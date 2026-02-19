@@ -1,0 +1,17 @@
+{
+  "name": "typed-smol",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "test": "pnpm -r run test"
+  },
+  "devDependencies": {
+    "oxlint": "catalog:",
+    "oxfmt": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "packageManager": "pnpm@10.0.0"
+}

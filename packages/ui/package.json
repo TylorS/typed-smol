@@ -1,0 +1,33 @@
+{
+  "name": "@typed/ui",
+  "version": "0.14.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@typed/fx": "workspace:*",
+    "@typed/navigation": "workspace:*",
+    "@typed/router": "workspace:*",
+    "@typed/template": "workspace:*",
+    "effect": "catalog:",
+    "happy-dom": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

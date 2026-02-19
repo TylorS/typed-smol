@@ -1,0 +1,22 @@
+import type * as Effect from "effect/Effect"
+import { dual, flow } from "effect/Function"
+import type * as Scope from "effect/Scope"
+import { fromEffect } from "../constructors/fromEffect.js"
+import type { Fx } from "../Fx.js"
+import { flatMapConcurrently } from "./flatMapConcurrently.js"
+import type { FlatMapEffectLike } from "./flatMapEffect.js"
+
+/**
+ * Maps each element of an Fx to an Effect, running them concurrently with a limit.
+ *
+ * @param f - A function that maps an element `A` to an `Effect<B>`.
+ * @param concurrency - The maximum number of concurrent effects.
+ * @returns An `Fx` that emits the results of the effects.
+ * @since 1.0.0
+ * @category combinators
+ */
+export const flatMapConcurrentlyEffect: FlatMapEffectLike<[concurrency: number]> = dual(3, <A, E, R, B, E2, R2>(
+  self: Fx<A, E, R>,
+  f: (a: A) => Effect.Effect<B, E2, R2>,
+  concurrency: number
+): Fx<B, E | E2, R | R2 | Scope.Scope> => flatMapConcurrently(self, flow(f, fromEffect), concurrency))
