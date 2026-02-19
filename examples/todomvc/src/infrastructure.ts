@@ -27,15 +27,11 @@ class Todos extends ServiceMap.Service<Todos>()("TodosService", {
       ),
     );
 
-  static readonly replicateToStorage = App.TodoList.pipe(Fx.tap(Todos.set), Fx.drainLayer);
+  static readonly replicateToStorage = App.TodoList.pipe(Fx.observeLayer(Todos.set));
 
-  static readonly local = Layer.effect(
-    Todos,
-    Effect.gen(function* () {
-      const kv = yield* KeyValueStore.KeyValueStore;
-      return KeyValueStore.toSchemaStore(kv, Domain.TodoList);
-    }),
-  ).pipe(Layer.provide(KeyValueStore.layerStorage(() => localStorage)));
+  static readonly local = Layer.effect(Todos, this.make).pipe(
+    Layer.provideMerge(KeyValueStore.layerStorage(() => localStorage)),
+  );
 }
 
 const FilterState = Router.match(Router.Slash, "all")
@@ -64,6 +60,5 @@ const CreateTodo = Layer.sync(
 
 export const Services = Layer.mergeAll(CreateTodo, Todos.replicateToStorage).pipe(
   Layer.provideMerge(Model),
-  Layer.provideMerge(Todos.local),
-  Layer.provideMerge(Router.BrowserRouter()),
+  Layer.provideMerge([Todos.local, Router.BrowserRouter()]),
 );

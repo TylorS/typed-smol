@@ -99,16 +99,16 @@ export const drainLayer = <A, E, R>(fx: Fx<A, E, R>): Layer<never, E, Exclude<R,
 export const observeLayer: {
   <A, E2 = never, R2 = never>(
     f: (value: A) => void | Effect<unknown, E2, R2>,
-  ): <E, R>(fx: Fx<A, E, R>) => Layer<never, E | E2, R | R2>;
+  ): <E, R>(fx: Fx<A, E, R>) => Layer<never, E | E2, Exclude<R | R2, Scope>>;
 
   <A, E, R, E2 = never, R2 = never>(
     fx: Fx<A, E, R>,
     f: (value: A) => void | Effect<unknown, E2, R2>,
-  ): Layer<never, E | E2, R | R2>;
+  ): Layer<never, E | E2, Exclude<R | R2, Scope>>;
 } = dual(
   2,
   <A, E, R, E2 = never, R2 = never>(
     fx: Fx<A, E, R>,
     f: (value: A) => void | Effect<unknown, E2, R2>,
-  ): Layer<never, E | E2, R | R2> => effectDiscard(observe(fx, f)),
+  ): Layer<never, E | E2, Exclude<R | R2, Scope>> => effectDiscard(observe(fx, f)),
 );
