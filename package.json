@@ -8,8 +8,8 @@
     "test": "pnpm -r run test"
   },
   "devDependencies": {
-    "oxlint": "catalog:",
     "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

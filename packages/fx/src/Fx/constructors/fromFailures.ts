@@ -1,12 +1,12 @@
-import * as Cause from "effect/Cause"
-import { flow } from "effect/Function"
-import { failCause } from "./failCause.js"
+import * as Cause from "effect/Cause";
+import { flow } from "effect/Function";
+import { failCause } from "./failCause.js";
 
 const fromFailuresCause = <E>(failures: Iterable<E>): Cause.Cause<E> =>
   Array.from(failures).reduce(
     (acc, e) => Cause.combine(acc, Cause.fail(e)),
-    Cause.empty as Cause.Cause<E>
-  )
+    Cause.empty as Cause.Cause<E>,
+  );
 
 /**
  * Creates an Fx from a collection of failures (errors).
@@ -16,4 +16,4 @@ const fromFailuresCause = <E>(failures: Iterable<E>): Cause.Cause<E> =>
  * @since 1.0.0
  * @category constructors
  */
-export const fromFailures = /*#__PURE__*/ flow(fromFailuresCause, failCause)
+export const fromFailures = /*#__PURE__*/ flow(fromFailuresCause, failCause);

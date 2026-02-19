@@ -361,7 +361,10 @@ export class ReplaySubjectImpl<A, E> extends SubjectImpl<A, E> {
     );
   }
 
-  override readonly interrupt = Effect.tap(this.interruptScopes, Effect.sync(() => this.buffer.clear()));
+  override readonly interrupt = Effect.tap(
+    this.interruptScopes,
+    Effect.sync(() => this.buffer.clear()),
+  );
 }
 
 /**

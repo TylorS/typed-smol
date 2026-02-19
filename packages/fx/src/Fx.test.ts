@@ -59,10 +59,7 @@ describe("Sink", () => {
         class MySink extends Sink.Service<MySink, number>()("MySink") {}
 
         let value = 0;
-        const layer = MySink.make(
-          Effect.failCause,
-          (n) => Effect.sync(() => (value += n)),
-        );
+        const layer = MySink.make(Effect.failCause, (n) => Effect.sync(() => (value += n)));
 
         yield* MySink.onSuccess(1).pipe(Effect.provide(layer));
         expect(value).toEqual(1);

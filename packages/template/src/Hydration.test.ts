@@ -276,7 +276,9 @@ describe("Hydration", () => {
       const renderEventExample = yield* hydrateHtmlElement`<div>${html`
         <p>Hello, world!</p>
       `}</div>`;
-      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(`"<!--n_0--><!--t_67ksqn+xDM4=--><p>Hello, world!</p><!--/t_67ksqn+xDM4=--><!--/n_0-->"`);
+      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(
+        `"<!--n_0--><!--t_67ksqn+xDM4=--><p>Hello, world!</p><!--/t_67ksqn+xDM4=--><!--/n_0-->"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("interpolates array of render events", ({ expect }) =>
@@ -289,7 +291,9 @@ describe("Hydration", () => {
           <p>B</p>
         `,
       ]}</div>`;
-      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(`"<!--n_0--><!--t_bQ8ZflXybUE=--><p>A</p><!--/t_bQ8ZflXybUE=--><!--t_LkwTy1XybUE=--><p>B</p><!--/t_LkwTy1XybUE=--><!--/n_0-->"`);
+      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(
+        `"<!--n_0--><!--t_bQ8ZflXybUE=--><p>A</p><!--/t_bQ8ZflXybUE=--><!--t_LkwTy1XybUE=--><p>B</p><!--/t_LkwTy1XybUE=--><!--/n_0-->"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("interpolates many comments", ({ expect }) =>

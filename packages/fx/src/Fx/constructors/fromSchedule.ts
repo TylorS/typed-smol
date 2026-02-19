@@ -1,7 +1,7 @@
-import { schedule as schedule_Effect } from "effect/Effect"
-import type { Schedule } from "effect/Schedule"
-import type { Fx } from "../Fx.js"
-import { make } from "./make.js"
+import { schedule as schedule_Effect } from "effect/Effect";
+import type { Schedule } from "effect/Schedule";
+import type { Fx } from "../Fx.js";
+import { make } from "./make.js";
 
 /**
  * Creates an Fx that emits values according to a Schedule.
@@ -13,5 +13,6 @@ import { make } from "./make.js"
  * @category constructors
  */
 export const fromSchedule = <Error, Env>(
-  schedule: Schedule<unknown, unknown, Error, Env>
-): Fx<void, Error, Env> => /*#__PURE__*/ make<void, Error, Env>((sink) => schedule_Effect(sink.onSuccess(), schedule))
+  schedule: Schedule<unknown, unknown, Error, Env>,
+): Fx<void, Error, Env> =>
+  /*#__PURE__*/ make<void, Error, Env>((sink) => schedule_Effect(sink.onSuccess(), schedule));

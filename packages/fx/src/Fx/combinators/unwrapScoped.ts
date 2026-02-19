@@ -1,7 +1,7 @@
-import * as Effect from "effect/Effect"
-import type * as Scope from "effect/Scope"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import * as Effect from "effect/Effect";
+import type * as Scope from "effect/Scope";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Unwraps an Effect that produces an Fx into a single Fx, managing the scope of the effect.
@@ -14,11 +14,13 @@ import type { Fx } from "../Fx.js"
  * @category combinators
  */
 export const unwrapScoped = <A, E, R, E2, R2>(
-  effect: Effect.Effect<Fx<A, E, R>, E2, R2 | Scope.Scope>
+  effect: Effect.Effect<Fx<A, E, R>, E2, R2 | Scope.Scope>,
 ): Fx<A, E | E2, Exclude<R | R2, Scope.Scope>> =>
   make<A, E | E2, Exclude<R | R2, Scope.Scope>>((sink) =>
-    Effect.scoped(Effect.matchCauseEffect(effect, {
-      onFailure: (cause) => sink.onFailure(cause),
-      onSuccess: (fx) => fx.run(sink)
-    }))
-  )
+    Effect.scoped(
+      Effect.matchCauseEffect(effect, {
+        onFailure: (cause) => sink.onFailure(cause),
+        onSuccess: (fx) => fx.run(sink),
+      }),
+    ),
+  );

@@ -3,23 +3,25 @@
  * @since 1.18.0
  */
 
-import type * as Effect from "effect/Effect"
-import * as Equivalence_ from "effect/Equivalence"
-import type { Equivalence } from "effect/Equivalence"
-import { dual } from "effect/Function"
-import * as Option from "effect/Option"
-import type * as Scope from "effect/Scope"
+import type * as Effect from "effect/Effect";
+import * as Equivalence_ from "effect/Equivalence";
+import type { Equivalence } from "effect/Equivalence";
+import { dual } from "effect/Function";
+import * as Option from "effect/Option";
+import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
-import * as RefSubject from "./RefSubject.js"
+import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefOption is a RefSubject specialized over an Option value.
  * @since 1.18.0
  * @category models
  */
-export interface RefOption<in out A, in out E = never, out R = never>
-  extends RefSubject.RefSubject<Option.Option<A>, E, R>
-{}
+export interface RefOption<in out A, in out E = never, out R = never> extends RefSubject.RefSubject<
+  Option.Option<A>,
+  E,
+  R
+> {}
 
 /**
  * Creates a new `RefOption` from an Option, `Effect`, or `Fx`.
@@ -40,13 +42,10 @@ export interface RefOption<in out A, in out E = never, out R = never>
  * @category constructors
  */
 export function make<A, E = never, R = never>(
-  initial:
-    | Option.Option<A>
-    | Effect.Effect<Option.Option<A>, E, R>
-    | Fx.Fx<Option.Option<A>, E, R>,
-  eq: Equivalence<A> = Equivalence_.strictEqual()
+  initial: Option.Option<A> | Effect.Effect<Option.Option<A>, E, R> | Fx.Fx<Option.Option<A>, E, R>,
+  eq: Equivalence<A> = Equivalence_.strictEqual(),
 ): Effect.Effect<RefOption<A, E>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq: Option.makeEquivalence(eq) })
+  return RefSubject.make(initial, { eq: Option.makeEquivalence(eq) });
 }
 
 /**
@@ -55,11 +54,11 @@ export function make<A, E = never, R = never>(
  * @category combinators
  */
 export const setSome: {
-  <A>(value: A): <E, R>(ref: RefOption<A, E, R>) => Effect.Effect<Option.Option<A>, E, R>
-  <A, E, R>(ref: RefOption<A, E, R>, value: A): Effect.Effect<Option.Option<A>, E, R>
+  <A>(value: A): <E, R>(ref: RefOption<A, E, R>) => Effect.Effect<Option.Option<A>, E, R>;
+  <A, E, R>(ref: RefOption<A, E, R>, value: A): Effect.Effect<Option.Option<A>, E, R>;
 } = dual(2, function setSome<A, E, R>(ref: RefOption<A, E, R>, value: A) {
-  return RefSubject.set(ref, Option.some(value))
-})
+  return RefSubject.set(ref, Option.some(value));
+});
 
 /**
  * Set the current state of a RefOption to None.
@@ -67,7 +66,7 @@ export const setSome: {
  * @category combinators
  */
 export const setNone = <A, E, R>(ref: RefOption<A, E, R>): Effect.Effect<Option.Option<A>, E, R> =>
-  RefSubject.set(ref, Option.none())
+  RefSubject.set(ref, Option.none());
 
 // ========================================
 // Computed
@@ -79,11 +78,16 @@ export const setNone = <A, E, R>(ref: RefOption<A, E, R>): Effect.Effect<Option.
  * @category computed
  */
 export const map: {
-  <A, B>(f: (a: A) => B): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<Option.Option<B>, E, R>
-  <A, E, R, B>(ref: RefOption<A, E, R>, f: (a: A) => B): RefSubject.Computed<Option.Option<B>, E, R>
+  <A, B>(
+    f: (a: A) => B,
+  ): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<Option.Option<B>, E, R>;
+  <A, E, R, B>(
+    ref: RefOption<A, E, R>,
+    f: (a: A) => B,
+  ): RefSubject.Computed<Option.Option<B>, E, R>;
 } = dual(2, function map<A, E, R, B>(ref: RefOption<A, E, R>, f: (a: A) => B) {
-  return RefSubject.map(ref, (self) => Option.map(self, f))
-})
+  return RefSubject.map(ref, (self) => Option.map(self, f));
+});
 
 /**
  * FlatMap the value inside the Option of a RefOption.
@@ -91,11 +95,16 @@ export const map: {
  * @category computed
  */
 export const flatMap: {
-  <A, B>(f: (a: A) => Option.Option<B>): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<Option.Option<B>, E, R>
-  <A, E, R, B>(ref: RefOption<A, E, R>, f: (a: A) => Option.Option<B>): RefSubject.Computed<Option.Option<B>, E, R>
+  <A, B>(
+    f: (a: A) => Option.Option<B>,
+  ): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<Option.Option<B>, E, R>;
+  <A, E, R, B>(
+    ref: RefOption<A, E, R>,
+    f: (a: A) => Option.Option<B>,
+  ): RefSubject.Computed<Option.Option<B>, E, R>;
 } = dual(2, function flatMap<A, E, R, B>(ref: RefOption<A, E, R>, f: (a: A) => Option.Option<B>) {
-  return RefSubject.map(ref, (self) => Option.flatMap(self, f))
-})
+  return RefSubject.map(ref, (self) => Option.flatMap(self, f));
+});
 
 /**
  * Filter the value inside the Option of a RefOption.
@@ -103,11 +112,16 @@ export const flatMap: {
  * @category computed
  */
 export const filter: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<Option.Option<A>, E, R>
-  <A, E, R>(ref: RefOption<A, E, R>, predicate: (a: A) => boolean): RefSubject.Computed<Option.Option<A>, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<Option.Option<A>, E, R>;
+  <A, E, R>(
+    ref: RefOption<A, E, R>,
+    predicate: (a: A) => boolean,
+  ): RefSubject.Computed<Option.Option<A>, E, R>;
 } = dual(2, function filter<A, E, R>(ref: RefOption<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.map(ref, (self) => Option.filter(self, predicate))
-})
+  return RefSubject.map(ref, (self) => Option.filter(self, predicate));
+});
 
 /**
  * Get the value from the Option or use a fallback value.
@@ -115,11 +129,11 @@ export const filter: {
  * @category computed
  */
 export const getOrElse: {
-  <A>(fallback: () => A): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<A, E, R>
-  <A, E, R>(ref: RefOption<A, E, R>, fallback: () => A): RefSubject.Computed<A, E, R>
+  <A>(fallback: () => A): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<A, E, R>;
+  <A, E, R>(ref: RefOption<A, E, R>, fallback: () => A): RefSubject.Computed<A, E, R>;
 } = dual(2, function getOrElse<A, E, R>(ref: RefOption<A, E, R>, fallback: () => A) {
-  return RefSubject.map(ref, (self) => Option.getOrElse(self, fallback))
-})
+  return RefSubject.map(ref, (self) => Option.getOrElse(self, fallback));
+});
 
 /**
  * Check if the current state of a RefOption is Some.
@@ -127,7 +141,7 @@ export const getOrElse: {
  * @category computed
  */
 export const isSome = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, Option.isSome)
+  RefSubject.map(ref, Option.isSome);
 
 /**
  * Check if the current state of a RefOption is None.
@@ -135,7 +149,7 @@ export const isSome = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<bo
  * @category computed
  */
 export const isNone = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, Option.isNone)
+  RefSubject.map(ref, Option.isNone);
 
 /**
  * Check if the current state of a RefOption contains a value.
@@ -143,11 +157,11 @@ export const isNone = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<bo
  * @category computed
  */
 export const contains: {
-  <A>(value: A): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<boolean, E, R>
-  <A, E, R>(ref: RefOption<A, E, R>, value: A): RefSubject.Computed<boolean, E, R>
+  <A>(value: A): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <A, E, R>(ref: RefOption<A, E, R>, value: A): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function contains<A, E, R>(ref: RefOption<A, E, R>, value: A) {
-  return RefSubject.map(ref, (self) => Option.contains(self, value))
-})
+  return RefSubject.map(ref, (self) => Option.contains(self, value));
+});
 
 /**
  * Check if the value inside the Option satisfies a predicate.
@@ -155,11 +169,16 @@ export const contains: {
  * @category computed
  */
 export const exists: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<boolean, E, R>
-  <A, E, R>(ref: RefOption<A, E, R>, predicate: (a: A) => boolean): RefSubject.Computed<boolean, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <A, E, R>(
+    ref: RefOption<A, E, R>,
+    predicate: (a: A) => boolean,
+  ): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function exists<A, E, R>(ref: RefOption<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.map(ref, (self) => Option.exists(self, predicate))
-})
+  return RefSubject.map(ref, (self) => Option.exists(self, predicate));
+});
 
 // ========================================
 // Filtered
@@ -170,4 +189,5 @@ export const exists: {
  * @since 1.18.0
  * @category filtered
  */
-export const getValue = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Filtered<A, E, R> => RefSubject.compact(ref)
+export const getValue = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Filtered<A, E, R> =>
+  RefSubject.compact(ref);

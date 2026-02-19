@@ -1,7 +1,7 @@
-import type { Yieldable } from "effect/Effect"
-import { matchCauseEffect } from "effect/Effect"
-import type { Fx } from "../Fx.js"
-import { make } from "./make.js"
+import type { Yieldable } from "effect/Effect";
+import { matchCauseEffect } from "effect/Effect";
+import type { Fx } from "../Fx.js";
+import { make } from "./make.js";
 
 /**
  * Creates an Fx from any Yieldable value (e.g., Effect, Promise, etc.).
@@ -12,5 +12,6 @@ import { make } from "./make.js"
  * @category constructors
  */
 export const fromYieldable = <A, E = never, R = never>(
-  yieldable: Yieldable<any, A, E, R>
-): Fx<A, E, R> => /*#__PURE__*/ make<A, E, R>((sink) => matchCauseEffect(yieldable.asEffect(), sink))
+  yieldable: Yieldable<any, A, E, R>,
+): Fx<A, E, R> =>
+  /*#__PURE__*/ make<A, E, R>((sink) => matchCauseEffect(yieldable.asEffect(), sink));

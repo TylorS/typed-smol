@@ -987,6 +987,7 @@ class DropAfterSink<A, E, R> implements Sink<A, E, R> {
 export const skipInterrupt = <A, E, R>(sink: Sink<A, E, R>): Sink<A, E, R> => {
   return {
     onSuccess: (value) => sink.onSuccess(value),
-    onFailure: (cause) => (cause.reasons.every(Cause.isInterruptReason) ? Effect.void : sink.onFailure(cause)),
+    onFailure: (cause) =>
+      cause.reasons.every(Cause.isInterruptReason) ? Effect.void : sink.onFailure(cause),
   };
 };

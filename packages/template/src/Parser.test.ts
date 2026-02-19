@@ -1,406 +1,406 @@
-import { deepEqual, deepStrictEqual } from "assert"
-import { templateHash } from "./internal/templateHash.js"
-import * as Parser from "./Parser.js"
-import * as Template from "./Template.js"
-import { describe, expect, it } from "vitest"
+import { deepEqual, deepStrictEqual } from "assert";
+import { templateHash } from "./internal/templateHash.js";
+import * as Parser from "./Parser.js";
+import * as Template from "./Template.js";
+import { describe, expect, it } from "vitest";
 
 describe("Parser", () => {
   it("parses a simple template", () => {
-    const template = h`<div></div>`
+    const template = h`<div></div>`;
     const expected = new Template.Template(
       [new Template.ElementNode("div", [], [])],
       templateHash(template),
-      []
-    )
+      [],
+    );
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses a template with attributes", () => {
-    const template = h`<div id="foo" class="bar"></div>`
+    const template = h`<div id="foo" class="bar"></div>`;
 
-    const element = new Template.ElementNode("div", [], [])
-    const id = new Template.AttributeNode("id", "foo")
-    const className = new Template.AttributeNode("class", "bar")
+    const element = new Template.ElementNode("div", [], []);
+    const id = new Template.AttributeNode("id", "foo");
+    const className = new Template.AttributeNode("class", "bar");
 
-    element.attributes.push(id, className)
+    element.attributes.push(id, className);
 
-    const expected = new Template.Template([element], templateHash(template), [])
-    const actual = Parser.parse(template)
+    const expected = new Template.Template([element], templateHash(template), []);
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses a template with attributes with holes", () => {
-    const template = h`<div id=${"foo"} class=${"bar"}></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const id = new Template.AttrPartNode("id", 0)
-    const className = new Template.ClassNamePartNode(1)
+    const template = h`<div id=${"foo"} class=${"bar"}></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const id = new Template.AttrPartNode("id", 0);
+    const className = new Template.ClassNamePartNode(1);
 
-    div.attributes.push(id, className)
+    div.attributes.push(id, className);
 
     const expected = new Template.Template([div], templateHash(template), [
       [id, [0]],
-      [className, [0]]
-    ])
+      [className, [0]],
+    ]);
 
-    const actual = Parser.parse(template)
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses sparse attributes", () => {
-    const template = h`<div id="${"foo"} ${"bar"} ${"baz"}"></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const id0 = new Template.AttrPartNode("id", 0)
-    const id1 = new Template.AttrPartNode("id", 1)
-    const id2 = new Template.AttrPartNode("id", 2)
-    const idText = new Template.TextNode(" ")
-    const idText2 = new Template.TextNode(" ")
-    const sparse = new Template.SparseAttrNode("id", [id0, idText, id1, idText2, id2])
+    const template = h`<div id="${"foo"} ${"bar"} ${"baz"}"></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const id0 = new Template.AttrPartNode("id", 0);
+    const id1 = new Template.AttrPartNode("id", 1);
+    const id2 = new Template.AttrPartNode("id", 2);
+    const idText = new Template.TextNode(" ");
+    const idText2 = new Template.TextNode(" ");
+    const sparse = new Template.SparseAttrNode("id", [id0, idText, id1, idText2, id2]);
 
-    div.attributes.push(sparse)
+    div.attributes.push(sparse);
 
-    const expected = new Template.Template([div], templateHash(template), [[sparse, [0]]])
-    const actual = Parser.parse(template)
+    const expected = new Template.Template([div], templateHash(template), [[sparse, [0]]]);
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses sparse attributes with text", () => {
-    const template = h`<div id="${"foo"} hello ${"bar"} world ${"baz"}"></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const id0 = new Template.AttrPartNode("id", 0)
-    const id1 = new Template.AttrPartNode("id", 1)
-    const id2 = new Template.AttrPartNode("id", 2)
-    const idText = new Template.TextNode(" hello ")
-    const idText2 = new Template.TextNode(" world ")
-    const sparse = new Template.SparseAttrNode("id", [id0, idText, id1, idText2, id2])
+    const template = h`<div id="${"foo"} hello ${"bar"} world ${"baz"}"></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const id0 = new Template.AttrPartNode("id", 0);
+    const id1 = new Template.AttrPartNode("id", 1);
+    const id2 = new Template.AttrPartNode("id", 2);
+    const idText = new Template.TextNode(" hello ");
+    const idText2 = new Template.TextNode(" world ");
+    const sparse = new Template.SparseAttrNode("id", [id0, idText, id1, idText2, id2]);
 
-    div.attributes.push(sparse)
+    div.attributes.push(sparse);
 
-    const expected = new Template.Template([div], templateHash(template), [[sparse, [0]]])
-    const actual = Parser.parse(template)
+    const expected = new Template.Template([div], templateHash(template), [[sparse, [0]]]);
+    const actual = Parser.parse(template);
 
-    deepStrictEqual(actual, expected)
-  })
+    deepStrictEqual(actual, expected);
+  });
 
   it("parses boolean attributes", () => {
-    const template = h`<div hidden></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const hidden = new Template.BooleanNode("hidden")
+    const template = h`<div hidden></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const hidden = new Template.BooleanNode("hidden");
 
-    div.attributes.push(hidden)
+    div.attributes.push(hidden);
 
-    const expected = new Template.Template([div], templateHash(template), [])
+    const expected = new Template.Template([div], templateHash(template), []);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses boolean attributes with holes", () => {
-    const template = h`<div ?hidden="${true}"></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const hidden = new Template.BooleanPartNode("hidden", 0)
+    const template = h`<div ?hidden="${true}"></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const hidden = new Template.BooleanPartNode("hidden", 0);
 
-    div.attributes.push(hidden)
+    div.attributes.push(hidden);
 
-    const expected = new Template.Template([div], templateHash(template), [[hidden, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[hidden, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses class name attributes", () => {
-    const template = h`<div class="foo bar baz"></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const className = new Template.AttributeNode("class", "foo bar baz")
+    const template = h`<div class="foo bar baz"></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const className = new Template.AttributeNode("class", "foo bar baz");
 
-    div.attributes.push(className)
+    div.attributes.push(className);
 
-    const expected = new Template.Template([div], templateHash(template), [])
+    const expected = new Template.Template([div], templateHash(template), []);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses class name attributes with holes", () => {
-    const template = h`<div class=${"foo"}></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const className = new Template.ClassNamePartNode(0)
+    const template = h`<div class=${"foo"}></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const className = new Template.ClassNamePartNode(0);
 
-    div.attributes.push(className)
+    div.attributes.push(className);
 
-    const expected = new Template.Template([div], templateHash(template), [[className, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[className, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses sparse class name attributes", () => {
-    const template = h`<div class="${"foo"} ${"bar"} ${"baz"}"></div>`
-    const div = new Template.ElementNode("div", [], [])
+    const template = h`<div class="${"foo"} ${"bar"} ${"baz"}"></div>`;
+    const div = new Template.ElementNode("div", [], []);
 
-    const className0 = new Template.ClassNamePartNode(0)
-    const className1 = new Template.ClassNamePartNode(1)
-    const className2 = new Template.ClassNamePartNode(2)
+    const className0 = new Template.ClassNamePartNode(0);
+    const className1 = new Template.ClassNamePartNode(1);
+    const className2 = new Template.ClassNamePartNode(2);
     const sparse = new Template.SparseClassNameNode([
       className0,
       new Template.TextNode(" "),
       className1,
       new Template.TextNode(" "),
-      className2
-    ])
+      className2,
+    ]);
 
-    div.attributes.push(sparse)
+    div.attributes.push(sparse);
 
-    const expected = new Template.Template([div], templateHash(template), [[sparse, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[sparse, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses a template with children", () => {
-    const template = h`<div><span></span></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const span = new Template.ElementNode("span", [], [])
+    const template = h`<div><span></span></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const span = new Template.ElementNode("span", [], []);
 
-    div.children.push(span)
+    div.children.push(span);
 
-    const expected = new Template.Template([div], templateHash(template), [])
-    const actual = Parser.parse(template)
+    const expected = new Template.Template([div], templateHash(template), []);
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses a template with children with holes", () => {
-    const template = h`<div><span>${"foo"}</span></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const span = new Template.ElementNode("span", [], [])
-    const part = new Template.NodePart(0)
+    const template = h`<div><span>${"foo"}</span></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const span = new Template.ElementNode("span", [], []);
+    const part = new Template.NodePart(0);
 
-    span.children.push(part)
+    span.children.push(part);
 
-    div.children.push(span)
+    div.children.push(span);
 
-    const expected = new Template.Template([div], templateHash(template), [[part, [0, 0]]])
+    const expected = new Template.Template([div], templateHash(template), [[part, [0, 0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses a template with children with holes and attributes", () => {
-    const template = h`<div id=${"foo"}><span>${"bar"}</span></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const id = new Template.AttrPartNode("id", 0)
-    const span = new Template.ElementNode("span", [], [])
-    const part = new Template.NodePart(1)
+    const template = h`<div id=${"foo"}><span>${"bar"}</span></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const id = new Template.AttrPartNode("id", 0);
+    const span = new Template.ElementNode("span", [], []);
+    const part = new Template.NodePart(1);
 
-    span.children.push(part)
+    span.children.push(part);
 
-    div.attributes.push(id)
-    div.children.push(span)
+    div.attributes.push(id);
+    div.children.push(span);
 
     const expected = new Template.Template([div], templateHash(template), [
       [id, [0]],
-      [part, [0, 0]]
-    ])
+      [part, [0, 0]],
+    ]);
 
-    const actual = Parser.parse(template)
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses a template with children with holes and attributes and class names", () => {
-    const template = h`<div id=${"foo"} class=${"bar"}><span>${"baz"}</span></div>`
+    const template = h`<div id=${"foo"} class=${"bar"}><span>${"baz"}</span></div>`;
 
-    const div = new Template.ElementNode("div", [], [])
-    const id = new Template.AttrPartNode("id", 0)
-    const className = new Template.ClassNamePartNode(1)
-    const span = new Template.ElementNode("span", [], [])
-    const part = new Template.NodePart(2)
+    const div = new Template.ElementNode("div", [], []);
+    const id = new Template.AttrPartNode("id", 0);
+    const className = new Template.ClassNamePartNode(1);
+    const span = new Template.ElementNode("span", [], []);
+    const part = new Template.NodePart(2);
 
-    span.children.push(part)
+    span.children.push(part);
 
-    div.attributes.push(id, className)
-    div.children.push(span)
+    div.attributes.push(id, className);
+    div.children.push(span);
 
     const expected = new Template.Template([div], templateHash(template), [
       [id, [0]],
       [className, [0]],
-      [part, [0, 0]]
-    ])
+      [part, [0, 0]],
+    ]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses a template with children with holes and attributes and class names and sparse attributes", () => {
-    const template = h`<div id=${"foo"} class=${"bar"} ?hidden=${true}><span>${"baz"}</span></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const id = new Template.AttrPartNode("id", 0)
-    const className = new Template.ClassNamePartNode(1)
-    const hidden = new Template.BooleanPartNode("hidden", 2)
-    const span = new Template.ElementNode("span", [], [])
-    const part = new Template.NodePart(3)
+    const template = h`<div id=${"foo"} class=${"bar"} ?hidden=${true}><span>${"baz"}</span></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const id = new Template.AttrPartNode("id", 0);
+    const className = new Template.ClassNamePartNode(1);
+    const hidden = new Template.BooleanPartNode("hidden", 2);
+    const span = new Template.ElementNode("span", [], []);
+    const part = new Template.NodePart(3);
 
-    span.children.push(part)
+    span.children.push(part);
 
-    div.attributes.push(id, className, hidden)
-    div.children.push(span)
+    div.attributes.push(id, className, hidden);
+    div.children.push(span);
 
     const expected = new Template.Template([div], templateHash(template), [
       [id, [0]],
       [className, [0]],
       [hidden, [0]],
-      [part, [0, 0]]
-    ])
+      [part, [0, 0]],
+    ]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parser a template with data attributes", () => {
-    const template = h`<div data-foo=${"bar"}></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const data = new Template.AttrPartNode("data-foo", 0)
+    const template = h`<div data-foo=${"bar"}></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const data = new Template.AttrPartNode("data-foo", 0);
 
-    div.attributes.push(data)
+    div.attributes.push(data);
 
-    const expected = new Template.Template([div], templateHash(template), [[data, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[data, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses a template with .data property", () => {
-    const template = h`<div .data=${{ a: "1", b: "2" }}></div>`
+    const template = h`<div .data=${{ a: "1", b: "2" }}></div>`;
 
-    const div = new Template.ElementNode("div", [], [])
-    const data = new Template.DataPartNode(0)
+    const div = new Template.ElementNode("div", [], []);
+    const data = new Template.DataPartNode(0);
 
-    div.attributes.push(data)
+    div.attributes.push(data);
 
-    const expected = new Template.Template([div], templateHash(template), [[data, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[data, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses a template with @ event attributes", () => {
-    const template = h`<div @click=${() => {}}></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const event = new Template.EventPartNode("click", 0)
+    const template = h`<div @click=${() => {}}></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const event = new Template.EventPartNode("click", 0);
 
-    div.attributes.push(event)
+    div.attributes.push(event);
 
-    const expected = new Template.Template([div], templateHash(template), [[event, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[event, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses a template with event attributes with on* syntax", () => {
-    const template = h`<div onclick=${() => {}}></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const event = new Template.EventPartNode("click", 0)
+    const template = h`<div onclick=${() => {}}></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const event = new Template.EventPartNode("click", 0);
 
-    div.attributes.push(event)
+    div.attributes.push(event);
 
-    const expected = new Template.Template([div], templateHash(template), [[event, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[event, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses nested templates", () => {
-    const template = h`<div>${h`<span></span>`}</div>`
-    const div = new Template.ElementNode("div", [], [])
-    const part = new Template.NodePart(0)
+    const template = h`<div>${h`<span></span>`}</div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const part = new Template.NodePart(0);
 
-    div.children.push(part)
+    div.children.push(part);
 
-    const expected = new Template.Template([div], templateHash(template), [[part, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[part, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses properties", () => {
-    const template = h`<div .foo=${"bar"}></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const property = new Template.PropertyPartNode("foo", 0)
+    const template = h`<div .foo=${"bar"}></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const property = new Template.PropertyPartNode("foo", 0);
 
-    div.attributes.push(property)
+    div.attributes.push(property);
 
-    const expected = new Template.Template([div], templateHash(template), [[property, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[property, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parse ref attributes", () => {
-    const template = h`<div ref=${"foo"}></div>`
-    const div = new Template.ElementNode("div", [], [])
-    const ref = new Template.RefPartNode(0)
+    const template = h`<div ref=${"foo"}></div>`;
+    const div = new Template.ElementNode("div", [], []);
+    const ref = new Template.RefPartNode(0);
 
-    div.attributes.push(ref)
+    div.attributes.push(ref);
 
-    const expected = new Template.Template([div], templateHash(template), [[ref, [0]]])
+    const expected = new Template.Template([div], templateHash(template), [[ref, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses text-only nodes", () => {
-    const template = h`<textarea>foo</textarea>`
-    const textarea = new Template.TextOnlyElement("textarea", [], new Template.TextNode("foo"))
-    const expected = new Template.Template([textarea], templateHash(template), [])
+    const template = h`<textarea>foo</textarea>`;
+    const textarea = new Template.TextOnlyElement("textarea", [], new Template.TextNode("foo"));
+    const expected = new Template.Template([textarea], templateHash(template), []);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses text-only nodes with holes", () => {
-    const template = h`<textarea>${"foo"}</textarea>`
-    const part = new Template.TextPartNode(0)
-    const textarea = new Template.TextOnlyElement("textarea", [], part)
+    const template = h`<textarea>${"foo"}</textarea>`;
+    const part = new Template.TextPartNode(0);
+    const textarea = new Template.TextOnlyElement("textarea", [], part);
 
-    const expected = new Template.Template([textarea], templateHash(template), [[part, [0]]])
+    const expected = new Template.Template([textarea], templateHash(template), [[part, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses self-closing elements", () => {
-    const template = h`<input />`
+    const template = h`<input />`;
     const expected = new Template.Template(
       [new Template.SelfClosingElementNode("input", [])],
       templateHash(template),
-      []
-    )
+      [],
+    );
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses self-closing elements with attributes", () => {
-    const template = h`<input type=${"text"} />`
-    const input = new Template.SelfClosingElementNode("input", [])
-    const type = new Template.AttrPartNode("type", 0)
+    const template = h`<input type=${"text"} />`;
+    const input = new Template.SelfClosingElementNode("input", []);
+    const type = new Template.AttrPartNode("type", 0);
 
-    input.attributes.push(type)
+    input.attributes.push(type);
 
-    const expected = new Template.Template([input], templateHash(template), [[type, [0]]])
+    const expected = new Template.Template([input], templateHash(template), [[type, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses self-closing elements with attributes and class names", () => {
-    const template = h`<input type=${"text"} class=${"foo"} />`
-    const input = new Template.SelfClosingElementNode("input", [])
-    const type = new Template.AttrPartNode("type", 0)
-    const className = new Template.ClassNamePartNode(1)
+    const template = h`<input type=${"text"} class=${"foo"} />`;
+    const input = new Template.SelfClosingElementNode("input", []);
+    const type = new Template.AttrPartNode("type", 0);
+    const className = new Template.ClassNamePartNode(1);
 
-    input.attributes.push(type)
-    input.attributes.push(className)
+    input.attributes.push(type);
+    input.attributes.push(className);
 
     const expected = new Template.Template([input], templateHash(template), [
       [type, [0]],
-      [className, [0]]
-    ])
+      [className, [0]],
+    ]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses empty templates", () => {
-    const template = h``
-    const expected = new Template.Template([], templateHash(template), [])
+    const template = h``;
+    const expected = new Template.Template([], templateHash(template), []);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("determines the correct path for parts", () => {
     const template = h`
@@ -417,70 +417,82 @@ describe("Parser", () => {
       <div>
         <p>${"test"}</p>
       </div>
-    </footer>`
-    const part1 = new Template.NodePart(0)
-    const part2 = new Template.NodePart(1)
-    const part3 = new Template.NodePart(2)
+    </footer>`;
+    const part1 = new Template.NodePart(0);
+    const part2 = new Template.NodePart(1);
+    const part3 = new Template.NodePart(2);
     const expected = new Template.Template(
       [
-        new Template.ElementNode("div", [], [
-          new Template.ElementNode("p", [], [new Template.TextNode("test "), part1])
-        ]),
-        new Template.ElementNode("div", [], [
-          new Template.ElementNode("p", [], [new Template.TextNode("test "), part2])
-        ]),
+        new Template.ElementNode(
+          "div",
+          [],
+          [new Template.ElementNode("p", [], [new Template.TextNode("test "), part1])],
+        ),
+        new Template.ElementNode(
+          "div",
+          [],
+          [new Template.ElementNode("p", [], [new Template.TextNode("test "), part2])],
+        ),
         new Template.ElementNode(
           "footer",
           [],
           [
-            new Template.ElementNode("div", [], [new Template.ElementNode("p", [], [new Template.TextNode("test")])]),
-            new Template.ElementNode("div", [], [new Template.ElementNode("p", [], [part3])])
-          ]
-        )
+            new Template.ElementNode(
+              "div",
+              [],
+              [new Template.ElementNode("p", [], [new Template.TextNode("test")])],
+            ),
+            new Template.ElementNode("div", [], [new Template.ElementNode("p", [], [part3])]),
+          ],
+        ),
       ],
       templateHash(template),
       [
         [part1, [0, 0]],
         [part2, [1, 0]],
-        [part3, [2, 1, 0]]
-      ]
-    )
+        [part3, [2, 1, 0]],
+      ],
+    );
 
-    const actual = Parser.parse(template)
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses comments", () => {
-    const template = h`<!-- test -->`
-    const expected = new Template.Template([new Template.CommentNode(" test ")], templateHash(template), [])
+    const template = h`<!-- test -->`;
+    const expected = new Template.Template(
+      [new Template.CommentNode(" test ")],
+      templateHash(template),
+      [],
+    );
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses comments with hole", () => {
-    const template = h`<!-- ${"test"} -->`
-    const part = new Template.CommentPartNode(0)
-    const expected = new Template.Template([part], templateHash(template), [[part, [0]]])
+    const template = h`<!-- ${"test"} -->`;
+    const part = new Template.CommentPartNode(0);
+    const expected = new Template.Template([part], templateHash(template), [[part, [0]]]);
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses template with only holes", () => {
-    const template = h`${"test"} ${"test"}`
-    const part1 = new Template.NodePart(0)
-    const part2 = new Template.NodePart(1)
+    const template = h`${"test"} ${"test"}`;
+    const part1 = new Template.NodePart(0);
+    const part2 = new Template.NodePart(1);
     const expected = new Template.Template(
       [part1, new Template.TextNode(" "), part2],
       templateHash(template),
       [
         [part1, []],
-        [part2, []]
-      ]
-    )
+        [part2, []],
+      ],
+    );
 
-    expect(Parser.parse(template)).toEqual(expected)
-  })
+    expect(Parser.parse(template)).toEqual(expected);
+  });
 
   it("parses templates with doctypes", () => {
     const template = h`<!DOCTYPE html>
@@ -491,7 +503,7 @@ describe("Parser", () => {
       <body>
         <div id="root"></div>
       </body>
-    </html>`
+    </html>`;
     const expected = new Template.Template(
       [
         new Template.DocType("html"),
@@ -502,32 +514,34 @@ describe("Parser", () => {
             new Template.ElementNode(
               "head",
               [],
-              [new Template.TextOnlyElement("title", [], new Template.TextNode("Test"))]
+              [new Template.TextOnlyElement("title", [], new Template.TextNode("Test"))],
             ),
-            new Template.ElementNode("body", [], [
-              new Template.ElementNode("div", [new Template.AttributeNode("id", "root")], [])
-            ])
-          ]
-        )
+            new Template.ElementNode(
+              "body",
+              [],
+              [new Template.ElementNode("div", [new Template.AttributeNode("id", "root")], [])],
+            ),
+          ],
+        ),
       ],
       templateHash(template),
-      []
-    )
+      [],
+    );
 
-    deepStrictEqual(Parser.parse(template), expected)
-  })
+    deepStrictEqual(Parser.parse(template), expected);
+  });
 
   it("parses templates with spread props", () => {
-    const template = h`<div ...${{ id: "foo", class: "bar" }}></div>`
-    const props = new Template.PropertiesPartNode(0)
+    const template = h`<div ...${{ id: "foo", class: "bar" }}></div>`;
+    const props = new Template.PropertiesPartNode(0);
     const expected = new Template.Template(
       [new Template.ElementNode("div", [props], [])],
       templateHash(template),
-      [[props, [0]]]
-    )
+      [[props, [0]]],
+    );
 
-    deepStrictEqual(Parser.parse(template), expected)
-  })
+    deepStrictEqual(Parser.parse(template), expected);
+  });
 
   it("parses large svg templates", () => {
     const template = h`<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
@@ -654,12 +668,12 @@ c192 -183 322 -427 380 -715 22 -107 22 -146 -10 -621 -11 -164 0 -383 25
 -358 -500 -731 -719 -114 -68 -309 -172 -321 -172 -11 0 -3 339 14 560 46 617
 195 1021 454 1231 67 55 85 58 178 34z" />
 </g>
-</svg>`
+</svg>`;
     // eslint-disable-next-line no-console
-    console.time("parse large svg (cold start)")
-    const actual = Parser.parse(template)
+    console.time("parse large svg (cold start)");
+    const actual = Parser.parse(template);
     // eslint-disable-next-line no-console
-    console.timeEnd("parse large svg (cold start)")
+    console.timeEnd("parse large svg (cold start)");
 
     const expected = new Template.Template(
       [
@@ -671,7 +685,7 @@ c192 -183 322 -427 380 -715 22 -107 22 -146 -10 -621 -11 -164 0 -383 25
             new Template.AttributeNode("width", "1280.000000pt"),
             new Template.AttributeNode("height", "1280.000000pt"),
             new Template.AttributeNode("viewBox", "0 0 1280.000000 1280.000000"),
-            new Template.AttributeNode("preserveAspectRatio", "xMidYMid meet")
+            new Template.AttributeNode("preserveAspectRatio", "xMidYMid meet"),
           ],
           [
             new Template.ElementNode(
@@ -679,10 +693,10 @@ c192 -183 322 -427 380 -715 22 -107 22 -146 -10 -621 -11 -164 0 -383 25
               [
                 new Template.AttributeNode(
                   "transform",
-                  "translate(0.000000,1280.000000) scale(0.100000,-0.100000)"
+                  "translate(0.000000,1280.000000) scale(0.100000,-0.100000)",
                 ),
                 new Template.AttributeNode("fill", "#000000"),
-                new Template.AttributeNode("stroke", "none")
+                new Template.AttributeNode("stroke", "none"),
               ],
               [
                 new Template.ElementNode(
@@ -807,100 +821,104 @@ c192 -183 322 -427 380 -715 22 -107 22 -146 -10 -621 -11 -164 0 -383 25
 330 370 99 51 115 57 155 52 25 -3 73 -19 106 -36z m-5413 16 c104 -27 176
 -71 267 -164 136 -137 202 -292 204 -481 1 -114 -13 -177 -65 -289 -126 -271
 -358 -500 -731 -719 -114 -68 -309 -172 -321 -172 -11 0 -3 339 14 560 46 617
-195 1021 454 1231 67 55 85 58 178 34z`
-                    )
+195 1021 454 1231 67 55 85 58 178 34z`,
+                    ),
                   ],
-                  []
-                )
-              ]
-            )
-          ]
-        )
+                  [],
+                ),
+              ],
+            ),
+          ],
+        ),
       ],
       templateHash(template),
-      []
-    )
+      [],
+    );
 
-    deepEqual(actual, expected)
+    deepEqual(actual, expected);
 
-    const iterations = 1000
-    let totalTime = 0
+    const iterations = 1000;
+    let totalTime = 0;
     for (let i = 0; i < iterations; i++) {
-      const start = performance.now()
-      Parser.parse(template)
-      const end = performance.now()
-      totalTime += end - start
+      const start = performance.now();
+      Parser.parse(template);
+      const end = performance.now();
+      totalTime += end - start;
     }
     // eslint-disable-next-line no-console
-    console.log(`parse large svg (${iterations} iterations): ${totalTime / iterations}ms`)
-  })
+    console.log(`parse large svg (${iterations} iterations): ${totalTime / iterations}ms`);
+  });
 
   it("parses any element as self-closing", () => {
-    const template = h`<div /><p>Hello</p>`
+    const template = h`<div /><p>Hello</p>`;
     const expected = new Template.Template(
-      [new Template.ElementNode("div", [], []), new Template.ElementNode("p", [], [new Template.TextNode("Hello")])],
+      [
+        new Template.ElementNode("div", [], []),
+        new Template.ElementNode("p", [], [new Template.TextNode("Hello")]),
+      ],
       templateHash(template),
-      []
-    )
-    const actual = Parser.parse(template)
+      [],
+    );
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses text-only elements with sparse text", () => {
-    const template = h`<textarea>${"foo"} ${"bar"}</textarea>`
-    const fooPart = new Template.TextPartNode(0)
-    const barPart = new Template.TextPartNode(1)
-    const sparseText = new Template.SparseTextNode([fooPart, new Template.TextNode(" "), barPart])
-    const textarea = new Template.TextOnlyElement(
-      "textarea",
-      [],
-      sparseText
-    )
-    const expected = new Template.Template([textarea], templateHash(template), [[sparseText, [0]]])
-    const actual = Parser.parse(template)
+    const template = h`<textarea>${"foo"} ${"bar"}</textarea>`;
+    const fooPart = new Template.TextPartNode(0);
+    const barPart = new Template.TextPartNode(1);
+    const sparseText = new Template.SparseTextNode([fooPart, new Template.TextNode(" "), barPart]);
+    const textarea = new Template.TextOnlyElement("textarea", [], sparseText);
+    const expected = new Template.Template([textarea], templateHash(template), [[sparseText, [0]]]);
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses public doctype", () => {
-    const template = h`<!DOCTYPE html PUBLIC "http://www.w3.org/TR/html5/strict.dtd">`
+    const template = h`<!DOCTYPE html PUBLIC "http://www.w3.org/TR/html5/strict.dtd">`;
     const expected = new Template.Template(
       [new Template.DocType("html", "http://www.w3.org/TR/html5/strict.dtd")],
       templateHash(template),
-      []
-    )
-    const actual = Parser.parse(template)
+      [],
+    );
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses system doctype", () => {
-    const template = h`<!DOCTYPE html SYSTEM "http://www.w3.org/TR/html5/strict.dtd">`
+    const template = h`<!DOCTYPE html SYSTEM "http://www.w3.org/TR/html5/strict.dtd">`;
     const expected = new Template.Template(
       [new Template.DocType("html", undefined, "http://www.w3.org/TR/html5/strict.dtd")],
       templateHash(template),
-      []
-    )
-    const actual = Parser.parse(template)
+      [],
+    );
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
+    expect(actual).toEqual(expected);
+  });
 
   it("parses public and system doctype", () => {
-    const template =
-      h`<!DOCTYPE html PUBLIC "http://www.w3.org/TR/html5/strict.dtd" SYSTEM "http://www.w3.org/TR/html5/strict.dtd">`
+    const template = h`<!DOCTYPE html PUBLIC "http://www.w3.org/TR/html5/strict.dtd" SYSTEM "http://www.w3.org/TR/html5/strict.dtd">`;
     const expected = new Template.Template(
-      [new Template.DocType("html", "http://www.w3.org/TR/html5/strict.dtd", "http://www.w3.org/TR/html5/strict.dtd")],
+      [
+        new Template.DocType(
+          "html",
+          "http://www.w3.org/TR/html5/strict.dtd",
+          "http://www.w3.org/TR/html5/strict.dtd",
+        ),
+      ],
       templateHash(template),
-      []
-    )
-    const actual = Parser.parse(template)
+      [],
+    );
+    const actual = Parser.parse(template);
 
-    expect(actual).toEqual(expected)
-  })
-})
+    expect(actual).toEqual(expected);
+  });
+});
 
 function h<Values extends ReadonlyArray<any>>(template: TemplateStringsArray, ..._: Values) {
-  return template
+  return template;
 }

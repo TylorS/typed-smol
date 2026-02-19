@@ -1,6 +1,6 @@
-import { forEach } from "effect/Effect"
-import type { Fx } from "../Fx.js"
-import { make } from "./make.js"
+import { forEach } from "effect/Effect";
+import type { Fx } from "../Fx.js";
+import { make } from "./make.js";
 
 /**
  * Creates an Fx from an Iterable.
@@ -12,4 +12,4 @@ import { make } from "./make.js"
  * @category constructors
  */
 export const fromIterable = <A>(iterable: Iterable<A>): Fx<A> =>
-  make<A>((sink) => forEach(iterable, sink.onSuccess, { discard: true }))
+  make<A>((sink) => forEach(iterable, sink.onSuccess, { discard: true }));

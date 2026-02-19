@@ -1,6 +1,5 @@
 // oxlint-disable require-yield
-import assert from "node:assert";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import { Effect } from "effect";
 import * as Cause from "effect/Cause";
 import * as Exit from "effect/Exit";
@@ -15,8 +14,7 @@ describe("AsyncData", () => {
         const data = AsyncData.NoData;
         assert(AsyncData.isNoData(data));
         assert(data._tag === "NoData");
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("loading without progress", () =>
       Effect.gen(function* () {
@@ -24,8 +22,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isLoading(data));
         assert(data._tag === "Loading");
         assert(data.progress === undefined);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("loading with progress", () =>
       Effect.gen(function* () {
@@ -34,8 +31,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isLoading(data));
         assert(data.progress?.loaded === 50);
         assert(data.progress?.total === 100);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("success without progress", () =>
       Effect.gen(function* () {
@@ -44,8 +40,7 @@ describe("AsyncData", () => {
         assert(data._tag === "Success");
         assert(data.value === 42);
         assert(data.progress === undefined);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("success with progress", () =>
       Effect.gen(function* () {
@@ -55,8 +50,7 @@ describe("AsyncData", () => {
         assert(data.value === 42);
         assert(data.progress?.loaded === 75);
         assert(data.progress?.total === 100);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("failure without progress", () =>
       Effect.gen(function* () {
@@ -66,8 +60,7 @@ describe("AsyncData", () => {
         assert(data._tag === "Failure");
         assert(data.cause === cause);
         assert(data.progress === undefined);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("failure with progress", () =>
       Effect.gen(function* () {
@@ -77,8 +70,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isFailure(data));
         assert(data.progress?.loaded === 25);
         assert(data.progress?.total === undefined);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("optimistic", () =>
       Effect.gen(function* () {
@@ -88,8 +80,7 @@ describe("AsyncData", () => {
         assert(data._tag === "Optimistic");
         assert(data.value === 20);
         assert(data.previous === previous);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 
   describe("type guards", () => {
@@ -98,24 +89,21 @@ describe("AsyncData", () => {
         assert(AsyncData.isNoData(AsyncData.NoData));
         assert(!AsyncData.isNoData(AsyncData.loading()));
         assert(!AsyncData.isNoData(AsyncData.success(1)));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("isLoading", () =>
       Effect.gen(function* () {
         assert(AsyncData.isLoading(AsyncData.loading()));
         assert(!AsyncData.isLoading(AsyncData.NoData));
         assert(!AsyncData.isLoading(AsyncData.success(1)));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("isSuccess", () =>
       Effect.gen(function* () {
         assert(AsyncData.isSuccess(AsyncData.success(1)));
         assert(!AsyncData.isSuccess(AsyncData.NoData));
         assert(!AsyncData.isSuccess(AsyncData.loading()));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("isFailure", () =>
       Effect.gen(function* () {
@@ -123,8 +111,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isFailure(AsyncData.failure(cause)));
         assert(!AsyncData.isFailure(AsyncData.NoData));
         assert(!AsyncData.isFailure(AsyncData.success(1)));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("isOptimistic", () =>
       Effect.gen(function* () {
@@ -133,8 +120,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isOptimistic(data));
         assert(!AsyncData.isOptimistic(AsyncData.NoData));
         assert(!AsyncData.isOptimistic(AsyncData.success(1)));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("isAsyncData", () =>
       Effect.gen(function* () {
@@ -145,8 +131,7 @@ describe("AsyncData", () => {
         assert(!AsyncData.isAsyncData(null));
         assert(!AsyncData.isAsyncData({}));
         assert(!AsyncData.isAsyncData({ _tag: "Invalid" }));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("isRefreshing", () =>
       Effect.gen(function* () {
@@ -157,8 +142,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isRefreshing(failureWithProgress));
         assert(!AsyncData.isRefreshing(AsyncData.success(1)));
         assert(!AsyncData.isRefreshing(AsyncData.loading()));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("isPending", () =>
       Effect.gen(function* () {
@@ -168,8 +152,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isPending(AsyncData.failure(Cause.fail("error"), progress)));
         assert(!AsyncData.isPending(AsyncData.NoData));
         assert(!AsyncData.isPending(AsyncData.success(1)));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 
   describe("extractors", () => {
@@ -186,8 +169,7 @@ describe("AsyncData", () => {
         const optimisticOption = AsyncData.getSuccess(optimistic);
         assert(Option.isSome(optimisticOption));
         assert(optimisticOption.value === 20);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("getCause", () =>
       Effect.gen(function* () {
@@ -199,8 +181,7 @@ describe("AsyncData", () => {
         assert(Option.isNone(AsyncData.getCause(AsyncData.NoData)));
         assert(Option.isNone(AsyncData.getCause(AsyncData.loading())));
         assert(Option.isNone(AsyncData.getCause(AsyncData.success(1))));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("getError", () =>
       Effect.gen(function* () {
@@ -213,8 +194,7 @@ describe("AsyncData", () => {
         assert(Option.isNone(AsyncData.getError(AsyncData.NoData)));
         assert(Option.isNone(AsyncData.getError(AsyncData.loading())));
         assert(Option.isNone(AsyncData.getError(AsyncData.success(1))));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 
   describe("transformations", () => {
@@ -233,8 +213,7 @@ describe("AsyncData", () => {
         assert(mappedOptimistic.value === 20);
         assert(AsyncData.isSuccess(mappedOptimistic.previous));
         assert(mappedOptimistic.previous.value === 10);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("map preserves progress", () =>
       Effect.gen(function* () {
@@ -244,8 +223,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isSuccess(mapped));
         assert(mapped.progress?.loaded === 50);
         assert(mapped.progress?.total === 100);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("flatMap", () =>
       Effect.gen(function* () {
@@ -266,8 +244,7 @@ describe("AsyncData", () => {
         );
         assert(AsyncData.isOptimistic(flatMappedOptimistic2));
         assert(flatMappedOptimistic2.value === 20);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("mapError", () =>
       Effect.gen(function* () {
@@ -285,8 +262,7 @@ describe("AsyncData", () => {
         const mappedOptimistic = AsyncData.mapError(optimistic, (e) => `mapped: ${e}`);
         assert(AsyncData.isOptimistic(mappedOptimistic));
         assert(AsyncData.isFailure(mappedOptimistic.previous));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("mapError preserves progress", () =>
       Effect.gen(function* () {
@@ -296,8 +272,7 @@ describe("AsyncData", () => {
         const mapped = AsyncData.mapError(data, (e) => `mapped: ${e}`);
         assert(AsyncData.isFailure(mapped));
         assert(mapped.progress?.loaded === 50);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 
   describe("utilities", () => {
@@ -306,8 +281,7 @@ describe("AsyncData", () => {
         const data = AsyncData.NoData;
         const started = AsyncData.startLoading(data);
         assert(AsyncData.isLoading(started));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("startLoading from Success", () =>
       Effect.gen(function* () {
@@ -317,8 +291,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isSuccess(started));
         assert(started.value === 42);
         assert(started.progress?.loaded === 50);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("startLoading from Failure", () =>
       Effect.gen(function* () {
@@ -329,8 +302,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isFailure(started));
         assert(started.cause === cause);
         assert(started.progress?.loaded === 50);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("startLoading from Optimistic", () =>
       Effect.gen(function* () {
@@ -342,8 +314,7 @@ describe("AsyncData", () => {
         assert(started.value === 20);
         assert(AsyncData.isSuccess(started.previous));
         assert(started.previous.progress?.loaded === 50);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("stopLoading from Success with progress", () =>
       Effect.gen(function* () {
@@ -353,8 +324,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isSuccess(stopped));
         assert(stopped.value === 42);
         assert(stopped.progress === undefined);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("stopLoading from Failure with progress", () =>
       Effect.gen(function* () {
@@ -365,8 +335,7 @@ describe("AsyncData", () => {
         assert(AsyncData.isFailure(stopped));
         assert(stopped.cause === cause);
         assert(stopped.progress === undefined);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("stopLoading from Optimistic", () =>
       Effect.gen(function* () {
@@ -377,16 +346,14 @@ describe("AsyncData", () => {
         assert(stopped.value === 20);
         assert(AsyncData.isSuccess(stopped.previous));
         assert(stopped.previous.progress === undefined);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("stopLoading from NoData", () =>
       Effect.gen(function* () {
         const data = AsyncData.NoData;
         const stopped = AsyncData.stopLoading(data);
         assert(AsyncData.isNoData(stopped));
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("match", () =>
       Effect.gen(function* () {
@@ -437,8 +404,7 @@ describe("AsyncData", () => {
           Optimistic: (value) => `optimistic-${value}`,
         });
         assert(optimisticResult === "optimistic-20");
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("fromExit Success", () =>
       Effect.gen(function* () {
@@ -446,8 +412,7 @@ describe("AsyncData", () => {
         const data = AsyncData.fromExit(exit);
         assert(AsyncData.isSuccess(data));
         assert(data.value === 42);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("fromExit Failure", () =>
       Effect.gen(function* () {
@@ -456,8 +421,7 @@ describe("AsyncData", () => {
         const data = AsyncData.fromExit(exit);
         assert(AsyncData.isFailure(data));
         assert(data.cause === cause);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("fromResult Success", () =>
       Effect.gen(function* () {
@@ -465,8 +429,7 @@ describe("AsyncData", () => {
         const data = AsyncData.fromResult(result);
         assert(AsyncData.isSuccess(data));
         assert(data.value === 42);
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
 
     it("fromResult Failure", () =>
       Effect.gen(function* () {
@@ -476,7 +439,6 @@ describe("AsyncData", () => {
         const error = Cause.findErrorOption(data.cause);
         assert(Option.isSome(error));
         assert(error.value === "error");
-      }).pipe(Effect.scoped, Effect.runPromise),
-    );
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 });

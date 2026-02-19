@@ -1,7 +1,7 @@
-const byteToHex: Array<string> = []
+const byteToHex: Array<string> = [];
 
 for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).slice(1))
+  byteToHex.push((i + 0x100).toString(16).slice(1));
 }
 
 export function uuidStringify(seed: Uint8Array): string {
@@ -25,6 +25,6 @@ export function uuidStringify(seed: Uint8Array): string {
     byteToHex[seed[12]],
     byteToHex[seed[13]],
     byteToHex[seed[14]],
-    byteToHex[seed[15]]
-  ].join("")
+    byteToHex[seed[15]],
+  ].join("");
 }

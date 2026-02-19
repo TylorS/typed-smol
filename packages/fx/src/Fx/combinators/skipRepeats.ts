@@ -1,8 +1,8 @@
-import { equals } from "effect/Equal"
-import type { Fx } from "../Fx.js"
-import { skipRepeatsWith } from "./skipRepeatsWith.js"
+import { equals } from "effect/Equal";
+import type { Fx } from "../Fx.js";
+import { skipRepeatsWith } from "./skipRepeatsWith.js";
 
-const skipRepeats_ = skipRepeatsWith<any>(equals)
+const skipRepeats_ = skipRepeatsWith<any>(equals);
 
 /**
  * Drops elements that are equal to the previous element using standard equality.
@@ -12,4 +12,4 @@ const skipRepeats_ = skipRepeatsWith<any>(equals)
  * @since 1.0.0
  * @category combinators
  */
-export const skipRepeats: <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R> = skipRepeats_
+export const skipRepeats: <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R> = skipRepeats_;

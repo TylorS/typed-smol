@@ -1,10 +1,10 @@
 // oxlint-disable typescript/no-redundant-type-constituents
 // oxlint-disable typescript/no-duplicate-type-constituents
 
-import type * as Effect from "effect/Effect"
-import type * as Stream from "effect/Stream"
-import type { Fx } from "@typed/fx"
-import type { RenderEvent } from "./RenderEvent.js"
+import type * as Effect from "effect/Effect";
+import type * as Stream from "effect/Stream";
+import type { Fx } from "@typed/fx";
+import type { RenderEvent } from "./RenderEvent.js";
 
 /**
  * Represents any value that can be rendered into a template.
@@ -52,7 +52,7 @@ export type Renderable<A, E = never, R = never> =
   | ReadonlyArray<Renderable<A, E, R>>
   | Effect.Effect<A, E, R>
   | Stream.Stream<A, E, R>
-  | Fx.Fx<A, E, R>
+  | Fx.Fx<A, E, R>;
 
 export declare namespace Renderable {
   /**
@@ -62,7 +62,7 @@ export declare namespace Renderable {
     | Renderable<any, any, any>
     | Renderable<any, never, never>
     | Renderable<never, any, any>
-    | Renderable<never, never, any>
+    | Renderable<never, never, any>;
 
   /**
    * The basic primitive types that can be rendered directly.
@@ -75,7 +75,7 @@ export declare namespace Renderable {
     | null
     | undefined
     | void
-    | RenderEvent
+    | RenderEvent;
 
   /**
    * Extracts the required services from a Renderable type.
@@ -83,7 +83,7 @@ export declare namespace Renderable {
   export type Services<T> =
     | Fx.Services<T>
     | (T extends Stream.Stream<any, any, any> ? Stream.Services<T> : never)
-    | Effect.Services<T>
+    | Effect.Services<T>;
 
   /**
    * Extracts the error type from a Renderable type.
@@ -91,7 +91,7 @@ export declare namespace Renderable {
   export type Error<T> =
     | Fx.Error<T>
     | (T extends Stream.Stream<any, any, any> ? Stream.Error<T> : never)
-    | Effect.Error<T>
+    | Effect.Error<T>;
 
   /**
    * Extracts the success type from a Renderable type.
@@ -99,7 +99,7 @@ export declare namespace Renderable {
   export type Success<T> =
     | Fx.Success<T>
     | (T extends Stream.Stream<any, any, any> ? Stream.Success<T> : never)
-    | Effect.Success<T>
+    | Effect.Success<T>;
 
   // Helpers for arbitrary objects
 
@@ -109,9 +109,13 @@ export declare namespace Renderable {
    */
   export type ServicesFromObject<T> = [
     {
-      [K in keyof T]: T[K] extends (...args: Array<any>) => any ? Services<ReturnType<T[K]>> : Services<T[K]>
-    }[keyof T]
-  ] extends [infer U] ? U : never
+      [K in keyof T]: T[K] extends (...args: Array<any>) => any
+        ? Services<ReturnType<T[K]>>
+        : Services<T[K]>;
+    }[keyof T],
+  ] extends [infer U]
+    ? U
+    : never;
 
   /**
    * Traverse all keys in an object and extract the error from each value. If
@@ -119,7 +123,11 @@ export declare namespace Renderable {
    */
   export type ErrorFromObject<T> = [
     {
-      [K in keyof T]: T[K] extends (...args: Array<any>) => any ? Error<ReturnType<T[K]>> : Error<T[K]>
-    }[keyof T]
-  ] extends [infer U] ? U : never
+      [K in keyof T]: T[K] extends (...args: Array<any>) => any
+        ? Error<ReturnType<T[K]>>
+        : Error<T[K]>;
+    }[keyof T],
+  ] extends [infer U]
+    ? U
+    : never;
 }

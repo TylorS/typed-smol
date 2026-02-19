@@ -1,9 +1,9 @@
-import * as Effect from "effect/Effect"
-import type * as Fiber from "effect/Fiber"
-import { dual } from "effect/Function"
-import { take } from "../combinators/take.js"
-import type { Fx } from "../Fx.js"
-import { observe } from "./observe.js"
+import * as Effect from "effect/Effect";
+import type * as Fiber from "effect/Fiber";
+import { dual } from "effect/Function";
+import { take } from "../combinators/take.js";
+import type { Fx } from "../Fx.js";
+import { observe } from "./observe.js";
 
 /**
  * Collects all values emitted by an `Fx` into an array.
@@ -14,16 +14,16 @@ import { observe } from "./observe.js"
  * @category runners
  */
 export const collectAll = <A, E = never, R = never>(
-  fx: Fx<A, E, R>
+  fx: Fx<A, E, R>,
 ): Effect.Effect<ReadonlyArray<A>, E, R> =>
   Effect.suspend(() => {
-    const values: Array<A> = []
+    const values: Array<A> = [];
 
     return fx.pipe(
       observe((value) => Effect.sync(() => values.push(value))),
-      (_) => Effect.map(_.asEffect(), () => values)
-    )
-  })
+      (_) => Effect.map(_.asEffect(), () => values),
+    );
+  });
 
 /**
  * Forks the collection of all values from an `Fx`.
@@ -34,12 +34,12 @@ export const collectAll = <A, E = never, R = never>(
  * @category runners
  */
 export const collectAllFork = <A, E = never, R = never>(
-  fx: Fx<A, E, R>
+  fx: Fx<A, E, R>,
 ): Effect.Effect<Fiber.Fiber<ReadonlyArray<A>, E>, never, R> =>
   Effect.forkChild(collectAll(fx), {
     startImmediately: true,
-    uninterruptible: false
-  })
+    uninterruptible: false,
+  });
 
 /**
  * Collects the first `n` values emitted by an `Fx` into an array.
@@ -51,22 +51,14 @@ export const collectAllFork = <A, E = never, R = never>(
  * @category runners
  */
 export const collectUpTo: {
-  (
-    upTo: number
-  ): <A, E, R>(fx: Fx<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>
+  (upTo: number): <A, E, R>(fx: Fx<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
 
-  <A, E, R>(
-    fx: Fx<A, E, R>,
-    upTo: number
-  ): Effect.Effect<ReadonlyArray<A>, E, R>
+  <A, E, R>(fx: Fx<A, E, R>, upTo: number): Effect.Effect<ReadonlyArray<A>, E, R>;
 } = dual(
   2,
   <A, E, R>(fx: Fx<A, E, R>, upTo: number): Effect.Effect<ReadonlyArray<A>, E, R> =>
-    fx.pipe(
-      take(upTo),
-      collectAll
-    )
-)
+    fx.pipe(take(upTo), collectAll),
+);
 
 /**
  * Forks the collection of up to `n` values from an `Fx`.
@@ -79,9 +71,9 @@ export const collectUpTo: {
  */
 export const collectUpToFork = <A, E = never, R = never>(
   fx: Fx<A, E, R>,
-  upTo: number
+  upTo: number,
 ): Effect.Effect<Fiber.Fiber<ReadonlyArray<A>, E>, never, R> =>
   Effect.forkChild(collectUpTo(fx, upTo), {
     startImmediately: true,
-    uninterruptible: false
-  })
+    uninterruptible: false,
+  });

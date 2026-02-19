@@ -1,10 +1,10 @@
-import type * as Effect from "effect/Effect"
-import { dual, flow } from "effect/Function"
-import type * as Scope from "effect/Scope"
-import { fromEffect } from "../constructors/fromEffect.js"
-import type { Fx } from "../Fx.js"
-import { exhaustLatestMap } from "./exhaustLatestMap.js"
-import type { FlatMapEffectLike } from "./flatMapEffect.js"
+import type * as Effect from "effect/Effect";
+import { dual, flow } from "effect/Function";
+import type * as Scope from "effect/Scope";
+import { fromEffect } from "../constructors/fromEffect.js";
+import type { Fx } from "../Fx.js";
+import { exhaustLatestMap } from "./exhaustLatestMap.js";
+import type { FlatMapEffectLike } from "./flatMapEffect.js";
 
 /**
  * Maps each element of an Fx to an Effect, but only runs one effect at a time.
@@ -16,7 +16,10 @@ import type { FlatMapEffectLike } from "./flatMapEffect.js"
  * @since 1.0.0
  * @category combinators
  */
-export const exhaustLatestMapEffect: FlatMapEffectLike = dual(2, <A, E, R, B, E2, R2>(
-  self: Fx<A, E, R>,
-  f: (a: A) => Effect.Effect<B, E2, R2>
-): Fx<B, E | E2, R | R2 | Scope.Scope> => exhaustLatestMap(self, flow(f, fromEffect)))
+export const exhaustLatestMapEffect: FlatMapEffectLike = dual(
+  2,
+  <A, E, R, B, E2, R2>(
+    self: Fx<A, E, R>,
+    f: (a: A) => Effect.Effect<B, E2, R2>,
+  ): Fx<B, E | E2, R | R2 | Scope.Scope> => exhaustLatestMap(self, flow(f, fromEffect)),
+);

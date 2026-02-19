@@ -1,7 +1,7 @@
-import type * as Duration from "effect/Duration"
-import { spaced } from "effect/Schedule"
-import type { Fx } from "../Fx.js"
-import { fromSchedule } from "./fromSchedule.js"
+import type * as Duration from "effect/Duration";
+import { spaced } from "effect/Schedule";
+import type { Fx } from "../Fx.js";
+import { fromSchedule } from "./fromSchedule.js";
 
 /**
  * Creates an Fx that emits a `void` value periodically.
@@ -11,4 +11,5 @@ import { fromSchedule } from "./fromSchedule.js"
  * @since 1.0.0
  * @category constructors
  */
-export const periodic = (period: Duration.DurationInput): Fx<void> => /*#__PURE__*/ fromSchedule(spaced(period))
+export const periodic = (period: Duration.DurationInput): Fx<void> =>
+  /*#__PURE__*/ fromSchedule(spaced(period));

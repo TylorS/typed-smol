@@ -1,7 +1,7 @@
-import * as Cause from "effect/Cause"
-import { flow } from "effect/Function"
-import type { Fx } from "../Fx.js"
-import { failCause } from "./failCause.js"
+import * as Cause from "effect/Cause";
+import { flow } from "effect/Function";
+import type { Fx } from "../Fx.js";
+import { failCause } from "./failCause.js";
 
 /**
  * Creates an Fx that immediately terminates with a defect (unexpected error).
@@ -11,4 +11,7 @@ import { failCause } from "./failCause.js"
  * @since 1.0.0
  * @category constructors
  */
-export const die: (defect: unknown) => Fx<never, never, never> = /*#__PURE__*/ flow(Cause.die, failCause)
+export const die: (defect: unknown) => Fx<never, never, never> = /*#__PURE__*/ flow(
+  Cause.die,
+  failCause,
+);

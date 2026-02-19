@@ -1,5 +1,4 @@
-import assert from "node:assert";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import { Effect } from "effect";
 import * as Uuid7 from "@typed/id/Uuid7";
 import { fromWindow } from "./fromWindow.js";
@@ -56,8 +55,7 @@ describe("typed/navigation", () => {
             currentIndex: 1,
           }),
         ),
-      )
-    );
+      ));
 
     it("initialMemory creates navigation from URL", () =>
       Effect.runPromise(
@@ -78,8 +76,7 @@ describe("typed/navigation", () => {
             state: { test: "initial-data" },
           }),
         ),
-      )
-    );
+      ));
 
     it("navigate adds new entry", () =>
       Effect.runPromise(
@@ -99,8 +96,7 @@ describe("typed/navigation", () => {
             currentIndex: 0,
           }),
         ),
-      )
-    );
+      ));
 
     it("back navigates to previous entry", () =>
       Effect.runPromise(
@@ -123,8 +119,7 @@ describe("typed/navigation", () => {
             currentIndex: 1,
           }),
         ),
-      )
-    );
+      ));
 
     it("forward navigates to next entry", () =>
       Effect.runPromise(
@@ -147,8 +142,7 @@ describe("typed/navigation", () => {
             currentIndex: 0,
           }),
         ),
-      )
-    );
+      ));
 
     it("limits entries to maxEntries when navigating", () =>
       Effect.runPromise(
@@ -175,8 +169,7 @@ describe("typed/navigation", () => {
             maxEntries: 3,
           }),
         ),
-      )
-    );
+      ));
 
     it("maintains correct index when entries are limited", () =>
       Effect.runPromise(
@@ -203,8 +196,7 @@ describe("typed/navigation", () => {
             maxEntries: 2,
           }),
         ),
-      )
-    );
+      ));
 
     it("can go back after entries are limited", () =>
       Effect.runPromise(
@@ -225,8 +217,7 @@ describe("typed/navigation", () => {
             maxEntries: 2,
           }),
         ),
-      )
-    );
+      ));
   });
 });
 
@@ -267,11 +258,11 @@ function mockWindow(): Window {
     },
     pushState(_state: unknown, _unused: string, url: string) {
       historyState = _state;
-      (mockLocation as { href: string }).href = url;
+      mockLocation.href = url;
     },
     replaceState(_state: unknown, _unused: string, url: string) {
       historyState = _state;
-      (mockLocation as { href: string }).href = url;
+      mockLocation.href = url;
     },
     go(_delta: number) {
       popstateListeners.forEach((fn) => fn());

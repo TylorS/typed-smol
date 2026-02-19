@@ -3,21 +3,23 @@
  * @since 1.18.0
  */
 
-import * as BigDecimal from "effect/BigDecimal"
-import type * as Effect from "effect/Effect"
-import { dual } from "effect/Function"
-import type * as Scope from "effect/Scope"
-import type * as Fx from "../Fx/index.js"
-import * as RefSubject from "./RefSubject.js"
+import * as BigDecimal from "effect/BigDecimal";
+import type * as Effect from "effect/Effect";
+import { dual } from "effect/Function";
+import type * as Scope from "effect/Scope";
+import type * as Fx from "../Fx/index.js";
+import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefBigDecimal is a RefSubject specialized over a BigDecimal value.
  * @since 1.18.0
  * @category models
  */
-export interface RefBigDecimal<in out E = never, out R = never>
-  extends RefSubject.RefSubject<BigDecimal.BigDecimal, E, R>
-{}
+export interface RefBigDecimal<in out E = never, out R = never> extends RefSubject.RefSubject<
+  BigDecimal.BigDecimal,
+  E,
+  R
+> {}
 
 /**
  * Creates a new `RefBigDecimal` from a BigDecimal, `Effect`, or `Fx`.
@@ -41,9 +43,9 @@ export function make<E = never, R = never>(
   initial:
     | BigDecimal.BigDecimal
     | Effect.Effect<BigDecimal.BigDecimal, E, R>
-    | Fx.Fx<BigDecimal.BigDecimal, E, R>
+    | Fx.Fx<BigDecimal.BigDecimal, E, R>,
 ): Effect.Effect<RefBigDecimal<E>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq: BigDecimal.Equivalence })
+  return RefSubject.make(initial, { eq: BigDecimal.Equivalence });
 }
 
 // ========================================
@@ -56,11 +58,16 @@ export function make<E = never, R = never>(
  * @category computed
  */
 export const add: {
-  (that: BigDecimal.BigDecimal): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<BigDecimal.BigDecimal, E, R>
+  (
+    that: BigDecimal.BigDecimal,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
+  <E, R>(
+    ref: RefBigDecimal<E, R>,
+    that: BigDecimal.BigDecimal,
+  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
 } = dual(2, function add<E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal) {
-  return RefSubject.map(ref, (self) => BigDecimal.sum(self, that))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.sum(self, that));
+});
 
 /**
  * Subtract a BigDecimal from the current state of a RefBigDecimal.
@@ -68,11 +75,16 @@ export const add: {
  * @category computed
  */
 export const subtract: {
-  (that: BigDecimal.BigDecimal): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<BigDecimal.BigDecimal, E, R>
+  (
+    that: BigDecimal.BigDecimal,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
+  <E, R>(
+    ref: RefBigDecimal<E, R>,
+    that: BigDecimal.BigDecimal,
+  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
 } = dual(2, function subtract<E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal) {
-  return RefSubject.map(ref, (self) => BigDecimal.subtract(self, that))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.subtract(self, that));
+});
 
 /**
  * Multiply the current state of a RefBigDecimal by a BigDecimal.
@@ -80,11 +92,16 @@ export const subtract: {
  * @category computed
  */
 export const multiply: {
-  (that: BigDecimal.BigDecimal): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<BigDecimal.BigDecimal, E, R>
+  (
+    that: BigDecimal.BigDecimal,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
+  <E, R>(
+    ref: RefBigDecimal<E, R>,
+    that: BigDecimal.BigDecimal,
+  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
 } = dual(2, function multiply<E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal) {
-  return RefSubject.map(ref, (self) => BigDecimal.multiply(self, that))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.multiply(self, that));
+});
 
 /**
  * Divide the current state of a RefBigDecimal by a BigDecimal.
@@ -93,31 +110,35 @@ export const multiply: {
  */
 export const divide: {
   (
-    that: BigDecimal.BigDecimal
-  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal | undefined, E, R>
+    that: BigDecimal.BigDecimal,
+  ): <E, R>(
+    ref: RefBigDecimal<E, R>,
+  ) => RefSubject.Computed<BigDecimal.BigDecimal | undefined, E, R>;
   <E, R>(
     ref: RefBigDecimal<E, R>,
-    that: BigDecimal.BigDecimal
-  ): RefSubject.Computed<BigDecimal.BigDecimal | undefined, E, R>
+    that: BigDecimal.BigDecimal,
+  ): RefSubject.Computed<BigDecimal.BigDecimal | undefined, E, R>;
 } = dual(2, function divide<E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal) {
-  return RefSubject.map(ref, (self) => BigDecimal.divide(self, that))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.divide(self, that));
+});
 
 /**
  * Get the absolute value of the current state of a RefBigDecimal.
  * @since 1.18.0
  * @category computed
  */
-export const abs = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<BigDecimal.BigDecimal, E, R> =>
-  RefSubject.map(ref, BigDecimal.abs)
+export const abs = <E, R>(
+  ref: RefBigDecimal<E, R>,
+): RefSubject.Computed<BigDecimal.BigDecimal, E, R> => RefSubject.map(ref, BigDecimal.abs);
 
 /**
  * Negate the current state of a RefBigDecimal.
  * @since 1.18.0
  * @category computed
  */
-export const negate = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<BigDecimal.BigDecimal, E, R> =>
-  RefSubject.map(ref, BigDecimal.negate)
+export const negate = <E, R>(
+  ref: RefBigDecimal<E, R>,
+): RefSubject.Computed<BigDecimal.BigDecimal, E, R> => RefSubject.map(ref, BigDecimal.negate);
 
 /**
  * Round the current state of a RefBigDecimal.
@@ -125,19 +146,20 @@ export const negate = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<BigD
  * @category computed
  */
 export const round: {
-  (options?: { scale?: number; mode?: BigDecimal.RoundingMode }): <E, R>(
-    ref: RefBigDecimal<E, R>
-  ) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>
+  (options?: {
+    scale?: number;
+    mode?: BigDecimal.RoundingMode;
+  }): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
   <E, R>(
     ref: RefBigDecimal<E, R>,
-    options?: { scale?: number; mode?: BigDecimal.RoundingMode }
-  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>
-} = dual(2, function round<E, R>(
-  ref: RefBigDecimal<E, R>,
-  options?: { scale?: number; mode?: BigDecimal.RoundingMode }
-) {
-  return RefSubject.map(ref, (self) => BigDecimal.round(self, options))
-})
+    options?: { scale?: number; mode?: BigDecimal.RoundingMode },
+  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
+} = dual(2, function round<
+  E,
+  R,
+>(ref: RefBigDecimal<E, R>, options?: { scale?: number; mode?: BigDecimal.RoundingMode }) {
+  return RefSubject.map(ref, (self) => BigDecimal.round(self, options));
+});
 
 /**
  * Truncate the current state of a RefBigDecimal.
@@ -145,11 +167,16 @@ export const round: {
  * @category computed
  */
 export const truncate: {
-  (scale?: number): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, scale?: number): RefSubject.Computed<BigDecimal.BigDecimal, E, R>
+  (
+    scale?: number,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
+  <E, R>(
+    ref: RefBigDecimal<E, R>,
+    scale?: number,
+  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
 } = dual(2, function truncate<E, R>(ref: RefBigDecimal<E, R>, scale?: number) {
-  return RefSubject.map(ref, (self) => BigDecimal.truncate(self, scale))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.truncate(self, scale));
+});
 
 /**
  * Calculate the ceiling of the current state of a RefBigDecimal.
@@ -157,11 +184,16 @@ export const truncate: {
  * @category computed
  */
 export const ceil: {
-  (scale?: number): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, scale?: number): RefSubject.Computed<BigDecimal.BigDecimal, E, R>
+  (
+    scale?: number,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
+  <E, R>(
+    ref: RefBigDecimal<E, R>,
+    scale?: number,
+  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
 } = dual(2, function ceil<E, R>(ref: RefBigDecimal<E, R>, scale?: number) {
-  return RefSubject.map(ref, (self) => BigDecimal.ceil(self, scale))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.ceil(self, scale));
+});
 
 /**
  * Calculate the floor of the current state of a RefBigDecimal.
@@ -169,11 +201,16 @@ export const ceil: {
  * @category computed
  */
 export const floor: {
-  (scale?: number): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, scale?: number): RefSubject.Computed<BigDecimal.BigDecimal, E, R>
+  (
+    scale?: number,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
+  <E, R>(
+    ref: RefBigDecimal<E, R>,
+    scale?: number,
+  ): RefSubject.Computed<BigDecimal.BigDecimal, E, R>;
 } = dual(2, function floor<E, R>(ref: RefBigDecimal<E, R>, scale?: number) {
-  return RefSubject.map(ref, (self) => BigDecimal.floor(self, scale))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.floor(self, scale));
+});
 
 /**
  * Check if the current state of a RefBigDecimal is zero.
@@ -181,7 +218,7 @@ export const floor: {
  * @category computed
  */
 export const isZero = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, BigDecimal.isZero)
+  RefSubject.map(ref, BigDecimal.isZero);
 
 /**
  * Check if the current state of a RefBigDecimal is negative.
@@ -189,7 +226,7 @@ export const isZero = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<bool
  * @category computed
  */
 export const isNegative = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, BigDecimal.isNegative)
+  RefSubject.map(ref, BigDecimal.isNegative);
 
 /**
  * Check if the current state of a RefBigDecimal is positive.
@@ -197,7 +234,7 @@ export const isNegative = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<
  * @category computed
  */
 export const isPositive = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, BigDecimal.isPositive)
+  RefSubject.map(ref, BigDecimal.isPositive);
 
 /**
  * Check if the current state of a RefBigDecimal is an integer.
@@ -205,7 +242,7 @@ export const isPositive = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<
  * @category computed
  */
 export const isInteger = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, BigDecimal.isInteger)
+  RefSubject.map(ref, BigDecimal.isInteger);
 
 /**
  * Get the sign of the current state of a RefBigDecimal.
@@ -213,7 +250,7 @@ export const isInteger = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<b
  * @category computed
  */
 export const sign = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<number, E, R> =>
-  RefSubject.map(ref, BigDecimal.sign)
+  RefSubject.map(ref, BigDecimal.sign);
 
 /**
  * Check if the current state of a RefBigDecimal is less than a BigDecimal.
@@ -221,11 +258,13 @@ export const sign = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<number
  * @category computed
  */
 export const isLessThan: {
-  (that: BigDecimal.BigDecimal): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<boolean, E, R>
+  (
+    that: BigDecimal.BigDecimal,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function isLessThan<E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal) {
-  return RefSubject.map(ref, (self) => BigDecimal.isLessThan(self, that))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.isLessThan(self, that));
+});
 
 /**
  * Check if the current state of a RefBigDecimal is greater than a BigDecimal.
@@ -233,11 +272,13 @@ export const isLessThan: {
  * @category computed
  */
 export const isGreaterThan: {
-  (that: BigDecimal.BigDecimal): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<boolean, E, R>
+  (
+    that: BigDecimal.BigDecimal,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function isGreaterThan<E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal) {
-  return RefSubject.map(ref, (self) => BigDecimal.isGreaterThan(self, that))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.isGreaterThan(self, that));
+});
 
 /**
  * Check if the current state of a RefBigDecimal equals a BigDecimal.
@@ -245,8 +286,10 @@ export const isGreaterThan: {
  * @category computed
  */
 export const equals: {
-  (that: BigDecimal.BigDecimal): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<boolean, E, R>
+  (
+    that: BigDecimal.BigDecimal,
+  ): <E, R>(ref: RefBigDecimal<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function equals<E, R>(ref: RefBigDecimal<E, R>, that: BigDecimal.BigDecimal) {
-  return RefSubject.map(ref, (self) => BigDecimal.equals(self, that))
-})
+  return RefSubject.map(ref, (self) => BigDecimal.equals(self, that));
+});

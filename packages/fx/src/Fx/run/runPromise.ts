@@ -1,8 +1,8 @@
-import type { RunOptions } from "effect/Effect"
-import * as Effect from "effect/Effect"
-import type * as Exit from "effect/Exit"
-import type { Fx } from "../Fx.js"
-import { drain } from "./observe.js"
+import type { RunOptions } from "effect/Effect";
+import * as Effect from "effect/Effect";
+import type * as Exit from "effect/Exit";
+import type { Fx } from "../Fx.js";
+import { drain } from "./observe.js";
 
 /**
  * Runs an `Fx` stream to completion and returns a Promise of the Exit.
@@ -15,8 +15,8 @@ import { drain } from "./observe.js"
  */
 export const runPromiseExit = <A, E>(
   fx: Fx<A, E>,
-  options?: RunOptions
-): Promise<Exit.Exit<void, E>> => Effect.runPromiseExit(drain(fx), options)
+  options?: RunOptions,
+): Promise<Exit.Exit<void, E>> => Effect.runPromiseExit(drain(fx), options);
 
 /**
  * Runs an `Fx` stream to completion and returns a Promise.
@@ -28,7 +28,5 @@ export const runPromiseExit = <A, E>(
  * @since 1.0.0
  * @category runners
  */
-export const runPromise = <A, E>(
-  fx: Fx<A, E>,
-  options?: RunOptions
-): Promise<unknown> => Effect.runPromise(drain(fx), options)
+export const runPromise = <A, E>(fx: Fx<A, E>, options?: RunOptions): Promise<unknown> =>
+  Effect.runPromise(drain(fx), options);

@@ -1,6 +1,6 @@
-import * as Effect from "effect/Effect"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import * as Effect from "effect/Effect";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Unwraps an Effect that produces an Fx into a single Fx.
@@ -11,11 +11,11 @@ import type { Fx } from "../Fx.js"
  * @category combinators
  */
 export const unwrap = <A, E, R, E2, R2>(
-  effect: Effect.Effect<Fx<A, E, R>, E2, R2>
+  effect: Effect.Effect<Fx<A, E, R>, E2, R2>,
 ): Fx<A, E | E2, R | R2> =>
   make<A, E | E2, R | R2>((sink) =>
     Effect.matchCauseEffect(effect, {
       onFailure: (cause) => sink.onFailure(cause),
-      onSuccess: (fx) => fx.run(sink)
-    })
-  )
+      onSuccess: (fx) => fx.run(sink),
+    }),
+  );

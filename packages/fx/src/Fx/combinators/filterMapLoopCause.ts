@@ -1,9 +1,9 @@
-import type * as Cause from "effect/Cause"
-import { dual } from "effect/Function"
-import type * as Option from "effect/Option"
-import * as sinkCore from "../../Sink/combinators.js"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import type * as Cause from "effect/Cause";
+import { dual } from "effect/Function";
+import type * as Option from "effect/Option";
+import * as sinkCore from "../../Sink/combinators.js";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Loops over the failure causes of an Fx with an accumulator, potentially transforming or filtering them.
@@ -18,16 +18,19 @@ import type { Fx } from "../Fx.js"
 export const filterMapLoopCause: {
   <B, A, C>(
     seed: B,
-    f: (acc: B, a: Cause.Cause<A>) => readonly [Option.Option<Cause.Cause<C>>, B]
-  ): <E, R>(self: Fx<A, E, R>) => Fx<A, C, R>
+    f: (acc: B, a: Cause.Cause<A>) => readonly [Option.Option<Cause.Cause<C>>, B],
+  ): <E, R>(self: Fx<A, E, R>) => Fx<A, C, R>;
 
   <A, E, R, B, C>(
     self: Fx<A, E, R>,
     seed: B,
-    f: (acc: B, a: Cause.Cause<E>) => readonly [Option.Option<Cause.Cause<C>>, B]
-  ): Fx<A, C, R>
-} = dual(3, <A, E, R, B, C>(
-  self: Fx<A, E, R>,
-  seed: B,
-  f: (acc: B, a: Cause.Cause<E>) => readonly [Option.Option<Cause.Cause<C>>, B]
-): Fx<A, C, R> => make<A, C, R>((sink) => self.run(sinkCore.filterMapLoopCause(sink, seed, f))))
+    f: (acc: B, a: Cause.Cause<E>) => readonly [Option.Option<Cause.Cause<C>>, B],
+  ): Fx<A, C, R>;
+} = dual(
+  3,
+  <A, E, R, B, C>(
+    self: Fx<A, E, R>,
+    seed: B,
+    f: (acc: B, a: Cause.Cause<E>) => readonly [Option.Option<Cause.Cause<C>>, B],
+  ): Fx<A, C, R> => make<A, C, R>((sink) => self.run(sinkCore.filterMapLoopCause(sink, seed, f))),
+);

@@ -3,24 +3,26 @@
  * @since 1.18.0
  */
 
-import type * as Effect from "effect/Effect"
-import { equals } from "effect/Equal"
-import { dual } from "effect/Function"
-import * as HashRing from "effect/HashRing"
-import * as Option from "effect/Option"
-import type * as PrimaryKey from "effect/PrimaryKey"
-import type * as Scope from "effect/Scope"
+import type * as Effect from "effect/Effect";
+import { equals } from "effect/Equal";
+import { dual } from "effect/Function";
+import * as HashRing from "effect/HashRing";
+import * as Option from "effect/Option";
+import type * as PrimaryKey from "effect/PrimaryKey";
+import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
-import * as RefSubject from "./RefSubject.js"
+import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefHashRing is a RefSubject specialized over a HashRing.
  * @since 1.18.0
  * @category models
  */
-export interface RefHashRing<in out A extends PrimaryKey.PrimaryKey, in out E = never, out R = never>
-  extends RefSubject.RefSubject<HashRing.HashRing<A>, E, R>
-{}
+export interface RefHashRing<
+  in out A extends PrimaryKey.PrimaryKey,
+  in out E = never,
+  out R = never,
+> extends RefSubject.RefSubject<HashRing.HashRing<A>, E, R> {}
 
 /**
  * Creates a new `RefHashRing` from a HashRing, `Effect`, or `Fx`.
@@ -31,9 +33,9 @@ export function make<A extends PrimaryKey.PrimaryKey, E, R>(
   initial:
     | HashRing.HashRing<A>
     | Effect.Effect<HashRing.HashRing<A>, E, R>
-    | Fx.Fx<HashRing.HashRing<A>, E, R>
+    | Fx.Fx<HashRing.HashRing<A>, E, R>,
 ): Effect.Effect<RefHashRing<A, E>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq: equals })
+  return RefSubject.make(initial, { eq: equals });
 }
 
 /**
@@ -42,15 +44,17 @@ export function make<A extends PrimaryKey.PrimaryKey, E, R>(
  * @category constructors
  */
 export function empty<A extends PrimaryKey.PrimaryKey, E, R>(options?: {
-  readonly baseWeight?: number
+  readonly baseWeight?: number;
 }): Effect.Effect<RefHashRing<A, E>, never, R | Scope.Scope> {
-  return RefSubject.make(HashRing.make<A>(options), { eq: equals })
+  return RefSubject.make(HashRing.make<A>(options), { eq: equals });
 }
 
 // Helper to copy a HashRing before mutation
-function copyRing<A extends PrimaryKey.PrimaryKey>(ring: HashRing.HashRing<A>): HashRing.HashRing<A> {
-  const newRing = HashRing.make<A>({ baseWeight: ring.baseWeight })
-  return HashRing.addMany(newRing, ring)
+function copyRing<A extends PrimaryKey.PrimaryKey>(
+  ring: HashRing.HashRing<A>,
+): HashRing.HashRing<A> {
+  const newRing = HashRing.make<A>({ baseWeight: ring.baseWeight });
+  return HashRing.addMany(newRing, ring);
 }
 
 // ========================================
@@ -65,23 +69,23 @@ function copyRing<A extends PrimaryKey.PrimaryKey>(ring: HashRing.HashRing<A>): 
 export const add: {
   <A extends PrimaryKey.PrimaryKey>(
     node: A,
-    options?: { readonly weight?: number }
-  ): <E, R>(ref: RefHashRing<A, E, R>) => Effect.Effect<HashRing.HashRing<A>, E, R>
+    options?: { readonly weight?: number },
+  ): <E, R>(ref: RefHashRing<A, E, R>) => Effect.Effect<HashRing.HashRing<A>, E, R>;
   <A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
     node: A,
-    options?: { readonly weight?: number }
-  ): Effect.Effect<HashRing.HashRing<A>, E, R>
+    options?: { readonly weight?: number },
+  ): Effect.Effect<HashRing.HashRing<A>, E, R>;
 } = dual(
   (args) => RefSubject.isRefSubject(args[0]),
   function add<A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
     node: A,
-    options?: { readonly weight?: number }
+    options?: { readonly weight?: number },
   ) {
-    return RefSubject.update(ref, (ring) => HashRing.add(copyRing(ring), node, options))
-  }
-)
+    return RefSubject.update(ref, (ring) => HashRing.add(copyRing(ring), node, options));
+  },
+);
 
 /**
  * Add multiple nodes to the HashRing.
@@ -91,23 +95,23 @@ export const add: {
 export const addMany: {
   <A extends PrimaryKey.PrimaryKey>(
     nodes: Iterable<A>,
-    options?: { readonly weight?: number }
-  ): <E, R>(ref: RefHashRing<A, E, R>) => Effect.Effect<HashRing.HashRing<A>, E, R>
+    options?: { readonly weight?: number },
+  ): <E, R>(ref: RefHashRing<A, E, R>) => Effect.Effect<HashRing.HashRing<A>, E, R>;
   <A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
     nodes: Iterable<A>,
-    options?: { readonly weight?: number }
-  ): Effect.Effect<HashRing.HashRing<A>, E, R>
+    options?: { readonly weight?: number },
+  ): Effect.Effect<HashRing.HashRing<A>, E, R>;
 } = dual(
   (args) => RefSubject.isRefSubject(args[0]),
   function addMany<A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
     nodes: Iterable<A>,
-    options?: { readonly weight?: number }
+    options?: { readonly weight?: number },
   ) {
-    return RefSubject.update(ref, (ring) => HashRing.addMany(copyRing(ring), nodes, options))
-  }
-)
+    return RefSubject.update(ref, (ring) => HashRing.addMany(copyRing(ring), nodes, options));
+  },
+);
 
 /**
  * Remove a node from the HashRing.
@@ -116,15 +120,19 @@ export const addMany: {
  */
 export const remove: {
   <A extends PrimaryKey.PrimaryKey>(
-    node: A
-  ): <E, R>(ref: RefHashRing<A, E, R>) => Effect.Effect<HashRing.HashRing<A>, E, R>
+    node: A,
+  ): <E, R>(ref: RefHashRing<A, E, R>) => Effect.Effect<HashRing.HashRing<A>, E, R>;
   <A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
-    node: A
-  ): Effect.Effect<HashRing.HashRing<A>, E, R>
-} = dual(2, function remove<A extends PrimaryKey.PrimaryKey, E, R>(ref: RefHashRing<A, E, R>, node: A) {
-  return RefSubject.update(ref, (ring) => HashRing.remove(copyRing(ring), node))
-})
+    node: A,
+  ): Effect.Effect<HashRing.HashRing<A>, E, R>;
+} = dual(2, function remove<
+  A extends PrimaryKey.PrimaryKey,
+  E,
+  R,
+>(ref: RefHashRing<A, E, R>, node: A) {
+  return RefSubject.update(ref, (ring) => HashRing.remove(copyRing(ring), node));
+});
 
 // ========================================
 // Computed
@@ -137,15 +145,19 @@ export const remove: {
  */
 export const has: {
   <A extends PrimaryKey.PrimaryKey>(
-    node: A
-  ): <E, R>(ref: RefHashRing<A, E, R>) => RefSubject.Computed<boolean, E, R>
+    node: A,
+  ): <E, R>(ref: RefHashRing<A, E, R>) => RefSubject.Computed<boolean, E, R>;
   <A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
-    node: A
-  ): RefSubject.Computed<boolean, E, R>
-} = dual(2, function has<A extends PrimaryKey.PrimaryKey, E, R>(ref: RefHashRing<A, E, R>, node: A) {
-  return RefSubject.map(ref, HashRing.has(node))
-})
+    node: A,
+  ): RefSubject.Computed<boolean, E, R>;
+} = dual(2, function has<
+  A extends PrimaryKey.PrimaryKey,
+  E,
+  R,
+>(ref: RefHashRing<A, E, R>, node: A) {
+  return RefSubject.map(ref, HashRing.has(node));
+});
 
 /**
  * Get the number of nodes in the HashRing.
@@ -153,8 +165,8 @@ export const has: {
  * @category computed
  */
 export const size = <A extends PrimaryKey.PrimaryKey, E, R>(
-  ref: RefHashRing<A, E, R>
-): RefSubject.Computed<number, E, R> => RefSubject.map(ref, (ring) => ring.nodes.size)
+  ref: RefHashRing<A, E, R>,
+): RefSubject.Computed<number, E, R> => RefSubject.map(ref, (ring) => ring.nodes.size);
 
 /**
  * Check if the HashRing is empty.
@@ -162,8 +174,8 @@ export const size = <A extends PrimaryKey.PrimaryKey, E, R>(
  * @category computed
  */
 export const isEmpty = <A extends PrimaryKey.PrimaryKey, E, R>(
-  ref: RefHashRing<A, E, R>
-): RefSubject.Computed<boolean, E, R> => RefSubject.map(ref, (ring) => ring.nodes.size === 0)
+  ref: RefHashRing<A, E, R>,
+): RefSubject.Computed<boolean, E, R> => RefSubject.map(ref, (ring) => ring.nodes.size === 0);
 
 /**
  * Get the node which should handle a given input string as a Computed.
@@ -172,16 +184,22 @@ export const isEmpty = <A extends PrimaryKey.PrimaryKey, E, R>(
  * @category computed
  */
 export const getNode: {
-  (input: string): <A extends PrimaryKey.PrimaryKey, E, R>(
-    ref: RefHashRing<A, E, R>
-  ) => RefSubject.Computed<A | undefined, E, R>
+  (
+    input: string,
+  ): <A extends PrimaryKey.PrimaryKey, E, R>(
+    ref: RefHashRing<A, E, R>,
+  ) => RefSubject.Computed<A | undefined, E, R>;
   <A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
-    input: string
-  ): RefSubject.Computed<A | undefined, E, R>
-} = dual(2, function getNode<A extends PrimaryKey.PrimaryKey, E, R>(ref: RefHashRing<A, E, R>, input: string) {
-  return RefSubject.map(ref, (ring) => HashRing.get(ring, input))
-})
+    input: string,
+  ): RefSubject.Computed<A | undefined, E, R>;
+} = dual(2, function getNode<
+  A extends PrimaryKey.PrimaryKey,
+  E,
+  R,
+>(ref: RefHashRing<A, E, R>, input: string) {
+  return RefSubject.map(ref, (ring) => HashRing.get(ring, input));
+});
 
 /**
  * Get shard distribution across nodes.
@@ -189,16 +207,22 @@ export const getNode: {
  * @category computed
  */
 export const getShards: {
-  (count: number): <A extends PrimaryKey.PrimaryKey, E, R>(
-    ref: RefHashRing<A, E, R>
-  ) => RefSubject.Computed<Array<A> | undefined, E, R>
+  (
+    count: number,
+  ): <A extends PrimaryKey.PrimaryKey, E, R>(
+    ref: RefHashRing<A, E, R>,
+  ) => RefSubject.Computed<Array<A> | undefined, E, R>;
   <A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
-    count: number
-  ): RefSubject.Computed<Array<A> | undefined, E, R>
-} = dual(2, function getShards<A extends PrimaryKey.PrimaryKey, E, R>(ref: RefHashRing<A, E, R>, count: number) {
-  return RefSubject.map(ref, (ring) => HashRing.getShards(ring, count))
-})
+    count: number,
+  ): RefSubject.Computed<Array<A> | undefined, E, R>;
+} = dual(2, function getShards<
+  A extends PrimaryKey.PrimaryKey,
+  E,
+  R,
+>(ref: RefHashRing<A, E, R>, count: number) {
+  return RefSubject.map(ref, (ring) => HashRing.getShards(ring, count));
+});
 
 /**
  * Get all nodes as an array.
@@ -206,8 +230,8 @@ export const getShards: {
  * @category computed
  */
 export const values = <A extends PrimaryKey.PrimaryKey, E, R>(
-  ref: RefHashRing<A, E, R>
-): RefSubject.Computed<Array<A>, E, R> => RefSubject.map(ref, (ring) => Array.from(ring))
+  ref: RefHashRing<A, E, R>,
+): RefSubject.Computed<Array<A>, E, R> => RefSubject.map(ref, (ring) => Array.from(ring));
 
 // ========================================
 // Filtered
@@ -220,13 +244,19 @@ export const values = <A extends PrimaryKey.PrimaryKey, E, R>(
  * @category filtered
  */
 export const get: {
-  (input: string): <A extends PrimaryKey.PrimaryKey, E, R>(
-    ref: RefHashRing<A, E, R>
-  ) => RefSubject.Filtered<A, E, R>
+  (
+    input: string,
+  ): <A extends PrimaryKey.PrimaryKey, E, R>(
+    ref: RefHashRing<A, E, R>,
+  ) => RefSubject.Filtered<A, E, R>;
   <A extends PrimaryKey.PrimaryKey, E, R>(
     ref: RefHashRing<A, E, R>,
-    input: string
-  ): RefSubject.Filtered<A, E, R>
-} = dual(2, function get<A extends PrimaryKey.PrimaryKey, E, R>(ref: RefHashRing<A, E, R>, input: string) {
-  return RefSubject.filterMap(ref, (ring) => Option.fromUndefinedOr(HashRing.get(ring, input)))
-})
+    input: string,
+  ): RefSubject.Filtered<A, E, R>;
+} = dual(2, function get<
+  A extends PrimaryKey.PrimaryKey,
+  E,
+  R,
+>(ref: RefHashRing<A, E, R>, input: string) {
+  return RefSubject.filterMap(ref, (ring) => Option.fromUndefinedOr(HashRing.get(ring, input)));
+});

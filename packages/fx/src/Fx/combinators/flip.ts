@@ -1,6 +1,6 @@
-import * as sinkCore from "../../Sink/combinators.js"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import * as sinkCore from "../../Sink/combinators.js";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Flips the error and success channels of an Fx.
@@ -10,4 +10,5 @@ import type { Fx } from "../Fx.js"
  * @since 1.0.0
  * @category combinators
  */
-export const flip = <A, E, R>(fx: Fx<A, E, R>): Fx<E, A, R> => make<E, A, R>((sink) => fx.run(sinkCore.flip(sink)))
+export const flip = <A, E, R>(fx: Fx<A, E, R>): Fx<E, A, R> =>
+  make<E, A, R>((sink) => fx.run(sinkCore.flip(sink)));

@@ -1,69 +1,75 @@
-import * as Effect from "effect/Effect"
-import type { Scope } from "effect/Scope"
-import type { Stream } from "effect/Stream"
-import { type Fx, gen } from "@typed/fx/Fx"
-import { RefSubject } from "@typed/fx/RefSubject"
-import { getUrl, type NavigationError, Navigation } from "@typed/navigation"
-import { EventHandler, type Renderable, type RenderEvent, type RenderTemplate, html } from "@typed/template"
+import * as Effect from "effect/Effect";
+import type { Scope } from "effect/Scope";
+import type { Stream } from "effect/Stream";
+import { type Fx, gen } from "@typed/fx/Fx";
+import { RefSubject } from "@typed/fx/RefSubject";
+import { getUrl, type NavigationError, Navigation } from "@typed/navigation";
+import {
+  EventHandler,
+  type Renderable,
+  type RenderEvent,
+  type RenderTemplate,
+  html,
+} from "@typed/template";
 
-type EventHandlerProperty = `on${string}`
+type EventHandlerProperty = `on${string}`;
 
 type AnchorEventHandlers = {
   readonly [K in keyof HTMLAnchorElement as K extends EventHandlerProperty ? K : never]?:
-  | Effect.Effect<unknown, any, any>
-  | EventHandler.EventHandler<Event, any, any>
-}
+    | Effect.Effect<unknown, any, any>
+    | EventHandler.EventHandler<Event, any, any>;
+};
 
 type AnchorRef = {
   readonly ref?: (
-    element: HTMLAnchorElement
-  ) => void | Effect.Effect<unknown, any, any> | Stream<unknown, any, any> | Fx<unknown, any, any>
-}
+    element: HTMLAnchorElement,
+  ) => void | Effect.Effect<unknown, any, any> | Stream<unknown, any, any> | Fx<unknown, any, any>;
+};
 
-type IfEquals<X, Y, Output> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? Output
-  : never
+type IfEquals<X, Y, Output> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? Output : never;
 
 type WritableKeys<T> = {
-  [P in keyof T]-?: IfEquals<
-    { [Q in P]: T[P] },
-    { -readonly [Q in P]: T[P] },
-    P
-  >
-}[keyof T]
+  [P in keyof T]-?: IfEquals<{ [Q in P]: T[P] }, { -readonly [Q in P]: T[P] }, P>;
+}[keyof T];
 
 type AnchorProperties = {
-  readonly [K in WritableKeys<HTMLAnchorElement> as K extends EventHandlerProperty | "ref" ? never : K]?: Renderable<
-    HTMLAnchorElement[K],
-    any,
-    any
-  >
-}
+  readonly [K in WritableKeys<HTMLAnchorElement> as K extends EventHandlerProperty | "ref"
+    ? never
+    : K]?: Renderable<HTMLAnchorElement[K], any, any>;
+};
 
 export interface LinkOptions extends AnchorEventHandlers, AnchorRef, AnchorProperties {
-  readonly href: Renderable<string, any, any>
-  readonly content: Renderable<string | number | boolean | null | undefined | void | RenderEvent, any, any>
-  readonly replace?: boolean // false
+  readonly href: Renderable<string, any, any>;
+  readonly content: Renderable<
+    string | number | boolean | null | undefined | void | RenderEvent,
+    any,
+    any
+  >;
+  readonly replace?: boolean; // false
 }
 
-function makeLinkClickHandler(replace$: RefSubject.RefSubject<boolean>): EventHandler.EventHandler<
+function makeLinkClickHandler(
+  replace$: RefSubject.RefSubject<boolean>,
+): EventHandler.EventHandler<
   MouseEvent & { readonly currentTarget: HTMLAnchorElement },
   NavigationError,
   Navigation
 > {
   return EventHandler.make((ev: MouseEvent & { readonly currentTarget: HTMLAnchorElement }) =>
     Effect.gen(function* () {
-      const href = ev.currentTarget.href
-      if (ev.ctrlKey || ev.metaKey || ev.shiftKey) return
-      const t = ev.currentTarget.target
-      if (t && t !== "_self") return
-      const nav = yield* Navigation
-      const target = getUrl(nav.origin, href)
-      if (target.origin !== nav.origin) return
-      ev.preventDefault()
-      const replace = yield* replace$
-      yield* nav.navigate(href, { history: replace ? "replace" : "push" })
-    })
-  )
+      const href = ev.currentTarget.href;
+      if (ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+      const t = ev.currentTarget.target;
+      if (t && t !== "_self") return;
+      const nav = yield* Navigation;
+      const target = getUrl(nav.origin, href);
+      if (target.origin !== nav.origin) return;
+      ev.preventDefault();
+      const replace = yield* replace$;
+      yield* nav.navigate(href, { history: replace ? "replace" : "push" });
+    }),
+  );
 }
 
 /**
@@ -72,26 +78,30 @@ function makeLinkClickHandler(replace$: RefSubject.RefSubject<boolean>): EventHa
  * `Navigation` and `RenderTemplate` in the Effect context (e.g. `BrowserRouter`).
  */
 export function Link<const Opts extends LinkOptions>(
-  options: Opts
-): Fx<RenderEvent, Renderable.ErrorFromObject<Opts>, Renderable.ServicesFromObject<Opts> | Scope | RenderTemplate> {
+  options: Opts,
+): Fx<
+  RenderEvent,
+  Renderable.ErrorFromObject<Opts>,
+  Renderable.ServicesFromObject<Opts> | Scope | RenderTemplate
+> {
   return gen(function* () {
-    const { replace = false, onclick, content: children, ...rest } = options
-    const replace$ = yield* RefSubject.make(replace)
-    const navigationHandler = makeLinkClickHandler(replace$)
-    const userHandler = onclick ? EventHandler.fromEffectOrEventHandler(onclick) : undefined
+    const { replace = false, onclick, content: children, ...rest } = options;
+    const replace$ = yield* RefSubject.make(replace);
+    const navigationHandler = makeLinkClickHandler(replace$);
+    const userHandler = onclick ? EventHandler.fromEffectOrEventHandler(onclick) : undefined;
     const clickHandler = userHandler
       ? EventHandler.make(
-        Effect.fn(function* (ev: MouseEvent & { readonly currentTarget: HTMLAnchorElement }) {
-          yield* userHandler.handler(ev)
-          if (ev.defaultPrevented) return
-          yield* navigationHandler.handler(ev)
-        }),
-        { ...userHandler.options, preventDefault: true }
-      )
-      : navigationHandler
+          Effect.fn(function* (ev: MouseEvent & { readonly currentTarget: HTMLAnchorElement }) {
+            yield* userHandler.handler(ev);
+            if (ev.defaultPrevented) return;
+            yield* navigationHandler.handler(ev);
+          }),
+          { ...userHandler.options, preventDefault: true },
+        )
+      : navigationHandler;
 
-    const props: Record<string, unknown> = { ...rest, onclick: clickHandler }
+    const props: Record<string, unknown> = { ...rest, onclick: clickHandler };
 
-    return html`<a ...${props}>${children}</a>`
-  })
+    return html`<a ...${props}>${children}</a>`;
+  });
 }

@@ -1,1 +1,27 @@
-{"name":"@typed/fx","version":"1.32.0","private":true,"type":"module","exports":{".":{"import":"./dist/index.js","types":"./dist/index.d.ts"},"./*":{"import":"./dist/*.js","types":"./dist/*.d.ts"}},"scripts":{"build":"tsc","test":"vitest run --passWithNoTests"},"dependencies":{"effect":"catalog:"},"devDependencies":{"typescript":"catalog:","vitest":"catalog:"}}
+{
+  "name": "@typed/fx",
+  "version": "1.32.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

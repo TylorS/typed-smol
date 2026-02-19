@@ -1,5 +1,5 @@
-import type { Cause } from "effect/Cause"
-import type { Effect } from "effect/Effect"
+import type { Cause } from "effect/Cause";
+import type { Effect } from "effect/Effect";
 import {
   callback,
   catchCause,
@@ -10,15 +10,15 @@ import {
   runForkWith,
   servicesWith,
   sync,
-  void as void_
-} from "effect/Effect"
-import { interrupt } from "effect/Fiber"
-import { dual } from "effect/Function"
-import type { Layer } from "effect/Layer"
-import { effectDiscard } from "effect/Layer"
-import type { Scope } from "effect/Scope"
-import { make } from "../../Sink/Sink.js"
-import type { Fx } from "../Fx.js"
+  void as void_,
+} from "effect/Effect";
+import { interrupt } from "effect/Fiber";
+import { dual } from "effect/Function";
+import type { Layer } from "effect/Layer";
+import { effectDiscard } from "effect/Layer";
+import type { Scope } from "effect/Scope";
+import { make } from "../../Sink/Sink.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Observes the values of an `Fx` stream using a callback function.
@@ -32,33 +32,36 @@ import type { Fx } from "../Fx.js"
  */
 export const observe: {
   <A, E2 = never, R2 = never>(
-    f: (value: A) => void | Effect<unknown, E2, R2>
-  ): <E, R>(fx: Fx<A, E, R>) => Effect<unknown, E | E2, R | R2>
+    f: (value: A) => void | Effect<unknown, E2, R2>,
+  ): <E, R>(fx: Fx<A, E, R>) => Effect<unknown, E | E2, R | R2>;
 
   <A, E, R, E2 = never, R2 = never>(
     fx: Fx<A, E, R>,
-    f: (value: A) => void | Effect<unknown, E2, R2>
-  ): Effect<unknown, E | E2, R | R2>
-} = dual(2, <A, E, R, E2 = never, R2 = never>(
-  fx: Fx<A, E, R>,
-  f: (value: A) => void | Effect<unknown, E2, R2>
-): Effect<unknown, E | E2, R | R2> =>
-  servicesWith((services) =>
-    callback<void, E | E2, R | R2>((resume) => {
-      const onFailure = (cause: Cause<E | E2>) => sync(() => resume(failCause(cause)))
-      const onSuccess = (value: A) => {
-        const result = f(value)
-        return isEffect(result) ? catchCause(result, onFailure) : void_
-      }
-      const onDone = () => sync(() => resume(void_))
+    f: (value: A) => void | Effect<unknown, E2, R2>,
+  ): Effect<unknown, E | E2, R | R2>;
+} = dual(
+  2,
+  <A, E, R, E2 = never, R2 = never>(
+    fx: Fx<A, E, R>,
+    f: (value: A) => void | Effect<unknown, E2, R2>,
+  ): Effect<unknown, E | E2, R | R2> =>
+    servicesWith((services) =>
+      callback<void, E | E2, R | R2>((resume) => {
+        const onFailure = (cause: Cause<E | E2>) => sync(() => resume(failCause(cause)));
+        const onSuccess = (value: A) => {
+          const result = f(value);
+          return isEffect(result) ? catchCause(result, onFailure) : void_;
+        };
+        const onDone = () => sync(() => resume(void_));
 
-      return fx.run(make(onFailure, onSuccess)).pipe(
-        matchCauseEffect(make(onFailure, onDone)),
-        runForkWith(services),
-        interrupt // Interrupt fiber when callback is interrupted
-      )
-    })
-  ))
+        return fx.run(make(onFailure, onSuccess)).pipe(
+          matchCauseEffect(make(onFailure, onDone)),
+          runForkWith(services),
+          interrupt, // Interrupt fiber when callback is interrupted
+        );
+      }),
+    ),
+);
 
 /**
  * Runs an `Fx` stream to completion, discarding all values.
@@ -69,7 +72,7 @@ export const observe: {
  * @since 1.0.0
  * @category runners
  */
-export const drain = <A, E, R>(fx: Fx<A, E, R>): Effect<void, E, R> => observe(fx, () => void_)
+export const drain = <A, E, R>(fx: Fx<A, E, R>): Effect<void, E, R> => observe(fx, () => void_);
 
 /**
  * Runs an `Fx` stream as a Layer.
@@ -81,7 +84,7 @@ export const drain = <A, E, R>(fx: Fx<A, E, R>): Effect<void, E, R> => observe(f
  * @category runners
  */
 export const drainLayer = <A, E, R>(fx: Fx<A, E, R>): Layer<never, E, Exclude<R, Scope>> =>
-  effectDiscard(forkChild(drain(fx)))
+  effectDiscard(forkChild(drain(fx)));
 
 /**
  * Observes the values of an `Fx` stream using a callback function and returns a `Layer`.
@@ -95,14 +98,17 @@ export const drainLayer = <A, E, R>(fx: Fx<A, E, R>): Layer<never, E, Exclude<R,
  */
 export const observeLayer: {
   <A, E2 = never, R2 = never>(
-    f: (value: A) => void | Effect<unknown, E2, R2>
-  ): <E, R>(fx: Fx<A, E, R>) => Layer<never, E | E2, R | R2>
+    f: (value: A) => void | Effect<unknown, E2, R2>,
+  ): <E, R>(fx: Fx<A, E, R>) => Layer<never, E | E2, R | R2>;
 
   <A, E, R, E2 = never, R2 = never>(
     fx: Fx<A, E, R>,
-    f: (value: A) => void | Effect<unknown, E2, R2>
-  ): Layer<never, E | E2, R | R2>
-} = dual(2, <A, E, R, E2 = never, R2 = never>(
-  fx: Fx<A, E, R>,
-  f: (value: A) => void | Effect<unknown, E2, R2>
-): Layer<never, E | E2, R | R2> => effectDiscard(observe(fx, f)))
+    f: (value: A) => void | Effect<unknown, E2, R2>,
+  ): Layer<never, E | E2, R | R2>;
+} = dual(
+  2,
+  <A, E, R, E2 = never, R2 = never>(
+    fx: Fx<A, E, R>,
+    f: (value: A) => void | Effect<unknown, E2, R2>,
+  ): Layer<never, E | E2, R | R2> => effectDiscard(observe(fx, f)),
+);

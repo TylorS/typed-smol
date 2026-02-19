@@ -1,6 +1,6 @@
-import * as Cause from "effect/Cause"
-import { flow } from "effect/Function"
-import { failCause } from "./failCause.js"
+import * as Cause from "effect/Cause";
+import { flow } from "effect/Function";
+import { failCause } from "./failCause.js";
 
 /**
  * Creates an Fx that immediately interrupts.
@@ -10,4 +10,4 @@ import { failCause } from "./failCause.js"
  * @since 1.0.0
  * @category constructors
  */
-export const interrupt = /*#__PURE__*/ flow(Cause.interrupt, failCause)
+export const interrupt = /*#__PURE__*/ flow(Cause.interrupt, failCause);

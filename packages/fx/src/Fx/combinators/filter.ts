@@ -1,7 +1,7 @@
-import { dual } from "effect/Function"
-import * as sinkCore from "../../Sink/combinators.js"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import { dual } from "effect/Function";
+import * as sinkCore from "../../Sink/combinators.js";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Filters elements of an Fx using a predicate function.
@@ -12,15 +12,11 @@ import type { Fx } from "../Fx.js"
  * @category combinators
  */
 export const filter: {
-  <A>(
-    f: (a: A) => boolean
-  ): <E, R>(self: Fx<A, E, R>) => Fx<A, E, R>
+  <A>(f: (a: A) => boolean): <E, R>(self: Fx<A, E, R>) => Fx<A, E, R>;
 
-  <A, E, R>(
-    self: Fx<A, E, R>,
-    f: (a: A) => boolean
-  ): Fx<A, E, R>
-} = dual(2, <A, E, R>(
-  self: Fx<A, E, R>,
-  f: (a: A) => boolean
-): Fx<A, E, R> => make<A, E, R>((sink) => self.run(sinkCore.filter(sink, f))))
+  <A, E, R>(self: Fx<A, E, R>, f: (a: A) => boolean): Fx<A, E, R>;
+} = dual(
+  2,
+  <A, E, R>(self: Fx<A, E, R>, f: (a: A) => boolean): Fx<A, E, R> =>
+    make<A, E, R>((sink) => self.run(sinkCore.filter(sink, f))),
+);

@@ -1,71 +1,82 @@
-import type * as Template from "../Template.js"
+import type * as Template from "../Template.js";
 
-export function buildTemplateFragment(document: Document, template: Template.Template): DocumentFragment {
-  const root = document.createDocumentFragment()
+export function buildTemplateFragment(
+  document: Document,
+  template: Template.Template,
+): DocumentFragment {
+  const root = document.createDocumentFragment();
   for (const node of template.nodes) {
-    root.appendChild(buildTemplateNode(document, node))
+    root.appendChild(buildTemplateNode(document, node));
   }
-  return root
+  return root;
 }
 
 function buildTemplateNode(document: Document, node: Template.Node): Node {
   switch (node._tag) {
     case "comment":
-      return document.createComment(node.value)
+      return document.createComment(node.value);
     case "comment-part":
-      return document.createComment(`c_${node.index}`)
+      return document.createComment(`c_${node.index}`);
     case "sparse-comment": {
-      return document.createComment(`c_${node.nodes.map((n) => n._tag === "text" ? "" : n.index).join("_")}`)
+      return document.createComment(
+        `c_${node.nodes.map((n) => (n._tag === "text" ? "" : n.index)).join("_")}`,
+      );
     }
     case "doctype":
       return document.implementation.createDocumentType(
         node.name,
         node.publicId ?? "",
-        node.systemId ?? ""
-      )
+        node.systemId ?? "",
+      );
     case "element":
-      return buildTemplateElement(document, node)
+      return buildTemplateElement(document, node);
     case "self-closing-element":
-      return buildTemplateSelfClosingElement(document, node)
+      return buildTemplateSelfClosingElement(document, node);
     case "text-only-element":
-      return buildTemplateTextOnlyElement(document, node)
+      return buildTemplateTextOnlyElement(document, node);
     case "text":
-      return document.createTextNode(node.value)
+      return document.createTextNode(node.value);
     case "node":
-      return document.createComment(`/n_${node.index}`)
+      return document.createComment(`/n_${node.index}`);
   }
 }
 
 function buildTemplateElement(document: Document, node: Template.ElementNode): HTMLElement {
-  const element = document.createElement(node.tagName)
-  addStaticAttributes(element, node.attributes)
+  const element = document.createElement(node.tagName);
+  addStaticAttributes(element, node.attributes);
   for (const child of node.children) {
-    element.appendChild(buildTemplateNode(document, child))
+    element.appendChild(buildTemplateNode(document, child));
   }
-  return element
+  return element;
 }
 
 function addStaticAttributes(element: HTMLElement, attributes: Array<Template.Attribute>): void {
   for (const attribute of attributes) {
     if (attribute._tag === "attribute") {
-      element.setAttribute(attribute.name, attribute.value)
+      element.setAttribute(attribute.name, attribute.value);
     } else if (attribute._tag === "boolean") {
-      element.toggleAttribute(attribute.name, true)
+      element.toggleAttribute(attribute.name, true);
     }
   }
 }
 
-function buildTemplateSelfClosingElement(document: Document, node: Template.SelfClosingElementNode): HTMLElement {
-  const element = document.createElement(node.tagName)
-  addStaticAttributes(element, node.attributes)
-  return element
+function buildTemplateSelfClosingElement(
+  document: Document,
+  node: Template.SelfClosingElementNode,
+): HTMLElement {
+  const element = document.createElement(node.tagName);
+  addStaticAttributes(element, node.attributes);
+  return element;
 }
 
-function buildTemplateTextOnlyElement(document: Document, node: Template.TextOnlyElement): HTMLElement {
-  const element = document.createElement(node.tagName)
-  addStaticAttributes(element, node.attributes)
+function buildTemplateTextOnlyElement(
+  document: Document,
+  node: Template.TextOnlyElement,
+): HTMLElement {
+  const element = document.createElement(node.tagName);
+  addStaticAttributes(element, node.attributes);
   if (node.textContent && node.textContent._tag === "text") {
-    element.textContent = node.textContent.value
+    element.textContent = node.textContent.value;
   }
-  return element
+  return element;
 }

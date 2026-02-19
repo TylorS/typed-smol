@@ -3,22 +3,24 @@
  * @since 1.18.0
  */
 
-import type * as Effect from "effect/Effect"
-import { equals } from "effect/Equal"
-import { dual } from "effect/Function"
-import * as HashSet from "effect/HashSet"
-import type * as Scope from "effect/Scope"
+import type * as Effect from "effect/Effect";
+import { equals } from "effect/Equal";
+import { dual } from "effect/Function";
+import * as HashSet from "effect/HashSet";
+import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
-import * as RefSubject from "./RefSubject.js"
+import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefHashSet is a RefSubject specialized over a HashSet.
  * @since 1.18.0
  * @category models
  */
-export interface RefHashSet<in out V, in out E = never, out R = never>
-  extends RefSubject.RefSubject<HashSet.HashSet<V>, E, R>
-{}
+export interface RefHashSet<
+  in out V,
+  in out E = never,
+  out R = never,
+> extends RefSubject.RefSubject<HashSet.HashSet<V>, E, R> {}
 
 /**
  * Creates a new `RefHashSet` from a HashSet, `Effect`, or `Fx`.
@@ -26,9 +28,12 @@ export interface RefHashSet<in out V, in out E = never, out R = never>
  * @category constructors
  */
 export function make<V, E, R>(
-  initial: HashSet.HashSet<V> | Effect.Effect<HashSet.HashSet<V>, E, R> | Fx.Fx<HashSet.HashSet<V>, E, R>
+  initial:
+    | HashSet.HashSet<V>
+    | Effect.Effect<HashSet.HashSet<V>, E, R>
+    | Fx.Fx<HashSet.HashSet<V>, E, R>,
 ): Effect.Effect<RefHashSet<V, E>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq: equals })
+  return RefSubject.make(initial, { eq: equals });
 }
 
 // ========================================
@@ -41,11 +46,11 @@ export function make<V, E, R>(
  * @category combinators
  */
 export const add: {
-  <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, value: V): Effect.Effect<HashSet.HashSet<V>, E, R>
+  <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
+  <V, E, R>(ref: RefHashSet<V, E, R>, value: V): Effect.Effect<HashSet.HashSet<V>, E, R>;
 } = dual(2, function add<V, E, R>(ref: RefHashSet<V, E, R>, value: V) {
-  return RefSubject.update(ref, HashSet.add(value))
-})
+  return RefSubject.update(ref, HashSet.add(value));
+});
 
 /**
  * Remove a value from the RefHashSet.
@@ -53,11 +58,11 @@ export const add: {
  * @category combinators
  */
 export const remove: {
-  <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, value: V): Effect.Effect<HashSet.HashSet<V>, E, R>
+  <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
+  <V, E, R>(ref: RefHashSet<V, E, R>, value: V): Effect.Effect<HashSet.HashSet<V>, E, R>;
 } = dual(2, function remove<V, E, R>(ref: RefHashSet<V, E, R>, value: V) {
-  return RefSubject.update(ref, HashSet.remove(value))
-})
+  return RefSubject.update(ref, HashSet.remove(value));
+});
 
 /**
  * Clear all values from the RefHashSet.
@@ -65,7 +70,7 @@ export const remove: {
  * @category combinators
  */
 export const clear = <V, E, R>(ref: RefHashSet<V, E, R>): Effect.Effect<HashSet.HashSet<V>, E, R> =>
-  RefSubject.update(ref, () => HashSet.empty())
+  RefSubject.update(ref, () => HashSet.empty());
 
 /**
  * Compute the union with another HashSet.
@@ -73,11 +78,16 @@ export const clear = <V, E, R>(ref: RefHashSet<V, E, R>): Effect.Effect<HashSet.
  * @category combinators
  */
 export const union: {
-  <V>(that: HashSet.HashSet<V>): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>): Effect.Effect<HashSet.HashSet<V>, E, R>
+  <V>(
+    that: HashSet.HashSet<V>,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
+  <V, E, R>(
+    ref: RefHashSet<V, E, R>,
+    that: HashSet.HashSet<V>,
+  ): Effect.Effect<HashSet.HashSet<V>, E, R>;
 } = dual(2, function union<V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>) {
-  return RefSubject.update(ref, HashSet.union(that))
-})
+  return RefSubject.update(ref, HashSet.union(that));
+});
 
 /**
  * Compute the intersection with another HashSet.
@@ -85,11 +95,16 @@ export const union: {
  * @category combinators
  */
 export const intersection: {
-  <V>(that: HashSet.HashSet<V>): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>): Effect.Effect<HashSet.HashSet<V>, E, R>
+  <V>(
+    that: HashSet.HashSet<V>,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
+  <V, E, R>(
+    ref: RefHashSet<V, E, R>,
+    that: HashSet.HashSet<V>,
+  ): Effect.Effect<HashSet.HashSet<V>, E, R>;
 } = dual(2, function intersection<V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>) {
-  return RefSubject.update(ref, HashSet.intersection(that))
-})
+  return RefSubject.update(ref, HashSet.intersection(that));
+});
 
 /**
  * Compute the difference with another HashSet.
@@ -97,11 +112,16 @@ export const intersection: {
  * @category combinators
  */
 export const difference: {
-  <V>(that: HashSet.HashSet<V>): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>): Effect.Effect<HashSet.HashSet<V>, E, R>
+  <V>(
+    that: HashSet.HashSet<V>,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
+  <V, E, R>(
+    ref: RefHashSet<V, E, R>,
+    that: HashSet.HashSet<V>,
+  ): Effect.Effect<HashSet.HashSet<V>, E, R>;
 } = dual(2, function difference<V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>) {
-  return RefSubject.update(ref, HashSet.difference(that))
-})
+  return RefSubject.update(ref, HashSet.difference(that));
+});
 
 /**
  * Filter values in place.
@@ -109,11 +129,16 @@ export const difference: {
  * @category combinators
  */
 export const filter: {
-  <V>(predicate: (value: V) => boolean): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean): Effect.Effect<HashSet.HashSet<V>, E, R>
+  <V>(
+    predicate: (value: V) => boolean,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
+  <V, E, R>(
+    ref: RefHashSet<V, E, R>,
+    predicate: (value: V) => boolean,
+  ): Effect.Effect<HashSet.HashSet<V>, E, R>;
 } = dual(2, function filter<V, E, R>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean) {
-  return RefSubject.update(ref, HashSet.filter(predicate))
-})
+  return RefSubject.update(ref, HashSet.filter(predicate));
+});
 
 /**
  * Map values in place (endomorphic).
@@ -121,11 +146,13 @@ export const filter: {
  * @category combinators
  */
 export const map: {
-  <V>(f: (value: V) => V): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, f: (value: V) => V): Effect.Effect<HashSet.HashSet<V>, E, R>
+  <V>(
+    f: (value: V) => V,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
+  <V, E, R>(ref: RefHashSet<V, E, R>, f: (value: V) => V): Effect.Effect<HashSet.HashSet<V>, E, R>;
 } = dual(2, function map<V, E, R>(ref: RefHashSet<V, E, R>, f: (value: V) => V) {
-  return RefSubject.update(ref, HashSet.map(f))
-})
+  return RefSubject.update(ref, HashSet.map(f));
+});
 
 // ========================================
 // Computed
@@ -137,7 +164,7 @@ export const map: {
  * @category computed
  */
 export const size = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<number, E, R> =>
-  RefSubject.map(ref, HashSet.size)
+  RefSubject.map(ref, HashSet.size);
 
 /**
  * Check if the RefHashSet is empty.
@@ -145,7 +172,7 @@ export const size = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<num
  * @category computed
  */
 export const isEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, HashSet.isEmpty)
+  RefSubject.map(ref, HashSet.isEmpty);
 
 /**
  * Check if the RefHashSet is non-empty.
@@ -153,7 +180,7 @@ export const isEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<
  * @category computed
  */
 export const isNonEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, (s) => !HashSet.isEmpty(s))
+  RefSubject.map(ref, (s) => !HashSet.isEmpty(s));
 
 /**
  * Check if a value exists in the RefHashSet.
@@ -161,11 +188,11 @@ export const isNonEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Comput
  * @category computed
  */
 export const has: {
-  <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, value: V): RefSubject.Computed<boolean, E, R>
+  <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <V, E, R>(ref: RefHashSet<V, E, R>, value: V): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function has<V, E, R>(ref: RefHashSet<V, E, R>, value: V) {
-  return RefSubject.map(ref, HashSet.has(value))
-})
+  return RefSubject.map(ref, HashSet.has(value));
+});
 
 /**
  * Check if any value satisfies a predicate.
@@ -173,11 +200,16 @@ export const has: {
  * @category computed
  */
 export const some: {
-  <V>(predicate: (value: V) => boolean): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean): RefSubject.Computed<boolean, E, R>
+  <V>(
+    predicate: (value: V) => boolean,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <V, E, R>(
+    ref: RefHashSet<V, E, R>,
+    predicate: (value: V) => boolean,
+  ): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function some<V, E, R>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean) {
-  return RefSubject.map(ref, HashSet.some(predicate))
-})
+  return RefSubject.map(ref, HashSet.some(predicate));
+});
 
 /**
  * Check if all values satisfy a predicate.
@@ -185,11 +217,16 @@ export const some: {
  * @category computed
  */
 export const every: {
-  <V>(predicate: (value: V) => boolean): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean): RefSubject.Computed<boolean, E, R>
+  <V>(
+    predicate: (value: V) => boolean,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <V, E, R>(
+    ref: RefHashSet<V, E, R>,
+    predicate: (value: V) => boolean,
+  ): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function every<V, E, R>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean) {
-  return RefSubject.map(ref, HashSet.every(predicate))
-})
+  return RefSubject.map(ref, HashSet.every(predicate));
+});
 
 /**
  * Check if this set is a subset of another.
@@ -197,11 +234,13 @@ export const every: {
  * @category computed
  */
 export const isSubset: {
-  <V>(that: HashSet.HashSet<V>): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>
-  <V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>): RefSubject.Computed<boolean, E, R>
+  <V>(
+    that: HashSet.HashSet<V>,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function isSubset<V, E, R>(ref: RefHashSet<V, E, R>, that: HashSet.HashSet<V>) {
-  return RefSubject.map(ref, HashSet.isSubset(that))
-})
+  return RefSubject.map(ref, HashSet.isSubset(that));
+});
 
 /**
  * Map values to a different type.
@@ -209,11 +248,16 @@ export const isSubset: {
  * @category computed
  */
 export const mapValues: {
-  <V, B>(f: (value: V) => B): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<HashSet.HashSet<B>, E, R>
-  <V, E, R, B>(ref: RefHashSet<V, E, R>, f: (value: V) => B): RefSubject.Computed<HashSet.HashSet<B>, E, R>
+  <V, B>(
+    f: (value: V) => B,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<HashSet.HashSet<B>, E, R>;
+  <V, E, R, B>(
+    ref: RefHashSet<V, E, R>,
+    f: (value: V) => B,
+  ): RefSubject.Computed<HashSet.HashSet<B>, E, R>;
 } = dual(2, function mapValues<V, E, R, B>(ref: RefHashSet<V, E, R>, f: (value: V) => B) {
-  return RefSubject.map(ref, HashSet.map(f))
-})
+  return RefSubject.map(ref, HashSet.map(f));
+});
 
 /**
  * Filter values creating a Computed value.
@@ -222,15 +266,19 @@ export const mapValues: {
  */
 export const filterValues: {
   <V>(
-    predicate: (value: V) => boolean
-  ): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<HashSet.HashSet<V>, E, R>
+    predicate: (value: V) => boolean,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<HashSet.HashSet<V>, E, R>;
   <V, E, R>(
     ref: RefHashSet<V, E, R>,
-    predicate: (value: V) => boolean
-  ): RefSubject.Computed<HashSet.HashSet<V>, E, R>
-} = dual(2, function filterValues<V, E, R>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean) {
-  return RefSubject.map(ref, HashSet.filter(predicate))
-})
+    predicate: (value: V) => boolean,
+  ): RefSubject.Computed<HashSet.HashSet<V>, E, R>;
+} = dual(2, function filterValues<
+  V,
+  E,
+  R,
+>(ref: RefHashSet<V, E, R>, predicate: (value: V) => boolean) {
+  return RefSubject.map(ref, HashSet.filter(predicate));
+});
 
 /**
  * Reduce the values to a single value.
@@ -238,11 +286,18 @@ export const filterValues: {
  * @category computed
  */
 export const reduce: {
-  <V, B>(b: B, f: (b: B, value: V) => B): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<B, E, R>
-  <V, E, R, B>(ref: RefHashSet<V, E, R>, b: B, f: (b: B, value: V) => B): RefSubject.Computed<B, E, R>
+  <V, B>(
+    b: B,
+    f: (b: B, value: V) => B,
+  ): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<B, E, R>;
+  <V, E, R, B>(
+    ref: RefHashSet<V, E, R>,
+    b: B,
+    f: (b: B, value: V) => B,
+  ): RefSubject.Computed<B, E, R>;
 } = dual(3, function reduce<V, E, R, B>(ref: RefHashSet<V, E, R>, b: B, f: (b: B, value: V) => B) {
-  return RefSubject.map(ref, HashSet.reduce(b, f))
-})
+  return RefSubject.map(ref, HashSet.reduce(b, f));
+});
 
 /**
  * Get all values as an array.
@@ -250,4 +305,4 @@ export const reduce: {
  * @category computed
  */
 export const values = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<Array<V>, E, R> =>
-  RefSubject.map(ref, (s) => Array.from(s))
+  RefSubject.map(ref, (s) => Array.from(s));

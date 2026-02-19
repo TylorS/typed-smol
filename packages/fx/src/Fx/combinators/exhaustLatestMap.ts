@@ -1,12 +1,12 @@
-import * as Effect from "effect/Effect"
-import * as Fiber from "effect/Fiber"
-import { dual } from "effect/Function"
-import type * as Scope from "effect/Scope"
-import { make as makeSink, type Sink } from "../../Sink/Sink.js"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
-import { extendScope } from "../internal/scope.js"
-import type { FlatMapLike } from "./flatMap.js"
+import * as Effect from "effect/Effect";
+import * as Fiber from "effect/Fiber";
+import { dual } from "effect/Function";
+import type * as Scope from "effect/Scope";
+import { make as makeSink, type Sink } from "../../Sink/Sink.js";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
+import { extendScope } from "../internal/scope.js";
+import type { FlatMapLike } from "./flatMap.js";
 
 /**
  * Maps each element of an Fx to a new Fx, but only runs one inner Fx at a time.
@@ -20,53 +20,55 @@ import type { FlatMapLike } from "./flatMap.js"
  * @since 1.0.0
  * @category combinators
  */
-export const exhaustLatestMap: FlatMapLike = dual(2, <A, E, R, B, E2, R2>(
-  self: Fx<A, E, R>,
-  f: (a: A) => Fx<B, E2, R2>
-): Fx<B, E | E2, R | R2 | Scope.Scope> => {
-  return make<B, E | E2, R | R2 | Scope.Scope>(Effect.fn(function*<RSink>(sink: Sink<B, E | E2, RSink>) {
-    let runningFiber: Fiber.Fiber<unknown, never> | undefined = undefined
-    let nextEffectToFork: Effect.Effect<unknown, never, R2 | RSink> | undefined = undefined
+export const exhaustLatestMap: FlatMapLike = dual(
+  2,
+  <A, E, R, B, E2, R2>(
+    self: Fx<A, E, R>,
+    f: (a: A) => Fx<B, E2, R2>,
+  ): Fx<B, E | E2, R | R2 | Scope.Scope> => {
+    return make<B, E | E2, R | R2 | Scope.Scope>(
+      Effect.fn(function* <RSink>(sink: Sink<B, E | E2, RSink>) {
+        let runningFiber: Fiber.Fiber<unknown, never> | undefined = undefined;
+        let nextEffectToFork: Effect.Effect<unknown, never, R2 | RSink> | undefined = undefined;
 
-    const scope = yield* Effect.scope
+        const scope = yield* Effect.scope;
 
-    const fork = (
-      effect: Effect.Effect<unknown, never, R2 | RSink>
-    ): Effect.Effect<Fiber.Fiber<unknown, never>, never, RSink | R2> =>
-      Effect.forkIn(
-        effect.pipe(
-          Effect.ensuring(
-            Effect.zip(resetRunningFiber, runNext)
-          )
-        ),
-        scope
-      )
+        const fork = (
+          effect: Effect.Effect<unknown, never, R2 | RSink>,
+        ): Effect.Effect<Fiber.Fiber<unknown, never>, never, RSink | R2> =>
+          Effect.forkIn(
+            effect.pipe(Effect.ensuring(Effect.zip(resetRunningFiber, runNext))),
+            scope,
+          );
 
-    const resetRunningFiber: Effect.Effect<void, never, never> = Effect.sync(() => runningFiber = undefined)
+        const resetRunningFiber: Effect.Effect<void, never, never> = Effect.sync(
+          () => (runningFiber = undefined),
+        );
 
-    const runNext: Effect.Effect<void, never, R2 | RSink> = Effect.gen(function*() {
-      if (nextEffectToFork !== undefined) {
-        const eff = nextEffectToFork
-        nextEffectToFork = undefined
-        yield* exhaustLatestFork(eff)
-        // Ensure we don't close the scope until the last fiber completes
-        if (runningFiber !== undefined) yield* Fiber.join(runningFiber)
-      }
-    })
+        const runNext: Effect.Effect<void, never, R2 | RSink> = Effect.gen(function* () {
+          if (nextEffectToFork !== undefined) {
+            const eff = nextEffectToFork;
+            nextEffectToFork = undefined;
+            yield* exhaustLatestFork(eff);
+            // Ensure we don't close the scope until the last fiber completes
+            if (runningFiber !== undefined) yield* Fiber.join(runningFiber);
+          }
+        });
 
-    const exhaustLatestFork = Effect.fn(function*(eff: Effect.Effect<void, never, R2 | RSink>) {
-      if (runningFiber === undefined) {
-        runningFiber = yield* fork(eff)
-      } else {
-        nextEffectToFork = eff
-      }
-    })
+        const exhaustLatestFork = Effect.fn(function* (
+          eff: Effect.Effect<void, never, R2 | RSink>,
+        ) {
+          if (runningFiber === undefined) {
+            runningFiber = yield* fork(eff);
+          } else {
+            nextEffectToFork = eff;
+          }
+        });
 
-    yield* self.run(makeSink(
-      sink.onFailure,
-      (a) => exhaustLatestFork(f(a).run(sink))
-    ))
+        yield* self.run(makeSink(sink.onFailure, (a) => exhaustLatestFork(f(a).run(sink))));
 
-    if (runningFiber !== undefined) yield* Fiber.join(runningFiber as Fiber.Fiber<void, never>)
-  }, extendScope))
-})
+        if (runningFiber !== undefined) yield* Fiber.join(runningFiber as Fiber.Fiber<void, never>);
+      }, extendScope),
+    );
+  },
+);

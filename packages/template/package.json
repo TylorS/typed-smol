@@ -5,12 +5,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./*": {
-      "import": "./dist/*.js",
-      "types": "./dist/*.d.ts"
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
     }
   },
   "scripts": {
@@ -23,8 +23,8 @@
     "html5parser": "2.0.2"
   },
   "devDependencies": {
+    "happy-dom": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "happy-dom": "catalog:"
+    "vitest": "catalog:"
   }
 }

@@ -13,9 +13,7 @@ describe("Fx", () => {
         const tag = yield* Ref.make("unset");
 
         const fx = Fx.fromIterable([1]).pipe(
-          Fx.onExit((exit) =>
-            Ref.set(tag, Exit.isSuccess(exit) ? "success" : "failure"),
-          ),
+          Fx.onExit((exit) => Ref.set(tag, Exit.isSuccess(exit) ? "success" : "failure")),
         );
 
         const result = yield* Fx.collectAll(fx);
@@ -28,9 +26,7 @@ describe("Fx", () => {
         const tag = yield* Ref.make("unset");
 
         const fx = Fx.fail("boom").pipe(
-          Fx.onExit((exit) =>
-            Ref.set(tag, Exit.isFailure(exit) ? "failure" : "success"),
-          ),
+          Fx.onExit((exit) => Ref.set(tag, Exit.isFailure(exit) ? "failure" : "success")),
         );
 
         const exit = yield* Effect.exit(Fx.collectAll(fx));
@@ -75,10 +71,7 @@ describe("Fx", () => {
       Effect.gen(function* () {
         const ensured = yield* Ref.make(false);
 
-        const fiber = yield* Fx.never.pipe(
-          Fx.ensuring(Ref.set(ensured, true)),
-          Fx.collectAllFork,
-        );
+        const fiber = yield* Fx.never.pipe(Fx.ensuring(Ref.set(ensured, true)), Fx.collectAllFork);
 
         yield* Fiber.interrupt(fiber);
         assert.strictEqual(yield* Ref.get(ensured), true);

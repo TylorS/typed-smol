@@ -3,21 +3,25 @@
  * @since 1.18.0
  */
 
-import * as BigInt_ from "effect/BigInt"
-import type * as Effect from "effect/Effect"
-import * as Equivalence_ from "effect/Equivalence"
-import type { Equivalence } from "effect/Equivalence"
-import { dual } from "effect/Function"
-import type * as Scope from "effect/Scope"
-import type * as Fx from "../Fx/index.js"
-import * as RefSubject from "./RefSubject.js"
+import * as BigInt_ from "effect/BigInt";
+import type * as Effect from "effect/Effect";
+import * as Equivalence_ from "effect/Equivalence";
+import type { Equivalence } from "effect/Equivalence";
+import { dual } from "effect/Function";
+import type * as Scope from "effect/Scope";
+import type * as Fx from "../Fx/index.js";
+import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefBigInt is a RefSubject specialized over a BigInt value.
  * @since 1.18.0
  * @category models
  */
-export interface RefBigInt<in out E = never, out R = never> extends RefSubject.RefSubject<bigint, E, R> {}
+export interface RefBigInt<in out E = never, out R = never> extends RefSubject.RefSubject<
+  bigint,
+  E,
+  R
+> {}
 
 /**
  * Creates a new `RefBigInt` from a BigInt, `Effect`, or `Fx`.
@@ -39,9 +43,9 @@ export interface RefBigInt<in out E = never, out R = never> extends RefSubject.R
  */
 export function make<E = never, R = never>(
   initial: bigint | Effect.Effect<bigint, E, R> | Fx.Fx<bigint, E, R>,
-  eq: Equivalence<bigint> = Equivalence_.strictEqual()
+  eq: Equivalence<bigint> = Equivalence_.strictEqual(),
 ): Effect.Effect<RefBigInt<E>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq })
+  return RefSubject.make(initial, { eq });
 }
 
 // ========================================
@@ -54,11 +58,11 @@ export function make<E = never, R = never>(
  * @category computed
  */
 export const add: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>;
 } = dual(2, function add<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => BigInt_.sum(self, that))
-})
+  return RefSubject.map(ref, (self) => BigInt_.sum(self, that));
+});
 
 /**
  * Subtract a BigInt from the current state of a RefBigInt.
@@ -66,11 +70,11 @@ export const add: {
  * @category computed
  */
 export const subtract: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>;
 } = dual(2, function subtract<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => BigInt_.subtract(self, that))
-})
+  return RefSubject.map(ref, (self) => BigInt_.subtract(self, that));
+});
 
 /**
  * Multiply the current state of a RefBigInt by a BigInt.
@@ -78,11 +82,11 @@ export const subtract: {
  * @category computed
  */
 export const multiply: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>;
 } = dual(2, function multiply<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => BigInt_.multiply(self, that))
-})
+  return RefSubject.map(ref, (self) => BigInt_.multiply(self, that));
+});
 
 /**
  * Divide the current state of a RefBigInt by a BigInt.
@@ -90,11 +94,11 @@ export const multiply: {
  * @category computed
  */
 export const divide: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint | undefined, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint | undefined, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint | undefined, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint | undefined, E, R>;
 } = dual(2, function divide<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => BigInt_.divide(self, that))
-})
+  return RefSubject.map(ref, (self) => BigInt_.divide(self, that));
+});
 
 /**
  * Get the remainder of dividing the current state of a RefBigInt by a BigInt.
@@ -102,18 +106,19 @@ export const divide: {
  * @category computed
  */
 export const mod: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<bigint, E, R>;
 } = dual(2, function mod<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => BigInt_.remainder(self, that))
-})
+  return RefSubject.map(ref, (self) => BigInt_.remainder(self, that));
+});
 
 /**
  * Get the absolute value of the current state of a RefBigInt.
  * @since 1.18.0
  * @category computed
  */
-export const abs = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, E, R> => RefSubject.map(ref, BigInt_.abs)
+export const abs = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, E, R> =>
+  RefSubject.map(ref, BigInt_.abs);
 
 /**
  * Negate the current state of a RefBigInt.
@@ -121,7 +126,7 @@ export const abs = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, E, 
  * @category computed
  */
 export const negate = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, E, R> =>
-  RefSubject.map(ref, (self) => -self)
+  RefSubject.map(ref, (self) => -self);
 
 /**
  * Check if the current state of a RefBigInt is zero.
@@ -129,7 +134,7 @@ export const negate = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, 
  * @category computed
  */
 export const isZero = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, (self) => self === BigInt_.BigInt(0))
+  RefSubject.map(ref, (self) => self === BigInt_.BigInt(0));
 
 /**
  * Check if the current state of a RefBigInt is negative.
@@ -137,7 +142,7 @@ export const isZero = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean,
  * @category computed
  */
 export const isNegative = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, (self) => self < BigInt_.BigInt(0))
+  RefSubject.map(ref, (self) => self < BigInt_.BigInt(0));
 
 /**
  * Check if the current state of a RefBigInt is positive.
@@ -145,7 +150,7 @@ export const isNegative = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bool
  * @category computed
  */
 export const isPositive = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, (self) => self > BigInt_.BigInt(0))
+  RefSubject.map(ref, (self) => self > BigInt_.BigInt(0));
 
 /**
  * Check if the current state of a RefBigInt is less than a BigInt.
@@ -153,11 +158,11 @@ export const isPositive = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bool
  * @category computed
  */
 export const isLessThan: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<boolean, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function isLessThan<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => BigInt_.isLessThan(self, that))
-})
+  return RefSubject.map(ref, (self) => BigInt_.isLessThan(self, that));
+});
 
 /**
  * Check if the current state of a RefBigInt is greater than a BigInt.
@@ -165,11 +170,11 @@ export const isLessThan: {
  * @category computed
  */
 export const isGreaterThan: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<boolean, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function isGreaterThan<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => BigInt_.isGreaterThan(self, that))
-})
+  return RefSubject.map(ref, (self) => BigInt_.isGreaterThan(self, that));
+});
 
 /**
  * Check if the current state of a RefBigInt equals a BigInt.
@@ -177,8 +182,8 @@ export const isGreaterThan: {
  * @category computed
  */
 export const equals: {
-  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<boolean, E, R>
+  (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(ref: RefBigInt<E, R>, that: bigint): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function equals<E, R>(ref: RefBigInt<E, R>, that: bigint) {
-  return RefSubject.map(ref, (self) => self === that)
-})
+  return RefSubject.map(ref, (self) => self === that);
+});

@@ -1,8 +1,8 @@
-import * as Effect from "effect/Effect"
-import { dual } from "effect/Function"
-import { make } from "../constructors/make.js"
-import { succeed } from "../constructors/succeed.js"
-import type { Fx } from "../Fx.js"
+import * as Effect from "effect/Effect";
+import { dual } from "effect/Function";
+import { make } from "../constructors/make.js";
+import { succeed } from "../constructors/succeed.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * continues an Fx with another Fx after the first one completes.
@@ -13,19 +13,14 @@ import type { Fx } from "../Fx.js"
  * @category combinators
  */
 export const continueWith: {
-  <B, E2, R2>(
-    f: () => Fx<B, E2, R2>
-  ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B, E | E2, R | R2>
+  <B, E2, R2>(f: () => Fx<B, E2, R2>): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B, E | E2, R | R2>;
 
-  <A, E, R, B, E2, R2>(
-    fx: Fx<A, E, R>,
-    f: () => Fx<B, E2, R2>
-  ): Fx<A | B, E | E2, R | R2>
-} = dual(2, <A, E, R, B, E2, R2>(
-  fx: Fx<A, E, R>,
-  f: () => Fx<B, E2, R2>
-): Fx<A | B, E | E2, R | R2> =>
-  make<A | B, E | E2, R | R2>((sink) => Effect.flatMap(fx.run(sink), () => f().run(sink))))
+  <A, E, R, B, E2, R2>(fx: Fx<A, E, R>, f: () => Fx<B, E2, R2>): Fx<A | B, E | E2, R | R2>;
+} = dual(
+  2,
+  <A, E, R, B, E2, R2>(fx: Fx<A, E, R>, f: () => Fx<B, E2, R2>): Fx<A | B, E | E2, R | R2> =>
+    make<A | B, E | E2, R | R2>((sink) => Effect.flatMap(fx.run(sink), () => f().run(sink))),
+);
 
 /**
  * Appends a value to the end of an Fx.
@@ -36,18 +31,14 @@ export const continueWith: {
  * @category combinators
  */
 export const append: {
-  <B>(
-    value: B
-  ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B, E, R>
+  <B>(value: B): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B, E, R>;
 
-  <A, E, R, B>(
-    fx: Fx<A, E, R>,
-    value: B
-  ): Fx<A | B, E, R>
-} = dual(2, <A, E, R, B>(
-  fx: Fx<A, E, R>,
-  value: B
-): Fx<A | B, E, R> => continueWith(fx, () => succeed(value)))
+  <A, E, R, B>(fx: Fx<A, E, R>, value: B): Fx<A | B, E, R>;
+} = dual(
+  2,
+  <A, E, R, B>(fx: Fx<A, E, R>, value: B): Fx<A | B, E, R> =>
+    continueWith(fx, () => succeed(value)),
+);
 
 /**
  * Prepends a value to the beginning of an Fx.
@@ -58,18 +49,14 @@ export const append: {
  * @category combinators
  */
 export const prepend: {
-  <B>(
-    value: B
-  ): <A, E, R>(fx: Fx<A, E, R>) => Fx<B | A, E, R>
+  <B>(value: B): <A, E, R>(fx: Fx<A, E, R>) => Fx<B | A, E, R>;
 
-  <A, E, R, B>(
-    fx: Fx<A, E, R>,
-    value: B
-  ): Fx<B | A, E, R>
-} = dual(2, <A, E, R, B>(
-  fx: Fx<A, E, R>,
-  value: B
-): Fx<B | A, E, R> => continueWith(succeed(value), () => fx))
+  <A, E, R, B>(fx: Fx<A, E, R>, value: B): Fx<B | A, E, R>;
+} = dual(
+  2,
+  <A, E, R, B>(fx: Fx<A, E, R>, value: B): Fx<B | A, E, R> =>
+    continueWith(succeed(value), () => fx),
+);
 
 /**
  * Wraps an Fx with a start and end value.
@@ -81,22 +68,11 @@ export const prepend: {
  * @category combinators
  */
 export const delimit: {
-  <B, C>(
-    before: B,
-    after: C
-  ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B | C, E, R>
+  <B, C>(before: B, after: C): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B | C, E, R>;
 
-  <A, E, R, B, C>(
-    fx: Fx<A, E, R>,
-    before: B,
-    after: C
-  ): Fx<A | B | C, E, R>
-} = dual(3, <A, E, R, B, C>(
-  fx: Fx<A, E, R>,
-  before: B,
-  after: C
-): Fx<A | B | C, E, R> =>
-  fx.pipe(
-    prepend(before),
-    append(after)
-  ))
+  <A, E, R, B, C>(fx: Fx<A, E, R>, before: B, after: C): Fx<A | B | C, E, R>;
+} = dual(
+  3,
+  <A, E, R, B, C>(fx: Fx<A, E, R>, before: B, after: C): Fx<A | B | C, E, R> =>
+    fx.pipe(prepend(before), append(after)),
+);

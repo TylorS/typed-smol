@@ -1,8 +1,8 @@
-import { dual } from "effect/Function"
-import type * as Option from "effect/Option"
-import * as sinkCore from "../../Sink/combinators.js"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import { dual } from "effect/Function";
+import type * as Option from "effect/Option";
+import * as sinkCore from "../../Sink/combinators.js";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Maps and filters elements of an Fx in a single operation.
@@ -13,15 +13,11 @@ import type { Fx } from "../Fx.js"
  * @category combinators
  */
 export const filterMap: {
-  <A, B>(
-    f: (a: A) => Option.Option<B>
-  ): <E, R>(self: Fx<A, E, R>) => Fx<B, E, R>
+  <A, B>(f: (a: A) => Option.Option<B>): <E, R>(self: Fx<A, E, R>) => Fx<B, E, R>;
 
-  <A, E, R, B>(
-    self: Fx<A, E, R>,
-    f: (a: A) => Option.Option<B>
-  ): Fx<B, E, R>
-} = dual(2, <A, E, R, B>(
-  self: Fx<A, E, R>,
-  f: (a: A) => Option.Option<B>
-): Fx<B, E, R> => make<B, E, R>((sink) => self.run(sinkCore.filterMap(sink, f))))
+  <A, E, R, B>(self: Fx<A, E, R>, f: (a: A) => Option.Option<B>): Fx<B, E, R>;
+} = dual(
+  2,
+  <A, E, R, B>(self: Fx<A, E, R>, f: (a: A) => Option.Option<B>): Fx<B, E, R> =>
+    make<B, E, R>((sink) => self.run(sinkCore.filterMap(sink, f))),
+);

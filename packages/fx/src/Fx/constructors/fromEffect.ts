@@ -1,6 +1,6 @@
-import * as Effect from "effect/Effect"
-import type { Fx } from "../Fx.js"
-import { make } from "./make.js"
+import * as Effect from "effect/Effect";
+import type { Fx } from "../Fx.js";
+import { make } from "./make.js";
 
 /**
  * Creates an Fx from an Effect.
@@ -13,13 +13,12 @@ import { make } from "./make.js"
  * @since 1.0.0
  * @category constructors
  */
-export const fromEffect = <A, E = never, R = never>(
-  effect: Effect.Effect<A, E, R>
-): Fx<A, E, R> => /*#__PURE__*/ make<A, E, R>((sink) => Effect.matchCauseEffect(effect, sink))
+export const fromEffect = <A, E = never, R = never>(effect: Effect.Effect<A, E, R>): Fx<A, E, R> =>
+  /*#__PURE__*/ make<A, E, R>((sink) => Effect.matchCauseEffect(effect, sink));
 
 /**
  * An Fx that runs forever without emitting any values.
  * @since 1.0.0
  * @category constructors
  */
-export const never: Fx<never, never, never> = make<never, never, never>(() => Effect.never)
+export const never: Fx<never, never, never> = make<never, never, never>(() => Effect.never);

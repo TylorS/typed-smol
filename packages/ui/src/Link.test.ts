@@ -75,9 +75,7 @@ describe("typed/ui/Link", () => {
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
-  const window = new Window(
-    ...params,
-  ) as unknown as globalThis.Window & typeof globalThis;
+  const window = new Window(...params) as unknown as globalThis.Window & typeof globalThis;
   const domLayer = DomRenderTemplate.using(window.document);
   const opts = params[0] as { url?: string } | undefined;
   const url = opts?.url ?? "http://localhost/";

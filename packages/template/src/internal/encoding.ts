@@ -1,6 +1,6 @@
-import { isOption, match } from "effect/Option"
-import { hasProperty, isNullish } from "effect/Predicate"
-import { isHtmlRenderEvent } from "../RenderEvent.js"
+import { isOption, match } from "effect/Option";
+import { hasProperty, isNullish } from "effect/Predicate";
+import { isHtmlRenderEvent } from "../RenderEvent.js";
 
 export function escape(s: unknown): string {
   switch (typeof s) {
@@ -8,142 +8,140 @@ export function escape(s: unknown): string {
     case "number":
     case "boolean":
     case "bigint":
-      return escapeHtml(String(s))
+      return escapeHtml(String(s));
     case "object": {
       if (isNullish(s)) {
-        return ""
+        return "";
       } else if (Array.isArray(s)) {
-        return s.map(escape).join("")
+        return s.map(escape).join("");
       } else if (s instanceof Date) {
-        return escapeHtml(s.toISOString())
+        return escapeHtml(s.toISOString());
       } else if (s instanceof RegExp) {
-        return escapeHtml(s.toString())
+        return escapeHtml(s.toString());
       } else {
-        return escapeHtml(JSON.stringify(s))
+        return escapeHtml(JSON.stringify(s));
       }
     }
     default:
-      return escapeHtml(JSON.stringify(s))
+      return escapeHtml(JSON.stringify(s));
   }
 }
 
 export function unescape(s: string) {
-  const unescaped = unescapeHtml(s)
-  const couldBeJson = unescaped[0] === "[" || unescaped === "{"
+  const unescaped = unescapeHtml(s);
+  const couldBeJson = unescaped[0] === "[" || unescaped === "{";
   if (couldBeJson) {
     try {
-      return JSON.parse(unescaped)
+      return JSON.parse(unescaped);
     } catch {
-      return unescaped
+      return unescaped;
     }
   } else {
-    return unescaped
+    return unescaped;
   }
 }
 
 const unescapeHtmlRules = [
-  [/&quot;/g, "\""],
+  [/&quot;/g, '"'],
   [/&#39;/g, "'"],
   [/&#x3A;/g, ":"],
   [/&lt;/g, "<"],
   [/&gt;/g, ">"],
-  [/&amp;/g, "&"]
-] as const
+  [/&amp;/g, "&"],
+] as const;
 
-const matchHtmlRegExp = /["'&<>]/
+const matchHtmlRegExp = /["'&<>]/;
 
 export function escapeHtml(str: string): string {
   if (str.length === 0) {
-    return str
+    return str;
   }
 
-  const match = matchHtmlRegExp.exec(str)
+  const match = matchHtmlRegExp.exec(str);
 
   if (!match) {
-    return str
+    return str;
   }
 
-  let escape
-  let html = ""
-  let index = 0
-  let lastIndex = 0
+  let escape;
+  let html = "";
+  let index = 0;
+  let lastIndex = 0;
 
   for (index = match.index; index < str.length; index++) {
     switch (str.charCodeAt(index)) {
       case 34: // "
-        escape = "&quot;"
-        break
+        escape = "&quot;";
+        break;
       case 38: // &
-        escape = "&amp;"
-        break
+        escape = "&amp;";
+        break;
       case 39: // '
-        escape = "&#39;"
-        break
+        escape = "&#39;";
+        break;
       case 60: // <
-        escape = "&lt;"
-        break
+        escape = "&lt;";
+        break;
       case 62: // >
-        escape = "&gt;"
-        break
+        escape = "&gt;";
+        break;
       default:
-        continue
+        continue;
     }
 
     if (lastIndex !== index) {
-      html += str.substring(lastIndex, index)
+      html += str.substring(lastIndex, index);
     }
 
-    lastIndex = index + 1
-    html += escape
+    lastIndex = index + 1;
+    html += escape;
   }
 
-  return lastIndex !== index
-    ? html + str.substring(lastIndex, index)
-    : html
+  return lastIndex !== index ? html + str.substring(lastIndex, index) : html;
 }
 
 export function unescapeHtml(html: string) {
   for (const [from, to] of unescapeHtmlRules) {
-    html = html.replace(from, to)
+    html = html.replace(from, to);
   }
 
-  return html
+  return html;
 }
 
 export function renderToString(value: unknown, delimiter: string = ""): string {
   if (Array.isArray(value)) {
-    return value.map((v) => renderToString(v, delimiter)).join(delimiter)
+    return value.map((v) => renderToString(v, delimiter)).join(delimiter);
   }
   if (isNullish(value)) {
-    return ""
+    return "";
   }
   if (isOption(value)) {
     return match(value, {
       onNone: () => "",
-      onSome: (v: unknown) => renderToString(v, delimiter)
-    })
+      onSome: (v: unknown) => renderToString(v, delimiter),
+    });
   }
   if (isHtmlRenderEvent(value)) {
-    return value.html
+    return value.html;
   }
 
   if (typeof value === "string") {
-    return value
+    return value;
   }
 
   if (hasProperty(value, "toString") && typeof value.toString === "function") {
-    const s = value.toString()
+    const s = value.toString();
     if (s !== "[object Object]") {
-      return s
+      return s;
     }
   }
 
   if (typeof value === "object") {
-    return JSON.stringify(value)
+    return JSON.stringify(value);
   }
-  return String(value)
+  return String(value);
 }
 
 export function renderToEscapedString(value: unknown, delimiter: string): string {
-  return escape(renderToString(value, delimiter))
+  return escape(renderToString(value, delimiter));
 }

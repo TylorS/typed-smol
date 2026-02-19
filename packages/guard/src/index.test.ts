@@ -37,8 +37,7 @@ describe("@typed/guard", () => {
     });
 
     it("returns asGuard() when given an AsGuard", () => {
-      const inner: Guard<string, number> = (s) =>
-        Effect.succeed(Option.some(Number(s)));
+      const inner: Guard<string, number> = (s) => Effect.succeed(Option.some(Number(s)));
       const asGuard = { asGuard: () => inner };
       expect(getGuard(asGuard)).toBe(inner);
     });
@@ -117,7 +116,9 @@ describe("@typed/guard", () => {
 
     it("fails when the effect fails", async () => {
       const base = liftPredicate((n: number) => n > 0);
-      const g = mapEffect(base, (n) => (n > 10 ? Effect.fail("too big" as const) : Effect.succeed(n)));
+      const g = mapEffect(base, (n) =>
+        n > 10 ? Effect.fail("too big" as const) : Effect.succeed(n),
+      );
       await expect(run(g(20))).rejects.toBe("too big");
     });
   });
@@ -220,9 +221,7 @@ describe("@typed/guard", () => {
     it("catches tagged errors", async () => {
       type E = { _tag: "Bad"; n: number } | { _tag: "Other" };
       const failing: Guard<number, number, E> = (n) =>
-        n >= 0
-          ? Effect.succeed(Option.some(n))
-          : Effect.fail({ _tag: "Bad" as const, n });
+        n >= 0 ? Effect.succeed(Option.some(n)) : Effect.fail({ _tag: "Bad" as const, n });
       const g = catchTag(failing, "Bad", (e) => Effect.succeed(-e.n));
       const ok = await run(g(3));
       expect(Option.isSome(ok)).toBe(true);
@@ -288,7 +287,10 @@ describe("@typed/guard", () => {
       if (Option.isSome(result)) {
         expect((result.value as { doubled: number }).doubled).toBe(0);
       }
-      const base2 = map(liftPredicate((n: number) => n > 0), (n) => ({ n }));
+      const base2 = map(
+        liftPredicate((n: number) => n > 0),
+        (n) => ({ n }),
+      );
       const g2 = let_(base2, "doubled", 2);
       const r2 = await run(g2(3));
       expect(Option.isSome(r2)).toBe(true);
@@ -338,7 +340,12 @@ describe("@typed/guard", () => {
   describe("provideService", () => {
     it("provides a service so the guard no longer requires it", async () => {
       const Foo = ServiceMap.Service<{ readonly n: number }>("Test/Foo");
-      const guardNeedsFoo: Guard<number, number, never, ServiceMap.Service.Identifier<typeof Foo>> = (i) =>
+      const guardNeedsFoo: Guard<
+        number,
+        number,
+        never,
+        ServiceMap.Service.Identifier<typeof Foo>
+      > = (i) =>
         Effect.flatMap(Effect.service(Foo), (foo) => Effect.succeed(Option.some(i + foo.n)));
       const g = provideService(guardNeedsFoo, Foo, { n: 10 });
       const result = await run(g(1));

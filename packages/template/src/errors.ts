@@ -18,10 +18,10 @@
  * @category errors
  */
 export class CouldNotFindCommentError extends Error {
-  readonly partIndex: number
+  readonly partIndex: number;
   constructor(partIndex: number) {
-    super(`Could not find comment for part ${partIndex}`)
-    this.partIndex = partIndex
+    super(`Could not find comment for part ${partIndex}`);
+    this.partIndex = partIndex;
   }
 }
 
@@ -45,10 +45,10 @@ export class CouldNotFindCommentError extends Error {
  * @category errors
  */
 export class CouldNotFindRootElement extends Error {
-  readonly partIndex: number
+  readonly partIndex: number;
   constructor(partIndex: number) {
-    super(`Could not find root elements for part ${partIndex}`)
-    this.partIndex = partIndex
+    super(`Could not find root elements for part ${partIndex}`);
+    this.partIndex = partIndex;
   }
 }
 
@@ -72,10 +72,10 @@ export class CouldNotFindRootElement extends Error {
  * @category errors
  */
 export class CouldNotFindManyCommentError extends Error {
-  readonly manyIndex: string
+  readonly manyIndex: string;
   constructor(manyIndex: string) {
-    super(`Could not find comment for many part ${manyIndex}`)
-    this.manyIndex = manyIndex
+    super(`Could not find comment for many part ${manyIndex}`);
+    this.manyIndex = manyIndex;
   }
 }
 
@@ -99,10 +99,10 @@ export class CouldNotFindManyCommentError extends Error {
  * @category errors
  */
 export class CouldNotFindTemplateHashError extends Error {
-  readonly hash: string
+  readonly hash: string;
   constructor(hash: string) {
-    super(`Could not find template hash ${hash}`)
-    this.hash = hash
+    super(`Could not find template hash ${hash}`);
+    this.hash = hash;
   }
 }
 
@@ -126,10 +126,10 @@ export class CouldNotFindTemplateHashError extends Error {
  * @category errors
  */
 export class CouldNotFindTemplateEndError extends Error {
-  readonly hash: string
+  readonly hash: string;
   constructor(hash: string) {
-    super(`Could not find end of template for hash ${hash}`)
-    this.hash = hash
+    super(`Could not find end of template for hash ${hash}`);
+    this.hash = hash;
   }
 }
 
@@ -138,8 +138,8 @@ const constructors = [
   CouldNotFindRootElement,
   CouldNotFindManyCommentError,
   CouldNotFindTemplateHashError,
-  CouldNotFindTemplateEndError
-] as const
+  CouldNotFindTemplateEndError,
+] as const;
 
 /**
  * A union type of all hydration-related errors.
@@ -147,7 +147,7 @@ const constructors = [
  * @since 1.0.0
  * @category errors
  */
-export type HydrationError = InstanceType<typeof constructors[number]>
+export type HydrationError = InstanceType<(typeof constructors)[number]>;
 
 /**
  * Checks if an error is a hydration error.
@@ -169,5 +169,5 @@ export type HydrationError = InstanceType<typeof constructors[number]>
  * @category guards
  */
 export function isHydrationError(e: unknown): e is HydrationError {
-  return constructors.some((c) => e instanceof c)
+  return constructors.some((c) => e instanceof c);
 }

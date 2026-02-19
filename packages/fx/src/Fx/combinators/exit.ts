@@ -1,7 +1,7 @@
-import type * as Exit from "effect/Exit"
-import * as sinkCore from "../../Sink/combinators.js"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import type * as Exit from "effect/Exit";
+import * as sinkCore from "../../Sink/combinators.js";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Materializes the success and failure of an Fx into `Exit` values.
@@ -12,4 +12,4 @@ import type { Fx } from "../Fx.js"
  * @category combinators
  */
 export const exit = <A, E, R>(fx: Fx<A, E, R>): Fx<Exit.Exit<A, E>, never, R> =>
-  make<Exit.Exit<A, E>, never, R>((sink) => fx.run(sinkCore.exit(sink)))
+  make<Exit.Exit<A, E>, never, R>((sink) => fx.run(sinkCore.exit(sink)));

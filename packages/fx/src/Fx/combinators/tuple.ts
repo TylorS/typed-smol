@@ -1,9 +1,9 @@
-import * as Effect from "effect/Effect"
-import { make as makeSink } from "../../Sink/Sink.js"
-import { make } from "../constructors/make.js"
-import { succeed } from "../constructors/succeed.js"
-import type { Fx } from "../Fx.js"
-import { map } from "./map.js"
+import * as Effect from "effect/Effect";
+import { make as makeSink } from "../../Sink/Sink.js";
+import { make } from "../constructors/make.js";
+import { succeed } from "../constructors/succeed.js";
+import type { Fx } from "../Fx.js";
+import { map } from "./map.js";
 
 /**
  * Combines multiple Fx streams into a single Fx that emits a tuple of the latest values from each stream.
@@ -17,28 +17,40 @@ import { map } from "./map.js"
  */
 export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
   ...fxs: FX
-): Fx<{ readonly [K in keyof FX]: Fx.Success<FX[K]> }, Fx.Error<FX[number]>, Fx.Services<FX[number]>> {
-  if (fxs.length === 0) return succeed([] as { readonly [K in keyof FX]: Fx.Success<FX[K]> })
-  if (fxs.length === 1) return fxs[0]
+): Fx<
+  { readonly [K in keyof FX]: Fx.Success<FX[K]> },
+  Fx.Error<FX[number]>,
+  Fx.Services<FX[number]>
+> {
+  if (fxs.length === 0) return succeed([] as { readonly [K in keyof FX]: Fx.Success<FX[K]> });
+  if (fxs.length === 1) return fxs[0];
 
-  type Result = { readonly [K in keyof FX]: Fx.Success<FX[K]> }
-  return make(Effect.fn(function*(sink) {
-    const len = fxs.length
-    const result: Array<Fx.Success<FX[number]>> = new Array(len)
-    const filled = new Set<number>()
+  type Result = { readonly [K in keyof FX]: Fx.Success<FX[K]> };
+  return make(
+    Effect.fn(function* (sink) {
+      const len = fxs.length;
+      const result: Array<Fx.Success<FX[number]>> = new Array(len);
+      const filled = new Set<number>();
 
-    return yield* Effect.forEach(fxs, (fx, i) =>
-      fx.run(makeSink(
-        sink.onFailure,
-        Effect.fn(function*(value) {
-          result[i] = value
-          filled.add(i)
-          if (filled.size === len) {
-            yield* sink.onSuccess(result as Result)
-          }
-        })
-      )), { concurrency: "unbounded", discard: true })
-  }))
+      return yield* Effect.forEach(
+        fxs,
+        (fx, i) =>
+          fx.run(
+            makeSink(
+              sink.onFailure,
+              Effect.fn(function* (value) {
+                result[i] = value;
+                filled.add(i);
+                if (filled.size === len) {
+                  yield* sink.onSuccess(result as Result);
+                }
+              }),
+            ),
+          ),
+        { concurrency: "unbounded", discard: true },
+      );
+    }),
+  );
 }
 
 /**
@@ -51,14 +63,16 @@ export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
  * @category combinators
  */
 export function struct<FXS extends Readonly<Record<string, Fx<any, any, any>>>>(
-  fxs: FXS
-): Fx<{ readonly [K in keyof FXS]: Fx.Success<FXS[K]> }, Fx.Error<FXS[keyof FXS]>, Fx.Services<FXS[keyof FXS]>> {
+  fxs: FXS,
+): Fx<
+  { readonly [K in keyof FXS]: Fx.Success<FXS[K]> },
+  Fx.Error<FXS[keyof FXS]>,
+  Fx.Services<FXS[keyof FXS]>
+> {
   return map(
-    tuple(
-      ...Object.entries(fxs).map(([key, fx]) => map(fx, (value) => [key, value] as const))
-    ),
-    Object.fromEntries as (
-      entries: ReadonlyArray<readonly [string, any]>
-    ) => { readonly [K in keyof FXS]: Fx.Success<FXS[K]> }
-  )
+    tuple(...Object.entries(fxs).map(([key, fx]) => map(fx, (value) => [key, value] as const))),
+    Object.fromEntries as (entries: ReadonlyArray<readonly [string, any]>) => {
+      readonly [K in keyof FXS]: Fx.Success<FXS[K]>;
+    },
+  );
 }

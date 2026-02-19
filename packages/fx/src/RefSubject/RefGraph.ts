@@ -3,23 +3,27 @@
  * @since 1.18.0
  */
 
-import type * as Effect from "effect/Effect"
-import { equals } from "effect/Equal"
-import { dual } from "effect/Function"
-import * as Graph from "effect/Graph"
-import * as Option from "effect/Option"
-import type * as Scope from "effect/Scope"
+import type * as Effect from "effect/Effect";
+import { equals } from "effect/Equal";
+import { dual } from "effect/Function";
+import * as Graph from "effect/Graph";
+import * as Option from "effect/Option";
+import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
-import * as RefSubject from "./RefSubject.js"
+import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefGraph is a RefSubject specialized over a Graph.
  * @since 1.18.0
  * @category models
  */
-export interface RefGraph<in out N, in out E, T extends Graph.Kind = "directed", in out Err = never, out R = never>
-  extends RefSubject.RefSubject<Graph.Graph<N, E, T>, Err, R>
-{}
+export interface RefGraph<
+  in out N,
+  in out E,
+  T extends Graph.Kind = "directed",
+  in out Err = never,
+  out R = never,
+> extends RefSubject.RefSubject<Graph.Graph<N, E, T>, Err, R> {}
 
 /**
  * Creates a new `RefGraph` from a Graph, `Effect`, or `Fx`.
@@ -30,9 +34,9 @@ export function make<N, E, T extends Graph.Kind, Err, R>(
   initial:
     | Graph.Graph<N, E, T>
     | Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-    | Fx.Fx<Graph.Graph<N, E, T>, Err, R>
+    | Fx.Fx<Graph.Graph<N, E, T>, Err, R>,
 ): Effect.Effect<RefGraph<N, E, T, Err>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq: equals })
+  return RefSubject.make(initial, { eq: equals });
 }
 
 /**
@@ -45,7 +49,7 @@ export function directed<N, E, Err, R>(): Effect.Effect<
   never,
   R | Scope.Scope
 > {
-  return RefSubject.make(Graph.directed<N, E>(), { eq: equals })
+  return RefSubject.make(Graph.directed<N, E>(), { eq: equals });
 }
 
 /**
@@ -58,7 +62,7 @@ export function undirected<N, E, Err, R>(): Effect.Effect<
   never,
   R | Scope.Scope
 > {
-  return RefSubject.make(Graph.undirected<N, E>(), { eq: equals })
+  return RefSubject.make(Graph.undirected<N, E>(), { eq: equals });
 }
 
 // ========================================
@@ -72,21 +76,27 @@ export function undirected<N, E, Err, R>(): Effect.Effect<
  */
 export const addNode: {
   <N>(
-    data: N
+    data: N,
   ): <E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    data: N
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(2, function addNode<N, E, T extends Graph.Kind, Err, R>(ref: RefGraph<N, E, T, Err, R>, data: N) {
+    data: N,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(2, function addNode<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, data: N) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.addNode(mutable, data)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.addNode(mutable, data);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Remove a node from the graph.
@@ -95,24 +105,27 @@ export const addNode: {
  */
 export const removeNode: {
   (
-    nodeIndex: Graph.NodeIndex
+    nodeIndex: Graph.NodeIndex,
   ): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    nodeIndex: Graph.NodeIndex
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(2, function removeNode<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  nodeIndex: Graph.NodeIndex
-) {
+    nodeIndex: Graph.NodeIndex,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(2, function removeNode<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, nodeIndex: Graph.NodeIndex) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.removeNode(mutable, nodeIndex)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.removeNode(mutable, nodeIndex);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Update a node's data.
@@ -122,26 +135,28 @@ export const removeNode: {
 export const updateNode: {
   <N>(
     nodeIndex: Graph.NodeIndex,
-    f: (data: N) => N
+    f: (data: N) => N,
   ): <E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
     nodeIndex: Graph.NodeIndex,
-    f: (data: N) => N
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(3, function updateNode<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  nodeIndex: Graph.NodeIndex,
-  f: (data: N) => N
-) {
+    f: (data: N) => N,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(3, function updateNode<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, nodeIndex: Graph.NodeIndex, f: (data: N) => N) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.updateNode(mutable, nodeIndex, f)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.updateNode(mutable, nodeIndex, f);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Add an edge to the graph.
@@ -152,28 +167,29 @@ export const addEdge: {
   <E>(
     source: Graph.NodeIndex,
     target: Graph.NodeIndex,
-    data: E
+    data: E,
   ): <N, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
     source: Graph.NodeIndex,
     target: Graph.NodeIndex,
-    data: E
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(4, function addEdge<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  source: Graph.NodeIndex,
-  target: Graph.NodeIndex,
-  data: E
-) {
+    data: E,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(4, function addEdge<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, source: Graph.NodeIndex, target: Graph.NodeIndex, data: E) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.addEdge(mutable, source, target, data)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.addEdge(mutable, source, target, data);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Remove an edge from the graph.
@@ -182,24 +198,27 @@ export const addEdge: {
  */
 export const removeEdge: {
   (
-    edgeIndex: Graph.EdgeIndex
+    edgeIndex: Graph.EdgeIndex,
   ): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    edgeIndex: Graph.EdgeIndex
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(2, function removeEdge<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  edgeIndex: Graph.EdgeIndex
-) {
+    edgeIndex: Graph.EdgeIndex,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(2, function removeEdge<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, edgeIndex: Graph.EdgeIndex) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.removeEdge(mutable, edgeIndex)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.removeEdge(mutable, edgeIndex);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Update an edge's data.
@@ -209,26 +228,28 @@ export const removeEdge: {
 export const updateEdge: {
   <E>(
     edgeIndex: Graph.EdgeIndex,
-    f: (data: E) => E
+    f: (data: E) => E,
   ): <N, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
     edgeIndex: Graph.EdgeIndex,
-    f: (data: E) => E
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(3, function updateEdge<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  edgeIndex: Graph.EdgeIndex,
-  f: (data: E) => E
-) {
+    f: (data: E) => E,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(3, function updateEdge<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, edgeIndex: Graph.EdgeIndex, f: (data: E) => E) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.updateEdge(mutable, edgeIndex, f)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.updateEdge(mutable, edgeIndex, f);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Map all node data.
@@ -237,24 +258,27 @@ export const updateEdge: {
  */
 export const mapNodes: {
   <N>(
-    f: (data: N) => N
+    f: (data: N) => N,
   ): <E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    f: (data: N) => N
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(2, function mapNodes<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  f: (data: N) => N
-) {
+    f: (data: N) => N,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(2, function mapNodes<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, f: (data: N) => N) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.mapNodes(mutable, f)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.mapNodes(mutable, f);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Map all edge data.
@@ -263,24 +287,27 @@ export const mapNodes: {
  */
 export const mapEdges: {
   <E>(
-    f: (data: E) => E
+    f: (data: E) => E,
   ): <N, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    f: (data: E) => E
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(2, function mapEdges<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  f: (data: E) => E
-) {
+    f: (data: E) => E,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(2, function mapEdges<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, f: (data: E) => E) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.mapEdges(mutable, f)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.mapEdges(mutable, f);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Filter nodes.
@@ -289,24 +316,27 @@ export const mapEdges: {
  */
 export const filterNodes: {
   <N>(
-    predicate: (data: N) => boolean
+    predicate: (data: N) => boolean,
   ): <E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    predicate: (data: N) => boolean
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(2, function filterNodes<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  predicate: (data: N) => boolean
-) {
+    predicate: (data: N) => boolean,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(2, function filterNodes<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, predicate: (data: N) => boolean) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.filterNodes(mutable, predicate)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.filterNodes(mutable, predicate);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Filter edges.
@@ -315,24 +345,27 @@ export const filterNodes: {
  */
 export const filterEdges: {
   <E>(
-    predicate: (data: E) => boolean
+    predicate: (data: E) => boolean,
   ): <N, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    predicate: (data: E) => boolean
-  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>
-} = dual(2, function filterEdges<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  predicate: (data: E) => boolean
-) {
+    predicate: (data: E) => boolean,
+  ): Effect.Effect<Graph.Graph<N, E, T>, Err, R>;
+} = dual(2, function filterEdges<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, predicate: (data: E) => boolean) {
   return RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.filterEdges(mutable, predicate)
-    return Graph.endMutation(mutable)
-  })
-})
+    const mutable = Graph.beginMutation(g);
+    Graph.filterEdges(mutable, predicate);
+    return Graph.endMutation(mutable);
+  });
+});
 
 /**
  * Reverse all edge directions.
@@ -340,13 +373,13 @@ export const filterEdges: {
  * @category combinators
  */
 export const reverse = <N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>
+  ref: RefGraph<N, E, T, Err, R>,
 ): Effect.Effect<Graph.Graph<N, E, T>, Err, R> =>
   RefSubject.update(ref, (g) => {
-    const mutable = Graph.beginMutation(g)
-    Graph.reverse(mutable)
-    return Graph.endMutation(mutable)
-  })
+    const mutable = Graph.beginMutation(g);
+    Graph.reverse(mutable);
+    return Graph.endMutation(mutable);
+  });
 
 // ========================================
 // Computed
@@ -358,8 +391,8 @@ export const reverse = <N, E, T extends Graph.Kind, Err, R>(
  * @category computed
  */
 export const nodeCount = <N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>
-): RefSubject.Computed<number, Err, R> => RefSubject.map(ref, Graph.nodeCount)
+  ref: RefGraph<N, E, T, Err, R>,
+): RefSubject.Computed<number, Err, R> => RefSubject.map(ref, Graph.nodeCount);
 
 /**
  * Get the edge count.
@@ -367,8 +400,8 @@ export const nodeCount = <N, E, T extends Graph.Kind, Err, R>(
  * @category computed
  */
 export const edgeCount = <N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>
-): RefSubject.Computed<number, Err, R> => RefSubject.map(ref, Graph.edgeCount)
+  ref: RefGraph<N, E, T, Err, R>,
+): RefSubject.Computed<number, Err, R> => RefSubject.map(ref, Graph.edgeCount);
 
 /**
  * Check if a node exists.
@@ -376,19 +409,24 @@ export const edgeCount = <N, E, T extends Graph.Kind, Err, R>(
  * @category computed
  */
 export const hasNode: {
-  (nodeIndex: Graph.NodeIndex): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Computed<boolean, Err, R>
+  (
+    nodeIndex: Graph.NodeIndex,
+  ): <N, E, T extends Graph.Kind, Err, R>(
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Computed<boolean, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    nodeIndex: Graph.NodeIndex
-  ): RefSubject.Computed<boolean, Err, R>
-} = dual(2, function hasNode<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  nodeIndex: Graph.NodeIndex
-) {
-  return RefSubject.map(ref, Graph.hasNode(nodeIndex))
-})
+    nodeIndex: Graph.NodeIndex,
+  ): RefSubject.Computed<boolean, Err, R>;
+} = dual(2, function hasNode<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, nodeIndex: Graph.NodeIndex) {
+  return RefSubject.map(ref, Graph.hasNode(nodeIndex));
+});
 
 /**
  * Check if an edge exists.
@@ -398,22 +436,24 @@ export const hasNode: {
 export const hasEdge: {
   (
     source: Graph.NodeIndex,
-    target: Graph.NodeIndex
+    target: Graph.NodeIndex,
   ): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Computed<boolean, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Computed<boolean, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
     source: Graph.NodeIndex,
-    target: Graph.NodeIndex
-  ): RefSubject.Computed<boolean, Err, R>
-} = dual(3, function hasEdge<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  source: Graph.NodeIndex,
-  target: Graph.NodeIndex
-) {
-  return RefSubject.map(ref, Graph.hasEdge(source, target))
-})
+    target: Graph.NodeIndex,
+  ): RefSubject.Computed<boolean, Err, R>;
+} = dual(3, function hasEdge<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, source: Graph.NodeIndex, target: Graph.NodeIndex) {
+  return RefSubject.map(ref, Graph.hasEdge(source, target));
+});
 
 /**
  * Get neighbors of a node.
@@ -421,19 +461,24 @@ export const hasEdge: {
  * @category computed
  */
 export const neighbors: {
-  (nodeIndex: Graph.NodeIndex): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>
+  (
+    nodeIndex: Graph.NodeIndex,
+  ): <N, E, T extends Graph.Kind, Err, R>(
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    nodeIndex: Graph.NodeIndex
-  ): RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>
-} = dual(2, function neighbors<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  nodeIndex: Graph.NodeIndex
-) {
-  return RefSubject.map(ref, Graph.neighbors(nodeIndex))
-})
+    nodeIndex: Graph.NodeIndex,
+  ): RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>;
+} = dual(2, function neighbors<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, nodeIndex: Graph.NodeIndex) {
+  return RefSubject.map(ref, Graph.neighbors(nodeIndex));
+});
 
 /**
  * Get directed neighbors of a node.
@@ -443,22 +488,24 @@ export const neighbors: {
 export const neighborsDirected: {
   (
     nodeIndex: Graph.NodeIndex,
-    direction: Graph.Direction
+    direction: Graph.Direction,
   ): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
     nodeIndex: Graph.NodeIndex,
-    direction: Graph.Direction
-  ): RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>
-} = dual(3, function neighborsDirected<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  nodeIndex: Graph.NodeIndex,
-  direction: Graph.Direction
-) {
-  return RefSubject.map(ref, Graph.neighborsDirected(nodeIndex, direction))
-})
+    direction: Graph.Direction,
+  ): RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>;
+} = dual(3, function neighborsDirected<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, nodeIndex: Graph.NodeIndex, direction: Graph.Direction) {
+  return RefSubject.map(ref, Graph.neighborsDirected(nodeIndex, direction));
+});
 
 /**
  * Check if the graph is acyclic.
@@ -466,8 +513,8 @@ export const neighborsDirected: {
  * @category computed
  */
 export const isAcyclic = <N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>
-): RefSubject.Computed<boolean, Err, R> => RefSubject.map(ref, Graph.isAcyclic)
+  ref: RefGraph<N, E, T, Err, R>,
+): RefSubject.Computed<boolean, Err, R> => RefSubject.map(ref, Graph.isAcyclic);
 
 /**
  * Check if the graph is bipartite (undirected only).
@@ -475,8 +522,8 @@ export const isAcyclic = <N, E, T extends Graph.Kind, Err, R>(
  * @category computed
  */
 export const isBipartite = <N, E, Err, R>(
-  ref: RefGraph<N, E, "undirected", Err, R>
-): RefSubject.Computed<boolean, Err, R> => RefSubject.map(ref, Graph.isBipartite)
+  ref: RefGraph<N, E, "undirected", Err, R>,
+): RefSubject.Computed<boolean, Err, R> => RefSubject.map(ref, Graph.isBipartite);
 
 /**
  * Get connected components (undirected only).
@@ -484,8 +531,9 @@ export const isBipartite = <N, E, Err, R>(
  * @category computed
  */
 export const connectedComponents = <N, E, Err, R>(
-  ref: RefGraph<N, E, "undirected", Err, R>
-): RefSubject.Computed<Array<Array<Graph.NodeIndex>>, Err, R> => RefSubject.map(ref, Graph.connectedComponents)
+  ref: RefGraph<N, E, "undirected", Err, R>,
+): RefSubject.Computed<Array<Array<Graph.NodeIndex>>, Err, R> =>
+  RefSubject.map(ref, Graph.connectedComponents);
 
 /**
  * Get strongly connected components.
@@ -493,8 +541,9 @@ export const connectedComponents = <N, E, Err, R>(
  * @category computed
  */
 export const stronglyConnectedComponents = <N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>
-): RefSubject.Computed<Array<Array<Graph.NodeIndex>>, Err, R> => RefSubject.map(ref, Graph.stronglyConnectedComponents)
+  ref: RefGraph<N, E, T, Err, R>,
+): RefSubject.Computed<Array<Array<Graph.NodeIndex>>, Err, R> =>
+  RefSubject.map(ref, Graph.stronglyConnectedComponents);
 
 // ========================================
 // Filtered
@@ -506,19 +555,24 @@ export const stronglyConnectedComponents = <N, E, T extends Graph.Kind, Err, R>(
  * @category filtered
  */
 export const getNode: {
-  (nodeIndex: Graph.NodeIndex): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Filtered<N, Err, R>
+  (
+    nodeIndex: Graph.NodeIndex,
+  ): <N, E, T extends Graph.Kind, Err, R>(
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Filtered<N, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    nodeIndex: Graph.NodeIndex
-  ): RefSubject.Filtered<N, Err, R>
-} = dual(2, function getNode<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  nodeIndex: Graph.NodeIndex
-) {
-  return RefSubject.filterMap(ref, Graph.getNode(nodeIndex))
-})
+    nodeIndex: Graph.NodeIndex,
+  ): RefSubject.Filtered<N, Err, R>;
+} = dual(2, function getNode<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, nodeIndex: Graph.NodeIndex) {
+  return RefSubject.filterMap(ref, Graph.getNode(nodeIndex));
+});
 
 /**
  * Get an edge's data.
@@ -526,19 +580,24 @@ export const getNode: {
  * @category filtered
  */
 export const getEdge: {
-  (edgeIndex: Graph.EdgeIndex): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Filtered<Graph.Edge<E>, Err, R>
+  (
+    edgeIndex: Graph.EdgeIndex,
+  ): <N, E, T extends Graph.Kind, Err, R>(
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Filtered<Graph.Edge<E>, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    edgeIndex: Graph.EdgeIndex
-  ): RefSubject.Filtered<Graph.Edge<E>, Err, R>
-} = dual(2, function getEdge<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  edgeIndex: Graph.EdgeIndex
-) {
-  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.getEdge(g, edgeIndex)))
-})
+    edgeIndex: Graph.EdgeIndex,
+  ): RefSubject.Filtered<Graph.Edge<E>, Err, R>;
+} = dual(2, function getEdge<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, edgeIndex: Graph.EdgeIndex) {
+  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.getEdge(g, edgeIndex)));
+});
 
 /**
  * Find a node matching a predicate.
@@ -547,20 +606,23 @@ export const getEdge: {
  */
 export const findNode: {
   <N>(
-    predicate: (data: N) => boolean
+    predicate: (data: N) => boolean,
   ): <E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Filtered<Graph.NodeIndex, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Filtered<Graph.NodeIndex, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    predicate: (data: N) => boolean
-  ): RefSubject.Filtered<Graph.NodeIndex, Err, R>
-} = dual(2, function findNode<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  predicate: (data: N) => boolean
-) {
-  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.findNode(g, predicate)))
-})
+    predicate: (data: N) => boolean,
+  ): RefSubject.Filtered<Graph.NodeIndex, Err, R>;
+} = dual(2, function findNode<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, predicate: (data: N) => boolean) {
+  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.findNode(g, predicate)));
+});
 
 /**
  * Find an edge matching a predicate.
@@ -569,17 +631,20 @@ export const findNode: {
  */
 export const findEdge: {
   <E>(
-    predicate: (edge: E) => boolean
+    predicate: (edge: E) => boolean,
   ): <N, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>
-  ) => RefSubject.Filtered<Graph.EdgeIndex, Err, R>
+    ref: RefGraph<N, E, T, Err, R>,
+  ) => RefSubject.Filtered<Graph.EdgeIndex, Err, R>;
   <N, E, T extends Graph.Kind, Err, R>(
     ref: RefGraph<N, E, T, Err, R>,
-    predicate: (edge: E) => boolean
-  ): RefSubject.Filtered<Graph.EdgeIndex, Err, R>
-} = dual(2, function findEdge<N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
-  predicate: (edge: E) => boolean
-) {
-  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.findEdge(g, predicate)))
-})
+    predicate: (edge: E) => boolean,
+  ): RefSubject.Filtered<Graph.EdgeIndex, Err, R>;
+} = dual(2, function findEdge<
+  N,
+  E,
+  T extends Graph.Kind,
+  Err,
+  R,
+>(ref: RefGraph<N, E, T, Err, R>, predicate: (edge: E) => boolean) {
+  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.findEdge(g, predicate)));
+});

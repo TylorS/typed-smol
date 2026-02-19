@@ -1,7 +1,7 @@
-import { dual } from "effect/Function"
-import * as sinkCore from "../../Sink/combinators.js"
-import { make } from "../constructors/make.js"
-import type { Fx } from "../Fx.js"
+import { dual } from "effect/Function";
+import * as sinkCore from "../../Sink/combinators.js";
+import { make } from "../constructors/make.js";
+import type { Fx } from "../Fx.js";
 
 /**
  * Loops over an Fx with an accumulator, producing a new value for each element
@@ -16,16 +16,12 @@ import type { Fx } from "../Fx.js"
 export const loop: {
   <B, A, C>(
     seed: B,
-    f: (acc: B, a: A) => readonly [C, B]
-  ): <E, R>(self: Fx<A, E, R>) => Fx<C, E, R>
+    f: (acc: B, a: A) => readonly [C, B],
+  ): <E, R>(self: Fx<A, E, R>) => Fx<C, E, R>;
 
-  <A, E, R, B, C>(
-    self: Fx<A, E, R>,
-    seed: B,
-    f: (acc: B, a: A) => readonly [C, B]
-  ): Fx<C, E, R>
-} = dual(3, <A, E, R, B, C>(
-  self: Fx<A, E, R>,
-  seed: B,
-  f: (acc: B, a: A) => readonly [C, B]
-): Fx<C, E, R> => make<C, E, R>((sink) => self.run(sinkCore.loop(sink, seed, f))))
+  <A, E, R, B, C>(self: Fx<A, E, R>, seed: B, f: (acc: B, a: A) => readonly [C, B]): Fx<C, E, R>;
+} = dual(
+  3,
+  <A, E, R, B, C>(self: Fx<A, E, R>, seed: B, f: (acc: B, a: A) => readonly [C, B]): Fx<C, E, R> =>
+    make<C, E, R>((sink) => self.run(sinkCore.loop(sink, seed, f))),
+);

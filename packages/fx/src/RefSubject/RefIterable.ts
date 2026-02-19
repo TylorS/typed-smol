@@ -3,23 +3,25 @@
  * @since 1.18.0
  */
 
-import type * as Effect from "effect/Effect"
-import { equals } from "effect/Equal"
-import { dual } from "effect/Function"
-import * as Iterable from "effect/Iterable"
-import type * as Option from "effect/Option"
-import type * as Scope from "effect/Scope"
+import type * as Effect from "effect/Effect";
+import { equals } from "effect/Equal";
+import { dual } from "effect/Function";
+import * as Iterable from "effect/Iterable";
+import type * as Option from "effect/Option";
+import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
-import * as RefSubject from "./RefSubject.js"
+import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefIterable is a RefSubject specialized over an Iterable of values.
  * @since 1.18.0
  * @category models
  */
-export interface RefIterable<in out A, in out E = never, out R = never>
-  extends RefSubject.RefSubject<Iterable<A>, E, R>
-{}
+export interface RefIterable<
+  in out A,
+  in out E = never,
+  out R = never,
+> extends RefSubject.RefSubject<Iterable<A>, E, R> {}
 
 /**
  * Creates a new `RefIterable` from an Iterable, `Effect`, or `Fx`.
@@ -27,9 +29,9 @@ export interface RefIterable<in out A, in out E = never, out R = never>
  * @category constructors
  */
 export function make<A, E, R>(
-  initial: Iterable<A> | Effect.Effect<Iterable<A>, E, R> | Fx.Fx<Iterable<A>, E, R>
+  initial: Iterable<A> | Effect.Effect<Iterable<A>, E, R> | Fx.Fx<Iterable<A>, E, R>,
 ): Effect.Effect<RefIterable<A, E>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq: equals })
+  return RefSubject.make(initial, { eq: equals });
 }
 
 // ========================================
@@ -42,11 +44,11 @@ export function make<A, E, R>(
  * @category combinators
  */
 export const prepend: {
-  <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, value: A): Effect.Effect<Iterable<A>, E, R>
+  <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, value: A): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function prepend<A, E, R>(ref: RefIterable<A, E, R>, value: A) {
-  return RefSubject.update(ref, Iterable.prepend(value))
-})
+  return RefSubject.update(ref, Iterable.prepend(value));
+});
 
 /**
  * Prepend an iterable of values to the current state of a RefIterable.
@@ -54,11 +56,11 @@ export const prepend: {
  * @category combinators
  */
 export const prependAll: {
-  <A>(value: Iterable<A>): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, value: Iterable<A>): Effect.Effect<Iterable<A>, E, R>
+  <A>(value: Iterable<A>): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, value: Iterable<A>): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function prependAll<A, E, R>(ref: RefIterable<A, E, R>, value: Iterable<A>) {
-  return RefSubject.update(ref, Iterable.prependAll(value))
-})
+  return RefSubject.update(ref, Iterable.prependAll(value));
+});
 
 /**
  * Append a value to the current state of a RefIterable.
@@ -66,11 +68,11 @@ export const prependAll: {
  * @category combinators
  */
 export const append: {
-  <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, value: A): Effect.Effect<Iterable<A>, E, R>
+  <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, value: A): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function append<A, E, R>(ref: RefIterable<A, E, R>, value: A) {
-  return RefSubject.update(ref, Iterable.append(value))
-})
+  return RefSubject.update(ref, Iterable.append(value));
+});
 
 /**
  * Append an iterable of values to the current state of a RefIterable.
@@ -78,11 +80,11 @@ export const append: {
  * @category combinators
  */
 export const appendAll: {
-  <A>(value: Iterable<A>): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, value: Iterable<A>): Effect.Effect<Iterable<A>, E, R>
+  <A>(value: Iterable<A>): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, value: Iterable<A>): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function appendAll<A, E, R>(ref: RefIterable<A, E, R>, value: Iterable<A>) {
-  return RefSubject.update(ref, Iterable.appendAll(value))
-})
+  return RefSubject.update(ref, Iterable.appendAll(value));
+});
 
 /**
  * Drop the first `n` values from a RefIterable.
@@ -90,11 +92,11 @@ export const appendAll: {
  * @category combinators
  */
 export const drop: {
-  (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, n: number): Effect.Effect<Iterable<A>, E, R>
+  (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, n: number): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function drop<A, E, R>(ref: RefIterable<A, E, R>, n: number) {
-  return RefSubject.update(ref, Iterable.drop(n))
-})
+  return RefSubject.update(ref, Iterable.drop(n));
+});
 
 /**
  * Take the first `n` values from a RefIterable.
@@ -102,11 +104,11 @@ export const drop: {
  * @category combinators
  */
 export const take: {
-  (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, n: number): Effect.Effect<Iterable<A>, E, R>
+  (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, n: number): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function take<A, E, R>(ref: RefIterable<A, E, R>, n: number) {
-  return RefSubject.update(ref, Iterable.take(n))
-})
+  return RefSubject.update(ref, Iterable.take(n));
+});
 
 /**
  * Take values from a RefIterable while a predicate is true.
@@ -114,11 +116,16 @@ export const take: {
  * @category combinators
  */
 export const takeWhile: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): Effect.Effect<Iterable<A>, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    predicate: (a: A) => boolean,
+  ): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function takeWhile<A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.update(ref, Iterable.takeWhile(predicate))
-})
+  return RefSubject.update(ref, Iterable.takeWhile(predicate));
+});
 
 /**
  * Filter the values of a RefIterable (mutating).
@@ -126,11 +133,16 @@ export const takeWhile: {
  * @category combinators
  */
 export const filter: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): Effect.Effect<Iterable<A>, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    predicate: (a: A) => boolean,
+  ): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function filter<A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.update(ref, Iterable.filter(predicate))
-})
+  return RefSubject.update(ref, Iterable.filter(predicate));
+});
 
 /**
  * Map (Endomorphic) the values of a RefIterable.
@@ -138,19 +150,25 @@ export const filter: {
  * @category combinators
  */
 export const map: {
-  <A>(f: (a: A, index: number) => A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => A): Effect.Effect<Iterable<A>, E, R>
+  <A>(
+    f: (a: A, index: number) => A,
+  ): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    f: (a: A, index: number) => A,
+  ): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function map<A, E, R>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => A) {
-  return RefSubject.update(ref, Iterable.map(f))
-})
+  return RefSubject.update(ref, Iterable.map(f));
+});
 
 /**
  * Remove adjacent duplicate values from a RefIterable.
  * @since 1.18.0
  * @category combinators
  */
-export const dedupeAdjacent = <A, E, R>(ref: RefIterable<A, E, R>): Effect.Effect<Iterable<A>, E, R> =>
-  RefSubject.update(ref, Iterable.dedupeAdjacent)
+export const dedupeAdjacent = <A, E, R>(
+  ref: RefIterable<A, E, R>,
+): Effect.Effect<Iterable<A>, E, R> => RefSubject.update(ref, Iterable.dedupeAdjacent);
 
 /**
  * Intersperse a separator between elements.
@@ -158,11 +176,11 @@ export const dedupeAdjacent = <A, E, R>(ref: RefIterable<A, E, R>): Effect.Effec
  * @category combinators
  */
 export const intersperse: {
-  <A>(middle: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, middle: A): Effect.Effect<Iterable<A>, E, R>
+  <A>(middle: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, middle: A): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function intersperse<A, E, R>(ref: RefIterable<A, E, R>, middle: A) {
-  return RefSubject.update(ref, Iterable.intersperse(middle))
-})
+  return RefSubject.update(ref, Iterable.intersperse(middle));
+});
 
 /**
  * Repeat the iterable n times.
@@ -170,11 +188,11 @@ export const intersperse: {
  * @category combinators
  */
 export const repeat: {
-  (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, n: number): Effect.Effect<Iterable<A>, E, R>
+  (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, n: number): Effect.Effect<Iterable<A>, E, R>;
 } = dual(2, function repeat<A, E, R>(ref: RefIterable<A, E, R>, n: number) {
-  return RefSubject.update(ref, Iterable.repeat(n))
-})
+  return RefSubject.update(ref, Iterable.repeat(n));
+});
 
 /**
  * FlatMap (endomorphic).
@@ -182,11 +200,20 @@ export const repeat: {
  * @category combinators
  */
 export const flatMap: {
-  <A>(f: (a: A, index: number) => Iterable<A>): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => Iterable<A>): Effect.Effect<Iterable<A>, E, R>
-} = dual(2, function flatMap<A, E, R>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => Iterable<A>) {
-  return RefSubject.update(ref, Iterable.flatMap(f))
-})
+  <A>(
+    f: (a: A, index: number) => Iterable<A>,
+  ): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    f: (a: A, index: number) => Iterable<A>,
+  ): Effect.Effect<Iterable<A>, E, R>;
+} = dual(2, function flatMap<
+  A,
+  E,
+  R,
+>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => Iterable<A>) {
+  return RefSubject.update(ref, Iterable.flatMap(f));
+});
 
 /**
  * Filter and map values in place.
@@ -195,15 +222,19 @@ export const flatMap: {
  */
 export const filterMap: {
   <A>(
-    f: (a: A, index: number) => Option.Option<A>
-  ): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>
+    f: (a: A, index: number) => Option.Option<A>,
+  ): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
   <A, E, R>(
     ref: RefIterable<A, E, R>,
-    f: (a: A, index: number) => Option.Option<A>
-  ): Effect.Effect<Iterable<A>, E, R>
-} = dual(2, function filterMap<A, E, R>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => Option.Option<A>) {
-  return RefSubject.update(ref, Iterable.filterMap(f))
-})
+    f: (a: A, index: number) => Option.Option<A>,
+  ): Effect.Effect<Iterable<A>, E, R>;
+} = dual(2, function filterMap<
+  A,
+  E,
+  R,
+>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => Option.Option<A>) {
+  return RefSubject.update(ref, Iterable.filterMap(f));
+});
 
 /**
  * Extract Some values from Option iterable.
@@ -211,9 +242,9 @@ export const filterMap: {
  * @category combinators
  */
 export const getSomes = <A, E, R>(
-  ref: RefIterable<Option.Option<A>, E, R>
+  ref: RefIterable<Option.Option<A>, E, R>,
 ): Effect.Effect<Iterable<Option.Option<A>>, E, R> =>
-  RefSubject.update(ref, (iter) => Iterable.getSomes(iter) as Iterable<Option.Option<A>>)
+  RefSubject.update(ref, (iter) => Iterable.getSomes(iter) as Iterable<Option.Option<A>>);
 
 // ========================================
 // Computed
@@ -225,7 +256,7 @@ export const getSomes = <A, E, R>(
  * @category computed
  */
 export const isEmpty = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, Iterable.isEmpty)
+  RefSubject.map(ref, Iterable.isEmpty);
 
 /**
  * Get the current size of a RefIterable.
@@ -233,7 +264,7 @@ export const isEmpty = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed
  * @category computed
  */
 export const size = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<number, E, R> =>
-  RefSubject.map(ref, Iterable.size)
+  RefSubject.map(ref, Iterable.size);
 
 /**
  * Map the values of a RefIterable to a different type.
@@ -241,11 +272,21 @@ export const size = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<nu
  * @category computed
  */
 export const mapValues: {
-  <A, B>(f: (a: A, index: number) => B): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<Iterable<B>, E, R>
-  <A, E, R, B>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => B): RefSubject.Computed<Iterable<B>, E, R>
-} = dual(2, function mapValues<A, E, R, B>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => B) {
-  return RefSubject.map(ref, Iterable.map(f))
-})
+  <A, B>(
+    f: (a: A, index: number) => B,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<Iterable<B>, E, R>;
+  <A, E, R, B>(
+    ref: RefIterable<A, E, R>,
+    f: (a: A, index: number) => B,
+  ): RefSubject.Computed<Iterable<B>, E, R>;
+} = dual(2, function mapValues<
+  A,
+  E,
+  R,
+  B,
+>(ref: RefIterable<A, E, R>, f: (a: A, index: number) => B) {
+  return RefSubject.map(ref, Iterable.map(f));
+});
 
 /**
  * Filter the values of a RefIterable creating a Computed value.
@@ -253,11 +294,20 @@ export const mapValues: {
  * @category computed
  */
 export const filterValues: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<Iterable<A>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): RefSubject.Computed<Iterable<A>, E, R>
-} = dual(2, function filterValues<A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.map(ref, Iterable.filter(predicate))
-})
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<Iterable<A>, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    predicate: (a: A) => boolean,
+  ): RefSubject.Computed<Iterable<A>, E, R>;
+} = dual(2, function filterValues<
+  A,
+  E,
+  R,
+>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
+  return RefSubject.map(ref, Iterable.filter(predicate));
+});
 
 /**
  * Group the values of a RefIterable by a key.
@@ -265,11 +315,16 @@ export const filterValues: {
  * @category computed
  */
 export const groupBy: {
-  <A>(f: (a: A) => string): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<Record<string, Array<A>>, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, f: (a: A) => string): RefSubject.Computed<Record<string, Array<A>>, E, R>
+  <A>(
+    f: (a: A) => string,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<Record<string, Array<A>>, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    f: (a: A) => string,
+  ): RefSubject.Computed<Record<string, Array<A>>, E, R>;
 } = dual(2, function groupBy<A, E, R>(ref: RefIterable<A, E, R>, f: (a: A) => string) {
-  return RefSubject.map(ref, Iterable.groupBy(f))
-})
+  return RefSubject.map(ref, Iterable.groupBy(f));
+});
 
 /**
  * Reduce the values of a RefIterable to a single value.
@@ -277,11 +332,23 @@ export const groupBy: {
  * @category computed
  */
 export const reduce: {
-  <A, B>(b: B, f: (b: B, a: A, index: number) => B): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<B, E, R>
-  <A, E, R, B>(ref: RefIterable<A, E, R>, b: B, f: (b: B, a: A, index: number) => B): RefSubject.Computed<B, E, R>
-} = dual(3, function reduce<A, E, R, B>(ref: RefIterable<A, E, R>, b: B, f: (b: B, a: A, index: number) => B) {
-  return RefSubject.map(ref, Iterable.reduce(b, f))
-})
+  <A, B>(
+    b: B,
+    f: (b: B, a: A, index: number) => B,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<B, E, R>;
+  <A, E, R, B>(
+    ref: RefIterable<A, E, R>,
+    b: B,
+    f: (b: B, a: A, index: number) => B,
+  ): RefSubject.Computed<B, E, R>;
+} = dual(3, function reduce<
+  A,
+  E,
+  R,
+  B,
+>(ref: RefIterable<A, E, R>, b: B, f: (b: B, a: A, index: number) => B) {
+  return RefSubject.map(ref, Iterable.reduce(b, f));
+});
 
 /**
  * Check if any value satisfies a predicate.
@@ -289,11 +356,16 @@ export const reduce: {
  * @category computed
  */
 export const some: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<boolean, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): RefSubject.Computed<boolean, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    predicate: (a: A) => boolean,
+  ): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function some<A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.map(ref, Iterable.some(predicate))
-})
+  return RefSubject.map(ref, Iterable.some(predicate));
+});
 
 /**
  * Check if a RefIterable contains a value.
@@ -301,11 +373,11 @@ export const some: {
  * @category computed
  */
 export const contains: {
-  <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<boolean, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, value: A): RefSubject.Computed<boolean, E, R>
+  <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<boolean, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, value: A): RefSubject.Computed<boolean, E, R>;
 } = dual(2, function contains<A, E, R>(ref: RefIterable<A, E, R>, value: A) {
-  return RefSubject.map(ref, Iterable.contains(value))
-})
+  return RefSubject.map(ref, Iterable.contains(value));
+});
 
 /**
  * Count elements satisfying a predicate.
@@ -313,11 +385,16 @@ export const contains: {
  * @category computed
  */
 export const countBy: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<number, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): RefSubject.Computed<number, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<number, E, R>;
+  <A, E, R>(
+    ref: RefIterable<A, E, R>,
+    predicate: (a: A) => boolean,
+  ): RefSubject.Computed<number, E, R>;
 } = dual(2, function countBy<A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.map(ref, Iterable.countBy(predicate))
-})
+  return RefSubject.map(ref, Iterable.countBy(predicate));
+});
 
 /**
  * Convert to array.
@@ -325,7 +402,7 @@ export const countBy: {
  * @category computed
  */
 export const toArray = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<Array<A>, E, R> =>
-  RefSubject.map(ref, (iter) => Array.from(iter))
+  RefSubject.map(ref, (iter) => Array.from(iter));
 
 // ========================================
 // Filtered
@@ -337,7 +414,7 @@ export const toArray = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed
  * @category filtered
  */
 export const head = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Filtered<A, E, R> =>
-  RefSubject.filterMap(ref, Iterable.head)
+  RefSubject.filterMap(ref, Iterable.head);
 
 /**
  * Find the first value satisfying a predicate.
@@ -345,11 +422,13 @@ export const head = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Filtered<A,
  * @category filtered
  */
 export const findFirst: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Filtered<A, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): RefSubject.Filtered<A, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Filtered<A, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): RefSubject.Filtered<A, E, R>;
 } = dual(2, function findFirst<A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.filterMap(ref, Iterable.findFirst(predicate))
-})
+  return RefSubject.filterMap(ref, Iterable.findFirst(predicate));
+});
 
 /**
  * Find the last value satisfying a predicate.
@@ -357,8 +436,10 @@ export const findFirst: {
  * @category filtered
  */
 export const findLast: {
-  <A>(predicate: (a: A) => boolean): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Filtered<A, E, R>
-  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): RefSubject.Filtered<A, E, R>
+  <A>(
+    predicate: (a: A) => boolean,
+  ): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Filtered<A, E, R>;
+  <A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean): RefSubject.Filtered<A, E, R>;
 } = dual(2, function findLast<A, E, R>(ref: RefIterable<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.filterMap(ref, Iterable.findLast(predicate))
-})
+  return RefSubject.filterMap(ref, Iterable.findLast(predicate));
+});

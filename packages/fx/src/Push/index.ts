@@ -1,1 +1,1 @@
-export * from "./Push.js"
+export * from "./Push.js";

@@ -1,8 +1,8 @@
-import type { Effect, RunOptions } from "effect/Effect"
-import { forkChild as effectFork, runFork as effectRunFork } from "effect/Effect"
-import type { Fiber } from "effect/Fiber"
-import type { Fx } from "../Fx.js"
-import { drain } from "./observe.js"
+import type { Effect, RunOptions } from "effect/Effect";
+import { forkChild as effectFork, runFork as effectRunFork } from "effect/Effect";
+import type { Fiber } from "effect/Fiber";
+import type { Fx } from "../Fx.js";
+import { drain } from "./observe.js";
 
 /**
  * Forks the execution of an `Fx` into a background fiber.
@@ -14,14 +14,17 @@ import { drain } from "./observe.js"
  * @since 1.0.0
  * @category runners
  */
-export const fork = <A, E, R>(fx: Fx<A, E, R>, options?: {
-  readonly startImmediately?: boolean
-  readonly uninterruptible?: boolean
-}): Effect<Fiber<unknown, E>, never, R> =>
+export const fork = <A, E, R>(
+  fx: Fx<A, E, R>,
+  options?: {
+    readonly startImmediately?: boolean;
+    readonly uninterruptible?: boolean;
+  },
+): Effect<Fiber<unknown, E>, never, R> =>
   effectFork(drain(fx), {
     startImmediately: options?.startImmediately ?? true,
-    uninterruptible: options?.uninterruptible ?? false
-  })
+    uninterruptible: options?.uninterruptible ?? false,
+  });
 
 /**
  * Runs an `Fx` in a new fiber, using the standard `Effect.runFork`.
@@ -33,4 +36,5 @@ export const fork = <A, E, R>(fx: Fx<A, E, R>, options?: {
  * @since 1.0.0
  * @category runners
  */
-export const runFork = <A, E>(fx: Fx<A, E>, options?: RunOptions): Fiber<void, E> => effectRunFork(drain(fx), options)
+export const runFork = <A, E>(fx: Fx<A, E>, options?: RunOptions): Fiber<void, E> =>
+  effectRunFork(drain(fx), options);

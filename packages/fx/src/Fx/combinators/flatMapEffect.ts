@@ -1,9 +1,9 @@
-import type * as Effect from "effect/Effect"
-import { dual, flow } from "effect/Function"
-import type * as Scope from "effect/Scope"
-import { fromEffect } from "../constructors/fromEffect.js"
-import type { Fx } from "../Fx.js"
-import { flatMap } from "./flatMap.js"
+import type * as Effect from "effect/Effect";
+import { dual, flow } from "effect/Function";
+import type * as Scope from "effect/Scope";
+import { fromEffect } from "../constructors/fromEffect.js";
+import type { Fx } from "../Fx.js";
+import { flatMap } from "./flatMap.js";
 
 /**
  * Type definition for flatMapEffect functions to support variable arguments.
@@ -14,14 +14,14 @@ export type FlatMapEffectLike<Args extends ReadonlyArray<any> = []> = {
   <A, B, E2, R2>(
     f: (a: A) => Effect.Effect<B, E2, R2>,
     ...args: Args
-  ): <E, R>(self: Fx<A, E, R>) => Fx<B, E | E2, R | R2 | Scope.Scope>
+  ): <E, R>(self: Fx<A, E, R>) => Fx<B, E | E2, R | R2 | Scope.Scope>;
 
   <A, E, R, B, E2, R2>(
     self: Fx<A, E, R>,
     f: (a: A) => Effect.Effect<B, E2, R2>,
     ...args: Args
-  ): Fx<B, E | E2, R | R2 | Scope.Scope>
-}
+  ): Fx<B, E | E2, R | R2 | Scope.Scope>;
+};
 
 /**
  * Maps each element of an Fx to an Effect, and merges the results.
@@ -33,7 +33,10 @@ export type FlatMapEffectLike<Args extends ReadonlyArray<any> = []> = {
  * @since 1.0.0
  * @category combinators
  */
-export const flatMapEffect: FlatMapEffectLike = dual(2, <A, E, R, B, E2, R2>(
-  self: Fx<A, E, R>,
-  f: (a: A) => Effect.Effect<B, E2, R2>
-): Fx<B, E | E2, R | R2 | Scope.Scope> => flatMap(self, flow(f, fromEffect)))
+export const flatMapEffect: FlatMapEffectLike = dual(
+  2,
+  <A, E, R, B, E2, R2>(
+    self: Fx<A, E, R>,
+    f: (a: A) => Effect.Effect<B, E2, R2>,
+  ): Fx<B, E | E2, R | R2 | Scope.Scope> => flatMap(self, flow(f, fromEffect)),
+);

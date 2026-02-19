@@ -1,8 +1,8 @@
-import type * as Effect from "effect/Effect"
-import type * as Option from "effect/Option"
-import type * as Scope from "effect/Scope"
-import * as ServiceMap from "effect/ServiceMap"
-import { RefSubject } from "@typed/fx"
+import type * as Effect from "effect/Effect";
+import type * as Option from "effect/Option";
+import type * as Scope from "effect/Scope";
+import * as ServiceMap from "effect/ServiceMap";
+import { RefSubject } from "@typed/fx";
 import type {
   BeforeNavigationEvent,
   CancelNavigation,
@@ -10,90 +10,103 @@ import type {
   NavigationError,
   NavigationEvent,
   RedirectError,
-  Transition
-} from "./model.js"
+  Transition,
+} from "./model.js";
 
-export class Navigation extends ServiceMap.Service<Navigation, {
-  readonly origin: string
-  readonly base: string
-  readonly currentEntry: RefSubject.Computed<Destination>
-  readonly entries: RefSubject.Computed<ReadonlyArray<Destination>>
-  readonly transition: RefSubject.Filtered<Transition>
-  readonly canGoBack: RefSubject.Computed<boolean>
-  readonly canGoForward: RefSubject.Computed<boolean>
+export class Navigation extends ServiceMap.Service<
+  Navigation,
+  {
+    readonly origin: string;
+    readonly base: string;
+    readonly currentEntry: RefSubject.Computed<Destination>;
+    readonly entries: RefSubject.Computed<ReadonlyArray<Destination>>;
+    readonly transition: RefSubject.Filtered<Transition>;
+    readonly canGoBack: RefSubject.Computed<boolean>;
+    readonly canGoForward: RefSubject.Computed<boolean>;
 
-  readonly navigate: (
-    url: string | URL,
-    options?: NavigationNavigateOptions
-  ) => Effect.Effect<Destination, NavigationError>
-  readonly back: (options?: { readonly info?: unknown }) => Effect.Effect<Destination, NavigationError>
-  readonly forward: (options?: { readonly info?: unknown }) => Effect.Effect<Destination, NavigationError>
-  readonly traverseTo: (
-    key: Destination["key"],
-    options?: { readonly info?: unknown }
-  ) => Effect.Effect<Destination, NavigationError>
-  readonly updateCurrentEntry: (
-    options: { readonly state: unknown }
-  ) => Effect.Effect<Destination, NavigationError>
-  readonly reload: (
-    options?: { readonly info?: unknown; readonly state?: unknown }
-  ) => Effect.Effect<Destination, NavigationError>
+    readonly navigate: (
+      url: string | URL,
+      options?: NavigationNavigateOptions,
+    ) => Effect.Effect<Destination, NavigationError>;
+    readonly back: (options?: {
+      readonly info?: unknown;
+    }) => Effect.Effect<Destination, NavigationError>;
+    readonly forward: (options?: {
+      readonly info?: unknown;
+    }) => Effect.Effect<Destination, NavigationError>;
+    readonly traverseTo: (
+      key: Destination["key"],
+      options?: { readonly info?: unknown },
+    ) => Effect.Effect<Destination, NavigationError>;
+    readonly updateCurrentEntry: (options: {
+      readonly state: unknown;
+    }) => Effect.Effect<Destination, NavigationError>;
+    readonly reload: (options?: {
+      readonly info?: unknown;
+      readonly state?: unknown;
+    }) => Effect.Effect<Destination, NavigationError>;
 
-  readonly onBeforeNavigation: <R = never, R2 = never>(
-    handler: BeforeNavigationHandler<R, R2>
-  ) => Effect.Effect<void, never, R | R2 | Scope.Scope>
-  readonly onNavigation: <R = never, R2 = never>(
-    handler: NavigationHandler<R, R2>
-  ) => Effect.Effect<void, never, R | R2 | Scope.Scope>
-}>()("@typed/navigation/Navigation") {
-  static readonly origin = Navigation.useSync((n) => n.origin)
-  static readonly base = Navigation.useSync((n) => n.base)
+    readonly onBeforeNavigation: <R = never, R2 = never>(
+      handler: BeforeNavigationHandler<R, R2>,
+    ) => Effect.Effect<void, never, R | R2 | Scope.Scope>;
+    readonly onNavigation: <R = never, R2 = never>(
+      handler: NavigationHandler<R, R2>,
+    ) => Effect.Effect<void, never, R | R2 | Scope.Scope>;
+  }
+>()("@typed/navigation/Navigation") {
+  static readonly origin = Navigation.useSync((n) => n.origin);
+  static readonly base = Navigation.useSync((n) => n.base);
 
-  static readonly currentEntry = RefSubject.computedFromService(Navigation.useSync((n) => n.currentEntry))
-  static readonly entries = RefSubject.computedFromService(Navigation.useSync((n) => n.entries))
-  static readonly transition = RefSubject.filteredFromService(Navigation.useSync((n) => n.transition))
-  static readonly canGoBack = RefSubject.computedFromService(Navigation.useSync((n) => n.canGoBack))
-  static readonly canGoForward = RefSubject.computedFromService(Navigation.useSync((n) => n.canGoForward))
+  static readonly currentEntry = RefSubject.computedFromService(
+    Navigation.useSync((n) => n.currentEntry),
+  );
+  static readonly entries = RefSubject.computedFromService(Navigation.useSync((n) => n.entries));
+  static readonly transition = RefSubject.filteredFromService(
+    Navigation.useSync((n) => n.transition),
+  );
+  static readonly canGoBack = RefSubject.computedFromService(
+    Navigation.useSync((n) => n.canGoBack),
+  );
+  static readonly canGoForward = RefSubject.computedFromService(
+    Navigation.useSync((n) => n.canGoForward),
+  );
 
   static readonly navigate = (url: string | URL, options?: NavigationNavigateOptions) =>
-    Navigation.use((n) => n.navigate(url, options))
-  static readonly back = (options?: { readonly info?: unknown }) => Navigation.use((n) => n.back(options))
-  static readonly forward = (options?: { readonly info?: unknown }) => Navigation.use((n) => n.forward(options))
+    Navigation.use((n) => n.navigate(url, options));
+  static readonly back = (options?: { readonly info?: unknown }) =>
+    Navigation.use((n) => n.back(options));
+  static readonly forward = (options?: { readonly info?: unknown }) =>
+    Navigation.use((n) => n.forward(options));
   static readonly traverseTo = (key: Destination["key"], options?: { readonly info?: unknown }) =>
-    Navigation.use((n) => n.traverseTo(key, options))
+    Navigation.use((n) => n.traverseTo(key, options));
   static readonly updateCurrentEntry = (options: { readonly state: unknown }) =>
-    Navigation.use((n) => n.updateCurrentEntry(options))
+    Navigation.use((n) => n.updateCurrentEntry(options));
   static readonly reload = (options?: { readonly info?: unknown; readonly state?: unknown }) =>
-    Navigation.use((n) => n.reload(options))
+    Navigation.use((n) => n.reload(options));
 
-  static readonly onBeforeNavigation = <R = never, R2 = never>(handler: BeforeNavigationHandler<R, R2>) =>
-    Navigation.use((n) => n.onBeforeNavigation(handler))
+  static readonly onBeforeNavigation = <R = never, R2 = never>(
+    handler: BeforeNavigationHandler<R, R2>,
+  ) => Navigation.use((n) => n.onBeforeNavigation(handler));
   static readonly onNavigation = <R = never, R2 = never>(handler: NavigationHandler<R, R2>) =>
-    Navigation.use((n) => n.onNavigation(handler))
+    Navigation.use((n) => n.onNavigation(handler));
 }
 
 export type BeforeNavigationHandler<R, R2> = (
-  event: BeforeNavigationEvent
+  event: BeforeNavigationEvent,
 ) => Effect.Effect<
-  Option.Option<
-    Effect.Effect<unknown, RedirectError | CancelNavigation, R2>
-  >,
+  Option.Option<Effect.Effect<unknown, RedirectError | CancelNavigation, R2>>,
   RedirectError | CancelNavigation,
   R
->
+>;
 
 export type NavigationHandler<R, R2> = (
-  event: NavigationEvent
-) => Effect.Effect<
-  Option.Option<
-    Effect.Effect<unknown, never, R2>
-  >,
-  never,
-  R
->
+  event: NavigationEvent,
+) => Effect.Effect<Option.Option<Effect.Effect<unknown, never, R2>>, never, R>;
 
-export const CurrentPath = RefSubject.computedFromService(Navigation.useSync((n) =>
-  n.currentEntry.pipe(
-    RefSubject.map((entry: Destination) => entry.url.pathname + entry.url.search)
-  )
-))
+export const CurrentPath = RefSubject.computedFromService(
+  Navigation.useSync((n) =>
+    n.currentEntry.pipe(
+      RefSubject.map((entry: Destination) => entry.url.pathname + entry.url.search),
+    ),
+  ),
+);

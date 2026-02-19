@@ -1,6 +1,6 @@
-import { dual } from "effect/Function"
-import type { Fx } from "../Fx.js"
-import { slice } from "./slice.js"
+import { dual } from "effect/Function";
+import type { Fx } from "../Fx.js";
+import { slice } from "./slice.js";
 
 /**
  * Skips the first `n` elements of an Fx.
@@ -11,15 +11,10 @@ import { slice } from "./slice.js"
  * @category combinators
  */
 export const skip: {
-  (
-    n: number
-  ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>
+  (n: number): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
 
-  <A, E, R>(
-    fx: Fx<A, E, R>,
-    n: number
-  ): Fx<A, E, R>
-} = dual(2, <A, E, R>(
-  fx: Fx<A, E, R>,
-  n: number
-): Fx<A, E, R> => slice(fx, { skip: n, take: Infinity }))
+  <A, E, R>(fx: Fx<A, E, R>, n: number): Fx<A, E, R>;
+} = dual(
+  2,
+  <A, E, R>(fx: Fx<A, E, R>, n: number): Fx<A, E, R> => slice(fx, { skip: n, take: Infinity }),
+);

@@ -10,9 +10,7 @@ describe("Fx", () => {
 
     it("catch recovers from typed failures", () =>
       Effect.gen(function* () {
-        const fx = Fx.fail("boom").pipe(
-          Fx.catch((e) => Fx.succeed(`recovered:${e}`)),
-        );
+        const fx = Fx.fail("boom").pipe(Fx.catch((e) => Fx.succeed(`recovered:${e}`)));
 
         const result = yield* Fx.collectAll(fx);
         assert.deepStrictEqual(result, ["recovered:boom"]);
@@ -20,9 +18,7 @@ describe("Fx", () => {
 
     it("catch does not recover from defects", () =>
       Effect.gen(function* () {
-        const fx = Fx.die("boom").pipe(
-          Fx.catch(() => Fx.succeed("nope")),
-        );
+        const fx = Fx.die("boom").pipe(Fx.catch(() => Fx.succeed("nope")));
 
         const exit = yield* Effect.exit(Fx.collectAll(fx));
         assert(Exit.isFailure(exit));
@@ -31,9 +27,7 @@ describe("Fx", () => {
 
     it("catchCause recovers from defects", () =>
       Effect.gen(function* () {
-        const fx = Fx.die("boom").pipe(
-          Fx.catchCause(() => Fx.succeed("ok")),
-        );
+        const fx = Fx.die("boom").pipe(Fx.catchCause(() => Fx.succeed("ok")));
 
         const result = yield* Fx.collectAll(fx);
         assert.deepStrictEqual(result, ["ok"]);
@@ -41,9 +35,7 @@ describe("Fx", () => {
 
     it("catchTag recovers from tagged failures", () =>
       Effect.gen(function* () {
-        const fx = Fx.fail(new ErrorA()).pipe(
-          Fx.catchTag("A", () => Fx.succeed(1)),
-        );
+        const fx = Fx.fail(new ErrorA()).pipe(Fx.catchTag("A", () => Fx.succeed(1)));
 
         const result = yield* Fx.collectAll(fx);
         assert.deepStrictEqual(result, [1]);

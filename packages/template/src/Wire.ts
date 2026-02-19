@@ -20,42 +20,44 @@
  * @category models
  */
 export interface Wire {
-  readonly ELEMENT_NODE: 1
-  readonly DOCUMENT_FRAGMENT_NODE: 11
-  readonly nodeType: 111
-  readonly firstChild: Node | null
-  readonly lastChild: Node | null
-  readonly childNodes: Array<Node>
-  readonly valueOf: () => DocumentFragment
+  readonly ELEMENT_NODE: 1;
+  readonly DOCUMENT_FRAGMENT_NODE: 11;
+  readonly nodeType: 111;
+  readonly firstChild: Node | null;
+  readonly lastChild: Node | null;
+  readonly childNodes: Array<Node>;
+  readonly valueOf: () => DocumentFragment;
 }
 
-const ELEMENT_NODE = 1
-const DOCUMENT_FRAGMENT_NODE = 11
-const nodeType = 111
+const ELEMENT_NODE = 1;
+const DOCUMENT_FRAGMENT_NODE = 11;
+const nodeType = 111;
 
 const remove = ({ firstChild, lastChild }: Node, document: Document): Node => {
-  const range = document.createRange()
+  const range = document.createRange();
 
-  range.setStartAfter(firstChild!)
+  range.setStartAfter(firstChild!);
 
-  range.setEndAfter(lastChild!)
-  range.deleteContents()
-  return firstChild as Node
-}
+  range.setEndAfter(lastChild!);
+  range.deleteContents();
+  return firstChild as Node;
+};
 
 /**
  * Create a diffable node from any Node which also might be a Wire.
  * @internal
  */
-export const diffable = (document: Document) => (node: Node, operation: number): Node => {
-  if (node.nodeType !== nodeType) return node
+export const diffable =
+  (document: Document) =>
+  (node: Node, operation: number): Node => {
+    if (node.nodeType !== nodeType) return node;
 
-  if (1 / operation < 0) {
-    return operation ? remove(node, document) : (node.lastChild as Node)
-  }
+    if (1 / operation < 0) {
+      return operation ? remove(node, document) : (node.lastChild as Node);
+    }
 
-  return operation ? (node.valueOf() as Node) : (node.firstChild as Node)
-}
+    return operation ? (node.valueOf() as Node) : (node.firstChild as Node);
+  };
 
 /**
  * Creates a Wire from a DocumentFragment.
@@ -67,16 +69,16 @@ export const diffable = (document: Document) => (node: Node, operation: number):
 export const persistent = (
   document: Document,
   templateHash: string,
-  fragment: DocumentFragment
+  fragment: DocumentFragment,
 ): DocumentFragment | Node | Wire => {
-  const { childNodes } = fragment
-  const { length } = childNodes
-  if (length === 0) return fragment
-  if (length === 1) return childNodes[0]
-  const firstChild = document.createComment(`t_${templateHash}`)
-  const lastChild = document.createComment(`/t_${templateHash}`)
-  return fromComments(fragment, firstChild, lastChild)
-}
+  const { childNodes } = fragment;
+  const { length } = childNodes;
+  if (length === 0) return fragment;
+  if (length === 1) return childNodes[0];
+  const firstChild = document.createComment(`t_${templateHash}`);
+  const lastChild = document.createComment(`/t_${templateHash}`);
+  return fromComments(fragment, firstChild, lastChild);
+};
 
 /**
  * Creates a Wire from a Fragment and boundary comments.
@@ -85,24 +87,24 @@ export const persistent = (
 export const fromComments = (
   fragment: DocumentFragment,
   firstChild: Comment,
-  lastChild: Comment
+  lastChild: Comment,
 ): Wire => {
   if (fragment.childNodes[0] !== firstChild) {
-    fragment.prepend(firstChild)
+    fragment.prepend(firstChild);
   }
   if (fragment.childNodes[fragment.childNodes.length - 1] !== lastChild) {
-    fragment.append(lastChild)
+    fragment.append(lastChild);
   }
 
   const getChildNodes = () => {
-    const nodes = getAllSiblingsBetween(firstChild, lastChild)
+    const nodes = getAllSiblingsBetween(firstChild, lastChild);
 
     if (fragment.childNodes.length !== nodes.length) {
-      fragment.replaceChildren(...nodes)
+      fragment.replaceChildren(...nodes);
     }
 
-    return nodes
-  }
+    return nodes;
+  };
 
   return {
     ELEMENT_NODE,
@@ -111,27 +113,27 @@ export const fromComments = (
     firstChild,
     lastChild,
     get childNodes() {
-      return getChildNodes()
+      return getChildNodes();
     },
     valueOf(): DocumentFragment {
-      getChildNodes()
-      return fragment
-    }
-  }
-}
+      getChildNodes();
+      return fragment;
+    },
+  };
+};
 
 /**
  * Gets all sibling nodes between a start and end node (exclusive).
  * @internal
  */
 export function getAllSiblingsBetween(start: Node, end: Node): Array<Node> {
-  const siblings = []
-  let node = start.nextSibling as Node
+  const siblings = [];
+  let node = start.nextSibling as Node;
   while (node && node !== end) {
-    siblings.push(node)
-    node = node.nextSibling as Node
+    siblings.push(node);
+    node = node.nextSibling as Node;
   }
-  return siblings
+  return siblings;
 }
 
 /**
@@ -151,101 +153,102 @@ export function getAllSiblingsBetween(start: Node, end: Node): Array<Node> {
  * @since 1.0.0
  * @category models
  */
-export type Rendered = Rendered.Value | ReadonlyArray<Rendered>
+export type Rendered = Rendered.Value | ReadonlyArray<Rendered>;
 
 export namespace Rendered {
   /**
    * Single rendered value type.
    */
-  export type Value = Node | DocumentFragment | Wire
+  export type Value = Node | DocumentFragment | Wire;
 
   /**
    * Extract the values from a Rendered type
    */
-  export type Values<T extends Rendered> = [T] extends [ReadonlyArray<infer R>] ?
-    ReadonlyArray<R | Exclude<T, ReadonlyArray<any>>>
-    : ReadonlyArray<T>
+  export type Values<T extends Rendered> = [T] extends [ReadonlyArray<infer R>]
+    ? ReadonlyArray<R | Exclude<T, ReadonlyArray<any>>>
+    : ReadonlyArray<T>;
 
   /**
    * Extract the elements from a Rendered type
    */
   export type Elements<T extends Rendered> = ReadonlyArray<
-    [Node] extends [Exclude<T, DocumentFragment | Wire | ReadonlyArray<Rendered>>] ? HTMLElement | SVGElement
+    [Node] extends [Exclude<T, DocumentFragment | Wire | ReadonlyArray<Rendered>>]
+      ? HTMLElement | SVGElement
       : Exclude<T, DocumentFragment | Wire | ReadonlyArray<Rendered>>
-  >
+  >;
 }
 
 /**
  * Checks if a rendered node is a `Wire`.
  */
 export function isWire(node: Rendered): node is Wire {
-  if (!isArray(node)) return node.nodeType === nodeType
-  return false
+  if (!isArray(node)) return node.nodeType === nodeType;
+  return false;
 }
 
 /**
  * Checks if a rendered node is a standard DOM `Node`.
  */
 export function isNode(node: Rendered): node is Node {
-  if (!isArray(node)) return node.nodeType !== node.DOCUMENT_FRAGMENT_NODE
-  return false
+  if (!isArray(node)) return node.nodeType !== node.DOCUMENT_FRAGMENT_NODE;
+  return false;
 }
 
 /**
  * Checks if a rendered node is an `Element`.
  */
 export function isElement(node: Rendered): node is Element {
-  return isNode(node) && node.nodeType === node.ELEMENT_NODE
+  return isNode(node) && node.nodeType === node.ELEMENT_NODE;
 }
 
 /**
  * Checks if a rendered node is an `SVGElement`.
  */
 export function isSvgElement(node: Rendered): node is SVGElement {
-  return isElement(node) && "ownerSVGElement" in node
+  return isElement(node) && "ownerSVGElement" in node;
 }
 
 /**
  * Checks if a rendered node is an `HTMLElement`.
  */
 export function isHtmlElement(node: Rendered): node is HTMLElement {
-  return isElement(node) && !("ownerSVGElement" in node)
+  return isElement(node) && !("ownerSVGElement" in node);
 }
 
 /**
  * Checks if a rendered node is a `Text` node.
  */
 export function isText(node: Rendered): node is Text {
-  return isNode(node) && node.nodeType === node.TEXT_NODE
+  return isNode(node) && node.nodeType === node.TEXT_NODE;
 }
 
 /**
  * Checks if a rendered node is an `Attr` node.
  */
 export function isAttr(node: Rendered): node is Attr {
-  return isNode(node) && node.nodeType === node.ATTRIBUTE_NODE
+  return isNode(node) && node.nodeType === node.ATTRIBUTE_NODE;
 }
 
 /**
  * Checks if a rendered node is a `Comment` node.
  */
 export function isComment(node: Rendered): node is Comment {
-  return isNode(node) && node.nodeType === node.COMMENT_NODE
+  return isNode(node) && node.nodeType === node.COMMENT_NODE;
 }
 
 /**
  * Checks if a rendered node is a `DocumentFragment`.
  */
 export function isDocumentFragment(node: Rendered): node is DocumentFragment {
-  if (!isArray(node)) return node.nodeType === node.DOCUMENT_FRAGMENT_NODE
-  return false
+  if (!isArray(node)) return node.nodeType === node.DOCUMENT_FRAGMENT_NODE;
+  return false;
 }
 
 /**
  * Checks if a rendered value is an array of nodes.
  */
 export function isArray(node: Rendered): node is ReadonlyArray<Rendered> {
-  return Array.isArray(node)
+  return Array.isArray(node);
 }
 
 /**
@@ -268,13 +271,13 @@ export function isArray(node: Rendered): node is ReadonlyArray<Rendered> {
  * @category utilities
  */
 export function toHtml(node: Rendered): string {
-  if (isArray(node)) return node.map(toHtml).join("")
-  if (isWire(node)) return toHtml(node.valueOf())
-  if (isElement(node)) return node.outerHTML
-  if (isText(node)) return node.data
-  if (isComment(node)) return `<!--${node.data}-->`
-  if (isDocumentFragment(node)) return Array.from(node.childNodes ?? [], toHtml).join("")
-  return node.nodeValue || ""
+  if (isArray(node)) return node.map(toHtml).join("");
+  if (isWire(node)) return toHtml(node.valueOf());
+  if (isElement(node)) return node.outerHTML;
+  if (isText(node)) return node.data;
+  if (isComment(node)) return `<!--${node.data}-->`;
+  if (isDocumentFragment(node)) return Array.from(node.childNodes ?? [], toHtml).join("");
+  return node.nodeValue || "";
 }
 
 /**
@@ -298,9 +301,9 @@ export function toHtml(node: Rendered): string {
  * @category utilities
  */
 export function getElements(node: Rendered): Array<Element> {
-  if (isArray(node)) return node.flatMap(getElements)
-  if (isWire(node)) return getElements(node.valueOf())
-  if (isElement(node)) return [node]
-  if (isDocumentFragment(node)) return Array.from(node.childNodes ?? []).flatMap(getElements)
-  return []
+  if (isArray(node)) return node.flatMap(getElements);
+  if (isWire(node)) return getElements(node.valueOf());
+  if (isElement(node)) return [node];
+  if (isDocumentFragment(node)) return Array.from(node.childNodes ?? []).flatMap(getElements);
+  return [];
 }

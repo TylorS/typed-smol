@@ -3,23 +3,27 @@
  * @since 1.18.0
  */
 
-import type * as Effect from "effect/Effect"
-import * as Equivalence_ from "effect/Equivalence"
-import type { Equivalence } from "effect/Equivalence"
-import { dual } from "effect/Function"
-import type * as Scope from "effect/Scope"
-import * as String_ from "effect/String"
+import type * as Effect from "effect/Effect";
+import * as Equivalence_ from "effect/Equivalence";
+import type { Equivalence } from "effect/Equivalence";
+import { dual } from "effect/Function";
+import type * as Scope from "effect/Scope";
+import * as String_ from "effect/String";
 import type * as Fx from "../Fx/index.js";
-import * as RefSubject from "./RefSubject.js"
+import * as RefSubject from "./RefSubject.js";
 
-const isRefStringDataFirst = (args: IArguments) => RefSubject.isRefSubject(args[0])
+const isRefStringDataFirst = (args: IArguments) => RefSubject.isRefSubject(args[0]);
 
 /**
  * A RefString is a RefSubject specialized over a string value.
  * @since 1.18.0
  * @category models
  */
-export interface RefString<in out E = never, out R = never> extends RefSubject.RefSubject<string, E, R> {}
+export interface RefString<in out E = never, out R = never> extends RefSubject.RefSubject<
+  string,
+  E,
+  R
+> {}
 
 /**
  * Creates a new `RefString` from a string, `Effect`, or `Fx`.
@@ -41,9 +45,9 @@ export interface RefString<in out E = never, out R = never> extends RefSubject.R
  */
 export function make<E = never, R = never>(
   initial: string | Effect.Effect<string, E, R> | Fx.Fx<string, E, R>,
-  eq: Equivalence<string> = Equivalence_.strictEqual()
+  eq: Equivalence<string> = Equivalence_.strictEqual(),
 ): Effect.Effect<RefString<E>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq })
+  return RefSubject.make(initial, { eq });
 }
 
 // ========================================
@@ -56,11 +60,11 @@ export function make<E = never, R = never>(
  * @category computed
  */
 export const concat: {
-  (that: string): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>
-  <E, R>(ref: RefString<E, R>, that: string): RefSubject.Computed<string, E, R>
+  (that: string): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>;
+  <E, R>(ref: RefString<E, R>, that: string): RefSubject.Computed<string, E, R>;
 } = dual(2, function concat<E, R>(ref: RefString<E, R>, that: string) {
-  return RefSubject.map(ref, (self) => String_.concat(self, that))
-})
+  return RefSubject.map(ref, (self) => String_.concat(self, that));
+});
 
 /**
  * Convert the current state of a RefString to uppercase.
@@ -68,7 +72,7 @@ export const concat: {
  * @category computed
  */
 export const toUpperCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
-  RefSubject.map(ref, String_.toUpperCase)
+  RefSubject.map(ref, String_.toUpperCase);
 
 /**
  * Convert the current state of a RefString to lowercase.
@@ -76,14 +80,15 @@ export const toUpperCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<str
  * @category computed
  */
 export const toLowerCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
-  RefSubject.map(ref, String_.toLowerCase)
+  RefSubject.map(ref, String_.toLowerCase);
 
 /**
  * Trim whitespace from both ends of the current state of a RefString.
  * @since 1.18.0
  * @category computed
  */
-export const trim = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> => RefSubject.map(ref, String_.trim)
+export const trim = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
+  RefSubject.map(ref, String_.trim);
 
 /**
  * Trim whitespace from the start of the current state of a RefString.
@@ -91,7 +96,7 @@ export const trim = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E,
  * @category computed
  */
 export const trimStart = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
-  RefSubject.map(ref, String_.trimStart)
+  RefSubject.map(ref, String_.trimStart);
 
 /**
  * Trim whitespace from the end of the current state of a RefString.
@@ -99,7 +104,7 @@ export const trimStart = <E, R>(ref: RefString<E, R>): RefSubject.Computed<strin
  * @category computed
  */
 export const trimEnd = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
-  RefSubject.map(ref, String_.trimEnd)
+  RefSubject.map(ref, String_.trimEnd);
 
 /**
  * Replace the first occurrence of a substring or pattern in the current state of a RefString.
@@ -109,16 +114,19 @@ export const trimEnd = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string,
 export const replace: {
   (
     searchValue: string | RegExp,
-    replaceValue: string
-  ): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>
+    replaceValue: string,
+  ): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>;
   <E, R>(
     ref: RefString<E, R>,
     searchValue: string | RegExp,
-    replaceValue: string
-  ): RefSubject.Computed<string, E, R>
-} = dual(3, function replace<E, R>(ref: RefString<E, R>, searchValue: string | RegExp, replaceValue: string) {
-  return RefSubject.map(ref, String_.replace(searchValue, replaceValue))
-})
+    replaceValue: string,
+  ): RefSubject.Computed<string, E, R>;
+} = dual(3, function replace<
+  E,
+  R,
+>(ref: RefString<E, R>, searchValue: string | RegExp, replaceValue: string) {
+  return RefSubject.map(ref, String_.replace(searchValue, replaceValue));
+});
 
 /**
  * Replace all occurrences of a substring or pattern in the current state of a RefString.
@@ -128,16 +136,19 @@ export const replace: {
 export const replaceAll: {
   (
     searchValue: string | RegExp,
-    replaceValue: string
-  ): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>
+    replaceValue: string,
+  ): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>;
   <E, R>(
     ref: RefString<E, R>,
     searchValue: string | RegExp,
-    replaceValue: string
-  ): RefSubject.Computed<string, E, R>
-} = dual(3, function replaceAll<E, R>(ref: RefString<E, R>, searchValue: string | RegExp, replaceValue: string) {
-  return RefSubject.map(ref, String_.replaceAll(searchValue, replaceValue))
-})
+    replaceValue: string,
+  ): RefSubject.Computed<string, E, R>;
+} = dual(3, function replaceAll<
+  E,
+  R,
+>(ref: RefString<E, R>, searchValue: string | RegExp, replaceValue: string) {
+  return RefSubject.map(ref, String_.replaceAll(searchValue, replaceValue));
+});
 
 /**
  * Check if the current state of a RefString is empty.
@@ -145,7 +156,7 @@ export const replaceAll: {
  * @category computed
  */
 export const isEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, String_.isEmpty)
+  RefSubject.map(ref, String_.isEmpty);
 
 /**
  * Check if the current state of a RefString is non-empty.
@@ -153,7 +164,7 @@ export const isEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<boolean
  * @category computed
  */
 export const isNonEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<boolean, E, R> =>
-  RefSubject.map(ref, String_.isNonEmpty)
+  RefSubject.map(ref, String_.isNonEmpty);
 
 /**
  * Get the length of the current state of a RefString.
@@ -161,7 +172,7 @@ export const isNonEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<bool
  * @category computed
  */
 export const length = <E, R>(ref: RefString<E, R>): RefSubject.Computed<number, E, R> =>
-  RefSubject.map(ref, String_.length)
+  RefSubject.map(ref, String_.length);
 
 /**
  * Check if the current state of a RefString starts with a substring.
@@ -169,14 +180,21 @@ export const length = <E, R>(ref: RefString<E, R>): RefSubject.Computed<number, 
  * @category computed
  */
 export const startsWith: {
-  (searchString: string, position?: number): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefString<E, R>, searchString: string, position?: number): RefSubject.Computed<boolean, E, R>
-} = dual(
-  isRefStringDataFirst,
-  function startsWith<E, R>(ref: RefString<E, R>, searchString: string, position?: number) {
-    return RefSubject.map(ref, String_.startsWith(searchString, position))
-  }
-)
+  (
+    searchString: string,
+    position?: number,
+  ): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(
+    ref: RefString<E, R>,
+    searchString: string,
+    position?: number,
+  ): RefSubject.Computed<boolean, E, R>;
+} = dual(isRefStringDataFirst, function startsWith<
+  E,
+  R,
+>(ref: RefString<E, R>, searchString: string, position?: number) {
+  return RefSubject.map(ref, String_.startsWith(searchString, position));
+});
 
 /**
  * Check if the current state of a RefString ends with a substring.
@@ -184,14 +202,21 @@ export const startsWith: {
  * @category computed
  */
 export const endsWith: {
-  (searchString: string, position?: number): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefString<E, R>, searchString: string, position?: number): RefSubject.Computed<boolean, E, R>
-} = dual(
-  isRefStringDataFirst,
-  function endsWith<E, R>(ref: RefString<E, R>, searchString: string, position?: number) {
-    return RefSubject.map(ref, String_.endsWith(searchString, position))
-  }
-)
+  (
+    searchString: string,
+    position?: number,
+  ): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(
+    ref: RefString<E, R>,
+    searchString: string,
+    position?: number,
+  ): RefSubject.Computed<boolean, E, R>;
+} = dual(isRefStringDataFirst, function endsWith<
+  E,
+  R,
+>(ref: RefString<E, R>, searchString: string, position?: number) {
+  return RefSubject.map(ref, String_.endsWith(searchString, position));
+});
 
 /**
  * Check if the current state of a RefString includes a substring.
@@ -199,14 +224,21 @@ export const endsWith: {
  * @category computed
  */
 export const includes: {
-  (searchString: string, position?: number): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<boolean, E, R>
-  <E, R>(ref: RefString<E, R>, searchString: string, position?: number): RefSubject.Computed<boolean, E, R>
-} = dual(
-  isRefStringDataFirst,
-  function includes<E, R>(ref: RefString<E, R>, searchString: string, position?: number) {
-    return RefSubject.map(ref, String_.includes(searchString, position))
-  }
-)
+  (
+    searchString: string,
+    position?: number,
+  ): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<boolean, E, R>;
+  <E, R>(
+    ref: RefString<E, R>,
+    searchString: string,
+    position?: number,
+  ): RefSubject.Computed<boolean, E, R>;
+} = dual(isRefStringDataFirst, function includes<
+  E,
+  R,
+>(ref: RefString<E, R>, searchString: string, position?: number) {
+  return RefSubject.map(ref, String_.includes(searchString, position));
+});
 
 /**
  * Extract a section of the current state of a RefString.
@@ -214,11 +246,11 @@ export const includes: {
  * @category computed
  */
 export const slice: {
-  (start?: number, end?: number): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>
-  <E, R>(ref: RefString<E, R>, start?: number, end?: number): RefSubject.Computed<string, E, R>
-} = dual(
-  isRefStringDataFirst,
-  function slice<E, R>(ref: RefString<E, R>, start?: number, end?: number) {
-    return RefSubject.map(ref, String_.slice(start, end))
-  }
-)
+  (start?: number, end?: number): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>;
+  <E, R>(ref: RefString<E, R>, start?: number, end?: number): RefSubject.Computed<string, E, R>;
+} = dual(isRefStringDataFirst, function slice<
+  E,
+  R,
+>(ref: RefString<E, R>, start?: number, end?: number) {
+  return RefSubject.map(ref, String_.slice(start, end));
+});

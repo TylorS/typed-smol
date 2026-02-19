@@ -1,10 +1,10 @@
-import type * as Effect from "effect/Effect"
-import { dual, flow } from "effect/Function"
-import type * as Scope from "effect/Scope"
-import { fromEffect } from "../constructors/fromEffect.js"
-import type { Fx } from "../Fx.js"
-import type { FlatMapEffectLike } from "./flatMapEffect.js"
-import { switchMap } from "./switchMap.js"
+import type * as Effect from "effect/Effect";
+import { dual, flow } from "effect/Function";
+import type * as Scope from "effect/Scope";
+import { fromEffect } from "../constructors/fromEffect.js";
+import type { Fx } from "../Fx.js";
+import type { FlatMapEffectLike } from "./flatMapEffect.js";
+import { switchMap } from "./switchMap.js";
 
 /**
  * Maps each element of an Fx to an Effect, and switches to the latest effect.
@@ -16,7 +16,10 @@ import { switchMap } from "./switchMap.js"
  * @since 1.0.0
  * @category combinators
  */
-export const switchMapEffect: FlatMapEffectLike = dual(2, <A, E, R, B, E2, R2>(
-  self: Fx<A, E, R>,
-  f: (a: A) => Effect.Effect<B, E2, R2>
-): Fx<B, E | E2, R | R2 | Scope.Scope> => switchMap(self, flow(f, fromEffect)))
+export const switchMapEffect: FlatMapEffectLike = dual(
+  2,
+  <A, E, R, B, E2, R2>(
+    self: Fx<A, E, R>,
+    f: (a: A) => Effect.Effect<B, E2, R2>,
+  ): Fx<B, E | E2, R | R2 | Scope.Scope> => switchMap(self, flow(f, fromEffect)),
+);

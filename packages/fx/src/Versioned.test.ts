@@ -11,11 +11,7 @@ describe("Versioned", () => {
           "MyVersioned",
         ) {}
 
-        const layer = MyVersioned.make(
-          Effect.succeed(1),
-          Fx.succeed(42),
-          Effect.succeed(42),
-        );
+        const layer = MyVersioned.make(Effect.succeed(1), Fx.succeed(42), Effect.succeed(42));
 
         yield* Effect.gen(function* () {
           expect(yield* MyVersioned).toEqual(42);

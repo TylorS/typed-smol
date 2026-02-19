@@ -32,11 +32,7 @@ describe("RefSubject", () => {
 
   it("tracks updates to an fx", () =>
     Effect.gen(function* () {
-      const fx = Fx.mergeAll(
-        Fx.succeed(1),
-        Fx.at(2, 100),
-        Fx.at(3, 200),
-      );
+      const fx = Fx.mergeAll(Fx.succeed(1), Fx.at(2, 100), Fx.at(3, 200));
 
       const ref = yield* RefSubject.make(fx);
       expect(yield* ref).toEqual(1);

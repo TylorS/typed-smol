@@ -1,19 +1,19 @@
-import { hasProperty } from "effect/Predicate"
-import type { Fx } from "./Fx.js"
+import { hasProperty } from "effect/Predicate";
+import type { Fx } from "./Fx.js";
 
 /**
  * The unique type identifier for Fx.
  * @since 1.0.0
  * @category symbol
  */
-export const FxTypeId = Symbol.for("@typed/fx/Fx")
+export const FxTypeId = Symbol.for("@typed/fx/Fx");
 
 /**
  * The unique type identifier type for Fx.
  * @since 1.0.0
  * @category symbol
  */
-export type FxTypeId = typeof FxTypeId
+export type FxTypeId = typeof FxTypeId;
 
 /**
  * Checks if a value is an Fx.
@@ -21,5 +21,5 @@ export type FxTypeId = typeof FxTypeId
  * @category guards
  */
 export function isFx(u: unknown): u is Fx<any, any, any> {
-  return hasProperty(u, FxTypeId)
+  return hasProperty(u, FxTypeId);
 }
