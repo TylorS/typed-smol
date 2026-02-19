@@ -72,8 +72,8 @@ data.pipe(
     Failure: (cause, data) => R3,
     Success: (value, data) => R4,
     Optimistic: (value, data) => R5,
-  })
-)
+  }),
+);
 ```
 
 Returns a unified result type from the matching branch. Callbacks receive the variant payload (and full variant for `Failure`/`Success`/`Optimistic`).
@@ -103,21 +103,19 @@ Extract the success value, failure cause, or first error from the variant (or `O
 ### Transformers
 
 ```ts
-data.pipe(AsyncData.map((a: A) => B))
+data.pipe(AsyncData.map((a: A) => B));
 ```
 
 Maps the success/optimistic value; NoData, Loading, and Failure are unchanged.
 
 ```ts
-data.pipe(
-  AsyncData.flatMap((value: A, data: Success<A> | Optimistic<A, E>) => AsyncData<B, E2>)
-)
+data.pipe(AsyncData.flatMap((value: A, data: Success<A> | Optimistic<A, E>) => AsyncData<B, E2>));
 ```
 
 Chains on success or optimistic; NoData, Loading, and Failure are unchanged.
 
 ```ts
-data.pipe(AsyncData.mapError((e: E) => E2))
+data.pipe(AsyncData.mapError((e: E) => E2));
 ```
 
 Maps the failure error type; Success, NoData, Loading unchanged; Optimistic recurs on `previous`.
@@ -144,7 +142,7 @@ const message = data.pipe(
     Failure: (cause) => `error: ${cause}`,
     Success: (user) => `user: ${user.name}`,
     Optimistic: (user) => `optimistic: ${user.name}`,
-  })
+  }),
 );
 // message === "user: Alice"
 

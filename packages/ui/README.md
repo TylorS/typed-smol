@@ -27,17 +27,21 @@ Renders an `<a href="...">` that intercepts same-origin, same-document clicks an
 
 ```ts
 function Link<const Opts extends LinkOptions>(
-  options: Opts
-): Fx<RenderEvent, Renderable.ErrorFromObject<Opts>, Renderable.ServicesFromObject<Opts> | Scope | RenderTemplate>
+  options: Opts,
+): Fx<
+  RenderEvent,
+  Renderable.ErrorFromObject<Opts>,
+  Renderable.ServicesFromObject<Opts> | Scope | RenderTemplate
+>;
 ```
 
 **`LinkOptions`**
 
-| Property   | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `href`    | `Renderable<string, any, any>` | Yes | Target URL. |
-| `content` | `Renderable<string \| number \| boolean \| null \| undefined \| void \| RenderEvent, any, any>` | Yes | Link body (text or template content). |
-| `replace` | `boolean` | No | If `true`, use history replace instead of push. Default: `false`. |
+| Property  | Type                                                                                            | Required | Description                                                       |
+| --------- | ----------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- |
+| `href`    | `Renderable<string, any, any>`                                                                  | Yes      | Target URL.                                                       |
+| `content` | `Renderable<string \| number \| boolean \| null \| undefined \| void \| RenderEvent, any, any>` | Yes      | Link body (text or template content).                             |
+| `replace` | `boolean`                                                                                       | No       | If `true`, use history replace instead of push. Default: `false`. |
 
 In addition, `LinkOptions` accepts standard anchor event handlers (e.g. `onclick`), `ref`, and other writable `HTMLAnchorElement` properties. Custom `onclick` runs first; if the event is not `preventDefault`’d, the built-in navigation handler runs.
 
@@ -53,13 +57,13 @@ Registers route handlers on an Effect **HttpRouter** for server-side rendering. 
 // (router, matcher)
 function ssrForHttp<E, R>(
   router: HttpRouter,
-  input: Matcher<RenderEvent, E, R>
-): Effect.Effect<void, never, Exclude<R, Scope | Router>>
+  input: Matcher<RenderEvent, E, R>,
+): Effect.Effect<void, never, Exclude<R, Scope | Router>>;
 
 // (matcher)(router) — curried
 function ssrForHttp<E, R>(
-  input: Matcher<RenderEvent, E, R>
-): (router: HttpRouter) => Effect.Effect<void, never, Exclude<R, Scope | Router>>
+  input: Matcher<RenderEvent, E, R>,
+): (router: HttpRouter) => Effect.Effect<void, never, Exclude<R, Scope | Router>>;
 ```
 
 - **`router`** — Effect `HttpRouter` to attach GET handlers to.
@@ -71,14 +75,14 @@ function ssrForHttp<E, R>(
 
 Adds global middleware to an **HttpRouter** that catches `HttpServerError` and returns appropriate HTTP responses:
 
-| Error reason     | Status |
-|------------------|--------|
-| `RouteNotFound`  | 404    |
-| `RequestParseError` | 400 |
-| `InternalError` / `ResponseError` | 500 |
+| Error reason                      | Status |
+| --------------------------------- | ------ |
+| `RouteNotFound`                   | 404    |
+| `RequestParseError`               | 400    |
+| `InternalError` / `ResponseError` | 500    |
 
 ```ts
-function handleHttpServerError(router: HttpRouter): Effect.Effect<void, never, HttpRouter>
+function handleHttpServerError(router: HttpRouter): Effect.Effect<void, never, HttpRouter>;
 ```
 
 Use after registering routes (e.g. after `ssrForHttp`) so unhandled route and parse errors are converted to 404/400/500 instead of failing the server.
@@ -91,8 +95,7 @@ import { html } from "@typed/template";
 
 // In a template: link that navigates via Navigation (no full reload)
 const nav = html`<nav>
-  ${Link({ href: "/", content: "Home" })}
-  ${Link({ href: "/todos", content: "Todos" })}
+  ${Link({ href: "/", content: "Home" })} ${Link({ href: "/todos", content: "Todos" })}
 </nav>`;
 ```
 

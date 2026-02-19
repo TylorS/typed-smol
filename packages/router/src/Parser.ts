@@ -30,17 +30,11 @@ export declare namespace Parser {
     readonly return: never;
   }
 
-  export interface Char<C extends string> extends TypeLambda<
-    [input: string],
-    Result<C, string> | never
-  > {
+  export interface Char<C extends string> extends TypeLambda<[input: string], Result<C, string>> {
     readonly return: Arg0<this> extends `${C}${infer Rest}` ? readonly [C, Rest] : never;
   }
 
-  export interface String<S extends string> extends TypeLambda<
-    [input: string],
-    Result<S, string> | never
-  > {
+  export interface String<S extends string> extends TypeLambda<[input: string], Result<S, string>> {
     readonly return: Arg0<this> extends `${S}${infer Rest}` ? readonly [S, Rest] : never;
   }
 
@@ -137,7 +131,7 @@ export declare namespace Parser {
 
   export interface TakeWhile1<Allowed extends string> extends TypeLambda<
     [input: string],
-    Result<string, string> | never
+    Result<string, string>
   > {
     readonly return: Arg0<this> extends infer Input extends string
       ? TakeWhile1Internal<Input, Allowed>

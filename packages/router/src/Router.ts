@@ -24,7 +24,9 @@ export const ServerRouter = (options: MemoryOptions | InitialMemoryOptions): Lay
     Layer.provideMerge(Ids.Default),
   );
 
-export const TestRouter = (options: (MemoryOptions | InitialMemoryOptions) & {}): Layer.Layer<Router> =>
+export const TestRouter = (
+  options: (MemoryOptions | InitialMemoryOptions) & {},
+): Layer.Layer<Router> =>
   CurrentRoute.Default.pipe(
     Layer.provideMerge("url" in options ? initialMemory(options) : memory(options)),
     Layer.provideMerge(Ids.Test()),

@@ -85,12 +85,16 @@ const Positive = Schema.Number.pipe(Schema.positive());
 const guardDecode = Guard.fromSchemaDecode(Positive);
 
 // Inside Effect.gen(function* () { ... })
-const result = yield* guardDecode(42).pipe(
-  Effect.map(Option.match({
-    onNone: () => "invalid",
-    onSome: (n) => `ok: ${n}`,
-  })),
-);
+const result =
+  yield *
+  guardDecode(42).pipe(
+    Effect.map(
+      Option.match({
+        onNone: () => "invalid",
+        onSome: (n) => `ok: ${n}`,
+      }),
+    ),
+  );
 // result === "ok: 42"
 
 const even = Guard.liftPredicate((n: number) => n % 2 === 0);

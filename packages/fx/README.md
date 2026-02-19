@@ -26,7 +26,7 @@ Fx.fromIterable([1, 2, 3]).pipe(
   Fx.filter((n) => n % 2 === 0),
   Fx.map((n) => n * 2),
   Fx.observe((n) => Effect.log(`emitted: ${n}`)),
-  Effect.runPromise
+  Effect.runPromise,
 );
 ```
 
