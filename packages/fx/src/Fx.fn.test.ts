@@ -1,5 +1,4 @@
-import assert from "node:assert";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import { Effect } from "effect";
 import { Fx } from "./index.js";
 
@@ -26,6 +25,7 @@ describe("Fx", () => {
 
     it("named variant supports generator bodies", () =>
       Effect.gen(function* () {
+        // oxlint-disable-next-line require-yield
         const makeFx = Fx.fn("Fx.fn (named)")(function* (input: string) {
           return Fx.succeed(input);
         });

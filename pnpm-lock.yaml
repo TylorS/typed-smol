@@ -124,6 +124,9 @@ importers:
       '@typed/guard':
         specifier: workspace:*
         version: link:../guard
+      '@typed/id':
+        specifier: workspace:*
+        version: link:../id
       '@typed/navigation':
         specifier: workspace:*
         version: link:../navigation

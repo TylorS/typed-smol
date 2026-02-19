@@ -44,9 +44,9 @@ export interface RefCause<
  */
 export function make<E = never, Err = never, R = never>(
   initial: Cause.Cause<E> | Effect.Effect<Cause.Cause<E>, Err, R> | Fx.Fx<Cause.Cause<E>, Err, R>,
-  eq: Equivalence<E> = Equivalence_.strictEqual(),
+  eq: Equivalence<Cause.Cause<E>> = equals,
 ): Effect.Effect<RefCause<E, Err>, never, R | Scope.Scope> {
-  return RefSubject.make(initial, { eq: Equivalence_.make((a, b) => equals(a, b)) });
+  return RefSubject.make(initial, { eq: Equivalence_.make(eq) });
 }
 
 /**

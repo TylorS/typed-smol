@@ -10,7 +10,7 @@ export type ToStreamOptions = Parameters<typeof Stream.callback<unknown, unknown
 
 export const toStream = <A, E, R>(
   fx: Fx.Fx<A, E, R>,
-  options?: ToStreamOptions | undefined,
+  options?: ToStreamOptions,
 ): Stream.Stream<A, E, R> =>
   Stream.callback<A, E, R>(
     (queue) =>
@@ -29,7 +29,7 @@ export type FromStreamOptions = Parameters<
 
 export const fromStream = <A, E, R>(
   stream: Stream.Stream<A, E, R>,
-  options?: FromStreamOptions | undefined,
+  options?: FromStreamOptions,
 ): Fx.Fx<A, E, R> =>
   make<A, E, R>(
     <RSink = never>(sink: Sink.Sink<A, E, RSink>): Effect.Effect<unknown, never, R | RSink> =>

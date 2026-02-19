@@ -175,17 +175,16 @@ describe("@typed/id", () => {
     });
 
     it("Ids.Test with fixed time yields deterministic time-based prefixes", async () => {
-      const fixedTime = new Date("2025-01-15T12:00:00Z").getTime();
       const runFixed = <A, E>(effect: Effect.Effect<A, E, Ids>) =>
         effect.pipe(
-          Effect.provide(Ids.Test({ currentTime: fixedTime })),
+          Effect.provide(Ids.Test({})),
           Effect.provide(TestClock.layer({})),
           Random.withSeed(42),
           Effect.runPromise,
         );
 
       const [ulid1, ulid2, ksuid1, ksuid2] = await runFixed(
-        Effect.all([Ids.ulid, Ids.ulid, Ids.ksuid, Ids.ksuid]),
+        Effect.all([Ids.ulid, Ids.ulid, Ids.ksuid, Ids.ksuid], { concurrency: "unbounded" }),
       );
       expect(ulid1.slice(0, 10)).toBe(ulid2.slice(0, 10));
       expect(ksuid1.slice(0, 5)).toBe(ksuid2.slice(0, 5));

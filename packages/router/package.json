@@ -20,6 +20,7 @@
   "dependencies": {
     "@typed/fx": "workspace:*",
     "@typed/guard": "workspace:*",
+    "@typed/id": "workspace:*",
     "@typed/navigation": "workspace:*",
     "effect": "catalog:",
     "find-my-way-ts": "0.1.6",

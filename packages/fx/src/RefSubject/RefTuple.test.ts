@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
-import type * as Scope from "effect/Scope";
 import * as Tuple from "effect/Tuple";
 import * as RefTuple from "./RefTuple.js";
 

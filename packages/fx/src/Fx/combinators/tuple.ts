@@ -29,6 +29,7 @@ export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
   return make(
     Effect.fn(function* (sink) {
       const len = fxs.length;
+      // oxlint-disable-next-line unicorn/no-new-array
       const result: Array<Fx.Success<FX[number]>> = new Array(len);
       const filled = new Set<number>();
 

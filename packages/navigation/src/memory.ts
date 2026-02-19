@@ -1,3 +1,4 @@
+import { Ids } from "@typed/id";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -47,6 +48,7 @@ const limitEntries =
 export const memory = (options: MemoryOptions) =>
   Layer.effect(Navigation)(
     Effect.gen(function* () {
+      const ids = yield* Effect.service(Ids);
       const origin = options.origin ?? "http://localhost";
       const base = options.base ?? "/";
       const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
@@ -61,20 +63,33 @@ export const memory = (options: MemoryOptions) =>
         limitEntries(maxEntries),
       );
 
-      return yield* makeNavigationCore(origin, base, state, options.commit ?? defaultCommit);
+      return yield* makeNavigationCore(
+        origin,
+        base,
+        state,
+        options.commit ??
+          ((before, runHandlers) =>
+            Effect.provideService(defaultCommit(before, runHandlers), Ids, ids)),
+      );
     }),
   );
 
 export const initialMemory = (options: InitialMemoryOptions) =>
   Layer.unwrap(
-    Effect.sync(() => {
+    Effect.gen(function* () {
+      const key = yield* Ids.uuid7;
+      const id = yield* Ids.uuid7;
       const origin = options.origin ?? "http://localhost";
       const url = getUrl(origin, options.url);
-      const entry = proposedToDestination({
-        url,
-        state: options.state,
-        sameDocument: url.origin === origin,
-      });
+      const entry = proposedToDestination(
+        {
+          url,
+          state: options.state,
+          sameDocument: url.origin === origin,
+        },
+        key,
+        id,
+      );
 
       return memory({
         origin,
@@ -90,15 +105,21 @@ const defaultCommit = (
   runHandlers: (destination: Destination) => Effect.Effect<void>,
 ) =>
   Effect.gen(function* () {
-    const destination = proposedToDestination(before.to);
+    const key = yield* Ids.uuid7;
+    const id = yield* Ids.uuid7;
+    const destination = proposedToDestination(before.to, key, id);
     yield* runHandlers(destination);
     return destination;
   });
 
-const proposedToDestination = (before: ProposedDestination) => ({
-  key: before.key ?? crypto.randomUUID(),
+const proposedToDestination = (
+  before: ProposedDestination,
+  key: string,
+  id: string,
+): Destination => ({
+  key: before.key ?? key,
   url: before.url,
   state: before.state,
   sameDocument: before.sameDocument,
-  id: crypto.randomUUID(),
+  id,
 });

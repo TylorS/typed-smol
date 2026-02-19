@@ -1,5 +1,5 @@
 import { assert, describe, it } from "vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import * as Uuid7 from "@typed/id/Uuid7";
 import { fromWindow } from "./fromWindow.js";
 import { initialMemory, memory } from "./memory.js";
@@ -53,7 +53,7 @@ describe("typed/navigation", () => {
               createDestination("http://localhost/2"),
             ],
             currentIndex: 1,
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
 
@@ -74,7 +74,7 @@ describe("typed/navigation", () => {
           initialMemory({
             url: "http://localhost/initial-test",
             state: { test: "initial-data" },
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
 
@@ -94,7 +94,7 @@ describe("typed/navigation", () => {
           memory({
             entries: [createDestination("http://localhost/1")],
             currentIndex: 0,
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
 
@@ -117,7 +117,7 @@ describe("typed/navigation", () => {
               createDestination("http://localhost/2"),
             ],
             currentIndex: 1,
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
 
@@ -140,7 +140,7 @@ describe("typed/navigation", () => {
               createDestination("http://localhost/2"),
             ],
             currentIndex: 0,
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
 
@@ -167,7 +167,7 @@ describe("typed/navigation", () => {
             entries: [createDestination("http://localhost/1")],
             currentIndex: 0,
             maxEntries: 3,
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
 
@@ -194,7 +194,7 @@ describe("typed/navigation", () => {
             ],
             currentIndex: 2,
             maxEntries: 2,
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
 
@@ -215,7 +215,7 @@ describe("typed/navigation", () => {
             entries: [createDestination("http://localhost/1")],
             currentIndex: 0,
             maxEntries: 2,
-          }),
+          }).pipe(Layer.provideMerge(Ids.Test())),
         ),
       ));
   });

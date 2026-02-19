@@ -127,9 +127,11 @@ describe("@typed/guard", () => {
     it("runs side effect and returns original value", async () => {
       let side = 0;
       const base = liftPredicate((n: number) => n > 0);
-      const g = tap(base, (n) => {
-        side = n;
-      });
+      const g = tap(base, (n) =>
+        Effect.sync(() => {
+          side = n;
+        }),
+      );
       const result = await run(g(7));
       expect(side).toBe(7);
       expect(Option.isSome(result)).toBe(true);
@@ -207,7 +209,7 @@ describe("@typed/guard", () => {
     it("recovers from failure with a value", async () => {
       const failing: Guard<number, number, string> = (n) =>
         n > 0 ? Effect.succeed(Option.some(n)) : Effect.fail("negative");
-      const g = catchAll(failing, (e) => Effect.succeed(0));
+      const g = catchAll(failing, () => Effect.succeed(0));
       const ok = await run(g(5));
       expect(Option.isSome(ok)).toBe(true);
       if (Option.isSome(ok)) expect(ok.value).toBe(5);
