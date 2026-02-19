@@ -1,7 +1,6 @@
 {
   "name": "@typed/async-data",
   "version": "0.13.1",
-  "private": true,
   "type": "module",
   "exports": {
     ".": {

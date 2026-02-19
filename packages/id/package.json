@@ -1,7 +1,6 @@
 {
   "name": "@typed/id",
   "version": "0.17.2",
-  "private": true,
   "type": "module",
   "exports": {
     ".": {

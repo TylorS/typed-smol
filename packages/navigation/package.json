@@ -1,7 +1,6 @@
 {
   "name": "@typed/navigation",
   "version": "0.18.1",
-  "private": true,
   "type": "module",
   "exports": {
     ".": {
