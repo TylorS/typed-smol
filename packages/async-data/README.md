@@ -18,6 +18,117 @@
 - **Helpers:** `startLoading`, `stopLoading`; `getSuccess`, `getCause`, `getError`.
 - **Transformers:** `map`, `flatMap`, `mapError`; `fromExit`, `fromResult`.
 
+## API reference
+
+### Types
+
+- **`Progress`** — `{ readonly loaded: number; readonly total?: number }`. Used for loading/refresh progress.
+- **`NoData`** — `{ readonly _tag: "NoData" }`. Initial state before any load.
+- **`Loading`** — `{ readonly _tag: "Loading"; readonly progress?: Progress }`. Load in progress.
+- **`Success<A>`** — `{ readonly _tag: "Success"; readonly value: A; readonly progress?: Progress }`. Loaded value; optional progress when refreshing.
+- **`Failure<E>`** — `{ readonly _tag: "Failure"; readonly cause: Cause.Cause<E>; readonly progress?: Progress }`. Error state; optional progress when refreshing.
+- **`Optimistic<A, E>`** — `{ readonly _tag: "Optimistic"; readonly value: A; readonly previous: AsyncData<A, E> }`. Optimistic value with previous state.
+- **`AsyncData<A, E>`** — `NoData | Loading | Success<A> | Failure<E> | Optimistic<A, E>`.
+- **`Refreshing<A, E>`** — `(Success<A> | Failure<E>) & { readonly progress: Progress }`. Success or Failure that is currently refreshing.
+
+### Schema
+
+```ts
+AsyncData(A, E): Schema.Codec<AsyncData<A, E>, ...>
+```
+
+Builds an Effect Schema codec for `AsyncData` given value schema `A` and error schema `E`.
+
+### Constructors
+
+```ts
+NoData: NoData
+loading(progress?: Progress): Loading
+success<A>(value: A, progress?: Progress): Success<A>
+failure<E>(cause: Cause.Cause<E>, progress?: Progress): Failure<E>
+optimistic<A, E>(previous: AsyncData<A, E>, value: A): Optimistic<A, E>
+```
+
+### Guards
+
+```ts
+isNoData<A, E>(asyncData: AsyncData<A, E>): asyncData is NoData
+isLoading<A, E>(asyncData: AsyncData<A, E>): asyncData is Loading
+isSuccess<A, E>(asyncData: AsyncData<A, E>): asyncData is Success<A>
+isFailure<A, E>(asyncData: AsyncData<A, E>): asyncData is Failure<E>
+isOptimistic<A, E>(asyncData: AsyncData<A, E>): asyncData is Optimistic<A, E>
+isAsyncData<A, E>(u: unknown): u is AsyncData<A, E>
+isRefreshing<A, E>(asyncData: AsyncData<A, E>): asyncData is Refreshing<A, E>
+isPending<A, E>(asyncData: AsyncData<A, E>): asyncData is Loading | Refreshing<A, E>
+```
+
+### Pattern matching
+
+```ts
+data.pipe(
+  AsyncData.match({
+    NoData: (data) => R1,
+    Loading: (data) => R2,
+    Failure: (cause, data) => R3,
+    Success: (value, data) => R4,
+    Optimistic: (value, data) => R5,
+  })
+)
+```
+
+Returns a unified result type from the matching branch. Callbacks receive the variant payload (and full variant for `Failure`/`Success`/`Optimistic`).
+
+### Helpers
+
+```ts
+startLoading<A, E>(data: AsyncData<A, E>, progress?: Progress): AsyncData<A, E>
+```
+
+Puts data into a loading/refreshing state: Success/Failure become refreshing with optional progress; Optimistic recurs on `previous`; NoData/Loading become Loading (with optional progress).
+
+```ts
+stopLoading<A, E>(data: AsyncData<A, E>): AsyncData<A, E>
+```
+
+Removes progress from Success/Failure/Optimistic (stops refreshing); NoData/Loading unchanged.
+
+```ts
+getSuccess<A, E>(data: AsyncData<A, E>): Option.Option<A>
+getCause<A, E>(data: AsyncData<A, E>): Option.Option<Cause.Cause<E>>
+getError<A, E>(data: AsyncData<A, E>): Option.Option<E>
+```
+
+Extract the success value, failure cause, or first error from the variant (or `Option.none` when not applicable).
+
+### Transformers
+
+```ts
+data.pipe(AsyncData.map((a: A) => B))
+```
+
+Maps the success/optimistic value; NoData, Loading, and Failure are unchanged.
+
+```ts
+data.pipe(
+  AsyncData.flatMap((value: A, data: Success<A> | Optimistic<A, E>) => AsyncData<B, E2>)
+)
+```
+
+Chains on success or optimistic; NoData, Loading, and Failure are unchanged.
+
+```ts
+data.pipe(AsyncData.mapError((e: E) => E2))
+```
+
+Maps the failure error type; Success, NoData, Loading unchanged; Optimistic recurs on `previous`.
+
+```ts
+fromExit<A, E>(exit: Exit.Exit<A, E>): AsyncData<A, E>
+fromResult<A, E>(result: Result.Result<A, E>): AsyncData<A, E>
+```
+
+Convert an Effect `Exit` or `Result` to `AsyncData`.
+
 ## Example
 
 ```ts
@@ -26,13 +137,15 @@ import * as AsyncData from "@typed/async-data";
 
 // Success and match
 const data = AsyncData.success({ id: 1, name: "Alice" });
-const message = AsyncData.match(data, {
-  NoData: () => "no data",
-  Loading: () => "loading...",
-  Failure: (cause) => `error: ${cause}`,
-  Success: (user) => `user: ${user.name}`,
-  Optimistic: (user) => `optimistic: ${user.name}`,
-});
+const message = data.pipe(
+  AsyncData.match({
+    NoData: () => "no data",
+    Loading: () => "loading...",
+    Failure: (cause) => `error: ${cause}`,
+    Success: (user) => `user: ${user.name}`,
+    Optimistic: (user) => `optimistic: ${user.name}`,
+  })
+);
 // message === "user: Alice"
 
 // From Result and getSuccess
