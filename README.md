@@ -53,3 +53,20 @@ From the repo root:
 ---
 
 *All packages are in beta; APIs are subject to change.*
+
+## Releases
+
+Current beta versions (first public beta release; future betas will use `-beta.1`, `-beta.2`, etc.):
+
+| Package | Version |
+|---------|---------|
+| @typed/fx | 2.0.0-beta.0 |
+| @typed/async-data | 1.0.0-beta.0 |
+| @typed/guard | 1.0.0-beta.0 |
+| @typed/id | 1.0.0-beta.0 |
+| @typed/navigation | 1.0.0-beta.0 |
+| @typed/router | 1.0.0-beta.0 |
+| @typed/template | 1.0.0-beta.0 |
+| @typed/ui | 1.0.0-beta.0 |
+
+Install with the `beta` tag, e.g. `pnpm add @typed/fx@beta`.
