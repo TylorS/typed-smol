@@ -1,0 +1,77 @@
+{
+  "name": "@typed/virtual-modules-vscode",
+  "version": "1.0.0-beta.0",
+  "main": "./dist/extension.js",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "typed.virtualModules.open",
+        "title": "Virtual Modules: Open virtual module"
+      },
+      {
+        "command": "typed.virtualModules.openFromImport",
+        "title": "Virtual Modules: Open virtual module from import"
+      },
+      {
+        "command": "typed.virtualModules.refresh",
+        "title": "Refresh Virtual Modules"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "typed.virtualModules.openFromImport",
+          "when": "editorTextFocus",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "typed.virtualModules.refresh",
+          "when": "view == typedVirtualModules",
+          "group": "navigation"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "typedVirtualModules",
+          "name": "Virtual Module Imports"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "typedVirtualModules",
+        "contents": "No virtual modules found. Add imports like `import x from 'virtual:foo'` in your TypeScript files."
+      }
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --format=cjs --outfile=dist/extension.js --external:vscode --platform=node",
+    "compile": "npm run build"
+  },
+  "dependencies": {
+    "@typed/virtual-modules": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@types/vscode": "^1.74.0",
+    "esbuild": "^0.24.0",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  }
+}

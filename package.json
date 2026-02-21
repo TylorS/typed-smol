@@ -2,7 +2,7 @@
   "name": "typed-smol",
   "private": true,
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && pnpm --filter @typed/virtual-modules-vscode build",
     "lint": "oxlint",
     "format": "oxfmt",
     "test": "pnpm -r run test"

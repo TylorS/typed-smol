@@ -9,10 +9,14 @@
     "plugins": [
       {
         "name": "@typed/virtual-modules-ts-plugin",
-        "plugins": ["./plugin.cjs"],
+        "plugins": [
+          "./plugin.cjs"
+        ],
         "debounceMs": 50
       }
     ]
   },
-  "include": ["*.ts"]
+  "include": [
+    "*.ts"
+  ]
 }

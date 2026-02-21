@@ -11,6 +11,16 @@ import {
   type ResolveRecordResult,
 } from "./internal/VirtualRecordStore.js";
 
+interface ProjectServiceLike {
+  getOrCreateOpenScriptInfo?(
+    fileName: string,
+    fileContent: string | undefined,
+    scriptKind: ts.ScriptKind,
+    hasMixedContent: boolean,
+    projectRootPath: string | undefined,
+  ): unknown;
+}
+
 const ADAPTER_DIAGNOSTIC_CODE = 99001;
 
 const toTsDiagnostic = (
@@ -309,6 +319,8 @@ export const attachLanguageServiceAdapter = (
   };
   (host as ts.LanguageServiceHost).resolveModuleNameLiterals = assignResolveModuleNameLiterals;
 
+  const projectService = (host as { projectService?: ProjectServiceLike }).projectService;
+
   host.getScriptSnapshot = (fileName: string): ts.IScriptSnapshot | undefined => {
     const record = recordsByVirtualFile.get(fileName);
     if (!record) {
@@ -316,6 +328,18 @@ export const attachLanguageServiceAdapter = (
     }
 
     const freshRecord = rebuildRecordIfNeeded(record);
+
+    if (projectService?.getOrCreateOpenScriptInfo) {
+      projectService.getOrCreateOpenScriptInfo(
+        fileName,
+        freshRecord.sourceText,
+        options.ts.ScriptKind.TS,
+        false,
+        options.projectRoot,
+      );
+      return originalGetScriptSnapshot?.(fileName);
+    }
+
     return options.ts.ScriptSnapshot.fromString(freshRecord.sourceText);
   };
 
