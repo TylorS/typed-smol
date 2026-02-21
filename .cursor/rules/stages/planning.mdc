@@ -1,0 +1,73 @@
+---
+description: MUST utilize when in Planning Stage.
+alwaysApply: false
+---
+
+# Planning Stage
+
+## Purpose
+
+- Produce an execution-ready plan with clear sequencing, checks, and rollback paths.
+- Encode two-timescale planning: semantic upfront, tactical at runtime.
+
+## Planning Model (SOTA-aligned)
+
+### 1) Semantic Plan Upfront
+
+- Build a subgoal graph/DAG, not a flat todo list.
+- Define dependencies, risk class, and success checks per subgoal.
+- Map each subgoal to `FR`/`NFR`/`AC` IDs.
+
+### 2) Tactical Plan During Execution
+
+- Define local replanning triggers (failed check, changed constraints, new evidence).
+- Replan only the affected subgoal when possible.
+- Keep global plan stable unless the objective itself changes.
+
+## Effect Skill Loading (Required)
+
+- When planning Effect-related tasks, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Workflow Ownership Gate
+
+- Initialize a new workflow slug for the current run before writing planning artifacts.
+- Do not inherit another workflow folder by default, even if it is currently active in editor context.
+- Reuse an existing workflow only with explicit user instruction; record that override.
+- Create `.docs/workflows/<workflow_slug>/00-workflow-init.md` before `<asset-increment>-plan.md`.
+
+## Artifact
+
+Write:
+
+- `.docs/workflows/<workflow_slug>/00-workflow-init.md`
+- `.docs/workflows/<workflow_slug>/<asset-increment>-plan.md`
+- Start from `.docs/_templates/workflow-init.md` and `.docs/_templates/plan.md`
+
+Include:
+
+- Ordered tasks with owners and prerequisites
+- Validation strategy per task
+- Mutating-action safeguards
+- Rollback/compensation notes
+- Memory plan:
+  - What will be captured in `workflows/<workflow_slug>/memory/`
+  - Promotion criteria for `.docs/_meta/memory/`
+  - Recall targets from existing long-term memory
+
+## Human-in-the-Loop Approval Gate (Required)
+
+Before exiting this stage, run an approval prompt against the current plan artifact:
+
+`AskQuestion("Does <docName.md> look good?", ["LGTM", "Needs sequencing/ownership revisions", "Needs validation/safeguard/rollback revisions", "Other (share custom feedback)"])`
+
+Use the actual plan filename for `<docName.md>` (for example, `01-plan.md`).
+
+If the user does not choose `LGTM`, capture and apply the requested changes, then re-run the same approval gate. Always preserve a custom feedback path (`Other`) so the user can provide free-form guidance.
+
+## Exit Criteria
+
+- Plan is traceable, testable, and dependency-aware.
+- Replanning policy is explicit.
+- Execution can start without unresolved blockers.
+- Memory capture and promotion plan is explicit.
+- User approval gate is passed (`LGTM`) for the current plan document.

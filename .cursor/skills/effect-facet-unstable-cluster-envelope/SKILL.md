@@ -1,0 +1,94 @@
+---
+name: effect-facet-unstable-cluster-envelope
+description: Guidance for facet `effect/unstable/cluster/Envelope` focused on APIs like Encoded, makeRequest, and isEnvelope. Load after `effect-skill-router` when this facet is the primary owner.
+---
+
+# Effect Facet unstable/cluster/Envelope
+
+## Owned scope
+
+- Owns only `effect/unstable/cluster/Envelope`.
+- Parent module: `effect/unstable/cluster`.
+- Source anchor: `packages/effect/src/unstable/cluster/Envelope.ts`.
+
+## What it is for
+
+- Module-specific APIs and usage patterns for Effect programs.
+
+## API quick reference
+
+- `Encoded`
+- `makeRequest`
+- `isEnvelope`
+- `Any`
+- `TypeId`
+- `Partial`
+- `Request`
+- `AckChunk`
+- `Envelope`
+- `Interrupt`
+- `primaryKey`
+- `PartialJson`
+- `PartialArray`
+- `AckChunkEncoded`
+- `InterruptEncoded`
+- `PartialRequest`
+- `PartialRequestEncoded`
+- `primaryKeyByAddress`
+- Full API list: `references/api-reference.md`
+
+## How to use it
+
+- Start with constructor-style APIs to build values/services before composing operations.
+- Use schema/codec APIs to validate inputs at boundaries before business logic.
+- Assume unstable APIs can evolve quickly; isolate usage behind thin local adapters.
+
+## Starter example
+
+```ts
+import { Envelope } from "effect/unstable/cluster/Envelope"
+
+const value = Envelope.makeRequest()
+const next = Envelope.Encoded(value)
+```
+
+## Common pitfalls
+
+- Concurrency helpers can hide ordering/cancellation behavior; test interruption and race paths.
+- Unstable module contracts may change; avoid coupling core app logic directly to experimental details.
+
+## Not covered here
+
+- Sibling facets under the same parent are out of scope:
+  - `effect-facet-unstable-cluster-clustercron` (effect/unstable/cluster/ClusterCron)
+  - `effect-facet-unstable-cluster-clustererror` (effect/unstable/cluster/ClusterError)
+  - `effect-facet-unstable-cluster-clustermetrics` (effect/unstable/cluster/ClusterMetrics)
+  - `effect-facet-unstable-cluster-clusterschema` (effect/unstable/cluster/ClusterSchema)
+  - `effect-facet-unstable-cluster-clusterworkflowengine` (effect/unstable/cluster/ClusterWorkflowEngine)
+  - `effect-facet-unstable-cluster-core` (effect/unstable/cluster#core)
+  - `effect-facet-unstable-cluster-deliverat` (effect/unstable/cluster/DeliverAt)
+  - `effect-facet-unstable-cluster-entity` (effect/unstable/cluster/Entity)
+  - `effect-facet-unstable-cluster-entityaddress` (effect/unstable/cluster/EntityAddress)
+  - `effect-facet-unstable-cluster-entityid` (effect/unstable/cluster/EntityId)
+  - `effect-facet-unstable-cluster-entityproxy` (effect/unstable/cluster/EntityProxy)
+  - `effect-facet-unstable-cluster-entityproxyserver` (effect/unstable/cluster/EntityProxyServer)
+  - `effect-facet-unstable-cluster-entityresource` (effect/unstable/cluster/EntityResource)
+  - `effect-facet-unstable-cluster-entitytype` (effect/unstable/cluster/EntityType)
+  - plus 29 additional sibling facets.
+- Parent module ownership belongs to `effect-module-unstable-cluster`.
+
+## Escalate to
+
+- `effect-module-unstable-cluster` for parent module-wide workflows.
+- `effect-skill-router` for cross-module routing and ownership checks.
+
+## Reference anchors
+
+- Facet source: `packages/effect/src/unstable/cluster/Envelope.ts`
+- Parent tests: `packages/effect/test/cluster/ClusterWorkflowEngine.test.ts`
+- Parent tests: `packages/effect/test/cluster/Entity.test.ts`
+- Parent tests: `packages/effect/test/cluster/MessageStorage.test.ts`
+- Parent tests: `packages/effect/test/cluster/Sharding.test.ts`
+- API details: `references/api-reference.md`
+- Usage notes: `references/usage-reference.md`
+- Ownership mapping: `references/owner.md`

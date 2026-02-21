@@ -1,0 +1,51 @@
+---
+description: MUST utilize when in Strict mode.
+alwaysApply: false
+---
+
+# Strict Mode
+
+Use this mode when correctness, auditability, and risk control are the top priorities.
+
+## Required Stage Order
+
+1. `brainstorming`
+2. `research`
+3. `requirements`
+4. `specification`
+5. `planning`
+6. `execution`
+7. `finalization`
+
+For each stage, load and follow the matching rule:
+
+- `.cursor/rules/stages/brainstorming.mdc`
+- `.cursor/rules/stages/research.mdc`
+- `.cursor/rules/stages/requirements.mdc`
+- `.cursor/rules/stages/specification.mdc`
+- `.cursor/rules/stages/planning.mdc`
+- `.cursor/rules/stages/execution.mdc`
+- `.cursor/rules/stages/finalization.mdc`
+
+## Effect Skill Loading
+
+- For any Effect-related stage activity, also load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Strict Guarantees
+
+- Do not skip a stage unless the user explicitly asks to.
+- Maintain requirement traceability from `requirements` to `planning` to `execution`.
+- Use two-timescale planning: semantic DAG upfront + tactical local replanning at runtime.
+- Add verification gates before mutating or high-risk actions.
+- Persist outputs in `.docs` with clear stage ownership.
+- Maintain memory traceability from short-term workflow memory to promoted long-term memory.
+- Use `.docs/_templates/` as the canonical source when authoring required stage artifacts.
+
+## Stage Exit Contract
+
+At each stage boundary, provide:
+
+1. Decisions made
+2. Evidence used
+3. Open risks/questions
+4. Next stage readiness

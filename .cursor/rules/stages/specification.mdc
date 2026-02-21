@@ -1,0 +1,86 @@
+---
+description: MUST load when you're in the Specification Stage
+alwaysApply: false
+---
+
+# Specification Stage
+
+## Purpose
+
+- Define how the system should work before execution.
+- Capture architecture decisions in durable records.
+
+## Artifacts
+
+- `.docs/specs/<spec_slug>/spec.md`
+- `.docs/specs/<spec_slug>/testing-strategy.md` (or a dedicated testing strategy section in `spec.md` for small specs)
+- `.docs/adrs/<YYYYMMDD-HHMM>-<slug>.md` (for each meaningful architectural decision)
+- Start from `.docs/_templates/spec.md`, `.docs/_templates/testing-strategy.md`, and `.docs/_templates/adr.md`
+
+## Effect Skill Loading (Required)
+
+- When specifying Effect-based components or interfaces, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Canonical Source Utilization (Required)
+
+- Review relevant `.docs/specs/` before drafting to avoid duplicate or conflicting definitions.
+- Review related `.docs/adrs/` and align with accepted decisions; if direction changes, create a new ADR that supersedes prior guidance.
+- Use `.docs/workflows/` as transient input/evidence only, then route durable outcomes into `.docs/specs/` and `.docs/adrs/`.
+
+## Specification Content
+
+- System context and scope
+- Component responsibilities and interfaces
+- Mermaid system diagrams for key components and interactions (at least one diagram showing how major systems fit together)
+- Data/control flow
+- Failure modes and mitigations
+- Requirement traceability (`FR`/`NFR` -> design elements)
+- References to consulted `.docs/specs/`, `.docs/adrs/`, and relevant `.docs/workflows/`
+- Memory design when applicable (short-term capture, long-term schema, promotion/recall flow)
+
+## Testing Strategy (Required)
+
+Every specification MUST include a testing strategy before exiting this stage. Use `.docs/_templates/testing-strategy.md` as the canonical starting point.
+
+The testing strategy MUST define:
+
+1. **Test type taxonomy**: unit, integration, and e2e scope and boundaries. Mark any type as N/A with rationale if it genuinely does not apply.
+2. **Critical-path test scenarios** (`TS-*` IDs): concrete scenarios that, if they fail, block release. Each scenario MUST link to at least one `FR`/`NFR` and one `AC`.
+3. **Coverage targets**: critical-path scenario coverage target (percentage of TS-* passing) and optional code coverage. Define validation hooks (CI gates, pre-commit, manual checkpoints).
+4. **Dependency readiness matrix**: list dependencies (`deps`) required for test execution; flag incomplete ones with unblock actions.
+5. **Acceptance failure policy**: what happens when a TS-* scenario fails during execution (loopback/rewrite) and when a dependency in `deps` is incomplete (prioritize unblocking).
+
+## ADR Best Practices
+
+Each ADR should include:
+
+1. `Status` (proposed/accepted/superseded)
+2. `Context`
+3. `Decision`
+4. `Consequences`
+5. `Alternatives considered`
+6. `References`
+
+Use one ADR per decision and cross-link it from `spec.md`.
+
+## Human-in-the-Loop Approval Gate (Required)
+
+Before exiting this stage, run an approval prompt against the specification document:
+
+`AskQuestion("Does <docName.md> look good?", ["LGTM", "Needs architecture/ADR revisions", "Needs traceability/failure-mode revisions", "Other (share custom feedback)"])`
+
+Use `spec.md` for `<docName.md>`. If testing strategy is a separate artifact, run a second approval gate for `testing-strategy.md` using the same prompt.
+
+If the user does not choose `LGTM`, capture and apply the requested changes, then re-run the same approval gate. Always preserve a custom feedback path (`Other`) so the user can provide free-form guidance.
+
+## Exit Criteria
+
+- Spec is actionable for planning/execution.
+- Architecture trade-offs are recorded as ADRs.
+- Risks and assumptions are explicit.
+- `spec.md` includes Mermaid diagram(s) for key systems and their interactions.
+- Memory lifecycle and governance are explicit when memory is part of the design.
+- Testing strategy is defined with test types, critical-path scenarios (`TS-*`), coverage targets, dependency readiness, and acceptance failure policy.
+- Each TS-* scenario is traceable to at least one FR/NFR and one AC.
+- User approval gate is passed (`LGTM`) for `spec.md`.
+- Durable updates are routed to canonical docs (`.docs/specs/` and `.docs/adrs/`) while transient notes stay in `.docs/workflows/`.

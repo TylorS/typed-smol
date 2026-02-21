@@ -1,0 +1,127 @@
+---
+description: MUST load when you're in the Execution Stage
+alwaysApply: false
+---
+
+# Execution Stage
+
+Execute the approved plan task-by-task with local verification, tactical replanning, and disciplined context management.
+
+## Context Intake (AGENTS-first)
+
+- Treat `AGENTS.md` as the primary entry point for all codebase-specific context.
+- Load `AGENTS.md` hierarchically from repository root to the active working directory.
+- Apply precedence from general to specific: nearest `AGENTS.md` overrides parent defaults.
+- Enforce subagent routing from `.cursor/rules/agent-collaboration.mdc` before substantial execution work.
+- Keep each `AGENTS.md` concise and navigational (intent, constraints, pointers), not encyclopedic.
+- When an `AGENTS.md` grows too large, move detailed content into a corresponding `.agents/*.md` directory and link those files from `AGENTS.md`.
+- Load only the `.agents/*.md` files relevant to the active task/subgoal to avoid context distraction.
+
+## Effect Skill Loading (Required)
+
+- Before implementing or reviewing any Effect code in this stage, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Workflow Ownership Check
+
+- Confirm active workflow has `00-workflow-init.md` created by the current run unless explicit reuse was user-approved.
+- Treat other workflow directories as read-only references.
+- If reuse is requested, record the override before mutating files in that workflow.
+
+## Testing Strategy Execution (Required)
+
+Before starting the Per-Task Loop, load the testing strategy artifact produced during Specification (`specs/<spec_slug>/testing-strategy.md` or the testing strategy section of `spec.md`).
+
+### Dependency Gate
+
+- Check the Dependency Readiness Matrix from the testing strategy.
+- If any dependency in `deps` is marked incomplete:
+  1. Prioritize unblocking that dependency before executing dependent tasks.
+  2. Record the unblock action and outcome in the execution log.
+  3. Update the dependency status when resolved.
+
+### Per-Task Testing Requirements
+
+- For each task, identify the TS-* scenarios that apply (from the critical-path table).
+- Execute applicable TS-* scenarios as part of step 4 (Validate) in the Per-Task Loop.
+- Record pass/fail evidence per TS-* scenario in the execution log.
+
+### Acceptance Failure Loopback
+
+- If a TS-* scenario fails:
+  1. Log the failure with evidence (error output, logs, test results).
+  2. Diagnose root cause; rewrite the affected implementation.
+  3. Re-run the failed TS-* scenario.
+  4. Update the plan path if the fix introduces new subtasks or changes sequencing.
+  5. Only mark the task complete when all applicable TS-* scenarios pass.
+
+## Per-Task Loop
+
+1. Reconfirm active subgoal, requirement IDs, and relevant `AGENTS.md` / `.agents/*.md` context.
+2. Break task into concrete sub-steps.
+3. Implement the smallest valuable increment.
+4. Validate with tests/checks/logs. Execute applicable TS-* scenarios from the testing strategy; record pass/fail per scenario.
+5. Review for correctness, regressions, and requirement coverage.
+6. If blocked or invalidated, replan locally and continue.
+7. Mark task complete only with evidence.
+
+## Atomic Commit Discipline (MUST)
+
+- Commit execution work atomically: each commit MUST contain one coherent change set only.
+- Use Conventional Commit format for execution commits: `type(scope): imperative summary`.
+- Include descriptive commit body that explains intent, key changes, and validation performed.
+- Split independent concerns into separate commits; do not batch unrelated changes together.
+- Before leaving execution, commit all completed implementation work (or explicitly log why no commit was created).
+
+## Context Hygiene During Execution
+
+- Prevent context poisoning: verify assumptions before propagating prior conclusions.
+- Prevent context confusion: keep only active-task tools, snippets, and docs in working context.
+- Prevent context clash: reconcile conflicting instructions before making mutating changes.
+- Compact long interaction history into structured state snapshots: objective, decisions, open risks, next action.
+- Promote durable insights by updating `AGENTS.md` pointers and/or corresponding `.agents/*.md` docs.
+
+## Memory Loop During Execution
+
+- Capture raw observations in `workflows/<workflow_slug>/memory/inbox.md`.
+- Log meaningful attempts in `workflows/<workflow_slug>/memory/episodes.md`.
+- Periodically synthesize patterns in `workflows/<workflow_slug>/memory/reflections.md`.
+- Track candidate promotions in `workflows/<workflow_slug>/memory/promotion-candidates.md`.
+- Promote only durable, evidence-backed items to `.docs/_meta/memory/`.
+
+## Safety and Reliability
+
+- Add extra checks before mutating/high-impact actions.
+- Prefer local repair over global plan reset.
+- Record any plan deviation and why it occurred.
+- Confirm rollback/compensation approach before high-impact mutations.
+
+## Artifact
+
+Write/update:
+
+- `.docs/workflows/<workflow_slug>/<asset-increment>-execution-log.md`
+- Start from `.docs/_templates/execution-log.md`
+
+For each completed task, include:
+
+- Task ID/title
+- Requirement IDs covered
+- Validation evidence
+- Commit hash and Conventional Commit message used for the atomic change (or explicit no-commit rationale)
+- Deviations/replans (if any)
+- TS-* scenarios executed and pass/fail results
+- Acceptance failure loopbacks triggered (if any)
+- Context updates (`AGENTS.md`/`.agents/*.md`) made or intentionally deferred
+- Memory updates made (captured, reflected, promoted, or intentionally deferred)
+
+## Exit Criteria
+
+- Planned tasks are completed or explicitly deferred.
+- Validation evidence exists for each completed task.
+- Completed implementation work is atomically committed using Conventional Commit conventions and descriptive commit bodies.
+- All critical-path TS-* scenarios from the testing strategy have been executed with pass evidence.
+- Any acceptance failure loopbacks are resolved or explicitly deferred with rationale.
+- Dependency Readiness Matrix is fully resolved or deferred items are documented.
+- Remaining risks are documented for finalization.
+- Durable context updates are captured via `AGENTS.md` and corresponding `.agents/*.md` pointers/content.
+- Short-term memory was maintained and durable items were promoted or explicitly deferred.

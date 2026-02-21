@@ -1,0 +1,2527 @@
+{
+  "generatedAt": "2026-02-20T20:42:30.404Z",
+  "package": "effect",
+  "coverageContract": {
+    "exportsFile": "packages/effect/package.json",
+    "stableBarrel": "packages/effect/src/index.ts",
+    "testingBarrel": "packages/effect/src/testing/index.ts",
+    "unstableBarrelsRoot": "packages/effect/src/unstable",
+    "note": "Unstable namespaces are sourced from all unstable index barrels, then marked if explicitly listed in package exports."
+  },
+  "counts": {
+    "stablePrimary": 127,
+    "testingPrimary": 1,
+    "unstablePrimary": 18,
+    "primaryTotal": 146,
+    "testingFacet": 4,
+    "unstableFacet": 177,
+    "facetTotal": 181,
+    "totalSkillsPlanned": 328
+  },
+  "ownership": {
+    "rules": [
+      "Each public module import path has exactly one primary skill owner.",
+      "Primary skills may only cover one module import path.",
+      "Facet skills may only subdivide one parent module and must link back to that parent.",
+      "Router skills provide navigation only and own no module behavior.",
+      "Every skill includes Owned scope, Not covered here, and Escalate to sections."
+    ],
+    "routerSkills": [
+      "effect-skill-router"
+    ],
+    "primarySkillPrefix": "effect-module",
+    "facetSkillPrefix": "effect-facet"
+  },
+  "primaryModules": [
+    {
+      "importPath": "effect/Array",
+      "moduleName": "Array",
+      "sourcePath": "packages/effect/src/Array.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-array"
+    },
+    {
+      "importPath": "effect/BigDecimal",
+      "moduleName": "BigDecimal",
+      "sourcePath": "packages/effect/src/BigDecimal.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-bigdecimal"
+    },
+    {
+      "importPath": "effect/BigInt",
+      "moduleName": "BigInt",
+      "sourcePath": "packages/effect/src/BigInt.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-bigint"
+    },
+    {
+      "importPath": "effect/Boolean",
+      "moduleName": "Boolean",
+      "sourcePath": "packages/effect/src/Boolean.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-boolean"
+    },
+    {
+      "importPath": "effect/Brand",
+      "moduleName": "Brand",
+      "sourcePath": "packages/effect/src/Brand.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-brand"
+    },
+    {
+      "importPath": "effect/Cache",
+      "moduleName": "Cache",
+      "sourcePath": "packages/effect/src/Cache.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-cache"
+    },
+    {
+      "importPath": "effect/Cause",
+      "moduleName": "Cause",
+      "sourcePath": "packages/effect/src/Cause.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-cause"
+    },
+    {
+      "importPath": "effect/Channel",
+      "moduleName": "Channel",
+      "sourcePath": "packages/effect/src/Channel.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-channel"
+    },
+    {
+      "importPath": "effect/ChannelSchema",
+      "moduleName": "ChannelSchema",
+      "sourcePath": "packages/effect/src/ChannelSchema.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-channelschema"
+    },
+    {
+      "importPath": "effect/Chunk",
+      "moduleName": "Chunk",
+      "sourcePath": "packages/effect/src/Chunk.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-chunk"
+    },
+    {
+      "importPath": "effect/Clock",
+      "moduleName": "Clock",
+      "sourcePath": "packages/effect/src/Clock.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-clock"
+    },
+    {
+      "importPath": "effect/Combiner",
+      "moduleName": "Combiner",
+      "sourcePath": "packages/effect/src/Combiner.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-combiner"
+    },
+    {
+      "importPath": "effect/Config",
+      "moduleName": "Config",
+      "sourcePath": "packages/effect/src/Config.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-config"
+    },
+    {
+      "importPath": "effect/ConfigProvider",
+      "moduleName": "ConfigProvider",
+      "sourcePath": "packages/effect/src/ConfigProvider.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-configprovider"
+    },
+    {
+      "importPath": "effect/Console",
+      "moduleName": "Console",
+      "sourcePath": "packages/effect/src/Console.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-console"
+    },
+    {
+      "importPath": "effect/Cron",
+      "moduleName": "Cron",
+      "sourcePath": "packages/effect/src/Cron.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-cron"
+    },
+    {
+      "importPath": "effect/Data",
+      "moduleName": "Data",
+      "sourcePath": "packages/effect/src/Data.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-data"
+    },
+    {
+      "importPath": "effect/DateTime",
+      "moduleName": "DateTime",
+      "sourcePath": "packages/effect/src/DateTime.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-datetime"
+    },
+    {
+      "importPath": "effect/Deferred",
+      "moduleName": "Deferred",
+      "sourcePath": "packages/effect/src/Deferred.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-deferred"
+    },
+    {
+      "importPath": "effect/Differ",
+      "moduleName": "Differ",
+      "sourcePath": "packages/effect/src/Differ.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-differ"
+    },
+    {
+      "importPath": "effect/Duration",
+      "moduleName": "Duration",
+      "sourcePath": "packages/effect/src/Duration.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-duration"
+    },
+    {
+      "importPath": "effect/Effect",
+      "moduleName": "Effect",
+      "sourcePath": "packages/effect/src/Effect.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-effect"
+    },
+    {
+      "importPath": "effect/Encoding",
+      "moduleName": "Encoding",
+      "sourcePath": "packages/effect/src/Encoding.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-encoding"
+    },
+    {
+      "importPath": "effect/Equal",
+      "moduleName": "Equal",
+      "sourcePath": "packages/effect/src/Equal.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-equal"
+    },
+    {
+      "importPath": "effect/Equivalence",
+      "moduleName": "Equivalence",
+      "sourcePath": "packages/effect/src/Equivalence.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-equivalence"
+    },
+    {
+      "importPath": "effect/ExecutionPlan",
+      "moduleName": "ExecutionPlan",
+      "sourcePath": "packages/effect/src/ExecutionPlan.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-executionplan"
+    },
+    {
+      "importPath": "effect/Exit",
+      "moduleName": "Exit",
+      "sourcePath": "packages/effect/src/Exit.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-exit"
+    },
+    {
+      "importPath": "effect/Fiber",
+      "moduleName": "Fiber",
+      "sourcePath": "packages/effect/src/Fiber.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-fiber"
+    },
+    {
+      "importPath": "effect/FiberHandle",
+      "moduleName": "FiberHandle",
+      "sourcePath": "packages/effect/src/FiberHandle.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-fiberhandle"
+    },
+    {
+      "importPath": "effect/FiberMap",
+      "moduleName": "FiberMap",
+      "sourcePath": "packages/effect/src/FiberMap.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-fibermap"
+    },
+    {
+      "importPath": "effect/FiberSet",
+      "moduleName": "FiberSet",
+      "sourcePath": "packages/effect/src/FiberSet.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-fiberset"
+    },
+    {
+      "importPath": "effect/FileSystem",
+      "moduleName": "FileSystem",
+      "sourcePath": "packages/effect/src/FileSystem.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-filesystem"
+    },
+    {
+      "importPath": "effect/Filter",
+      "moduleName": "Filter",
+      "sourcePath": "packages/effect/src/Filter.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-filter"
+    },
+    {
+      "importPath": "effect/Formatter",
+      "moduleName": "Formatter",
+      "sourcePath": "packages/effect/src/Formatter.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-formatter"
+    },
+    {
+      "importPath": "effect/Function",
+      "moduleName": "Function",
+      "sourcePath": "packages/effect/src/Function.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-function"
+    },
+    {
+      "importPath": "effect/Graph",
+      "moduleName": "Graph",
+      "sourcePath": "packages/effect/src/Graph.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-graph"
+    },
+    {
+      "importPath": "effect/Hash",
+      "moduleName": "Hash",
+      "sourcePath": "packages/effect/src/Hash.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-hash"
+    },
+    {
+      "importPath": "effect/HashMap",
+      "moduleName": "HashMap",
+      "sourcePath": "packages/effect/src/HashMap.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-hashmap"
+    },
+    {
+      "importPath": "effect/HashRing",
+      "moduleName": "HashRing",
+      "sourcePath": "packages/effect/src/HashRing.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-hashring"
+    },
+    {
+      "importPath": "effect/HashSet",
+      "moduleName": "HashSet",
+      "sourcePath": "packages/effect/src/HashSet.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-hashset"
+    },
+    {
+      "importPath": "effect/HKT",
+      "moduleName": "HKT",
+      "sourcePath": "packages/effect/src/HKT.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-hkt"
+    },
+    {
+      "importPath": "effect/Inspectable",
+      "moduleName": "Inspectable",
+      "sourcePath": "packages/effect/src/Inspectable.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-inspectable"
+    },
+    {
+      "importPath": "effect/Iterable",
+      "moduleName": "Iterable",
+      "sourcePath": "packages/effect/src/Iterable.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-iterable"
+    },
+    {
+      "importPath": "effect/JsonPatch",
+      "moduleName": "JsonPatch",
+      "sourcePath": "packages/effect/src/JsonPatch.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-jsonpatch"
+    },
+    {
+      "importPath": "effect/JsonPointer",
+      "moduleName": "JsonPointer",
+      "sourcePath": "packages/effect/src/JsonPointer.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-jsonpointer"
+    },
+    {
+      "importPath": "effect/JsonSchema",
+      "moduleName": "JsonSchema",
+      "sourcePath": "packages/effect/src/JsonSchema.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-jsonschema"
+    },
+    {
+      "importPath": "effect/Latch",
+      "moduleName": "Latch",
+      "sourcePath": "packages/effect/src/Latch.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-latch"
+    },
+    {
+      "importPath": "effect/Layer",
+      "moduleName": "Layer",
+      "sourcePath": "packages/effect/src/Layer.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-layer"
+    },
+    {
+      "importPath": "effect/LayerMap",
+      "moduleName": "LayerMap",
+      "sourcePath": "packages/effect/src/LayerMap.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-layermap"
+    },
+    {
+      "importPath": "effect/Logger",
+      "moduleName": "Logger",
+      "sourcePath": "packages/effect/src/Logger.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-logger"
+    },
+    {
+      "importPath": "effect/LogLevel",
+      "moduleName": "LogLevel",
+      "sourcePath": "packages/effect/src/LogLevel.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-loglevel"
+    },
+    {
+      "importPath": "effect/ManagedRuntime",
+      "moduleName": "ManagedRuntime",
+      "sourcePath": "packages/effect/src/ManagedRuntime.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-managedruntime"
+    },
+    {
+      "importPath": "effect/Match",
+      "moduleName": "Match",
+      "sourcePath": "packages/effect/src/Match.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-match"
+    },
+    {
+      "importPath": "effect/Metric",
+      "moduleName": "Metric",
+      "sourcePath": "packages/effect/src/Metric.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-metric"
+    },
+    {
+      "importPath": "effect/MutableHashMap",
+      "moduleName": "MutableHashMap",
+      "sourcePath": "packages/effect/src/MutableHashMap.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-mutablehashmap"
+    },
+    {
+      "importPath": "effect/MutableHashSet",
+      "moduleName": "MutableHashSet",
+      "sourcePath": "packages/effect/src/MutableHashSet.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-mutablehashset"
+    },
+    {
+      "importPath": "effect/MutableList",
+      "moduleName": "MutableList",
+      "sourcePath": "packages/effect/src/MutableList.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-mutablelist"
+    },
+    {
+      "importPath": "effect/MutableRef",
+      "moduleName": "MutableRef",
+      "sourcePath": "packages/effect/src/MutableRef.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-mutableref"
+    },
+    {
+      "importPath": "effect/NonEmptyIterable",
+      "moduleName": "NonEmptyIterable",
+      "sourcePath": "packages/effect/src/NonEmptyIterable.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-nonemptyiterable"
+    },
+    {
+      "importPath": "effect/NullOr",
+      "moduleName": "NullOr",
+      "sourcePath": "packages/effect/src/NullOr.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-nullor"
+    },
+    {
+      "importPath": "effect/Number",
+      "moduleName": "Number",
+      "sourcePath": "packages/effect/src/Number.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-number"
+    },
+    {
+      "importPath": "effect/Optic",
+      "moduleName": "Optic",
+      "sourcePath": "packages/effect/src/Optic.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-optic"
+    },
+    {
+      "importPath": "effect/Option",
+      "moduleName": "Option",
+      "sourcePath": "packages/effect/src/Option.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-option"
+    },
+    {
+      "importPath": "effect/Order",
+      "moduleName": "Order",
+      "sourcePath": "packages/effect/src/Order.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-order"
+    },
+    {
+      "importPath": "effect/Ordering",
+      "moduleName": "Ordering",
+      "sourcePath": "packages/effect/src/Ordering.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-ordering"
+    },
+    {
+      "importPath": "effect/Path",
+      "moduleName": "Path",
+      "sourcePath": "packages/effect/src/Path.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-path"
+    },
+    {
+      "importPath": "effect/Pipeable",
+      "moduleName": "Pipeable",
+      "sourcePath": "packages/effect/src/Pipeable.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-pipeable"
+    },
+    {
+      "importPath": "effect/PlatformError",
+      "moduleName": "PlatformError",
+      "sourcePath": "packages/effect/src/PlatformError.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-platformerror"
+    },
+    {
+      "importPath": "effect/Pool",
+      "moduleName": "Pool",
+      "sourcePath": "packages/effect/src/Pool.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-pool"
+    },
+    {
+      "importPath": "effect/Predicate",
+      "moduleName": "Predicate",
+      "sourcePath": "packages/effect/src/Predicate.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-predicate"
+    },
+    {
+      "importPath": "effect/PrimaryKey",
+      "moduleName": "PrimaryKey",
+      "sourcePath": "packages/effect/src/PrimaryKey.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-primarykey"
+    },
+    {
+      "importPath": "effect/PubSub",
+      "moduleName": "PubSub",
+      "sourcePath": "packages/effect/src/PubSub.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-pubsub"
+    },
+    {
+      "importPath": "effect/Pull",
+      "moduleName": "Pull",
+      "sourcePath": "packages/effect/src/Pull.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-pull"
+    },
+    {
+      "importPath": "effect/Queue",
+      "moduleName": "Queue",
+      "sourcePath": "packages/effect/src/Queue.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-queue"
+    },
+    {
+      "importPath": "effect/Random",
+      "moduleName": "Random",
+      "sourcePath": "packages/effect/src/Random.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-random"
+    },
+    {
+      "importPath": "effect/RcMap",
+      "moduleName": "RcMap",
+      "sourcePath": "packages/effect/src/RcMap.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-rcmap"
+    },
+    {
+      "importPath": "effect/RcRef",
+      "moduleName": "RcRef",
+      "sourcePath": "packages/effect/src/RcRef.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-rcref"
+    },
+    {
+      "importPath": "effect/Record",
+      "moduleName": "Record",
+      "sourcePath": "packages/effect/src/Record.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-record"
+    },
+    {
+      "importPath": "effect/Redactable",
+      "moduleName": "Redactable",
+      "sourcePath": "packages/effect/src/Redactable.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-redactable"
+    },
+    {
+      "importPath": "effect/Redacted",
+      "moduleName": "Redacted",
+      "sourcePath": "packages/effect/src/Redacted.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-redacted"
+    },
+    {
+      "importPath": "effect/Reducer",
+      "moduleName": "Reducer",
+      "sourcePath": "packages/effect/src/Reducer.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-reducer"
+    },
+    {
+      "importPath": "effect/Ref",
+      "moduleName": "Ref",
+      "sourcePath": "packages/effect/src/Ref.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-ref"
+    },
+    {
+      "importPath": "effect/References",
+      "moduleName": "References",
+      "sourcePath": "packages/effect/src/References.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-references"
+    },
+    {
+      "importPath": "effect/RegExp",
+      "moduleName": "RegExp",
+      "sourcePath": "packages/effect/src/RegExp.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-regexp"
+    },
+    {
+      "importPath": "effect/Request",
+      "moduleName": "Request",
+      "sourcePath": "packages/effect/src/Request.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-request"
+    },
+    {
+      "importPath": "effect/RequestResolver",
+      "moduleName": "RequestResolver",
+      "sourcePath": "packages/effect/src/RequestResolver.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-requestresolver"
+    },
+    {
+      "importPath": "effect/Resource",
+      "moduleName": "Resource",
+      "sourcePath": "packages/effect/src/Resource.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-resource"
+    },
+    {
+      "importPath": "effect/Result",
+      "moduleName": "Result",
+      "sourcePath": "packages/effect/src/Result.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-result"
+    },
+    {
+      "importPath": "effect/Runtime",
+      "moduleName": "Runtime",
+      "sourcePath": "packages/effect/src/Runtime.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-runtime"
+    },
+    {
+      "importPath": "effect/Schedule",
+      "moduleName": "Schedule",
+      "sourcePath": "packages/effect/src/Schedule.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schedule"
+    },
+    {
+      "importPath": "effect/Scheduler",
+      "moduleName": "Scheduler",
+      "sourcePath": "packages/effect/src/Scheduler.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-scheduler"
+    },
+    {
+      "importPath": "effect/Schema",
+      "moduleName": "Schema",
+      "sourcePath": "packages/effect/src/Schema.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schema"
+    },
+    {
+      "importPath": "effect/SchemaAST",
+      "moduleName": "SchemaAST",
+      "sourcePath": "packages/effect/src/SchemaAST.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schemaast"
+    },
+    {
+      "importPath": "effect/SchemaGetter",
+      "moduleName": "SchemaGetter",
+      "sourcePath": "packages/effect/src/SchemaGetter.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schemagetter"
+    },
+    {
+      "importPath": "effect/SchemaIssue",
+      "moduleName": "SchemaIssue",
+      "sourcePath": "packages/effect/src/SchemaIssue.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schemaissue"
+    },
+    {
+      "importPath": "effect/SchemaParser",
+      "moduleName": "SchemaParser",
+      "sourcePath": "packages/effect/src/SchemaParser.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schemaparser"
+    },
+    {
+      "importPath": "effect/SchemaRepresentation",
+      "moduleName": "SchemaRepresentation",
+      "sourcePath": "packages/effect/src/SchemaRepresentation.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schemarepresentation"
+    },
+    {
+      "importPath": "effect/SchemaTransformation",
+      "moduleName": "SchemaTransformation",
+      "sourcePath": "packages/effect/src/SchemaTransformation.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schematransformation"
+    },
+    {
+      "importPath": "effect/SchemaUtils",
+      "moduleName": "SchemaUtils",
+      "sourcePath": "packages/effect/src/SchemaUtils.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-schemautils"
+    },
+    {
+      "importPath": "effect/Scope",
+      "moduleName": "Scope",
+      "sourcePath": "packages/effect/src/Scope.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-scope"
+    },
+    {
+      "importPath": "effect/ScopedCache",
+      "moduleName": "ScopedCache",
+      "sourcePath": "packages/effect/src/ScopedCache.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-scopedcache"
+    },
+    {
+      "importPath": "effect/ScopedRef",
+      "moduleName": "ScopedRef",
+      "sourcePath": "packages/effect/src/ScopedRef.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-scopedref"
+    },
+    {
+      "importPath": "effect/Semaphore",
+      "moduleName": "Semaphore",
+      "sourcePath": "packages/effect/src/Semaphore.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-semaphore"
+    },
+    {
+      "importPath": "effect/ServiceMap",
+      "moduleName": "ServiceMap",
+      "sourcePath": "packages/effect/src/ServiceMap.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-servicemap"
+    },
+    {
+      "importPath": "effect/Sink",
+      "moduleName": "Sink",
+      "sourcePath": "packages/effect/src/Sink.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-sink"
+    },
+    {
+      "importPath": "effect/Stdio",
+      "moduleName": "Stdio",
+      "sourcePath": "packages/effect/src/Stdio.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-stdio"
+    },
+    {
+      "importPath": "effect/Stream",
+      "moduleName": "Stream",
+      "sourcePath": "packages/effect/src/Stream.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-stream"
+    },
+    {
+      "importPath": "effect/String",
+      "moduleName": "String",
+      "sourcePath": "packages/effect/src/String.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-string"
+    },
+    {
+      "importPath": "effect/Struct",
+      "moduleName": "Struct",
+      "sourcePath": "packages/effect/src/Struct.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-struct"
+    },
+    {
+      "importPath": "effect/SubscriptionRef",
+      "moduleName": "SubscriptionRef",
+      "sourcePath": "packages/effect/src/SubscriptionRef.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-subscriptionref"
+    },
+    {
+      "importPath": "effect/Symbol",
+      "moduleName": "Symbol",
+      "sourcePath": "packages/effect/src/Symbol.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-symbol"
+    },
+    {
+      "importPath": "effect/SynchronizedRef",
+      "moduleName": "SynchronizedRef",
+      "sourcePath": "packages/effect/src/SynchronizedRef.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-synchronizedref"
+    },
+    {
+      "importPath": "effect/Take",
+      "moduleName": "Take",
+      "sourcePath": "packages/effect/src/Take.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-take"
+    },
+    {
+      "importPath": "effect/Terminal",
+      "moduleName": "Terminal",
+      "sourcePath": "packages/effect/src/Terminal.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-terminal"
+    },
+    {
+      "importPath": "effect/testing",
+      "moduleName": "testing",
+      "sourcePath": "packages/effect/src/testing/index.ts",
+      "kind": "testing-primary",
+      "primarySkill": "effect-module-testing"
+    },
+    {
+      "importPath": "effect/Tracer",
+      "moduleName": "Tracer",
+      "sourcePath": "packages/effect/src/Tracer.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-tracer"
+    },
+    {
+      "importPath": "effect/Trie",
+      "moduleName": "Trie",
+      "sourcePath": "packages/effect/src/Trie.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-trie"
+    },
+    {
+      "importPath": "effect/Tuple",
+      "moduleName": "Tuple",
+      "sourcePath": "packages/effect/src/Tuple.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-tuple"
+    },
+    {
+      "importPath": "effect/TxChunk",
+      "moduleName": "TxChunk",
+      "sourcePath": "packages/effect/src/TxChunk.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-txchunk"
+    },
+    {
+      "importPath": "effect/TxHashMap",
+      "moduleName": "TxHashMap",
+      "sourcePath": "packages/effect/src/TxHashMap.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-txhashmap"
+    },
+    {
+      "importPath": "effect/TxHashSet",
+      "moduleName": "TxHashSet",
+      "sourcePath": "packages/effect/src/TxHashSet.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-txhashset"
+    },
+    {
+      "importPath": "effect/TxQueue",
+      "moduleName": "TxQueue",
+      "sourcePath": "packages/effect/src/TxQueue.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-txqueue"
+    },
+    {
+      "importPath": "effect/TxRef",
+      "moduleName": "TxRef",
+      "sourcePath": "packages/effect/src/TxRef.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-txref"
+    },
+    {
+      "importPath": "effect/TxSemaphore",
+      "moduleName": "TxSemaphore",
+      "sourcePath": "packages/effect/src/TxSemaphore.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-txsemaphore"
+    },
+    {
+      "importPath": "effect/Types",
+      "moduleName": "Types",
+      "sourcePath": "packages/effect/src/Types.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-types"
+    },
+    {
+      "importPath": "effect/UndefinedOr",
+      "moduleName": "UndefinedOr",
+      "sourcePath": "packages/effect/src/UndefinedOr.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-undefinedor"
+    },
+    {
+      "importPath": "effect/Unify",
+      "moduleName": "Unify",
+      "sourcePath": "packages/effect/src/Unify.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-unify"
+    },
+    {
+      "importPath": "effect/unstable/ai",
+      "moduleName": "unstable/ai",
+      "sourcePath": "packages/effect/src/unstable/ai/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-ai"
+    },
+    {
+      "importPath": "effect/unstable/cli",
+      "moduleName": "unstable/cli",
+      "sourcePath": "packages/effect/src/unstable/cli/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-cli"
+    },
+    {
+      "importPath": "effect/unstable/cluster",
+      "moduleName": "unstable/cluster",
+      "sourcePath": "packages/effect/src/unstable/cluster/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-cluster"
+    },
+    {
+      "importPath": "effect/unstable/devtools",
+      "moduleName": "unstable/devtools",
+      "sourcePath": "packages/effect/src/unstable/devtools/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-devtools"
+    },
+    {
+      "importPath": "effect/unstable/encoding",
+      "moduleName": "unstable/encoding",
+      "sourcePath": "packages/effect/src/unstable/encoding/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": false,
+      "primarySkill": "effect-module-unstable-encoding"
+    },
+    {
+      "importPath": "effect/unstable/eventlog",
+      "moduleName": "unstable/eventlog",
+      "sourcePath": "packages/effect/src/unstable/eventlog/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-eventlog"
+    },
+    {
+      "importPath": "effect/unstable/http",
+      "moduleName": "unstable/http",
+      "sourcePath": "packages/effect/src/unstable/http/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-http"
+    },
+    {
+      "importPath": "effect/unstable/httpapi",
+      "moduleName": "unstable/httpapi",
+      "sourcePath": "packages/effect/src/unstable/httpapi/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-httpapi"
+    },
+    {
+      "importPath": "effect/unstable/observability",
+      "moduleName": "unstable/observability",
+      "sourcePath": "packages/effect/src/unstable/observability/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-observability"
+    },
+    {
+      "importPath": "effect/unstable/persistence",
+      "moduleName": "unstable/persistence",
+      "sourcePath": "packages/effect/src/unstable/persistence/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-persistence"
+    },
+    {
+      "importPath": "effect/unstable/process",
+      "moduleName": "unstable/process",
+      "sourcePath": "packages/effect/src/unstable/process/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-process"
+    },
+    {
+      "importPath": "effect/unstable/reactivity",
+      "moduleName": "unstable/reactivity",
+      "sourcePath": "packages/effect/src/unstable/reactivity/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-reactivity"
+    },
+    {
+      "importPath": "effect/unstable/rpc",
+      "moduleName": "unstable/rpc",
+      "sourcePath": "packages/effect/src/unstable/rpc/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-rpc"
+    },
+    {
+      "importPath": "effect/unstable/schema",
+      "moduleName": "unstable/schema",
+      "sourcePath": "packages/effect/src/unstable/schema/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-schema"
+    },
+    {
+      "importPath": "effect/unstable/socket",
+      "moduleName": "unstable/socket",
+      "sourcePath": "packages/effect/src/unstable/socket/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-socket"
+    },
+    {
+      "importPath": "effect/unstable/sql",
+      "moduleName": "unstable/sql",
+      "sourcePath": "packages/effect/src/unstable/sql/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-sql"
+    },
+    {
+      "importPath": "effect/unstable/workers",
+      "moduleName": "unstable/workers",
+      "sourcePath": "packages/effect/src/unstable/workers/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-workers"
+    },
+    {
+      "importPath": "effect/unstable/workflow",
+      "moduleName": "unstable/workflow",
+      "sourcePath": "packages/effect/src/unstable/workflow/index.ts",
+      "kind": "unstable-primary",
+      "explicitlyExportedInPackageJson": true,
+      "primarySkill": "effect-module-unstable-workflow"
+    },
+    {
+      "importPath": "effect/Utils",
+      "moduleName": "Utils",
+      "sourcePath": "packages/effect/src/Utils.ts",
+      "kind": "stable-primary",
+      "primarySkill": "effect-module-utils"
+    }
+  ],
+  "facetModules": [
+    {
+      "importPath": "effect/testing/FastCheck",
+      "moduleName": "FastCheck",
+      "sourcePath": "packages/effect/src/testing/FastCheck.ts",
+      "parent": "effect/testing",
+      "kind": "testing-facet",
+      "facetSkill": "effect-facet-testing-fastcheck"
+    },
+    {
+      "importPath": "effect/testing/TestClock",
+      "moduleName": "TestClock",
+      "sourcePath": "packages/effect/src/testing/TestClock.ts",
+      "parent": "effect/testing",
+      "kind": "testing-facet",
+      "facetSkill": "effect-facet-testing-testclock"
+    },
+    {
+      "importPath": "effect/testing/TestConsole",
+      "moduleName": "TestConsole",
+      "sourcePath": "packages/effect/src/testing/TestConsole.ts",
+      "parent": "effect/testing",
+      "kind": "testing-facet",
+      "facetSkill": "effect-facet-testing-testconsole"
+    },
+    {
+      "importPath": "effect/testing/TestSchema",
+      "moduleName": "TestSchema",
+      "sourcePath": "packages/effect/src/testing/TestSchema.ts",
+      "parent": "effect/testing",
+      "kind": "testing-facet",
+      "facetSkill": "effect-facet-testing-testschema"
+    },
+    {
+      "importPath": "effect/unstable/ai/AiError",
+      "moduleName": "AiError",
+      "sourcePath": "packages/effect/src/unstable/ai/AiError.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-aierror"
+    },
+    {
+      "importPath": "effect/unstable/ai/AnthropicStructuredOutput",
+      "moduleName": "AnthropicStructuredOutput",
+      "sourcePath": "packages/effect/src/unstable/ai/AnthropicStructuredOutput.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-anthropicstructuredoutput"
+    },
+    {
+      "importPath": "effect/unstable/ai/Chat",
+      "moduleName": "Chat",
+      "sourcePath": "packages/effect/src/unstable/ai/Chat.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-chat"
+    },
+    {
+      "importPath": "effect/unstable/ai/IdGenerator",
+      "moduleName": "IdGenerator",
+      "sourcePath": "packages/effect/src/unstable/ai/IdGenerator.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-idgenerator"
+    },
+    {
+      "importPath": "effect/unstable/ai/LanguageModel",
+      "moduleName": "LanguageModel",
+      "sourcePath": "packages/effect/src/unstable/ai/LanguageModel.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-languagemodel"
+    },
+    {
+      "importPath": "effect/unstable/ai/McpSchema",
+      "moduleName": "McpSchema",
+      "sourcePath": "packages/effect/src/unstable/ai/McpSchema.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-mcpschema"
+    },
+    {
+      "importPath": "effect/unstable/ai/McpServer",
+      "moduleName": "McpServer",
+      "sourcePath": "packages/effect/src/unstable/ai/McpServer.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-mcpserver"
+    },
+    {
+      "importPath": "effect/unstable/ai/Model",
+      "moduleName": "Model",
+      "sourcePath": "packages/effect/src/unstable/ai/Model.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-model"
+    },
+    {
+      "importPath": "effect/unstable/ai/OpenAiStructuredOutput",
+      "moduleName": "OpenAiStructuredOutput",
+      "sourcePath": "packages/effect/src/unstable/ai/OpenAiStructuredOutput.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-openaistructuredoutput"
+    },
+    {
+      "importPath": "effect/unstable/ai/Prompt",
+      "moduleName": "Prompt",
+      "sourcePath": "packages/effect/src/unstable/ai/Prompt.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-prompt"
+    },
+    {
+      "importPath": "effect/unstable/ai/Response",
+      "moduleName": "Response",
+      "sourcePath": "packages/effect/src/unstable/ai/Response.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-response"
+    },
+    {
+      "importPath": "effect/unstable/ai/Telemetry",
+      "moduleName": "Telemetry",
+      "sourcePath": "packages/effect/src/unstable/ai/Telemetry.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-telemetry"
+    },
+    {
+      "importPath": "effect/unstable/ai/Tokenizer",
+      "moduleName": "Tokenizer",
+      "sourcePath": "packages/effect/src/unstable/ai/Tokenizer.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-tokenizer"
+    },
+    {
+      "importPath": "effect/unstable/ai/Tool",
+      "moduleName": "Tool",
+      "sourcePath": "packages/effect/src/unstable/ai/Tool.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-tool"
+    },
+    {
+      "importPath": "effect/unstable/ai/Toolkit",
+      "moduleName": "Toolkit",
+      "sourcePath": "packages/effect/src/unstable/ai/Toolkit.ts",
+      "parent": "effect/unstable/ai",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-ai-toolkit"
+    },
+    {
+      "importPath": "effect/unstable/cli/Argument",
+      "moduleName": "Argument",
+      "sourcePath": "packages/effect/src/unstable/cli/Argument.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-argument"
+    },
+    {
+      "importPath": "effect/unstable/cli/CliError",
+      "moduleName": "CliError",
+      "sourcePath": "packages/effect/src/unstable/cli/CliError.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-clierror"
+    },
+    {
+      "importPath": "effect/unstable/cli/CliOutput",
+      "moduleName": "CliOutput",
+      "sourcePath": "packages/effect/src/unstable/cli/CliOutput.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-clioutput"
+    },
+    {
+      "importPath": "effect/unstable/cli/Command",
+      "moduleName": "Command",
+      "sourcePath": "packages/effect/src/unstable/cli/Command.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-command"
+    },
+    {
+      "importPath": "effect/unstable/cli/Flag",
+      "moduleName": "Flag",
+      "sourcePath": "packages/effect/src/unstable/cli/Flag.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-flag"
+    },
+    {
+      "importPath": "effect/unstable/cli/HelpDoc",
+      "moduleName": "HelpDoc",
+      "sourcePath": "packages/effect/src/unstable/cli/HelpDoc.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-helpdoc"
+    },
+    {
+      "importPath": "effect/unstable/cli/Param",
+      "moduleName": "Param",
+      "sourcePath": "packages/effect/src/unstable/cli/Param.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-param"
+    },
+    {
+      "importPath": "effect/unstable/cli/Primitive",
+      "moduleName": "Primitive",
+      "sourcePath": "packages/effect/src/unstable/cli/Primitive.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-primitive"
+    },
+    {
+      "importPath": "effect/unstable/cli/Prompt",
+      "moduleName": "Prompt",
+      "sourcePath": "packages/effect/src/unstable/cli/Prompt.ts",
+      "parent": "effect/unstable/cli",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cli-prompt"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ClusterCron",
+      "moduleName": "ClusterCron",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterCron.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-clustercron"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ClusterError",
+      "moduleName": "ClusterError",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterError.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-clustererror"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ClusterMetrics",
+      "moduleName": "ClusterMetrics",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterMetrics.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-clustermetrics"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ClusterSchema",
+      "moduleName": "ClusterSchema",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterSchema.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-clusterschema"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ClusterWorkflowEngine",
+      "moduleName": "ClusterWorkflowEngine",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterWorkflowEngine.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-clusterworkflowengine"
+    },
+    {
+      "importPath": "effect/unstable/cluster/DeliverAt",
+      "moduleName": "DeliverAt",
+      "sourcePath": "packages/effect/src/unstable/cluster/DeliverAt.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-deliverat"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Entity",
+      "moduleName": "Entity",
+      "sourcePath": "packages/effect/src/unstable/cluster/Entity.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-entity"
+    },
+    {
+      "importPath": "effect/unstable/cluster/EntityAddress",
+      "moduleName": "EntityAddress",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityAddress.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-entityaddress"
+    },
+    {
+      "importPath": "effect/unstable/cluster/EntityId",
+      "moduleName": "EntityId",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityId.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-entityid"
+    },
+    {
+      "importPath": "effect/unstable/cluster/EntityProxy",
+      "moduleName": "EntityProxy",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityProxy.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-entityproxy"
+    },
+    {
+      "importPath": "effect/unstable/cluster/EntityProxyServer",
+      "moduleName": "EntityProxyServer",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityProxyServer.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-entityproxyserver"
+    },
+    {
+      "importPath": "effect/unstable/cluster/EntityResource",
+      "moduleName": "EntityResource",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityResource.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-entityresource"
+    },
+    {
+      "importPath": "effect/unstable/cluster/EntityType",
+      "moduleName": "EntityType",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityType.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-entitytype"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Envelope",
+      "moduleName": "Envelope",
+      "sourcePath": "packages/effect/src/unstable/cluster/Envelope.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-envelope"
+    },
+    {
+      "importPath": "effect/unstable/cluster/HttpRunner",
+      "moduleName": "HttpRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/HttpRunner.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-httprunner"
+    },
+    {
+      "importPath": "effect/unstable/cluster/K8sHttpClient",
+      "moduleName": "K8sHttpClient",
+      "sourcePath": "packages/effect/src/unstable/cluster/K8sHttpClient.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-k8shttpclient"
+    },
+    {
+      "importPath": "effect/unstable/cluster/MachineId",
+      "moduleName": "MachineId",
+      "sourcePath": "packages/effect/src/unstable/cluster/MachineId.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-machineid"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Message",
+      "moduleName": "Message",
+      "sourcePath": "packages/effect/src/unstable/cluster/Message.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-message"
+    },
+    {
+      "importPath": "effect/unstable/cluster/MessageStorage",
+      "moduleName": "MessageStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/MessageStorage.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-messagestorage"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Reply",
+      "moduleName": "Reply",
+      "sourcePath": "packages/effect/src/unstable/cluster/Reply.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-reply"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Runner",
+      "moduleName": "Runner",
+      "sourcePath": "packages/effect/src/unstable/cluster/Runner.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-runner"
+    },
+    {
+      "importPath": "effect/unstable/cluster/RunnerAddress",
+      "moduleName": "RunnerAddress",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerAddress.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-runneraddress"
+    },
+    {
+      "importPath": "effect/unstable/cluster/RunnerHealth",
+      "moduleName": "RunnerHealth",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerHealth.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-runnerhealth"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Runners",
+      "moduleName": "Runners",
+      "sourcePath": "packages/effect/src/unstable/cluster/Runners.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-runners"
+    },
+    {
+      "importPath": "effect/unstable/cluster/RunnerServer",
+      "moduleName": "RunnerServer",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerServer.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-runnerserver"
+    },
+    {
+      "importPath": "effect/unstable/cluster/RunnerStorage",
+      "moduleName": "RunnerStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerStorage.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-runnerstorage"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ShardId",
+      "moduleName": "ShardId",
+      "sourcePath": "packages/effect/src/unstable/cluster/ShardId.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-shardid"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Sharding",
+      "moduleName": "Sharding",
+      "sourcePath": "packages/effect/src/unstable/cluster/Sharding.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-sharding"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ShardingConfig",
+      "moduleName": "ShardingConfig",
+      "sourcePath": "packages/effect/src/unstable/cluster/ShardingConfig.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-shardingconfig"
+    },
+    {
+      "importPath": "effect/unstable/cluster/ShardingRegistrationEvent",
+      "moduleName": "ShardingRegistrationEvent",
+      "sourcePath": "packages/effect/src/unstable/cluster/ShardingRegistrationEvent.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-shardingregistrationevent"
+    },
+    {
+      "importPath": "effect/unstable/cluster/SingleRunner",
+      "moduleName": "SingleRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/SingleRunner.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-singlerunner"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Singleton",
+      "moduleName": "Singleton",
+      "sourcePath": "packages/effect/src/unstable/cluster/Singleton.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-singleton"
+    },
+    {
+      "importPath": "effect/unstable/cluster/SingletonAddress",
+      "moduleName": "SingletonAddress",
+      "sourcePath": "packages/effect/src/unstable/cluster/SingletonAddress.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-singletonaddress"
+    },
+    {
+      "importPath": "effect/unstable/cluster/Snowflake",
+      "moduleName": "Snowflake",
+      "sourcePath": "packages/effect/src/unstable/cluster/Snowflake.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-snowflake"
+    },
+    {
+      "importPath": "effect/unstable/cluster/SocketRunner",
+      "moduleName": "SocketRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/SocketRunner.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-socketrunner"
+    },
+    {
+      "importPath": "effect/unstable/cluster/SqlMessageStorage",
+      "moduleName": "SqlMessageStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/SqlMessageStorage.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-sqlmessagestorage"
+    },
+    {
+      "importPath": "effect/unstable/cluster/SqlRunnerStorage",
+      "moduleName": "SqlRunnerStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/SqlRunnerStorage.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-sqlrunnerstorage"
+    },
+    {
+      "importPath": "effect/unstable/cluster/TestRunner",
+      "moduleName": "TestRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/TestRunner.ts",
+      "parent": "effect/unstable/cluster",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-cluster-testrunner"
+    },
+    {
+      "importPath": "effect/unstable/devtools/DevTools",
+      "moduleName": "DevTools",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevTools.ts",
+      "parent": "effect/unstable/devtools",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-devtools-devtools"
+    },
+    {
+      "importPath": "effect/unstable/devtools/DevToolsClient",
+      "moduleName": "DevToolsClient",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevToolsClient.ts",
+      "parent": "effect/unstable/devtools",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-devtools-devtoolsclient"
+    },
+    {
+      "importPath": "effect/unstable/devtools/DevToolsSchema",
+      "moduleName": "DevToolsSchema",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevToolsSchema.ts",
+      "parent": "effect/unstable/devtools",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-devtools-devtoolsschema"
+    },
+    {
+      "importPath": "effect/unstable/devtools/DevToolsServer",
+      "moduleName": "DevToolsServer",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevToolsServer.ts",
+      "parent": "effect/unstable/devtools",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-devtools-devtoolsserver"
+    },
+    {
+      "importPath": "effect/unstable/encoding/Msgpack",
+      "moduleName": "Msgpack",
+      "sourcePath": "packages/effect/src/unstable/encoding/Msgpack.ts",
+      "parent": "effect/unstable/encoding",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-encoding-msgpack"
+    },
+    {
+      "importPath": "effect/unstable/encoding/Ndjson",
+      "moduleName": "Ndjson",
+      "sourcePath": "packages/effect/src/unstable/encoding/Ndjson.ts",
+      "parent": "effect/unstable/encoding",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-encoding-ndjson"
+    },
+    {
+      "importPath": "effect/unstable/encoding/Sse",
+      "moduleName": "Sse",
+      "sourcePath": "packages/effect/src/unstable/encoding/Sse.ts",
+      "parent": "effect/unstable/encoding",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-encoding-sse"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/Event",
+      "moduleName": "Event",
+      "sourcePath": "packages/effect/src/unstable/eventlog/Event.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-event"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/EventGroup",
+      "moduleName": "EventGroup",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventGroup.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-eventgroup"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/EventJournal",
+      "moduleName": "EventJournal",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventJournal.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-eventjournal"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/EventLog",
+      "moduleName": "EventLog",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLog.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-eventlog"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/EventLogEncryption",
+      "moduleName": "EventLogEncryption",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLogEncryption.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-eventlogencryption"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/EventLogRemote",
+      "moduleName": "EventLogRemote",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLogRemote.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-eventlogremote"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/EventLogServer",
+      "moduleName": "EventLogServer",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLogServer.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-eventlogserver"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/SqlEventLogJournal",
+      "moduleName": "SqlEventLogJournal",
+      "sourcePath": "packages/effect/src/unstable/eventlog/SqlEventLogJournal.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-sqleventlogjournal"
+    },
+    {
+      "importPath": "effect/unstable/eventlog/SqlEventLogServer",
+      "moduleName": "SqlEventLogServer",
+      "sourcePath": "packages/effect/src/unstable/eventlog/SqlEventLogServer.ts",
+      "parent": "effect/unstable/eventlog",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-eventlog-sqleventlogserver"
+    },
+    {
+      "importPath": "effect/unstable/http/Cookies",
+      "moduleName": "Cookies",
+      "sourcePath": "packages/effect/src/unstable/http/Cookies.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-cookies"
+    },
+    {
+      "importPath": "effect/unstable/http/Etag",
+      "moduleName": "Etag",
+      "sourcePath": "packages/effect/src/unstable/http/Etag.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-etag"
+    },
+    {
+      "importPath": "effect/unstable/http/FetchHttpClient",
+      "moduleName": "FetchHttpClient",
+      "sourcePath": "packages/effect/src/unstable/http/FetchHttpClient.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-fetchhttpclient"
+    },
+    {
+      "importPath": "effect/unstable/http/FindMyWay",
+      "moduleName": "FindMyWay",
+      "sourcePath": "packages/effect/src/unstable/http/FindMyWay.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-findmyway"
+    },
+    {
+      "importPath": "effect/unstable/http/Headers",
+      "moduleName": "Headers",
+      "sourcePath": "packages/effect/src/unstable/http/Headers.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-headers"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpBody",
+      "moduleName": "HttpBody",
+      "sourcePath": "packages/effect/src/unstable/http/HttpBody.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpbody"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpClient",
+      "moduleName": "HttpClient",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClient.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpclient"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpClientError",
+      "moduleName": "HttpClientError",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClientError.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpclienterror"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpClientRequest",
+      "moduleName": "HttpClientRequest",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClientRequest.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpclientrequest"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpClientResponse",
+      "moduleName": "HttpClientResponse",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClientResponse.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpclientresponse"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpEffect",
+      "moduleName": "HttpEffect",
+      "sourcePath": "packages/effect/src/unstable/http/HttpEffect.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpeffect"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpIncomingMessage",
+      "moduleName": "HttpIncomingMessage",
+      "sourcePath": "packages/effect/src/unstable/http/HttpIncomingMessage.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpincomingmessage"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpMethod",
+      "moduleName": "HttpMethod",
+      "sourcePath": "packages/effect/src/unstable/http/HttpMethod.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpmethod"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpMiddleware",
+      "moduleName": "HttpMiddleware",
+      "sourcePath": "packages/effect/src/unstable/http/HttpMiddleware.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpmiddleware"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpPlatform",
+      "moduleName": "HttpPlatform",
+      "sourcePath": "packages/effect/src/unstable/http/HttpPlatform.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpplatform"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpRouter",
+      "moduleName": "HttpRouter",
+      "sourcePath": "packages/effect/src/unstable/http/HttpRouter.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httprouter"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpServer",
+      "moduleName": "HttpServer",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServer.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpserver"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpServerError",
+      "moduleName": "HttpServerError",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerError.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpservererror"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpServerRequest",
+      "moduleName": "HttpServerRequest",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerRequest.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpserverrequest"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpServerRespondable",
+      "moduleName": "HttpServerRespondable",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerRespondable.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpserverrespondable"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpServerResponse",
+      "moduleName": "HttpServerResponse",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerResponse.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httpserverresponse"
+    },
+    {
+      "importPath": "effect/unstable/http/HttpTraceContext",
+      "moduleName": "HttpTraceContext",
+      "sourcePath": "packages/effect/src/unstable/http/HttpTraceContext.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-httptracecontext"
+    },
+    {
+      "importPath": "effect/unstable/http/Multipart",
+      "moduleName": "Multipart",
+      "sourcePath": "packages/effect/src/unstable/http/Multipart.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-multipart"
+    },
+    {
+      "importPath": "effect/unstable/http/Multipasta",
+      "moduleName": "Multipasta",
+      "sourcePath": "packages/effect/src/unstable/http/Multipasta.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-multipasta"
+    },
+    {
+      "importPath": "effect/unstable/http/Template",
+      "moduleName": "Template",
+      "sourcePath": "packages/effect/src/unstable/http/Template.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-template"
+    },
+    {
+      "importPath": "effect/unstable/http/UrlParams",
+      "moduleName": "UrlParams",
+      "sourcePath": "packages/effect/src/unstable/http/UrlParams.ts",
+      "parent": "effect/unstable/http",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-http-urlparams"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApi",
+      "moduleName": "HttpApi",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApi.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapi"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiBuilder",
+      "moduleName": "HttpApiBuilder",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiBuilder.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapibuilder"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiClient",
+      "moduleName": "HttpApiClient",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiClient.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapiclient"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiEndpoint",
+      "moduleName": "HttpApiEndpoint",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiEndpoint.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapiendpoint"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiError",
+      "moduleName": "HttpApiError",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiError.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapierror"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiGroup",
+      "moduleName": "HttpApiGroup",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiGroup.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapigroup"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiMiddleware",
+      "moduleName": "HttpApiMiddleware",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiMiddleware.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapimiddleware"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiScalar",
+      "moduleName": "HttpApiScalar",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiScalar.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapiscalar"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiSchema",
+      "moduleName": "HttpApiSchema",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiSchema.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapischema"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiSecurity",
+      "moduleName": "HttpApiSecurity",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiSecurity.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapisecurity"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/HttpApiSwagger",
+      "moduleName": "HttpApiSwagger",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiSwagger.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-httpapiswagger"
+    },
+    {
+      "importPath": "effect/unstable/httpapi/OpenApi",
+      "moduleName": "OpenApi",
+      "sourcePath": "packages/effect/src/unstable/httpapi/OpenApi.ts",
+      "parent": "effect/unstable/httpapi",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-httpapi-openapi"
+    },
+    {
+      "importPath": "effect/unstable/observability/Otlp",
+      "moduleName": "Otlp",
+      "sourcePath": "packages/effect/src/unstable/observability/Otlp.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-otlp"
+    },
+    {
+      "importPath": "effect/unstable/observability/OtlpExporter",
+      "moduleName": "OtlpExporter",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpExporter.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-otlpexporter"
+    },
+    {
+      "importPath": "effect/unstable/observability/OtlpLogger",
+      "moduleName": "OtlpLogger",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpLogger.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-otlplogger"
+    },
+    {
+      "importPath": "effect/unstable/observability/OtlpMetrics",
+      "moduleName": "OtlpMetrics",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpMetrics.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-otlpmetrics"
+    },
+    {
+      "importPath": "effect/unstable/observability/OtlpResource",
+      "moduleName": "OtlpResource",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpResource.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-otlpresource"
+    },
+    {
+      "importPath": "effect/unstable/observability/OtlpSerialization",
+      "moduleName": "OtlpSerialization",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpSerialization.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-otlpserialization"
+    },
+    {
+      "importPath": "effect/unstable/observability/OtlpTracer",
+      "moduleName": "OtlpTracer",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpTracer.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-otlptracer"
+    },
+    {
+      "importPath": "effect/unstable/observability/PrometheusMetrics",
+      "moduleName": "PrometheusMetrics",
+      "sourcePath": "packages/effect/src/unstable/observability/PrometheusMetrics.ts",
+      "parent": "effect/unstable/observability",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-observability-prometheusmetrics"
+    },
+    {
+      "importPath": "effect/unstable/persistence/KeyValueStore",
+      "moduleName": "KeyValueStore",
+      "sourcePath": "packages/effect/src/unstable/persistence/KeyValueStore.ts",
+      "parent": "effect/unstable/persistence",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-persistence-keyvaluestore"
+    },
+    {
+      "importPath": "effect/unstable/persistence/Persistable",
+      "moduleName": "Persistable",
+      "sourcePath": "packages/effect/src/unstable/persistence/Persistable.ts",
+      "parent": "effect/unstable/persistence",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-persistence-persistable"
+    },
+    {
+      "importPath": "effect/unstable/persistence/PersistedCache",
+      "moduleName": "PersistedCache",
+      "sourcePath": "packages/effect/src/unstable/persistence/PersistedCache.ts",
+      "parent": "effect/unstable/persistence",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-persistence-persistedcache"
+    },
+    {
+      "importPath": "effect/unstable/persistence/PersistedQueue",
+      "moduleName": "PersistedQueue",
+      "sourcePath": "packages/effect/src/unstable/persistence/PersistedQueue.ts",
+      "parent": "effect/unstable/persistence",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-persistence-persistedqueue"
+    },
+    {
+      "importPath": "effect/unstable/persistence/Persistence",
+      "moduleName": "Persistence",
+      "sourcePath": "packages/effect/src/unstable/persistence/Persistence.ts",
+      "parent": "effect/unstable/persistence",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-persistence-persistence"
+    },
+    {
+      "importPath": "effect/unstable/persistence/RateLimiter",
+      "moduleName": "RateLimiter",
+      "sourcePath": "packages/effect/src/unstable/persistence/RateLimiter.ts",
+      "parent": "effect/unstable/persistence",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-persistence-ratelimiter"
+    },
+    {
+      "importPath": "effect/unstable/persistence/Redis",
+      "moduleName": "Redis",
+      "sourcePath": "packages/effect/src/unstable/persistence/Redis.ts",
+      "parent": "effect/unstable/persistence",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-persistence-redis"
+    },
+    {
+      "importPath": "effect/unstable/process/ChildProcess",
+      "moduleName": "ChildProcess",
+      "sourcePath": "packages/effect/src/unstable/process/ChildProcess.ts",
+      "parent": "effect/unstable/process",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-process-childprocess"
+    },
+    {
+      "importPath": "effect/unstable/process/ChildProcessSpawner",
+      "moduleName": "ChildProcessSpawner",
+      "sourcePath": "packages/effect/src/unstable/process/ChildProcessSpawner.ts",
+      "parent": "effect/unstable/process",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-process-childprocessspawner"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/AsyncResult",
+      "moduleName": "AsyncResult",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AsyncResult.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-asyncresult"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/Atom",
+      "moduleName": "Atom",
+      "sourcePath": "packages/effect/src/unstable/reactivity/Atom.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-atom"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/AtomHttpApi",
+      "moduleName": "AtomHttpApi",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomHttpApi.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-atomhttpapi"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/AtomRef",
+      "moduleName": "AtomRef",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomRef.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-atomref"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/AtomRegistry",
+      "moduleName": "AtomRegistry",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomRegistry.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-atomregistry"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/AtomRpc",
+      "moduleName": "AtomRpc",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomRpc.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-atomrpc"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/Hydration",
+      "moduleName": "Hydration",
+      "sourcePath": "packages/effect/src/unstable/reactivity/Hydration.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-hydration"
+    },
+    {
+      "importPath": "effect/unstable/reactivity/Reactivity",
+      "moduleName": "Reactivity",
+      "sourcePath": "packages/effect/src/unstable/reactivity/Reactivity.ts",
+      "parent": "effect/unstable/reactivity",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-reactivity-reactivity"
+    },
+    {
+      "importPath": "effect/unstable/rpc/Rpc",
+      "moduleName": "Rpc",
+      "sourcePath": "packages/effect/src/unstable/rpc/Rpc.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpc"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcClient",
+      "moduleName": "RpcClient",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcClient.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcclient"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcClientError",
+      "moduleName": "RpcClientError",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcClientError.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcclienterror"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcGroup",
+      "moduleName": "RpcGroup",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcGroup.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcgroup"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcMessage",
+      "moduleName": "RpcMessage",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcMessage.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcmessage"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcMiddleware",
+      "moduleName": "RpcMiddleware",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcMiddleware.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcmiddleware"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcSchema",
+      "moduleName": "RpcSchema",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcSchema.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcschema"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcSerialization",
+      "moduleName": "RpcSerialization",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcSerialization.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcserialization"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcServer",
+      "moduleName": "RpcServer",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcServer.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcserver"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcTest",
+      "moduleName": "RpcTest",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcTest.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpctest"
+    },
+    {
+      "importPath": "effect/unstable/rpc/RpcWorker",
+      "moduleName": "RpcWorker",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcWorker.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-rpcworker"
+    },
+    {
+      "importPath": "effect/unstable/rpc/Utils",
+      "moduleName": "Utils",
+      "sourcePath": "packages/effect/src/unstable/rpc/Utils.ts",
+      "parent": "effect/unstable/rpc",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-rpc-utils"
+    },
+    {
+      "importPath": "effect/unstable/schema/Model",
+      "moduleName": "Model",
+      "sourcePath": "packages/effect/src/unstable/schema/Model.ts",
+      "parent": "effect/unstable/schema",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-schema-model"
+    },
+    {
+      "importPath": "effect/unstable/schema/VariantSchema",
+      "moduleName": "VariantSchema",
+      "sourcePath": "packages/effect/src/unstable/schema/VariantSchema.ts",
+      "parent": "effect/unstable/schema",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-schema-variantschema"
+    },
+    {
+      "importPath": "effect/unstable/socket/Socket",
+      "moduleName": "Socket",
+      "sourcePath": "packages/effect/src/unstable/socket/Socket.ts",
+      "parent": "effect/unstable/socket",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-socket-socket"
+    },
+    {
+      "importPath": "effect/unstable/socket/SocketServer",
+      "moduleName": "SocketServer",
+      "sourcePath": "packages/effect/src/unstable/socket/SocketServer.ts",
+      "parent": "effect/unstable/socket",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-socket-socketserver"
+    },
+    {
+      "importPath": "effect/unstable/sql/Migrator",
+      "moduleName": "Migrator",
+      "sourcePath": "packages/effect/src/unstable/sql/Migrator.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-migrator"
+    },
+    {
+      "importPath": "effect/unstable/sql/SqlClient",
+      "moduleName": "SqlClient",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlClient.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-sqlclient"
+    },
+    {
+      "importPath": "effect/unstable/sql/SqlConnection",
+      "moduleName": "SqlConnection",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlConnection.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-sqlconnection"
+    },
+    {
+      "importPath": "effect/unstable/sql/SqlError",
+      "moduleName": "SqlError",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlError.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-sqlerror"
+    },
+    {
+      "importPath": "effect/unstable/sql/SqlModel",
+      "moduleName": "SqlModel",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlModel.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-sqlmodel"
+    },
+    {
+      "importPath": "effect/unstable/sql/SqlResolver",
+      "moduleName": "SqlResolver",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlResolver.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-sqlresolver"
+    },
+    {
+      "importPath": "effect/unstable/sql/SqlSchema",
+      "moduleName": "SqlSchema",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlSchema.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-sqlschema"
+    },
+    {
+      "importPath": "effect/unstable/sql/SqlStream",
+      "moduleName": "SqlStream",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlStream.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-sqlstream"
+    },
+    {
+      "importPath": "effect/unstable/sql/Statement",
+      "moduleName": "Statement",
+      "sourcePath": "packages/effect/src/unstable/sql/Statement.ts",
+      "parent": "effect/unstable/sql",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-sql-statement"
+    },
+    {
+      "importPath": "effect/unstable/workers/Transferable",
+      "moduleName": "Transferable",
+      "sourcePath": "packages/effect/src/unstable/workers/Transferable.ts",
+      "parent": "effect/unstable/workers",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workers-transferable"
+    },
+    {
+      "importPath": "effect/unstable/workers/Worker",
+      "moduleName": "Worker",
+      "sourcePath": "packages/effect/src/unstable/workers/Worker.ts",
+      "parent": "effect/unstable/workers",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workers-worker"
+    },
+    {
+      "importPath": "effect/unstable/workers/WorkerError",
+      "moduleName": "WorkerError",
+      "sourcePath": "packages/effect/src/unstable/workers/WorkerError.ts",
+      "parent": "effect/unstable/workers",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workers-workererror"
+    },
+    {
+      "importPath": "effect/unstable/workers/WorkerRunner",
+      "moduleName": "WorkerRunner",
+      "sourcePath": "packages/effect/src/unstable/workers/WorkerRunner.ts",
+      "parent": "effect/unstable/workers",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workers-workerrunner"
+    },
+    {
+      "importPath": "effect/unstable/workflow/Activity",
+      "moduleName": "Activity",
+      "sourcePath": "packages/effect/src/unstable/workflow/Activity.ts",
+      "parent": "effect/unstable/workflow",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workflow-activity"
+    },
+    {
+      "importPath": "effect/unstable/workflow/DurableClock",
+      "moduleName": "DurableClock",
+      "sourcePath": "packages/effect/src/unstable/workflow/DurableClock.ts",
+      "parent": "effect/unstable/workflow",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workflow-durableclock"
+    },
+    {
+      "importPath": "effect/unstable/workflow/DurableDeferred",
+      "moduleName": "DurableDeferred",
+      "sourcePath": "packages/effect/src/unstable/workflow/DurableDeferred.ts",
+      "parent": "effect/unstable/workflow",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workflow-durabledeferred"
+    },
+    {
+      "importPath": "effect/unstable/workflow/Workflow",
+      "moduleName": "Workflow",
+      "sourcePath": "packages/effect/src/unstable/workflow/Workflow.ts",
+      "parent": "effect/unstable/workflow",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workflow-workflow"
+    },
+    {
+      "importPath": "effect/unstable/workflow/WorkflowEngine",
+      "moduleName": "WorkflowEngine",
+      "sourcePath": "packages/effect/src/unstable/workflow/WorkflowEngine.ts",
+      "parent": "effect/unstable/workflow",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workflow-workflowengine"
+    },
+    {
+      "importPath": "effect/unstable/workflow/WorkflowProxy",
+      "moduleName": "WorkflowProxy",
+      "sourcePath": "packages/effect/src/unstable/workflow/WorkflowProxy.ts",
+      "parent": "effect/unstable/workflow",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workflow-workflowproxy"
+    },
+    {
+      "importPath": "effect/unstable/workflow/WorkflowProxyServer",
+      "moduleName": "WorkflowProxyServer",
+      "sourcePath": "packages/effect/src/unstable/workflow/WorkflowProxyServer.ts",
+      "parent": "effect/unstable/workflow",
+      "kind": "unstable-facet",
+      "facetSkill": "effect-facet-unstable-workflow-workflowproxyserver"
+    }
+  ]
+}

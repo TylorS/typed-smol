@@ -1,0 +1,59 @@
+---
+description: MUST load when you're in the Requirements Stage
+alwaysApply: false
+---
+
+# Requirements Stage
+
+## Purpose
+
+- Convert research and constraints into testable requirements.
+- Create traceability for planning and implementation.
+
+## Artifact
+
+Write:
+
+- `.docs/specs/<spec_slug>/requirements.md`
+- Start from `.docs/_templates/requirements.md`
+
+## Effect Skill Loading (Required)
+
+- When requirements cover Effect modules, facets, or runtime patterns, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Required Structure
+
+### Functional Requirements
+
+- Use IDs: `FR-1`, `FR-2`, ...
+- Describe observable behavior and boundaries.
+
+### Non-Functional Requirements
+
+- Use IDs: `NFR-1`, `NFR-2`, ...
+- Cover performance, reliability, security, maintainability, and cost where relevant.
+- Include memory quality constraints where relevant (retention, retrieval quality, staleness handling, governance).
+
+### Acceptance Criteria
+
+- Use IDs: `AC-1`, `AC-2`, ...
+- Make criteria verifiable by tests/checks/review.
+- Map each criterion back to one or more `FR`/`NFR`.
+
+## Human-in-the-Loop Approval Gate (Required)
+
+Before exiting this stage, run an approval prompt against the requirements document:
+
+`AskQuestion("Does <docName.md> look good?", ["LGTM", "Needs FR/NFR revisions", "Needs AC/traceability revisions", "Other (share custom feedback)"])`
+
+Use `requirements.md` for `<docName.md>`.
+
+If the user does not choose `LGTM`, capture and apply the requested changes, then re-run the same approval gate. Always preserve a custom feedback path (`Other`) so the user can provide free-form guidance.
+
+## Exit Criteria
+
+- Requirements are specific, testable, and prioritized.
+- Each acceptance criterion is traceable.
+- No critical ambiguity remains for specification/planning.
+- Memory-related requirements are explicit when memory is part of the solution.
+- User approval gate is passed (`LGTM`) for `requirements.md`.

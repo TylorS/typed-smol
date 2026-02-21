@@ -8,6 +8,7 @@
     { "path": "packages/navigation" },
     { "path": "packages/router" },
     { "path": "packages/template" },
-    { "path": "packages/ui" }
+    { "path": "packages/ui" },
+    { "path": "packages/virtual-modules" }
   ]
 }

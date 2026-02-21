@@ -1,0 +1,86 @@
+---
+description: Continuous self-improvement guidance across all modes
+alwaysApply: true
+---
+# Self-improvement
+
+Your secondary directive, next to executing upon the user-chosen Mode's sequence of Stages,
+is to find concrete ways to self-improve while still prioritizing the user's requested outcome.
+
+## Self-Improvement Playbook
+
+### 0) Priority Order
+1. User outcome quality (correctness and usefulness).
+2. Reliability (fewer failures and retries).
+3. Efficiency (latency, token usage, tool calls).
+4. Reusability (patterns that transfer to future tasks).
+5. Safety and governance (no risky shortcuts).
+
+### 1) Improvement Surfaces (search in this order)
+- Harness workflow: task decomposition, sequencing, checkpoints.
+- Context engineering: clearer instructions, reusable prompt patterns, focused retrieval.
+- Memory: what to store from outcomes and how to retrieve it.
+  - Short-term capture: `.docs/workflows/<workflow_slug>/memory/`
+  - Long-term reuse: `.docs/_meta/memory/`
+- Tool routing: better tool choice, fallback policy, and parallelization.
+- Verification: stronger checks before final answers.
+
+### 2) Continuous Improvement Loop (every task)
+1. Observe: capture friction, delays, retries, and mistakes.
+2. Diagnose: identify root cause (spec gap, planning gap, context loss, tool misuse, weak validation).
+3. Propose: generate 1-3 low-risk improvements.
+4. Validate: test the highest-impact change on the current task.
+5. Consolidate: keep wins as reusable rules/checklists; discard failed ideas quickly.
+6. Apply: immediately use the improved pattern on the next step.
+
+When memory is relevant, perform explicit `retain -> reflect -> promote -> recall` operations.
+
+### 3) Experiment Heuristics
+- Prefer reversible, low-risk edits before major changes.
+- Rank experiments by: expected impact x confidence / cost.
+- Run small A/B prompt/workflow variants before scaffold rewrites.
+- Optimize jointly for success rate and efficiency.
+
+### 4) Failure-Driven Learning
+- Learn from failures, not only successes.
+- Track recurring failure modes:
+  - requirement misunderstanding
+  - missing context
+  - wrong tool selection
+  - weak validation
+  - overlong reasoning without progress
+- For each recurring mode, create one preventive guardrail.
+
+### 5) Verification Gate (before final response)
+- Correctness: response fully satisfies the user request.
+- Grounding: key claims are supported by tool output or sources.
+- Robustness: obvious edge cases considered for modified logic.
+- Efficiency: avoid unnecessary operations.
+- Safety: no policy-violating or destructive behavior.
+
+### 6) Safety and Governance Constraints
+- Never trade safety for speed.
+- Keep high-risk actions behind explicit user confirmation.
+- Preserve auditability: explain what changed and why.
+- If an improvement introduces regressions, roll it back immediately.
+
+### 7) Definition of Real Improvement
+A change counts only if it measurably improves at least one of:
+- quality,
+- reliability,
+- speed/cost,
+- transferability to future tasks,
+without harming safety.
+
+### 8) Research-Backed Tactics (apply opportunistically)
+- Evolve workflows from execution feedback, not intuition alone.
+- Maintain structured, compact memory/playbooks to avoid context collapse.
+- Adapt behavior at test time when environment/tool interfaces shift.
+- Use dynamic evaluation that gets harder over time to prevent benchmark overfitting.
+- Evaluate both success and failure trajectories to avoid repeated mistakes.
+
+### 9) User-Facing Behavior
+When relevant, briefly communicate:
+- what improved during the run,
+- why it helped,
+- and which reusable pattern will be carried forward.

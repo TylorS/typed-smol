@@ -1,0 +1,79 @@
+---
+description: Documentation architecture and artifact placement
+alwaysApply: true
+---
+
+# Docs Architecture
+
+All project knowledge should be organized under `.docs` using this split:
+
+- `.docs/adrs/`: durable architecture decisions
+- `.docs/specs/<spec_slug>/`: durable system intent and behavior
+- `.docs/workflows/<workflow_slug>/`: transient working artifacts for active tasks
+- `.docs/_templates/`: canonical templates for required documentation artifacts
+- `.docs/_meta/memory/`: durable cross-workflow memory (procedural, mistakes, heuristics, benchmarks)
+
+## Single Source of Truth
+
+Every definition (handoff contract, naming convention, field list, role roster, etc.) must live in exactly one file. Other files that need the same concept must reference it, not redefine it.
+
+- When adding a new concept, choose one canonical home and place the full definition there.
+- Other files may include a short summary plus a pointer (e.g., "Canonical definition in `<path>`").
+- If you find the same definition in two places, consolidate into one and replace the other with a pointer.
+- Cross-file references must use paths that resolve to existing files. Do not reference files that do not exist.
+
+## Terminology Governance
+
+Core domain terms must be canonical and non-overloaded:
+
+- For Anchorpoint core architecture terms, canonical definitions live in `.docs/specs/anchorpoint-system-architecture/terminology.md`.
+- Composition semantics and ACL authorization semantics must use distinct core terms (for example, `guardrail` vs `enforcement`) rather than overloading one term.
+- If a core term changes, update the canonical terminology file first, then update pointer/reference docs.
+
+## ADR Rules
+
+- Name ADRs as `<YYYYMMDD-HHMM>-<slug>.md`.
+- Include: `Status`, `Context`, `Decision`, `Consequences`, `Alternatives considered`, `References`.
+- Keep one decision per ADR.
+
+## Naming Conventions
+
+- `spec_slug`: short kebab-case name for a durable feature/system area.
+- `workflow_slug`: `<YYYYMMDD-HHMM>-<topic-slug>` for an in-flight workstream.
+
+## Template Rules
+
+- Use `.docs/_templates/` as the single canonical location for artifact templates.
+- When creating required artifacts, start from the matching template in `.docs/_templates/`.
+- Legacy templates in other `.docs` folders should be treated as compatibility pointers, not canonical definitions.
+
+## Guidance Files
+
+- Use `AGENTS.md` for folder-level operational guidance.
+- Do not create `README.md` for these guidance docs unless the user explicitly asks.
+- Ensure active subdirectories used by a workflow have an `AGENTS.md` with concise local rules.
+
+## Specs Rules
+
+- `specs` should describe intended steady-state behavior.
+- Prefer updating an existing spec over creating duplicates.
+- Link relevant ADRs from each spec.
+
+## Artifact Numbering
+
+Workflow artifacts use a two-digit `<asset-increment>` prefix:
+
+- `00` — workflow init
+- `01`–`89` — stage artifacts in chronological order (gaps are fine; just keep monotonically increasing)
+- `99` — finalization
+
+## Workflows Rules
+
+- `workflows` are temporary and task-centric.
+- Store brainstorming, research notes, plans, checkpoints, and final summaries here.
+- Each run should create and use its own workflow directory by default.
+- Existing workflow directories are reference-only unless the user explicitly requests reuse.
+- Start each new workflow with `00-workflow-init.md` (objective, started_at, started_by, source_context, explicit_reuse_override).
+- Promote stable insights from `workflows` into `specs`/`adrs` when they become durable decisions.
+- Store short-term memory in `workflows/<workflow_slug>/memory/` during execution.
+- Promote reusable memory from workflow memory to `.docs/_meta/memory/` using a checklist-driven process.

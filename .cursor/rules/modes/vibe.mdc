@@ -1,0 +1,39 @@
+---
+description: MUST utilize when in vibe mode.
+alwaysApply: false
+---
+
+# Vibe Mode
+
+Use this mode for fast iteration with pragmatic guardrails.
+
+## Required Stage Order
+
+1. `planning`
+2. `execution`
+3. `finalization`
+
+Load:
+
+- `.cursor/rules/stages/planning.mdc`
+- `.cursor/rules/stages/execution.mdc`
+- `.cursor/rules/stages/finalization.mdc`
+
+## Effect Skill Loading
+
+- When any vibe-mode stage includes Effect work, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Operating Style
+
+- Optimize for momentum while keeping quality high.
+- Use lightweight semantic planning first, then tactical replanning during execution.
+- Skip heavyweight documentation, but still write essential transient artifacts in `.docs/workflows`.
+- If uncertainty/risk rises, briefly backfill missing research or requirements before continuing.
+
+## Minimum Deliverables
+
+- A clear implementation plan with validation steps.
+- Execution evidence (tests, checks, or manual verification notes).
+- A concise finalization summary.
+- Short-term memory notes in `workflows/<workflow_slug>/memory/` and explicit promotion/defer decisions for long-term memory.
+- Use `.docs/_templates/` as the canonical starting point for required artifacts.

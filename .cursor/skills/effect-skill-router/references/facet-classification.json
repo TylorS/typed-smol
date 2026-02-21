@@ -1,0 +1,2292 @@
+{
+  "generatedAt": "2026-02-20T20:43:56.348Z",
+  "summary": {
+    "submoduleFacetCount": 181,
+    "thematicFacetCount": 64,
+    "totalFacetCount": 245
+  },
+  "thematicFacets": [
+    {
+      "parent": "effect/Effect",
+      "facet": "constructors",
+      "rationale": "Creation and lifting APIs"
+    },
+    {
+      "parent": "effect/Effect",
+      "facet": "composition",
+      "rationale": "map/flatMap/zip/all composition APIs"
+    },
+    {
+      "parent": "effect/Effect",
+      "facet": "error-handling",
+      "rationale": "catch/match/retry/recover flows"
+    },
+    {
+      "parent": "effect/Effect",
+      "facet": "concurrency",
+      "rationale": "fork/race/concurrency control"
+    },
+    {
+      "parent": "effect/Effect",
+      "facet": "resource-scope",
+      "rationale": "scoped/acquireRelease/finalization"
+    },
+    {
+      "parent": "effect/Effect",
+      "facet": "context-di",
+      "rationale": "provide/service/context operations"
+    },
+    {
+      "parent": "effect/Effect",
+      "facet": "execution",
+      "rationale": "run/runSync/runPromise boundaries"
+    },
+    {
+      "parent": "effect/Layer",
+      "facet": "constructors",
+      "rationale": "Layer creation APIs"
+    },
+    {
+      "parent": "effect/Layer",
+      "facet": "composition",
+      "rationale": "merge/provide/andThen graph composition"
+    },
+    {
+      "parent": "effect/Layer",
+      "facet": "building",
+      "rationale": "Layer build and runtime materialization"
+    },
+    {
+      "parent": "effect/Layer",
+      "facet": "memoization",
+      "rationale": "MemoMap/fresh lifecycle behavior"
+    },
+    {
+      "parent": "effect/Stream",
+      "facet": "constructors",
+      "rationale": "stream creation APIs"
+    },
+    {
+      "parent": "effect/Stream",
+      "facet": "transforms",
+      "rationale": "map/filter/flatMap style transforms"
+    },
+    {
+      "parent": "effect/Stream",
+      "facet": "combinators",
+      "rationale": "merge/zip/grouping composition"
+    },
+    {
+      "parent": "effect/Stream",
+      "facet": "runtime",
+      "rationale": "runCollect/runDrain/sink execution"
+    },
+    {
+      "parent": "effect/Stream",
+      "facet": "concurrency",
+      "rationale": "buffer/share/debounce/throttle behavior"
+    },
+    {
+      "parent": "effect/Channel",
+      "facet": "core",
+      "rationale": "core channel model and constructors"
+    },
+    {
+      "parent": "effect/Channel",
+      "facet": "composition",
+      "rationale": "sequencing/transformation pipelines"
+    },
+    {
+      "parent": "effect/Channel",
+      "facet": "utilities",
+      "rationale": "supportive helper operations"
+    },
+    {
+      "parent": "effect/Sink",
+      "facet": "core",
+      "rationale": "sink model and base constructors"
+    },
+    {
+      "parent": "effect/Sink",
+      "facet": "reducing",
+      "rationale": "reduce/fold aggregation behavior"
+    },
+    {
+      "parent": "effect/Sink",
+      "facet": "transforms",
+      "rationale": "mapping and composition helpers"
+    },
+    {
+      "parent": "effect/Schema",
+      "facet": "core",
+      "rationale": "schema model and constructors"
+    },
+    {
+      "parent": "effect/Schema",
+      "facet": "decoding",
+      "rationale": "decode and parse pathways"
+    },
+    {
+      "parent": "effect/Schema",
+      "facet": "encoding",
+      "rationale": "encode and serialization pathways"
+    },
+    {
+      "parent": "effect/Schema",
+      "facet": "checks",
+      "rationale": "validation/refinement checks"
+    },
+    {
+      "parent": "effect/Schema",
+      "facet": "composition",
+      "rationale": "struct/union/record/tuple composition"
+    },
+    {
+      "parent": "effect/Schedule",
+      "facet": "constructors",
+      "rationale": "schedule constructors and seeds"
+    },
+    {
+      "parent": "effect/Schedule",
+      "facet": "combinators",
+      "rationale": "compose/andThen/while/until behavior"
+    },
+    {
+      "parent": "effect/Schedule",
+      "facet": "collecting",
+      "rationale": "input/output collection operators"
+    },
+    {
+      "parent": "effect/Schedule",
+      "facet": "timing-strategies",
+      "rationale": "jitter/delay/window timing controls"
+    },
+    {
+      "parent": "effect/Fiber",
+      "facet": "lifecycle",
+      "rationale": "join/interrupt/await lifecycle controls"
+    },
+    {
+      "parent": "effect/Fiber",
+      "facet": "status",
+      "rationale": "fiber status and introspection APIs"
+    },
+    {
+      "parent": "effect/Fiber",
+      "facet": "collections",
+      "rationale": "FiberMap/FiberSet/FiberHandle patterns"
+    },
+    {
+      "parent": "effect/Scope",
+      "facet": "creation",
+      "rationale": "scope creation and provisioning"
+    },
+    {
+      "parent": "effect/Scope",
+      "facet": "finalization",
+      "rationale": "finalizer registration and close behavior"
+    },
+    {
+      "parent": "effect/Scope",
+      "facet": "state-management",
+      "rationale": "scope state model and transitions"
+    },
+    {
+      "parent": "effect/Function",
+      "facet": "core",
+      "rationale": "pipe/dual/core function tools"
+    },
+    {
+      "parent": "effect/Function",
+      "facet": "composition",
+      "rationale": "flow/compose style combinators"
+    },
+    {
+      "parent": "effect/Function",
+      "facet": "constants",
+      "rationale": "constant helper functions"
+    },
+    {
+      "parent": "effect/Match",
+      "facet": "core",
+      "rationale": "matcher model and constructors"
+    },
+    {
+      "parent": "effect/Match",
+      "facet": "combinators",
+      "rationale": "when/whenOr/whenAnd operators"
+    },
+    {
+      "parent": "effect/Match",
+      "facet": "discriminators",
+      "rationale": "tag/discriminator matching APIs"
+    },
+    {
+      "parent": "effect/Match",
+      "facet": "predicates",
+      "rationale": "predicate-driven matching"
+    },
+    {
+      "parent": "effect/Predicate",
+      "facet": "core",
+      "rationale": "predicate/refinement base types"
+    },
+    {
+      "parent": "effect/Predicate",
+      "facet": "guards",
+      "rationale": "runtime type guard helpers"
+    },
+    {
+      "parent": "effect/Predicate",
+      "facet": "combinators",
+      "rationale": "logical predicate composition"
+    },
+    {
+      "parent": "effect/Option",
+      "facet": "core",
+      "rationale": "option model and constructors"
+    },
+    {
+      "parent": "effect/Option",
+      "facet": "combinators",
+      "rationale": "map/flatMap/filter operations"
+    },
+    {
+      "parent": "effect/Option",
+      "facet": "conversions",
+      "rationale": "interop and fallback conversions"
+    },
+    {
+      "parent": "effect/Result",
+      "facet": "core",
+      "rationale": "result model and constructors"
+    },
+    {
+      "parent": "effect/Result",
+      "facet": "combinators",
+      "rationale": "map/flatMap/match operations"
+    },
+    {
+      "parent": "effect/Result",
+      "facet": "conversions",
+      "rationale": "interop and fallback conversions"
+    },
+    {
+      "parent": "effect/unstable/cluster",
+      "facet": "core",
+      "rationale": "entity/shard core domain"
+    },
+    {
+      "parent": "effect/unstable/cluster",
+      "facet": "runners",
+      "rationale": "runner fleet execution domain"
+    },
+    {
+      "parent": "effect/unstable/cluster",
+      "facet": "storage",
+      "rationale": "message/runner storage backends"
+    },
+    {
+      "parent": "effect/unstable/cluster",
+      "facet": "proxies",
+      "rationale": "entity proxy and resource shims"
+    },
+    {
+      "parent": "effect/unstable/cluster",
+      "facet": "workflow",
+      "rationale": "cluster workflow engine integration"
+    },
+    {
+      "parent": "effect/unstable/cluster",
+      "facet": "utilities",
+      "rationale": "support utilities and ids"
+    },
+    {
+      "parent": "effect/unstable/http",
+      "facet": "core",
+      "rationale": "client and server core APIs"
+    },
+    {
+      "parent": "effect/unstable/http",
+      "facet": "middleware",
+      "rationale": "middleware/effect/tracing glue"
+    },
+    {
+      "parent": "effect/unstable/http",
+      "facet": "router",
+      "rationale": "routing and method template surfaces"
+    },
+    {
+      "parent": "effect/unstable/http",
+      "facet": "utilities",
+      "rationale": "headers/cookies/body/multipart helpers"
+    },
+    {
+      "parent": "effect/unstable/http",
+      "facet": "client-impl",
+      "rationale": "specific client implementation adapters"
+    }
+  ],
+  "facets": [
+    {
+      "type": "submodule",
+      "parent": "effect/testing",
+      "importPath": "effect/testing/FastCheck",
+      "sourcePath": "packages/effect/src/testing/FastCheck.ts",
+      "skill": "effect-facet-testing-fastcheck",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/testing",
+      "importPath": "effect/testing/TestClock",
+      "sourcePath": "packages/effect/src/testing/TestClock.ts",
+      "skill": "effect-facet-testing-testclock",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/testing",
+      "importPath": "effect/testing/TestConsole",
+      "sourcePath": "packages/effect/src/testing/TestConsole.ts",
+      "skill": "effect-facet-testing-testconsole",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/testing",
+      "importPath": "effect/testing/TestSchema",
+      "sourcePath": "packages/effect/src/testing/TestSchema.ts",
+      "skill": "effect-facet-testing-testschema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/AiError",
+      "sourcePath": "packages/effect/src/unstable/ai/AiError.ts",
+      "skill": "effect-facet-unstable-ai-aierror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/AnthropicStructuredOutput",
+      "sourcePath": "packages/effect/src/unstable/ai/AnthropicStructuredOutput.ts",
+      "skill": "effect-facet-unstable-ai-anthropicstructuredoutput",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Chat",
+      "sourcePath": "packages/effect/src/unstable/ai/Chat.ts",
+      "skill": "effect-facet-unstable-ai-chat",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/IdGenerator",
+      "sourcePath": "packages/effect/src/unstable/ai/IdGenerator.ts",
+      "skill": "effect-facet-unstable-ai-idgenerator",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/LanguageModel",
+      "sourcePath": "packages/effect/src/unstable/ai/LanguageModel.ts",
+      "skill": "effect-facet-unstable-ai-languagemodel",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/McpSchema",
+      "sourcePath": "packages/effect/src/unstable/ai/McpSchema.ts",
+      "skill": "effect-facet-unstable-ai-mcpschema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/McpServer",
+      "sourcePath": "packages/effect/src/unstable/ai/McpServer.ts",
+      "skill": "effect-facet-unstable-ai-mcpserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Model",
+      "sourcePath": "packages/effect/src/unstable/ai/Model.ts",
+      "skill": "effect-facet-unstable-ai-model",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/OpenAiStructuredOutput",
+      "sourcePath": "packages/effect/src/unstable/ai/OpenAiStructuredOutput.ts",
+      "skill": "effect-facet-unstable-ai-openaistructuredoutput",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Prompt",
+      "sourcePath": "packages/effect/src/unstable/ai/Prompt.ts",
+      "skill": "effect-facet-unstable-ai-prompt",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Response",
+      "sourcePath": "packages/effect/src/unstable/ai/Response.ts",
+      "skill": "effect-facet-unstable-ai-response",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Telemetry",
+      "sourcePath": "packages/effect/src/unstable/ai/Telemetry.ts",
+      "skill": "effect-facet-unstable-ai-telemetry",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Tokenizer",
+      "sourcePath": "packages/effect/src/unstable/ai/Tokenizer.ts",
+      "skill": "effect-facet-unstable-ai-tokenizer",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Tool",
+      "sourcePath": "packages/effect/src/unstable/ai/Tool.ts",
+      "skill": "effect-facet-unstable-ai-tool",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/ai",
+      "importPath": "effect/unstable/ai/Toolkit",
+      "sourcePath": "packages/effect/src/unstable/ai/Toolkit.ts",
+      "skill": "effect-facet-unstable-ai-toolkit",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/Argument",
+      "sourcePath": "packages/effect/src/unstable/cli/Argument.ts",
+      "skill": "effect-facet-unstable-cli-argument",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/CliError",
+      "sourcePath": "packages/effect/src/unstable/cli/CliError.ts",
+      "skill": "effect-facet-unstable-cli-clierror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/CliOutput",
+      "sourcePath": "packages/effect/src/unstable/cli/CliOutput.ts",
+      "skill": "effect-facet-unstable-cli-clioutput",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/Command",
+      "sourcePath": "packages/effect/src/unstable/cli/Command.ts",
+      "skill": "effect-facet-unstable-cli-command",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/Flag",
+      "sourcePath": "packages/effect/src/unstable/cli/Flag.ts",
+      "skill": "effect-facet-unstable-cli-flag",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/HelpDoc",
+      "sourcePath": "packages/effect/src/unstable/cli/HelpDoc.ts",
+      "skill": "effect-facet-unstable-cli-helpdoc",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/Param",
+      "sourcePath": "packages/effect/src/unstable/cli/Param.ts",
+      "skill": "effect-facet-unstable-cli-param",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/Primitive",
+      "sourcePath": "packages/effect/src/unstable/cli/Primitive.ts",
+      "skill": "effect-facet-unstable-cli-primitive",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cli",
+      "importPath": "effect/unstable/cli/Prompt",
+      "sourcePath": "packages/effect/src/unstable/cli/Prompt.ts",
+      "skill": "effect-facet-unstable-cli-prompt",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ClusterCron",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterCron.ts",
+      "skill": "effect-facet-unstable-cluster-clustercron",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ClusterError",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterError.ts",
+      "skill": "effect-facet-unstable-cluster-clustererror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ClusterMetrics",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterMetrics.ts",
+      "skill": "effect-facet-unstable-cluster-clustermetrics",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ClusterSchema",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterSchema.ts",
+      "skill": "effect-facet-unstable-cluster-clusterschema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ClusterWorkflowEngine",
+      "sourcePath": "packages/effect/src/unstable/cluster/ClusterWorkflowEngine.ts",
+      "skill": "effect-facet-unstable-cluster-clusterworkflowengine",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/DeliverAt",
+      "sourcePath": "packages/effect/src/unstable/cluster/DeliverAt.ts",
+      "skill": "effect-facet-unstable-cluster-deliverat",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Entity",
+      "sourcePath": "packages/effect/src/unstable/cluster/Entity.ts",
+      "skill": "effect-facet-unstable-cluster-entity",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/EntityAddress",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityAddress.ts",
+      "skill": "effect-facet-unstable-cluster-entityaddress",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/EntityId",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityId.ts",
+      "skill": "effect-facet-unstable-cluster-entityid",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/EntityProxy",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityProxy.ts",
+      "skill": "effect-facet-unstable-cluster-entityproxy",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/EntityProxyServer",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityProxyServer.ts",
+      "skill": "effect-facet-unstable-cluster-entityproxyserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/EntityResource",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityResource.ts",
+      "skill": "effect-facet-unstable-cluster-entityresource",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/EntityType",
+      "sourcePath": "packages/effect/src/unstable/cluster/EntityType.ts",
+      "skill": "effect-facet-unstable-cluster-entitytype",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Envelope",
+      "sourcePath": "packages/effect/src/unstable/cluster/Envelope.ts",
+      "skill": "effect-facet-unstable-cluster-envelope",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/HttpRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/HttpRunner.ts",
+      "skill": "effect-facet-unstable-cluster-httprunner",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/K8sHttpClient",
+      "sourcePath": "packages/effect/src/unstable/cluster/K8sHttpClient.ts",
+      "skill": "effect-facet-unstable-cluster-k8shttpclient",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/MachineId",
+      "sourcePath": "packages/effect/src/unstable/cluster/MachineId.ts",
+      "skill": "effect-facet-unstable-cluster-machineid",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Message",
+      "sourcePath": "packages/effect/src/unstable/cluster/Message.ts",
+      "skill": "effect-facet-unstable-cluster-message",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/MessageStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/MessageStorage.ts",
+      "skill": "effect-facet-unstable-cluster-messagestorage",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Reply",
+      "sourcePath": "packages/effect/src/unstable/cluster/Reply.ts",
+      "skill": "effect-facet-unstable-cluster-reply",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Runner",
+      "sourcePath": "packages/effect/src/unstable/cluster/Runner.ts",
+      "skill": "effect-facet-unstable-cluster-runner",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/RunnerAddress",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerAddress.ts",
+      "skill": "effect-facet-unstable-cluster-runneraddress",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/RunnerHealth",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerHealth.ts",
+      "skill": "effect-facet-unstable-cluster-runnerhealth",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Runners",
+      "sourcePath": "packages/effect/src/unstable/cluster/Runners.ts",
+      "skill": "effect-facet-unstable-cluster-runners",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/RunnerServer",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerServer.ts",
+      "skill": "effect-facet-unstable-cluster-runnerserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/RunnerStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/RunnerStorage.ts",
+      "skill": "effect-facet-unstable-cluster-runnerstorage",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ShardId",
+      "sourcePath": "packages/effect/src/unstable/cluster/ShardId.ts",
+      "skill": "effect-facet-unstable-cluster-shardid",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Sharding",
+      "sourcePath": "packages/effect/src/unstable/cluster/Sharding.ts",
+      "skill": "effect-facet-unstable-cluster-sharding",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ShardingConfig",
+      "sourcePath": "packages/effect/src/unstable/cluster/ShardingConfig.ts",
+      "skill": "effect-facet-unstable-cluster-shardingconfig",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/ShardingRegistrationEvent",
+      "sourcePath": "packages/effect/src/unstable/cluster/ShardingRegistrationEvent.ts",
+      "skill": "effect-facet-unstable-cluster-shardingregistrationevent",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/SingleRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/SingleRunner.ts",
+      "skill": "effect-facet-unstable-cluster-singlerunner",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Singleton",
+      "sourcePath": "packages/effect/src/unstable/cluster/Singleton.ts",
+      "skill": "effect-facet-unstable-cluster-singleton",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/SingletonAddress",
+      "sourcePath": "packages/effect/src/unstable/cluster/SingletonAddress.ts",
+      "skill": "effect-facet-unstable-cluster-singletonaddress",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/Snowflake",
+      "sourcePath": "packages/effect/src/unstable/cluster/Snowflake.ts",
+      "skill": "effect-facet-unstable-cluster-snowflake",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/SocketRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/SocketRunner.ts",
+      "skill": "effect-facet-unstable-cluster-socketrunner",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/SqlMessageStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/SqlMessageStorage.ts",
+      "skill": "effect-facet-unstable-cluster-sqlmessagestorage",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/SqlRunnerStorage",
+      "sourcePath": "packages/effect/src/unstable/cluster/SqlRunnerStorage.ts",
+      "skill": "effect-facet-unstable-cluster-sqlrunnerstorage",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster/TestRunner",
+      "sourcePath": "packages/effect/src/unstable/cluster/TestRunner.ts",
+      "skill": "effect-facet-unstable-cluster-testrunner",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/devtools",
+      "importPath": "effect/unstable/devtools/DevTools",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevTools.ts",
+      "skill": "effect-facet-unstable-devtools-devtools",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/devtools",
+      "importPath": "effect/unstable/devtools/DevToolsClient",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevToolsClient.ts",
+      "skill": "effect-facet-unstable-devtools-devtoolsclient",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/devtools",
+      "importPath": "effect/unstable/devtools/DevToolsSchema",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevToolsSchema.ts",
+      "skill": "effect-facet-unstable-devtools-devtoolsschema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/devtools",
+      "importPath": "effect/unstable/devtools/DevToolsServer",
+      "sourcePath": "packages/effect/src/unstable/devtools/DevToolsServer.ts",
+      "skill": "effect-facet-unstable-devtools-devtoolsserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/encoding",
+      "importPath": "effect/unstable/encoding/Msgpack",
+      "sourcePath": "packages/effect/src/unstable/encoding/Msgpack.ts",
+      "skill": "effect-facet-unstable-encoding-msgpack",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/encoding",
+      "importPath": "effect/unstable/encoding/Ndjson",
+      "sourcePath": "packages/effect/src/unstable/encoding/Ndjson.ts",
+      "skill": "effect-facet-unstable-encoding-ndjson",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/encoding",
+      "importPath": "effect/unstable/encoding/Sse",
+      "sourcePath": "packages/effect/src/unstable/encoding/Sse.ts",
+      "skill": "effect-facet-unstable-encoding-sse",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/Event",
+      "sourcePath": "packages/effect/src/unstable/eventlog/Event.ts",
+      "skill": "effect-facet-unstable-eventlog-event",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/EventGroup",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventGroup.ts",
+      "skill": "effect-facet-unstable-eventlog-eventgroup",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/EventJournal",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventJournal.ts",
+      "skill": "effect-facet-unstable-eventlog-eventjournal",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/EventLog",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLog.ts",
+      "skill": "effect-facet-unstable-eventlog-eventlog",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/EventLogEncryption",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLogEncryption.ts",
+      "skill": "effect-facet-unstable-eventlog-eventlogencryption",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/EventLogRemote",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLogRemote.ts",
+      "skill": "effect-facet-unstable-eventlog-eventlogremote",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/EventLogServer",
+      "sourcePath": "packages/effect/src/unstable/eventlog/EventLogServer.ts",
+      "skill": "effect-facet-unstable-eventlog-eventlogserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/SqlEventLogJournal",
+      "sourcePath": "packages/effect/src/unstable/eventlog/SqlEventLogJournal.ts",
+      "skill": "effect-facet-unstable-eventlog-sqleventlogjournal",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/eventlog",
+      "importPath": "effect/unstable/eventlog/SqlEventLogServer",
+      "sourcePath": "packages/effect/src/unstable/eventlog/SqlEventLogServer.ts",
+      "skill": "effect-facet-unstable-eventlog-sqleventlogserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/Cookies",
+      "sourcePath": "packages/effect/src/unstable/http/Cookies.ts",
+      "skill": "effect-facet-unstable-http-cookies",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/Etag",
+      "sourcePath": "packages/effect/src/unstable/http/Etag.ts",
+      "skill": "effect-facet-unstable-http-etag",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/FetchHttpClient",
+      "sourcePath": "packages/effect/src/unstable/http/FetchHttpClient.ts",
+      "skill": "effect-facet-unstable-http-fetchhttpclient",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/FindMyWay",
+      "sourcePath": "packages/effect/src/unstable/http/FindMyWay.ts",
+      "skill": "effect-facet-unstable-http-findmyway",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/Headers",
+      "sourcePath": "packages/effect/src/unstable/http/Headers.ts",
+      "skill": "effect-facet-unstable-http-headers",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpBody",
+      "sourcePath": "packages/effect/src/unstable/http/HttpBody.ts",
+      "skill": "effect-facet-unstable-http-httpbody",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpClient",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClient.ts",
+      "skill": "effect-facet-unstable-http-httpclient",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpClientError",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClientError.ts",
+      "skill": "effect-facet-unstable-http-httpclienterror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpClientRequest",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClientRequest.ts",
+      "skill": "effect-facet-unstable-http-httpclientrequest",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpClientResponse",
+      "sourcePath": "packages/effect/src/unstable/http/HttpClientResponse.ts",
+      "skill": "effect-facet-unstable-http-httpclientresponse",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpEffect",
+      "sourcePath": "packages/effect/src/unstable/http/HttpEffect.ts",
+      "skill": "effect-facet-unstable-http-httpeffect",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpIncomingMessage",
+      "sourcePath": "packages/effect/src/unstable/http/HttpIncomingMessage.ts",
+      "skill": "effect-facet-unstable-http-httpincomingmessage",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpMethod",
+      "sourcePath": "packages/effect/src/unstable/http/HttpMethod.ts",
+      "skill": "effect-facet-unstable-http-httpmethod",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpMiddleware",
+      "sourcePath": "packages/effect/src/unstable/http/HttpMiddleware.ts",
+      "skill": "effect-facet-unstable-http-httpmiddleware",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpPlatform",
+      "sourcePath": "packages/effect/src/unstable/http/HttpPlatform.ts",
+      "skill": "effect-facet-unstable-http-httpplatform",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpRouter",
+      "sourcePath": "packages/effect/src/unstable/http/HttpRouter.ts",
+      "skill": "effect-facet-unstable-http-httprouter",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpServer",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServer.ts",
+      "skill": "effect-facet-unstable-http-httpserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpServerError",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerError.ts",
+      "skill": "effect-facet-unstable-http-httpservererror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpServerRequest",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerRequest.ts",
+      "skill": "effect-facet-unstable-http-httpserverrequest",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpServerRespondable",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerRespondable.ts",
+      "skill": "effect-facet-unstable-http-httpserverrespondable",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpServerResponse",
+      "sourcePath": "packages/effect/src/unstable/http/HttpServerResponse.ts",
+      "skill": "effect-facet-unstable-http-httpserverresponse",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/HttpTraceContext",
+      "sourcePath": "packages/effect/src/unstable/http/HttpTraceContext.ts",
+      "skill": "effect-facet-unstable-http-httptracecontext",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/Multipart",
+      "sourcePath": "packages/effect/src/unstable/http/Multipart.ts",
+      "skill": "effect-facet-unstable-http-multipart",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/Multipasta",
+      "sourcePath": "packages/effect/src/unstable/http/Multipasta.ts",
+      "skill": "effect-facet-unstable-http-multipasta",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/Template",
+      "sourcePath": "packages/effect/src/unstable/http/Template.ts",
+      "skill": "effect-facet-unstable-http-template",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http/UrlParams",
+      "sourcePath": "packages/effect/src/unstable/http/UrlParams.ts",
+      "skill": "effect-facet-unstable-http-urlparams",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApi",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApi.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapi",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiBuilder",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiBuilder.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapibuilder",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiClient",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiClient.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapiclient",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiEndpoint",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiEndpoint.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapiendpoint",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiError",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiError.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapierror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiGroup",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiGroup.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapigroup",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiMiddleware",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiMiddleware.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapimiddleware",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiScalar",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiScalar.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapiscalar",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiSchema",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiSchema.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapischema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiSecurity",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiSecurity.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapisecurity",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/HttpApiSwagger",
+      "sourcePath": "packages/effect/src/unstable/httpapi/HttpApiSwagger.ts",
+      "skill": "effect-facet-unstable-httpapi-httpapiswagger",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/httpapi",
+      "importPath": "effect/unstable/httpapi/OpenApi",
+      "sourcePath": "packages/effect/src/unstable/httpapi/OpenApi.ts",
+      "skill": "effect-facet-unstable-httpapi-openapi",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/Otlp",
+      "sourcePath": "packages/effect/src/unstable/observability/Otlp.ts",
+      "skill": "effect-facet-unstable-observability-otlp",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/OtlpExporter",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpExporter.ts",
+      "skill": "effect-facet-unstable-observability-otlpexporter",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/OtlpLogger",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpLogger.ts",
+      "skill": "effect-facet-unstable-observability-otlplogger",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/OtlpMetrics",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpMetrics.ts",
+      "skill": "effect-facet-unstable-observability-otlpmetrics",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/OtlpResource",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpResource.ts",
+      "skill": "effect-facet-unstable-observability-otlpresource",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/OtlpSerialization",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpSerialization.ts",
+      "skill": "effect-facet-unstable-observability-otlpserialization",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/OtlpTracer",
+      "sourcePath": "packages/effect/src/unstable/observability/OtlpTracer.ts",
+      "skill": "effect-facet-unstable-observability-otlptracer",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/observability",
+      "importPath": "effect/unstable/observability/PrometheusMetrics",
+      "sourcePath": "packages/effect/src/unstable/observability/PrometheusMetrics.ts",
+      "skill": "effect-facet-unstable-observability-prometheusmetrics",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/persistence",
+      "importPath": "effect/unstable/persistence/KeyValueStore",
+      "sourcePath": "packages/effect/src/unstable/persistence/KeyValueStore.ts",
+      "skill": "effect-facet-unstable-persistence-keyvaluestore",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/persistence",
+      "importPath": "effect/unstable/persistence/Persistable",
+      "sourcePath": "packages/effect/src/unstable/persistence/Persistable.ts",
+      "skill": "effect-facet-unstable-persistence-persistable",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/persistence",
+      "importPath": "effect/unstable/persistence/PersistedCache",
+      "sourcePath": "packages/effect/src/unstable/persistence/PersistedCache.ts",
+      "skill": "effect-facet-unstable-persistence-persistedcache",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/persistence",
+      "importPath": "effect/unstable/persistence/PersistedQueue",
+      "sourcePath": "packages/effect/src/unstable/persistence/PersistedQueue.ts",
+      "skill": "effect-facet-unstable-persistence-persistedqueue",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/persistence",
+      "importPath": "effect/unstable/persistence/Persistence",
+      "sourcePath": "packages/effect/src/unstable/persistence/Persistence.ts",
+      "skill": "effect-facet-unstable-persistence-persistence",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/persistence",
+      "importPath": "effect/unstable/persistence/RateLimiter",
+      "sourcePath": "packages/effect/src/unstable/persistence/RateLimiter.ts",
+      "skill": "effect-facet-unstable-persistence-ratelimiter",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/persistence",
+      "importPath": "effect/unstable/persistence/Redis",
+      "sourcePath": "packages/effect/src/unstable/persistence/Redis.ts",
+      "skill": "effect-facet-unstable-persistence-redis",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/process",
+      "importPath": "effect/unstable/process/ChildProcess",
+      "sourcePath": "packages/effect/src/unstable/process/ChildProcess.ts",
+      "skill": "effect-facet-unstable-process-childprocess",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/process",
+      "importPath": "effect/unstable/process/ChildProcessSpawner",
+      "sourcePath": "packages/effect/src/unstable/process/ChildProcessSpawner.ts",
+      "skill": "effect-facet-unstable-process-childprocessspawner",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/AsyncResult",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AsyncResult.ts",
+      "skill": "effect-facet-unstable-reactivity-asyncresult",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/Atom",
+      "sourcePath": "packages/effect/src/unstable/reactivity/Atom.ts",
+      "skill": "effect-facet-unstable-reactivity-atom",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/AtomHttpApi",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomHttpApi.ts",
+      "skill": "effect-facet-unstable-reactivity-atomhttpapi",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/AtomRef",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomRef.ts",
+      "skill": "effect-facet-unstable-reactivity-atomref",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/AtomRegistry",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomRegistry.ts",
+      "skill": "effect-facet-unstable-reactivity-atomregistry",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/AtomRpc",
+      "sourcePath": "packages/effect/src/unstable/reactivity/AtomRpc.ts",
+      "skill": "effect-facet-unstable-reactivity-atomrpc",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/Hydration",
+      "sourcePath": "packages/effect/src/unstable/reactivity/Hydration.ts",
+      "skill": "effect-facet-unstable-reactivity-hydration",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/reactivity",
+      "importPath": "effect/unstable/reactivity/Reactivity",
+      "sourcePath": "packages/effect/src/unstable/reactivity/Reactivity.ts",
+      "skill": "effect-facet-unstable-reactivity-reactivity",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/Rpc",
+      "sourcePath": "packages/effect/src/unstable/rpc/Rpc.ts",
+      "skill": "effect-facet-unstable-rpc-rpc",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcClient",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcClient.ts",
+      "skill": "effect-facet-unstable-rpc-rpcclient",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcClientError",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcClientError.ts",
+      "skill": "effect-facet-unstable-rpc-rpcclienterror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcGroup",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcGroup.ts",
+      "skill": "effect-facet-unstable-rpc-rpcgroup",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcMessage",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcMessage.ts",
+      "skill": "effect-facet-unstable-rpc-rpcmessage",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcMiddleware",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcMiddleware.ts",
+      "skill": "effect-facet-unstable-rpc-rpcmiddleware",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcSchema",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcSchema.ts",
+      "skill": "effect-facet-unstable-rpc-rpcschema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcSerialization",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcSerialization.ts",
+      "skill": "effect-facet-unstable-rpc-rpcserialization",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcServer",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcServer.ts",
+      "skill": "effect-facet-unstable-rpc-rpcserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcTest",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcTest.ts",
+      "skill": "effect-facet-unstable-rpc-rpctest",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/RpcWorker",
+      "sourcePath": "packages/effect/src/unstable/rpc/RpcWorker.ts",
+      "skill": "effect-facet-unstable-rpc-rpcworker",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/rpc",
+      "importPath": "effect/unstable/rpc/Utils",
+      "sourcePath": "packages/effect/src/unstable/rpc/Utils.ts",
+      "skill": "effect-facet-unstable-rpc-utils",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/schema",
+      "importPath": "effect/unstable/schema/Model",
+      "sourcePath": "packages/effect/src/unstable/schema/Model.ts",
+      "skill": "effect-facet-unstable-schema-model",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/schema",
+      "importPath": "effect/unstable/schema/VariantSchema",
+      "sourcePath": "packages/effect/src/unstable/schema/VariantSchema.ts",
+      "skill": "effect-facet-unstable-schema-variantschema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/socket",
+      "importPath": "effect/unstable/socket/Socket",
+      "sourcePath": "packages/effect/src/unstable/socket/Socket.ts",
+      "skill": "effect-facet-unstable-socket-socket",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/socket",
+      "importPath": "effect/unstable/socket/SocketServer",
+      "sourcePath": "packages/effect/src/unstable/socket/SocketServer.ts",
+      "skill": "effect-facet-unstable-socket-socketserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/Migrator",
+      "sourcePath": "packages/effect/src/unstable/sql/Migrator.ts",
+      "skill": "effect-facet-unstable-sql-migrator",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/SqlClient",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlClient.ts",
+      "skill": "effect-facet-unstable-sql-sqlclient",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/SqlConnection",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlConnection.ts",
+      "skill": "effect-facet-unstable-sql-sqlconnection",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/SqlError",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlError.ts",
+      "skill": "effect-facet-unstable-sql-sqlerror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/SqlModel",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlModel.ts",
+      "skill": "effect-facet-unstable-sql-sqlmodel",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/SqlResolver",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlResolver.ts",
+      "skill": "effect-facet-unstable-sql-sqlresolver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/SqlSchema",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlSchema.ts",
+      "skill": "effect-facet-unstable-sql-sqlschema",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/SqlStream",
+      "sourcePath": "packages/effect/src/unstable/sql/SqlStream.ts",
+      "skill": "effect-facet-unstable-sql-sqlstream",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/sql",
+      "importPath": "effect/unstable/sql/Statement",
+      "sourcePath": "packages/effect/src/unstable/sql/Statement.ts",
+      "skill": "effect-facet-unstable-sql-statement",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workers",
+      "importPath": "effect/unstable/workers/Transferable",
+      "sourcePath": "packages/effect/src/unstable/workers/Transferable.ts",
+      "skill": "effect-facet-unstable-workers-transferable",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workers",
+      "importPath": "effect/unstable/workers/Worker",
+      "sourcePath": "packages/effect/src/unstable/workers/Worker.ts",
+      "skill": "effect-facet-unstable-workers-worker",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workers",
+      "importPath": "effect/unstable/workers/WorkerError",
+      "sourcePath": "packages/effect/src/unstable/workers/WorkerError.ts",
+      "skill": "effect-facet-unstable-workers-workererror",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workers",
+      "importPath": "effect/unstable/workers/WorkerRunner",
+      "sourcePath": "packages/effect/src/unstable/workers/WorkerRunner.ts",
+      "skill": "effect-facet-unstable-workers-workerrunner",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workflow",
+      "importPath": "effect/unstable/workflow/Activity",
+      "sourcePath": "packages/effect/src/unstable/workflow/Activity.ts",
+      "skill": "effect-facet-unstable-workflow-activity",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workflow",
+      "importPath": "effect/unstable/workflow/DurableClock",
+      "sourcePath": "packages/effect/src/unstable/workflow/DurableClock.ts",
+      "skill": "effect-facet-unstable-workflow-durableclock",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workflow",
+      "importPath": "effect/unstable/workflow/DurableDeferred",
+      "sourcePath": "packages/effect/src/unstable/workflow/DurableDeferred.ts",
+      "skill": "effect-facet-unstable-workflow-durabledeferred",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workflow",
+      "importPath": "effect/unstable/workflow/Workflow",
+      "sourcePath": "packages/effect/src/unstable/workflow/Workflow.ts",
+      "skill": "effect-facet-unstable-workflow-workflow",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workflow",
+      "importPath": "effect/unstable/workflow/WorkflowEngine",
+      "sourcePath": "packages/effect/src/unstable/workflow/WorkflowEngine.ts",
+      "skill": "effect-facet-unstable-workflow-workflowengine",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workflow",
+      "importPath": "effect/unstable/workflow/WorkflowProxy",
+      "sourcePath": "packages/effect/src/unstable/workflow/WorkflowProxy.ts",
+      "skill": "effect-facet-unstable-workflow-workflowproxy",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "submodule",
+      "parent": "effect/unstable/workflow",
+      "importPath": "effect/unstable/workflow/WorkflowProxyServer",
+      "sourcePath": "packages/effect/src/unstable/workflow/WorkflowProxyServer.ts",
+      "skill": "effect-facet-unstable-workflow-workflowproxyserver",
+      "rationale": "Direct unstable/testing submodule surface for strict ownership."
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Effect",
+      "importPath": "effect/Effect#constructors",
+      "sourcePath": null,
+      "skill": "effect-facet-effect-constructors",
+      "rationale": "Creation and lifting APIs"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Effect",
+      "importPath": "effect/Effect#composition",
+      "sourcePath": null,
+      "skill": "effect-facet-effect-composition",
+      "rationale": "map/flatMap/zip/all composition APIs"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Effect",
+      "importPath": "effect/Effect#error-handling",
+      "sourcePath": null,
+      "skill": "effect-facet-effect-error-handling",
+      "rationale": "catch/match/retry/recover flows"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Effect",
+      "importPath": "effect/Effect#concurrency",
+      "sourcePath": null,
+      "skill": "effect-facet-effect-concurrency",
+      "rationale": "fork/race/concurrency control"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Effect",
+      "importPath": "effect/Effect#resource-scope",
+      "sourcePath": null,
+      "skill": "effect-facet-effect-resource-scope",
+      "rationale": "scoped/acquireRelease/finalization"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Effect",
+      "importPath": "effect/Effect#context-di",
+      "sourcePath": null,
+      "skill": "effect-facet-effect-context-di",
+      "rationale": "provide/service/context operations"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Effect",
+      "importPath": "effect/Effect#execution",
+      "sourcePath": null,
+      "skill": "effect-facet-effect-execution",
+      "rationale": "run/runSync/runPromise boundaries"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Layer",
+      "importPath": "effect/Layer#constructors",
+      "sourcePath": null,
+      "skill": "effect-facet-layer-constructors",
+      "rationale": "Layer creation APIs"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Layer",
+      "importPath": "effect/Layer#composition",
+      "sourcePath": null,
+      "skill": "effect-facet-layer-composition",
+      "rationale": "merge/provide/andThen graph composition"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Layer",
+      "importPath": "effect/Layer#building",
+      "sourcePath": null,
+      "skill": "effect-facet-layer-building",
+      "rationale": "Layer build and runtime materialization"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Layer",
+      "importPath": "effect/Layer#memoization",
+      "sourcePath": null,
+      "skill": "effect-facet-layer-memoization",
+      "rationale": "MemoMap/fresh lifecycle behavior"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Stream",
+      "importPath": "effect/Stream#constructors",
+      "sourcePath": null,
+      "skill": "effect-facet-stream-constructors",
+      "rationale": "stream creation APIs"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Stream",
+      "importPath": "effect/Stream#transforms",
+      "sourcePath": null,
+      "skill": "effect-facet-stream-transforms",
+      "rationale": "map/filter/flatMap style transforms"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Stream",
+      "importPath": "effect/Stream#combinators",
+      "sourcePath": null,
+      "skill": "effect-facet-stream-combinators",
+      "rationale": "merge/zip/grouping composition"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Stream",
+      "importPath": "effect/Stream#runtime",
+      "sourcePath": null,
+      "skill": "effect-facet-stream-runtime",
+      "rationale": "runCollect/runDrain/sink execution"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Stream",
+      "importPath": "effect/Stream#concurrency",
+      "sourcePath": null,
+      "skill": "effect-facet-stream-concurrency",
+      "rationale": "buffer/share/debounce/throttle behavior"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Channel",
+      "importPath": "effect/Channel#core",
+      "sourcePath": null,
+      "skill": "effect-facet-channel-core",
+      "rationale": "core channel model and constructors"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Channel",
+      "importPath": "effect/Channel#composition",
+      "sourcePath": null,
+      "skill": "effect-facet-channel-composition",
+      "rationale": "sequencing/transformation pipelines"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Channel",
+      "importPath": "effect/Channel#utilities",
+      "sourcePath": null,
+      "skill": "effect-facet-channel-utilities",
+      "rationale": "supportive helper operations"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Sink",
+      "importPath": "effect/Sink#core",
+      "sourcePath": null,
+      "skill": "effect-facet-sink-core",
+      "rationale": "sink model and base constructors"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Sink",
+      "importPath": "effect/Sink#reducing",
+      "sourcePath": null,
+      "skill": "effect-facet-sink-reducing",
+      "rationale": "reduce/fold aggregation behavior"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Sink",
+      "importPath": "effect/Sink#transforms",
+      "sourcePath": null,
+      "skill": "effect-facet-sink-transforms",
+      "rationale": "mapping and composition helpers"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schema",
+      "importPath": "effect/Schema#core",
+      "sourcePath": null,
+      "skill": "effect-facet-schema-core",
+      "rationale": "schema model and constructors"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schema",
+      "importPath": "effect/Schema#decoding",
+      "sourcePath": null,
+      "skill": "effect-facet-schema-decoding",
+      "rationale": "decode and parse pathways"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schema",
+      "importPath": "effect/Schema#encoding",
+      "sourcePath": null,
+      "skill": "effect-facet-schema-encoding",
+      "rationale": "encode and serialization pathways"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schema",
+      "importPath": "effect/Schema#checks",
+      "sourcePath": null,
+      "skill": "effect-facet-schema-checks",
+      "rationale": "validation/refinement checks"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schema",
+      "importPath": "effect/Schema#composition",
+      "sourcePath": null,
+      "skill": "effect-facet-schema-composition",
+      "rationale": "struct/union/record/tuple composition"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schedule",
+      "importPath": "effect/Schedule#constructors",
+      "sourcePath": null,
+      "skill": "effect-facet-schedule-constructors",
+      "rationale": "schedule constructors and seeds"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schedule",
+      "importPath": "effect/Schedule#combinators",
+      "sourcePath": null,
+      "skill": "effect-facet-schedule-combinators",
+      "rationale": "compose/andThen/while/until behavior"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schedule",
+      "importPath": "effect/Schedule#collecting",
+      "sourcePath": null,
+      "skill": "effect-facet-schedule-collecting",
+      "rationale": "input/output collection operators"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Schedule",
+      "importPath": "effect/Schedule#timing-strategies",
+      "sourcePath": null,
+      "skill": "effect-facet-schedule-timing-strategies",
+      "rationale": "jitter/delay/window timing controls"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Fiber",
+      "importPath": "effect/Fiber#lifecycle",
+      "sourcePath": null,
+      "skill": "effect-facet-fiber-lifecycle",
+      "rationale": "join/interrupt/await lifecycle controls"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Fiber",
+      "importPath": "effect/Fiber#status",
+      "sourcePath": null,
+      "skill": "effect-facet-fiber-status",
+      "rationale": "fiber status and introspection APIs"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Fiber",
+      "importPath": "effect/Fiber#collections",
+      "sourcePath": null,
+      "skill": "effect-facet-fiber-collections",
+      "rationale": "FiberMap/FiberSet/FiberHandle patterns"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Scope",
+      "importPath": "effect/Scope#creation",
+      "sourcePath": null,
+      "skill": "effect-facet-scope-creation",
+      "rationale": "scope creation and provisioning"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Scope",
+      "importPath": "effect/Scope#finalization",
+      "sourcePath": null,
+      "skill": "effect-facet-scope-finalization",
+      "rationale": "finalizer registration and close behavior"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Scope",
+      "importPath": "effect/Scope#state-management",
+      "sourcePath": null,
+      "skill": "effect-facet-scope-state-management",
+      "rationale": "scope state model and transitions"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Function",
+      "importPath": "effect/Function#core",
+      "sourcePath": null,
+      "skill": "effect-facet-function-core",
+      "rationale": "pipe/dual/core function tools"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Function",
+      "importPath": "effect/Function#composition",
+      "sourcePath": null,
+      "skill": "effect-facet-function-composition",
+      "rationale": "flow/compose style combinators"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Function",
+      "importPath": "effect/Function#constants",
+      "sourcePath": null,
+      "skill": "effect-facet-function-constants",
+      "rationale": "constant helper functions"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Match",
+      "importPath": "effect/Match#core",
+      "sourcePath": null,
+      "skill": "effect-facet-match-core",
+      "rationale": "matcher model and constructors"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Match",
+      "importPath": "effect/Match#combinators",
+      "sourcePath": null,
+      "skill": "effect-facet-match-combinators",
+      "rationale": "when/whenOr/whenAnd operators"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Match",
+      "importPath": "effect/Match#discriminators",
+      "sourcePath": null,
+      "skill": "effect-facet-match-discriminators",
+      "rationale": "tag/discriminator matching APIs"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Match",
+      "importPath": "effect/Match#predicates",
+      "sourcePath": null,
+      "skill": "effect-facet-match-predicates",
+      "rationale": "predicate-driven matching"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Predicate",
+      "importPath": "effect/Predicate#core",
+      "sourcePath": null,
+      "skill": "effect-facet-predicate-core",
+      "rationale": "predicate/refinement base types"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Predicate",
+      "importPath": "effect/Predicate#guards",
+      "sourcePath": null,
+      "skill": "effect-facet-predicate-guards",
+      "rationale": "runtime type guard helpers"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Predicate",
+      "importPath": "effect/Predicate#combinators",
+      "sourcePath": null,
+      "skill": "effect-facet-predicate-combinators",
+      "rationale": "logical predicate composition"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Option",
+      "importPath": "effect/Option#core",
+      "sourcePath": null,
+      "skill": "effect-facet-option-core",
+      "rationale": "option model and constructors"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Option",
+      "importPath": "effect/Option#combinators",
+      "sourcePath": null,
+      "skill": "effect-facet-option-combinators",
+      "rationale": "map/flatMap/filter operations"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Option",
+      "importPath": "effect/Option#conversions",
+      "sourcePath": null,
+      "skill": "effect-facet-option-conversions",
+      "rationale": "interop and fallback conversions"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Result",
+      "importPath": "effect/Result#core",
+      "sourcePath": null,
+      "skill": "effect-facet-result-core",
+      "rationale": "result model and constructors"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Result",
+      "importPath": "effect/Result#combinators",
+      "sourcePath": null,
+      "skill": "effect-facet-result-combinators",
+      "rationale": "map/flatMap/match operations"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/Result",
+      "importPath": "effect/Result#conversions",
+      "sourcePath": null,
+      "skill": "effect-facet-result-conversions",
+      "rationale": "interop and fallback conversions"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster#core",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-cluster-core",
+      "rationale": "entity/shard core domain"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster#runners",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-cluster-runners-theme",
+      "rationale": "runner fleet execution domain"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster#storage",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-cluster-storage",
+      "rationale": "message/runner storage backends"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster#proxies",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-cluster-proxies",
+      "rationale": "entity proxy and resource shims"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster#workflow",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-cluster-workflow",
+      "rationale": "cluster workflow engine integration"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/cluster",
+      "importPath": "effect/unstable/cluster#utilities",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-cluster-utilities",
+      "rationale": "support utilities and ids"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http#core",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-http-core",
+      "rationale": "client and server core APIs"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http#middleware",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-http-middleware",
+      "rationale": "middleware/effect/tracing glue"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http#router",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-http-router",
+      "rationale": "routing and method template surfaces"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http#utilities",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-http-utilities",
+      "rationale": "headers/cookies/body/multipart helpers"
+    },
+    {
+      "type": "thematic",
+      "parent": "effect/unstable/http",
+      "importPath": "effect/unstable/http#client-impl",
+      "sourcePath": null,
+      "skill": "effect-facet-unstable-http-client-impl",
+      "rationale": "specific client implementation adapters"
+    }
+  ]
+}

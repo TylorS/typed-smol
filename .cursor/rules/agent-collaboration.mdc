@@ -1,0 +1,86 @@
+---
+description: Specialized agent collaboration and concise handoffs
+alwaysApply: true
+---
+
+# Agent Collaboration
+
+Specialize work into bounded agent roles whenever it improves quality or speed.
+
+## Subagent Usage Policy (required)
+
+The following are hard rules, not suggestions.
+
+### Mandatory Routing Gate
+
+- Before substantial work, run a routing decision: `direct` vs `specialist subagent` vs `swarm`.
+- If any mandatory trigger below is true, you MUST use subagents.
+- If no trigger is true, direct execution is allowed.
+
+### Mandatory Triggers (MUST use subagents)
+
+- Broad codebase exploration where target files/ownership are not yet known.
+  - use `explore` (quick/medium/very thorough based on ambiguity)
+- Work that is primarily a specialist concern:
+  - security risk assessment -> `security-sentinel`
+  - performance diagnosis -> `performance-profiler`
+  - root-cause debugging -> `debug-detective`
+  - risk-focused code review -> `review-auditor`
+  - test design/coverage strategy -> `test-strategist`
+  - structural refactor planning -> `refactor-surgeon`
+  - requirements/spec extraction -> `requirements-analyst` or `specification-writer`
+  - release/readiness checks -> `release-finalizer`
+- Three or more independent workstreams that can be parallelized.
+  - use `swarm-orchestrator` and/or launch parallel specialists (max 4 concurrent)
+- User explicitly asks for subagents, specialist routing, or parallel subagent work.
+
+### Allowed Direct-Execution Exceptions
+
+- Narrow, deterministic tasks that are faster and safer directly (for example, single-symbol lookup, one-file mechanical edit, or a focused answer from already-known files).
+- User explicitly forbids subagent use.
+
+### Orchestration Requirements
+
+- Match each launched subagent to a bounded objective and one owner role.
+- Include concrete output expectations and require the handoff contract fields.
+- Resume prior agents for follow-ups when continuity helps; avoid redundant fresh launches.
+- Synthesize subagent outputs into a single decision path; do not forward raw handoff text without integration.
+- Verify high-impact claims with direct evidence before final user-facing assertions.
+
+### Compliance Checks
+
+- If a mandatory trigger is discovered mid-task, pause direct execution and launch the required subagent(s) immediately.
+- If an exception is used, record the rationale in the execution log artifact.
+
+Core specializations:
+
+- Research scout
+- Planning architect
+- Execution operator
+- Review auditor
+- Docs archivist
+
+The full roster of all 14 agent roles is defined in `AGENTS.md` (project root).
+
+Docs archivist should own memory hygiene and cross-file cohesion:
+
+- Ensure short-term notes exist in `workflows/<workflow_slug>/memory/`.
+- Validate promotions into `.docs/_meta/memory/` with confidence and source links.
+- Flag stale or conflicting long-term memory entries.
+- Verify no duplicate definitions exist across `.docs/` and `.cursor/` (Single Source of Truth principle in `docs-architecture.mdc`).
+
+## Handoff Contract (required)
+
+Agent-to-agent handoffs must be concise and include:
+
+1. Objective
+2. Completed work
+3. Findings/evidence
+4. Risks/open questions
+5. Recommended next action
+
+## Brevity Rules
+
+- Keep handoffs short and structured.
+- Prefer bullets over long prose.
+- Include only actionable context for the next stage.

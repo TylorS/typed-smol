@@ -1,0 +1,80 @@
+---
+name: effect-facet-unstable-reactivity-atomregistry
+description: Guidance for facet `effect/unstable/reactivity/AtomRegistry` focused on APIs like make, layer, and getResult. Load after `effect-skill-router` when this facet is the primary owner.
+---
+
+# Effect Facet unstable/reactivity/AtomRegistry
+
+## Owned scope
+
+- Owns only `effect/unstable/reactivity/AtomRegistry`.
+- Parent module: `effect/unstable/reactivity`.
+- Source anchor: `packages/effect/src/unstable/reactivity/AtomRegistry.ts`.
+
+## What it is for
+
+- Module-specific APIs and usage patterns for Effect programs.
+
+## API quick reference
+
+- `make`
+- `layer`
+- `getResult`
+- `layerOptions`
+- `isAtomRegistry`
+- `Node`
+- `batch`
+- `mount`
+- `TypeId`
+- `toStream`
+- `BatchPhase`
+- `batchState`
+- `AtomRegistry`
+- `toStreamResult`
+- Full API list: `references/api-reference.md`
+
+## How to use it
+
+- Start with constructor-style APIs to build values/services before composing operations.
+- Treat stateful APIs as synchronization boundaries and keep updates atomic.
+- Assume unstable APIs can evolve quickly; isolate usage behind thin local adapters.
+
+## Starter example
+
+```ts
+import { AtomRegistry } from "effect/unstable/reactivity/AtomRegistry"
+
+const value = AtomRegistry.make()
+const next = AtomRegistry.getResult(value)
+```
+
+## Common pitfalls
+
+- Unstable module contracts may change; avoid coupling core app logic directly to experimental details.
+- Prefer explicit, typed combinators over ad-hoc casting or unchecked assumptions.
+
+## Not covered here
+
+- Sibling facets under the same parent are out of scope:
+  - `effect-facet-unstable-reactivity-asyncresult` (effect/unstable/reactivity/AsyncResult)
+  - `effect-facet-unstable-reactivity-atom` (effect/unstable/reactivity/Atom)
+  - `effect-facet-unstable-reactivity-atomhttpapi` (effect/unstable/reactivity/AtomHttpApi)
+  - `effect-facet-unstable-reactivity-atomref` (effect/unstable/reactivity/AtomRef)
+  - `effect-facet-unstable-reactivity-atomrpc` (effect/unstable/reactivity/AtomRpc)
+  - `effect-facet-unstable-reactivity-hydration` (effect/unstable/reactivity/Hydration)
+  - `effect-facet-unstable-reactivity-reactivity` (effect/unstable/reactivity/Reactivity)
+- Parent module ownership belongs to `effect-module-unstable-reactivity`.
+
+## Escalate to
+
+- `effect-module-unstable-reactivity` for parent module-wide workflows.
+- `effect-skill-router` for cross-module routing and ownership checks.
+
+## Reference anchors
+
+- Facet source: `packages/effect/src/unstable/reactivity/AtomRegistry.ts`
+- Parent tests: `packages/effect/test/reactivity/AsyncResult.test.ts`
+- Parent tests: `packages/effect/test/reactivity/Atom.test.ts`
+- API details: `references/api-reference.md`
+- Usage notes: `references/usage-reference.md`
+- Ownership mapping: `references/owner.md`

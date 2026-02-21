@@ -1,0 +1,67 @@
+---
+description: MUST include when you're in the Research Stage
+alwaysApply: false
+---
+
+# Research Stage
+
+## Purpose
+
+- Validate assumptions with evidence.
+- Identify state-of-the-art options, trade-offs, and risks.
+- Prepare inputs for requirements and specification.
+
+## Core Actions
+
+1. Review prior intent in `.docs/specs/`, prior decisions in `.docs/adrs/`, and relevant in-flight context in `.docs/workflows/`.
+2. Define explicit research questions.
+3. Gather evidence from primary sources first (papers, official docs, benchmarks).
+4. Actively use `WebSearch` to discover relevant research papers; when recency matters, target the current year horizon (through 2026) and prioritize original paper links over secondary summaries.
+5. Prefer the newest credible evidence when recency matters.
+6. Record conflicting evidence and confidence level.
+7. Translate findings into concrete implications for requirements and architecture.
+8. Capture reusable findings in workflow short-term memory for possible long-term promotion.
+
+## Effect Skill Loading (Required)
+
+- When research involves Effect APIs or architecture, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Artifact
+
+Write:
+
+- `.docs/workflows/<workflow_slug>/<asset-increment>-research.md`
+- Start from `.docs/_templates/research.md`
+
+Include:
+
+- Research questions
+- Source table (link, date/year, source type, confidence)
+- `WebSearch` query log for paper discovery (queries used, rationale, and selected papers)
+- Key findings
+- Open risks/unknowns
+- Implications for `requirements` and `specification`
+- Alignment notes against consulted `.docs/specs/`, `.docs/adrs/`, and `.docs/workflows/`
+- Memory promotion candidates (`procedural`, `mistakes`, `heuristics`, `benchmarks`)
+
+## Quality Bar
+
+- Avoid unsupported claims.
+- Distinguish measured results from author claims.
+- Note benchmark scope/limitations before generalizing.
+- Verify paper metadata (title, authors, year, venue) from primary sources before citing.
+- Label source maturity (peer-reviewed, preprint, vendor report, or other) and reflect that in confidence.
+- Label confidence for any candidate memory intended for long-term reuse.
+
+## Documentation Routing (Required)
+
+- Keep durable behavioral intent in `.docs/specs/` and durable architecture decisions in `.docs/adrs/`.
+- Keep exploratory notes and unresolved findings in `.docs/workflows/` until promoted.
+- When findings conflict with existing durable docs, record the conflict explicitly and route updates to the canonical file rather than duplicating concepts.
+
+## Exit Criteria
+
+- Evidence is sufficient to define requirements.
+- Major decisions have at least one credible supporting source.
+- Remaining unknowns are explicitly listed.
+- Reusable findings are captured for promotion to `.docs/_meta/memory/`.

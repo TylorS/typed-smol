@@ -1,0 +1,49 @@
+---
+description: MUST load when you're in the Review Stage
+alwaysApply: false
+---
+
+# Review Stage
+
+## Purpose
+
+- Identify defects, risks, and regressions.
+- Provide actionable, prioritized findings.
+
+## Review Process
+
+1. Inspect changes against requirements/spec/plan.
+2. Prioritize issues by severity and user impact.
+3. Highlight missing tests and residual uncertainty.
+4. Recommend fixes and verification steps.
+5. Review memory impacts: stale guidance risks, missing promotions, and recall quality.
+
+## Effect Skill Loading (Required)
+
+- When reviewing Effect-related changes, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Response Format
+
+- Findings first, ordered by severity.
+- Each finding should include:
+  - What is wrong
+  - Why it matters
+  - Where it appears
+  - Suggested fix path
+- If no findings, state that explicitly.
+
+## Artifact
+
+Write:
+
+- `.docs/workflows/<workflow_slug>/<asset-increment>-review.md`
+- Start from `.docs/_templates/review.md`
+
+Include findings, open questions, and test gaps.
+Include memory findings when memory artifacts changed.
+
+## Exit Criteria
+
+- Review is complete and evidence-backed.
+- Risks and follow-ups are explicit.
+- Memory-related risks and follow-ups are explicit when applicable.

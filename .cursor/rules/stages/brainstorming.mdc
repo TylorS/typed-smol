@@ -1,0 +1,60 @@
+---
+description: MUST load when you're in the Brainstorming Stage
+alwaysApply: false
+---
+
+# Brainstorming Stage
+
+## Purpose
+
+- Frame scope, constraints, and outcomes.
+- Surface unknowns early.
+- Create a shared problem definition before deep research or implementation.
+
+## Core Actions
+
+1. Review existing context in `.docs/specs/`, `.docs/adrs/`, and relevant `.docs/workflows/` before proposing new directions.
+2. Identify ambiguity in scope, priorities, constraints, and success criteria.
+3. Ask targeted clarifying questions (prefer batched `AskQuestion` when choices are clear).
+4. Capture candidate approaches with pros/cons and risks.
+5. Propose a recommended direction when evidence is sufficient.
+6. Define initial memory approach (short-term capture and long-term promotion) when relevant.
+
+## Effect Skill Loading (Required)
+
+- When brainstorming touches Effect-related work, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Artifact
+
+Write:
+
+- `.docs/workflows/<workflow_slug>/<asset-increment>-brainstorming.md`
+- Start from `.docs/_templates/brainstorming.md`
+
+Include:
+
+- Problem statement
+- Desired outcomes
+- Constraints and assumptions
+- Known unknowns and risks
+- Candidate approaches and recommendation
+- Source grounding from `.docs/specs/`, `.docs/adrs/`, and `.docs/workflows/` (what was consulted and why)
+- Initial memory strategy (if applicable)
+
+## Documentation Routing (Required)
+
+- Treat `.docs/specs/` and `.docs/adrs/` as durable context and constraints.
+- Treat `.docs/workflows/` as transient run context; do not treat workflow notes as canonical decisions.
+- If brainstorming surfaces a durable concept, mark it for promotion to a canonical destination instead of redefining it in multiple places.
+
+## Communication Rules
+
+- Ask only high-value questions that unblock decisions.
+- Explain why each question matters.
+- Keep questions specific and non-overlapping.
+
+## Exit Criteria
+
+- Ambiguities are reduced to a manageable list.
+- Initial direction is agreed or explicitly deferred.
+- Next stage inputs are documented.

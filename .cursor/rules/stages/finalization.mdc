@@ -1,0 +1,81 @@
+---
+description: Final stage strategy and closure requirements
+alwaysApply: true
+---
+# Finalization
+
+## Purpose
+
+- Close the run with clear outcomes, evidence, and next actions.
+- Apply the selected finalization strategy (`pr` or `merge`) safely.
+
+## Strategy Selection
+
+Based on what the user originally selected:
+
+### PR
+
+- MUST create a new branch dedicated to the run before finalization.
+- MUST commit only the changes produced for this run (exclude unrelated local changes).
+- MUST verify the PR diff contains only run-owned changes before opening the PR.
+- MUST push the run branch and open a PR to the user-selected base branch (default: `main`).
+- Provide concise PR summary and test plan.
+
+### Merge
+
+- MUST commit the run's work before any merge action.
+- MUST merge committed work into a user-selected target branch (default: `main` when not specified).
+- Merge according to repository workflow.
+- Do not perform risky/destructive git operations without explicit approval.
+
+## Required Artifact
+
+Write:
+
+- `.docs/workflows/<workflow_slug>/99-finalization.md`
+- Start from `.docs/_templates/finalization.md`
+
+## Effect Skill Loading (Required)
+
+- For Effect-related runs, confirm `.cursor/rules/effect-skill-loading.mdc` was applied during stage execution and note deviations in finalization.
+
+Include:
+
+- What changed
+- Validation performed
+- Known residual risks
+- Follow-up recommendations
+- Workflow ownership outcome:
+  - active workflow slug created for this run
+  - whether any explicit reuse override was used
+- Memory outcomes:
+  - What was captured in workflow short-term memory
+  - What was promoted to `.docs/_meta/memory/`
+  - What was deferred and why
+
+## Cohesion Check
+
+Before closing, verify:
+
+- No concept was defined in more than one file during this run. If it was, consolidate into one canonical location and replace the other with a pointer.
+- All cross-file references added or modified during this run resolve to existing files.
+- Handoff contracts, naming conventions, and field lists remain consistent with their canonical sources.
+- Documentation routing is correct: durable architecture decisions in `.docs/adrs/`, durable behavior in `.docs/specs/`, and transient run records in `.docs/workflows/`.
+- Core terminology is non-overloaded: each core term has one meaning, and updated term usage matches canonical glossary definitions.
+
+## Self-improvement Loop (Required)
+
+Before closing finalization, run a mandatory self-improvement loop:
+
+1. Observe friction, retries, delays, and failure modes from this run.
+2. Diagnose likely root causes.
+3. Propose 1-3 low-risk process improvements.
+4. Validate the highest-impact improvement on the current run where feasible.
+5. Consolidate what worked and discard what did not.
+6. Apply the improved pattern to the next relevant step.
+
+For memory promotion decisions, run `SemanticSearch` against `.docs/adrs/`, `.docs/specs/`, and `.docs/workflows/` (one target at a time) to detect similar concepts before promoting anything to stable memory.
+
+- If a similar concept already exists, update the canonical location and add pointers instead of duplicating definitions.
+- Promote to `.docs/_meta/memory/` only when evidence-backed and non-duplicative.
+- Record what was searched, what matched, and why promotion happened (or was deferred) in `.docs/workflows/<workflow_slug>/99-finalization.md`.

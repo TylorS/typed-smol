@@ -76,7 +76,7 @@ function toRoute(
   currentServices: ServiceMap.ServiceMap<never>,
 ): Route<any, any> {
   return {
-    "~effect/http/HttpRouter/Route": "~effect/http/HttpRouter/Route",
+    ["~effect/http/HttpRouter/Route"]: "~effect/http/HttpRouter/Route",
     method: "GET",
     path: entry.route.path,
     handler: Effect.gen(function* () {

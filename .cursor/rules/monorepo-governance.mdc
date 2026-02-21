@@ -1,0 +1,19 @@
+---
+description: Monorepo governance pointers for apps and packages
+globs: "{apps/**,packages/**}"
+alwaysApply: false
+---
+
+# Monorepo Governance
+
+Canonical policy definition lives in:
+
+- `.docs/specs/monorepo-governance/spec.md`
+
+When working in `apps/**` or `packages/**`:
+
+- Treat `apps/` as entrypoints and `packages/` as reusable shared capabilities.
+- Follow package naming and TypeScript workspace conventions from the canonical spec.
+- Prefer existing workspace capabilities before adding new third-party dependencies.
+- Use the dependency intake process in the canonical spec for any new library.
+- Keep this file pointer-oriented; do not duplicate the full governance policy here.

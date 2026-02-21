@@ -1,0 +1,36 @@
+---
+description: MUST utilize when in Review mode.
+alwaysApply: false
+---
+
+# Review Mode
+
+Use this mode for evaluation, risk discovery, and actionable feedback.
+
+## Required Stage Order
+
+1. `review`
+2. `finalization`
+
+Load:
+
+- `.cursor/rules/stages/review.mdc`
+- `.cursor/rules/stages/finalization.mdc`
+
+## Effect Skill Loading
+
+- When review-mode work involves Effect code, load and apply `.cursor/rules/effect-skill-loading.mdc`.
+
+## Review Priorities
+
+- Findings first, ordered by severity.
+- Focus on behavioral regressions, correctness issues, risk, and missing tests.
+- Keep summaries short after findings are listed.
+- If no issues are found, state that explicitly and note residual risks/testing gaps.
+
+## Deliverables
+
+- Structured review artifact in `.docs/workflows/<workflow>/`.
+- Final recommendation with clear next actions.
+- Explicit note on memory impacts: new reusable lessons, corrected stale memory, and deferred promotions.
+- Use `.docs/_templates/` as the canonical source for required artifacts.
