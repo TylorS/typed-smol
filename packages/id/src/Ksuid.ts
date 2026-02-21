@@ -12,7 +12,7 @@ const STRING_LENGTH = 27;
 
 // Schema
 export const Ksuid = Schema.String.pipe(
-  Schema.check(Schema.isPattern(/^[0-9a-zA-Z]{27}$/)),
+  Schema.check(Schema.isPattern(/^[0-9A-Za-z]{27}$/)),
   Schema.brand("@typed/id/KSUID"),
 );
 export type Ksuid = typeof Ksuid.Type;

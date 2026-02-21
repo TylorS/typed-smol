@@ -1,15 +1,14 @@
 {
-  "name": "@typed/ui",
+  "name": "@typed/virtual-modules-compiler",
   "version": "1.0.0-beta.0",
   "type": "module",
+  "bin": {
+    "vmc": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
     }
   },
   "publishConfig": {
@@ -20,16 +19,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@effect/platform-node": "catalog:",
-    "@typed/fx": "workspace:*",
-    "@typed/id": "workspace:*",
-    "@typed/navigation": "workspace:*",
-    "@typed/router": "workspace:*",
-    "@typed/template": "workspace:*",
-    "effect": "catalog:",
-    "happy-dom": "catalog:"
+    "@typed/virtual-modules": "workspace:*",
+    "typescript": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "^25.3.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

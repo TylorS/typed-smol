@@ -39,6 +39,10 @@ Before starting the Per-Task Loop, load the testing strategy artifact produced d
   2. Record the unblock action and outcome in the execution log.
   3. Update the dependency status when resolved.
 
+### Property-Based Testing (Preferred)
+
+- When writing tests for type guards, validators, or pure functions, prefer `effect/testing/FastCheck` over hand-written examples (see `.docs/_meta/memory/property-testing-fastcheck.md`).
+
 ### Per-Task Testing Requirements
 
 - For each task, identify the TS-* scenarios that apply (from the critical-path table).

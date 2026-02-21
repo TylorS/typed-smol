@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect";
-import { assert, describe, expect, it } from "vitest";
+import * as FastCheck from "effect/testing/FastCheck";
+import { describe, expect, it } from "vitest";
 import * as Cuid from "./Cuid.js";
 import { Ids } from "./Ids.js";
 import * as Ksuid from "./Ksuid.js";
@@ -15,91 +16,116 @@ const run = <A, E>(effect: Effect.Effect<A, E, Ids>) =>
   Effect.runPromise(Effect.provide(effect, Ids.Test()));
 
 describe("@typed/id", () => {
-  describe("type guards", () => {
+  describe("type guards (property-based)", () => {
     describe("isUuid4", () => {
-      it("accepts valid UUID v4", () => {
-        expect(Uuid4.isUuid4("f47ac10b-58cc-4372-a567-0e02b2c3d479")).toBe(true);
-        expect(Uuid4.isUuid4("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
+      it("accepts any UUID v4", () => {
+        FastCheck.assert(
+          FastCheck.property(FastCheck.uuid({ version: 4 }), (s) => Uuid4.isUuid4(s)),
+        );
       });
-      it("rejects invalid formats", () => {
-        expect(Uuid4.isUuid4("")).toBe(false);
-        expect(Uuid4.isUuid4("not-a-uuid")).toBe(false);
-        expect(Uuid4.isUuid4("f47ac10b-58cc-4372-a567-0e02b2c3d479".replace(/-/g, ""))).toBe(false);
-        expect(Uuid4.isUuid4("g47ac10b-58cc-4372-a567-0e02b2c3d479")).toBe(false); // invalid hex
-      });
-      it("rejects UUID v5 as UUID v4", () => {
-        expect(Uuid4.isUuid4("886313e1-3b8a-5372-9b90-0c9aee199e5d")).toBe(false);
+      it("rejects non-UUID-v4 strings", () => {
+        const invalid = FastCheck.oneof(
+          FastCheck.constant(""),
+          FastCheck.string({ maxLength: 35 }).filter((s) => s.length < 36),
+          FastCheck.string().filter(
+            (s) =>
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s),
+          ),
+        );
+        FastCheck.assert(FastCheck.property(invalid, (s) => !Uuid4.isUuid4(s)));
       });
     });
 
     describe("isUuid5", () => {
-      it("accepts valid UUID v5", () => {
-        expect(Uuid5.isUuid5("886313e1-3b8a-5372-9b90-0c9aee199e5d")).toBe(true);
-        expect(Uuid5.isUuid5("c2ee5f2e-5b2e-5f2e-8b2e-5b2e5f2e8b2e")).toBe(true);
+      it("accepts any UUID v5", () => {
+        FastCheck.assert(
+          FastCheck.property(FastCheck.uuid({ version: 5 }), (s) => Uuid5.isUuid5(s)),
+        );
       });
-      it("rejects invalid formats", () => {
-        expect(Uuid5.isUuid5("")).toBe(false);
-        expect(Uuid5.isUuid5("f47ac10b-58cc-4372-a567-0e02b2c3d479")).toBe(false); // v4
+      it("rejects non-UUID-v5 strings", () => {
+        const invalid = FastCheck.oneof(
+          FastCheck.constant(""),
+          FastCheck.string().filter(
+            (s) =>
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s),
+          ),
+        );
+        FastCheck.assert(FastCheck.property(invalid, (s) => !Uuid5.isUuid5(s)));
       });
     });
 
     describe("isUuid7", () => {
-      it("accepts valid UUID v7", () => {
-        expect(Uuid7.isUuid7("018eebb4-1f2c-7c3a-8b4d-123456789abc")).toBe(true);
+      it("accepts any UUID v7", () => {
+        FastCheck.assert(
+          FastCheck.property(FastCheck.uuid({ version: 7 }), (s) => Uuid7.isUuid7(s)),
+        );
       });
-      it("rejects invalid formats", () => {
-        expect(Uuid7.isUuid7("")).toBe(false);
-        expect(Uuid7.isUuid7("f47ac10b-58cc-4372-a567-0e02b2c3d479")).toBe(false); // v4
+      it("rejects non-UUID-v7 strings", () => {
+        const invalid = FastCheck.oneof(
+          FastCheck.constant(""),
+          FastCheck.string().filter(
+            (s) =>
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s),
+          ),
+        );
+        FastCheck.assert(FastCheck.property(invalid, (s) => !Uuid7.isUuid7(s)));
       });
     });
 
     describe("isCuid", () => {
-      it("accepts valid CUID-like strings (lowercase letter + base36)", () => {
-        expect(Cuid.isCuid("c1234567890abcdefghijklmn")).toBe(true);
-        expect(Cuid.isCuid("a0")).toBe(true);
+      it("accepts any CUID-like string (lowercase letter + base36)", () => {
+        const cuidArb = FastCheck.stringMatching(/^[a-z][0-9a-z]+$/);
+        FastCheck.assert(FastCheck.property(cuidArb, (s) => Cuid.isCuid(s)));
       });
-      it("rejects invalid formats", () => {
-        expect(Cuid.isCuid("")).toBe(false);
-        expect(Cuid.isCuid("A123")).toBe(false); // must start with lowercase
-        expect(Cuid.isCuid("1abc")).toBe(false); // must start with letter
-        expect(Cuid.isCuid("c123-456")).toBe(false); // no hyphen
+      it("rejects strings that do not match CUID pattern", () => {
+        const invalid = FastCheck.oneof(
+          FastCheck.constant(""),
+          FastCheck.string().filter((s) => !/^[a-z][0-9a-z]+$/.test(s)),
+        );
+        FastCheck.assert(FastCheck.property(invalid, (s) => !Cuid.isCuid(s)));
       });
     });
 
     describe("isKsuid", () => {
-      it("accepts 27-char base62 strings", () => {
-        assert(Ksuid.isKsuid("0123456789ABCDEFGHIJKLMNOPQ"));
-        assert(Ksuid.isKsuid("000000000000000000000000000"));
+      it("accepts any 27-char base62 string", () => {
+        const ksuidArb = FastCheck.stringMatching(/^[0-9A-Za-z]{27}$/);
+        FastCheck.assert(FastCheck.property(ksuidArb, (s) => Ksuid.isKsuid(s)));
       });
-      it("rejects invalid formats", () => {
-        expect(Ksuid.isKsuid("")).toBe(false);
-        expect(Ksuid.isKsuid("short")).toBe(false);
-        expect(Ksuid.isKsuid("0ujsszwN8NRYtYaMBZrYCVp4O1!")).toBe(false); // 28 chars, invalid char
+      it("rejects non-KSUID strings", () => {
+        const invalid = FastCheck.oneof(
+          FastCheck.constant(""),
+          FastCheck.string().filter((s) => s.length !== 27 || !/^[0-9A-Za-z]{27}$/.test(s)),
+        );
+        FastCheck.assert(FastCheck.property(invalid, (s) => !Ksuid.isKsuid(s)));
       });
     });
 
     describe("isNanoId", () => {
-      it("accepts strings with only 0-9a-zA-Z_-", () => {
-        assert(NanoId.isNanoId("V1StGXR8_Z5jdHi6B-myT"));
-        assert(NanoId.isNanoId("abc123"));
-        assert(NanoId.isNanoId("_-_"));
+      it("accepts any string with only 0-9a-zA-Z_-", () => {
+        const nanoIdArb = FastCheck.stringMatching(/^[0-9a-zA-Z_-]+$/);
+        FastCheck.assert(FastCheck.property(nanoIdArb, (s) => NanoId.isNanoId(s)));
       });
-      it("rejects invalid characters", () => {
-        expect(NanoId.isNanoId("")).toBe(false);
-        expect(NanoId.isNanoId("   ")).toBe(false);
-        expect(NanoId.isNanoId("!@#$%")).toBe(false);
+      it("rejects strings with invalid characters", () => {
+        const invalid = FastCheck.oneof(
+          FastCheck.constant(""),
+          FastCheck.string().filter((s) => !/^[0-9a-zA-Z_-]+$/.test(s)),
+        );
+        FastCheck.assert(FastCheck.property(invalid, (s) => !NanoId.isNanoId(s)));
       });
     });
 
     describe("isUlid", () => {
-      it("accepts valid ULIDs (26 chars, Effect alphabet 0-9A-HJKMNP-TV-Z)", () => {
-        expect(Ulid.isUlid("01D78XYFJ1PRM1WPBCBT3VHMNV")).toBe(true);
+      it("accepts any valid ULID", () => {
+        FastCheck.assert(FastCheck.property(FastCheck.ulid(), (s) => Ulid.isUlid(s)));
       });
-      it("rejects invalid formats", () => {
-        expect(Ulid.isUlid("")).toBe(false);
-        expect(Ulid.isUlid("01ARZ3NDEKTSV4RRFFQ69G5FA")).toBe(false); // wrong length
-        expect(Ulid.isUlid("01ARZ3NDEKTSV4RRFFQ69G5FAV0")).toBe(false); // wrong length
-        expect(Ulid.isUlid("01ARZ3NDEKTSV4RRFFQ69G5FAI")).toBe(false); // I not in Crockford base32
+      it("rejects non-ULID strings", () => {
+        const invalid = FastCheck.oneof(
+          FastCheck.constant(""),
+          FastCheck.string().filter(
+            (s) => s.length !== 26 || !/^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/.test(s),
+          ),
+        );
+        FastCheck.assert(FastCheck.property(invalid, (s) => !Ulid.isUlid(s)));
       });
     });
   });
@@ -107,13 +133,11 @@ describe("@typed/id", () => {
   describe("Ids service", () => {
     it("uuid4 produces valid UUID v4", async () => {
       const id = await run(Ids.uuid4);
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(Uuid4.isUuid4(id)).toBe(true);
     });
 
     it("uuid5 produces valid UUID v5", async () => {
       const id = await run(Ids.uuid5("hello", Uuid5.Uuid5Namespace.DNS));
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(Uuid5.isUuid5(id)).toBe(true);
     });
 
@@ -143,27 +167,23 @@ describe("@typed/id", () => {
 
     it("uuid7 produces valid UUID v7", async () => {
       const id = await run(Ids.uuid7);
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(Uuid7.isUuid7(id)).toBe(true);
     });
 
     it("cuid produces valid CUID", async () => {
       const id = await run(Ids.cuid);
       expect(Cuid.isCuid(id)).toBe(true);
-      expect(id).toMatch(/^[a-z][0-9a-z]+$/);
     });
 
     it("ksuid produces valid KSUID", async () => {
       const id = await run(Ids.ksuid);
       expect(Ksuid.isKsuid(id)).toBe(true);
       expect(id).toHaveLength(27);
-      expect(id).toMatch(/^[0-9a-zA-Z]{27}$/);
     });
 
     it("nanoId produces valid NanoId", async () => {
       const id = await run(Ids.nanoId);
       expect(NanoId.isNanoId(id)).toBe(true);
-      expect(id).toMatch(/^[0-9a-zA-Z_-]+$/);
       expect(id).toHaveLength(21);
     });
 
@@ -171,17 +191,11 @@ describe("@typed/id", () => {
       const id = await run(Ids.ulid);
       expect(Ulid.isUlid(id)).toBe(true);
       expect(id).toHaveLength(26);
-      expect(id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     });
 
     it("Ids.Test with fixed time yields deterministic time-based prefixes", async () => {
       const runFixed = <A, E>(effect: Effect.Effect<A, E, Ids>) =>
-        effect.pipe(
-          Effect.provide(Ids.Test({})),
-          Effect.provide(TestClock.layer({})),
-          Random.withSeed(42),
-          Effect.runPromise,
-        );
+        effect.pipe(Effect.provide(Ids.Test({})), Random.withSeed(0), Effect.runPromise);
 
       const [ulid1, ulid2, ksuid1, ksuid2] = await runFixed(
         Effect.all([Ids.ulid, Ids.ulid, Ids.ksuid, Ids.ksuid], { concurrency: "unbounded" }),

@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "plugins": [{
+      "name": "@typed/virtual-modules-ts-plugin",
+      "plugins": ["./plugin.cjs"],
+      "debounceMs": 50
+    }]
+  },
+  "include": ["*.ts"]
+}

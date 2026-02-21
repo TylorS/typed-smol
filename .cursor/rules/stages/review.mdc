@@ -14,7 +14,7 @@ alwaysApply: false
 
 1. Inspect changes against requirements/spec/plan.
 2. Prioritize issues by severity and user impact.
-3. Highlight missing tests and residual uncertainty.
+3. Highlight missing tests and residual uncertainty. When tests use hand-written examples for validators/guards, consider recommending property-based tests via `effect/testing/FastCheck` (`.docs/_meta/memory/property-testing-fastcheck.md`).
 4. Recommend fixes and verification steps.
 5. Review memory impacts: stale guidance risks, missing promotions, and recall quality.
 

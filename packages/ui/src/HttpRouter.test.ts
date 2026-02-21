@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { describe, it } from "vitest";
 import { Effect, Layer } from "effect";
 import { Fx } from "@typed/fx";
+import { Ids } from "@typed/id";
 import { Navigation } from "@typed/navigation";
 import { CurrentRoute } from "@typed/router/CurrentRoute";
 import * as Matcher from "@typed/router/Matcher";
@@ -22,7 +23,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge([NodeHttpServer.layerTest]),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/home").pipe(Effect.flatMap((r) => r.text));
@@ -39,7 +40,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/users/123").pipe(Effect.flatMap((r) => r.text));
@@ -58,7 +59,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/search?q=test").pipe(Effect.flatMap((r) => r.text));
@@ -85,7 +86,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const homeResponse = yield* HttpClient.get("/home").pipe(Effect.flatMap((r) => r.text));
@@ -110,7 +111,7 @@ describe("typed/ui/HttpRouter", () => {
     ).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/notfound");
@@ -125,7 +126,7 @@ describe("typed/ui/HttpRouter", () => {
     );
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
       Layer.provide(StaticHtmlRenderTemplate),
     );
     return Effect.gen(function* () {
@@ -144,7 +145,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/home");
@@ -167,7 +168,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const listResponse = yield* HttpClient.get("/api/users").pipe(Effect.flatMap((r) => r.text));
@@ -192,7 +193,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/test").pipe(Effect.flatMap((r) => r.text));
@@ -213,7 +214,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/users").pipe(Effect.flatMap((r) => r.text));
@@ -233,7 +234,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/home").pipe(Effect.flatMap((r) => r.text));
@@ -263,7 +264,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
       Layer.provide(CurrentRoute.extend(api)),
     );
     return Effect.gen(function* () {
@@ -284,7 +285,7 @@ describe("typed/ui/HttpRouter", () => {
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
-      Layer.provideMerge(NodeHttpServer.layerTest),
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
     );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/about").pipe(Effect.flatMap((r) => r.text));
