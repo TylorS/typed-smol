@@ -1,15 +1,11 @@
 {
-  "name": "@typed/virtual-modules",
+  "name": "@typed/virtual-modules-vite",
   "version": "1.0.0-beta.0",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
     }
   },
   "publishConfig": {
@@ -19,13 +15,16 @@
     "build": "tsc",
     "test": "vitest run --passWithNoTests"
   },
-  "devDependencies": {
-    "@manuth/typescript-languageservice-tester": "^5.0.2",
-    "@types/node": "^25.3.0",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+  "dependencies": {
+    "@typed/virtual-modules": "workspace:*"
   },
   "peerDependencies": {
-    "typescript": "catalog:"
+    "vite": ">=5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "catalog:",
+    "vite": "^7.3.1",
+    "vitest": "catalog:"
   }
 }
