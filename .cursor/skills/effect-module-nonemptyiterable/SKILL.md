@@ -29,28 +29,22 @@ description: Guidance for `effect/NonEmptyIterable` focused on APIs like nonEmpt
 ## Starter example
 
 ```ts
-import * as NonEmptyIterable from "effect/NonEmptyIterable"
+import * as NonEmptyIterable from "effect/NonEmptyIterable";
 
 // NonEmptyIterable is a type that represents any iterable with at least one element
 function processNonEmpty<A>(data: NonEmptyIterable.NonEmptyIterable<A>): A {
   // Safe to get the first element - guaranteed to exist
-  const [first] = NonEmptyIterable.unprepend(data)
-  return first
+  const [first] = NonEmptyIterable.unprepend(data);
+  return first;
 }
 
 // Using Array.make to create non-empty arrays
-const numbers = Array.make(
-  1,
-  2,
-  3,
-  4,
-  5
-) as unknown as NonEmptyIterable.NonEmptyIterable<number>
-const firstNumber = processNonEmpty(numbers) // number
+const numbers = Array.make(1, 2, 3, 4, 5) as unknown as NonEmptyIterable.NonEmptyIterable<number>;
+const firstNumber = processNonEmpty(numbers); // number
 
 // Regular arrays can be asserted as NonEmptyIterable when known to be non-empty
-const values = [1, 2, 3] as unknown as NonEmptyIterable.NonEmptyIterable<number>
-const firstValue = processNonEmpty(values) // number
+const values = [1, 2, 3] as unknown as NonEmptyIterable.NonEmptyIterable<number>;
+const firstValue = processNonEmpty(values); // number
 
 // Custom iterables that are guaranteed non-empty
 ```

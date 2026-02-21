@@ -46,10 +46,10 @@ description: Guidance for `effect/SynchronizedRef` focused on APIs like get, set
 ## Starter example
 
 ```ts
-import { SynchronizedRef } from "effect/SynchronizedRef"
+import { SynchronizedRef } from "effect/SynchronizedRef";
 
-const value = SynchronizedRef.make()
-const next = SynchronizedRef.get(value)
+const value = SynchronizedRef.make();
+const next = SynchronizedRef.get(value);
 ```
 
 ## Common pitfalls

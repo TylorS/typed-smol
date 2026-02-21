@@ -41,10 +41,10 @@ description: Guidance for facet `effect/unstable/http/HttpServerError` focused o
 ## Starter example
 
 ```ts
-import { HttpServerError } from "effect/unstable/http/HttpServerError"
+import { HttpServerError } from "effect/unstable/http/HttpServerError";
 
-const value = HttpServerError.isHttpServerError()
-const next = HttpServerError.RequestParseError(value)
+const value = HttpServerError.isHttpServerError();
+const next = HttpServerError.RequestParseError(value);
 ```
 
 ## Common pitfalls

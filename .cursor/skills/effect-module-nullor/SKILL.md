@@ -35,10 +35,10 @@ description: Guidance for `effect/NullOr` focused on APIs like map, getOrThrow, 
 ## Starter example
 
 ```ts
-import { NullOr } from "effect/NullOr"
+import { NullOr } from "effect/NullOr";
 
-const value = NullOr.makeReducer()
-const next = NullOr.map(value)
+const value = NullOr.makeReducer();
+const next = NullOr.map(value);
 ```
 
 ## Common pitfalls

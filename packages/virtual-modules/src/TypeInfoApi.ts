@@ -200,7 +200,9 @@ const serializeTypeNode = (
     const union: UnionTypeNode = {
       kind: "union",
       text,
-      elements: type.types.map((value) => serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited)),
+      elements: type.types.map((value) =>
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+      ),
     };
     return union;
   }
@@ -209,7 +211,9 @@ const serializeTypeNode = (
     const intersection: IntersectionTypeNode = {
       kind: "intersection",
       text,
-      elements: type.types.map((value) => serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited)),
+      elements: type.types.map((value) =>
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+      ),
     };
     return intersection;
   }
@@ -224,7 +228,9 @@ const serializeTypeNode = (
     const tuple: TupleTypeNode = {
       kind: "tuple",
       text,
-      elements: typeArguments.map((value) => serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited)),
+      elements: typeArguments.map((value) =>
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+      ),
     };
     return tuple;
   }
@@ -244,7 +250,14 @@ const serializeTypeNode = (
 
   const callSignatures = checker.getSignaturesOfType(type, tsMod.SignatureKind.Call);
   if (callSignatures.length > 0) {
-    const signature = serializeFunctionSignature(callSignatures[0], checker, tsMod, depth, maxDepth, visited);
+    const signature = serializeFunctionSignature(
+      callSignatures[0],
+      checker,
+      tsMod,
+      depth,
+      maxDepth,
+      visited,
+    );
     const fn: FunctionTypeNode = {
       kind: "function",
       text,
@@ -319,7 +332,9 @@ const createFileSnapshot = (
     };
   }
 
-  const exports = checker.getExportsOfModule(moduleSymbol).map((value) => serializeExport(value, checker, tsMod, maxDepth));
+  const exports = checker
+    .getExportsOfModule(moduleSymbol)
+    .map((value) => serializeExport(value, checker, tsMod, maxDepth));
 
   return {
     filePath,
@@ -327,7 +342,9 @@ const createFileSnapshot = (
   };
 };
 
-export const createTypeInfoApiSession = (options: CreateTypeInfoApiSessionOptions): TypeInfoApiSession => {
+export const createTypeInfoApiSession = (
+  options: CreateTypeInfoApiSessionOptions,
+): TypeInfoApiSession => {
   const checker = options.program.getTypeChecker();
   const descriptors = new Map<string, WatchDependencyDescriptor>();
   const snapshotCache = new Map<string, TypeInfoFileSnapshot>();
@@ -340,10 +357,16 @@ export const createTypeInfoApiSession = (options: CreateTypeInfoApiSessionOption
     }
 
     const globs = descriptor.relativeGlobs.join("|");
-    descriptors.set(`glob:${descriptor.baseDir}:${descriptor.recursive ? "r" : "nr"}:${globs}`, descriptor);
+    descriptors.set(
+      `glob:${descriptor.baseDir}:${descriptor.recursive ? "r" : "nr"}:${globs}`,
+      descriptor,
+    );
   };
 
-  const file = (relativePath: string, queryOptions: TypeInfoFileQueryOptions): FileSnapshotResult => {
+  const file = (
+    relativePath: string,
+    queryOptions: TypeInfoFileQueryOptions,
+  ): FileSnapshotResult => {
     const baseDirResult = validatePathSegment(queryOptions.baseDir, "baseDir");
     if (!baseDirResult.ok) return { ok: false, error: "invalid-input" };
     const relativePathResult = validatePathSegment(relativePath, "relativePath");
@@ -353,7 +376,11 @@ export const createTypeInfoApiSession = (options: CreateTypeInfoApiSessionOption
 
     const pathResult = resolvePathUnderBase(baseDir, normalizedRelativePath);
     if (!pathResult.ok) {
-      return { ok: false, error: "path-escapes-base", path: resolveRelativePath(baseDir, normalizedRelativePath) };
+      return {
+        ok: false,
+        error: "path-escapes-base",
+        path: resolveRelativePath(baseDir, normalizedRelativePath),
+      };
     }
     const absolutePath = pathResult.path;
 
@@ -382,7 +409,13 @@ export const createTypeInfoApiSession = (options: CreateTypeInfoApiSessionOption
       return { ok: true, snapshot: cached };
     }
 
-    const snapshot = createFileSnapshot(absolutePath, checker, options.program, options.ts, maxDepth);
+    const snapshot = createFileSnapshot(
+      absolutePath,
+      checker,
+      options.program,
+      options.ts,
+      maxDepth,
+    );
     snapshotCache.set(absolutePath, snapshot);
     return { ok: true, snapshot };
   };
@@ -419,7 +452,9 @@ export const createTypeInfoApiSession = (options: CreateTypeInfoApiSessionOption
       depth,
     );
 
-    const normalizedMatches = dedupeSorted(matchedPaths.map((value) => resolveRelativePath(baseDir, value)));
+    const normalizedMatches = dedupeSorted(
+      matchedPaths.map((value) => resolveRelativePath(baseDir, value)),
+    );
     const underBase = normalizedMatches.filter((filePath) => pathIsUnderBase(baseDir, filePath));
     const filteredMatches = queryOptions.recursive
       ? underBase
@@ -432,9 +467,7 @@ export const createTypeInfoApiSession = (options: CreateTypeInfoApiSessionOption
     const tsMod = options.ts;
     return filteredMatches
       .filter((filePath) => program.getSourceFile(filePath) !== undefined)
-      .map((filePath) =>
-        createFileSnapshot(filePath, checker, program, tsMod, maxDepth),
-      );
+      .map((filePath) => createFileSnapshot(filePath, checker, program, tsMod, maxDepth));
   };
 
   return {
@@ -446,6 +479,7 @@ export const createTypeInfoApiSession = (options: CreateTypeInfoApiSessionOption
   };
 };
 
-export const createTypeInfoApiSessionFactory = (
-  options: CreateTypeInfoApiSessionOptions,
-): CreateTypeInfoApiSession => () => createTypeInfoApiSession(options);
+export const createTypeInfoApiSessionFactory =
+  (options: CreateTypeInfoApiSessionOptions): CreateTypeInfoApiSession =>
+  () =>
+    createTypeInfoApiSession(options);

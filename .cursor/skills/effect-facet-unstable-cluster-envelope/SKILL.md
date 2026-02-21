@@ -46,10 +46,10 @@ description: Guidance for facet `effect/unstable/cluster/Envelope` focused on AP
 ## Starter example
 
 ```ts
-import { Envelope } from "effect/unstable/cluster/Envelope"
+import { Envelope } from "effect/unstable/cluster/Envelope";
 
-const value = Envelope.makeRequest()
-const next = Envelope.Encoded(value)
+const value = Envelope.makeRequest();
+const next = Envelope.Encoded(value);
 ```
 
 ## Common pitfalls

@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RunnerServer } from "effect/unstable/cluster/RunnerServer"
+import { RunnerServer } from "effect/unstable/cluster/RunnerServer";
 
-const value = RunnerServer.layer()
+const value = RunnerServer.layer();
 ```
 
 ## Test Anchors

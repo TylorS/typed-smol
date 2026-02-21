@@ -30,10 +30,10 @@ description: Guidance for facet `effect/unstable/cluster/RunnerAddress` focused 
 ## Starter example
 
 ```ts
-import { RunnerAddress } from "effect/unstable/cluster/RunnerAddress"
+import { RunnerAddress } from "effect/unstable/cluster/RunnerAddress";
 
-const value = RunnerAddress.make()
-const next = RunnerAddress.RunnerAddress(value)
+const value = RunnerAddress.make();
+const next = RunnerAddress.RunnerAddress(value);
 ```
 
 ## Common pitfalls

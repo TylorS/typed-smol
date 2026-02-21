@@ -20,12 +20,12 @@ Predicate and Refinement helpers for runtime checks, filtering, and type narrowi
 ## Starter Example
 
 ```ts
-import * as Predicate from "effect/Predicate"
+import * as Predicate from "effect/Predicate";
 
-const isPositive = (n: number) => n > 0
-const data = [2, -1, 3]
+const isPositive = (n: number) => n > 0;
+const data = [2, -1, 3];
 
-console.log(data.filter(isPositive))
+console.log(data.filter(isPositive));
 ```
 
 ## Test Anchors

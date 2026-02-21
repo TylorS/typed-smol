@@ -22,10 +22,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { AsyncResult } from "effect/unstable/reactivity/AsyncResult"
+import { AsyncResult } from "effect/unstable/reactivity/AsyncResult";
 
-const value = AsyncResult.fromExit()
-const next = AsyncResult.map(value)
+const value = AsyncResult.fromExit();
+const next = AsyncResult.map(value);
 ```
 
 ## Test Anchors

@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { FetchHttpClient } from "effect/unstable/http/FetchHttpClient"
+import { FetchHttpClient } from "effect/unstable/http/FetchHttpClient";
 
-const value = FetchHttpClient.layer()
+const value = FetchHttpClient.layer();
 ```
 
 ## Test Anchors

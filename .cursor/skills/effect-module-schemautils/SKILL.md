@@ -29,9 +29,9 @@ description: Guidance for `effect/SchemaUtils` focused on APIs like getNativeCla
 ## Starter example
 
 ```ts
-import { SchemaUtils } from "effect/SchemaUtils"
+import { SchemaUtils } from "effect/SchemaUtils";
 
-const value = SchemaUtils.getNativeClassSchema()
+const value = SchemaUtils.getNativeClassSchema();
 ```
 
 ## Common pitfalls

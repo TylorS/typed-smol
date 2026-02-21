@@ -11,8 +11,6 @@ export function sanitizeErrorMessage(message: string): string {
 
   const unixPath = /\/[\w./-]+\/[\w./-]+(?:\/[\w./-]*)*/g;
   const winPath = /[A-Za-z]:[\\/][\w.-]+(?:[\\/][\w.-]+)*/g;
-  let out = withoutStack
-    .replace(unixPath, "[path]")
-    .replace(winPath, "[path]");
+  let out = withoutStack.replace(unixPath, "[path]").replace(winPath, "[path]");
   return out.replace(/\s{2,}/g, " ").trim();
 }

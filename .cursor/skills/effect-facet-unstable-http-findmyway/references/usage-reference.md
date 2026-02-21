@@ -20,7 +20,7 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { FindMyWay } from "effect/unstable/http/FindMyWay"
+import { FindMyWay } from "effect/unstable/http/FindMyWay";
 
 // Inspect exports in references/api-reference.md
 ```

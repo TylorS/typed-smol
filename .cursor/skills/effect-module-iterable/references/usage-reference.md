@@ -20,19 +20,19 @@ This module provides utility functions for working with Iterables in TypeScript.
 ## Starter Example
 
 ```ts
-import { Iterable } from "effect"
+import { Iterable } from "effect";
 
 // Create iterables
-const numbers = Iterable.range(1, 5)
-const doubled = Iterable.map(numbers, (x) => x * 2)
-const filtered = Iterable.filter(doubled, (x) => x > 5)
+const numbers = Iterable.range(1, 5);
+const doubled = Iterable.map(numbers, (x) => x * 2);
+const filtered = Iterable.filter(doubled, (x) => x > 5);
 
-console.log(Array.from(filtered)) // [6, 8, 10]
+console.log(Array.from(filtered)); // [6, 8, 10]
 
 // Infinite iterables
-const fibonacci = Iterable.unfold([0, 1], ([a, b]) => [a, [b, a + b]])
-const first10 = Iterable.take(fibonacci, 10)
-console.log(Array.from(first10)) // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+const fibonacci = Iterable.unfold([0, 1], ([a, b]) => [a, [b, a + b]]);
+const first10 = Iterable.take(fibonacci, 10);
+console.log(Array.from(first10)); // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 ```
 
 ## Test Anchors

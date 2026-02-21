@@ -18,13 +18,13 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import type { Unify } from "effect"
+import type { Unify } from "effect";
 
 // The unifySymbol is used internally in Effect types
 // to enable automatic type unification
 declare const effect: {
-  readonly [Unify.unifySymbol]?: any
-}
+  readonly [Unify.unifySymbol]?: any;
+};
 ```
 
 ## Test Anchors

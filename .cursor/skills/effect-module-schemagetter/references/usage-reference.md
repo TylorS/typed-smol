@@ -19,16 +19,16 @@ Composable transformation primitives for the Effect Schema system.
 ## Starter Example
 
 ```ts
-import { Schema, SchemaGetter } from "effect"
+import { Schema, SchemaGetter } from "effect";
 
 const NumberFromString = Schema.String.pipe(
   Schema.decodeTo(Schema.Number, {
     decode: SchemaGetter.transform((s) => Number(s)),
-    encode: SchemaGetter.transform((n) => String(n))
-  })
-)
+    encode: SchemaGetter.transform((n) => String(n)),
+  }),
+);
 
-const result = Schema.decodeUnknownSync(NumberFromString)("42")
+const result = Schema.decodeUnknownSync(NumberFromString)("42");
 // result: 42
 ```
 

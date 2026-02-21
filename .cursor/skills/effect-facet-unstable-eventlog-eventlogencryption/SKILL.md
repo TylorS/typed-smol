@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/eventlog/EventLogEncryption` fo
 ## Starter example
 
 ```ts
-import { EventLogEncryption } from "effect/unstable/eventlog/EventLogEncryption"
+import { EventLogEncryption } from "effect/unstable/eventlog/EventLogEncryption";
 
-const value = EventLogEncryption.makeEncryptionSubtle()
+const value = EventLogEncryption.makeEncryptionSubtle();
 ```
 
 ## Common pitfalls

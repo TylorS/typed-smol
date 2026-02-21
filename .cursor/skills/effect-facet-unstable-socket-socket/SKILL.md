@@ -46,10 +46,10 @@ description: Guidance for facet `effect/unstable/socket/Socket` focused on APIs 
 ## Starter example
 
 ```ts
-import { Socket } from "effect/unstable/socket/Socket"
+import { Socket } from "effect/unstable/socket/Socket";
 
-const value = Socket.makeChannel()
-const next = Socket.toChannelMap(value)
+const value = Socket.makeChannel();
+const next = Socket.toChannelMap(value);
 ```
 
 ## Common pitfalls

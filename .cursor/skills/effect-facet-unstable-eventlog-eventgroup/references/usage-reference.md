@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EventGroup } from "effect/unstable/eventlog/EventGroup"
+import { EventGroup } from "effect/unstable/eventlog/EventGroup";
 
-const value = EventGroup.empty()
+const value = EventGroup.empty();
 ```
 
 ## Test Anchors

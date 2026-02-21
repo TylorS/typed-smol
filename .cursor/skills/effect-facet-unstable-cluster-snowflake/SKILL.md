@@ -44,9 +44,9 @@ description: Guidance for facet `effect/unstable/cluster/Snowflake` focused on A
 ## Starter example
 
 ```ts
-import { Snowflake } from "effect/unstable/cluster/Snowflake"
+import { Snowflake } from "effect/unstable/cluster/Snowflake";
 
-const value = Snowflake.make()
+const value = Snowflake.make();
 ```
 
 ## Common pitfalls

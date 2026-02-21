@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/observability/OtlpTracer` focus
 ## Starter example
 
 ```ts
-import { OtlpTracer } from "effect/unstable/observability/OtlpTracer"
+import { OtlpTracer } from "effect/unstable/observability/OtlpTracer";
 
-const value = OtlpTracer.make()
+const value = OtlpTracer.make();
 ```
 
 ## Common pitfalls

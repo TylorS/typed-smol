@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { AtomRegistry } from "effect/unstable/reactivity/AtomRegistry"
+import { AtomRegistry } from "effect/unstable/reactivity/AtomRegistry";
 
-const value = AtomRegistry.make()
-const next = AtomRegistry.getResult(value)
+const value = AtomRegistry.make();
+const next = AtomRegistry.getResult(value);
 ```
 
 ## Test Anchors

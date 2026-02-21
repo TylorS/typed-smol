@@ -46,21 +46,20 @@ description: Guidance for `effect/SubscriptionRef` focused on APIs like get, set
 ## Starter example
 
 ```ts
-import { Effect, Stream, SubscriptionRef } from "effect"
+import { Effect, Stream, SubscriptionRef } from "effect";
 
-const program = Effect.gen(function*() {
-  const ref = yield* SubscriptionRef.make(0)
+const program = Effect.gen(function* () {
+  const ref = yield* SubscriptionRef.make(0);
 
-  const stream = SubscriptionRef.changes(ref)
+  const stream = SubscriptionRef.changes(ref);
 
-  const fiber = yield* Stream.runForEach(
-    stream,
-    (value) => Effect.sync(() => console.log("Value:", value))
-  ).pipe(Effect.forkScoped)
+  const fiber = yield* Stream.runForEach(stream, (value) =>
+    Effect.sync(() => console.log("Value:", value)),
+  ).pipe(Effect.forkScoped);
 
-  yield* SubscriptionRef.set(ref, 1)
-  yield* SubscriptionRef.set(ref, 2)
-})
+  yield* SubscriptionRef.set(ref, 1);
+  yield* SubscriptionRef.set(ref, 2);
+});
 ```
 
 ## Common pitfalls

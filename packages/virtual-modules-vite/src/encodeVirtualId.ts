@@ -19,9 +19,7 @@ export function encodeVirtualId(id: string, importer: string): string {
 /**
  * Parse a virtual id produced by encodeVirtualId. Returns null if not a virtual id.
  */
-export function decodeVirtualId(
-  resolvedId: string,
-): { id: string; importer: string } | null {
+export function decodeVirtualId(resolvedId: string): { id: string; importer: string } | null {
   if (!resolvedId.startsWith(PREFIX)) {
     return null;
   }

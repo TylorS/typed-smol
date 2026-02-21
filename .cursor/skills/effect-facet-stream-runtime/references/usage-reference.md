@@ -21,16 +21,16 @@ runCollect/runDrain/sink execution. Module-specific APIs and usage patterns for 
 ## Starter Example
 
 ```ts
-import { Console, Effect, Stream } from "effect"
+import { Console, Effect, Stream } from "effect";
 
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   yield* Stream.make(1, 2, 3).pipe(
     Stream.map((n) => n * 2),
-    Stream.runForEach((n) => Console.log(n))
-  )
-})
+    Stream.runForEach((n) => Console.log(n)),
+  );
+});
 
-Effect.runPromise(program)
+Effect.runPromise(program);
 // Output:
 // 2
 // 4

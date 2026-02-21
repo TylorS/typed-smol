@@ -19,15 +19,15 @@ JSON Patch operations for transforming JSON documents.
 ## Starter Example
 
 ```ts
-import * as JsonPatch from "effect/JsonPatch"
+import * as JsonPatch from "effect/JsonPatch";
 
-const oldValue = { name: "Alice", age: 30 }
-const newValue = { name: "Alice", age: 31, city: "NYC" }
+const oldValue = { name: "Alice", age: 30 };
+const newValue = { name: "Alice", age: 31, city: "NYC" };
 
-const patch = JsonPatch.get(oldValue, newValue)
+const patch = JsonPatch.get(oldValue, newValue);
 // [{ op: "replace", path: "/age", value: 31 }, { op: "add", path: "/city", value: "NYC" }]
 
-const result = JsonPatch.apply(patch, oldValue)
+const result = JsonPatch.apply(patch, oldValue);
 // { name: "Alice", age: 31, city: "NYC" }
 ```
 

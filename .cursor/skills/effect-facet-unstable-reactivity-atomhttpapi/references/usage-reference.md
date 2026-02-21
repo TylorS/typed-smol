@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { AtomHttpApi } from "effect/unstable/reactivity/AtomHttpApi"
+import { AtomHttpApi } from "effect/unstable/reactivity/AtomHttpApi";
 
-const value = AtomHttpApi.Service()
+const value = AtomHttpApi.Service();
 ```
 
 ## Test Anchors

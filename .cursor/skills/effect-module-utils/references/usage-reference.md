@@ -19,16 +19,11 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import type { Utils } from "effect"
-import type * as Option from "effect/Option"
+import type { Utils } from "effect";
+import type * as Option from "effect/Option";
 
 // Variance defines the type parameter relationships
-declare const variance: Utils.Variance<
-  Option.OptionTypeLambda,
-  never,
-  never,
-  never
->
+declare const variance: Utils.Variance<Option.OptionTypeLambda, never, never, never>;
 ```
 
 ## Test Anchors

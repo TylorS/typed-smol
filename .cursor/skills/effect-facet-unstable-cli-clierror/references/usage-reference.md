@@ -20,25 +20,25 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { CliError } from "effect/unstable/cli"
+import { Effect } from "effect";
+import { CliError } from "effect/unstable/cli";
 
 const handleError = (error: unknown) => {
   if (CliError.isCliError(error)) {
-    console.log("CLI Error:", error.message)
-    return Effect.succeed("Handled CLI error")
+    console.log("CLI Error:", error.message);
+    return Effect.succeed("Handled CLI error");
   }
-  return Effect.fail("Unknown error")
-}
+  return Effect.fail("Unknown error");
+};
 
 // Example usage in error handling
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   const result = yield* Effect.try({
     try: () => ({ success: true }),
-    catch: (error) => error
-  })
-  handleError(result)
-})
+    catch: (error) => error,
+  });
+  handleError(result);
+});
 ```
 
 ## Test Anchors

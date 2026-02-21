@@ -33,9 +33,9 @@ description: Guidance for facet `effect/unstable/reactivity/Hydration` focused o
 ## Starter example
 
 ```ts
-import { Hydration } from "effect/unstable/reactivity/Hydration"
+import { Hydration } from "effect/unstable/reactivity/Hydration";
 
-const value = Hydration.hydrate()
+const value = Hydration.hydrate();
 ```
 
 ## Common pitfalls

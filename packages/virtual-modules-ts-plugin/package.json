@@ -5,8 +5,8 @@
   "main": "dist/plugin.js",
   "exports": {
     ".": {
-      "require": "./dist/plugin.js",
-      "types": "./dist/plugin.d.ts"
+      "types": "./dist/plugin.d.ts",
+      "require": "./dist/plugin.js"
     }
   },
   "publishConfig": {
@@ -21,13 +21,13 @@
   "dependencies": {
     "@typed/virtual-modules": "workspace:*"
   },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
-  },
   "devDependencies": {
     "@types/node": "^25.3.0",
     "tsup": "^8.5.1",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
   }
 }

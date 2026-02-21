@@ -41,9 +41,9 @@ description: Guidance for facet `effect/unstable/observability/OtlpResource` foc
 ## Starter example
 
 ```ts
-import { OtlpResource } from "effect/unstable/observability/OtlpResource"
+import { OtlpResource } from "effect/unstable/observability/OtlpResource";
 
-const value = OtlpResource.make()
+const value = OtlpResource.make();
 ```
 
 ## Common pitfalls

@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlClient } from "effect/unstable/sql/SqlClient"
+import { SqlClient } from "effect/unstable/sql/SqlClient";
 
-const value = SqlClient.make()
+const value = SqlClient.make();
 ```
 
 ## Test Anchors

@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RunnerHealth } from "effect/unstable/cluster/RunnerHealth"
+import { RunnerHealth } from "effect/unstable/cluster/RunnerHealth";
 
-const value = RunnerHealth.makeK8s()
-const next = RunnerHealth.RunnerHealth(value)
+const value = RunnerHealth.makeK8s();
+const next = RunnerHealth.RunnerHealth(value);
 ```
 
 ## Test Anchors

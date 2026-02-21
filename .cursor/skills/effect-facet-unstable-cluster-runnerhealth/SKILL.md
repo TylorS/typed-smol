@@ -34,10 +34,10 @@ description: Guidance for facet `effect/unstable/cluster/RunnerHealth` focused o
 ## Starter example
 
 ```ts
-import { RunnerHealth } from "effect/unstable/cluster/RunnerHealth"
+import { RunnerHealth } from "effect/unstable/cluster/RunnerHealth";
 
-const value = RunnerHealth.makeK8s()
-const next = RunnerHealth.RunnerHealth(value)
+const value = RunnerHealth.makeK8s();
+const next = RunnerHealth.RunnerHealth(value);
 ```
 
 ## Common pitfalls

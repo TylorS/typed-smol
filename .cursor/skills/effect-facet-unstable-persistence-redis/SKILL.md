@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/persistence/Redis` focused on A
 ## Starter example
 
 ```ts
-import { Redis } from "effect/unstable/persistence/Redis"
+import { Redis } from "effect/unstable/persistence/Redis";
 
-const value = Redis.make()
+const value = Redis.make();
 ```
 
 ## Common pitfalls

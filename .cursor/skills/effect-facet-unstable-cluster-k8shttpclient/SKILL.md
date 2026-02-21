@@ -35,9 +35,9 @@ description: Guidance for facet `effect/unstable/cluster/K8sHttpClient` focused 
 ## Starter example
 
 ```ts
-import { K8sHttpClient } from "effect/unstable/cluster/K8sHttpClient"
+import { K8sHttpClient } from "effect/unstable/cluster/K8sHttpClient";
 
-const value = K8sHttpClient.makeGetPods()
+const value = K8sHttpClient.makeGetPods();
 ```
 
 ## Common pitfalls

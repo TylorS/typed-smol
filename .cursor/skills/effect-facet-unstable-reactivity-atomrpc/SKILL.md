@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/reactivity/AtomRpc` focused on 
 ## Starter example
 
 ```ts
-import { AtomRpc } from "effect/unstable/reactivity/AtomRpc"
+import { AtomRpc } from "effect/unstable/reactivity/AtomRpc";
 
-const value = AtomRpc.Service()
+const value = AtomRpc.Service();
 ```
 
 ## Common pitfalls

@@ -20,29 +20,33 @@ The `Prompt` module provides several data structures to simplify creating and co
 ## Starter Example
 
 ```ts
-import { Prompt } from "effect/unstable/ai"
+import { Prompt } from "effect/unstable/ai";
 
 // Create a structured conversation
 const conversation = Prompt.make([
   {
     role: "system",
-    content: "You are a helpful assistant specialized in mathematics."
+    content: "You are a helpful assistant specialized in mathematics.",
   },
   {
     role: "user",
-    content: [{
-      type: "text",
-      text: "What is the derivative of x²?"
-    }]
+    content: [
+      {
+        type: "text",
+        text: "What is the derivative of x²?",
+      },
+    ],
   },
   {
     role: "assistant",
-    content: [{
-      type: "text",
-      text: "The derivative of x² is 2x."
-    }]
-  }
-])
+    content: [
+      {
+        type: "text",
+        text: "The derivative of x² is 2x.",
+      },
+    ],
+  },
+]);
 ```
 
 ## Test Anchors

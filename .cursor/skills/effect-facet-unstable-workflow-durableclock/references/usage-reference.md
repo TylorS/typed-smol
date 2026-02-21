@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { DurableClock } from "effect/unstable/workflow/DurableClock"
+import { DurableClock } from "effect/unstable/workflow/DurableClock";
 
-const value = DurableClock.make()
+const value = DurableClock.make();
 ```
 
 ## Test Anchors

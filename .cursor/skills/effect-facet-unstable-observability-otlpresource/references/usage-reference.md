@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { OtlpResource } from "effect/unstable/observability/OtlpResource"
+import { OtlpResource } from "effect/unstable/observability/OtlpResource";
 
-const value = OtlpResource.make()
+const value = OtlpResource.make();
 ```
 
 ## Test Anchors

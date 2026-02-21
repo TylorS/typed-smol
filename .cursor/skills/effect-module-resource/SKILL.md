@@ -33,9 +33,9 @@ description: Guidance for `effect/Resource` focused on APIs like get, isResource
 ## Starter example
 
 ```ts
-import { Resource } from "effect/Resource"
+import { Resource } from "effect/Resource";
 
-const value = Resource.get()
+const value = Resource.get();
 ```
 
 ## Common pitfalls

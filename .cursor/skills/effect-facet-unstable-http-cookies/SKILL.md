@@ -47,10 +47,10 @@ description: Guidance for facet `effect/unstable/http/Cookies` focused on APIs l
 ## Starter example
 
 ```ts
-import { Cookies } from "effect/unstable/http/Cookies"
+import { Cookies } from "effect/unstable/http/Cookies";
 
-const value = Cookies.empty()
-const next = Cookies.get(value)
+const value = Cookies.empty();
+const next = Cookies.get(value);
 ```
 
 ## Common pitfalls

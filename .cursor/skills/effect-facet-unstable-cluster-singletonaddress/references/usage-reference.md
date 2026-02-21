@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SingletonAddress } from "effect/unstable/cluster/SingletonAddress"
+import { SingletonAddress } from "effect/unstable/cluster/SingletonAddress";
 
-const value = SingletonAddress.SingletonAddress()
+const value = SingletonAddress.SingletonAddress();
 ```
 
 ## Test Anchors

@@ -42,9 +42,9 @@ description: Guidance for facet `effect/unstable/persistence/PersistedQueue` foc
 ## Starter example
 
 ```ts
-import { PersistedQueue } from "effect/unstable/persistence/PersistedQueue"
+import { PersistedQueue } from "effect/unstable/persistence/PersistedQueue";
 
-const value = PersistedQueue.make()
+const value = PersistedQueue.make();
 ```
 
 ## Common pitfalls

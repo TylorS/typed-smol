@@ -45,10 +45,10 @@ description: Guidance for `effect/SchemaParser` focused on APIs like run, Parser
 ## Starter example
 
 ```ts
-import { SchemaParser } from "effect/SchemaParser"
+import { SchemaParser } from "effect/SchemaParser";
 
-const value = SchemaParser.makeEffect()
-const next = SchemaParser.run(value)
+const value = SchemaParser.makeEffect();
+const next = SchemaParser.run(value);
 ```
 
 ## Common pitfalls

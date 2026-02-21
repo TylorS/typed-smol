@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/observability/OtlpExporter` foc
 ## Starter example
 
 ```ts
-import { OtlpExporter } from "effect/unstable/observability/OtlpExporter"
+import { OtlpExporter } from "effect/unstable/observability/OtlpExporter";
 
-const value = OtlpExporter.make()
+const value = OtlpExporter.make();
 ```
 
 ## Common pitfalls

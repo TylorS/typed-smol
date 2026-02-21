@@ -47,9 +47,9 @@ description: Guidance for facet `effect/unstable/cli/Argument` focused on APIs l
 ## Starter example
 
 ```ts
-import { Argument } from "effect/unstable/cli"
+import { Argument } from "effect/unstable/cli";
 
-const filename = Argument.string("filename")
+const filename = Argument.string("filename");
 ```
 
 ## Common pitfalls

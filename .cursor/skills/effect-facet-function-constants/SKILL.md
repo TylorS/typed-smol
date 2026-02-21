@@ -46,11 +46,11 @@ description: Guidance for facet `effect/Function#constants` focused on APIs like
 ## Starter example
 
 ```ts
-import type { FunctionTypeLambda } from "effect/Function"
-import type { Kind } from "effect/HKT"
+import type { FunctionTypeLambda } from "effect/Function";
+import type { Kind } from "effect/HKT";
 
 // Create a function type using the type lambda
-type StringToNumber = Kind<FunctionTypeLambda, string, never, never, number>
+type StringToNumber = Kind<FunctionTypeLambda, string, never, never, number>;
 // Equivalent to: (a: string) => number
 ```
 

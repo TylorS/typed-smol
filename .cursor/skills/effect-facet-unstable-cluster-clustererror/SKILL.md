@@ -36,10 +36,10 @@ description: Guidance for facet `effect/unstable/cluster/ClusterError` focused o
 ## Starter example
 
 ```ts
-import { ClusterError } from "effect/unstable/cluster/ClusterError"
+import { ClusterError } from "effect/unstable/cluster/ClusterError";
 
-const value = ClusterError.RunnerNotRegistered()
-const next = ClusterError.RunnerUnavailable(value)
+const value = ClusterError.RunnerNotRegistered();
+const next = ClusterError.RunnerUnavailable(value);
 ```
 
 ## Common pitfalls

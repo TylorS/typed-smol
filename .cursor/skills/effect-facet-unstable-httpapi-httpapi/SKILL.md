@@ -36,9 +36,9 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApi` focused on API
 ## Starter example
 
 ```ts
-import { HttpApi } from "effect/unstable/httpapi/HttpApi"
+import { HttpApi } from "effect/unstable/httpapi/HttpApi";
 
-const value = HttpApi.make()
+const value = HttpApi.make();
 ```
 
 ## Common pitfalls

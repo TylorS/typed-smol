@@ -20,20 +20,20 @@ The `Response` module provides data structures to represent responses from large
 ## Starter Example
 
 ```ts
-import { Response } from "effect/unstable/ai"
+import { Response } from "effect/unstable/ai";
 
 // Create a simple text response part
 const textResponse = Response.makePart("text", {
-  text: "The weather is sunny today!"
-})
+  text: "The weather is sunny today!",
+});
 
 // Create a tool call response part
 const toolCallResponse = Response.makePart("tool-call", {
   id: "call_123",
   name: "get_weather",
   params: { city: "San Francisco" },
-  providerExecuted: false
-})
+  providerExecuted: false,
+});
 ```
 
 ## Test Anchors

@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { PersistedCache } from "effect/unstable/persistence/PersistedCache"
+import { PersistedCache } from "effect/unstable/persistence/PersistedCache";
 
-const value = PersistedCache.make()
+const value = PersistedCache.make();
 ```
 
 ## Test Anchors

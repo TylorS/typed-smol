@@ -47,10 +47,10 @@ description: Guidance for facet `effect/unstable/http/HttpClientRequest` focused
 ## Starter example
 
 ```ts
-import { HttpClientRequest } from "effect/unstable/http/HttpClientRequest"
+import { HttpClientRequest } from "effect/unstable/http/HttpClientRequest";
 
-const value = HttpClientRequest.make()
-const next = HttpClientRequest.get(value)
+const value = HttpClientRequest.make();
+const next = HttpClientRequest.get(value);
 ```
 
 ## Common pitfalls

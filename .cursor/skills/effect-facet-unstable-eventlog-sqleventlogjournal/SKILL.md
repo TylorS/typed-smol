@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/eventlog/SqlEventLogJournal` fo
 ## Starter example
 
 ```ts
-import { SqlEventLogJournal } from "effect/unstable/eventlog/SqlEventLogJournal"
+import { SqlEventLogJournal } from "effect/unstable/eventlog/SqlEventLogJournal";
 
-const value = SqlEventLogJournal.make()
+const value = SqlEventLogJournal.make();
 ```
 
 ## Common pitfalls

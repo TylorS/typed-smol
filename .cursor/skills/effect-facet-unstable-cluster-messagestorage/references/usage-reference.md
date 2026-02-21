@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { MessageStorage } from "effect/unstable/cluster/MessageStorage"
+import { MessageStorage } from "effect/unstable/cluster/MessageStorage";
 
-const value = MessageStorage.make()
-const next = MessageStorage.Encoded(value)
+const value = MessageStorage.make();
+const next = MessageStorage.Encoded(value);
 ```
 
 ## Test Anchors

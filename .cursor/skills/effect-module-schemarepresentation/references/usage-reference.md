@@ -19,21 +19,21 @@ Serializable intermediate representation (IR) of Effect Schema types.
 ## Starter Example
 
 ```ts
-import { Schema, SchemaRepresentation } from "effect"
+import { Schema, SchemaRepresentation } from "effect";
 
 const Person = Schema.Struct({
   name: Schema.String,
-  age: Schema.Int
-})
+  age: Schema.Int,
+});
 
 // Schema AST → Document
-const doc = SchemaRepresentation.fromAST(Person.ast)
+const doc = SchemaRepresentation.fromAST(Person.ast);
 
 // Document → JSON Schema
-const jsonSchema = SchemaRepresentation.toJsonSchemaDocument(doc)
+const jsonSchema = SchemaRepresentation.toJsonSchemaDocument(doc);
 
 // Document → runtime Schema
-const reconstructed = SchemaRepresentation.toSchema(doc)
+const reconstructed = SchemaRepresentation.toSchema(doc);
 ```
 
 ## Test Anchors

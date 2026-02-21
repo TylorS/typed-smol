@@ -22,10 +22,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpClientRequest } from "effect/unstable/http/HttpClientRequest"
+import { HttpClientRequest } from "effect/unstable/http/HttpClientRequest";
 
-const value = HttpClientRequest.make()
-const next = HttpClientRequest.get(value)
+const value = HttpClientRequest.make();
+const next = HttpClientRequest.get(value);
 ```
 
 ## Test Anchors

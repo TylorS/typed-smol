@@ -30,9 +30,9 @@ description: Guidance for `effect/unstable/encoding` focused on APIs like Sse, N
 ## Starter example
 
 ```ts
-import { encoding } from "effect/unstable/encoding"
+import { encoding } from "effect/unstable/encoding";
 
-const value = encoding.Sse()
+const value = encoding.Sse();
 ```
 
 ## Common pitfalls

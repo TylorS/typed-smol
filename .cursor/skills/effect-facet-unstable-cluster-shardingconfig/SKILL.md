@@ -35,9 +35,9 @@ description: Guidance for facet `effect/unstable/cluster/ShardingConfig` focused
 ## Starter example
 
 ```ts
-import { ShardingConfig } from "effect/unstable/cluster/ShardingConfig"
+import { ShardingConfig } from "effect/unstable/cluster/ShardingConfig";
 
-const value = ShardingConfig.layer()
+const value = ShardingConfig.layer();
 ```
 
 ## Common pitfalls

@@ -45,23 +45,23 @@ description: Guidance for `effect/Ref` focused on APIs like get, set, and make. 
 ## Starter example
 
 ```ts
-import { Effect, Ref } from "effect"
+import { Effect, Ref } from "effect";
 
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   // Create a ref with initial value
-  const counter = yield* Ref.make(0)
+  const counter = yield* Ref.make(0);
 
   // Atomic operations
-  yield* Ref.update(counter, (n) => n + 1)
-  yield* Ref.update(counter, (n) => n * 2)
+  yield* Ref.update(counter, (n) => n + 1);
+  yield* Ref.update(counter, (n) => n * 2);
 
-  const value = yield* Ref.get(counter)
-  console.log(value) // 2
+  const value = yield* Ref.get(counter);
+  console.log(value); // 2
 
   // Atomic modify with return value
-  const previous = yield* Ref.getAndSet(counter, 100)
-  console.log(previous) // 2
-})
+  const previous = yield* Ref.getAndSet(counter, 100);
+  console.log(previous); // 2
+});
 ```
 
 ## Common pitfalls

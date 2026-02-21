@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/observability/OtlpLogger` focus
 ## Starter example
 
 ```ts
-import { OtlpLogger } from "effect/unstable/observability/OtlpLogger"
+import { OtlpLogger } from "effect/unstable/observability/OtlpLogger";
 
-const value = OtlpLogger.make()
+const value = OtlpLogger.make();
 ```
 
 ## Common pitfalls

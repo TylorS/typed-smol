@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Otlp } from "effect/unstable/observability/Otlp"
+import { Otlp } from "effect/unstable/observability/Otlp";
 
-const value = Otlp.layer()
+const value = Otlp.layer();
 ```
 
 ## Test Anchors

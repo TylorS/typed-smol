@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { DurableDeferred } from "effect/unstable/workflow/DurableDeferred"
+import { DurableDeferred } from "effect/unstable/workflow/DurableDeferred";
 
-const value = DurableDeferred.make()
-const next = DurableDeferred.TokenParsed(value)
+const value = DurableDeferred.make();
+const next = DurableDeferred.TokenParsed(value);
 ```
 
 ## Test Anchors

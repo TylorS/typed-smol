@@ -39,9 +39,9 @@ description: Guidance for facet `effect/unstable/http/HttpClientResponse` focuse
 ## Starter example
 
 ```ts
-import { HttpClientResponse } from "effect/unstable/http/HttpClientResponse"
+import { HttpClientResponse } from "effect/unstable/http/HttpClientResponse";
 
-const value = HttpClientResponse.fromWeb()
+const value = HttpClientResponse.fromWeb();
 ```
 
 ## Common pitfalls

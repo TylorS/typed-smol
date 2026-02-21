@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/cluster/TestRunner` focused on 
 ## Starter example
 
 ```ts
-import { TestRunner } from "effect/unstable/cluster/TestRunner"
+import { TestRunner } from "effect/unstable/cluster/TestRunner";
 
-const value = TestRunner.layer()
+const value = TestRunner.layer();
 ```
 
 ## Common pitfalls

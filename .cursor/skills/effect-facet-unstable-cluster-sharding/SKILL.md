@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/cluster/Sharding` focused on AP
 ## Starter example
 
 ```ts
-import { Sharding } from "effect/unstable/cluster/Sharding"
+import { Sharding } from "effect/unstable/cluster/Sharding";
 
-const value = Sharding.layer()
+const value = Sharding.layer();
 ```
 
 ## Common pitfalls

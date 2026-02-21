@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SocketRunner } from "effect/unstable/cluster/SocketRunner"
+import { SocketRunner } from "effect/unstable/cluster/SocketRunner";
 
-const value = SocketRunner.layer()
+const value = SocketRunner.layer();
 ```
 
 ## Test Anchors

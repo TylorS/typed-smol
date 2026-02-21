@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpApiSwagger } from "effect/unstable/httpapi/HttpApiSwagger"
+import { HttpApiSwagger } from "effect/unstable/httpapi/HttpApiSwagger";
 
-const value = HttpApiSwagger.layer()
+const value = HttpApiSwagger.layer();
 ```
 
 ## Test Anchors

@@ -21,12 +21,12 @@ This module provides utility functions and type class instances for working with
 ## Starter Example
 
 ```ts
-import { BigDecimal } from "effect"
+import { BigDecimal } from "effect";
 
-const d = BigDecimal.fromNumberUnsafe(123.45)
+const d = BigDecimal.fromNumberUnsafe(123.45);
 
-d.value // 12345n
-d.scale // 2
+d.value; // 12345n
+d.scale; // 2
 ```
 
 ## Test Anchors

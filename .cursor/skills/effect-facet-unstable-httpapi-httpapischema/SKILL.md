@@ -47,10 +47,10 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiSchema` focused 
 ## Starter example
 
 ```ts
-import { HttpApiSchema } from "effect/unstable/httpapi/HttpApiSchema"
+import { HttpApiSchema } from "effect/unstable/httpapi/HttpApiSchema";
 
-const value = HttpApiSchema.Empty()
-const next = HttpApiSchema.getPayloadEncoding(value)
+const value = HttpApiSchema.Empty();
+const next = HttpApiSchema.getPayloadEncoding(value);
 ```
 
 ## Common pitfalls

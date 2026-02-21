@@ -15,21 +15,23 @@ Add to `tsconfig.json`:
 ```json
 {
   "compilerOptions": {
-    "plugins": [{
-      "name": "@typed/virtual-modules-ts-plugin",
-      "plugins": ["./virtual/foo.cjs"],
-      "debounceMs": 50
-    }]
+    "plugins": [
+      {
+        "name": "@typed/virtual-modules-ts-plugin",
+        "plugins": ["./virtual/foo.cjs"],
+        "debounceMs": 50
+      }
+    ]
   }
 }
 ```
 
 ### Config options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `plugins` | `string[]` | `[]` | Specifiers (paths or package names) for virtual module plugins. Loaded from project root via `NodeModulePluginLoader`. |
-| `debounceMs` | `number` | `50` | Debounce rapid watch events (ms). |
+| Option       | Type       | Default | Description                                                                                                            |
+| ------------ | ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `plugins`    | `string[]` | `[]`    | Specifiers (paths or package names) for virtual module plugins. Loaded from project root via `NodeModulePluginLoader`. |
+| `debounceMs` | `number`   | `50`    | Debounce rapid watch events (ms).                                                                                      |
 
 ## Plugin format
 

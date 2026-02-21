@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  encodeVirtualId,
-  decodeVirtualId,
-  isVirtualId,
-} from "./encodeVirtualId.js";
+import { encodeVirtualId, decodeVirtualId, isVirtualId } from "./encodeVirtualId.js";
 
 describe("encodeVirtualId / decodeVirtualId", () => {
   it("round-trips id and importer", () => {

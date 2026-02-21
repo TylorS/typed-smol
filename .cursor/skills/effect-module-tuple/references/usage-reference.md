@@ -19,19 +19,13 @@ Utilities for creating, accessing, transforming, and comparing fixed-length arra
 ## Starter Example
 
 ```ts
-import { pipe, Tuple } from "effect"
+import { pipe, Tuple } from "effect";
 
-const point = Tuple.make(10, 20, "red")
+const point = Tuple.make(10, 20, "red");
 
-const result = pipe(
-  point,
-  Tuple.evolve([
-    (x) => x * 2,
-    (y) => y * 2
-  ])
-)
+const result = pipe(point, Tuple.evolve([(x) => x * 2, (y) => y * 2]));
 
-console.log(result) // [20, 40, "red"]
+console.log(result); // [20, 40, "red"]
 ```
 
 ## Test Anchors

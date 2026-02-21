@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpServerRespondable } from "effect/unstable/http/HttpServerRespondable"
+import { HttpServerRespondable } from "effect/unstable/http/HttpServerRespondable";
 
-const value = HttpServerRespondable.isRespondable()
+const value = HttpServerRespondable.isRespondable();
 ```
 
 ## Test Anchors

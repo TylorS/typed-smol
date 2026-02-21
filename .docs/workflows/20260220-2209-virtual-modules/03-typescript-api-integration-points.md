@@ -5,6 +5,7 @@
 ### 1. Objective
 
 Provide precise TypeScript interfaces and methods for implementing virtual module adapters in TS 5.9-ish environments, covering:
+
 - Language Service / tsserver plugin integration (editor)
 - CompilerHost integration for tsc-like type-checking (CLI)
 - Watch/invalidation integration for both paths
@@ -27,12 +28,12 @@ Provide precise TypeScript interfaces and methods for implementing virtual modul
 
 **Available via `PluginCreateInfo` (passed to plugin `create(info)`):**
 
-| Property | Type | Purpose |
-|----------|------|---------|
-| `info.languageService` | `ts.LanguageService` | The LS instance to wrap (decorator target) |
-| `info.project` | `ts.server.Project` | Project context; access to `projectService` |
-| `info.projectService` | `ts.server.ProjectService` | Logger (`logger.info()`), project management |
-| `info.config` | `object` | Plugin config from `tsconfig.json` `plugins` entry |
+| Property               | Type                       | Purpose                                            |
+| ---------------------- | -------------------------- | -------------------------------------------------- |
+| `info.languageService` | `ts.LanguageService`       | The LS instance to wrap (decorator target)         |
+| `info.project`         | `ts.server.Project`        | Project context; access to `projectService`        |
+| `info.projectService`  | `ts.server.ProjectService` | Logger (`logger.info()`), project management       |
+| `info.config`          | `object`                   | Plugin config from `tsconfig.json` `plugins` entry |
 
 **Relevant LS / Host Methods (for virtual module resolution/source):**
 
@@ -71,7 +72,7 @@ interface VirtualModuleHostOverrides {
   readFile(fileName: string, encoding?: string): string | undefined;
   getScriptSnapshot?(fileName: string): ts.IScriptSnapshot | undefined;
   getScriptVersion?(fileName: string): string;
-  getScriptFileNames?(): string[];  // Include virtual paths when they are in the program
+  getScriptFileNames?(): string[]; // Include virtual paths when they are in the program
 }
 ```
 
@@ -105,6 +106,7 @@ watchDirectory(path: string, callback: ts.DirectoryWatcherCallback, recursive?: 
 ```
 
 **Caveats:**
+
 - `getScriptFileNames` must include virtual module paths if they are to be part of the LS program.
 - The LS host must cooperate with resolution so imports of virtual IDs resolve to virtual paths the host can serve.
 - Reference resolution walks imports; for `import x from 'virtual:id'`, resolution must produce a path the host recognizes and for which it returns content.
@@ -117,22 +119,31 @@ watchDirectory(path: string, callback: ts.DirectoryWatcherCallback, recursive?: 
 
 **Methods to override (from `types.ts`):**
 
-| Method | Signature (approximate) | Why needed |
-|--------|-------------------------|------------|
-| `resolveModuleNames` | `(moduleNames: string[], containingFile: string, reusedNames: string[] \| undefined, redirectedReference: ResolvedProjectReference \| undefined, options: CompilerOptions, containingSourceFile?: SourceFile) => (ResolvedModule \| undefined)[]` | Map virtual IDs to resolved file paths. Return `{ resolvedFileName: virtualPath }` for virtual modules; `undefined` for unresolved. |
-| `getSourceFile` | `(fileName: string, languageVersionOrOptions: ScriptTarget \| CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean) => SourceFile \| undefined` | Return `ts.createSourceFile(fileName, virtualSource, ...)` when `fileName` is a virtual module path. |
-| `fileExists` (from `ModuleResolutionHost`) | `(fileName: string) => boolean` | Return `true` for virtual paths so resolution and `getSourceFile` are used. |
-| `readFile` (from `ModuleResolutionHost`) | `(fileName: string) => string \| undefined` | Return virtual source for virtual paths (used when resolution reads file content). |
+| Method                                     | Signature (approximate)                                                                                                                                                                                                                           | Why needed                                                                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `resolveModuleNames`                       | `(moduleNames: string[], containingFile: string, reusedNames: string[] \| undefined, redirectedReference: ResolvedProjectReference \| undefined, options: CompilerOptions, containingSourceFile?: SourceFile) => (ResolvedModule \| undefined)[]` | Map virtual IDs to resolved file paths. Return `{ resolvedFileName: virtualPath }` for virtual modules; `undefined` for unresolved. |
+| `getSourceFile`                            | `(fileName: string, languageVersionOrOptions: ScriptTarget \| CreateSourceFileOptions, onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean) => SourceFile \| undefined`                                                      | Return `ts.createSourceFile(fileName, virtualSource, ...)` when `fileName` is a virtual module path.                                |
+| `fileExists` (from `ModuleResolutionHost`) | `(fileName: string) => boolean`                                                                                                                                                                                                                   | Return `true` for virtual paths so resolution and `getSourceFile` are used.                                                         |
+| `readFile` (from `ModuleResolutionHost`)   | `(fileName: string) => string \| undefined`                                                                                                                                                                                                       | Return virtual source for virtual paths (used when resolution reads file content).                                                  |
 
 **Exact `CompilerHost` snippet (from `types.ts` ~8130):**
 
 ```ts
 export interface CompilerHost extends ModuleResolutionHost {
-  getSourceFile(fileName: string, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions,
-    onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined;
-  resolveModuleNames?(moduleNames: string[], containingFile: string, reusedNames: string[] | undefined,
-    redirectedReference: ResolvedProjectReference | undefined, options: CompilerOptions,
-    containingSourceFile?: SourceFile): (ResolvedModule | undefined)[];
+  getSourceFile(
+    fileName: string,
+    languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions,
+    onError?: (message: string) => void,
+    shouldCreateNewSourceFile?: boolean,
+  ): SourceFile | undefined;
+  resolveModuleNames?(
+    moduleNames: string[],
+    containingFile: string,
+    reusedNames: string[] | undefined,
+    redirectedReference: ResolvedProjectReference | undefined,
+    options: CompilerOptions,
+    containingSourceFile?: SourceFile,
+  ): (ResolvedModule | undefined)[];
   // ... other methods
 }
 ```
@@ -171,10 +182,10 @@ export interface ResolvedModule {
 
 `WatchCompilerHostOfConfigFile` (and the host from `createWatchCompilerHost`) includes:
 
-| Method | Signature (approximate) | Purpose |
-|--------|-------------------------|---------|
-| `watchFile` | `(path: string, callback: FileWatcherCallback, pollingInterval?: number, options?: WatchOptions) => FileWatcher` | Register callback for file changes; use for file-level dependency invalidation. |
-| `watchDirectory` | `(path: string, callback: DirectoryWatcherCallback, recursive?: boolean, options?: WatchOptions) => FileWatcher` | Register callback for directory changes; use for glob-style dependencies. |
+| Method           | Signature (approximate)                                                                                          | Purpose                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `watchFile`      | `(path: string, callback: FileWatcherCallback, pollingInterval?: number, options?: WatchOptions) => FileWatcher` | Register callback for file changes; use for file-level dependency invalidation. |
+| `watchDirectory` | `(path: string, callback: DirectoryWatcherCallback, recursive?: boolean, options?: WatchOptions) => FileWatcher` | Register callback for directory changes; use for glob-style dependencies.       |
 
 **LS / tsserver path**
 
@@ -195,6 +206,7 @@ watchDirectory(path: string, callback: DirectoryWatcherCallback, recursive?: boo
 4. **Debouncing**: Combine rapid events (e.g. via `setTimeout`) before invalidating to avoid excessive recomputation.
 
 **Caveats:**
+
 - The LS plugin does not directly own `ServerHost`; watch registration must happen wherever the host is controlled (e.g. custom LS host or host wrapper).
 - `WatchCompilerHost` for CLI watch mode is created by the tool; the adapter can wrap `createWatchCompilerHost` to inject a host with custom `resolveModuleNames`, `getSourceFile`, and `watchFile` / `watchDirectory`.
 
@@ -203,11 +215,13 @@ watchDirectory(path: string, callback: DirectoryWatcherCallback, recursive?: boo
 #### 3.4 Relative File and `directory(relativeGlobs)` Integration
 
 The TypeInfo API’s `file(relativePath, options)` and `directory(relativeGlobs, options)` produce paths that are used as:
+
 - Watch targets
 - Keys for caching
 - Inputs to program/checker (via the host)
 
 **Path resolution:**
+
 - Resolve relative paths from `baseDir` (e.g. importer dir, project root).
 - `directory()` results must be stable, de-duplicated, and sorted for cache keys and watch descriptors.
 

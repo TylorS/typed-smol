@@ -44,22 +44,22 @@ description: Guidance for `effect/Cache` focused on APIs like get, set, and make
 ## Starter example
 
 ```ts
-import { Cache, Effect } from "effect"
+import { Cache, Effect } from "effect";
 
 // Basic cache with string keys and number values
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   const cache = yield* Cache.make<string, number>({
     capacity: 100,
-    lookup: (key: string) => Effect.succeed(key.length)
-  })
+    lookup: (key: string) => Effect.succeed(key.length),
+  });
 
   // Cache operations
-  const value1 = yield* Cache.get(cache, "hello") // 5
-  const value2 = yield* Cache.get(cache, "world") // 5
-  const value3 = yield* Cache.get(cache, "hello") // 5 (cached)
+  const value1 = yield* Cache.get(cache, "hello"); // 5
+  const value2 = yield* Cache.get(cache, "world"); // 5
+  const value3 = yield* Cache.get(cache, "hello"); // 5 (cached)
 
-  return [value1, value2, value3]
-})
+  return [value1, value2, value3];
+});
 ```
 
 ## Common pitfalls

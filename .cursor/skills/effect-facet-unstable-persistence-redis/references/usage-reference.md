@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Redis } from "effect/unstable/persistence/Redis"
+import { Redis } from "effect/unstable/persistence/Redis";
 
-const value = Redis.make()
+const value = Redis.make();
 ```
 
 ## Test Anchors

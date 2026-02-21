@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RunnerAddress } from "effect/unstable/cluster/RunnerAddress"
+import { RunnerAddress } from "effect/unstable/cluster/RunnerAddress";
 
-const value = RunnerAddress.make()
-const next = RunnerAddress.RunnerAddress(value)
+const value = RunnerAddress.make();
+const next = RunnerAddress.RunnerAddress(value);
 ```
 
 ## Test Anchors

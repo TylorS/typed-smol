@@ -19,10 +19,10 @@ Design: "pretty good" persistency. Real updates copy only the path; unrelated br
 ## Starter Example
 
 ```ts
-import { Optic } from "effect/Optic"
+import { Optic } from "effect/Optic";
 
-const value = Optic.makeIso()
-const next = Optic.getAll(value)
+const value = Optic.makeIso();
+const next = Optic.getAll(value);
 ```
 
 ## Test Anchors

@@ -20,20 +20,20 @@ Structured validation errors produced by the Effect Schema system.
 ## Starter Example
 
 ```ts
-import { Schema, SchemaIssue } from "effect"
+import { Schema, SchemaIssue } from "effect";
 
 const Person = Schema.Struct({
   name: Schema.String,
-  age: Schema.Number
-})
+  age: Schema.Number,
+});
 
 try {
-  Schema.decodeUnknownSync(Person)({ name: 42 })
+  Schema.decodeUnknownSync(Person)({ name: 42 });
 } catch (e) {
   if (Schema.isSchemaError(e)) {
-    console.log(SchemaIssue.isIssue(e.issue))
+    console.log(SchemaIssue.isIssue(e.issue));
     // true
-    console.log(String(e.issue))
+    console.log(String(e.issue));
     // formatted error message
   }
 }

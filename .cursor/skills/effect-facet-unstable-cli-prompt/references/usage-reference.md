@@ -20,24 +20,22 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { Prompt } from "effect/unstable/cli"
+import { Effect } from "effect";
+import { Prompt } from "effect/unstable/cli";
 
 const username = Prompt.text({
-  message: "Enter your username: "
-})
+  message: "Enter your username: ",
+});
 
 const password = Prompt.password({
   message: "Enter your password: ",
   validate: (value) =>
-    value.length === 0
-      ? Effect.fail("Password cannot be empty")
-      : Effect.succeed(value)
-})
+    value.length === 0 ? Effect.fail("Password cannot be empty") : Effect.succeed(value),
+});
 
-const allWithTuple = Prompt.all([username, password])
+const allWithTuple = Prompt.all([username, password]);
 
-const allWithRecord = Prompt.all({ username, password })
+const allWithRecord = Prompt.all({ username, password });
 ```
 
 ## Test Anchors

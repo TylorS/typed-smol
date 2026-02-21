@@ -45,10 +45,10 @@ description: Guidance for facet `effect/unstable/cluster/MessageStorage` focused
 ## Starter example
 
 ```ts
-import { MessageStorage } from "effect/unstable/cluster/MessageStorage"
+import { MessageStorage } from "effect/unstable/cluster/MessageStorage";
 
-const value = MessageStorage.make()
-const next = MessageStorage.Encoded(value)
+const value = MessageStorage.make();
+const next = MessageStorage.Encoded(value);
 ```
 
 ## Common pitfalls

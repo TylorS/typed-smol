@@ -38,10 +38,10 @@ description: Guidance for facet `effect/unstable/encoding/Msgpack` focused on AP
 ## Starter example
 
 ```ts
-import { Msgpack } from "effect/unstable/encoding/Msgpack"
+import { Msgpack } from "effect/unstable/encoding/Msgpack";
 
-const value = Msgpack.decode()
-const next = Msgpack.encode(value)
+const value = Msgpack.decode();
+const next = Msgpack.encode(value);
 ```
 
 ## Common pitfalls

@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ClusterWorkflowEngine } from "effect/unstable/cluster/ClusterWorkflowEngine"
+import { ClusterWorkflowEngine } from "effect/unstable/cluster/ClusterWorkflowEngine";
 
-const value = ClusterWorkflowEngine.make()
+const value = ClusterWorkflowEngine.make();
 ```
 
 ## Test Anchors

@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcSerialization } from "effect/unstable/rpc/RpcSerialization"
+import { RpcSerialization } from "effect/unstable/rpc/RpcSerialization";
 
-const value = RpcSerialization.Parser()
+const value = RpcSerialization.Parser();
 ```
 
 ## Test Anchors

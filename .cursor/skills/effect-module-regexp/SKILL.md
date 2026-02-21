@@ -29,14 +29,14 @@ description: Guidance for `effect/RegExp` focused on APIs like isRegExp, escape,
 ## Starter example
 
 ```ts
-import { RegExp } from "effect"
+import { RegExp } from "effect";
 
 // Create a regular expression using Effect's RegExp constructor
-const pattern = new RegExp.RegExp("hello", "i")
+const pattern = new RegExp.RegExp("hello", "i");
 
 // Test the pattern
-console.log(pattern.test("Hello World")) // true
-console.log(pattern.test("goodbye")) // false
+console.log(pattern.test("Hello World")); // true
+console.log(pattern.test("goodbye")); // false
 ```
 
 ## Common pitfalls

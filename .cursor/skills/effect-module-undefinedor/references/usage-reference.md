@@ -19,10 +19,10 @@ This module provides small, allocation-free utilities for working with values of
 ## Starter Example
 
 ```ts
-import { UndefinedOr } from "effect/UndefinedOr"
+import { UndefinedOr } from "effect/UndefinedOr";
 
-const value = UndefinedOr.makeReducer()
-const next = UndefinedOr.map(value)
+const value = UndefinedOr.makeReducer();
+const next = UndefinedOr.map(value);
 ```
 
 ## Test Anchors

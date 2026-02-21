@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/ai/AnthropicStructuredOutput` f
 ## Starter example
 
 ```ts
-import { AnthropicStructuredOutput } from "effect/unstable/ai/AnthropicStructuredOutput"
+import { AnthropicStructuredOutput } from "effect/unstable/ai/AnthropicStructuredOutput";
 
-const value = AnthropicStructuredOutput.toCodecAnthropic()
+const value = AnthropicStructuredOutput.toCodecAnthropic();
 ```
 
 ## Common pitfalls

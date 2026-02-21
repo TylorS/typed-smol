@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/observability/Otlp` focused on 
 ## Starter example
 
 ```ts
-import { Otlp } from "effect/unstable/observability/Otlp"
+import { Otlp } from "effect/unstable/observability/Otlp";
 
-const value = Otlp.layer()
+const value = Otlp.layer();
 ```
 
 ## Common pitfalls

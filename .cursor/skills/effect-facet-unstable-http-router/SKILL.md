@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/http#router` focused on APIs li
 ## Starter example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.Template()
+const value = http.Template();
 ```
 
 ## Common pitfalls

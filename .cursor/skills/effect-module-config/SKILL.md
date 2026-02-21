@@ -46,19 +46,19 @@ description: Guidance for `effect/Config` focused on APIs like map, fail, and ma
 ## Starter example
 
 ```ts
-import { Config, ConfigProvider, Effect, Schema } from "effect"
+import { Config, ConfigProvider, Effect, Schema } from "effect";
 
 const AppConfig = Config.schema(
   Schema.Struct({
     host: Schema.String,
-    port: Schema.Int
+    port: Schema.Int,
   }),
-  "app"
-)
+  "app",
+);
 
 const provider = ConfigProvider.fromEnv({
-  env: { app_host: "localhost", app_port: "8080" }
-})
+  env: { app_host: "localhost", app_port: "8080" },
+});
 
 // Effect.runSync(AppConfig.parse(provider))
 // { host: "localhost", port: 8080 }

@@ -44,9 +44,9 @@ description: Guidance for facet `effect/unstable/persistence/Persistable` focuse
 ## Starter example
 
 ```ts
-import { Persistable } from "effect/unstable/persistence/Persistable"
+import { Persistable } from "effect/unstable/persistence/Persistable";
 
-const value = Persistable.Services()
+const value = Persistable.Services();
 ```
 
 ## Common pitfalls

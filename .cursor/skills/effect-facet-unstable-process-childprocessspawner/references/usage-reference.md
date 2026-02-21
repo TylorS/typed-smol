@@ -21,9 +21,9 @@ A module providing a generic service interface for spawning child processes.
 ## Starter Example
 
 ```ts
-import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner";
 
-const value = ChildProcessSpawner.makeHandle()
+const value = ChildProcessSpawner.makeHandle();
 ```
 
 ## Test Anchors

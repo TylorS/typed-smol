@@ -41,22 +41,22 @@ description: Guidance for `effect/TxSemaphore` focused on APIs like make, isTxSe
 ## Starter example
 
 ```ts
-import { Effect, TxSemaphore } from "effect"
+import { Effect, TxSemaphore } from "effect";
 
 // Create a semaphore with 3 permits for managing concurrent database connections
-const program = Effect.gen(function*() {
-  const dbSemaphore = yield* TxSemaphore.make(3)
+const program = Effect.gen(function* () {
+  const dbSemaphore = yield* TxSemaphore.make(3);
 
   // Acquire a permit before accessing the database
-  yield* TxSemaphore.acquire(dbSemaphore)
-  console.log("Database connection acquired")
+  yield* TxSemaphore.acquire(dbSemaphore);
+  console.log("Database connection acquired");
 
   // Perform database operations...
 
   // Release the permit when done
-  yield* TxSemaphore.release(dbSemaphore)
-  console.log("Database connection released")
-})
+  yield* TxSemaphore.release(dbSemaphore);
+  console.log("Database connection released");
+});
 ```
 
 ## Common pitfalls

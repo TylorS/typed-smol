@@ -45,9 +45,9 @@ description: Guidance for facet `effect/unstable/persistence/Persistence` focuse
 ## Starter example
 
 ```ts
-import { Persistence } from "effect/unstable/persistence/Persistence"
+import { Persistence } from "effect/unstable/persistence/Persistence";
 
-const value = Persistence.layer()
+const value = Persistence.layer();
 ```
 
 ## Common pitfalls

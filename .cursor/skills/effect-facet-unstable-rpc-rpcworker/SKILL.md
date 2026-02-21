@@ -33,10 +33,10 @@ description: Guidance for facet `effect/unstable/rpc/RpcWorker` focused on APIs 
 ## Starter example
 
 ```ts
-import { RpcWorker } from "effect/unstable/rpc/RpcWorker"
+import { RpcWorker } from "effect/unstable/rpc/RpcWorker";
 
-const value = RpcWorker.makeInitialMessage()
-const next = RpcWorker.Encoded(value)
+const value = RpcWorker.makeInitialMessage();
+const next = RpcWorker.Encoded(value);
 ```
 
 ## Common pitfalls

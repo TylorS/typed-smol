@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpTraceContext } from "effect/unstable/http/HttpTraceContext"
+import { HttpTraceContext } from "effect/unstable/http/HttpTraceContext";
 
-const value = HttpTraceContext.fromHeaders()
+const value = HttpTraceContext.fromHeaders();
 ```
 
 ## Test Anchors

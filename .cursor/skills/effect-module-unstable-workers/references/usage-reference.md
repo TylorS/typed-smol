@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { workers } from "effect/unstable/workers"
+import { workers } from "effect/unstable/workers";
 
-const value = workers.Worker()
-const next = workers.WorkerRunner(value)
+const value = workers.Worker();
+const next = workers.WorkerRunner(value);
 ```
 
 ## Test Anchors

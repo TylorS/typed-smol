@@ -20,15 +20,15 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { DateTime } from "effect"
+import { DateTime } from "effect";
 
 // Create a UTC DateTime
-const utc: DateTime.DateTime = DateTime.nowUnsafe()
+const utc: DateTime.DateTime = DateTime.nowUnsafe();
 
 // Create a zoned DateTime
 const zoned: DateTime.DateTime = DateTime.makeZonedUnsafe(new Date(), {
-  timeZone: "Europe/London"
-})
+  timeZone: "Europe/London",
+});
 ```
 
 ## Test Anchors

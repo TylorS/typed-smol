@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EventJournal } from "effect/unstable/eventlog/EventJournal"
+import { EventJournal } from "effect/unstable/eventlog/EventJournal";
 
-const value = EventJournal.makeMemory()
+const value = EventJournal.makeMemory();
 ```
 
 ## Test Anchors

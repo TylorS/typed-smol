@@ -21,30 +21,30 @@ The `Metric` module provides a comprehensive system for collecting, aggregating,
 ## Starter Example
 
 ```ts
-import { Effect, Metric } from "effect"
+import { Effect, Metric } from "effect";
 
 // Create metrics
 const requestCount = Metric.counter("http_requests_total", {
-  description: "Total number of HTTP requests"
-})
+  description: "Total number of HTTP requests",
+});
 
 const responseTime = Metric.histogram("http_response_time", {
   description: "HTTP response time in milliseconds",
-  boundaries: Metric.linearBoundaries({ start: 0, width: 50, count: 20 })
-})
+  boundaries: Metric.linearBoundaries({ start: 0, width: 50, count: 20 }),
+});
 
 // Use metrics in your application
-const handleRequest = Effect.gen(function*() {
-  yield* Metric.update(requestCount, 1)
+const handleRequest = Effect.gen(function* () {
+  yield* Metric.update(requestCount, 1);
 
-  const startTime = yield* Effect.clockWith((clock) => clock.currentTimeMillis)
+  const startTime = yield* Effect.clockWith((clock) => clock.currentTimeMillis);
 
   // Process request...
-  yield* Effect.sleep("100 millis")
+  yield* Effect.sleep("100 millis");
 
-  const endTime = yield* Effect.clockWith((clock) => clock.currentTimeMillis)
-  yield* Metric.update(responseTime, endTime - startTime)
-})
+  const endTime = yield* Effect.clockWith((clock) => clock.currentTimeMillis);
+  yield* Metric.update(responseTime, endTime - startTime);
+});
 ```
 
 ## Test Anchors

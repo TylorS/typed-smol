@@ -42,9 +42,9 @@ description: Guidance for facet `effect/unstable/http/HttpServer` focused on API
 ## Starter example
 
 ```ts
-import { HttpServer } from "effect/unstable/http/HttpServer"
+import { HttpServer } from "effect/unstable/http/HttpServer";
 
-const value = HttpServer.make()
+const value = HttpServer.make();
 ```
 
 ## Common pitfalls

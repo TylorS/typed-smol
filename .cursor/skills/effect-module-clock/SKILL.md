@@ -30,21 +30,21 @@ description: Guidance for `effect/Clock` focused on APIs like Clock, clockWith, 
 ## Starter example
 
 ```ts
-import { Clock, Effect } from "effect"
+import { Clock, Effect } from "effect";
 
 // Get current time in milliseconds
-const getCurrentTime = Clock.currentTimeMillis
+const getCurrentTime = Clock.currentTimeMillis;
 
 // Sleep for 1 second
-const sleep1Second = Effect.sleep("1 seconds")
+const sleep1Second = Effect.sleep("1 seconds");
 
 // Measure execution time
-const measureTime = Effect.gen(function*() {
-  const start = yield* Clock.currentTimeMillis
-  yield* Effect.sleep("100 millis")
-  const end = yield* Clock.currentTimeMillis
-  return end - start
-})
+const measureTime = Effect.gen(function* () {
+  const start = yield* Clock.currentTimeMillis;
+  yield* Effect.sleep("100 millis");
+  const end = yield* Clock.currentTimeMillis;
+  return end - start;
+});
 ```
 
 ## Common pitfalls

@@ -32,13 +32,13 @@ description: Guidance for `effect/Formatter` focused on APIs like format, Format
 ## Starter example
 
 ```ts
-import { Formatter } from "effect"
+import { Formatter } from "effect";
 
-const obj = { name: "Alice", scores: [100, 97] }
-console.log(Formatter.format(obj))
+const obj = { name: "Alice", scores: [100, 97] };
+console.log(Formatter.format(obj));
 // {"name":"Alice","scores":[100,97]}
 
-console.log(Formatter.format(obj, { space: 2 }))
+console.log(Formatter.format(obj, { space: 2 }));
 // {
 //   "name": "Alice",
 //   "scores": [

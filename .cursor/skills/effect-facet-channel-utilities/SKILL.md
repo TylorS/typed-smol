@@ -37,13 +37,13 @@ description: Guidance for facet `effect/Channel#utilities` focused on APIs like 
 ## Starter example
 
 ```ts
-import { Channel } from "effect"
+import { Channel } from "effect";
 
 // Simple channel that outputs numbers
-const numberChannel = Channel.succeed(42)
+const numberChannel = Channel.succeed(42);
 
 // Transform channel that doubles values
-const doubleChannel = Channel.map(numberChannel, (n) => n * 2)
+const doubleChannel = Channel.map(numberChannel, (n) => n * 2);
 
 // Running the channel would output: 84
 ```

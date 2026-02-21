@@ -41,9 +41,9 @@ description: Guidance for facet `effect/unstable/rpc/RpcSerialization` focused o
 ## Starter example
 
 ```ts
-import { RpcSerialization } from "effect/unstable/rpc/RpcSerialization"
+import { RpcSerialization } from "effect/unstable/rpc/RpcSerialization";
 
-const value = RpcSerialization.Parser()
+const value = RpcSerialization.Parser();
 ```
 
 ## Common pitfalls

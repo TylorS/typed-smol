@@ -65,11 +65,17 @@ export class PluginManager implements VirtualModuleResolver {
   resolveModule(options: ResolveVirtualModuleOptions): VirtualModuleResolution {
     const idResult = validateNonEmptyString(options.id, "options.id");
     if (!idResult.ok) {
-      return { status: "error", diagnostic: createDiagnostic("invalid-options", "", idResult.reason) };
+      return {
+        status: "error",
+        diagnostic: createDiagnostic("invalid-options", "", idResult.reason),
+      };
     }
     const importerResult = validateNonEmptyString(options.importer, "options.importer");
     if (!importerResult.ok) {
-      return { status: "error", diagnostic: createDiagnostic("invalid-options", "", importerResult.reason) };
+      return {
+        status: "error",
+        diagnostic: createDiagnostic("invalid-options", "", importerResult.reason),
+      };
     }
 
     const createSession = options.createTypeInfoApiSession;
@@ -77,7 +83,10 @@ export class PluginManager implements VirtualModuleResolver {
     for (const plugin of this.#plugins) {
       const nameResult = validateNonEmptyString(plugin.name, "Plugin name");
       if (!nameResult.ok) {
-        return { status: "error", diagnostic: createDiagnostic("invalid-options", "", nameResult.reason) };
+        return {
+          status: "error",
+          diagnostic: createDiagnostic("invalid-options", "", nameResult.reason),
+        };
       }
       const shouldResolve = this.#safeShouldResolve(plugin, options.id, options.importer);
 

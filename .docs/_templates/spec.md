@@ -17,7 +17,7 @@ flowchart TD
 ## Requirement Traceability
 
 | requirement_id | design_element | notes |
-| --- | --- | --- |
+| -------------- | -------------- | ----- |
 
 ## References Consulted
 

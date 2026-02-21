@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Etag } from "effect/unstable/http/Etag"
+import { Etag } from "effect/unstable/http/Etag";
 
-const value = Etag.layer()
+const value = Etag.layer();
 ```
 
 ## Test Anchors

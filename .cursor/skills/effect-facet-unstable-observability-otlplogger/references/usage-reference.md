@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { OtlpLogger } from "effect/unstable/observability/OtlpLogger"
+import { OtlpLogger } from "effect/unstable/observability/OtlpLogger";
 
-const value = OtlpLogger.make()
+const value = OtlpLogger.make();
 ```
 
 ## Test Anchors

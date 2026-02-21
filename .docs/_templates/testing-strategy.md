@@ -7,7 +7,7 @@
 ## Critical Path Scenarios
 
 | ts_id | scenario | maps_to_fr_nfr | maps_to_ac | blocking |
-| --- | --- | --- | --- | --- |
+| ----- | -------- | -------------- | ---------- | -------- |
 
 ## Coverage Targets
 
@@ -18,6 +18,6 @@
 ## Dependency Readiness Matrix
 
 | dep | status | unblock_action |
-| --- | --- | --- |
+| --- | ------ | -------------- |
 
 ## Acceptance Failure Policy

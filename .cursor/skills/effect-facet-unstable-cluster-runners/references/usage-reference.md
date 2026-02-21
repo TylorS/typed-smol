@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Runners } from "effect/unstable/cluster/Runners"
+import { Runners } from "effect/unstable/cluster/Runners";
 
-const value = Runners.make()
-const next = Runners.Runners(value)
+const value = Runners.make();
+const next = Runners.Runners(value);
 ```
 
 ## Test Anchors

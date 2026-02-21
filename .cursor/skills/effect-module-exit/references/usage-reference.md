@@ -21,16 +21,16 @@ Represents the outcome of an Effect computation as a plain, synchronously inspec
 ## Starter Example
 
 ```ts
-import { Exit } from "effect"
+import { Exit } from "effect";
 
-const success = Exit.succeed(42)
-const failure = Exit.fail("not found")
+const success = Exit.succeed(42);
+const failure = Exit.fail("not found");
 
 const message = Exit.match(success, {
   onSuccess: (value) => `Got: ${value}`,
-  onFailure: () => "Failed"
-})
-console.log(message) // "Got: 42"
+  onFailure: () => "Failed",
+});
+console.log(message); // "Got: 42"
 ```
 
 ## Test Anchors

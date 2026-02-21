@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/sql/SqlResolver` focused on API
 ## Starter example
 
 ```ts
-import { SqlResolver } from "effect/unstable/sql/SqlResolver"
+import { SqlResolver } from "effect/unstable/sql/SqlResolver";
 
-const value = SqlResolver.void()
+const value = SqlResolver.void();
 ```
 
 ## Common pitfalls

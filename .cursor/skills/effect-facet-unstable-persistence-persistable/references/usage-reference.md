@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Persistable } from "effect/unstable/persistence/Persistable"
+import { Persistable } from "effect/unstable/persistence/Persistable";
 
-const value = Persistable.Services()
+const value = Persistable.Services();
 ```
 
 ## Test Anchors

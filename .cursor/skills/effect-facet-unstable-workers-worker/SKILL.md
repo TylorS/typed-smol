@@ -37,9 +37,9 @@ description: Guidance for facet `effect/unstable/workers/Worker` focused on APIs
 ## Starter example
 
 ```ts
-import { Worker } from "effect/unstable/workers/Worker"
+import { Worker } from "effect/unstable/workers/Worker";
 
-const value = Worker.makePlatform()
+const value = Worker.makePlatform();
 ```
 
 ## Common pitfalls

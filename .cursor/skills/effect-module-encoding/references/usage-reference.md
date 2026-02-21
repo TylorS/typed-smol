@@ -19,14 +19,14 @@ Encoding & decoding for Base64 (RFC4648), Base64Url, and Hex.
 ## Starter Example
 
 ```ts
-import { Encoding } from "effect"
+import { Encoding } from "effect";
 
 // Encode a string
-console.log(Encoding.encodeBase64("hello")) // "aGVsbG8="
+console.log(Encoding.encodeBase64("hello")); // "aGVsbG8="
 
 // Encode binary data
-const bytes = new Uint8Array([72, 101, 108, 108, 111])
-console.log(Encoding.encodeBase64(bytes)) // "SGVsbG8="
+const bytes = new Uint8Array([72, 101, 108, 108, 111]);
+console.log(Encoding.encodeBase64(bytes)); // "SGVsbG8="
 ```
 
 ## Test Anchors

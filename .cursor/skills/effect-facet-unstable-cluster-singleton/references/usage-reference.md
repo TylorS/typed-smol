@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Singleton } from "effect/unstable/cluster/Singleton"
+import { Singleton } from "effect/unstable/cluster/Singleton";
 
-const value = Singleton.make()
+const value = Singleton.make();
 ```
 
 ## Test Anchors

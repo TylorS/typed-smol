@@ -46,10 +46,10 @@ description: Guidance for facet `effect/unstable/workflow/Workflow` focused on A
 ## Starter example
 
 ```ts
-import { Workflow } from "effect/unstable/workflow/Workflow"
+import { Workflow } from "effect/unstable/workflow/Workflow";
 
-const value = Workflow.make()
-const next = Workflow.ResultEncoded(value)
+const value = Workflow.make();
+const next = Workflow.ResultEncoded(value);
 ```
 
 ## Common pitfalls

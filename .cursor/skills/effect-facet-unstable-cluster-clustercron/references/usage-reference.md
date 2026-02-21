@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ClusterCron } from "effect/unstable/cluster/ClusterCron"
+import { ClusterCron } from "effect/unstable/cluster/ClusterCron";
 
-const value = ClusterCron.make()
+const value = ClusterCron.make();
 ```
 
 ## Test Anchors

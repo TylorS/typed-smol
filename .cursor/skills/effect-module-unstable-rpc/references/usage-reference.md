@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { rpc } from "effect/unstable/rpc"
+import { rpc } from "effect/unstable/rpc";
 
-const value = rpc.Rpc()
+const value = rpc.Rpc();
 ```
 
 ## Test Anchors

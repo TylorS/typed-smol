@@ -37,9 +37,9 @@ description: Guidance for facet `effect/unstable/http/Template` focused on APIs 
 ## Starter example
 
 ```ts
-import { Template } from "effect/unstable/http/Template"
+import { Template } from "effect/unstable/http/Template";
 
-const value = Template.make()
+const value = Template.make();
 ```
 
 ## Common pitfalls

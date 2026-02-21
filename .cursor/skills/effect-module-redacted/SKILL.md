@@ -35,11 +35,11 @@ description: Guidance for `effect/Redacted` focused on APIs like make, makeEquiv
 ## Starter example
 
 ```ts
-import { Redacted } from "effect"
+import { Redacted } from "effect";
 
 // Create a redacted value to protect sensitive information
-const apiKey = Redacted.make("secret-key")
-const userPassword = Redacted.make("user-password")
+const apiKey = Redacted.make("secret-key");
+const userPassword = Redacted.make("user-password");
 
 // TypeScript will infer the types as Redacted<string>
 ```

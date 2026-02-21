@@ -20,9 +20,9 @@ Provides codec transformations for OpenAI structured output.
 ## Starter Example
 
 ```ts
-import { OpenAiStructuredOutput } from "effect/unstable/ai/OpenAiStructuredOutput"
+import { OpenAiStructuredOutput } from "effect/unstable/ai/OpenAiStructuredOutput";
 
-const value = OpenAiStructuredOutput.toCodecOpenAI()
+const value = OpenAiStructuredOutput.toCodecOpenAI();
 ```
 
 ## Test Anchors

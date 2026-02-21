@@ -21,15 +21,15 @@ The `Tokenizer` module provides tokenization and text truncation capabilities fo
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { Tokenizer } from "effect/unstable/ai"
+import { Effect } from "effect";
+import { Tokenizer } from "effect/unstable/ai";
 
-const tokenizeText = Effect.gen(function*() {
-  const tokenizer = yield* Tokenizer.Tokenizer
-  const tokens = yield* tokenizer.tokenize("Hello, world!")
-  console.log(`Token count: ${tokens.length}`)
-  return tokens
-})
+const tokenizeText = Effect.gen(function* () {
+  const tokenizer = yield* Tokenizer.Tokenizer;
+  const tokens = yield* tokenizer.tokenize("Hello, world!");
+  console.log(`Token count: ${tokens.length}`);
+  return tokens;
+});
 ```
 
 ## Test Anchors

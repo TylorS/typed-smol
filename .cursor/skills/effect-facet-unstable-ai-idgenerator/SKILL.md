@@ -35,19 +35,16 @@ description: Guidance for facet `effect/unstable/ai/IdGenerator` focused on APIs
 ## Starter example
 
 ```ts
-import { Effect } from "effect"
-import { IdGenerator } from "effect/unstable/ai"
+import { Effect } from "effect";
+import { IdGenerator } from "effect/unstable/ai";
 
 // Using the default ID generator
-const program = Effect.gen(function*() {
-  const idGen = yield* IdGenerator.IdGenerator
-  const toolCallId = yield* idGen.generateId()
-  console.log(toolCallId) // "id_A7xK9mP2qR5tY8uV"
-  return toolCallId
-}).pipe(Effect.provideService(
-  IdGenerator.IdGenerator,
-  IdGenerator.defaultIdGenerator
-))
+const program = Effect.gen(function* () {
+  const idGen = yield* IdGenerator.IdGenerator;
+  const toolCallId = yield* idGen.generateId();
+  console.log(toolCallId); // "id_A7xK9mP2qR5tY8uV"
+  return toolCallId;
+}).pipe(Effect.provideService(IdGenerator.IdGenerator, IdGenerator.defaultIdGenerator));
 ```
 
 ## Common pitfalls

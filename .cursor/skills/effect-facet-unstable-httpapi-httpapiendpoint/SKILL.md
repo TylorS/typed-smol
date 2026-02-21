@@ -47,10 +47,10 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiEndpoint` focuse
 ## Starter example
 
 ```ts
-import { HttpApiEndpoint } from "effect/unstable/httpapi/HttpApiEndpoint"
+import { HttpApiEndpoint } from "effect/unstable/httpapi/HttpApiEndpoint";
 
-const value = HttpApiEndpoint.make()
-const next = HttpApiEndpoint.get(value)
+const value = HttpApiEndpoint.make();
+const next = HttpApiEndpoint.get(value);
 ```
 
 ## Common pitfalls

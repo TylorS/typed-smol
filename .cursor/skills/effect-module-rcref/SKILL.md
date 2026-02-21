@@ -32,27 +32,27 @@ description: Guidance for `effect/RcRef` focused on APIs like get, make, and RcR
 ## Starter example
 
 ```ts
-import { Effect, RcRef } from "effect"
+import { Effect, RcRef } from "effect";
 
 // Create an RcRef for a database connection
 const createConnectionRef = (connectionString: string) =>
   RcRef.make({
     acquire: Effect.acquireRelease(
       Effect.succeed(`Connected to ${connectionString}`),
-      (connection) => Effect.log(`Closing connection: ${connection}`)
-    )
-  })
+      (connection) => Effect.log(`Closing connection: ${connection}`),
+    ),
+  });
 
 // Use the RcRef in multiple operations
-const program = Effect.gen(function*() {
-  const connectionRef = yield* createConnectionRef("postgres://localhost")
+const program = Effect.gen(function* () {
+  const connectionRef = yield* createConnectionRef("postgres://localhost");
 
   // Multiple gets will share the same connection
-  const connection1 = yield* RcRef.get(connectionRef)
-  const connection2 = yield* RcRef.get(connectionRef)
+  const connection1 = yield* RcRef.get(connectionRef);
+  const connection2 = yield* RcRef.get(connectionRef);
 
-  return [connection1, connection2]
-})
+  return [connection1, connection2];
+});
 ```
 
 ## Common pitfalls

@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlRunnerStorage } from "effect/unstable/cluster/SqlRunnerStorage"
+import { SqlRunnerStorage } from "effect/unstable/cluster/SqlRunnerStorage";
 
-const value = SqlRunnerStorage.make()
+const value = SqlRunnerStorage.make();
 ```
 
 ## Test Anchors

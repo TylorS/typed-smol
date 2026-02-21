@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EventLogServer } from "effect/unstable/eventlog/EventLogServer"
+import { EventLogServer } from "effect/unstable/eventlog/EventLogServer";
 
-const value = EventLogServer.makeHandler()
+const value = EventLogServer.makeHandler();
 ```
 
 ## Test Anchors

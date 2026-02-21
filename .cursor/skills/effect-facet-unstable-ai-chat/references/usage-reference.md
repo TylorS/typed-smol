@@ -21,22 +21,22 @@ The `Chat` module provides a stateful conversation interface for AI language mod
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { Chat } from "effect/unstable/ai"
+import { Effect } from "effect";
+import { Chat } from "effect/unstable/ai";
 
 // Create a new chat session
-const program = Effect.gen(function*() {
-  const chat = yield* Chat.empty
+const program = Effect.gen(function* () {
+  const chat = yield* Chat.empty;
 
   // Send a message and get response
   const response = yield* chat.generateText({
-    prompt: "Hello! What can you help me with?"
-  })
+    prompt: "Hello! What can you help me with?",
+  });
 
-  console.log(response.content)
+  console.log(response.content);
 
-  return response
-})
+  return response;
+});
 ```
 
 ## Test Anchors

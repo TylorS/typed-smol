@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/eventlog/SqlEventLogServer` foc
 ## Starter example
 
 ```ts
-import { SqlEventLogServer } from "effect/unstable/eventlog/SqlEventLogServer"
+import { SqlEventLogServer } from "effect/unstable/eventlog/SqlEventLogServer";
 
-const value = SqlEventLogServer.makeStorage()
+const value = SqlEventLogServer.makeStorage();
 ```
 
 ## Common pitfalls

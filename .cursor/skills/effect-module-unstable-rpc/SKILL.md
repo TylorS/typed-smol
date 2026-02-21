@@ -39,9 +39,9 @@ description: Guidance for `effect/unstable/rpc` focused on APIs like Rpc, Utils,
 ## Starter example
 
 ```ts
-import { rpc } from "effect/unstable/rpc"
+import { rpc } from "effect/unstable/rpc";
 
-const value = rpc.Rpc()
+const value = rpc.Rpc();
 ```
 
 ## Common pitfalls

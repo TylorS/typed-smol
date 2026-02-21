@@ -19,10 +19,10 @@ This module provides small, allocation-free utilities for working with values of
 ## Starter Example
 
 ```ts
-import { NullOr } from "effect/NullOr"
+import { NullOr } from "effect/NullOr";
 
-const value = NullOr.makeReducer()
-const next = NullOr.map(value)
+const value = NullOr.makeReducer();
+const next = NullOr.map(value);
 ```
 
 ## Test Anchors

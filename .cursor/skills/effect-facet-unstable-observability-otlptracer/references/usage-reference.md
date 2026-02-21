@@ -22,9 +22,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { OtlpTracer } from "effect/unstable/observability/OtlpTracer"
+import { OtlpTracer } from "effect/unstable/observability/OtlpTracer";
 
-const value = OtlpTracer.make()
+const value = OtlpTracer.make();
 ```
 
 ## Test Anchors

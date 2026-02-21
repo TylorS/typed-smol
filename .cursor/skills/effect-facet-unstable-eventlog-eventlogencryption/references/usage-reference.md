@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EventLogEncryption } from "effect/unstable/eventlog/EventLogEncryption"
+import { EventLogEncryption } from "effect/unstable/eventlog/EventLogEncryption";
 
-const value = EventLogEncryption.makeEncryptionSubtle()
+const value = EventLogEncryption.makeEncryptionSubtle();
 ```
 
 ## Test Anchors

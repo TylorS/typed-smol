@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Workflow } from "effect/unstable/workflow/Workflow"
+import { Workflow } from "effect/unstable/workflow/Workflow";
 
-const value = Workflow.make()
-const next = Workflow.ResultEncoded(value)
+const value = Workflow.make();
+const next = Workflow.ResultEncoded(value);
 ```
 
 ## Test Anchors

@@ -45,17 +45,17 @@ description: Guidance for `effect/Request` focused on APIs like of, fail, and su
 ## Starter example
 
 ```ts
-import type { Request } from "effect"
+import type { Request } from "effect";
 
 // Define a request that fetches a user by ID
 interface GetUser extends Request.Request<string, Error> {
-  readonly _tag: "GetUser"
-  readonly id: number
+  readonly _tag: "GetUser";
+  readonly id: number;
 }
 
 // Define a request that fetches all users
 interface GetAllUsers extends Request.Request<ReadonlyArray<string>, Error> {
-  readonly _tag: "GetAllUsers"
+  readonly _tag: "GetAllUsers";
 }
 ```
 

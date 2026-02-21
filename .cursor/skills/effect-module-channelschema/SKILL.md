@@ -33,10 +33,10 @@ description: Guidance for `effect/ChannelSchema` focused on APIs like decode, en
 ## Starter example
 
 ```ts
-import { ChannelSchema } from "effect/ChannelSchema"
+import { ChannelSchema } from "effect/ChannelSchema";
 
-const value = ChannelSchema.decode()
-const next = ChannelSchema.encode(value)
+const value = ChannelSchema.decode();
+const next = ChannelSchema.encode(value);
 ```
 
 ## Common pitfalls

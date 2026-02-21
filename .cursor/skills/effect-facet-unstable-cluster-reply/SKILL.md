@@ -39,10 +39,10 @@ description: Guidance for facet `effect/unstable/cluster/Reply` focused on APIs 
 ## Starter example
 
 ```ts
-import { Reply } from "effect/unstable/cluster/Reply"
+import { Reply } from "effect/unstable/cluster/Reply";
 
-const value = Reply.Encoded()
-const next = Reply.ChunkEncoded(value)
+const value = Reply.Encoded();
+const next = Reply.ChunkEncoded(value);
 ```
 
 ## Common pitfalls

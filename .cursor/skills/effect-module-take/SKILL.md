@@ -28,9 +28,9 @@ description: Guidance for `effect/Take` focused on APIs like Take and toPull. Lo
 ## Starter example
 
 ```ts
-import { Take } from "effect/Take"
+import { Take } from "effect/Take";
 
-const value = Take.Take()
+const value = Take.Take();
 ```
 
 ## Common pitfalls

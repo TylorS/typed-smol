@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { WorkflowEngine } from "effect/unstable/workflow/WorkflowEngine"
+import { WorkflowEngine } from "effect/unstable/workflow/WorkflowEngine";
 
-const value = WorkflowEngine.makeUnsafe()
-const next = WorkflowEngine.Encoded(value)
+const value = WorkflowEngine.makeUnsafe();
+const next = WorkflowEngine.Encoded(value);
 ```
 
 ## Test Anchors

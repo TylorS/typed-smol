@@ -37,9 +37,9 @@ description: Guidance for facet `effect/unstable/rpc/RpcGroup` focused on APIs l
 ## Starter example
 
 ```ts
-import { RpcGroup } from "effect/unstable/rpc/RpcGroup"
+import { RpcGroup } from "effect/unstable/rpc/RpcGroup";
 
-const value = RpcGroup.make()
+const value = RpcGroup.make();
 ```
 
 ## Common pitfalls

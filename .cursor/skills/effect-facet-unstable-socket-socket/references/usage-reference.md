@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Socket } from "effect/unstable/socket/Socket"
+import { Socket } from "effect/unstable/socket/Socket";
 
-const value = Socket.makeChannel()
-const next = Socket.toChannelMap(value)
+const value = Socket.makeChannel();
+const next = Socket.toChannelMap(value);
 ```
 
 ## Test Anchors

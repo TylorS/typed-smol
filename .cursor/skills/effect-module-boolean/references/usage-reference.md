@@ -18,16 +18,16 @@ This module provides utility functions and type class instances for working with
 ## Starter Example
 
 ```ts
-import * as Boolean from "effect/Boolean"
+import * as Boolean from "effect/Boolean";
 
-const bool = Boolean.Boolean(1)
-console.log(bool) // true
+const bool = Boolean.Boolean(1);
+console.log(bool); // true
 
-const fromString = Boolean.Boolean("false")
-console.log(fromString) // true (non-empty string)
+const fromString = Boolean.Boolean("false");
+console.log(fromString); // true (non-empty string)
 
-const fromZero = Boolean.Boolean(0)
-console.log(fromZero) // false
+const fromZero = Boolean.Boolean(0);
+console.log(fromZero); // false
 ```
 
 ## Test Anchors

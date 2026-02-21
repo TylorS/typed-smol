@@ -18,15 +18,15 @@ Utilities for escaping and unescaping JSON Pointer reference tokens according to
 ## Starter Example
 
 ```ts
-import { escapeToken, unescapeToken } from "effect/JsonPointer"
+import { escapeToken, unescapeToken } from "effect/JsonPointer";
 
 // Build a JSON Pointer from path segments
-const segments = ["users", "name/alias", "value"]
-const pointer = "/" + segments.map(escapeToken).join("/")
+const segments = ["users", "name/alias", "value"];
+const pointer = "/" + segments.map(escapeToken).join("/");
 // "/users/name~1alias/value"
 
 // Parse a JSON Pointer back to segments
-const tokens = pointer.split("/").slice(1).map(unescapeToken)
+const tokens = pointer.split("/").slice(1).map(unescapeToken);
 // ["users", "name/alias", "value"]
 ```
 

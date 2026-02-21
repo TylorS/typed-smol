@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { sql } from "effect/unstable/sql"
+import { sql } from "effect/unstable/sql";
 
-const value = sql.Migrator()
+const value = sql.Migrator();
 ```
 
 ## Test Anchors

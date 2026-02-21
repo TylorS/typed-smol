@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpClientError } from "effect/unstable/http/HttpClientError"
+import { HttpClientError } from "effect/unstable/http/HttpClientError";
 
-const value = HttpClientError.EmptyBodyError()
-const next = HttpClientError.DecodeError(value)
+const value = HttpClientError.EmptyBodyError();
+const next = HttpClientError.DecodeError(value);
 ```
 
 ## Test Anchors

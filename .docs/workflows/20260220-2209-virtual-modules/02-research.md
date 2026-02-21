@@ -6,7 +6,6 @@
 
 ## Source Table
 
-
 | source                                                                                                                                                                             | year                | type                                            | confidence  | notes                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ----------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------- |
 | [https://github.com/microsoft/TypeScript/wiki/Writing-a-Language-Service-Plugin](https://github.com/microsoft/TypeScript/wiki/Writing-a-Language-Service-Plugin)                   | 2024 (page updated) | official TypeScript wiki (vendor documentation) | high        | Confirms LS plugins are editing-only and not loaded by `tsc`; shows decorator/proxy pattern and `PluginCreateInfo`. |
@@ -17,9 +16,7 @@
 | [https://arxiv.org/abs/2509.15150](https://arxiv.org/abs/2509.15150)                                                                                                               | 2025                | research preprint                               | low-medium  | Supports modular language tooling direction; less direct on TypeScript plugin APIs.                                 |
 | [https://www.pl.informatik.uni-mainz.de/files/2020/10/incremental-typing-foundations.pdf](https://www.pl.informatik.uni-mainz.de/files/2020/10/incremental-typing-foundations.pdf) | 2020                | research paper/preprint copy                    | medium      | Shows value of incrementalized checking and avoiding unnecessary recomputation after small edits.                   |
 
-
 ## WebSearch Query Log
-
 
 | query                                                                                                   | rationale                                                                         | selected_sources                                                 |
 | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -28,7 +25,6 @@
 | `TypeScript 5.9 language service plugin changes tsserver plugin`                                        | Check recency/compatibility risk with TS 5.9 used in this repo.                   | TS 5.9 release notes                                             |
 | `incremental type checking language server architecture paper`                                          | Satisfy research-stage paper discovery for architecture/performance implications. | arXiv 2509.15150, incremental typing foundations paper           |
 | `A systematic approach to deriving incremental type checkers pdf`                                       | Obtain accessible primary source when ACM page was restricted.                    | incremental-typing-foundations PDF mirror                        |
-
 
 ## Key Findings
 
@@ -67,4 +63,3 @@
 - **heuristics**: “For TS virtual modules, separate LS (editor) and compiler-host (CLI) adapters behind one shared synchronous core.”
 - **procedural**: “When docs claim plugin limitations, verify against official vendor docs before architecture decisions.”
 - Promotion deferred to finalization pending implementation evidence.
-

@@ -33,9 +33,9 @@ description: Guidance for facet `effect/unstable/http#client-impl` focused on AP
 ## Starter example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.HttpClient()
+const value = http.HttpClient();
 ```
 
 ## Common pitfalls

@@ -96,21 +96,21 @@ This section is normative and defines which TypeScript APIs are extended/overrid
 
 #### 5.2 Host API touchpoints
 
-| Host API | Adapter behavior | Why |
-| --- | --- | --- |
-| `LanguageServiceHost.resolveModuleNameLiterals` (preferred) | Intercept import literals first; resolve via plugin manager; delegate unresolved entries to original host behavior. | Primary LS resolution hook in modern TS (`FR-4`, `NFR-4`). |
-| `LanguageServiceHost.resolveModuleNames` (fallback) | Same behavior when literals hook is not available. | Compatibility across host variants. |
-| `LanguageServiceHost.getScriptSnapshot` | Return virtual source snapshot for virtual files; lazily rebuild when stale. | Supplies in-memory virtual source to LS program graph. |
-| `LanguageServiceHost.getScriptVersion` | Return monotonic version per virtual file. | Correct LS incremental invalidation. |
-| `LanguageServiceHost.getProjectVersion` (if available) | Append/increment adapter epoch when virtual state changes. | Forces project graph refresh in editors. |
-| `LanguageServiceHost.fileExists` / `readFile` | Overlay virtual filesystem behavior for virtual paths; delegate all others. | Keeps resolver/source probes consistent. |
-| `LanguageService.getSemanticDiagnostics` / `getSyntacticDiagnostics` | Append structured adapter/plugin errors as diagnostics. | Non-crashing error surfacing (`NFR-6`). |
-| `CompilerHost.resolveModuleNameLiterals` (preferred) | Resolve imports through manager first; delegate unresolved imports. | Primary compiler hook in TS 5.x (`FR-5`, `NFR-4`). |
-| `CompilerHost.resolveModuleNames` (fallback) | Same as above where literals hook is unavailable. | Backward compatibility. |
-| `CompilerHost.getSourceFile` / `getSourceFileByPath` (if available) | Materialize `SourceFile` from virtual source for virtual files; delegate non-virtual files. | Injects virtual modules into program graph. |
-| `CompilerHost.fileExists` / `readFile` | Virtual filesystem overlay for compiler path probes. | Consistent behavior across resolution and source loading. |
-| `CompilerHost.hasInvalidatedResolutions` (if available) | Return `true` for affected paths after dependency-triggered invalidation. | Correct incremental/watch re-resolution. |
-| `watchFile` / `watchDirectory` on host/watch host | Register descriptor-derived watchers and invalidate dependent virtual records on callbacks. | Watch-driven recomputation (`FR-14`, `NFR-11`). |
+| Host API                                                             | Adapter behavior                                                                                                    | Why                                                        |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `LanguageServiceHost.resolveModuleNameLiterals` (preferred)          | Intercept import literals first; resolve via plugin manager; delegate unresolved entries to original host behavior. | Primary LS resolution hook in modern TS (`FR-4`, `NFR-4`). |
+| `LanguageServiceHost.resolveModuleNames` (fallback)                  | Same behavior when literals hook is not available.                                                                  | Compatibility across host variants.                        |
+| `LanguageServiceHost.getScriptSnapshot`                              | Return virtual source snapshot for virtual files; lazily rebuild when stale.                                        | Supplies in-memory virtual source to LS program graph.     |
+| `LanguageServiceHost.getScriptVersion`                               | Return monotonic version per virtual file.                                                                          | Correct LS incremental invalidation.                       |
+| `LanguageServiceHost.getProjectVersion` (if available)               | Append/increment adapter epoch when virtual state changes.                                                          | Forces project graph refresh in editors.                   |
+| `LanguageServiceHost.fileExists` / `readFile`                        | Overlay virtual filesystem behavior for virtual paths; delegate all others.                                         | Keeps resolver/source probes consistent.                   |
+| `LanguageService.getSemanticDiagnostics` / `getSyntacticDiagnostics` | Append structured adapter/plugin errors as diagnostics.                                                             | Non-crashing error surfacing (`NFR-6`).                    |
+| `CompilerHost.resolveModuleNameLiterals` (preferred)                 | Resolve imports through manager first; delegate unresolved imports.                                                 | Primary compiler hook in TS 5.x (`FR-5`, `NFR-4`).         |
+| `CompilerHost.resolveModuleNames` (fallback)                         | Same as above where literals hook is unavailable.                                                                   | Backward compatibility.                                    |
+| `CompilerHost.getSourceFile` / `getSourceFileByPath` (if available)  | Materialize `SourceFile` from virtual source for virtual files; delegate non-virtual files.                         | Injects virtual modules into program graph.                |
+| `CompilerHost.fileExists` / `readFile`                               | Virtual filesystem overlay for compiler path probes.                                                                | Consistent behavior across resolution and source loading.  |
+| `CompilerHost.hasInvalidatedResolutions` (if available)              | Return `true` for affected paths after dependency-triggered invalidation.                                           | Correct incremental/watch re-resolution.                   |
+| `watchFile` / `watchDirectory` on host/watch host                    | Register descriptor-derived watchers and invalidate dependent virtual records on callbacks.                         | Watch-driven recomputation (`FR-14`, `NFR-11`).            |
 
 #### 5.3 LanguageServiceAdapter flow
 
@@ -240,33 +240,33 @@ sequenceDiagram
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| --- | --- | --- |
-| FR-1 | Core plugin contract | `VirtualModulePlugin` signature defined as synchronous. |
-| FR-2 | Plugin manager | Ordered first-match algorithm. |
-| FR-3 | Type information API | Rich JSON-like snapshots. |
-| FR-4 | LanguageServiceAdapter | Editor integration surface. |
-| FR-5 | CompilerHostAdapter | CLI type-check integration surface. |
-| FR-6 | Manager invocation contract | `id` and `importer` are required parameters. |
-| FR-7 | Unresolved result model | Explicit unresolved path and fallback. |
-| FR-8 | NodeModulePluginLoader | Node module resolution semantics. |
-| FR-9 | Loader input normalization | package-name and explicit-path support. |
-| FR-10 | Loader export normalization | Sync load + normalized plugin shape. |
-| FR-11 | Structural type snapshot model | Explicit kinds for unions/intersections/records/arrays/tuples/functions/etc. |
-| FR-12 | Relative file queries | `TypeInfoApi.file()` resolves from explicit base directory. |
-| FR-13 | Directory-glob queries | `TypeInfoApi.directory()` supports one-or-many relative globs with recursive/non-recursive traversal. |
-| FR-14 | Watch dependency registration | Queries can register watch descriptors for recomputation. |
-| NFR-1 | Public API signatures | No Promise-returning hooks. |
-| NFR-2 | Type snapshot schema | JSON-like payload only. |
-| NFR-3 | Snapshot caching | Cache key strategy in TypeInfo API. |
-| NFR-4 | TS compatibility boundary | Designed around TS 5.9 host/plugin APIs. |
-| NFR-5 | Package boundaries | Shared core with thin adapters. |
-| NFR-6 | Error model | Structured results, non-crashing behavior. |
-| NFR-7 | Loader execution model | End-to-end sync loader path. |
-| NFR-8 | Deterministic resolution | Base-path-aware Node resolution behavior. |
-| NFR-9 | Stable rich snapshot contract | Discriminated-union schema without TS internal types. |
-| NFR-10 | Deterministic path traversal | Stable path normalization and ordering for file/directory queries. |
-| NFR-11 | Sync watch descriptors | Synchronous, serializable dependency registration contract. |
+| requirement_id | design_element                 | notes                                                                                                 |
+| -------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| FR-1           | Core plugin contract           | `VirtualModulePlugin` signature defined as synchronous.                                               |
+| FR-2           | Plugin manager                 | Ordered first-match algorithm.                                                                        |
+| FR-3           | Type information API           | Rich JSON-like snapshots.                                                                             |
+| FR-4           | LanguageServiceAdapter         | Editor integration surface.                                                                           |
+| FR-5           | CompilerHostAdapter            | CLI type-check integration surface.                                                                   |
+| FR-6           | Manager invocation contract    | `id` and `importer` are required parameters.                                                          |
+| FR-7           | Unresolved result model        | Explicit unresolved path and fallback.                                                                |
+| FR-8           | NodeModulePluginLoader         | Node module resolution semantics.                                                                     |
+| FR-9           | Loader input normalization     | package-name and explicit-path support.                                                               |
+| FR-10          | Loader export normalization    | Sync load + normalized plugin shape.                                                                  |
+| FR-11          | Structural type snapshot model | Explicit kinds for unions/intersections/records/arrays/tuples/functions/etc.                          |
+| FR-12          | Relative file queries          | `TypeInfoApi.file()` resolves from explicit base directory.                                           |
+| FR-13          | Directory-glob queries         | `TypeInfoApi.directory()` supports one-or-many relative globs with recursive/non-recursive traversal. |
+| FR-14          | Watch dependency registration  | Queries can register watch descriptors for recomputation.                                             |
+| NFR-1          | Public API signatures          | No Promise-returning hooks.                                                                           |
+| NFR-2          | Type snapshot schema           | JSON-like payload only.                                                                               |
+| NFR-3          | Snapshot caching               | Cache key strategy in TypeInfo API.                                                                   |
+| NFR-4          | TS compatibility boundary      | Designed around TS 5.9 host/plugin APIs.                                                              |
+| NFR-5          | Package boundaries             | Shared core with thin adapters.                                                                       |
+| NFR-6          | Error model                    | Structured results, non-crashing behavior.                                                            |
+| NFR-7          | Loader execution model         | End-to-end sync loader path.                                                                          |
+| NFR-8          | Deterministic resolution       | Base-path-aware Node resolution behavior.                                                             |
+| NFR-9          | Stable rich snapshot contract  | Discriminated-union schema without TS internal types.                                                 |
+| NFR-10         | Deterministic path traversal   | Stable path normalization and ordering for file/directory queries.                                    |
+| NFR-11         | Sync watch descriptors         | Synchronous, serializable dependency registration contract.                                           |
 
 ## References Consulted
 

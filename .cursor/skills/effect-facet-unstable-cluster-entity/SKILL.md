@@ -43,10 +43,10 @@ description: Guidance for facet `effect/unstable/cluster/Entity` focused on APIs
 ## Starter example
 
 ```ts
-import { Entity } from "effect/unstable/cluster/Entity"
+import { Entity } from "effect/unstable/cluster/Entity";
 
-const value = Entity.make()
-const next = Entity.CurrentRunnerAddress(value)
+const value = Entity.make();
+const next = Entity.CurrentRunnerAddress(value);
 ```
 
 ## Common pitfalls

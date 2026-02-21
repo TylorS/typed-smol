@@ -18,9 +18,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Differ } from "effect/Differ"
+import { Differ } from "effect/Differ";
 
-const value = Differ.Differ()
+const value = Differ.Differ();
 ```
 
 ## Test Anchors

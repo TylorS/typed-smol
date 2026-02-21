@@ -45,22 +45,22 @@ description: Guidance for `effect/Tracer` focused on APIs like make, Span, and T
 ## Starter example
 
 ```ts
-import type { Tracer } from "effect"
-import { Exit } from "effect"
+import type { Tracer } from "effect";
+import { Exit } from "effect";
 
 // Started span status
 const startedStatus: Tracer.SpanStatus = {
   _tag: "Started",
-  startTime: BigInt(Date.now() * 1000000)
-}
+  startTime: BigInt(Date.now() * 1000000),
+};
 
 // Ended span status
 const endedStatus: Tracer.SpanStatus = {
   _tag: "Ended",
   startTime: BigInt(Date.now() * 1000000),
   endTime: BigInt(Date.now() * 1000000 + 1000000),
-  exit: Exit.succeed("result")
-}
+  exit: Exit.succeed("result"),
+};
 ```
 
 ## Common pitfalls

@@ -43,19 +43,13 @@ description: Guidance for `effect/Tuple` focused on APIs like get, map, and make
 ## Starter example
 
 ```ts
-import { pipe, Tuple } from "effect"
+import { pipe, Tuple } from "effect";
 
-const point = Tuple.make(10, 20, "red")
+const point = Tuple.make(10, 20, "red");
 
-const result = pipe(
-  point,
-  Tuple.evolve([
-    (x) => x * 2,
-    (y) => y * 2
-  ])
-)
+const result = pipe(point, Tuple.evolve([(x) => x * 2, (y) => y * 2]));
 
-console.log(result) // [20, 40, "red"]
+console.log(result); // [20, 40, "red"]
 ```
 
 ## Common pitfalls

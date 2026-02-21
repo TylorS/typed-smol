@@ -36,9 +36,9 @@ description: Guidance for `effect/unstable/cli` focused on APIs like Flag, Param
 ## Starter example
 
 ```ts
-import { cli } from "effect/unstable/cli"
+import { cli } from "effect/unstable/cli";
 
-const value = cli.Flag()
+const value = cli.Flag();
 ```
 
 ## Common pitfalls

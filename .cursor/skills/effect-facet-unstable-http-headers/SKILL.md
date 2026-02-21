@@ -47,10 +47,10 @@ description: Guidance for facet `effect/unstable/http/Headers` focused on APIs l
 ## Starter example
 
 ```ts
-import { Headers } from "effect/unstable/http/Headers"
+import { Headers } from "effect/unstable/http/Headers";
 
-const value = Headers.empty()
-const next = Headers.get(value)
+const value = Headers.empty();
+const next = Headers.get(value);
 ```
 
 ## Common pitfalls

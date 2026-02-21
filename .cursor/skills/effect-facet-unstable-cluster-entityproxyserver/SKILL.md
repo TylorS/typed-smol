@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/EntityProxyServer` focu
 ## Starter example
 
 ```ts
-import { EntityProxyServer } from "effect/unstable/cluster/EntityProxyServer"
+import { EntityProxyServer } from "effect/unstable/cluster/EntityProxyServer";
 
-const value = EntityProxyServer.layerHttpApi()
+const value = EntityProxyServer.layerHttpApi();
 ```
 
 ## Common pitfalls

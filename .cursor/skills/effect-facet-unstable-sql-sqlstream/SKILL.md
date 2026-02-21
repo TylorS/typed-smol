@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/sql/SqlStream` focused on APIs 
 ## Starter example
 
 ```ts
-import { SqlStream } from "effect/unstable/sql/SqlStream"
+import { SqlStream } from "effect/unstable/sql/SqlStream";
 
-const value = SqlStream.asyncPauseResume()
+const value = SqlStream.asyncPauseResume();
 ```
 
 ## Common pitfalls

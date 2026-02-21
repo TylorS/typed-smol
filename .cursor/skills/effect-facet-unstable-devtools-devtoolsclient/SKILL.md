@@ -33,9 +33,9 @@ description: Guidance for facet `effect/unstable/devtools/DevToolsClient` focuse
 ## Starter example
 
 ```ts
-import { DevToolsClient } from "effect/unstable/devtools/DevToolsClient"
+import { DevToolsClient } from "effect/unstable/devtools/DevToolsClient";
 
-const value = DevToolsClient.make()
+const value = DevToolsClient.make();
 ```
 
 ## Common pitfalls

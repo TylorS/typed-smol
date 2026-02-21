@@ -40,11 +40,7 @@ export function resolveCommandLine(
     },
   };
 
-  const resolved = ts.getParsedCommandLineOfConfigFile(
-    configPath,
-    commandLine.options,
-    configHost,
-  );
+  const resolved = ts.getParsedCommandLineOfConfigFile(configPath, commandLine.options, configHost);
 
   if (!resolved) {
     return commandLine;

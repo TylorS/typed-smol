@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpServerError } from "effect/unstable/http/HttpServerError"
+import { HttpServerError } from "effect/unstable/http/HttpServerError";
 
-const value = HttpServerError.isHttpServerError()
-const next = HttpServerError.RequestParseError(value)
+const value = HttpServerError.isHttpServerError();
+const next = HttpServerError.RequestParseError(value);
 ```
 
 ## Test Anchors

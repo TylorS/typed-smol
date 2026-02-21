@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpServerRequest } from "effect/unstable/http/HttpServerRequest"
+import { HttpServerRequest } from "effect/unstable/http/HttpServerRequest";
 
-const value = HttpServerRequest.fromWeb()
-const next = HttpServerRequest.ParsedSearchParams(value)
+const value = HttpServerRequest.fromWeb();
+const next = HttpServerRequest.ParsedSearchParams(value);
 ```
 
 ## Test Anchors

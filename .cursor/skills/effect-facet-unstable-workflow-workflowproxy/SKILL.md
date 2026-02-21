@@ -32,24 +32,20 @@ description: Guidance for facet `effect/unstable/workflow/WorkflowProxy` focused
 ## Starter example
 
 ```ts
-import { Layer, Schema } from "effect"
-import { RpcServer } from "effect/unstable/rpc"
-import {
-  Workflow,
-  WorkflowProxy,
-  WorkflowProxyServer
-} from "effect/unstable/workflow"
+import { Layer, Schema } from "effect";
+import { RpcServer } from "effect/unstable/rpc";
+import { Workflow, WorkflowProxy, WorkflowProxyServer } from "effect/unstable/workflow";
 
 const EmailWorkflow = Workflow.make({
   name: "EmailWorkflow",
   payload: {
     id: Schema.String,
-    to: Schema.String
+    to: Schema.String,
   },
-  idempotencyKey: ({ id }) => id
-})
+  idempotencyKey: ({ id }) => id,
+});
 
-const myWorkflows = [EmailWorkflow] as const
+const myWorkflows = [EmailWorkflow] as const;
 
 // Use WorkflowProxy.toRpcGroup to create a `RpcGroup` from the
 // workflows

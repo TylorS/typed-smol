@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Sharding } from "effect/unstable/cluster/Sharding"
+import { Sharding } from "effect/unstable/cluster/Sharding";
 
-const value = Sharding.layer()
+const value = Sharding.layer();
 ```
 
 ## Test Anchors

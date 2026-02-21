@@ -46,9 +46,9 @@ description: Guidance for facet `effect/unstable/schema/VariantSchema` focused o
 ## Starter example
 
 ```ts
-import { VariantSchema } from "effect/unstable/schema/VariantSchema"
+import { VariantSchema } from "effect/unstable/schema/VariantSchema";
 
-const value = VariantSchema.make()
+const value = VariantSchema.make();
 ```
 
 ## Common pitfalls

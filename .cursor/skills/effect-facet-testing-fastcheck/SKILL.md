@@ -27,20 +27,20 @@ description: Guidance for facet `effect/testing/FastCheck` focused on its core A
 ## Starter example
 
 ```ts
-import * as FastCheck from "effect/testing/FastCheck"
+import * as FastCheck from "effect/testing/FastCheck";
 
 // Property: reverse of reverse should equal original
 const reverseProp = FastCheck.property(
   FastCheck.array(FastCheck.integer()),
   (arr: Array<number>) => {
-    const reversed = arr.slice().reverse()
-    const doubleReversed = reversed.slice().reverse()
-    return JSON.stringify(arr) === JSON.stringify(doubleReversed)
-  }
-)
+    const reversed = arr.slice().reverse();
+    const doubleReversed = reversed.slice().reverse();
+    return JSON.stringify(arr) === JSON.stringify(doubleReversed);
+  },
+);
 
 // Run the property test
-FastCheck.assert(reverseProp)
+FastCheck.assert(reverseProp);
 ```
 
 ## Common pitfalls

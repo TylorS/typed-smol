@@ -46,12 +46,12 @@ description: Guidance for `effect/BigDecimal` focused on APIs like make, fromBig
 ## Starter example
 
 ```ts
-import { BigDecimal } from "effect"
+import { BigDecimal } from "effect";
 
-const d = BigDecimal.fromNumberUnsafe(123.45)
+const d = BigDecimal.fromNumberUnsafe(123.45);
 
-d.value // 12345n
-d.scale // 2
+d.value; // 12345n
+d.scale; // 2
 ```
 
 ## Common pitfalls

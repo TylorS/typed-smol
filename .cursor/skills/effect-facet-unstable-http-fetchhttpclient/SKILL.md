@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/http/FetchHttpClient` focused o
 ## Starter example
 
 ```ts
-import { FetchHttpClient } from "effect/unstable/http/FetchHttpClient"
+import { FetchHttpClient } from "effect/unstable/http/FetchHttpClient";
 
-const value = FetchHttpClient.layer()
+const value = FetchHttpClient.layer();
 ```
 
 ## Common pitfalls

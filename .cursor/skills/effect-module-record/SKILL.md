@@ -46,15 +46,15 @@ description: Guidance for `effect/Record` focused on APIs like get, map, and set
 ## Starter example
 
 ```ts
-import type { Record } from "effect"
+import type { Record } from "effect";
 
 // Creating a readonly record type
-type UserRecord = Record.ReadonlyRecord<"name" | "age", string | number>
+type UserRecord = Record.ReadonlyRecord<"name" | "age", string | number>;
 
 const user: UserRecord = {
   name: "John",
-  age: 30
-}
+  age: 30,
+};
 ```
 
 ## Common pitfalls

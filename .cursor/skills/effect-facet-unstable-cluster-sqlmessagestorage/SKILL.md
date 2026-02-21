@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/cluster/SqlMessageStorage` focu
 ## Starter example
 
 ```ts
-import { SqlMessageStorage } from "effect/unstable/cluster/SqlMessageStorage"
+import { SqlMessageStorage } from "effect/unstable/cluster/SqlMessageStorage";
 
-const value = SqlMessageStorage.make()
+const value = SqlMessageStorage.make();
 ```
 
 ## Common pitfalls

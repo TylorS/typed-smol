@@ -20,17 +20,17 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect, Fiber, FiberHandle } from "effect"
+import { Effect, Fiber, FiberHandle } from "effect";
 
-Effect.gen(function*() {
+Effect.gen(function* () {
   // Create a FiberHandle that can hold fibers producing strings
-  const handle = yield* FiberHandle.make<string, never>()
+  const handle = yield* FiberHandle.make<string, never>();
 
   // The handle can store and manage a single fiber
-  const fiber = yield* FiberHandle.run(handle, Effect.succeed("hello"))
-  const result = yield* Fiber.await(fiber)
-  console.log(result) // "hello"
-})
+  const fiber = yield* FiberHandle.run(handle, Effect.succeed("hello"));
+  const result = yield* Fiber.await(fiber);
+  console.log(result); // "hello"
+});
 ```
 
 ## Test Anchors

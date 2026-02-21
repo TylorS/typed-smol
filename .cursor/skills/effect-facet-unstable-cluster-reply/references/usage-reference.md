@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Reply } from "effect/unstable/cluster/Reply"
+import { Reply } from "effect/unstable/cluster/Reply";
 
-const value = Reply.Encoded()
-const next = Reply.ChunkEncoded(value)
+const value = Reply.Encoded();
+const next = Reply.ChunkEncoded(value);
 ```
 
 ## Test Anchors

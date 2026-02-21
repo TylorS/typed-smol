@@ -30,9 +30,9 @@ description: Guidance for `effect/unstable/socket` focused on APIs like Socket a
 ## Starter example
 
 ```ts
-import { socket } from "effect/unstable/socket"
+import { socket } from "effect/unstable/socket";
 
-const value = socket.Socket()
+const value = socket.Socket();
 ```
 
 ## Common pitfalls

@@ -3,12 +3,12 @@
 ## Source Table
 
 | source | year | type | confidence | notes |
-| --- | --- | --- | --- | --- |
+| ------ | ---- | ---- | ---------- | ----- |
 
 ## WebSearch Query Log
 
 | query | rationale | selected_sources |
-| --- | --- | --- |
+| ----- | --------- | ---------------- |
 
 ## Key Findings
 

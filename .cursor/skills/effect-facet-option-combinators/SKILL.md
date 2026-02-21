@@ -33,24 +33,24 @@ description: Guidance for facet `effect/Option#combinators` focused on APIs like
 ## Starter example
 
 ```ts
-import { Option } from "effect"
+import { Option } from "effect";
 
-const name = Option.some("Alice")
-const age = Option.none<number>()
+const name = Option.some("Alice");
+const age = Option.none<number>();
 
 // Transform
-const upper = Option.map(name, (s) => s.toUpperCase())
+const upper = Option.map(name, (s) => s.toUpperCase());
 
 // Unwrap with fallback
-console.log(Option.getOrElse(upper, () => "unknown"))
+console.log(Option.getOrElse(upper, () => "unknown"));
 // Output: "ALICE"
 
-console.log(Option.getOrElse(age, () => 0))
+console.log(Option.getOrElse(age, () => 0));
 // Output: 0
 
 // Combine multiple options
-const both = Option.all({ name, age })
-console.log(Option.isNone(both))
+const both = Option.all({ name, age });
+console.log(Option.isNone(both));
 // Output: true
 ```
 

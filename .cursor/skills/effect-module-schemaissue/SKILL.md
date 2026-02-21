@@ -46,20 +46,20 @@ description: Guidance for `effect/SchemaIssue` focused on APIs like make, Filter
 ## Starter example
 
 ```ts
-import { Schema, SchemaIssue } from "effect"
+import { Schema, SchemaIssue } from "effect";
 
 const Person = Schema.Struct({
   name: Schema.String,
-  age: Schema.Number
-})
+  age: Schema.Number,
+});
 
 try {
-  Schema.decodeUnknownSync(Person)({ name: 42 })
+  Schema.decodeUnknownSync(Person)({ name: 42 });
 } catch (e) {
   if (Schema.isSchemaError(e)) {
-    console.log(SchemaIssue.isIssue(e.issue))
+    console.log(SchemaIssue.isIssue(e.issue));
     // true
-    console.log(String(e.issue))
+    console.log(String(e.issue));
     // formatted error message
   }
 }

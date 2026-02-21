@@ -46,10 +46,10 @@ description: Guidance for facet `effect/unstable/rpc/RpcMiddleware` focused on A
 ## Starter example
 
 ```ts
-import { RpcMiddleware } from "effect/unstable/rpc/RpcMiddleware"
+import { RpcMiddleware } from "effect/unstable/rpc/RpcMiddleware";
 
-const value = RpcMiddleware.Service()
-const next = RpcMiddleware.ErrorServicesDecode(value)
+const value = RpcMiddleware.Service();
+const next = RpcMiddleware.ErrorServicesDecode(value);
 ```
 
 ## Common pitfalls

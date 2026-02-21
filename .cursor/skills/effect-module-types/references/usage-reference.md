@@ -20,16 +20,16 @@ Type-level utility types for TypeScript.
 ## Starter Example
 
 ```ts
-import type { Types } from "effect"
+import type { Types } from "effect";
 
 // Exactly 3 numbers
-const triple: Types.TupleOf<3, number> = [1, 2, 3]
+const triple: Types.TupleOf<3, number> = [1, 2, 3];
 
 // @ts-expect-error - too few elements
-const tooFew: Types.TupleOf<3, number> = [1, 2]
+const tooFew: Types.TupleOf<3, number> = [1, 2];
 
 // @ts-expect-error - too many elements
-const tooMany: Types.TupleOf<3, number> = [1, 2, 3, 4]
+const tooMany: Types.TupleOf<3, number> = [1, 2, 3, 4];
 ```
 
 ## Test Anchors

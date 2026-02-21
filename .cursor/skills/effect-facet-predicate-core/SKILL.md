@@ -29,12 +29,12 @@ description: Guidance for facet `effect/Predicate#core` focused on APIs like isS
 ## Starter example
 
 ```ts
-import * as Predicate from "effect/Predicate"
+import * as Predicate from "effect/Predicate";
 
-const isPositive = (n: number) => n > 0
-const data = [2, -1, 3]
+const isPositive = (n: number) => n > 0;
+const data = [2, -1, 3];
 
-console.log(data.filter(isPositive))
+console.log(data.filter(isPositive));
 ```
 
 ## Common pitfalls

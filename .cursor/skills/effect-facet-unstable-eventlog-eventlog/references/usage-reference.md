@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EventLog } from "effect/unstable/eventlog/EventLog"
+import { EventLog } from "effect/unstable/eventlog/EventLog";
 
-const value = EventLog.makeClient()
-const next = EventLog.decodeIdentityString(value)
+const value = EventLog.makeClient();
+const next = EventLog.decodeIdentityString(value);
 ```
 
 ## Test Anchors

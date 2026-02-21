@@ -22,14 +22,14 @@ Param is the polymorphic implementation shared by Argument.ts and Flag.ts. The `
 ## Starter Example
 
 ```ts
-import * as Param from "effect/unstable/cli/Param"
+import * as Param from "effect/unstable/cli/Param";
 
 // @internal - this module is not exported publicly
 
-const maybeParam = Param.string(Param.flagKind, "name")
+const maybeParam = Param.string(Param.flagKind, "name");
 
 if (Param.isParam(maybeParam)) {
-  console.log("This is a Param")
+  console.log("This is a Param");
 }
 ```
 

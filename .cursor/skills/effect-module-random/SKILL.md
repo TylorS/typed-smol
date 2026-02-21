@@ -33,18 +33,18 @@ description: Guidance for `effect/Random` focused on APIs like next, Random, and
 ## Starter example
 
 ```ts
-import { Effect, Random } from "effect"
+import { Effect, Random } from "effect";
 
-const program = Effect.gen(function*() {
-  const randomFloat = yield* Random.next
-  console.log("Random float:", randomFloat)
+const program = Effect.gen(function* () {
+  const randomFloat = yield* Random.next;
+  console.log("Random float:", randomFloat);
 
-  const randomInt = yield* Random.nextInt
-  console.log("Random integer:", randomInt)
+  const randomInt = yield* Random.nextInt;
+  console.log("Random integer:", randomInt);
 
-  const diceRoll = yield* Random.nextIntBetween(1, 6)
-  console.log("Dice roll:", diceRoll)
-})
+  const diceRoll = yield* Random.nextIntBetween(1, 6);
+  console.log("Dice roll:", diceRoll);
+});
 ```
 
 ## Common pitfalls

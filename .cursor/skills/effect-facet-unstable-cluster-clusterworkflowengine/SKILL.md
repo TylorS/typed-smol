@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/ClusterWorkflowEngine` 
 ## Starter example
 
 ```ts
-import { ClusterWorkflowEngine } from "effect/unstable/cluster/ClusterWorkflowEngine"
+import { ClusterWorkflowEngine } from "effect/unstable/cluster/ClusterWorkflowEngine";
 
-const value = ClusterWorkflowEngine.make()
+const value = ClusterWorkflowEngine.make();
 ```
 
 ## Common pitfalls

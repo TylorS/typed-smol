@@ -41,9 +41,9 @@ description: Guidance for facet `effect/unstable/cluster/Message` focused on API
 ## Starter example
 
 ```ts
-import { Message } from "effect/unstable/cluster/Message"
+import { Message } from "effect/unstable/cluster/Message";
 
-const value = Message.Incoming()
+const value = Message.Incoming();
 ```
 
 ## Common pitfalls

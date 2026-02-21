@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpApiMiddleware } from "effect/unstable/httpapi/HttpApiMiddleware"
+import { HttpApiMiddleware } from "effect/unstable/httpapi/HttpApiMiddleware";
 
-const value = HttpApiMiddleware.Service()
-const next = HttpApiMiddleware.ErrorServicesDecode(value)
+const value = HttpApiMiddleware.Service();
+const next = HttpApiMiddleware.ErrorServicesDecode(value);
 ```
 
 ## Test Anchors

@@ -9,6 +9,7 @@ Unlike UI frameworks that bolt Effect support onto existing paradigms, Typed is 
 ## Core Architecture
 
 ### Effect + `Fx` (Push-Based)
+
 Typed adds exactly one new runtime abstraction to Effect: **`Fx`**.
 
 - **`Effect`** handles one-shot and scoped computations.
@@ -16,6 +17,7 @@ Typed adds exactly one new runtime abstraction to Effect: **`Fx`**.
 - **Template rendering, routing, and UI event processing** all share this same model.
 
 ### Pull vs Push (Event Reality)
+
 - **Pull-based** streams require consumers to ask for the next value (often by polling).
 - **Push-based** streams deliver values when producers have something to emit.
 - Browser systems are naturally push-driven: click, keydown, timer, and websocket events arrive over time.
@@ -35,6 +37,7 @@ flowchart LR
 ```
 
 #### Tradeoffs: Backpressure and Processing
+
 - **Pacing control:** Pull gives the consumer control over pace; push gives the producer control over emission timing.
 - **Backpressure:** Pull has natural backpressure (consumer requests next when ready). Push needs an explicit strategy when producers outrun consumers (buffering, dropping, sampling, or latest-only semantics).
 - **Processing model:** Pull tends to be demand-driven and often batch/sequential; push tends to be event-driven and continuous over time.
@@ -42,6 +45,7 @@ flowchart LR
 - **Why `Fx` here:** UI events are producer-driven by nature, so `Fx` lets Typed coordinate push streams declaratively while still using Effect for cancellation, errors, and resource safety.
 
 ### Type-Safe Routing
+
 Our **Router** builds on the battle-tested `find-my-way-ts` (the same routing foundation behind Effect's HTTP abstractions for maximum compatibility). You get:
 
 - **Type-level literal parsing** — routes are verified at compile time
@@ -61,6 +65,7 @@ Our template system is where Typed truly shines. Rather than forcing you into co
 - **Type-safe event handling** — handlers are checked at compile time
 
 ### UI Update Cost Model
+
 - **Targeted text and attribute updates are `O(1)`** — updates write directly to bound DOM references.
 - **`Fx`/`Stream` bindings can target attributes and text content directly** — each emission updates only the bound target.
 - **`many(...)` list updates are `O(n)`** — keyed diffing over list items.
@@ -74,16 +79,16 @@ Our template system is where Typed truly shines. Rather than forcing you into co
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [async-data](packages/async-data/README.md) | Async data states (NoData, Loading, Success, Failure, Optimistic) with Effect Schema and helpers |
-| [fx](packages/fx/README.md) | **`Fx`**: Typed's Push-based abstraction that extends Effect for realtime updates, plus RefSubject/Subject/Sink/Versioned utilities. |
-| [guard](packages/guard/README.md) | Effect-based guards (input → Option) with Schema decode/encode and composition |
-| [id](packages/id/README.md) | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid4/5/7, date-based, random |
-| [navigation](packages/navigation/README.md) | Navigation (browser/memory) and routing-related types |
-| [router](packages/router/README.md) | **Type-safe routing** with type-level literal parsing, Schema-based decoding, and find-my-way-ts compatibility |
-| [template](packages/template/README.md) | **Streaming templates** with native Fx/Stream/Effect integration, error handling, hydration, and event delegation |
-| [ui](packages/ui/README.md) | Web integration: HttpRouter, Link (builds on router + template + navigation) |
+| Package                                     | Description                                                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| [async-data](packages/async-data/README.md) | Async data states (NoData, Loading, Success, Failure, Optimistic) with Effect Schema and helpers                                     |
+| [fx](packages/fx/README.md)                 | **`Fx`**: Typed's Push-based abstraction that extends Effect for realtime updates, plus RefSubject/Subject/Sink/Versioned utilities. |
+| [guard](packages/guard/README.md)           | Effect-based guards (input → Option) with Schema decode/encode and composition                                                       |
+| [id](packages/id/README.md)                 | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid4/5/7, date-based, random                                                              |
+| [navigation](packages/navigation/README.md) | Navigation (browser/memory) and routing-related types                                                                                |
+| [router](packages/router/README.md)         | **Type-safe routing** with type-level literal parsing, Schema-based decoding, and find-my-way-ts compatibility                       |
+| [template](packages/template/README.md)     | **Streaming templates** with native Fx/Stream/Effect integration, error handling, hydration, and event delegation                    |
+| [ui](packages/ui/README.md)                 | Web integration: HttpRouter, Link (builds on router + template + navigation)                                                         |
 
 ## Requirements
 
@@ -117,7 +122,6 @@ From the repo root:
 - `pnpm test` — Run tests in all packages
 - `pnpm lint` — Lint (oxlint)
 - `pnpm format` — Format (oxfmt)
-
 
 _All packages are in beta; APIs are subject to change._
 
@@ -153,7 +157,7 @@ import { Fx } from "@typed/fx";
 const numbers = Fx.fromIterable([1, 2, 3]);
 
 await numbers.pipe(
-  // Filter out even values 
+  // Filter out even values
   Fx.filter((n) => n % 2 === 0),
   // Transform each value in the stream.
   Fx.map((n) => n * 2),
@@ -269,9 +273,7 @@ const fxValue = Fx.mergeAll(Fx.at("A", 0), Fx.at("B", 250), Fx.at("C", 500));
 const streamValue = Stream.fromIterable(["one", "two", "three"]);
 
 const view = html`<div data-current=${fxValue}>
-  Effect: ${Effect.succeed("ready")}
-  Fx: ${fxValue}
-  Stream: ${streamValue}
+  Effect: ${Effect.succeed("ready")} Fx: ${fxValue} Stream: ${streamValue}
 </div>`;
 ```
 
@@ -282,7 +284,7 @@ import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 
-// Our syntax is 
+// Our syntax is
 const field = html`<input
   <!-- Sparse attributes (requires quotes) -->
   class="a ${Effect.succeed("b")} ${Stream.succeed("c")} ${Fx.succeed("d")}"

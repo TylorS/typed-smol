@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/sql/SqlModel` focused on APIs l
 ## Starter example
 
 ```ts
-import { SqlModel } from "effect/unstable/sql/SqlModel"
+import { SqlModel } from "effect/unstable/sql/SqlModel";
 
-const value = SqlModel.makeDataLoaders()
+const value = SqlModel.makeDataLoaders();
 ```
 
 ## Common pitfalls

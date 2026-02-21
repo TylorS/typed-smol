@@ -19,19 +19,19 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Console, Effect } from "effect"
-import * as TestConsole from "effect/testing/TestConsole"
+import { Console, Effect } from "effect";
+import * as TestConsole from "effect/testing/TestConsole";
 
-const program = Effect.gen(function*() {
-  yield* Console.log("Hello, World!")
-  yield* Console.error("An error occurred")
+const program = Effect.gen(function* () {
+  yield* Console.log("Hello, World!");
+  yield* Console.error("An error occurred");
 
-  const logs = yield* TestConsole.logLines
-  const errors = yield* TestConsole.errorLines
+  const logs = yield* TestConsole.logLines;
+  const errors = yield* TestConsole.errorLines;
 
-  console.log(logs) // [["Hello, World!"]]
-  console.log(errors) // [["An error occurred"]]
-}).pipe(Effect.provide(TestConsole.layer))
+  console.log(logs); // [["Hello, World!"]]
+  console.log(errors); // [["An error occurred"]]
+}).pipe(Effect.provide(TestConsole.layer));
 ```
 
 ## Test Anchors

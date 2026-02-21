@@ -44,10 +44,10 @@ description: Guidance for `effect/Optic` focused on APIs like getAll, failure, a
 ## Starter example
 
 ```ts
-import { Optic } from "effect/Optic"
+import { Optic } from "effect/Optic";
 
-const value = Optic.makeIso()
-const next = Optic.getAll(value)
+const value = Optic.makeIso();
+const next = Optic.getAll(value);
 ```
 
 ## Common pitfalls

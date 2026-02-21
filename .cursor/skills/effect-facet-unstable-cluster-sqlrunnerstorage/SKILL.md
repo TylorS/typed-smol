@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/cluster/SqlRunnerStorage` focus
 ## Starter example
 
 ```ts
-import { SqlRunnerStorage } from "effect/unstable/cluster/SqlRunnerStorage"
+import { SqlRunnerStorage } from "effect/unstable/cluster/SqlRunnerStorage";
 
-const value = SqlRunnerStorage.make()
+const value = SqlRunnerStorage.make();
 ```
 
 ## Common pitfalls

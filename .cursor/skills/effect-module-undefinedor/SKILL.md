@@ -35,10 +35,10 @@ description: Guidance for `effect/UndefinedOr` focused on APIs like map, getOrTh
 ## Starter example
 
 ```ts
-import { UndefinedOr } from "effect/UndefinedOr"
+import { UndefinedOr } from "effect/UndefinedOr";
 
-const value = UndefinedOr.makeReducer()
-const next = UndefinedOr.map(value)
+const value = UndefinedOr.makeReducer();
+const next = UndefinedOr.map(value);
 ```
 
 ## Common pitfalls

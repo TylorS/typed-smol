@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/EntityType` focused on 
 ## Starter example
 
 ```ts
-import { EntityType } from "effect/unstable/cluster/EntityType"
+import { EntityType } from "effect/unstable/cluster/EntityType";
 
-const value = EntityType.make()
+const value = EntityType.make();
 ```
 
 ## Common pitfalls

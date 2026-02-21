@@ -41,9 +41,9 @@ description: Guidance for `effect/Brand` focused on APIs like make, FromConstruc
 ## Starter example
 
 ```ts
-import { Brand } from "effect/Brand"
+import { Brand } from "effect/Brand";
 
-const value = Brand.make()
+const value = Brand.make();
 ```
 
 ## Common pitfalls

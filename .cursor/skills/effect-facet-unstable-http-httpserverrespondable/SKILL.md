@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/http/HttpServerRespondable` foc
 ## Starter example
 
 ```ts
-import { HttpServerRespondable } from "effect/unstable/http/HttpServerRespondable"
+import { HttpServerRespondable } from "effect/unstable/http/HttpServerRespondable";
 
-const value = HttpServerRespondable.isRespondable()
+const value = HttpServerRespondable.isRespondable();
 ```
 
 ## Common pitfalls

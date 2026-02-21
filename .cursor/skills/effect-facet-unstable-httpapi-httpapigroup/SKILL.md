@@ -48,10 +48,10 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiGroup` focused o
 ## Starter example
 
 ```ts
-import { HttpApiGroup } from "effect/unstable/httpapi/HttpApiGroup"
+import { HttpApiGroup } from "effect/unstable/httpapi/HttpApiGroup";
 
-const value = HttpApiGroup.make()
-const next = HttpApiGroup.ErrorServicesDecode(value)
+const value = HttpApiGroup.make();
+const next = HttpApiGroup.ErrorServicesDecode(value);
 ```
 
 ## Common pitfalls

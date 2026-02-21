@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { VariantSchema } from "effect/unstable/schema/VariantSchema"
+import { VariantSchema } from "effect/unstable/schema/VariantSchema";
 
-const value = VariantSchema.make()
+const value = VariantSchema.make();
 ```
 
 ## Test Anchors

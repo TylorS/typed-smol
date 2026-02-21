@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Ndjson } from "effect/unstable/encoding/Ndjson"
+import { Ndjson } from "effect/unstable/encoding/Ndjson";
 
-const value = Ndjson.decode()
-const next = Ndjson.encode(value)
+const value = Ndjson.decode();
+const next = Ndjson.encode(value);
 ```
 
 ## Test Anchors

@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/process/ChildProcessSpawner` fo
 ## Starter example
 
 ```ts
-import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner";
 
-const value = ChildProcessSpawner.makeHandle()
+const value = ChildProcessSpawner.makeHandle();
 ```
 
 ## Common pitfalls

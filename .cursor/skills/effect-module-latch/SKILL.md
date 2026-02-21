@@ -30,17 +30,17 @@ description: Guidance for `effect/Latch` focused on APIs like make, makeUnsafe, 
 ## Starter example
 
 ```ts
-import { Effect, Latch } from "effect"
+import { Effect, Latch } from "effect";
 
 // Create and use a latch for coordination between fibers
-const program = Effect.gen(function*() {
-  const latch = yield* Latch.make()
+const program = Effect.gen(function* () {
+  const latch = yield* Latch.make();
 
   // Wait for the latch to be opened
-  yield* latch.await
+  yield* latch.await;
 
-  return "Latch was opened!"
-})
+  return "Latch was opened!";
+});
 ```
 
 ## Common pitfalls

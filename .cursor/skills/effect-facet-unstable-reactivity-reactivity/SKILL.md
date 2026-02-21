@@ -35,9 +35,9 @@ description: Guidance for facet `effect/unstable/reactivity/Reactivity` focused 
 ## Starter example
 
 ```ts
-import { Reactivity } from "effect/unstable/reactivity/Reactivity"
+import { Reactivity } from "effect/unstable/reactivity/Reactivity";
 
-const value = Reactivity.make()
+const value = Reactivity.make();
 ```
 
 ## Common pitfalls

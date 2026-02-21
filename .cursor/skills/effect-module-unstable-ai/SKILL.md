@@ -42,25 +42,22 @@ description: Guidance for `effect/unstable/ai` focused on APIs like Chat, Tool, 
 ## Starter example
 
 ```ts
-import { Effect, Match } from "effect"
-import type { AiError } from "effect/unstable/ai"
+import { Effect, Match } from "effect";
+import type { AiError } from "effect/unstable/ai";
 
 // Handle errors using Match on the reason
 const handleAiError = Match.type<AiError.AiError>().pipe(
-  Match.when(
-    { reason: { _tag: "RateLimitError" } },
-    (err) => Effect.logWarning(`Rate limited, retry after ${err.retryAfter}`)
+  Match.when({ reason: { _tag: "RateLimitError" } }, (err) =>
+    Effect.logWarning(`Rate limited, retry after ${err.retryAfter}`),
   ),
-  Match.when(
-    { reason: { _tag: "AuthenticationError" } },
-    (err) => Effect.logError(`Auth failed: ${err.reason.kind}`)
+  Match.when({ reason: { _tag: "AuthenticationError" } }, (err) =>
+    Effect.logError(`Auth failed: ${err.reason.kind}`),
   ),
-  Match.when(
-    { reason: { isRetryable: true } },
-    (err) => Effect.logWarning(`Transient error, retrying: ${err.message}`)
+  Match.when({ reason: { isRetryable: true } }, (err) =>
+    Effect.logWarning(`Transient error, retrying: ${err.message}`),
   ),
-  Match.orElse((err) => Effect.logError(`Permanent error: ${err.message}`))
-)
+  Match.orElse((err) => Effect.logError(`Permanent error: ${err.message}`)),
+);
 ```
 
 ## Common pitfalls

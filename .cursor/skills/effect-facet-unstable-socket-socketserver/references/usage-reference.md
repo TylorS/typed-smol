@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SocketServer } from "effect/unstable/socket/SocketServer"
+import { SocketServer } from "effect/unstable/socket/SocketServer";
 
-const value = SocketServer.Address()
-const next = SocketServer.SocketServerUnknownError(value)
+const value = SocketServer.Address();
+const next = SocketServer.SocketServerUnknownError(value);
 ```
 
 ## Test Anchors

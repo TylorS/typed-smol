@@ -20,19 +20,20 @@ This module provides functionality for defining and working with equality betwee
 ## Starter Example
 
 ```ts
-import { Equal, Hash } from "effect"
+import { Equal, Hash } from "effect";
 
 class Coordinate implements Equal.Equal {
-  constructor(readonly x: number, readonly y: number) {}
+  constructor(
+    readonly x: number,
+    readonly y: number,
+  ) {}
 
   [Equal.symbol](that: Equal.Equal): boolean {
-    return that instanceof Coordinate &&
-      this.x === that.x &&
-      this.y === that.y
+    return that instanceof Coordinate && this.x === that.x && this.y === that.y;
   }
 
   [Hash.symbol](): number {
-    return Hash.string(`${this.x},${this.y}`)
+    return Hash.string(`${this.x},${this.y}`);
   }
 }
 ```

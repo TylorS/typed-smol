@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ClusterMetrics } from "effect/unstable/cluster/ClusterMetrics"
+import { ClusterMetrics } from "effect/unstable/cluster/ClusterMetrics";
 
-const value = ClusterMetrics.runners()
-const next = ClusterMetrics.runnersHealthy(value)
+const value = ClusterMetrics.runners();
+const next = ClusterMetrics.runnersHealthy(value);
 ```
 
 ## Test Anchors

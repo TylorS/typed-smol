@@ -1,10 +1,7 @@
 import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import type {
-  VirtualModuleResolver,
-  VirtualModulePlugin,
-} from "@typed/virtual-modules";
+import type { VirtualModuleResolver, VirtualModulePlugin } from "@typed/virtual-modules";
 import { PluginManager } from "@typed/virtual-modules";
 
 const CONFIG_NAMES = ["vmc.config.js", "vmc.config.mjs", "vmc.config.cjs"];
@@ -58,7 +55,10 @@ function normalizeConfig(mod: unknown): VmcConfig {
   const m = mod as Record<string, unknown>;
   const result: { resolver?: VirtualModuleResolver; plugins?: readonly VirtualModulePlugin[] } = {};
 
-  if (m.resolver && typeof (m.resolver as { resolveModule: unknown }).resolveModule === "function") {
+  if (
+    m.resolver &&
+    typeof (m.resolver as { resolveModule: unknown }).resolveModule === "function"
+  ) {
     result.resolver = m.resolver as VirtualModuleResolver;
   }
   if (Array.isArray(m.plugins)) {

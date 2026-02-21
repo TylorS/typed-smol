@@ -46,30 +46,24 @@ description: Guidance for `effect/Cause` focused on APIs like map, fail, and Fai
 ## Starter example
 
 ```ts
-import { Cause, Effect } from "effect"
+import { Cause, Effect } from "effect";
 
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   const cause = yield* Effect.sandbox(
-    Effect.all([
-      Effect.fail("err1"),
-      Effect.die("defect"),
-      Effect.fail("err2")
-    ], { concurrency: "unbounded" })
-  ).pipe(Effect.flip)
+    Effect.all([Effect.fail("err1"), Effect.die("defect"), Effect.fail("err2")], {
+      concurrency: "unbounded",
+    }),
+  ).pipe(Effect.flip);
 
-  const errors = cause.reasons
-    .filter(Cause.isFailReason)
-    .map((r) => r.error)
+  const errors = cause.reasons.filter(Cause.isFailReason).map((r) => r.error);
 
-  const defects = cause.reasons
-    .filter(Cause.isDieReason)
-    .map((r) => r.defect)
+  const defects = cause.reasons.filter(Cause.isDieReason).map((r) => r.defect);
 
-  console.log(errors)  // ["err1", "err2"]  (order may vary)
-  console.log(defects) // ["defect"]
-})
+  console.log(errors); // ["err1", "err2"]  (order may vary)
+  console.log(defects); // ["defect"]
+});
 
-Effect.runPromise(program)
+Effect.runPromise(program);
 ```
 
 ## Common pitfalls

@@ -20,21 +20,18 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { UrlParams } from "effect/unstable/http"
-import * as assert from "node:assert"
+import { UrlParams } from "effect/unstable/http";
+import * as assert from "node:assert";
 
 const urlParams = UrlParams.fromInput({
   a: 1,
   b: true,
   c: "string",
-  e: [1, 2, 3]
-})
-const result = UrlParams.toRecord(urlParams)
+  e: [1, 2, 3],
+});
+const result = UrlParams.toRecord(urlParams);
 
-assert.deepStrictEqual(
-  result,
-  { "a": "1", "b": "true", "c": "string", "e": ["1", "2", "3"] }
-)
+assert.deepStrictEqual(result, { a: "1", b: "true", c: "string", e: ["1", "2", "3"] });
 ```
 
 ## Test Anchors

@@ -127,10 +127,7 @@ export interface FileSnapshotSuccess {
   readonly snapshot: TypeInfoFileSnapshot;
 }
 
-export type FileSnapshotErrorCode =
-  | "file-not-in-program"
-  | "path-escapes-base"
-  | "invalid-input";
+export type FileSnapshotErrorCode = "file-not-in-program" | "path-escapes-base" | "invalid-input";
 
 export interface FileSnapshotError {
   readonly ok: false;

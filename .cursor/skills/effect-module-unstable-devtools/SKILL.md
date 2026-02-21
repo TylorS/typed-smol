@@ -31,9 +31,9 @@ description: Guidance for `effect/unstable/devtools` focused on APIs like DevToo
 ## Starter example
 
 ```ts
-import { devtools } from "effect/unstable/devtools"
+import { devtools } from "effect/unstable/devtools";
 
-const value = devtools.DevTools()
+const value = devtools.DevTools();
 ```
 
 ## Common pitfalls

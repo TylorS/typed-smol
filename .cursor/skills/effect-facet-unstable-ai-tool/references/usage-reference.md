@@ -21,8 +21,8 @@ The `Tool` module provides functionality for defining and managing tools that la
 ## Starter Example
 
 ```ts
-import { Schema } from "effect"
-import { Tool } from "effect/unstable/ai"
+import { Schema } from "effect";
+import { Tool } from "effect/unstable/ai";
 
 // Define a simple calculator tool
 const Calculator = Tool.make("Calculator", {
@@ -30,10 +30,10 @@ const Calculator = Tool.make("Calculator", {
   parameters: Schema.Struct({
     operation: Schema.Literals(["add", "subtract", "multiply", "divide"]),
     a: Schema.Number,
-    b: Schema.Number
+    b: Schema.Number,
   }),
-  success: Schema.Number
-})
+  success: Schema.Number,
+});
 ```
 
 ## Test Anchors

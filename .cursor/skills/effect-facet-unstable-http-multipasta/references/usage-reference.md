@@ -20,7 +20,7 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Multipasta } from "effect/unstable/http/Multipasta"
+import { Multipasta } from "effect/unstable/http/Multipasta";
 
 // Inspect exports in references/api-reference.md
 ```

@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/http#utilities` focused on APIs
 ## Starter example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.HttpClientError()
+const value = http.HttpClientError();
 ```
 
 ## Common pitfalls

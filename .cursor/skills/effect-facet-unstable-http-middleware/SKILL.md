@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/http#middleware` focused on API
 ## Starter example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.Headers()
+const value = http.Headers();
 ```
 
 ## Common pitfalls

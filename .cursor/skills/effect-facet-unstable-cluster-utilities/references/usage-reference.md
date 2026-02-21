@@ -20,9 +20,9 @@ support utilities and ids. Module-specific APIs and usage patterns for Effect pr
 ## Starter Example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.ShardId()
+const value = cluster.ShardId();
 ```
 
 ## Test Anchors

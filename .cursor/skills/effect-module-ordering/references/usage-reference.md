@@ -18,23 +18,23 @@ The Ordering module provides utilities for working with comparison results and o
 ## Starter Example
 
 ```ts
-import type { Ordering } from "effect"
+import type { Ordering } from "effect";
 
 // Custom comparison function
 const compareNumbers = (a: number, b: number): Ordering.Ordering => {
-  if (a < b) return -1
-  if (a > b) return 1
-  return 0
-}
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+};
 
-console.log(compareNumbers(5, 10)) // -1 (5 < 10)
-console.log(compareNumbers(10, 5)) // 1 (10 > 5)
-console.log(compareNumbers(5, 5)) // 0 (5 == 5)
+console.log(compareNumbers(5, 10)); // -1 (5 < 10)
+console.log(compareNumbers(10, 5)); // 1 (10 > 5)
+console.log(compareNumbers(5, 5)); // 0 (5 == 5)
 
 // Using with string comparison
 const compareStrings = (a: string, b: string): Ordering.Ordering => {
-  return a.localeCompare(b) as Ordering.Ordering
-}
+  return a.localeCompare(b) as Ordering.Ordering;
+};
 ```
 
 ## Test Anchors

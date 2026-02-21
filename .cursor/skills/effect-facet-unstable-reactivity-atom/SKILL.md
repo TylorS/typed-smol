@@ -48,10 +48,10 @@ description: Guidance for facet `effect/unstable/reactivity/Atom` focused on API
 ## Starter example
 
 ```ts
-import { Atom } from "effect/unstable/reactivity/Atom"
+import { Atom } from "effect/unstable/reactivity/Atom";
 
-const value = Atom.make()
-const next = Atom.get(value)
+const value = Atom.make();
+const next = Atom.get(value);
 ```
 
 ## Common pitfalls

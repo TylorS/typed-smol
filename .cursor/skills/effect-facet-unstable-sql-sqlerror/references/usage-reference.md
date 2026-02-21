@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlError } from "effect/unstable/sql/SqlError"
+import { SqlError } from "effect/unstable/sql/SqlError";
 
-const value = SqlError.SqlError()
+const value = SqlError.SqlError();
 ```
 
 ## Test Anchors

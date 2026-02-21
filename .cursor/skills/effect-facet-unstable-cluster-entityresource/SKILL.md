@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/cluster/EntityResource` focused
 ## Starter example
 
 ```ts
-import { EntityResource } from "effect/unstable/cluster/EntityResource"
+import { EntityResource } from "effect/unstable/cluster/EntityResource";
 
-const value = EntityResource.make()
+const value = EntityResource.make();
 ```
 
 ## Common pitfalls

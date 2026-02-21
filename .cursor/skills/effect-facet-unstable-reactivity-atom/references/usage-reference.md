@@ -23,10 +23,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Atom } from "effect/unstable/reactivity/Atom"
+import { Atom } from "effect/unstable/reactivity/Atom";
 
-const value = Atom.make()
-const next = Atom.get(value)
+const value = Atom.make();
+const next = Atom.get(value);
 ```
 
 ## Test Anchors

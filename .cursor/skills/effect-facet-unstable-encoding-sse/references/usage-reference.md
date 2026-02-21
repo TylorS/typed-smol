@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Sse } from "effect/unstable/encoding/Sse"
+import { Sse } from "effect/unstable/encoding/Sse";
 
-const value = Sse.makeParser()
-const next = Sse.decode(value)
+const value = Sse.makeParser();
+const next = Sse.decode(value);
 ```
 
 ## Test Anchors

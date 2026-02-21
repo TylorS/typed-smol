@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlConnection } from "effect/unstable/sql/SqlConnection"
+import { SqlConnection } from "effect/unstable/sql/SqlConnection";
 
-const value = SqlConnection.Row()
+const value = SqlConnection.Row();
 ```
 
 ## Test Anchors

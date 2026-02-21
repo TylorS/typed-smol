@@ -21,23 +21,20 @@ jitter/delay/window timing controls. This module provides utilities for creating
 ## Starter Example
 
 ```ts
-import { Effect, Schedule } from "effect"
+import { Effect, Schedule } from "effect";
 
 // Retry with exponential backoff
-const retryPolicy = Schedule.exponential("100 millis", 2.0)
-  .pipe(Schedule.compose(Schedule.recurs(3)))
+const retryPolicy = Schedule.exponential("100 millis", 2.0).pipe(
+  Schedule.compose(Schedule.recurs(3)),
+);
 
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   // This will retry up to 3 times with exponential backoff
-  const result = yield* Effect.retry(
-    Effect.fail("Network error"),
-    retryPolicy
-  )
-})
+  const result = yield* Effect.retry(Effect.fail("Network error"), retryPolicy);
+});
 
 // Repeat on a fixed schedule
-const heartbeat = Effect.log("heartbeat")
-  .pipe(Effect.repeat(Schedule.spaced("30 seconds")))
+const heartbeat = Effect.log("heartbeat").pipe(Effect.repeat(Schedule.spaced("30 seconds")));
 ```
 
 ## Test Anchors

@@ -103,7 +103,9 @@ export class NodeModulePluginLoader {
       return invalidRequestError("specifier must be a non-empty string");
     }
     if (request.baseDir.length > MAX_PATH_LENGTH || request.specifier.length > MAX_PATH_LENGTH) {
-      return invalidRequestError(`baseDir and specifier must be at most ${MAX_PATH_LENGTH} characters`);
+      return invalidRequestError(
+        `baseDir and specifier must be at most ${MAX_PATH_LENGTH} characters`,
+      );
     }
 
     const require = createRequire(resolve(request.baseDir, "__typed_virtual_modules_loader__.cjs"));
@@ -121,7 +123,9 @@ export class NodeModulePluginLoader {
     if (!pathIsUnderBase(request.baseDir, resolvedPath)) {
       return pathEscapesError(
         request,
-        sanitizeErrorMessage(`Resolved plugin path "${resolvedPath}" is not under baseDir "${request.baseDir}"`),
+        sanitizeErrorMessage(
+          `Resolved plugin path "${resolvedPath}" is not under baseDir "${request.baseDir}"`,
+        ),
       );
     }
 
@@ -131,7 +135,9 @@ export class NodeModulePluginLoader {
       if (!normalizedPlugin) {
         return invalidPluginError(
           request,
-          sanitizeErrorMessage(`Resolved module "${resolvedPath}" does not export a valid VirtualModulePlugin`),
+          sanitizeErrorMessage(
+            `Resolved module "${resolvedPath}" does not export a valid VirtualModulePlugin`,
+          ),
         );
       }
 

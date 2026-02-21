@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { AtomRpc } from "effect/unstable/reactivity/AtomRpc"
+import { AtomRpc } from "effect/unstable/reactivity/AtomRpc";
 
-const value = AtomRpc.Service()
+const value = AtomRpc.Service();
 ```
 
 ## Test Anchors

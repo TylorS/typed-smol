@@ -33,9 +33,9 @@ description: Guidance for facet `effect/unstable/sql/SqlSchema` focused on APIs 
 ## Starter example
 
 ```ts
-import { SqlSchema } from "effect/unstable/sql/SqlSchema"
+import { SqlSchema } from "effect/unstable/sql/SqlSchema";
 
-const value = SqlSchema.void()
+const value = SqlSchema.void();
 ```
 
 ## Common pitfalls

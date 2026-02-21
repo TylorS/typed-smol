@@ -39,14 +39,14 @@ description: Guidance for `effect/Encoding` focused on APIs like decodeHex, enco
 ## Starter example
 
 ```ts
-import { Encoding } from "effect"
+import { Encoding } from "effect";
 
 // Encode a string
-console.log(Encoding.encodeBase64("hello")) // "aGVsbG8="
+console.log(Encoding.encodeBase64("hello")); // "aGVsbG8="
 
 // Encode binary data
-const bytes = new Uint8Array([72, 101, 108, 108, 111])
-console.log(Encoding.encodeBase64(bytes)) // "SGVsbG8="
+const bytes = new Uint8Array([72, 101, 108, 108, 111]);
+console.log(Encoding.encodeBase64(bytes)); // "SGVsbG8="
 ```
 
 ## Common pitfalls

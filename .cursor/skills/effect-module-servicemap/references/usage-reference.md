@@ -21,15 +21,13 @@ This module provides a data structure called `ServiceMap` that can be used for d
 ## Starter Example
 
 ```ts
-import { ServiceMap } from "effect"
+import { ServiceMap } from "effect";
 
 // Define an identifier for a database service
-const Database = ServiceMap.Service<{ query: (sql: string) => string }>(
-  "Database"
-)
+const Database = ServiceMap.Service<{ query: (sql: string) => string }>("Database");
 
 // The key can be used to store and retrieve services
-const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` })
+const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` });
 ```
 
 ## Test Anchors

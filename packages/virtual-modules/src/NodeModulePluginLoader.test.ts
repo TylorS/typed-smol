@@ -73,7 +73,11 @@ describe("NodeModulePluginLoader", () => {
 
   it("returns invalid-request for empty baseDir", () => {
     const dir = createTempDir();
-    writeFileSync(join(dir, "p.cjs"), `module.exports = { name: "p", shouldResolve: () => true, build: () => "" };`, "utf8");
+    writeFileSync(
+      join(dir, "p.cjs"),
+      `module.exports = { name: "p", shouldResolve: () => true, build: () => "" };`,
+      "utf8",
+    );
     const loader = new NodeModulePluginLoader();
     const result = loader.load({ specifier: "./p.cjs", baseDir: "" });
     expect(result.status).toBe("error");

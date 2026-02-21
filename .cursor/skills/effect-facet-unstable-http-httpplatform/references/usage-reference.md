@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpPlatform } from "effect/unstable/http/HttpPlatform"
+import { HttpPlatform } from "effect/unstable/http/HttpPlatform";
 
-const value = HttpPlatform.make()
+const value = HttpPlatform.make();
 ```
 
 ## Test Anchors

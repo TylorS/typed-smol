@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpApiBuilder } from "effect/unstable/httpapi/HttpApiBuilder"
+import { HttpApiBuilder } from "effect/unstable/httpapi/HttpApiBuilder";
 
-const value = HttpApiBuilder.FromGroup()
-const next = HttpApiBuilder.securityDecode(value)
+const value = HttpApiBuilder.FromGroup();
+const next = HttpApiBuilder.securityDecode(value);
 ```
 
 ## Test Anchors

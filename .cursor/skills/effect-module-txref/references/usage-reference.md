@@ -21,21 +21,23 @@ TxRef is a transactional value, it can be read and modified within the body of a
 ## Starter Example
 
 ```ts
-import { Effect, TxRef } from "effect"
+import { Effect, TxRef } from "effect";
 
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   // Create a transactional reference
-  const ref: TxRef.TxRef<number> = yield* TxRef.make(0)
+  const ref: TxRef.TxRef<number> = yield* TxRef.make(0);
 
   // Use within a transaction
-  yield* Effect.atomic(Effect.gen(function*() {
-    const current = yield* TxRef.get(ref)
-    yield* TxRef.set(ref, current + 1)
-  }))
+  yield* Effect.atomic(
+    Effect.gen(function* () {
+      const current = yield* TxRef.get(ref);
+      yield* TxRef.set(ref, current + 1);
+    }),
+  );
 
-  const final = yield* TxRef.get(ref)
-  console.log(final) // 1
-})
+  const final = yield* TxRef.get(ref);
+  console.log(final); // 1
+});
 ```
 
 ## Test Anchors

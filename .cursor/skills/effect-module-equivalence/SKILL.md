@@ -44,15 +44,13 @@ description: Guidance for `effect/Equivalence` focused on APIs like make, mapInp
 ## Starter example
 
 ```ts
-import { Array, Equivalence } from "effect"
+import { Array, Equivalence } from "effect";
 
-const caseInsensitive = Equivalence.make<string>((a, b) =>
-  a.toLowerCase() === b.toLowerCase()
-)
+const caseInsensitive = Equivalence.make<string>((a, b) => a.toLowerCase() === b.toLowerCase());
 
-const strings = ["Hello", "world", "HELLO", "World"]
-const deduplicated = Array.dedupeWith(strings, caseInsensitive)
-console.log(deduplicated) // ["Hello", "world"]
+const strings = ["Hello", "world", "HELLO", "World"];
+const deduplicated = Array.dedupeWith(strings, caseInsensitive);
+console.log(deduplicated); // ["Hello", "world"]
 ```
 
 ## Common pitfalls

@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/http/HttpPlatform` focused on A
 ## Starter example
 
 ```ts
-import { HttpPlatform } from "effect/unstable/http/HttpPlatform"
+import { HttpPlatform } from "effect/unstable/http/HttpPlatform";
 
-const value = HttpPlatform.make()
+const value = HttpPlatform.make();
 ```
 
 ## Common pitfalls

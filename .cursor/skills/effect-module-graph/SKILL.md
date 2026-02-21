@@ -46,16 +46,16 @@ description: Guidance for `effect/Graph` focused on APIs like getEdge, getNode, 
 ## Starter example
 
 ```ts
-import { Graph } from "effect"
+import { Graph } from "effect";
 
 // Directed graph with initial nodes and edges
 const graph = Graph.directed<string, string>((mutable) => {
-  const a = Graph.addNode(mutable, "A")
-  const b = Graph.addNode(mutable, "B")
-  const c = Graph.addNode(mutable, "C")
-  Graph.addEdge(mutable, a, b, "A->B")
-  Graph.addEdge(mutable, b, c, "B->C")
-})
+  const a = Graph.addNode(mutable, "A");
+  const b = Graph.addNode(mutable, "B");
+  const c = Graph.addNode(mutable, "C");
+  Graph.addEdge(mutable, a, b, "A->B");
+  Graph.addEdge(mutable, b, c, "B->C");
+});
 ```
 
 ## Common pitfalls

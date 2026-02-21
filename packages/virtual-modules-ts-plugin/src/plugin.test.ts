@@ -16,7 +16,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const tempDirs: string[] = [];
 
-const TEST_WORKSPACE = join(__dirname, "..", "..", "..", ".test-workspace", "virtual-modules-ts-plugin");
+const TEST_WORKSPACE = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  ".test-workspace",
+  "virtual-modules-ts-plugin",
+);
 
 function createTempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "typed-vm-tsplugin-"));
@@ -53,9 +60,9 @@ afterEach(() => {
 describe("virtual-modules-ts-plugin", () => {
   it("builds and exposes init function", () => {
     const pluginPath = join(__dirname, "..", "dist", "plugin.js");
-    const init = require(pluginPath) as (modules: {
-      typescript: typeof import("typescript");
-    }) => { create: (info: unknown) => unknown };
+    const init = require(pluginPath) as (modules: { typescript: typeof import("typescript") }) => {
+      create: (info: unknown) => unknown;
+    };
     expect(typeof init).toBe("function");
     const result = init({ typescript: ts });
     expect(result).toBeDefined();
@@ -161,9 +168,9 @@ describe("virtual-modules-ts-plugin", () => {
 
       const program = wrapped.getProgram();
       expect(program).toBeDefined();
-      expect(
-        program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual")),
-      ).toBe(true);
+      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+        true,
+      );
     },
   );
 
@@ -222,9 +229,9 @@ describe("virtual-modules-ts-plugin", () => {
       expect(diagnostics).toHaveLength(0);
       const program = languageService.getProgram();
       expect(program).toBeDefined();
-      expect(
-        program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual")),
-      ).toBe(true);
+      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+        true,
+      );
     } finally {
       handle.dispose();
     }

@@ -37,24 +37,27 @@ description: Guidance for facet `effect/Layer#composition` focused on APIs like 
 ## Starter example
 
 ```ts
-import { Effect, Layer, ServiceMap } from "effect"
+import { Effect, Layer, ServiceMap } from "effect";
 
-class Database extends ServiceMap.Service<Database, {
-  readonly query: (sql: string) => Effect.Effect<string>
-}>()("Database") {}
+class Database extends ServiceMap.Service<
+  Database,
+  {
+    readonly query: (sql: string) => Effect.Effect<string>;
+  }
+>()("Database") {}
 
 // Create a custom MemoMap for manual layer building
-const program = Effect.gen(function*() {
-  const memoMap = yield* Layer.makeMemoMap
-  const scope = yield* Effect.scope
+const program = Effect.gen(function* () {
+  const memoMap = yield* Layer.makeMemoMap;
+  const scope = yield* Effect.scope;
 
   const dbLayer = Layer.succeed(Database)({
-    query: (sql: string) => Effect.succeed("result")
-  })
-  const services = yield* Layer.buildWithMemoMap(dbLayer, memoMap, scope)
+    query: (sql: string) => Effect.succeed("result"),
+  });
+  const services = yield* Layer.buildWithMemoMap(dbLayer, memoMap, scope);
 
-  return ServiceMap.get(services, Database)
-})
+  return ServiceMap.get(services, Database);
+});
 ```
 
 ## Common pitfalls

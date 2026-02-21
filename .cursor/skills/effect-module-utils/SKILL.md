@@ -36,16 +36,11 @@ description: Guidance for `effect/Utils` focused on APIs like Gen, GenKind, and 
 ## Starter example
 
 ```ts
-import type { Utils } from "effect"
-import type * as Option from "effect/Option"
+import type { Utils } from "effect";
+import type * as Option from "effect/Option";
 
 // Variance defines the type parameter relationships
-declare const variance: Utils.Variance<
-  Option.OptionTypeLambda,
-  never,
-  never,
-  never
->
+declare const variance: Utils.Variance<Option.OptionTypeLambda, never, never, never>;
 ```
 
 ## Common pitfalls

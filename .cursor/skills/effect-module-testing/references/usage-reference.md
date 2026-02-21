@@ -19,9 +19,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { testing } from "effect/testing"
+import { testing } from "effect/testing";
 
-const value = testing.FastCheck()
+const value = testing.FastCheck();
 ```
 
 ## Test Anchors

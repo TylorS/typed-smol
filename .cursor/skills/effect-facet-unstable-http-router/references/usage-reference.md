@@ -21,9 +21,9 @@ routing and method template surfaces. Module-specific APIs and usage patterns fo
 ## Starter Example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.Template()
+const value = http.Template();
 ```
 
 ## Test Anchors

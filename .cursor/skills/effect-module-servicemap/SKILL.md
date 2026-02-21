@@ -46,15 +46,13 @@ description: Guidance for `effect/ServiceMap` focused on APIs like get, make, an
 ## Starter example
 
 ```ts
-import { ServiceMap } from "effect"
+import { ServiceMap } from "effect";
 
 // Define an identifier for a database service
-const Database = ServiceMap.Service<{ query: (sql: string) => string }>(
-  "Database"
-)
+const Database = ServiceMap.Service<{ query: (sql: string) => string }>("Database");
 
 // The key can be used to store and retrieve services
-const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` })
+const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` });
 ```
 
 ## Common pitfalls

@@ -19,17 +19,17 @@ A module for reducing collections of values into a single result.
 ## Starter Example
 
 ```ts
-import { Reducer } from "effect"
+import { Reducer } from "effect";
 
-const Sum = Reducer.make<number>((a, b) => a + b, 0)
+const Sum = Reducer.make<number>((a, b) => a + b, 0);
 
-console.log(Sum.combine(3, 4))
+console.log(Sum.combine(3, 4));
 // Output: 7
 
-console.log(Sum.combineAll([1, 2, 3, 4]))
+console.log(Sum.combineAll([1, 2, 3, 4]));
 // Output: 10
 
-console.log(Sum.combineAll([]))
+console.log(Sum.combineAll([]));
 // Output: 0
 ```
 

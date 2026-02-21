@@ -48,10 +48,10 @@ description: Guidance for facet `effect/unstable/reactivity/AsyncResult` focused
 ## Starter example
 
 ```ts
-import { AsyncResult } from "effect/unstable/reactivity/AsyncResult"
+import { AsyncResult } from "effect/unstable/reactivity/AsyncResult";
 
-const value = AsyncResult.fromExit()
-const next = AsyncResult.map(value)
+const value = AsyncResult.fromExit();
+const next = AsyncResult.map(value);
 ```
 
 ## Common pitfalls

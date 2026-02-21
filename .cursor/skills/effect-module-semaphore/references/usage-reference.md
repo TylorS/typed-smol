@@ -20,16 +20,14 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect, Semaphore } from "effect"
+import { Effect, Semaphore } from "effect";
 
 // Create and use a semaphore for controlling concurrent access
-const program = Effect.gen(function*() {
-  const semaphore = yield* Semaphore.make(2)
+const program = Effect.gen(function* () {
+  const semaphore = yield* Semaphore.make(2);
 
-  return yield* semaphore.withPermits(1)(
-    Effect.succeed("Resource accessed")
-  )
-})
+  return yield* semaphore.withPermits(1)(Effect.succeed("Resource accessed"));
+});
 ```
 
 ## Test Anchors

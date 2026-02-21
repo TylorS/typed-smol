@@ -30,23 +30,23 @@ description: Guidance for `effect/HKT` focused on APIs like URI, Kind, and TypeC
 ## Starter example
 
 ```ts
-import type { HKT } from "effect"
+import type { HKT } from "effect";
 
 // Define a TypeLambda for Array
 interface ArrayTypeLambda extends HKT.TypeLambda {
-  readonly type: Array<this["Target"]>
+  readonly type: Array<this["Target"]>;
 }
 
 // Use Kind to get the concrete type
-type MyArray = HKT.Kind<ArrayTypeLambda, never, never, never, string>
+type MyArray = HKT.Kind<ArrayTypeLambda, never, never, never, string>;
 // MyArray is Array<string>
 
 // Define a TypeClass that works with any HKT
 interface Functor<F extends HKT.TypeLambda> extends HKT.TypeClass<F> {
   map<A, B>(
     fa: HKT.Kind<F, never, never, never, A>,
-    f: (a: A) => B
-  ): HKT.Kind<F, never, never, never, B>
+    f: (a: A) => B,
+  ): HKT.Kind<F, never, never, never, B>;
 }
 ```
 

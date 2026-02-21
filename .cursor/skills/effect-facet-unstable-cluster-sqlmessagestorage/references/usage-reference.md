@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlMessageStorage } from "effect/unstable/cluster/SqlMessageStorage"
+import { SqlMessageStorage } from "effect/unstable/cluster/SqlMessageStorage";
 
-const value = SqlMessageStorage.make()
+const value = SqlMessageStorage.make();
 ```
 
 ## Test Anchors

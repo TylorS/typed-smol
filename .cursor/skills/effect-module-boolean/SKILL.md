@@ -43,16 +43,16 @@ description: Guidance for `effect/Boolean` focused on APIs like isBoolean, or, a
 ## Starter example
 
 ```ts
-import * as Boolean from "effect/Boolean"
+import * as Boolean from "effect/Boolean";
 
-const bool = Boolean.Boolean(1)
-console.log(bool) // true
+const bool = Boolean.Boolean(1);
+console.log(bool); // true
 
-const fromString = Boolean.Boolean("false")
-console.log(fromString) // true (non-empty string)
+const fromString = Boolean.Boolean("false");
+console.log(fromString); // true (non-empty string)
 
-const fromZero = Boolean.Boolean(0)
-console.log(fromZero) // false
+const fromZero = Boolean.Boolean(0);
+console.log(fromZero); // false
 ```
 
 ## Common pitfalls

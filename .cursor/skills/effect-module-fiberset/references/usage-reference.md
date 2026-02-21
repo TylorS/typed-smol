@@ -20,18 +20,18 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect, FiberSet } from "effect"
+import { Effect, FiberSet } from "effect";
 
-const program = Effect.gen(function*() {
-  const set = yield* FiberSet.make<string, string>()
+const program = Effect.gen(function* () {
+  const set = yield* FiberSet.make<string, string>();
 
   // Add fibers to the set
-  yield* FiberSet.run(set, Effect.succeed("hello"))
-  yield* FiberSet.run(set, Effect.succeed("world"))
+  yield* FiberSet.run(set, Effect.succeed("hello"));
+  yield* FiberSet.run(set, Effect.succeed("world"));
 
   // Wait for all fibers to complete
-  yield* FiberSet.awaitEmpty(set)
-})
+  yield* FiberSet.awaitEmpty(set);
+});
 ```
 
 ## Test Anchors

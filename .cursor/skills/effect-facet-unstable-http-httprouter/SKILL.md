@@ -47,15 +47,17 @@ description: Guidance for facet `effect/unstable/http/HttpRouter` focused on API
 ## Starter example
 
 ```ts
-import { Effect } from "effect"
-import * as Layer from "effect/Layer"
-import * as HttpRouter from "effect/unstable/http/HttpRouter"
+import { Effect } from "effect";
+import * as Layer from "effect/Layer";
+import * as HttpRouter from "effect/unstable/http/HttpRouter";
 
-const MyRoute = Layer.effectDiscard(Effect.gen(function*() {
-  const router = yield* HttpRouter.HttpRouter
+const MyRoute = Layer.effectDiscard(
+  Effect.gen(function* () {
+    const router = yield* HttpRouter.HttpRouter;
 
-  // then use `yield* router.add(...)` to add a route
-}))
+    // then use `yield* router.add(...)` to add a route
+  }),
+);
 ```
 
 ## Common pitfalls

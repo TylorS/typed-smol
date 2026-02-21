@@ -35,9 +35,9 @@ description: Guidance for facet `effect/unstable/http/HttpTraceContext` focused 
 ## Starter example
 
 ```ts
-import { HttpTraceContext } from "effect/unstable/http/HttpTraceContext"
+import { HttpTraceContext } from "effect/unstable/http/HttpTraceContext";
 
-const value = HttpTraceContext.fromHeaders()
+const value = HttpTraceContext.fromHeaders();
 ```
 
 ## Common pitfalls

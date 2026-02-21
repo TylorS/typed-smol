@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/cluster/DeliverAt` focused on A
 ## Starter example
 
 ```ts
-import { DeliverAt } from "effect/unstable/cluster/DeliverAt"
+import { DeliverAt } from "effect/unstable/cluster/DeliverAt";
 
-const value = DeliverAt.isDeliverAt()
+const value = DeliverAt.isDeliverAt();
 ```
 
 ## Common pitfalls

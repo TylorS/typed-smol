@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EventLogRemote } from "effect/unstable/eventlog/EventLogRemote"
+import { EventLogRemote } from "effect/unstable/eventlog/EventLogRemote";
 
-const value = EventLogRemote.fromSocket()
-const next = EventLogRemote.decodeRequest(value)
+const value = EventLogRemote.fromSocket();
+const next = EventLogRemote.decodeRequest(value);
 ```
 
 ## Test Anchors

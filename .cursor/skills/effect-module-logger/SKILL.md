@@ -46,21 +46,21 @@ description: Guidance for `effect/Logger` focused on APIs like map, make, and la
 ## Starter example
 
 ```ts
-import { Effect } from "effect"
+import { Effect } from "effect";
 
 // Basic logging
-const program = Effect.gen(function*() {
-  yield* Effect.log("Application started")
-  yield* Effect.logInfo("Processing user request")
-  yield* Effect.logWarning("Resource limit approaching")
-  yield* Effect.logError("Database connection failed")
-})
+const program = Effect.gen(function* () {
+  yield* Effect.log("Application started");
+  yield* Effect.logInfo("Processing user request");
+  yield* Effect.logWarning("Resource limit approaching");
+  yield* Effect.logError("Database connection failed");
+});
 
 // With structured data
-const structuredLog = Effect.gen(function*() {
-  yield* Effect.log("User action", { userId: 123, action: "login" })
-  yield* Effect.logInfo("Request processed", { duration: 150, statusCode: 200 })
-})
+const structuredLog = Effect.gen(function* () {
+  yield* Effect.log("User action", { userId: 123, action: "login" });
+  yield* Effect.logInfo("Request processed", { duration: 150, statusCode: 200 });
+});
 ```
 
 ## Common pitfalls

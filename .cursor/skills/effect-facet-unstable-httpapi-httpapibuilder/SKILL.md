@@ -41,10 +41,10 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiBuilder` focused
 ## Starter example
 
 ```ts
-import { HttpApiBuilder } from "effect/unstable/httpapi/HttpApiBuilder"
+import { HttpApiBuilder } from "effect/unstable/httpapi/HttpApiBuilder";
 
-const value = HttpApiBuilder.FromGroup()
-const next = HttpApiBuilder.securityDecode(value)
+const value = HttpApiBuilder.FromGroup();
+const next = HttpApiBuilder.securityDecode(value);
 ```
 
 ## Common pitfalls

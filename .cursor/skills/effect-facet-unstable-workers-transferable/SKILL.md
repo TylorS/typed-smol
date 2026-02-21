@@ -40,10 +40,10 @@ description: Guidance for facet `effect/unstable/workers/Transferable` focused o
 ## Starter example
 
 ```ts
-import { Transferable } from "effect/unstable/workers/Transferable"
+import { Transferable } from "effect/unstable/workers/Transferable";
 
-const value = Transferable.makeCollector()
-const next = Transferable.getterAddAll(value)
+const value = Transferable.makeCollector();
+const next = Transferable.getterAddAll(value);
 ```
 
 ## Common pitfalls

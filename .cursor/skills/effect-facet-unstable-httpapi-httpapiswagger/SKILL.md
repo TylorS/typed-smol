@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiSwagger` focused
 ## Starter example
 
 ```ts
-import { HttpApiSwagger } from "effect/unstable/httpapi/HttpApiSwagger"
+import { HttpApiSwagger } from "effect/unstable/httpapi/HttpApiSwagger";
 
-const value = HttpApiSwagger.layer()
+const value = HttpApiSwagger.layer();
 ```
 
 ## Common pitfalls

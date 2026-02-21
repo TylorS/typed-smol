@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/sql/SqlError` focused on APIs l
 ## Starter example
 
 ```ts
-import { SqlError } from "effect/unstable/sql/SqlError"
+import { SqlError } from "effect/unstable/sql/SqlError";
 
-const value = SqlError.SqlError()
+const value = SqlError.SqlError();
 ```
 
 ## Common pitfalls

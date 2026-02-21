@@ -36,10 +36,7 @@ const standardCompilerOptions: ts.CompilerOptions = {
   skipLibCheck: true,
 };
 
-function createProjectWithVirtualEntry(
-  dir: string,
-  entryContent: string,
-): { entryPath: string } {
+function createProjectWithVirtualEntry(dir: string, entryContent: string): { entryPath: string } {
   writeFileSync(
     join(dir, "tsconfig.json"),
     JSON.stringify({
@@ -74,40 +71,36 @@ afterEach(() => {
 });
 
 describe("LanguageServiceTester integration", () => {
-  it(
-    "runs tsserver-backed analysis via LanguageServiceTester",
-    { timeout: 60_000 },
-    async () => {
-      const dir = createTempDir();
-      writeFileSync(
-        join(dir, "tsconfig.json"),
-        JSON.stringify({
-          compilerOptions: {
-            strict: true,
-            target: "ESNext",
-            module: "ESNext",
-            noEmit: true,
-            skipLibCheck: true,
-          },
-          include: ["*.ts"],
-        }),
-        "utf8",
-      );
-      writeFileSync(join(dir, "index.ts"), "export const x = 1;\n", "utf8");
+  it("runs tsserver-backed analysis via LanguageServiceTester", { timeout: 60_000 }, async () => {
+    const dir = createTempDir();
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          target: "ESNext",
+          module: "ESNext",
+          noEmit: true,
+          skipLibCheck: true,
+        },
+        include: ["*.ts"],
+      }),
+      "utf8",
+    );
+    writeFileSync(join(dir, "index.ts"), "export const x = 1;\n", "utf8");
 
-      const tester = new LanguageServiceTester(dir);
-      try {
-        await tester.Install();
-        await tester.Configure();
-        const result = await tester.AnalyzeCode("export const y = 2;", "TS", "file.ts");
-        expect(result).toBeDefined();
-        expect(result.Diagnostics).toBeDefined();
-        expect(Array.isArray(result.Diagnostics)).toBe(true);
-      } finally {
-        await tester.Dispose();
-      }
-    },
-  );
+    const tester = new LanguageServiceTester(dir);
+    try {
+      await tester.Install();
+      await tester.Configure();
+      const result = await tester.AnalyzeCode("export const y = 2;", "TS", "file.ts");
+      expect(result).toBeDefined();
+      expect(result.Diagnostics).toBeDefined();
+      expect(Array.isArray(result.Diagnostics)).toBe(true);
+    } finally {
+      await tester.Dispose();
+    }
+  });
 });
 
 describe("Virtual modules with real TypeScript", () => {
@@ -159,9 +152,9 @@ describe("Virtual modules with real TypeScript", () => {
         expect(diagnostics).toHaveLength(0);
         const program = languageService.getProgram();
         expect(program).toBeDefined();
-        expect(
-          program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual")),
-        ).toBe(true);
+        expect(program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+          true,
+        );
       } finally {
         adapter.dispose();
       }
@@ -195,16 +188,12 @@ describe("Virtual modules with real TypeScript", () => {
       });
 
       try {
-        const program = ts.createProgram(
-          [entryPath],
-          standardCompilerOptions,
-          host,
-        );
+        const program = ts.createProgram([entryPath], standardCompilerOptions, host);
         const diagnostics = ts.getPreEmitDiagnostics(program);
         expect(diagnostics).toHaveLength(0);
-        expect(
-          program.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual")),
-        ).toBe(true);
+        expect(program.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+          true,
+        );
       } finally {
         adapter.dispose();
       }
@@ -268,9 +257,9 @@ describe("Virtual modules with real TypeScript", () => {
         expect(diagnostics).toHaveLength(0);
         const program = languageService.getProgram();
         expect(program).toBeDefined();
-        expect(
-          program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual")),
-        ).toBe(true);
+        expect(program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+          true,
+        );
       } finally {
         adapter.dispose();
       }

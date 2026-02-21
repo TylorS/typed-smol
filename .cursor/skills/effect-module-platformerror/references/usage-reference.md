@@ -18,9 +18,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { PlatformError } from "effect/PlatformError"
+import { PlatformError } from "effect/PlatformError";
 
-const value = PlatformError.badArgument()
+const value = PlatformError.badArgument();
 ```
 
 ## Test Anchors

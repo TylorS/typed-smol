@@ -45,10 +45,10 @@ description: Guidance for `effect/ScopedCache` focused on APIs like get, set, an
 ## Starter example
 
 ```ts
-import { ScopedCache } from "effect/ScopedCache"
+import { ScopedCache } from "effect/ScopedCache";
 
-const value = ScopedCache.make()
-const next = ScopedCache.get(value)
+const value = ScopedCache.make();
+const next = ScopedCache.get(value);
 ```
 
 ## Common pitfalls

@@ -35,9 +35,9 @@ description: Guidance for facet `effect/unstable/eventlog/EventLogServer` focuse
 ## Starter example
 
 ```ts
-import { EventLogServer } from "effect/unstable/eventlog/EventLogServer"
+import { EventLogServer } from "effect/unstable/eventlog/EventLogServer";
 
-const value = EventLogServer.makeHandler()
+const value = EventLogServer.makeHandler();
 ```
 
 ## Common pitfalls

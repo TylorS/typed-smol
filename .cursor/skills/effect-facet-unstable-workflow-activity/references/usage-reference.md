@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Activity } from "effect/unstable/workflow/Activity"
+import { Activity } from "effect/unstable/workflow/Activity";
 
-const value = Activity.make()
+const value = Activity.make();
 ```
 
 ## Test Anchors

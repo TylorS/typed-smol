@@ -46,12 +46,12 @@ description: Guidance for facet `effect/unstable/ai/Telemetry` focused on APIs l
 ## Starter example
 
 ```ts
-import { Effect } from "effect"
-import { Telemetry } from "effect/unstable/ai"
+import { Effect } from "effect";
+import { Telemetry } from "effect/unstable/ai";
 
 // Add telemetry attributes to a span
-const addTelemetry = Effect.gen(function*() {
-  const span = yield* Effect.currentSpan
+const addTelemetry = Effect.gen(function* () {
+  const span = yield* Effect.currentSpan;
 
   Telemetry.addGenAIAnnotations(span, {
     system: "openai",
@@ -59,14 +59,14 @@ const addTelemetry = Effect.gen(function*() {
     request: {
       model: "gpt-4",
       temperature: 0.7,
-      maxTokens: 1000
+      maxTokens: 1000,
     },
     usage: {
       inputTokens: 100,
-      outputTokens: 50
-    }
-  })
-})
+      outputTokens: 50,
+    },
+  });
+});
 ```
 
 ## Common pitfalls

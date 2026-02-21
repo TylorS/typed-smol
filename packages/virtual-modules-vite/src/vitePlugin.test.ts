@@ -22,7 +22,7 @@ describe("virtualModulesVitePlugin", () => {
       },
     ]);
     const plugin = virtualModulesVitePlugin({ resolver: manager });
-    const resolveId = plugin.resolveId! as ResolveId
+    const resolveId = plugin.resolveId! as ResolveId;
     expect(resolveId("virtual:x", undefined)).toBeNull();
   });
 

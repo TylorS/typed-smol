@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/EntityId` focused on AP
 ## Starter example
 
 ```ts
-import { EntityId } from "effect/unstable/cluster/EntityId"
+import { EntityId } from "effect/unstable/cluster/EntityId";
 
-const value = EntityId.make()
+const value = EntityId.make();
 ```
 
 ## Common pitfalls

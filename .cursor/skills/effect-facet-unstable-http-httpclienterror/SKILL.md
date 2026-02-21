@@ -41,10 +41,10 @@ description: Guidance for facet `effect/unstable/http/HttpClientError` focused o
 ## Starter example
 
 ```ts
-import { HttpClientError } from "effect/unstable/http/HttpClientError"
+import { HttpClientError } from "effect/unstable/http/HttpClientError";
 
-const value = HttpClientError.EmptyBodyError()
-const next = HttpClientError.DecodeError(value)
+const value = HttpClientError.EmptyBodyError();
+const next = HttpClientError.DecodeError(value);
 ```
 
 ## Common pitfalls

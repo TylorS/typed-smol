@@ -19,9 +19,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Terminal } from "effect/Terminal"
+import { Terminal } from "effect/Terminal";
 
-const value = Terminal.make()
+const value = Terminal.make();
 ```
 
 ## Test Anchors

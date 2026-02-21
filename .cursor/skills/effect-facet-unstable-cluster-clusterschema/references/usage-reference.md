@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ClusterSchema } from "effect/unstable/cluster/ClusterSchema"
+import { ClusterSchema } from "effect/unstable/cluster/ClusterSchema";
 
-const value = ClusterSchema.isUninterruptibleForClient()
+const value = ClusterSchema.isUninterruptibleForClient();
 ```
 
 ## Test Anchors

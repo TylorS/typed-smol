@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Template } from "effect/unstable/http/Template"
+import { Template } from "effect/unstable/http/Template";
 
-const value = Template.make()
+const value = Template.make();
 ```
 
 ## Test Anchors

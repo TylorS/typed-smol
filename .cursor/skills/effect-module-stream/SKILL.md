@@ -45,16 +45,16 @@ description: Guidance for `effect/Stream` focused on APIs like map, run, and fai
 ## Starter example
 
 ```ts
-import { Console, Effect, Stream } from "effect"
+import { Console, Effect, Stream } from "effect";
 
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   yield* Stream.make(1, 2, 3).pipe(
     Stream.map((n) => n * 2),
-    Stream.runForEach((n) => Console.log(n))
-  )
-})
+    Stream.runForEach((n) => Console.log(n)),
+  );
+});
 
-Effect.runPromise(program)
+Effect.runPromise(program);
 // Output:
 // 2
 // 4

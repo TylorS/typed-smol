@@ -33,26 +33,28 @@ description: Guidance for `effect/ManagedRuntime` focused on APIs like make, Ser
 ## Starter example
 
 ```ts
-import { Console, Effect, Layer, ManagedRuntime, ServiceMap } from "effect"
+import { Console, Effect, Layer, ManagedRuntime, ServiceMap } from "effect";
 
-class Notifications extends ServiceMap.Service<Notifications, {
-  readonly notify: (message: string) => Effect.Effect<void>
-}>()("Notifications") {
+class Notifications extends ServiceMap.Service<
+  Notifications,
+  {
+    readonly notify: (message: string) => Effect.Effect<void>;
+  }
+>()("Notifications") {
   static layer = Layer.succeed(this)({
-    notify: (message) => Console.log(message)
-  })
+    notify: (message) => Console.log(message),
+  });
 }
 
 async function main() {
-  const runtime = ManagedRuntime.make(Notifications.layer)
-  await runtime.runPromise(Effect.flatMap(
-    Notifications.asEffect(),
-    (_) => _.notify("Hello, world!")
-  ))
-  await runtime.dispose()
+  const runtime = ManagedRuntime.make(Notifications.layer);
+  await runtime.runPromise(
+    Effect.flatMap(Notifications.asEffect(), (_) => _.notify("Hello, world!")),
+  );
+  await runtime.dispose();
 }
 
-main()
+main();
 ```
 
 ## Common pitfalls

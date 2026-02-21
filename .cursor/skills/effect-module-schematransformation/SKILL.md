@@ -45,17 +45,17 @@ description: Guidance for `effect/SchemaTransformation` focused on APIs like mak
 ## Starter example
 
 ```ts
-import { Schema, SchemaTransformation } from "effect"
+import { Schema, SchemaTransformation } from "effect";
 
 const CentsFromDollars = Schema.Number.pipe(
   Schema.decodeTo(
     Schema.Number,
     SchemaTransformation.transform({
       decode: (dollars) => dollars * 100,
-      encode: (cents) => cents / 100
-    })
-  )
-)
+      encode: (cents) => cents / 100,
+    }),
+  ),
+);
 ```
 
 ## Common pitfalls

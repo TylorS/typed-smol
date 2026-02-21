@@ -20,13 +20,13 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpMethod } from "effect/unstable/http"
+import { HttpMethod } from "effect/unstable/http";
 
-console.log(HttpMethod.isHttpMethod("GET"))
+console.log(HttpMethod.isHttpMethod("GET"));
 // true
-console.log(HttpMethod.isHttpMethod("get"))
+console.log(HttpMethod.isHttpMethod("get"));
 // false
-console.log(HttpMethod.isHttpMethod(1))
+console.log(HttpMethod.isHttpMethod(1));
 // false
 ```
 

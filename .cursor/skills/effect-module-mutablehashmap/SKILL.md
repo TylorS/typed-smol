@@ -43,27 +43,26 @@ description: Guidance for `effect/MutableHashMap` focused on APIs like get, set,
 ## Starter example
 
 ```ts
-import * as MutableHashMap from "effect/MutableHashMap"
+import * as MutableHashMap from "effect/MutableHashMap";
 
 // Create a mutable hash map with string keys and number values
-const map: MutableHashMap.MutableHashMap<string, number> = MutableHashMap
-  .empty()
+const map: MutableHashMap.MutableHashMap<string, number> = MutableHashMap.empty();
 
 // Add some data
-MutableHashMap.set(map, "count", 42)
-MutableHashMap.set(map, "total", 100)
+MutableHashMap.set(map, "count", 42);
+MutableHashMap.set(map, "total", 100);
 
 // Use as iterable
 for (const [key, value] of map) {
-  console.log(`${key}: ${value}`)
+  console.log(`${key}: ${value}`);
 }
 // Output:
 // count: 42
 // total: 100
 
 // Convert to array
-const entries = Array.from(map)
-console.log(entries) // [["count", 42], ["total", 100]]
+const entries = Array.from(map);
+console.log(entries); // [["count", 42], ["total", 100]]
 ```
 
 ## Common pitfalls

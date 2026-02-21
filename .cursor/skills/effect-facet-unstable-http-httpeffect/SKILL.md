@@ -41,9 +41,9 @@ description: Guidance for facet `effect/unstable/http/HttpEffect` focused on API
 ## Starter example
 
 ```ts
-import { HttpEffect } from "effect/unstable/http/HttpEffect"
+import { HttpEffect } from "effect/unstable/http/HttpEffect";
 
-const value = HttpEffect.fromWebHandler()
+const value = HttpEffect.fromWebHandler();
 ```
 
 ## Common pitfalls

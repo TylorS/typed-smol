@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/workflow/DurableClock` focused 
 ## Starter example
 
 ```ts
-import { DurableClock } from "effect/unstable/workflow/DurableClock"
+import { DurableClock } from "effect/unstable/workflow/DurableClock";
 
-const value = DurableClock.make()
+const value = DurableClock.make();
 ```
 
 ## Common pitfalls

@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/cluster/ClusterCron` focused on
 ## Starter example
 
 ```ts
-import { ClusterCron } from "effect/unstable/cluster/ClusterCron"
+import { ClusterCron } from "effect/unstable/cluster/ClusterCron";
 
-const value = ClusterCron.make()
+const value = ClusterCron.make();
 ```
 
 ## Common pitfalls

@@ -35,9 +35,9 @@ description: Guidance for `effect/unstable/workflow` focused on APIs like Activi
 ## Starter example
 
 ```ts
-import { workflow } from "effect/unstable/workflow"
+import { workflow } from "effect/unstable/workflow";
 
-const value = workflow.Activity()
+const value = workflow.Activity();
 ```
 
 ## Common pitfalls

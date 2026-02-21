@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RunnerStorage } from "effect/unstable/cluster/RunnerStorage"
+import { RunnerStorage } from "effect/unstable/cluster/RunnerStorage";
 
-const value = RunnerStorage.makeMemory()
-const next = RunnerStorage.Encoded(value)
+const value = RunnerStorage.makeMemory();
+const next = RunnerStorage.Encoded(value);
 ```
 
 ## Test Anchors

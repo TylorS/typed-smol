@@ -47,8 +47,7 @@ export function pathIsUnderBase(baseDir: string, absolutePath: string): boolean 
 export const stableHash = (input: string): string =>
   createHash("sha1").update(input).digest("hex").slice(0, 16);
 
-const sanitizeSegment = (value: string): string =>
-  value.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
+const sanitizeSegment = (value: string): string => value.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
 
 export const createVirtualKey = (id: string, importer: string): string => `${importer}::${id}`;
 
@@ -59,7 +58,9 @@ export const createVirtualFileName = (
 ): string => {
   const safePluginName = sanitizeSegment(pluginName);
   const hash = stableHash(virtualKey);
-  return toPosixPath(posix.join(toPosixPath(projectRoot), ".typed", "virtual", safePluginName, `${hash}.d.ts`));
+  return toPosixPath(
+    posix.join(toPosixPath(projectRoot), ".typed", "virtual", safePluginName, `${hash}.d.ts`),
+  );
 };
 
 export const createWatchDescriptorKey = (descriptor: WatchDependencyDescriptor): string => {

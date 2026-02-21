@@ -20,13 +20,13 @@ This module provides the `Order` type class for defining total orderings on type
 ## Starter Example
 
 ```ts
-import { Order } from "effect"
+import { Order } from "effect";
 
-const result = Order.Number(5, 10)
-console.log(result) // -1 (5 is less than 10)
+const result = Order.Number(5, 10);
+console.log(result); // -1 (5 is less than 10)
 
-const isLessThan = Order.isLessThan(Order.Number)(5, 10)
-console.log(isLessThan) // true
+const isLessThan = Order.isLessThan(Order.Number)(5, 10);
+console.log(isLessThan); // true
 ```
 
 ## Test Anchors

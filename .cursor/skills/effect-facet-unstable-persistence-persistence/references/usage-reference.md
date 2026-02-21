@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Persistence } from "effect/unstable/persistence/Persistence"
+import { Persistence } from "effect/unstable/persistence/Persistence";
 
-const value = Persistence.layer()
+const value = Persistence.layer();
 ```
 
 ## Test Anchors

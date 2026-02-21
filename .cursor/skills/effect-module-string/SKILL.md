@@ -45,11 +45,11 @@ description: Guidance for `effect/String` focused on APIs like empty, isEmpty, a
 ## Starter example
 
 ```ts
-import { String } from "effect"
-import * as assert from "node:assert"
+import { String } from "effect";
+import * as assert from "node:assert";
 
-assert.deepStrictEqual(String.isString("a"), true)
-assert.deepStrictEqual(String.isString(1), false)
+assert.deepStrictEqual(String.isString("a"), true);
+assert.deepStrictEqual(String.isString(1), false);
 ```
 
 ## Common pitfalls

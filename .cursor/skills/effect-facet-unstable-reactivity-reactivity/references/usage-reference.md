@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Reactivity } from "effect/unstable/reactivity/Reactivity"
+import { Reactivity } from "effect/unstable/reactivity/Reactivity";
 
-const value = Reactivity.make()
+const value = Reactivity.make();
 ```
 
 ## Test Anchors

@@ -21,12 +21,12 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { RateLimiter } from "effect/unstable/persistence"
+import { Effect } from "effect";
+import { RateLimiter } from "effect/unstable/persistence";
 
-Effect.gen(function*() {
+Effect.gen(function* () {
   // Access the `withLimiter` function from the RateLimiter module
-  const withLimiter = yield* RateLimiter.makeWithRateLimiter
+  const withLimiter = yield* RateLimiter.makeWithRateLimiter;
 
   // Apply a rate limiter to an effect
   yield* Effect.log("Making a request with rate limiting").pipe(
@@ -35,10 +35,10 @@ Effect.gen(function*() {
       limit: 10,
       onExceeded: "delay",
       window: "5 seconds",
-      algorithm: "fixed-window"
-    })
-  )
-})
+      algorithm: "fixed-window",
+    }),
+  );
+});
 ```
 
 ## Test Anchors

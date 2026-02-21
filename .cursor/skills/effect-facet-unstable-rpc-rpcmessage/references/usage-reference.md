@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcMessage } from "effect/unstable/rpc/RpcMessage"
+import { RpcMessage } from "effect/unstable/rpc/RpcMessage";
 
-const value = RpcMessage.FromClient()
-const next = RpcMessage.FromClientEncoded(value)
+const value = RpcMessage.FromClient();
+const next = RpcMessage.FromClientEncoded(value);
 ```
 
 ## Test Anchors

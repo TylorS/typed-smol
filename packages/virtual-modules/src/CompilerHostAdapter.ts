@@ -1,8 +1,5 @@
 import type * as ts from "typescript";
-import {
-  type CompilerHostAdapterOptions,
-  type VirtualModuleAdapterHandle,
-} from "./types.js";
+import { type CompilerHostAdapterOptions, type VirtualModuleAdapterHandle } from "./types.js";
 import {
   createVirtualRecordStore,
   toResolvedModule,
@@ -12,10 +9,7 @@ import {
 export const attachCompilerHostAdapter = (
   options: CompilerHostAdapterOptions,
 ): VirtualModuleAdapterHandle => {
-  if (
-    typeof options.projectRoot !== "string" ||
-    options.projectRoot.trim() === ""
-  ) {
+  if (typeof options.projectRoot !== "string" || options.projectRoot.trim() === "") {
     throw new Error("projectRoot must be a non-empty string");
   }
 
@@ -24,21 +18,31 @@ export const attachCompilerHostAdapter = (
 
   const invalidatedPaths = new Set<string>();
 
-  const originalResolveModuleNameLiterals = (host as {
-    resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[];
-  }).resolveModuleNameLiterals?.bind(host);
-  const originalResolveModuleNames = (host as {
-    resolveModuleNames?: (...args: readonly unknown[]) => readonly (ts.ResolvedModule | undefined)[];
-  }).resolveModuleNames?.bind(host);
+  const originalResolveModuleNameLiterals = (
+    host as {
+      resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[];
+    }
+  ).resolveModuleNameLiterals?.bind(host);
+  const originalResolveModuleNames = (
+    host as {
+      resolveModuleNames?: (
+        ...args: readonly unknown[]
+      ) => readonly (ts.ResolvedModule | undefined)[];
+    }
+  ).resolveModuleNames?.bind(host);
   const originalGetSourceFile = host.getSourceFile.bind(host);
-  const originalGetSourceFileByPath = (host as {
-    getSourceFileByPath?: (...args: readonly unknown[]) => ts.SourceFile | undefined;
-  }).getSourceFileByPath?.bind(host);
+  const originalGetSourceFileByPath = (
+    host as {
+      getSourceFileByPath?: (...args: readonly unknown[]) => ts.SourceFile | undefined;
+    }
+  ).getSourceFileByPath?.bind(host);
   const originalFileExists = host.fileExists.bind(host);
   const originalReadFile = host.readFile.bind(host);
-  const originalHasInvalidatedResolutions = (host as {
-    hasInvalidatedResolutions?: (...args: readonly unknown[]) => boolean;
-  }).hasInvalidatedResolutions?.bind(host);
+  const originalHasInvalidatedResolutions = (
+    host as {
+      hasInvalidatedResolutions?: (...args: readonly unknown[]) => boolean;
+    }
+  ).hasInvalidatedResolutions?.bind(host);
 
   const store = createVirtualRecordStore({
     projectRoot: options.projectRoot,
@@ -108,7 +112,9 @@ export const attachCompilerHostAdapter = (
           compilerOptions,
           containingSourceFile,
         )
-      : moduleNames.map((moduleName) => fallbackResolveModule(moduleName, containingFile, compilerOptions));
+      : moduleNames.map((moduleName) =>
+          fallbackResolveModule(moduleName, containingFile, compilerOptions),
+        );
 
     return moduleNames.map((moduleName, index) => {
       const record = getOrBuildRecord(moduleName, containingFile);
@@ -128,16 +134,20 @@ export const attachCompilerHostAdapter = (
     reusedNames?: readonly { readonly text: string }[],
   ): readonly ts.ResolvedModuleWithFailedLookupLocations[] => {
     const fallback = originalResolveModuleNameLiterals
-      ? originalResolveModuleNameLiterals(
+      ? (originalResolveModuleNameLiterals(
           moduleLiterals as unknown as readonly ts.StringLiteralLike[],
           containingFile,
           redirectedReference,
           compilerOptions,
           containingSourceFile,
           reusedNames as readonly ts.StringLiteralLike[] | undefined,
-        ) as readonly ts.ResolvedModuleWithFailedLookupLocations[]
+        ) as readonly ts.ResolvedModuleWithFailedLookupLocations[])
       : moduleLiterals.map((moduleLiteral) => ({
-          resolvedModule: fallbackResolveModule(moduleLiteral.text, containingFile, compilerOptions),
+          resolvedModule: fallbackResolveModule(
+            moduleLiteral.text,
+            containingFile,
+            compilerOptions,
+          ),
         }));
 
     return moduleLiterals.map((moduleLiteral, index) => {
@@ -161,7 +171,12 @@ export const attachCompilerHostAdapter = (
   ): ts.SourceFile | undefined => {
     const record = recordsByVirtualFile.get(fileName);
     if (!record) {
-      return originalGetSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+      return originalGetSourceFile(
+        fileName,
+        languageVersionOrOptions,
+        onError,
+        shouldCreateNewSourceFile,
+      );
     }
 
     const freshRecord = rebuildIfStale(record);
@@ -184,7 +199,13 @@ export const attachCompilerHostAdapter = (
     ): ts.SourceFile | undefined => {
       const record = recordsByVirtualFile.get(fileName);
       if (!record) {
-        return originalGetSourceFileByPath(fileName, path, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+        return originalGetSourceFileByPath(
+          fileName,
+          path,
+          languageVersionOrOptions,
+          onError,
+          shouldCreateNewSourceFile,
+        );
       }
 
       const freshRecord = rebuildIfStale(record);
@@ -216,9 +237,9 @@ export const attachCompilerHostAdapter = (
   };
 
   if (originalHasInvalidatedResolutions) {
-    (host as { hasInvalidatedResolutions: (...args: readonly unknown[]) => boolean }).hasInvalidatedResolutions = (
-      ...args: readonly unknown[]
-    ) => {
+    (
+      host as { hasInvalidatedResolutions: (...args: readonly unknown[]) => boolean }
+    ).hasInvalidatedResolutions = (...args: readonly unknown[]) => {
       if (invalidatedPaths.size > 0) {
         return true;
       }
@@ -228,20 +249,29 @@ export const attachCompilerHostAdapter = (
 
   return {
     dispose(): void {
-      (host as { resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[] }).resolveModuleNameLiterals =
-        originalResolveModuleNameLiterals;
-      (host as {
-        resolveModuleNames?: (...args: readonly unknown[]) => readonly (ts.ResolvedModule | undefined)[];
-      }).resolveModuleNames = originalResolveModuleNames;
+      (
+        host as { resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[] }
+      ).resolveModuleNameLiterals = originalResolveModuleNameLiterals;
+      (
+        host as {
+          resolveModuleNames?: (
+            ...args: readonly unknown[]
+          ) => readonly (ts.ResolvedModule | undefined)[];
+        }
+      ).resolveModuleNames = originalResolveModuleNames;
       host.getSourceFile = originalGetSourceFile;
       if (originalGetSourceFileByPath) {
-        (host as { getSourceFileByPath?: (...args: readonly unknown[]) => ts.SourceFile | undefined }).getSourceFileByPath =
-          originalGetSourceFileByPath;
+        (
+          host as {
+            getSourceFileByPath?: (...args: readonly unknown[]) => ts.SourceFile | undefined;
+          }
+        ).getSourceFileByPath = originalGetSourceFileByPath;
       }
       host.fileExists = originalFileExists;
       host.readFile = originalReadFile;
-      (host as { hasInvalidatedResolutions?: (...args: readonly unknown[]) => boolean }).hasInvalidatedResolutions =
-        originalHasInvalidatedResolutions;
+      (
+        host as { hasInvalidatedResolutions?: (...args: readonly unknown[]) => boolean }
+      ).hasInvalidatedResolutions = originalHasInvalidatedResolutions;
 
       store.dispose();
       invalidatedPaths.clear();

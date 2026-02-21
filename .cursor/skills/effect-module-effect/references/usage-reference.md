@@ -21,20 +21,20 @@ The `Effect` module is the core of the Effect library, providing a powerful and 
 ## Starter Example
 
 ```ts
-import { Console, Effect } from "effect"
+import { Console, Effect } from "effect";
 
 // Creating a simple effect
-const hello = Effect.succeed("Hello, World!")
+const hello = Effect.succeed("Hello, World!");
 
 // Composing effects
-const program = Effect.gen(function*() {
-  const message = yield* hello
-  yield* Console.log(message)
-  return message.length
-})
+const program = Effect.gen(function* () {
+  const message = yield* hello;
+  yield* Console.log(message);
+  return message.length;
+});
 
 // Running the effect
-Effect.runPromise(program).then(console.log) // 13
+Effect.runPromise(program).then(console.log); // 13
 ```
 
 ## Test Anchors

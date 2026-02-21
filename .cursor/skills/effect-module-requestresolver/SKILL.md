@@ -46,22 +46,22 @@ description: Guidance for `effect/RequestResolver` focused on APIs like make, ma
 ## Starter example
 
 ```ts
-import type { Request } from "effect"
-import { Effect, Exit, RequestResolver } from "effect"
+import type { Request } from "effect";
+import { Effect, Exit, RequestResolver } from "effect";
 
 interface GetUserRequest extends Request.Request<string, Error> {
-  readonly _tag: "GetUserRequest"
-  readonly id: number
+  readonly _tag: "GetUserRequest";
+  readonly id: number;
 }
 
 // In practice, you would typically use RequestResolver.make() instead
 const resolver = RequestResolver.make<GetUserRequest>((entries) =>
   Effect.sync(() => {
     for (const entry of entries) {
-      entry.completeUnsafe(Exit.succeed(`User ${entry.request.id}`))
+      entry.completeUnsafe(Exit.succeed(`User ${entry.request.id}`));
     }
-  })
-)
+  }),
+);
 ```
 
 ## Common pitfalls

@@ -16,15 +16,17 @@ export interface CompileParams {
 export function compile(params: CompileParams): number {
   const { ts, commandLine, resolver, reportDiagnostic } = params;
   const { options, fileNames, projectReferences } = commandLine;
-  const configFileParsingDiagnostics = (commandLine as { configFileParsingDiagnostics?: readonly ts.Diagnostic[] }).configFileParsingDiagnostics;
+  const configFileParsingDiagnostics = (
+    commandLine as { configFileParsingDiagnostics?: readonly ts.Diagnostic[] }
+  ).configFileParsingDiagnostics;
 
-  const configParseDiags = (ts as {
-    getConfigFileParsingDiagnostics?: (p: ts.ParsedCommandLine) => readonly ts.Diagnostic[];
-  }).getConfigFileParsingDiagnostics?.(commandLine) ?? commandLine.errors;
-  const allConfigErrors = [
-    ...(configFileParsingDiagnostics ?? []),
-    ...configParseDiags,
-  ];
+  const configParseDiags =
+    (
+      ts as {
+        getConfigFileParsingDiagnostics?: (p: ts.ParsedCommandLine) => readonly ts.Diagnostic[];
+      }
+    ).getConfigFileParsingDiagnostics?.(commandLine) ?? commandLine.errors;
+  const allConfigErrors = [...(configFileParsingDiagnostics ?? []), ...configParseDiags];
   for (const d of allConfigErrors) {
     reportDiagnostic(d);
   }
@@ -48,13 +50,7 @@ export function compile(params: CompileParams): number {
   const sys = ts.sys;
   if (!sys) {
     reportDiagnostic(
-      createDiagnostic(
-        ts,
-        ts.DiagnosticCategory.Error,
-        0,
-        0,
-        "ts.sys is not available.",
-      ),
+      createDiagnostic(ts, ts.DiagnosticCategory.Error, 0, 0, "ts.sys is not available."),
     );
     return 1;
   }
@@ -87,7 +83,10 @@ export function compile(params: CompileParams): number {
       reportDiagnostic(d);
     }
 
-    if (emitResult.emitSkipped || allDiagnostics.some((d) => d.category === ts.DiagnosticCategory.Error)) {
+    if (
+      emitResult.emitSkipped ||
+      allDiagnostics.some((d) => d.category === ts.DiagnosticCategory.Error)
+    ) {
       exitCode = 1;
     }
   } finally {

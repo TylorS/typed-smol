@@ -42,10 +42,10 @@ description: Guidance for facet `effect/unstable/encoding/Sse` focused on APIs l
 ## Starter example
 
 ```ts
-import { Sse } from "effect/unstable/encoding/Sse"
+import { Sse } from "effect/unstable/encoding/Sse";
 
-const value = Sse.makeParser()
-const next = Sse.decode(value)
+const value = Sse.makeParser();
+const next = Sse.decode(value);
 ```
 
 ## Common pitfalls

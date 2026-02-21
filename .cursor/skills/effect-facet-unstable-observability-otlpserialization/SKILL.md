@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/observability/OtlpSerialization
 ## Starter example
 
 ```ts
-import { OtlpSerialization } from "effect/unstable/observability/OtlpSerialization"
+import { OtlpSerialization } from "effect/unstable/observability/OtlpSerialization";
 
-const value = OtlpSerialization.layerJson()
+const value = OtlpSerialization.layerJson();
 ```
 
 ## Common pitfalls

@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Event } from "effect/unstable/eventlog/Event"
+import { Event } from "effect/unstable/eventlog/Event";
 
-const value = Event.make()
+const value = Event.make();
 ```
 
 ## Test Anchors

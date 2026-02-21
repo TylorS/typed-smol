@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Migrator } from "effect/unstable/sql/Migrator"
+import { Migrator } from "effect/unstable/sql/Migrator";
 
-const value = Migrator.make()
+const value = Migrator.make();
 ```
 
 ## Test Anchors

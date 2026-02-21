@@ -45,13 +45,13 @@ description: Guidance for `effect/BigInt` focused on APIs like fromNumber, fromS
 ## Starter example
 
 ```ts
-import * as BigInt from "effect/BigInt"
+import * as BigInt from "effect/BigInt";
 
-const bigInt = BigInt.BigInt(123)
-console.log(bigInt) // 123n
+const bigInt = BigInt.BigInt(123);
+console.log(bigInt); // 123n
 
-const fromString = BigInt.BigInt("456")
-console.log(fromString) // 456n
+const fromString = BigInt.BigInt("456");
+console.log(fromString); // 456n
 ```
 
 ## Common pitfalls

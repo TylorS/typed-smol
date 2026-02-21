@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpApiError } from "effect/unstable/httpapi/HttpApiError"
+import { HttpApiError } from "effect/unstable/httpapi/HttpApiError";
 
-const value = HttpApiError.ServiceUnavailable()
+const value = HttpApiError.ServiceUnavailable();
 ```
 
 ## Test Anchors

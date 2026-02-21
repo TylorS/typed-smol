@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlSchema } from "effect/unstable/sql/SqlSchema"
+import { SqlSchema } from "effect/unstable/sql/SqlSchema";
 
-const value = SqlSchema.void()
+const value = SqlSchema.void();
 ```
 
 ## Test Anchors

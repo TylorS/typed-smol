@@ -46,10 +46,10 @@ description: Guidance for facet `effect/unstable/rpc/RpcServer` focused on APIs 
 ## Starter example
 
 ```ts
-import { RpcServer } from "effect/unstable/rpc/RpcServer"
+import { RpcServer } from "effect/unstable/rpc/RpcServer";
 
-const value = RpcServer.make()
-const next = RpcServer.layerProtocolWorkerRunner(value)
+const value = RpcServer.make();
+const next = RpcServer.layerProtocolWorkerRunner(value);
 ```
 
 ## Common pitfalls

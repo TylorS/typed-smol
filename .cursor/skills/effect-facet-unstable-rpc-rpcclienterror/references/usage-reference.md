@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcClientError } from "effect/unstable/rpc/RpcClientError"
+import { RpcClientError } from "effect/unstable/rpc/RpcClientError";
 
-const value = RpcClientError.RpcClientDefect()
+const value = RpcClientError.RpcClientDefect();
 ```
 
 ## Test Anchors

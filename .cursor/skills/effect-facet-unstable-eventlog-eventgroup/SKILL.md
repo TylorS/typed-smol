@@ -38,9 +38,9 @@ description: Guidance for facet `effect/unstable/eventlog/EventGroup` focused on
 ## Starter example
 
 ```ts
-import { EventGroup } from "effect/unstable/eventlog/EventGroup"
+import { EventGroup } from "effect/unstable/eventlog/EventGroup";
 
-const value = EventGroup.empty()
+const value = EventGroup.empty();
 ```
 
 ## Common pitfalls

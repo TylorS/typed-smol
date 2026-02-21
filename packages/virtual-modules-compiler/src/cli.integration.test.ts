@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -29,7 +30,10 @@ afterEach(() => {
   }
 });
 
-function runVmc(cwd: string, args: string[] = []): { exitCode: number; stdout: string; stderr: string } {
+function runVmc(
+  cwd: string,
+  args: string[] = [],
+): { exitCode: number; stdout: string; stderr: string } {
   const result = spawnSync("node", [cliPath, ...args], {
     cwd,
     encoding: "utf8",
@@ -150,7 +154,7 @@ describe("vmc CLI integration", () => {
       }),
       "utf8",
     );
-    writeFileSync(join(srcDir, "entry.ts"), 'export const x = 1;\n', "utf8");
+    writeFileSync(join(srcDir, "entry.ts"), "export const x = 1;\n", "utf8");
 
     const { exitCode, stderr } = runVmc(dir, ["--noEmit"]);
     expect(stderr).toBe("");

@@ -37,17 +37,17 @@ description: Guidance for `effect/LogLevel` focused on APIs like getOrdinal, isE
 ## Starter example
 
 ```ts
-import { Effect } from "effect"
+import { Effect } from "effect";
 
 // Basic log level usage
-const program = Effect.gen(function*() {
-  yield* Effect.logFatal("System is shutting down")
-  yield* Effect.logError("Database connection failed")
-  yield* Effect.logWarning("Memory usage is high")
-  yield* Effect.logInfo("User logged in")
-  yield* Effect.logDebug("Processing request")
-  yield* Effect.logTrace("Variable value: xyz")
-})
+const program = Effect.gen(function* () {
+  yield* Effect.logFatal("System is shutting down");
+  yield* Effect.logError("Database connection failed");
+  yield* Effect.logWarning("Memory usage is high");
+  yield* Effect.logInfo("User logged in");
+  yield* Effect.logDebug("Processing request");
+  yield* Effect.logTrace("Variable value: xyz");
+});
 ```
 
 ## Common pitfalls

@@ -45,23 +45,25 @@ description: Guidance for `effect/PubSub` focused on APIs like make, makeAtomicB
 ## Starter example
 
 ```ts
-import { Effect, PubSub } from "effect"
+import { Effect, PubSub } from "effect";
 
-const program = Effect.gen(function*() {
-  const pubsub = yield* PubSub.bounded<string>(10)
+const program = Effect.gen(function* () {
+  const pubsub = yield* PubSub.bounded<string>(10);
 
   // Publisher
-  yield* PubSub.publish(pubsub, "Hello")
-  yield* PubSub.publish(pubsub, "World")
+  yield* PubSub.publish(pubsub, "Hello");
+  yield* PubSub.publish(pubsub, "World");
 
   // Subscriber
-  yield* Effect.scoped(Effect.gen(function*() {
-    const subscription = yield* PubSub.subscribe(pubsub)
-    const message1 = yield* PubSub.take(subscription)
-    const message2 = yield* PubSub.take(subscription)
-    console.log(message1, message2) // "Hello", "World"
-  }))
-})
+  yield* Effect.scoped(
+    Effect.gen(function* () {
+      const subscription = yield* PubSub.subscribe(pubsub);
+      const message1 = yield* PubSub.take(subscription);
+      const message2 = yield* PubSub.take(subscription);
+      console.log(message1, message2); // "Hello", "World"
+    }),
+  );
+});
 ```
 
 ## Common pitfalls

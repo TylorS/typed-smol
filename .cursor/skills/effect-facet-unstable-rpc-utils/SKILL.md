@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/rpc/Utils` focused on APIs like
 ## Starter example
 
 ```ts
-import { Utils } from "effect/unstable/rpc/Utils"
+import { Utils } from "effect/unstable/rpc/Utils";
 
-const value = Utils.withRun()
+const value = Utils.withRun();
 ```
 
 ## Common pitfalls

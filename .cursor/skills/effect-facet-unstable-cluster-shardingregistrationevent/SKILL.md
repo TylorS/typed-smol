@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/ShardingRegistrationEve
 ## Starter example
 
 ```ts
-import { ShardingRegistrationEvent } from "effect/unstable/cluster/ShardingRegistrationEvent"
+import { ShardingRegistrationEvent } from "effect/unstable/cluster/ShardingRegistrationEvent";
 
-const value = ShardingRegistrationEvent.EntityRegistered()
+const value = ShardingRegistrationEvent.EntityRegistered();
 ```
 
 ## Common pitfalls

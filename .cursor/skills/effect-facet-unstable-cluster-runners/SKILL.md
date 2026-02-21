@@ -38,10 +38,10 @@ description: Guidance for facet `effect/unstable/cluster/Runners` focused on API
 ## Starter example
 
 ```ts
-import { Runners } from "effect/unstable/cluster/Runners"
+import { Runners } from "effect/unstable/cluster/Runners";
 
-const value = Runners.make()
-const next = Runners.Runners(value)
+const value = Runners.make();
+const next = Runners.Runners(value);
 ```
 
 ## Common pitfalls

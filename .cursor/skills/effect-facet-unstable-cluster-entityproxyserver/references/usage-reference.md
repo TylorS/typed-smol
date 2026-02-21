@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EntityProxyServer } from "effect/unstable/cluster/EntityProxyServer"
+import { EntityProxyServer } from "effect/unstable/cluster/EntityProxyServer";
 
-const value = EntityProxyServer.layerHttpApi()
+const value = EntityProxyServer.layerHttpApi();
 ```
 
 ## Test Anchors

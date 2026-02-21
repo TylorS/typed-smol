@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EntityId } from "effect/unstable/cluster/EntityId"
+import { EntityId } from "effect/unstable/cluster/EntityId";
 
-const value = EntityId.make()
+const value = EntityId.make();
 ```
 
 ## Test Anchors

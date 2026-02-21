@@ -45,24 +45,24 @@ description: Guidance for `effect/JsonSchema` focused on APIs like fromSchemaDra
 ## Starter example
 
 ```ts
-import { JsonSchema } from "effect"
+import { JsonSchema } from "effect";
 
 const raw: JsonSchema.JsonSchema = {
   type: "object",
   properties: {
-    name: { type: "string" }
+    name: { type: "string" },
   },
-  required: ["name"]
-}
+  required: ["name"],
+};
 
 // Parse into canonical form
-const doc = JsonSchema.fromSchemaDraft07(raw)
+const doc = JsonSchema.fromSchemaDraft07(raw);
 
 // Convert back to Draft-07
-const draft07 = JsonSchema.toDocumentDraft07(doc)
+const draft07 = JsonSchema.toDocumentDraft07(doc);
 
-console.log(draft07.dialect) // "draft-07"
-console.log(draft07.schema) // { type: "object", properties: { name: { type: "string" } }, required: ["name"] }
+console.log(draft07.dialect); // "draft-07"
+console.log(draft07.schema); // { type: "object", properties: { name: { type: "string" } }, required: ["name"] }
 ```
 
 ## Common pitfalls

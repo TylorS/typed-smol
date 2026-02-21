@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Envelope } from "effect/unstable/cluster/Envelope"
+import { Envelope } from "effect/unstable/cluster/Envelope";
 
-const value = Envelope.makeRequest()
-const next = Envelope.Encoded(value)
+const value = Envelope.makeRequest();
+const next = Envelope.Encoded(value);
 ```
 
 ## Test Anchors

@@ -45,22 +45,22 @@ description: Guidance for `effect/HashSet` focused on APIs like map, make, and e
 ## Starter example
 
 ```ts
-import * as HashSet from "effect/HashSet"
+import * as HashSet from "effect/HashSet";
 
 // Create a HashSet
-const set = HashSet.make("apple", "banana", "cherry")
+const set = HashSet.make("apple", "banana", "cherry");
 
 // Check membership
-console.log(HashSet.has(set, "apple")) // true
-console.log(HashSet.has(set, "grape")) // false
+console.log(HashSet.has(set, "apple")); // true
+console.log(HashSet.has(set, "grape")); // false
 
 // Add values (returns new HashSet)
-const updated = HashSet.add(set, "grape")
-console.log(HashSet.size(updated)) // 4
+const updated = HashSet.add(set, "grape");
+console.log(HashSet.size(updated)); // 4
 
 // Remove values (returns new HashSet)
-const smaller = HashSet.remove(set, "banana")
-console.log(HashSet.size(smaller)) // 2
+const smaller = HashSet.remove(set, "banana");
+console.log(HashSet.size(smaller)); // 2
 ```
 
 ## Common pitfalls

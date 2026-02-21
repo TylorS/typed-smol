@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/rpc/RpcClientError` focused on 
 ## Starter example
 
 ```ts
-import { RpcClientError } from "effect/unstable/rpc/RpcClientError"
+import { RpcClientError } from "effect/unstable/rpc/RpcClientError";
 
-const value = RpcClientError.RpcClientDefect()
+const value = RpcClientError.RpcClientDefect();
 ```
 
 ## Common pitfalls

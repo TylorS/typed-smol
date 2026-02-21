@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { cli } from "effect/unstable/cli"
+import { cli } from "effect/unstable/cli";
 
-const value = cli.Flag()
+const value = cli.Flag();
 ```
 
 ## Test Anchors

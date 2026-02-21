@@ -38,20 +38,20 @@ description: Guidance for facet `effect/testing/TestClock` focused on APIs like 
 ## Starter example
 
 ```ts
-import { Effect, Fiber, Option, pipe } from "effect"
-import { TestClock } from "effect/testing"
-import * as assert from "node:assert"
+import { Effect, Fiber, Option, pipe } from "effect";
+import { TestClock } from "effect/testing";
+import * as assert from "node:assert";
 
-Effect.gen(function*() {
+Effect.gen(function* () {
   const fiber = yield* pipe(
     Effect.sleep("5 minutes"),
     Effect.timeout("1 minute"),
-    Effect.forkChild
-  )
-  yield* TestClock.adjust("1 minute")
-  const result = yield* Fiber.join(fiber)
-  assert.deepStrictEqual(result, Option.none())
-})
+    Effect.forkChild,
+  );
+  yield* TestClock.adjust("1 minute");
+  const result = yield* Fiber.join(fiber);
+  assert.deepStrictEqual(result, Option.none());
+});
 ```
 
 ## Common pitfalls

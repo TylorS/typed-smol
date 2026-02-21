@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/cluster/Singleton` focused on A
 ## Starter example
 
 ```ts
-import { Singleton } from "effect/unstable/cluster/Singleton"
+import { Singleton } from "effect/unstable/cluster/Singleton";
 
-const value = Singleton.make()
+const value = Singleton.make();
 ```
 
 ## Common pitfalls

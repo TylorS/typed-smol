@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/cluster/SingleRunner` focused o
 ## Starter example
 
 ```ts
-import { SingleRunner } from "effect/unstable/cluster/SingleRunner"
+import { SingleRunner } from "effect/unstable/cluster/SingleRunner";
 
-const value = SingleRunner.layer()
+const value = SingleRunner.layer();
 ```
 
 ## Common pitfalls

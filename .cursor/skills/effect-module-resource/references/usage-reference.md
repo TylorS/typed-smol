@@ -19,9 +19,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Resource } from "effect/Resource"
+import { Resource } from "effect/Resource";
 
-const value = Resource.get()
+const value = Resource.get();
 ```
 
 ## Test Anchors

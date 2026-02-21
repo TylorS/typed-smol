@@ -45,16 +45,16 @@ description: Guidance for `effect/Chunk` focused on APIs like of, get, and map. 
 ## Starter example
 
 ```ts
-import { Chunk } from "effect"
+import { Chunk } from "effect";
 
 // Creating chunks
-const chunk1 = Chunk.fromIterable([1, 2, 3])
-const chunk2 = Chunk.fromIterable([4, 5, 6])
-const empty = Chunk.empty<number>()
+const chunk1 = Chunk.fromIterable([1, 2, 3]);
+const chunk2 = Chunk.fromIterable([4, 5, 6]);
+const empty = Chunk.empty<number>();
 
 // Combining chunks
-const combined = Chunk.appendAll(chunk1, chunk2)
-console.log(Chunk.toReadonlyArray(combined)) // [1, 2, 3, 4, 5, 6]
+const combined = Chunk.appendAll(chunk1, chunk2);
+console.log(Chunk.toReadonlyArray(combined)); // [1, 2, 3, 4, 5, 6]
 ```
 
 ## Common pitfalls

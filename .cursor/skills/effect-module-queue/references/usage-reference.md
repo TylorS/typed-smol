@@ -21,19 +21,19 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect, Queue } from "effect"
+import { Effect, Queue } from "effect";
 
 // Function that only needs write access to a queue
 const producer = (enqueue: Queue.Enqueue<string>) =>
-  Effect.gen(function*() {
-    yield* Queue.offer(enqueue as Queue.Queue<string>, "hello")
-    yield* Queue.offerAll(enqueue as Queue.Queue<string>, ["world", "!"])
-  })
+  Effect.gen(function* () {
+    yield* Queue.offer(enqueue as Queue.Queue<string>, "hello");
+    yield* Queue.offerAll(enqueue as Queue.Queue<string>, ["world", "!"]);
+  });
 
-const program = Effect.gen(function*() {
-  const queue = yield* Queue.bounded<string>(10)
-  yield* producer(queue)
-})
+const program = Effect.gen(function* () {
+  const queue = yield* Queue.bounded<string>(10);
+  yield* producer(queue);
+});
 ```
 
 ## Test Anchors

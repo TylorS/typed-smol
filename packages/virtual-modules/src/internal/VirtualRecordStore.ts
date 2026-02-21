@@ -33,7 +33,9 @@ export type ResolveRecordResult =
 
 export interface VirtualRecordStoreOptions {
   readonly projectRoot: string;
-  readonly resolver: { resolveModule(options: ResolveVirtualModuleOptions): VirtualModuleResolution };
+  readonly resolver: {
+    resolveModule(options: ResolveVirtualModuleOptions): VirtualModuleResolution;
+  };
   readonly createTypeInfoApiSession?: ResolveVirtualModuleOptions["createTypeInfoApiSession"];
   readonly debounceMs?: number;
   readonly watchHost?: {
@@ -222,7 +224,11 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
       }
 
       const key = createVirtualKey(id, importer);
-      const virtualFileName = createVirtualFileName(options.projectRoot, resolution.pluginName, key);
+      const virtualFileName = createVirtualFileName(
+        options.projectRoot,
+        resolution.pluginName,
+        key,
+      );
       const record: MutableVirtualRecord = {
         key,
         id,

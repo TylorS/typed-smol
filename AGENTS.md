@@ -17,19 +17,19 @@ AskQuestion({
       options: [
         { id: "strict", label: "Strict" },
         { id: "vibe", label: "Vibe" },
-        { id: "review", label: "Review" }
-      ]
+        { id: "review", label: "Review" },
+      ],
     },
     {
       id: "finalization-strategy",
       prompt: "What finalization strategy?",
       options: [
         { id: "pr", label: "PR" },
-        { id: "merge", label: "Merge" }
-      ]
-    }
-  ]
-})
+        { id: "merge", label: "Merge" },
+      ],
+    },
+  ],
+});
 ```
 
 ### Step 2: Load Mode Rule and Enforce Stage Order

@@ -32,9 +32,9 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiScalar` focused 
 ## Starter example
 
 ```ts
-import { HttpApiScalar } from "effect/unstable/httpapi/HttpApiScalar"
+import { HttpApiScalar } from "effect/unstable/httpapi/HttpApiScalar";
 
-const value = HttpApiScalar.layer()
+const value = HttpApiScalar.layer();
 ```
 
 ## Common pitfalls

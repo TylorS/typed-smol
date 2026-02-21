@@ -38,18 +38,18 @@ description: Guidance for `effect/Hash` focused on APIs like hash, Hash, and isH
 ## Starter example
 
 ```ts
-import { Hash } from "effect"
+import { Hash } from "effect";
 
 class MyClass implements Hash.Hash {
   constructor(private value: number) {}
 
   [Hash.symbol](): number {
-    return Hash.hash(this.value)
+    return Hash.hash(this.value);
   }
 }
 
-const instance = new MyClass(42)
-console.log(instance[Hash.symbol]()) // hash value of 42
+const instance = new MyClass(42);
+console.log(instance[Hash.symbol]()); // hash value of 42
 ```
 
 ## Common pitfalls

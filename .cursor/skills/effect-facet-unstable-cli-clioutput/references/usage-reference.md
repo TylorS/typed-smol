@@ -20,8 +20,8 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { CliOutput } from "effect/unstable/cli"
+import { Effect } from "effect";
+import { CliOutput } from "effect/unstable/cli";
 
 // Create a custom formatter implementation
 const customFormatter: CliOutput.Formatter = {
@@ -29,17 +29,15 @@ const customFormatter: CliOutput.Formatter = {
   formatCliError: (error) => `Error: ${error.message}`,
   formatError: (error) => `[ERROR] ${error.message}`,
   formatVersion: (name, version) => `${name} (${version})`,
-  formatErrors: (errors) => errors.map((error) => error.message).join("\\n")
-}
+  formatErrors: (errors) => errors.map((error) => error.message).join("\\n"),
+};
 
 // Use the custom formatter in a program
-const program = Effect.gen(function*() {
-  const formatter = yield* CliOutput.Formatter
-  const helpText = formatter.formatVersion("myapp", "1.0.0")
-  console.log(helpText)
-}).pipe(
-  Effect.provide(CliOutput.layer(customFormatter))
-)
+const program = Effect.gen(function* () {
+  const formatter = yield* CliOutput.Formatter;
+  const helpText = formatter.formatVersion("myapp", "1.0.0");
+  console.log(helpText);
+}).pipe(Effect.provide(CliOutput.layer(customFormatter)));
 ```
 
 ## Test Anchors

@@ -20,22 +20,22 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import type { Tracer } from "effect"
-import { Exit } from "effect"
+import type { Tracer } from "effect";
+import { Exit } from "effect";
 
 // Started span status
 const startedStatus: Tracer.SpanStatus = {
   _tag: "Started",
-  startTime: BigInt(Date.now() * 1000000)
-}
+  startTime: BigInt(Date.now() * 1000000),
+};
 
 // Ended span status
 const endedStatus: Tracer.SpanStatus = {
   _tag: "Ended",
   startTime: BigInt(Date.now() * 1000000),
   endTime: BigInt(Date.now() * 1000000 + 1000000),
-  exit: Exit.succeed("result")
-}
+  exit: Exit.succeed("result"),
+};
 ```
 
 ## Test Anchors

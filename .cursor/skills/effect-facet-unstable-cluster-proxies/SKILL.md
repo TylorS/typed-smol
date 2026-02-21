@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/cluster#proxies` focused on API
 ## Starter example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.EntityProxy()
+const value = cluster.EntityProxy();
 ```
 
 ## Common pitfalls

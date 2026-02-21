@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { EntityResource } from "effect/unstable/cluster/EntityResource"
+import { EntityResource } from "effect/unstable/cluster/EntityResource";
 
-const value = EntityResource.make()
+const value = EntityResource.make();
 ```
 
 ## Test Anchors

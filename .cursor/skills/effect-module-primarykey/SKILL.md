@@ -30,18 +30,21 @@ description: Guidance for `effect/PrimaryKey` focused on APIs like isPrimaryKey,
 ## Starter example
 
 ```ts
-import { PrimaryKey } from "effect"
+import { PrimaryKey } from "effect";
 
 class ProductId implements PrimaryKey.PrimaryKey {
-  constructor(private category: string, private id: number) {}
+  constructor(
+    private category: string,
+    private id: number,
+  ) {}
 
   [PrimaryKey.symbol](): string {
-    return `${this.category}-${this.id}`
+    return `${this.category}-${this.id}`;
   }
 }
 
-const productId = new ProductId("electronics", 42)
-console.log(PrimaryKey.value(productId)) // "electronics-42"
+const productId = new ProductId("electronics", 42);
+console.log(PrimaryKey.value(productId)); // "electronics-42"
 ```
 
 ## Common pitfalls

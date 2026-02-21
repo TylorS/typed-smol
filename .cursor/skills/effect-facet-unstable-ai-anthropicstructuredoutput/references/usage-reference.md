@@ -20,9 +20,9 @@ Provides a codec transformation for Anthropic structured output.
 ## Starter Example
 
 ```ts
-import { AnthropicStructuredOutput } from "effect/unstable/ai/AnthropicStructuredOutput"
+import { AnthropicStructuredOutput } from "effect/unstable/ai/AnthropicStructuredOutput";
 
-const value = AnthropicStructuredOutput.toCodecAnthropic()
+const value = AnthropicStructuredOutput.toCodecAnthropic();
 ```
 
 ## Test Anchors

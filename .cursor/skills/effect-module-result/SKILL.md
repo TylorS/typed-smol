@@ -45,19 +45,17 @@ description: Guidance for `effect/Result` focused on APIs like gen, map, and fai
 ## Starter example
 
 ```ts
-import { Result } from "effect"
+import { Result } from "effect";
 
 const parse = (input: string): Result.Result<number, string> =>
-  isNaN(Number(input))
-    ? Result.fail("not a number")
-    : Result.succeed(Number(input))
+  isNaN(Number(input)) ? Result.fail("not a number") : Result.succeed(Number(input));
 
 const ensurePositive = (n: number): Result.Result<number, string> =>
-  n > 0 ? Result.succeed(n) : Result.fail("not positive")
+  n > 0 ? Result.succeed(n) : Result.fail("not positive");
 
-const result = Result.flatMap(parse("42"), ensurePositive)
+const result = Result.flatMap(parse("42"), ensurePositive);
 
-console.log(Result.getOrElse(result, (err) => `Error: ${err}`))
+console.log(Result.getOrElse(result, (err) => `Error: ${err}`));
 // Output: 42
 ```
 

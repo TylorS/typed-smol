@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlResolver } from "effect/unstable/sql/SqlResolver"
+import { SqlResolver } from "effect/unstable/sql/SqlResolver";
 
-const value = SqlResolver.void()
+const value = SqlResolver.void();
 ```
 
 ## Test Anchors

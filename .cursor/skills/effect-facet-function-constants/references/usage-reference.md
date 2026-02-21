@@ -21,11 +21,11 @@ constant helper functions. Module-specific APIs and usage patterns for Effect pr
 ## Starter Example
 
 ```ts
-import type { FunctionTypeLambda } from "effect/Function"
-import type { Kind } from "effect/HKT"
+import type { FunctionTypeLambda } from "effect/Function";
+import type { Kind } from "effect/HKT";
 
 // Create a function type using the type lambda
-type StringToNumber = Kind<FunctionTypeLambda, string, never, never, number>
+type StringToNumber = Kind<FunctionTypeLambda, string, never, never, number>;
 // Equivalent to: (a: string) => number
 ```
 

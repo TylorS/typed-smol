@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/reactivity/AtomHttpApi` focused
 ## Starter example
 
 ```ts
-import { AtomHttpApi } from "effect/unstable/reactivity/AtomHttpApi"
+import { AtomHttpApi } from "effect/unstable/reactivity/AtomHttpApi";
 
-const value = AtomHttpApi.Service()
+const value = AtomHttpApi.Service();
 ```
 
 ## Common pitfalls

@@ -20,11 +20,11 @@ This module provides utilities for working with durations of time. A `Duration` 
 ## Starter Example
 
 ```ts
-import { Duration } from "effect"
+import { Duration } from "effect";
 
-const duration1 = Duration.fromInputUnsafe(1000) // 1000 milliseconds
-const duration2 = Duration.fromInputUnsafe("5 seconds")
-const duration3 = Duration.fromInputUnsafe([2, 500_000_000]) // 2 seconds and 500ms
+const duration1 = Duration.fromInputUnsafe(1000); // 1000 milliseconds
+const duration2 = Duration.fromInputUnsafe("5 seconds");
+const duration3 = Duration.fromInputUnsafe([2, 500_000_000]); // 2 seconds and 500ms
 ```
 
 ## Test Anchors

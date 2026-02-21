@@ -20,9 +20,9 @@ client and server core APIs. Module-specific APIs and usage patterns for Effect 
 ## Starter Example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.Etag()
+const value = http.Etag();
 ```
 
 ## Test Anchors

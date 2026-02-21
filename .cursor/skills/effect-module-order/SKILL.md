@@ -46,13 +46,13 @@ description: Guidance for `effect/Order` focused on APIs like make, mapInput, an
 ## Starter example
 
 ```ts
-import { Order } from "effect"
+import { Order } from "effect";
 
-const result = Order.Number(5, 10)
-console.log(result) // -1 (5 is less than 10)
+const result = Order.Number(5, 10);
+console.log(result); // -1 (5 is less than 10)
 
-const isLessThan = Order.isLessThan(Order.Number)(5, 10)
-console.log(isLessThan) // true
+const isLessThan = Order.isLessThan(Order.Number)(5, 10);
+console.log(isLessThan); // true
 ```
 
 ## Common pitfalls

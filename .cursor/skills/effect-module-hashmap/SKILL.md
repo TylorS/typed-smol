@@ -45,21 +45,21 @@ description: Guidance for `effect/HashMap` focused on APIs like get, map, and se
 ## Starter example
 
 ```ts
-import * as HashMap from "effect/HashMap"
+import * as HashMap from "effect/HashMap";
 
 // Create a HashMap
-const map = HashMap.make(["a", 1], ["b", 2], ["c", 3])
+const map = HashMap.make(["a", 1], ["b", 2], ["c", 3]);
 
 // Access values
-const valueA = HashMap.get(map, "a") // Option.some(1)
-const valueD = HashMap.get(map, "d") // Option.none()
+const valueA = HashMap.get(map, "a"); // Option.some(1)
+const valueD = HashMap.get(map, "d"); // Option.none()
 
 // Check if key exists
-console.log(HashMap.has(map, "b")) // true
+console.log(HashMap.has(map, "b")); // true
 
 // Add/update values (returns new HashMap)
-const updated = HashMap.set(map, "d", 4)
-console.log(HashMap.size(updated)) // 4
+const updated = HashMap.set(map, "d", 4);
+console.log(HashMap.size(updated)); // 4
 ```
 
 ## Common pitfalls

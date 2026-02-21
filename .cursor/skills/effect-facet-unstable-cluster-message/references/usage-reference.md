@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Message } from "effect/unstable/cluster/Message"
+import { Message } from "effect/unstable/cluster/Message";
 
-const value = Message.Incoming()
+const value = Message.Incoming();
 ```
 
 ## Test Anchors

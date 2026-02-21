@@ -62,20 +62,16 @@ export const fn = (input: Box): U => input.value;
 
   it("supports relativeGlobs directory queries and watch descriptors", () => {
     const dir = createTempDir();
-    writeFileSync(
-      join(dir, "a.ts"),
-      `export const a = 1;`,
-      "utf8",
-    );
-    writeFileSync(
-      join(dir, "b.ts"),
-      `export const b = 2;`,
-      "utf8",
-    );
+    writeFileSync(join(dir, "a.ts"), `export const a = 1;`, "utf8");
+    writeFileSync(join(dir, "b.ts"), `export const b = 2;`, "utf8");
     mkdirSync(join(dir, "nested"), { recursive: true });
     writeFileSync(join(dir, "nested", "nested.ts"), `export const nested = 3;`, "utf8");
 
-    const program = makeProgram([join(dir, "a.ts"), join(dir, "b.ts"), join(dir, "nested", "nested.ts")]);
+    const program = makeProgram([
+      join(dir, "a.ts"),
+      join(dir, "b.ts"),
+      join(dir, "nested", "nested.ts"),
+    ]);
     const session = createTypeInfoApiSession({ ts, program });
 
     const nonRecursive = session.api.directory("*.ts", {

@@ -20,15 +20,15 @@ This module provides utility functions for working with records in TypeScript.
 ## Starter Example
 
 ```ts
-import type { Record } from "effect"
+import type { Record } from "effect";
 
 // Creating a readonly record type
-type UserRecord = Record.ReadonlyRecord<"name" | "age", string | number>
+type UserRecord = Record.ReadonlyRecord<"name" | "age", string | number>;
 
 const user: UserRecord = {
   name: "John",
-  age: 30
-}
+  age: 30,
+};
 ```
 
 ## Test Anchors

@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Msgpack } from "effect/unstable/encoding/Msgpack"
+import { Msgpack } from "effect/unstable/encoding/Msgpack";
 
-const value = Msgpack.decode()
-const next = Msgpack.encode(value)
+const value = Msgpack.decode();
+const next = Msgpack.encode(value);
 ```
 
 ## Test Anchors

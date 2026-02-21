@@ -31,9 +31,9 @@ description: Guidance for `effect/testing` focused on APIs like FastCheck, TestC
 ## Starter example
 
 ```ts
-import { testing } from "effect/testing"
+import { testing } from "effect/testing";
 
-const value = testing.FastCheck()
+const value = testing.FastCheck();
 ```
 
 ## Common pitfalls

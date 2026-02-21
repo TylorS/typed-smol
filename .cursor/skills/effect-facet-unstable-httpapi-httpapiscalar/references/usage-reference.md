@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpApiScalar } from "effect/unstable/httpapi/HttpApiScalar"
+import { HttpApiScalar } from "effect/unstable/httpapi/HttpApiScalar";
 
-const value = HttpApiScalar.layer()
+const value = HttpApiScalar.layer();
 ```
 
 ## Test Anchors

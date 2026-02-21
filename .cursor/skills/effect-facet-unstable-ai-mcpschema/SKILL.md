@@ -48,10 +48,10 @@ description: Guidance for facet `effect/unstable/ai/McpSchema` focused on APIs l
 ## Starter example
 
 ```ts
-import { McpSchema } from "effect/unstable/ai/McpSchema"
+import { McpSchema } from "effect/unstable/ai/McpSchema";
 
-const value = McpSchema.FromClientEncoded()
-const next = McpSchema.SetLevel(value)
+const value = McpSchema.FromClientEncoded();
+const next = McpSchema.SetLevel(value);
 ```
 
 ## Common pitfalls

@@ -45,10 +45,10 @@ description: Guidance for facet `effect/Match#predicates` focused on APIs like i
 ## Starter example
 
 ```ts
-import { Match } from "effect"
+import { Match } from "effect";
 
 // Simulated dynamic input that can be a string or a number
-const input: string | number = "some input"
+const input: string | number = "some input";
 
 //      ┌─── string
 //      ▼
@@ -58,10 +58,10 @@ const result = Match.value(input).pipe(
   // Match if the value is a string
   Match.when(Match.string, (s) => `string: ${s}`),
   // Ensure all possible cases are covered
-  Match.exhaustive
-)
+  Match.exhaustive,
+);
 
-console.log(result)
+console.log(result);
 // Output: "string: some input"
 ```
 

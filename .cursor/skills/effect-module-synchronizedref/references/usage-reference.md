@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SynchronizedRef } from "effect/SynchronizedRef"
+import { SynchronizedRef } from "effect/SynchronizedRef";
 
-const value = SynchronizedRef.make()
-const next = SynchronizedRef.get(value)
+const value = SynchronizedRef.make();
+const next = SynchronizedRef.get(value);
 ```
 
 ## Test Anchors

@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/MachineId` focused on A
 ## Starter example
 
 ```ts
-import { MachineId } from "effect/unstable/cluster/MachineId"
+import { MachineId } from "effect/unstable/cluster/MachineId";
 
-const value = MachineId.make()
+const value = MachineId.make();
 ```
 
 ## Common pitfalls

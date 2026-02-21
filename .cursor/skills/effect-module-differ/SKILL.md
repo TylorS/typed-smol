@@ -27,9 +27,9 @@ description: Guidance for `effect/Differ` focused on APIs like Differ. Load afte
 ## Starter example
 
 ```ts
-import { Differ } from "effect/Differ"
+import { Differ } from "effect/Differ";
 
-const value = Differ.Differ()
+const value = Differ.Differ();
 ```
 
 ## Common pitfalls

@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/rpc/RpcTest` focused on APIs li
 ## Starter example
 
 ```ts
-import { RpcTest } from "effect/unstable/rpc/RpcTest"
+import { RpcTest } from "effect/unstable/rpc/RpcTest";
 
-const value = RpcTest.makeClient()
+const value = RpcTest.makeClient();
 ```
 
 ## Common pitfalls

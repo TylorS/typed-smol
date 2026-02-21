@@ -20,9 +20,9 @@ This module provides types and utility functions to create and work with branded
 ## Starter Example
 
 ```ts
-import { Brand } from "effect/Brand"
+import { Brand } from "effect/Brand";
 
-const value = Brand.make()
+const value = Brand.make();
 ```
 
 ## Test Anchors

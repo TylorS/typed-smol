@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpEffect } from "effect/unstable/http/HttpEffect"
+import { HttpEffect } from "effect/unstable/http/HttpEffect";
 
-const value = HttpEffect.fromWebHandler()
+const value = HttpEffect.fromWebHandler();
 ```
 
 ## Test Anchors

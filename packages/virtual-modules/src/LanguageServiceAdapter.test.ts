@@ -12,7 +12,9 @@ import type { LanguageServiceWatchHost } from "./types.js";
 const tempDirs: string[] = [];
 
 const getDiagnosticMessage = (d: ts.Diagnostic): string =>
-  typeof d.messageText === "string" ? d.messageText : ts.flattenDiagnosticMessageText(d.messageText, "\n");
+  typeof d.messageText === "string"
+    ? d.messageText
+    : ts.flattenDiagnosticMessageText(d.messageText, "\n");
 
 const createTempDir = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "typed-vm-ls-"));
@@ -66,7 +68,8 @@ export const value: Foo = { n: 1 };
       getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
       fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
       readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
-      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) => ts.sys.readDirectory(...args),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
     };
 
     const languageService = ts.createLanguageService(host);
@@ -102,7 +105,11 @@ export const value: Foo = { n: 1 };
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");
     const depFile = join(dir, "dep.ts");
-    writeFileSync(entryFile, `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`, "utf8");
+    writeFileSync(
+      entryFile,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`,
+      "utf8",
+    );
     writeFileSync(depFile, "export const d = 1;", "utf8");
 
     let buildCount = 0;
@@ -112,7 +119,9 @@ export const value: Foo = { n: 1 };
       [depFile, { version: 1, content: ts.sys.readFile(depFile) ?? "" }],
     ]);
 
-    const host: ts.LanguageServiceHost & { resolveModuleNames?: (...args: unknown[]) => (ts.ResolvedModule | undefined)[] } = {
+    const host: ts.LanguageServiceHost & {
+      resolveModuleNames?: (...args: unknown[]) => (ts.ResolvedModule | undefined)[];
+    } = {
       getCompilationSettings: () => ({
         strict: true,
         noEmit: true,
@@ -132,7 +141,8 @@ export const value: Foo = { n: 1 };
       getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
       fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
       readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
-      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) => ts.sys.readDirectory(...args),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
       resolveModuleNames: (..._args: unknown[]): (ts.ResolvedModule | undefined)[] => [],
       resolveModuleNameLiterals: (literals: readonly { readonly text: string }[]) =>
         literals.map(() => ({ resolvedModule: undefined as ts.ResolvedModuleFull | undefined })),
@@ -176,7 +186,9 @@ export const value: Foo = { n: 1 };
 
     watchCallback?.();
     const diag1 = languageService.getSemanticDiagnostics(entryFile);
-    const rebuildFailedDiag = diag1.filter((d) => getDiagnosticMessage(d).includes("rebuild failed"));
+    const rebuildFailedDiag = diag1.filter((d) =>
+      getDiagnosticMessage(d).includes("rebuild failed"),
+    );
     if (rebuildFailedDiag.length > 0) {
       watchCallback?.();
       const diag2 = languageService.getSemanticDiagnostics(entryFile);
@@ -213,7 +225,8 @@ export const value: Foo = { n: 1 };
       getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
       fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
       readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
-      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) => ts.sys.readDirectory(...args),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
       resolveModuleNames: (
         _moduleNames: string[],
         _containingFile: string,
@@ -264,17 +277,11 @@ export const value: Foo = { n: 1 };
       }),
     });
 
-    const patchedResolve = (host as ts.LanguageServiceHost & { resolveModuleNames?: (...args: unknown[]) => unknown[] })
-      .resolveModuleNames;
+    const patchedResolve = (
+      host as ts.LanguageServiceHost & { resolveModuleNames?: (...args: unknown[]) => unknown[] }
+    ).resolveModuleNames;
     host._triggerResolve = () => {
-      patchedResolve?.(
-        ["virtual:bar"],
-        entryFile,
-        undefined,
-        undefined,
-        {},
-        undefined,
-      );
+      patchedResolve?.(["virtual:bar"], entryFile, undefined, undefined, {}, undefined);
     };
 
     expect(() => languageService.getSemanticDiagnostics(entryFile)).not.toThrow();
@@ -288,7 +295,11 @@ export const value: Foo = { n: 1 };
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");
     const depFile = join(dir, "dep.ts");
-    writeFileSync(entryFile, `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`, "utf8");
+    writeFileSync(
+      entryFile,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`,
+      "utf8",
+    );
     writeFileSync(depFile, "export const d = 1;", "utf8");
     let buildCount = 0;
     let watchCallback: (() => void) | undefined;
@@ -316,7 +327,8 @@ export const value: Foo = { n: 1 };
       getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
       fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
       readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
-      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) => ts.sys.readDirectory(...args),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
     };
     const watchHost: LanguageServiceWatchHost = {
       watchFile: (path: string, callback: ts.FileWatcherCallback) => {
@@ -371,7 +383,11 @@ export const value: Foo = { n: 1 };
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");
     const otherFile = join(dir, "other.ts");
-    writeFileSync(entryFile, `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`, "utf8");
+    writeFileSync(
+      entryFile,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`,
+      "utf8",
+    );
     writeFileSync(otherFile, 'import "virtual:other"; export const y = 1;', "utf8");
 
     let scriptFileNames = [entryFile, otherFile];
@@ -400,7 +416,8 @@ export const value: Foo = { n: 1 };
       getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
       fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
       readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
-      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) => ts.sys.readDirectory(...args),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
     };
 
     const manager = new PluginManager([
@@ -427,7 +444,8 @@ export const value: Foo = { n: 1 };
 
     languageService.getSemanticDiagnostics(entryFile);
     const program = languageService.getProgram();
-    const virtualFiles = program?.getSourceFiles().filter((sf) => sf.fileName.includes(".typed/virtual")) ?? [];
+    const virtualFiles =
+      program?.getSourceFiles().filter((sf) => sf.fileName.includes(".typed/virtual")) ?? [];
     expect(virtualFiles.length).toBeGreaterThan(0);
     const virtualFileName = virtualFiles[0].fileName;
 
@@ -442,7 +460,11 @@ export const value: Foo = { n: 1 };
   it("dispose then getScriptSnapshot does not throw and returns original behavior", () => {
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");
-    writeFileSync(entryFile, `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`, "utf8");
+    writeFileSync(
+      entryFile,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = { n: 1 };`,
+      "utf8",
+    );
     const files = new Map<string, { version: number; content: string }>([
       [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
     ]);
@@ -466,10 +488,15 @@ export const value: Foo = { n: 1 };
       getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
       fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
       readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
-      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) => ts.sys.readDirectory(...args),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
     };
     const manager = new PluginManager([
-      { name: "virtual", shouldResolve: (id) => id === "virtual:foo", build: () => "export interface Foo { n: number }" },
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => "export interface Foo { n: number }",
+      },
     ]);
     const languageService = ts.createLanguageService(host);
     const adapter = attachLanguageServiceAdapter({
@@ -481,7 +508,9 @@ export const value: Foo = { n: 1 };
     });
     languageService.getProgram();
     const program = languageService.getProgram();
-    const virtualFile = program?.getSourceFiles().find((sf) => sf.fileName.includes(".typed/virtual"));
+    const virtualFile = program
+      ?.getSourceFiles()
+      .find((sf) => sf.fileName.includes(".typed/virtual"));
     expect(virtualFile).toBeDefined();
     const virtualFileName = virtualFile!.fileName;
 

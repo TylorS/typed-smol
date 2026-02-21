@@ -36,14 +36,14 @@ description: Guidance for `effect/Combiner` focused on APIs like make, max, and 
 ## Starter example
 
 ```ts
-import { Combiner, String } from "effect"
+import { Combiner, String } from "effect";
 
-const csv = Combiner.intercalate(",")(String.ReducerConcat)
+const csv = Combiner.intercalate(",")(String.ReducerConcat);
 
-console.log(csv.combine("a", "b"))
+console.log(csv.combine("a", "b"));
 // Output: "a,b"
 
-console.log(csv.combine(csv.combine("a", "b"), "c"))
+console.log(csv.combine(csv.combine("a", "b"), "c"));
 // Output: "a,b,c"
 ```
 

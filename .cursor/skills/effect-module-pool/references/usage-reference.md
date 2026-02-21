@@ -19,10 +19,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Pool } from "effect/Pool"
+import { Pool } from "effect/Pool";
 
-const value = Pool.make()
-const next = Pool.get(value)
+const value = Pool.make();
+const next = Pool.get(value);
 ```
 
 ## Test Anchors

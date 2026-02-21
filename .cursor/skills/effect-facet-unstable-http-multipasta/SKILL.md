@@ -28,7 +28,7 @@ description: Guidance for facet `effect/unstable/http/Multipasta` focused on its
 ## Starter example
 
 ```ts
-import { Multipasta } from "effect/unstable/http/Multipasta"
+import { Multipasta } from "effect/unstable/http/Multipasta";
 
 // Inspect exports in references/api-reference.md
 ```

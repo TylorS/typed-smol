@@ -46,12 +46,12 @@ description: Guidance for `effect/Predicate` focused on APIs like mapInput, isMa
 ## Starter example
 
 ```ts
-import * as Predicate from "effect/Predicate"
+import * as Predicate from "effect/Predicate";
 
-const isPositive = (n: number) => n > 0
-const data = [2, -1, 3]
+const isPositive = (n: number) => n > 0;
+const data = [2, -1, 3];
 
-console.log(data.filter(isPositive))
+console.log(data.filter(isPositive));
 ```
 
 ## Common pitfalls

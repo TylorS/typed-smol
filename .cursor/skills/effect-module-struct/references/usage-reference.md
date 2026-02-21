@@ -19,18 +19,18 @@ Utilities for creating, transforming, and comparing plain TypeScript objects (st
 ## Starter Example
 
 ```ts
-import { pipe, Struct } from "effect"
+import { pipe, Struct } from "effect";
 
-const user = { firstName: "Alice", lastName: "Smith", age: 30, admin: false }
+const user = { firstName: "Alice", lastName: "Smith", age: 30, admin: false };
 
 const result = pipe(
   user,
   Struct.pick(["firstName", "age"]),
   Struct.evolve({ age: (n) => n + 1 }),
-  Struct.renameKeys({ firstName: "name" })
-)
+  Struct.renameKeys({ firstName: "name" }),
+);
 
-console.log(result) // { name: "Alice", age: 31 }
+console.log(result); // { name: "Alice", age: 31 }
 ```
 
 ## Test Anchors

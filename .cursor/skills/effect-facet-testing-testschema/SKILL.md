@@ -29,9 +29,9 @@ description: Guidance for facet `effect/testing/TestSchema` focused on APIs like
 ## Starter example
 
 ```ts
-import { TestSchema } from "effect/testing/TestSchema"
+import { TestSchema } from "effect/testing/TestSchema";
 
-const value = TestSchema.Asserts()
+const value = TestSchema.Asserts();
 ```
 
 ## Common pitfalls

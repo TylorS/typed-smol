@@ -32,10 +32,10 @@ description: Guidance for facet `effect/unstable/workflow/WorkflowEngine` focuse
 ## Starter example
 
 ```ts
-import { WorkflowEngine } from "effect/unstable/workflow/WorkflowEngine"
+import { WorkflowEngine } from "effect/unstable/workflow/WorkflowEngine";
 
-const value = WorkflowEngine.makeUnsafe()
-const next = WorkflowEngine.Encoded(value)
+const value = WorkflowEngine.makeUnsafe();
+const next = WorkflowEngine.Encoded(value);
 ```
 
 ## Common pitfalls

@@ -46,17 +46,17 @@ description: Guidance for `effect/TxQueue` focused on APIs like fail, offer, and
 ## Starter example
 
 ```ts
-import type { TxQueue } from "effect"
+import type { TxQueue } from "effect";
 
 // State progression example
-declare const state: TxQueue.State<string, Error>
+declare const state: TxQueue.State<string, Error>;
 
 if (state._tag === "Open") {
-  console.log("Queue is accepting new items")
+  console.log("Queue is accepting new items");
 } else if (state._tag === "Closing") {
-  console.log("Queue is draining, cause:", state.cause)
+  console.log("Queue is draining, cause:", state.cause);
 } else {
-  console.log("Queue is done, cause:", state.cause)
+  console.log("Queue is done, cause:", state.cause);
 }
 ```
 

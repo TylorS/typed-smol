@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ScopedCache } from "effect/ScopedCache"
+import { ScopedCache } from "effect/ScopedCache";
 
-const value = ScopedCache.make()
-const next = ScopedCache.get(value)
+const value = ScopedCache.make();
+const next = ScopedCache.get(value);
 ```
 
 ## Test Anchors

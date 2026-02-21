@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ShardingRegistrationEvent } from "effect/unstable/cluster/ShardingRegistrationEvent"
+import { ShardingRegistrationEvent } from "effect/unstable/cluster/ShardingRegistrationEvent";
 
-const value = ShardingRegistrationEvent.EntityRegistered()
+const value = ShardingRegistrationEvent.EntityRegistered();
 ```
 
 ## Test Anchors

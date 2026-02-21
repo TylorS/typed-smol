@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { schema } from "effect/unstable/schema"
+import { schema } from "effect/unstable/schema";
 
-const value = schema.Model()
+const value = schema.Model();
 ```
 
 ## Test Anchors

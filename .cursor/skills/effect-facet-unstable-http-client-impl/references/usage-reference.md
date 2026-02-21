@@ -20,9 +20,9 @@ specific client implementation adapters. Module-specific APIs and usage patterns
 ## Starter Example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.HttpClient()
+const value = http.HttpClient();
 ```
 
 ## Test Anchors

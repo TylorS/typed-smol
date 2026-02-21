@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcSchema } from "effect/unstable/rpc/RpcSchema"
+import { RpcSchema } from "effect/unstable/rpc/RpcSchema";
 
-const value = RpcSchema.getStreamSchemas()
+const value = RpcSchema.getStreamSchemas();
 ```
 
 ## Test Anchors

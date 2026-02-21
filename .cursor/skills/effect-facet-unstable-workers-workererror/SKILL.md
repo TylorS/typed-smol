@@ -37,10 +37,10 @@ description: Guidance for facet `effect/unstable/workers/WorkerError` focused on
 ## Starter example
 
 ```ts
-import { WorkerError } from "effect/unstable/workers/WorkerError"
+import { WorkerError } from "effect/unstable/workers/WorkerError";
 
-const value = WorkerError.isWorkerError()
-const next = WorkerError.WorkerUnknownError(value)
+const value = WorkerError.isWorkerError();
+const next = WorkerError.WorkerUnknownError(value);
 ```
 
 ## Common pitfalls

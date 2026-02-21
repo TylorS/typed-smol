@@ -32,10 +32,10 @@ description: Guidance for `effect/unstable/workers` focused on APIs like Worker,
 ## Starter example
 
 ```ts
-import { workers } from "effect/unstable/workers"
+import { workers } from "effect/unstable/workers";
 
-const value = workers.Worker()
-const next = workers.WorkerRunner(value)
+const value = workers.Worker();
+const next = workers.WorkerRunner(value);
 ```
 
 ## Common pitfalls

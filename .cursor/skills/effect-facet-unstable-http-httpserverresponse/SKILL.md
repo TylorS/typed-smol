@@ -47,10 +47,10 @@ description: Guidance for facet `effect/unstable/http/HttpServerResponse` focuse
 ## Starter example
 
 ```ts
-import { HttpServerResponse } from "effect/unstable/http/HttpServerResponse"
+import { HttpServerResponse } from "effect/unstable/http/HttpServerResponse";
 
-const value = HttpServerResponse.empty()
-const next = HttpServerResponse.setBody(value)
+const value = HttpServerResponse.empty();
+const next = HttpServerResponse.setBody(value);
 ```
 
 ## Common pitfalls

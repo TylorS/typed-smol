@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { DeliverAt } from "effect/unstable/cluster/DeliverAt"
+import { DeliverAt } from "effect/unstable/cluster/DeliverAt";
 
-const value = DeliverAt.isDeliverAt()
+const value = DeliverAt.isDeliverAt();
 ```
 
 ## Test Anchors

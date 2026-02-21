@@ -19,19 +19,19 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import type { ServiceMap } from "effect"
-import { Redactable } from "effect"
+import type { ServiceMap } from "effect";
+import { Redactable } from "effect";
 
 class SensitiveData implements Redactable.Redactable {
   constructor(private secret: string) {}
 
   [Redactable.symbolRedactable](context: ServiceMap.ServiceMap<never>) {
     // In production, hide the actual secret
-    return { secret: "[REDACTED]" }
+    return { secret: "[REDACTED]" };
   }
 }
 
-const data = new SensitiveData("my-secret-key")
+const data = new SensitiveData("my-secret-key");
 // The redacted version will be used when converting to JSON in certain contexts
 ```
 

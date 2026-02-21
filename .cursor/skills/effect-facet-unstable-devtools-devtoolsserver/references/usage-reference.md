@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { DevToolsServer } from "effect/unstable/devtools/DevToolsServer"
+import { DevToolsServer } from "effect/unstable/devtools/DevToolsServer";
 
-const value = DevToolsServer.run()
+const value = DevToolsServer.run();
 ```
 
 ## Test Anchors

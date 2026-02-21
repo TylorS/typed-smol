@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Cookies } from "effect/unstable/http/Cookies"
+import { Cookies } from "effect/unstable/http/Cookies";
 
-const value = Cookies.empty()
-const next = Cookies.get(value)
+const value = Cookies.empty();
+const next = Cookies.get(value);
 ```
 
 ## Test Anchors

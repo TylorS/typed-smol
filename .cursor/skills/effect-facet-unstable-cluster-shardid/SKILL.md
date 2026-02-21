@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/ShardId` focused on API
 ## Starter example
 
 ```ts
-import { ShardId } from "effect/unstable/cluster/ShardId"
+import { ShardId } from "effect/unstable/cluster/ShardId";
 
-const value = ShardId.make()
+const value = ShardId.make();
 ```
 
 ## Common pitfalls

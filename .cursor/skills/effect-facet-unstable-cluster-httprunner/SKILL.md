@@ -42,9 +42,9 @@ description: Guidance for facet `effect/unstable/cluster/HttpRunner` focused on 
 ## Starter example
 
 ```ts
-import { HttpRunner } from "effect/unstable/cluster/HttpRunner"
+import { HttpRunner } from "effect/unstable/cluster/HttpRunner";
 
-const value = HttpRunner.layerHttp()
+const value = HttpRunner.layerHttp();
 ```
 
 ## Common pitfalls

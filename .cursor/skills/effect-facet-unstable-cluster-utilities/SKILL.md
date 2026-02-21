@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/cluster#utilities` focused on A
 ## Starter example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.ShardId()
+const value = cluster.ShardId();
 ```
 
 ## Common pitfalls

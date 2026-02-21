@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Utils } from "effect/unstable/rpc/Utils"
+import { Utils } from "effect/unstable/rpc/Utils";
 
-const value = Utils.withRun()
+const value = Utils.withRun();
 ```
 
 ## Test Anchors

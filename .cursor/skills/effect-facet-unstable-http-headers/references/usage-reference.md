@@ -22,10 +22,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Headers } from "effect/unstable/http/Headers"
+import { Headers } from "effect/unstable/http/Headers";
 
-const value = Headers.empty()
-const next = Headers.get(value)
+const value = Headers.empty();
+const next = Headers.get(value);
 ```
 
 ## Test Anchors

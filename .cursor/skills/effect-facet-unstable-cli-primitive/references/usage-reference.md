@@ -20,24 +20,24 @@ Primitive types for CLI parameter parsing.
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { Primitive } from "effect/unstable/cli"
+import { Effect } from "effect";
+import { Primitive } from "effect/unstable/cli";
 
 // Using built-in primitives
-const parseString = Effect.gen(function*() {
-  const stringResult = yield* Primitive.string.parse("hello")
-  const numberResult = yield* Primitive.integer.parse("42")
-  const boolResult = yield* Primitive.boolean.parse("true")
+const parseString = Effect.gen(function* () {
+  const stringResult = yield* Primitive.string.parse("hello");
+  const numberResult = yield* Primitive.integer.parse("42");
+  const boolResult = yield* Primitive.boolean.parse("true");
 
-  return { stringResult, numberResult, boolResult }
-})
+  return { stringResult, numberResult, boolResult };
+});
 
 // All primitives provide parsing functionality
-const parseDate = Effect.gen(function*() {
-  const dateResult = yield* Primitive.date.parse("2023-12-25")
-  const pathResult = yield* Primitive.path("file", true).parse("./package.json")
-  return { dateResult, pathResult }
-})
+const parseDate = Effect.gen(function* () {
+  const dateResult = yield* Primitive.date.parse("2023-12-25");
+  const pathResult = yield* Primitive.path("file", true).parse("./package.json");
+  return { dateResult, pathResult };
+});
 ```
 
 ## Test Anchors

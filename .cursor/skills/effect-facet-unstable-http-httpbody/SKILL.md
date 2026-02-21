@@ -46,9 +46,9 @@ description: Guidance for facet `effect/unstable/http/HttpBody` focused on APIs 
 ## Starter example
 
 ```ts
-import { HttpBody } from "effect/unstable/http/HttpBody"
+import { HttpBody } from "effect/unstable/http/HttpBody";
 
-const value = HttpBody.empty()
+const value = HttpBody.empty();
 ```
 
 ## Common pitfalls

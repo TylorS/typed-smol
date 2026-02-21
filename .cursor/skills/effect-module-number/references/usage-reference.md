@@ -19,13 +19,13 @@ This module provides utility functions and type class instances for working with
 ## Starter Example
 
 ```ts
-import * as N from "effect/Number"
+import * as N from "effect/Number";
 
-const num = N.Number("42")
-console.log(num) // 42
+const num = N.Number("42");
+console.log(num); // 42
 
-const float = N.Number("3.14")
-console.log(float) // 3.14
+const float = N.Number("3.14");
+console.log(float); // 3.14
 ```
 
 ## Test Anchors

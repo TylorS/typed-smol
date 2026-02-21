@@ -110,7 +110,9 @@ export class Ids extends ServiceMap.Service<Ids>()("@typed/id/Ids", {
     Layer.provideMerge([DateTimes.Default, RandomValues.Default]),
   );
 
-  static readonly Test = (options?: TestOptions): Layer.Layer<Ids | DateTimes | RandomValues | TestClock.TestClock> =>
+  static readonly Test = (
+    options?: TestOptions,
+  ): Layer.Layer<Ids | DateTimes | RandomValues | TestClock.TestClock> =>
     Layer.effect(Ids, Ids.make).pipe(
       Layer.provide([
         Layer.effect(CuidState, CuidState.make(options?.envData ?? "node")),

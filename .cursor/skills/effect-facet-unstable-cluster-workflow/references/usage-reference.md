@@ -21,9 +21,9 @@ cluster workflow engine integration. Module-specific APIs and usage patterns for
 ## Starter Example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.ClusterWorkflowEngine()
+const value = cluster.ClusterWorkflowEngine();
 ```
 
 ## Test Anchors

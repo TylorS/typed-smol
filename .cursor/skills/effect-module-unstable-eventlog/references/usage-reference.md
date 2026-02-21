@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { eventlog } from "effect/unstable/eventlog"
+import { eventlog } from "effect/unstable/eventlog";
 
-const value = eventlog.Event()
+const value = eventlog.Event();
 ```
 
 ## Test Anchors

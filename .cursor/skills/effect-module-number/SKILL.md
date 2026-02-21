@@ -45,13 +45,13 @@ description: Guidance for `effect/Number` focused on APIs like parse, isNumber, 
 ## Starter example
 
 ```ts
-import * as N from "effect/Number"
+import * as N from "effect/Number";
 
-const num = N.Number("42")
-console.log(num) // 42
+const num = N.Number("42");
+console.log(num); // 42
 
-const float = N.Number("3.14")
-console.log(float) // 3.14
+const float = N.Number("3.14");
+console.log(float); // 3.14
 ```
 
 ## Common pitfalls

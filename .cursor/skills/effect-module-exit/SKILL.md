@@ -46,16 +46,16 @@ description: Guidance for `effect/Exit` focused on APIs like map, fail, and Fail
 ## Starter example
 
 ```ts
-import { Exit } from "effect"
+import { Exit } from "effect";
 
-const success = Exit.succeed(42)
-const failure = Exit.fail("not found")
+const success = Exit.succeed(42);
+const failure = Exit.fail("not found");
 
 const message = Exit.match(success, {
   onSuccess: (value) => `Got: ${value}`,
-  onFailure: () => "Failed"
-})
-console.log(message) // "Got: 42"
+  onFailure: () => "Failed",
+});
+console.log(message); // "Got: 42"
 ```
 
 ## Common pitfalls

@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { persistence } from "effect/unstable/persistence"
+import { persistence } from "effect/unstable/persistence";
 
-const value = persistence.Redis()
+const value = persistence.Redis();
 ```
 
 ## Test Anchors

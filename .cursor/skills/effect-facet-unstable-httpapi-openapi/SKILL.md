@@ -47,9 +47,9 @@ description: Guidance for facet `effect/unstable/httpapi/OpenApi` focused on API
 ## Starter example
 
 ```ts
-import { OpenApi } from "effect/unstable/httpapi/OpenApi"
+import { OpenApi } from "effect/unstable/httpapi/OpenApi";
 
-const value = OpenApi.fromApi()
+const value = OpenApi.fromApi();
 ```
 
 ## Common pitfalls

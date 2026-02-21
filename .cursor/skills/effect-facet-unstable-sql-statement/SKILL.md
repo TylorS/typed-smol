@@ -47,9 +47,9 @@ description: Guidance for facet `effect/unstable/sql/Statement` focused on APIs 
 ## Starter example
 
 ```ts
-import { Statement } from "effect/unstable/sql/Statement"
+import { Statement } from "effect/unstable/sql/Statement";
 
-const value = Statement.make()
+const value = Statement.make();
 ```
 
 ## Common pitfalls

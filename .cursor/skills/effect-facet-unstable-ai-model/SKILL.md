@@ -32,22 +32,20 @@ description: Guidance for facet `effect/unstable/ai/Model` focused on APIs like 
 ## Starter example
 
 ```ts
-import type { Layer } from "effect"
-import { Effect } from "effect"
-import { LanguageModel, Model } from "effect/unstable/ai"
+import type { Layer } from "effect";
+import { Effect } from "effect";
+import { LanguageModel, Model } from "effect/unstable/ai";
 
-declare const myAnthropicLayer: Layer.Layer<LanguageModel.LanguageModel>
+declare const myAnthropicLayer: Layer.Layer<LanguageModel.LanguageModel>;
 
-const anthropicModel = Model.make("anthropic", myAnthropicLayer)
+const anthropicModel = Model.make("anthropic", myAnthropicLayer);
 
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   const response = yield* LanguageModel.generateText({
-    prompt: "Hello, world!"
-  })
-  return response.text
-}).pipe(
-  Effect.provide(anthropicModel)
-)
+    prompt: "Hello, world!",
+  });
+  return response.text;
+}).pipe(Effect.provide(anthropicModel));
 ```
 
 ## Common pitfalls

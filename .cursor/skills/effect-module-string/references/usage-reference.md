@@ -19,11 +19,11 @@ This module provides utility functions and type class instances for working with
 ## Starter Example
 
 ```ts
-import { String } from "effect"
-import * as assert from "node:assert"
+import { String } from "effect";
+import * as assert from "node:assert";
 
-assert.deepStrictEqual(String.isString("a"), true)
-assert.deepStrictEqual(String.isString(1), false)
+assert.deepStrictEqual(String.isString("a"), true);
+assert.deepStrictEqual(String.isString(1), false);
 ```
 
 ## Test Anchors

@@ -27,6 +27,7 @@ Follow this sequence:
    - reusable pattern to carry forward
 
 Constraints:
+
 - Prioritize user outcome quality and safety over speed.
 - Do not take destructive actions without explicit approval.
 - Keep final output concise and evidence-based.

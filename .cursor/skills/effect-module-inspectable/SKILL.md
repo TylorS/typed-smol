@@ -32,29 +32,29 @@ description: Guidance for `effect/Inspectable` focused on APIs like toJson, Base
 ## Starter example
 
 ```ts
-import { Inspectable } from "effect"
-import { format } from "effect/Formatter"
+import { Inspectable } from "effect";
+import { format } from "effect/Formatter";
 
 class User extends Inspectable.Class {
   constructor(
     public readonly name: string,
-    public readonly email: string
+    public readonly email: string,
   ) {
-    super()
+    super();
   }
 
   toJSON() {
     return {
       _tag: "User",
       name: this.name,
-      email: this.email
-    }
+      email: this.email,
+    };
   }
 }
 
-const user = new User("Alice", "alice@example.com")
-console.log(user.toString()) // Pretty printed JSON
-console.log(format(user)) // Same as toString()
+const user = new User("Alice", "alice@example.com");
+console.log(user.toString()); // Pretty printed JSON
+console.log(format(user)); // Same as toString()
 ```
 
 ## Common pitfalls

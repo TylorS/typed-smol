@@ -46,28 +46,28 @@ description: Guidance for `effect/FileSystem` focused on APIs like make, Update,
 ## Starter example
 
 ```ts
-import { Console, Effect, FileSystem } from "effect"
+import { Console, Effect, FileSystem } from "effect";
 
-const program = Effect.gen(function*() {
-  const fs = yield* FileSystem.FileSystem
+const program = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
 
   // Create a directory
-  yield* fs.makeDirectory("./temp", { recursive: true })
+  yield* fs.makeDirectory("./temp", { recursive: true });
 
   // Write a file
-  yield* fs.writeFileString("./temp/hello.txt", "Hello, World!")
+  yield* fs.writeFileString("./temp/hello.txt", "Hello, World!");
 
   // Read the file back
-  const content = yield* fs.readFileString("./temp/hello.txt")
-  yield* Console.log("File content:", content)
+  const content = yield* fs.readFileString("./temp/hello.txt");
+  yield* Console.log("File content:", content);
 
   // Get file information
-  const stats = yield* fs.stat("./temp/hello.txt")
-  yield* Console.log("File size:", stats.size)
+  const stats = yield* fs.stat("./temp/hello.txt");
+  yield* Console.log("File size:", stats.size);
 
   // Clean up
-  yield* fs.remove("./temp", { recursive: true })
-})
+  yield* fs.remove("./temp", { recursive: true });
+});
 ```
 
 ## Common pitfalls

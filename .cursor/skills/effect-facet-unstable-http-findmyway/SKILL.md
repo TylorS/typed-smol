@@ -28,7 +28,7 @@ description: Guidance for facet `effect/unstable/http/FindMyWay` focused on its 
 ## Starter example
 
 ```ts
-import { FindMyWay } from "effect/unstable/http/FindMyWay"
+import { FindMyWay } from "effect/unstable/http/FindMyWay";
 
 // Inspect exports in references/api-reference.md
 ```

@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SchemaParser } from "effect/SchemaParser"
+import { SchemaParser } from "effect/SchemaParser";
 
-const value = SchemaParser.makeEffect()
-const next = SchemaParser.run(value)
+const value = SchemaParser.makeEffect();
+const next = SchemaParser.run(value);
 ```
 
 ## Test Anchors

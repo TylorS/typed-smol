@@ -46,30 +46,30 @@ description: Guidance for facet `effect/unstable/schema/Model` focused on APIs l
 ## Starter example
 
 ```ts
-import { Schema } from "effect"
-import { Model } from "effect/unstable/schema"
+import { Schema } from "effect";
+import { Model } from "effect/unstable/schema";
 
-export const GroupId = Schema.Number.pipe(Schema.brand("GroupId"))
+export const GroupId = Schema.Number.pipe(Schema.brand("GroupId"));
 
 export class Group extends Model.Class<Group>("Group")({
   id: Model.Generated(GroupId),
   name: Schema.String,
   createdAt: Model.DateTimeInsertFromDate,
-  updatedAt: Model.DateTimeUpdateFromDate
+  updatedAt: Model.DateTimeUpdateFromDate,
 }) {}
 
 // schema used for selects
-Group
+Group;
 
 // schema used for inserts
-Group.insert
+Group.insert;
 
 // schema used for updates
-Group.update
+Group.update;
 
 // schema used for json api
-Group.json
-Group.jsonCreate
+Group.json;
+Group.jsonCreate;
 ```
 
 ## Common pitfalls

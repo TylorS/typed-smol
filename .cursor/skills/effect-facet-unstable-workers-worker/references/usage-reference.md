@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Worker } from "effect/unstable/workers/Worker"
+import { Worker } from "effect/unstable/workers/Worker";
 
-const value = Worker.makePlatform()
+const value = Worker.makePlatform();
 ```
 
 ## Test Anchors

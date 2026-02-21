@@ -39,9 +39,9 @@ description: Guidance for `effect/unstable/httpapi` focused on APIs like HttpApi
 ## Starter example
 
 ```ts
-import { httpapi } from "effect/unstable/httpapi"
+import { httpapi } from "effect/unstable/httpapi";
 
-const value = httpapi.HttpApi()
+const value = httpapi.HttpApi();
 ```
 
 ## Common pitfalls

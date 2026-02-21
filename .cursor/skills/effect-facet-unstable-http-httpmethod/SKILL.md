@@ -35,13 +35,13 @@ description: Guidance for facet `effect/unstable/http/HttpMethod` focused on API
 ## Starter example
 
 ```ts
-import { HttpMethod } from "effect/unstable/http"
+import { HttpMethod } from "effect/unstable/http";
 
-console.log(HttpMethod.isHttpMethod("GET"))
+console.log(HttpMethod.isHttpMethod("GET"));
 // true
-console.log(HttpMethod.isHttpMethod("get"))
+console.log(HttpMethod.isHttpMethod("get"));
 // false
-console.log(HttpMethod.isHttpMethod(1))
+console.log(HttpMethod.isHttpMethod(1));
 // false
 ```
 

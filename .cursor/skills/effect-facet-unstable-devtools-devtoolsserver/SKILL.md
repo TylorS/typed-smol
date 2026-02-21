@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/devtools/DevToolsServer` focuse
 ## Starter example
 
 ```ts
-import { DevToolsServer } from "effect/unstable/devtools/DevToolsServer"
+import { DevToolsServer } from "effect/unstable/devtools/DevToolsServer";
 
-const value = DevToolsServer.run()
+const value = DevToolsServer.run();
 ```
 
 ## Common pitfalls

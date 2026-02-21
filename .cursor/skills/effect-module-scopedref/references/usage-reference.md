@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ScopedRef } from "effect/ScopedRef"
+import { ScopedRef } from "effect/ScopedRef";
 
-const value = ScopedRef.make()
-const next = ScopedRef.get(value)
+const value = ScopedRef.make();
+const next = ScopedRef.get(value);
 ```
 
 ## Test Anchors

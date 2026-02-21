@@ -37,9 +37,9 @@ description: Guidance for facet `effect/unstable/http/HttpIncomingMessage` focus
 ## Starter example
 
 ```ts
-import { HttpIncomingMessage } from "effect/unstable/http/HttpIncomingMessage"
+import { HttpIncomingMessage } from "effect/unstable/http/HttpIncomingMessage";
 
-const value = HttpIncomingMessage.isHttpIncomingMessage()
+const value = HttpIncomingMessage.isHttpIncomingMessage();
 ```
 
 ## Common pitfalls

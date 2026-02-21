@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlStream } from "effect/unstable/sql/SqlStream"
+import { SqlStream } from "effect/unstable/sql/SqlStream";
 
-const value = SqlStream.asyncPauseResume()
+const value = SqlStream.asyncPauseResume();
 ```
 
 ## Test Anchors

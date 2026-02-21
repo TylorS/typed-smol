@@ -1,8 +1,5 @@
 import type { Plugin } from "vite";
-import type {
-  CreateTypeInfoApiSession,
-  VirtualModuleResolver,
-} from "@typed/virtual-modules";
+import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
 import { encodeVirtualId, decodeVirtualId, isVirtualId } from "./encodeVirtualId.js";
 
 const PLUGIN_NAME = "virtual-modules";
@@ -26,14 +23,8 @@ export interface VirtualModulesVitePluginOptions {
  * Vite plugin that integrates @typed/virtual-modules: resolves and loads virtual
  * modules via the given resolver (e.g. PluginManager) in both dev and build.
  */
-export function virtualModulesVitePlugin(
-  options: VirtualModulesVitePluginOptions,
-): Plugin {
-  const {
-    resolver,
-    createTypeInfoApiSession,
-    warnOnError = true,
-  } = options;
+export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOptions): Plugin {
+  const { resolver, createTypeInfoApiSession, warnOnError = true } = options;
 
   return {
     name: PLUGIN_NAME,

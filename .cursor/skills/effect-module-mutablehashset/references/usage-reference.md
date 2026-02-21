@@ -20,28 +20,25 @@ MutableHashSet is a high-performance, mutable set implementation that provides e
 ## Starter Example
 
 ```ts
-import { MutableHashSet } from "effect"
+import { MutableHashSet } from "effect";
 
 // Create a mutable hash set
-const set: MutableHashSet.MutableHashSet<string> = MutableHashSet.make(
-  "apple",
-  "banana"
-)
+const set: MutableHashSet.MutableHashSet<string> = MutableHashSet.make("apple", "banana");
 
 // Add elements
-MutableHashSet.add(set, "cherry")
+MutableHashSet.add(set, "cherry");
 
 // Check if elements exist
-console.log(MutableHashSet.has(set, "apple")) // true
-console.log(MutableHashSet.has(set, "grape")) // false
+console.log(MutableHashSet.has(set, "apple")); // true
+console.log(MutableHashSet.has(set, "grape")); // false
 
 // Iterate over elements
 for (const value of set) {
-  console.log(value) // "apple", "banana", "cherry"
+  console.log(value); // "apple", "banana", "cherry"
 }
 
 // Get size
-console.log(MutableHashSet.size(set)) // 3
+console.log(MutableHashSet.size(set)); // 3
 ```
 
 ## Test Anchors

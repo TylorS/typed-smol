@@ -33,9 +33,9 @@ description: Guidance for facet `effect/unstable/cluster/RunnerServer` focused o
 ## Starter example
 
 ```ts
-import { RunnerServer } from "effect/unstable/cluster/RunnerServer"
+import { RunnerServer } from "effect/unstable/cluster/RunnerServer";
 
-const value = RunnerServer.layer()
+const value = RunnerServer.layer();
 ```
 
 ## Common pitfalls

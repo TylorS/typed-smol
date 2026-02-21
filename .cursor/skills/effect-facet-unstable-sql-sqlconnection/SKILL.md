@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/sql/SqlConnection` focused on A
 ## Starter example
 
 ```ts
-import { SqlConnection } from "effect/unstable/sql/SqlConnection"
+import { SqlConnection } from "effect/unstable/sql/SqlConnection";
 
-const value = SqlConnection.Row()
+const value = SqlConnection.Row();
 ```
 
 ## Common pitfalls

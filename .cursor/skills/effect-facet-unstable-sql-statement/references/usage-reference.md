@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Statement } from "effect/unstable/sql/Statement"
+import { Statement } from "effect/unstable/sql/Statement";
 
-const value = Statement.make()
+const value = Statement.make();
 ```
 
 ## Test Anchors

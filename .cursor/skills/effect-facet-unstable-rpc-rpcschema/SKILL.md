@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/rpc/RpcSchema` focused on APIs 
 ## Starter example
 
 ```ts
-import { RpcSchema } from "effect/unstable/rpc/RpcSchema"
+import { RpcSchema } from "effect/unstable/rpc/RpcSchema";
 
-const value = RpcSchema.getStreamSchemas()
+const value = RpcSchema.getStreamSchemas();
 ```
 
 ## Common pitfalls

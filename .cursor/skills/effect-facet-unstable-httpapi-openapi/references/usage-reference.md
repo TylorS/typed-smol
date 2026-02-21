@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { OpenApi } from "effect/unstable/httpapi/OpenApi"
+import { OpenApi } from "effect/unstable/httpapi/OpenApi";
 
-const value = OpenApi.fromApi()
+const value = OpenApi.fromApi();
 ```
 
 ## Test Anchors

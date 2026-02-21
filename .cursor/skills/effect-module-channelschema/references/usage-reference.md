@@ -19,10 +19,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { ChannelSchema } from "effect/ChannelSchema"
+import { ChannelSchema } from "effect/ChannelSchema";
 
-const value = ChannelSchema.decode()
-const next = ChannelSchema.encode(value)
+const value = ChannelSchema.decode();
+const next = ChannelSchema.encode(value);
 ```
 
 ## Test Anchors

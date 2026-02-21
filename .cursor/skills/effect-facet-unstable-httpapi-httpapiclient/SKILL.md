@@ -36,9 +36,9 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiClient` focused 
 ## Starter example
 
 ```ts
-import { HttpApiClient } from "effect/unstable/httpapi/HttpApiClient"
+import { HttpApiClient } from "effect/unstable/httpapi/HttpApiClient";
 
-const value = HttpApiClient.make()
+const value = HttpApiClient.make();
 ```
 
 ## Common pitfalls

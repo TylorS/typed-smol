@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/ai/OpenAiStructuredOutput` focu
 ## Starter example
 
 ```ts
-import { OpenAiStructuredOutput } from "effect/unstable/ai/OpenAiStructuredOutput"
+import { OpenAiStructuredOutput } from "effect/unstable/ai/OpenAiStructuredOutput";
 
-const value = OpenAiStructuredOutput.toCodecOpenAI()
+const value = OpenAiStructuredOutput.toCodecOpenAI();
 ```
 
 ## Common pitfalls

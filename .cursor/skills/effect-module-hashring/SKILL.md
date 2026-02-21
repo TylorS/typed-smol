@@ -37,10 +37,10 @@ description: Guidance for `effect/HashRing` focused on APIs like get, make, and 
 ## Starter example
 
 ```ts
-import { HashRing } from "effect/HashRing"
+import { HashRing } from "effect/HashRing";
 
-const value = HashRing.make()
-const next = HashRing.get(value)
+const value = HashRing.make();
+const next = HashRing.get(value);
 ```
 
 ## Common pitfalls

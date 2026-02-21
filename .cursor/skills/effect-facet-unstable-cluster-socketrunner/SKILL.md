@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/SocketRunner` focused o
 ## Starter example
 
 ```ts
-import { SocketRunner } from "effect/unstable/cluster/SocketRunner"
+import { SocketRunner } from "effect/unstable/cluster/SocketRunner";
 
-const value = SocketRunner.layer()
+const value = SocketRunner.layer();
 ```
 
 ## Common pitfalls

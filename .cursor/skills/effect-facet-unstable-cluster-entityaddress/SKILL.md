@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/cluster/EntityAddress` focused 
 ## Starter example
 
 ```ts
-import { EntityAddress } from "effect/unstable/cluster/EntityAddress"
+import { EntityAddress } from "effect/unstable/cluster/EntityAddress";
 
-const value = EntityAddress.make()
+const value = EntityAddress.make();
 ```
 
 ## Common pitfalls

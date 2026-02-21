@@ -18,20 +18,20 @@ This module provides a re-export of the fast-check library for property-based te
 ## Starter Example
 
 ```ts
-import * as FastCheck from "effect/testing/FastCheck"
+import * as FastCheck from "effect/testing/FastCheck";
 
 // Property: reverse of reverse should equal original
 const reverseProp = FastCheck.property(
   FastCheck.array(FastCheck.integer()),
   (arr: Array<number>) => {
-    const reversed = arr.slice().reverse()
-    const doubleReversed = reversed.slice().reverse()
-    return JSON.stringify(arr) === JSON.stringify(doubleReversed)
-  }
-)
+    const reversed = arr.slice().reverse();
+    const doubleReversed = reversed.slice().reverse();
+    return JSON.stringify(arr) === JSON.stringify(doubleReversed);
+  },
+);
 
 // Run the property test
-FastCheck.assert(reverseProp)
+FastCheck.assert(reverseProp);
 ```
 
 ## Test Anchors

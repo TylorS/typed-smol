@@ -30,9 +30,9 @@ description: Guidance for `effect/Stdio` focused on APIs like make, Stdio, and T
 ## Starter example
 
 ```ts
-import { Stdio } from "effect/Stdio"
+import { Stdio } from "effect/Stdio";
 
-const value = Stdio.make()
+const value = Stdio.make();
 ```
 
 ## Common pitfalls

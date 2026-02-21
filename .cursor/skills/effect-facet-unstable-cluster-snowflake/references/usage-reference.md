@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Snowflake } from "effect/unstable/cluster/Snowflake"
+import { Snowflake } from "effect/unstable/cluster/Snowflake";
 
-const value = Snowflake.make()
+const value = Snowflake.make();
 ```
 
 ## Test Anchors

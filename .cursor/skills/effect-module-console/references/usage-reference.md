@@ -19,15 +19,15 @@ The `Console` module provides a functional interface for console operations with
 ## Starter Example
 
 ```ts
-import { Console, Effect } from "effect"
+import { Console, Effect } from "effect";
 
 // Basic logging
-const program = Effect.gen(function*() {
-  yield* Console.log("Hello, World!")
-  yield* Console.error("Something went wrong")
-  yield* Console.warn("This is a warning")
-  yield* Console.info("Information message")
-})
+const program = Effect.gen(function* () {
+  yield* Console.log("Hello, World!");
+  yield* Console.error("Something went wrong");
+  yield* Console.warn("This is a warning");
+  yield* Console.info("Information message");
+});
 ```
 
 ## Test Anchors

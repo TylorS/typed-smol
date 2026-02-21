@@ -46,9 +46,9 @@ description: Guidance for facet `effect/unstable/http/Multipart` focused on APIs
 ## Starter example
 
 ```ts
-import { Multipart } from "effect/unstable/http/Multipart"
+import { Multipart } from "effect/unstable/http/Multipart";
 
-const value = Multipart.makeConfig()
+const value = Multipart.makeConfig();
 ```
 
 ## Common pitfalls

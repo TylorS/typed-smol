@@ -46,9 +46,9 @@ description: Guidance for `effect/unstable/http` focused on APIs like Etag, Cook
 ## Starter example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.Etag()
+const value = http.Etag();
 ```
 
 ## Common pitfalls

@@ -67,4 +67,3 @@ Use approach **B**: provide an adapter-first API with:
   - `.docs/workflows/20260220-2209-virtual-modules/memory/inbox.md`
   - `.docs/workflows/20260220-2209-virtual-modules/memory/episodes.md`
 - Promote only durable API design heuristics (evidence-backed) to `.docs/_meta/memory/` during finalization.
-

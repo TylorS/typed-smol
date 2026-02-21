@@ -37,9 +37,9 @@ description: Guidance for `effect/unstable/eventlog` focused on APIs like Event,
 ## Starter example
 
 ```ts
-import { eventlog } from "effect/unstable/eventlog"
+import { eventlog } from "effect/unstable/eventlog";
 
-const value = eventlog.Event()
+const value = eventlog.Event();
 ```
 
 ## Common pitfalls

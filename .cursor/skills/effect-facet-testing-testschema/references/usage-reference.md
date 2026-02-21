@@ -18,9 +18,9 @@ Testing utilities for Schema validation and assertions.
 ## Starter Example
 
 ```ts
-import { TestSchema } from "effect/testing/TestSchema"
+import { TestSchema } from "effect/testing/TestSchema";
 
-const value = TestSchema.Asserts()
+const value = TestSchema.Asserts();
 ```
 
 ## Test Anchors

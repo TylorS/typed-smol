@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { WorkflowProxyServer } from "effect/unstable/workflow/WorkflowProxyServer"
+import { WorkflowProxyServer } from "effect/unstable/workflow/WorkflowProxyServer";
 
-const value = WorkflowProxyServer.layerHttpApi()
+const value = WorkflowProxyServer.layerHttpApi();
 ```
 
 ## Test Anchors

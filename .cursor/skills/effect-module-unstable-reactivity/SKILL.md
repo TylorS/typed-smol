@@ -35,9 +35,9 @@ description: Guidance for `effect/unstable/reactivity` focused on APIs like Atom
 ## Starter example
 
 ```ts
-import { reactivity } from "effect/unstable/reactivity"
+import { reactivity } from "effect/unstable/reactivity";
 
-const value = reactivity.Atom()
+const value = reactivity.Atom();
 ```
 
 ## Common pitfalls

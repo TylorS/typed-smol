@@ -41,9 +41,9 @@ description: Guidance for facet `effect/unstable/persistence/KeyValueStore` focu
 ## Starter example
 
 ```ts
-import { KeyValueStore } from "effect/unstable/persistence/KeyValueStore"
+import { KeyValueStore } from "effect/unstable/persistence/KeyValueStore";
 
-const value = KeyValueStore.make()
+const value = KeyValueStore.make();
 ```
 
 ## Common pitfalls

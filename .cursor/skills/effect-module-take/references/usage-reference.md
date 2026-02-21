@@ -18,9 +18,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Take } from "effect/Take"
+import { Take } from "effect/Take";
 
-const value = Take.Take()
+const value = Take.Take();
 ```
 
 ## Test Anchors

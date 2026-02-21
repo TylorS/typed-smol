@@ -26,9 +26,7 @@
       "Router skills provide navigation only and own no module behavior.",
       "Every skill includes Owned scope, Not covered here, and Escalate to sections."
     ],
-    "routerSkills": [
-      "effect-skill-router"
-    ],
+    "routerSkills": ["effect-skill-router"],
     "primarySkillPrefix": "effect-module",
     "facetSkillPrefix": "effect-facet"
   },

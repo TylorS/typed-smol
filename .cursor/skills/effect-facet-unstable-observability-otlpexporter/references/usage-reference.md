@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { OtlpExporter } from "effect/unstable/observability/OtlpExporter"
+import { OtlpExporter } from "effect/unstable/observability/OtlpExporter";
 
-const value = OtlpExporter.make()
+const value = OtlpExporter.make();
 ```
 
 ## Test Anchors

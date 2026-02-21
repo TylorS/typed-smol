@@ -35,9 +35,9 @@ description: Guidance for `effect/unstable/persistence` focused on APIs like Red
 ## Starter example
 
 ```ts
-import { persistence } from "effect/unstable/persistence"
+import { persistence } from "effect/unstable/persistence";
 
-const value = persistence.Redis()
+const value = persistence.Redis();
 ```
 
 ## Common pitfalls

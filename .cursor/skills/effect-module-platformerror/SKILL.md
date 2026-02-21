@@ -32,9 +32,9 @@ description: Guidance for `effect/PlatformError` focused on APIs like badArgumen
 ## Starter example
 
 ```ts
-import { PlatformError } from "effect/PlatformError"
+import { PlatformError } from "effect/PlatformError";
 
-const value = PlatformError.badArgument()
+const value = PlatformError.badArgument();
 ```
 
 ## Common pitfalls

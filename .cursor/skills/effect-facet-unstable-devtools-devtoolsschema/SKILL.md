@@ -46,9 +46,9 @@ description: Guidance for facet `effect/unstable/devtools/DevToolsSchema` focuse
 ## Starter example
 
 ```ts
-import { DevToolsSchema } from "effect/unstable/devtools/DevToolsSchema"
+import { DevToolsSchema } from "effect/unstable/devtools/DevToolsSchema";
 
-const value = DevToolsSchema.Ping()
+const value = DevToolsSchema.Ping();
 ```
 
 ## Common pitfalls

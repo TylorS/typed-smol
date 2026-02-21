@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { KeyValueStore } from "effect/unstable/persistence/KeyValueStore"
+import { KeyValueStore } from "effect/unstable/persistence/KeyValueStore";
 
-const value = KeyValueStore.make()
+const value = KeyValueStore.make();
 ```
 
 ## Test Anchors

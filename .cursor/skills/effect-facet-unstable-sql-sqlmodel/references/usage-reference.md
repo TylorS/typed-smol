@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlModel } from "effect/unstable/sql/SqlModel"
+import { SqlModel } from "effect/unstable/sql/SqlModel";
 
-const value = SqlModel.makeDataLoaders()
+const value = SqlModel.makeDataLoaders();
 ```
 
 ## Test Anchors

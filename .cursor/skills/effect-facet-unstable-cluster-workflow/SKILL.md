@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/cluster#workflow` focused on AP
 ## Starter example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.ClusterWorkflowEngine()
+const value = cluster.ClusterWorkflowEngine();
 ```
 
 ## Common pitfalls

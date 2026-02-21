@@ -46,10 +46,10 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiMiddleware` focu
 ## Starter example
 
 ```ts
-import { HttpApiMiddleware } from "effect/unstable/httpapi/HttpApiMiddleware"
+import { HttpApiMiddleware } from "effect/unstable/httpapi/HttpApiMiddleware";
 
-const value = HttpApiMiddleware.Service()
-const next = HttpApiMiddleware.ErrorServicesDecode(value)
+const value = HttpApiMiddleware.Service();
+const next = HttpApiMiddleware.ErrorServicesDecode(value);
 ```
 
 ## Common pitfalls

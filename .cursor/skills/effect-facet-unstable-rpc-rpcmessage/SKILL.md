@@ -47,10 +47,10 @@ description: Guidance for facet `effect/unstable/rpc/RpcMessage` focused on APIs
 ## Starter example
 
 ```ts
-import { RpcMessage } from "effect/unstable/rpc/RpcMessage"
+import { RpcMessage } from "effect/unstable/rpc/RpcMessage";
 
-const value = RpcMessage.FromClient()
-const next = RpcMessage.FromClientEncoded(value)
+const value = RpcMessage.FromClient();
+const next = RpcMessage.FromClientEncoded(value);
 ```
 
 ## Common pitfalls

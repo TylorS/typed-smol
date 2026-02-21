@@ -35,9 +35,9 @@ description: Guidance for facet `effect/unstable/cluster/ClusterSchema` focused 
 ## Starter example
 
 ```ts
-import { ClusterSchema } from "effect/unstable/cluster/ClusterSchema"
+import { ClusterSchema } from "effect/unstable/cluster/ClusterSchema";
 
-const value = ClusterSchema.isUninterruptibleForClient()
+const value = ClusterSchema.isUninterruptibleForClient();
 ```
 
 ## Common pitfalls

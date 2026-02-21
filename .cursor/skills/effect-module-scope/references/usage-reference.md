@@ -21,19 +21,19 @@ The `Scope` module provides functionality for managing resource lifecycles and c
 ## Starter Example
 
 ```ts
-import { Effect, Exit, Scope } from "effect"
+import { Effect, Exit, Scope } from "effect";
 
-const program = Effect.gen(function*() {
-  const scope = yield* Scope.make("sequential")
+const program = Effect.gen(function* () {
+  const scope = yield* Scope.make("sequential");
 
   // Scope has a strategy and state
-  console.log(scope.strategy) // "sequential"
-  console.log(scope.state._tag) // "Open"
+  console.log(scope.strategy); // "sequential"
+  console.log(scope.state._tag); // "Open"
 
   // Close the scope
-  yield* Scope.close(scope, Exit.void)
-  console.log(scope.state._tag) // "Closed"
-})
+  yield* Scope.close(scope, Exit.void);
+  console.log(scope.state._tag); // "Closed"
+});
 ```
 
 ## Test Anchors

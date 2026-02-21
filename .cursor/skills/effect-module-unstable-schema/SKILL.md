@@ -30,9 +30,9 @@ description: Guidance for `effect/unstable/schema` focused on APIs like Model an
 ## Starter example
 
 ```ts
-import { schema } from "effect/unstable/schema"
+import { schema } from "effect/unstable/schema";
 
-const value = schema.Model()
+const value = schema.Model();
 ```
 
 ## Common pitfalls

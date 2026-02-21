@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpBody } from "effect/unstable/http/HttpBody"
+import { HttpBody } from "effect/unstable/http/HttpBody";
 
-const value = HttpBody.empty()
+const value = HttpBody.empty();
 ```
 
 ## Test Anchors

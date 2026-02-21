@@ -18,19 +18,19 @@ This module provides utilities for creating data types with structural equality 
 ## Starter Example
 
 ```ts
-import { Data, Equal } from "effect"
-import * as assert from "node:assert"
+import { Data, Equal } from "effect";
+import * as assert from "node:assert";
 
 class Person extends Data.Class<{ readonly name: string }> {}
 
 // Creating instances of Person
-const mike1 = new Person({ name: "Mike" })
-const mike2 = new Person({ name: "Mike" })
-const john = new Person({ name: "John" })
+const mike1 = new Person({ name: "Mike" });
+const mike2 = new Person({ name: "Mike" });
+const john = new Person({ name: "John" });
 
 // Checking equality
-assert.deepStrictEqual(Equal.equals(mike1, mike2), true)
-assert.deepStrictEqual(Equal.equals(mike1, john), false)
+assert.deepStrictEqual(Equal.equals(mike1, mike2), true);
+assert.deepStrictEqual(Equal.equals(mike1, john), false);
 ```
 
 ## Test Anchors

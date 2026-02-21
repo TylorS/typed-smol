@@ -42,10 +42,10 @@ description: Guidance for facet `effect/unstable/encoding/Ndjson` focused on API
 ## Starter example
 
 ```ts
-import { Ndjson } from "effect/unstable/encoding/Ndjson"
+import { Ndjson } from "effect/unstable/encoding/Ndjson";
 
-const value = Ndjson.decode()
-const next = Ndjson.encode(value)
+const value = Ndjson.decode();
+const next = Ndjson.encode(value);
 ```
 
 ## Common pitfalls

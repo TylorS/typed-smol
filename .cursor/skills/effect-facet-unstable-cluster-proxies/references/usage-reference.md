@@ -20,9 +20,9 @@ entity proxy and resource shims. Module-specific APIs and usage patterns for Eff
 ## Starter Example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.EntityProxy()
+const value = cluster.EntityProxy();
 ```
 
 ## Test Anchors

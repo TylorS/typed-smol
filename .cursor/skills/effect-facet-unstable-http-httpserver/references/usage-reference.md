@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpServer } from "effect/unstable/http/HttpServer"
+import { HttpServer } from "effect/unstable/http/HttpServer";
 
-const value = HttpServer.make()
+const value = HttpServer.make();
 ```
 
 ## Test Anchors

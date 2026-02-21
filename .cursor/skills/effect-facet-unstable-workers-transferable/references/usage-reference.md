@@ -22,10 +22,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Transferable } from "effect/unstable/workers/Transferable"
+import { Transferable } from "effect/unstable/workers/Transferable";
 
-const value = Transferable.makeCollector()
-const next = Transferable.getterAddAll(value)
+const value = Transferable.makeCollector();
+const next = Transferable.getterAddAll(value);
 ```
 
 ## Test Anchors

@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { AtomRef } from "effect/unstable/reactivity/AtomRef"
+import { AtomRef } from "effect/unstable/reactivity/AtomRef";
 
-const value = AtomRef.make()
+const value = AtomRef.make();
 ```
 
 ## Test Anchors

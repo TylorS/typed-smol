@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Multipart } from "effect/unstable/http/Multipart"
+import { Multipart } from "effect/unstable/http/Multipart";
 
-const value = Multipart.makeConfig()
+const value = Multipart.makeConfig();
 ```
 
 ## Test Anchors

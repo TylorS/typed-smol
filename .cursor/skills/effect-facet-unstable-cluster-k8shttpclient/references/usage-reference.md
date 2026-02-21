@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { K8sHttpClient } from "effect/unstable/cluster/K8sHttpClient"
+import { K8sHttpClient } from "effect/unstable/cluster/K8sHttpClient";
 
-const value = K8sHttpClient.makeGetPods()
+const value = K8sHttpClient.makeGetPods();
 ```
 
 ## Test Anchors

@@ -34,9 +34,9 @@ description: Guidance for facet `effect/unstable/reactivity/AtomRef` focused on 
 ## Starter example
 
 ```ts
-import { AtomRef } from "effect/unstable/reactivity/AtomRef"
+import { AtomRef } from "effect/unstable/reactivity/AtomRef";
 
-const value = AtomRef.make()
+const value = AtomRef.make();
 ```
 
 ## Common pitfalls

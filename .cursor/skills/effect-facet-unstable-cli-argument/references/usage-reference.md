@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Argument } from "effect/unstable/cli"
+import { Argument } from "effect/unstable/cli";
 
-const filename = Argument.string("filename")
+const filename = Argument.string("filename");
 ```
 
 ## Test Anchors

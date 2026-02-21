@@ -38,10 +38,10 @@ description: Guidance for `effect/Pool` focused on APIs like get, make, and make
 ## Starter example
 
 ```ts
-import { Pool } from "effect/Pool"
+import { Pool } from "effect/Pool";
 
-const value = Pool.make()
-const next = Pool.get(value)
+const value = Pool.make();
+const next = Pool.get(value);
 ```
 
 ## Common pitfalls

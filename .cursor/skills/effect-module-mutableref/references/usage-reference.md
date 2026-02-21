@@ -20,30 +20,29 @@ MutableRef provides a mutable reference container that allows safe mutation of v
 ## Starter Example
 
 ```ts
-import { MutableRef } from "effect"
+import { MutableRef } from "effect";
 
 // Create a mutable reference
-const ref: MutableRef.MutableRef<number> = MutableRef.make(42)
+const ref: MutableRef.MutableRef<number> = MutableRef.make(42);
 
 // Read the current value
-console.log(ref.current) // 42
-console.log(MutableRef.get(ref)) // 42
+console.log(ref.current); // 42
+console.log(MutableRef.get(ref)); // 42
 
 // Update the value
-ref.current = 100
-console.log(MutableRef.get(ref)) // 100
+ref.current = 100;
+console.log(MutableRef.get(ref)); // 100
 
 // Use with complex types
 interface Config {
-  timeout: number
-  retries: number
+  timeout: number;
+  retries: number;
 }
 
 const config: MutableRef.MutableRef<Config> = MutableRef.make({
   timeout: 5000,
-  retries: 3
-})
-
+  retries: 3,
+});
 ```
 
 ## Test Anchors

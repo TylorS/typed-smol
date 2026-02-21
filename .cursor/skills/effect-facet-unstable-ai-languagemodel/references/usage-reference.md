@@ -20,19 +20,19 @@ The `LanguageModel` module provides AI text generation capabilities with tool ca
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import { LanguageModel } from "effect/unstable/ai"
+import { Effect } from "effect";
+import { LanguageModel } from "effect/unstable/ai";
 
 // Basic text generation
-const program = Effect.gen(function*() {
+const program = Effect.gen(function* () {
   const response = yield* LanguageModel.generateText({
-    prompt: "Explain quantum computing"
-  })
+    prompt: "Explain quantum computing",
+  });
 
-  console.log(response.text)
+  console.log(response.text);
 
-  return response
-})
+  return response;
+});
 ```
 
 ## Test Anchors

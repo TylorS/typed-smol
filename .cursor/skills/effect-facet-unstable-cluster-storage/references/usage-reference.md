@@ -20,10 +20,10 @@ message/runner storage backends. Module-specific APIs and usage patterns for Eff
 ## Starter Example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.RunnerStorage()
-const next = cluster.SqlRunnerStorage(value)
+const value = cluster.RunnerStorage();
+const next = cluster.SqlRunnerStorage(value);
 ```
 
 ## Test Anchors

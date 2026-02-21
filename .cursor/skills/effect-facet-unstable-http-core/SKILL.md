@@ -45,9 +45,9 @@ description: Guidance for facet `effect/unstable/http#core` focused on APIs like
 ## Starter example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.Etag()
+const value = http.Etag();
 ```
 
 ## Common pitfalls

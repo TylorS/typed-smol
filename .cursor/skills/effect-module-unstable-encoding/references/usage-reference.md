@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { encoding } from "effect/unstable/encoding"
+import { encoding } from "effect/unstable/encoding";
 
-const value = encoding.Sse()
+const value = encoding.Sse();
 ```
 
 ## Test Anchors

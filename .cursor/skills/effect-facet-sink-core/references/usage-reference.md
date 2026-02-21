@@ -19,18 +19,18 @@ sink model and base constructors. Module-specific APIs and usage patterns for Ef
 ## Starter Example
 
 ```ts
-import { Effect } from "effect"
-import * as Sink from "effect/Sink"
-import * as Stream from "effect/Stream"
+import { Effect } from "effect";
+import * as Sink from "effect/Sink";
+import * as Stream from "effect/Stream";
 
 // Create a simple sink that always succeeds with a value
-const sink: Sink.Sink<number> = Sink.succeed(42)
+const sink: Sink.Sink<number> = Sink.succeed(42);
 
 // Use the sink to consume a stream
-const stream = Stream.make(1, 2, 3)
-const program = Stream.run(stream, sink)
+const stream = Stream.make(1, 2, 3);
+const program = Stream.run(stream, sink);
 
-Effect.runPromise(program).then(console.log)
+Effect.runPromise(program).then(console.log);
 // Output: 42
 ```
 

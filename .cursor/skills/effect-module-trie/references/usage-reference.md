@@ -20,30 +20,29 @@ A `Trie` is used for locating specific `string` keys from within a set.
 ## Starter Example
 
 ```ts
-import * as Trie from "effect/Trie"
+import * as Trie from "effect/Trie";
 
 // Create a trie with string-to-number mappings
 const trie: Trie.Trie<number> = Trie.make(
   ["apple", 1],
   ["app", 2],
   ["application", 3],
-  ["banana", 4]
-)
+  ["banana", 4],
+);
 
 // Get values by exact key
-console.log(Trie.get(trie, "apple")) // Some(1)
-console.log(Trie.get(trie, "grape")) // None
+console.log(Trie.get(trie, "apple")); // Some(1)
+console.log(Trie.get(trie, "grape")); // None
 
 // Find all keys with a prefix
-console.log(Array.from(Trie.keysWithPrefix(trie, "app")))
+console.log(Array.from(Trie.keysWithPrefix(trie, "app")));
 // ["app", "apple", "application"]
 
 // Iterate over all entries (sorted alphabetically)
 for (const [key, value] of trie) {
-  console.log(`${key}: ${value}`)
+  console.log(`${key}: ${value}`);
 }
 // Output: "app: 2", "apple: 1", "application: 3", "banana: 4"
-
 ```
 
 ## Test Anchors

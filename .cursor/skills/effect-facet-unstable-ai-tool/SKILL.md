@@ -47,8 +47,8 @@ description: Guidance for facet `effect/unstable/ai/Tool` focused on APIs like m
 ## Starter example
 
 ```ts
-import { Schema } from "effect"
-import { Tool } from "effect/unstable/ai"
+import { Schema } from "effect";
+import { Tool } from "effect/unstable/ai";
 
 // Define a simple calculator tool
 const Calculator = Tool.make("Calculator", {
@@ -56,10 +56,10 @@ const Calculator = Tool.make("Calculator", {
   parameters: Schema.Struct({
     operation: Schema.Literals(["add", "subtract", "multiply", "divide"]),
     a: Schema.Number,
-    b: Schema.Number
+    b: Schema.Number,
   }),
-  success: Schema.Number
-})
+  success: Schema.Number,
+});
 ```
 
 ## Common pitfalls

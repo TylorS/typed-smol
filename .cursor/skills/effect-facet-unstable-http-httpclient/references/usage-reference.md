@@ -23,10 +23,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpClient } from "effect/unstable/http/HttpClient"
+import { HttpClient } from "effect/unstable/http/HttpClient";
 
-const value = HttpClient.make()
-const next = HttpClient.get(value)
+const value = HttpClient.make();
+const next = HttpClient.get(value);
 ```
 
 ## Test Anchors

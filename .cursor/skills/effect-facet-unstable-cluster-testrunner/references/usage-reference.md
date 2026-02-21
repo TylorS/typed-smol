@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { TestRunner } from "effect/unstable/cluster/TestRunner"
+import { TestRunner } from "effect/unstable/cluster/TestRunner";
 
-const value = TestRunner.layer()
+const value = TestRunner.layer();
 ```
 
 ## Test Anchors

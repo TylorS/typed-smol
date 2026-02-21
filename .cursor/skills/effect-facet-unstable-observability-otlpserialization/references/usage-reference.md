@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { OtlpSerialization } from "effect/unstable/observability/OtlpSerialization"
+import { OtlpSerialization } from "effect/unstable/observability/OtlpSerialization";
 
-const value = OtlpSerialization.layerJson()
+const value = OtlpSerialization.layerJson();
 ```
 
 ## Test Anchors

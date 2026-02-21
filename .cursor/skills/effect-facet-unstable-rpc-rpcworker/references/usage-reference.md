@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcWorker } from "effect/unstable/rpc/RpcWorker"
+import { RpcWorker } from "effect/unstable/rpc/RpcWorker";
 
-const value = RpcWorker.makeInitialMessage()
-const next = RpcWorker.Encoded(value)
+const value = RpcWorker.makeInitialMessage();
+const next = RpcWorker.Encoded(value);
 ```
 
 ## Test Anchors

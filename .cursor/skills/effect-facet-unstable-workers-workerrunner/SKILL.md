@@ -32,10 +32,10 @@ description: Guidance for facet `effect/unstable/workers/WorkerRunner` focused o
 ## Starter example
 
 ```ts
-import { WorkerRunner } from "effect/unstable/workers/WorkerRunner"
+import { WorkerRunner } from "effect/unstable/workers/WorkerRunner";
 
-const value = WorkerRunner.WorkerRunner()
-const next = WorkerRunner.WorkerRunnerPlatform(value)
+const value = WorkerRunner.WorkerRunner();
+const next = WorkerRunner.WorkerRunnerPlatform(value);
 ```
 
 ## Common pitfalls

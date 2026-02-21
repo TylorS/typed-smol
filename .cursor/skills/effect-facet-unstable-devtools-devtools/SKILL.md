@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/devtools/DevTools` focused on A
 ## Starter example
 
 ```ts
-import { DevTools } from "effect/unstable/devtools/DevTools"
+import { DevTools } from "effect/unstable/devtools/DevTools";
 
-const value = DevTools.layer()
+const value = DevTools.layer();
 ```
 
 ## Common pitfalls

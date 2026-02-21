@@ -19,9 +19,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Stdio } from "effect/Stdio"
+import { Stdio } from "effect/Stdio";
 
-const value = Stdio.make()
+const value = Stdio.make();
 ```
 
 ## Test Anchors

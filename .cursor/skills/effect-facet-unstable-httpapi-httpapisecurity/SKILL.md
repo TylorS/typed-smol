@@ -41,9 +41,9 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiSecurity` focuse
 ## Starter example
 
 ```ts
-import { HttpApiSecurity } from "effect/unstable/httpapi/HttpApiSecurity"
+import { HttpApiSecurity } from "effect/unstable/httpapi/HttpApiSecurity";
 
-const value = HttpApiSecurity.Type()
+const value = HttpApiSecurity.Type();
 ```
 
 ## Common pitfalls

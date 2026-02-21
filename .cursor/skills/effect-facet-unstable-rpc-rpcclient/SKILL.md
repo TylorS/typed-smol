@@ -43,9 +43,9 @@ description: Guidance for facet `effect/unstable/rpc/RpcClient` focused on APIs 
 ## Starter example
 
 ```ts
-import { RpcClient } from "effect/unstable/rpc/RpcClient"
+import { RpcClient } from "effect/unstable/rpc/RpcClient";
 
-const value = RpcClient.From()
+const value = RpcClient.From();
 ```
 
 ## Common pitfalls

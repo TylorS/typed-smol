@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Entity } from "effect/unstable/cluster/Entity"
+import { Entity } from "effect/unstable/cluster/Entity";
 
-const value = Entity.make()
-const next = Entity.CurrentRunnerAddress(value)
+const value = Entity.make();
+const next = Entity.CurrentRunnerAddress(value);
 ```
 
 ## Test Anchors

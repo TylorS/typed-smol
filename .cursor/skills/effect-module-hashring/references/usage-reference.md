@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HashRing } from "effect/HashRing"
+import { HashRing } from "effect/HashRing";
 
-const value = HashRing.make()
-const next = HashRing.get(value)
+const value = HashRing.make();
+const next = HashRing.get(value);
 ```
 
 ## Test Anchors

@@ -44,9 +44,9 @@ description: Guidance for facet `effect/unstable/eventlog/EventJournal` focused 
 ## Starter example
 
 ```ts
-import { EventJournal } from "effect/unstable/eventlog/EventJournal"
+import { EventJournal } from "effect/unstable/eventlog/EventJournal";
 
-const value = EventJournal.makeMemory()
+const value = EventJournal.makeMemory();
 ```
 
 ## Common pitfalls

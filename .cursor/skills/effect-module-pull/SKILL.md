@@ -42,15 +42,15 @@ description: Guidance for `effect/Pull` focused on APIs like Services, filterDon
 ## Starter example
 
 ```ts
-import { Cause, Effect, Pull } from "effect"
+import { Cause, Effect, Pull } from "effect";
 
-const pull = Cause.done("stream ended")
+const pull = Cause.done("stream ended");
 
 const result = Pull.matchEffect(pull, {
   onSuccess: (value) => Effect.succeed(`Got value: ${value}`),
   onFailure: (cause) => Effect.succeed(`Got error: ${cause}`),
-  onDone: (leftover) => Effect.succeed(`Stream halted with: ${leftover}`)
-})
+  onDone: (leftover) => Effect.succeed(`Stream halted with: ${leftover}`),
+});
 ```
 
 ## Common pitfalls

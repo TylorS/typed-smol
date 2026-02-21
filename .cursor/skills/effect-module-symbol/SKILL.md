@@ -27,11 +27,11 @@ description: Guidance for `effect/Symbol` focused on APIs like isSymbol. Load af
 ## Starter example
 
 ```ts
-import * as Predicate from "effect/Predicate"
-import * as assert from "node:assert"
+import * as Predicate from "effect/Predicate";
+import * as assert from "node:assert";
 
-assert.deepStrictEqual(Predicate.isSymbol(Symbol.for("a")), true)
-assert.deepStrictEqual(Predicate.isSymbol("a"), false)
+assert.deepStrictEqual(Predicate.isSymbol(Symbol.for("a")), true);
+assert.deepStrictEqual(Predicate.isSymbol("a"), false);
 ```
 
 ## Common pitfalls

@@ -47,30 +47,27 @@ description: Guidance for facet `effect/unstable/cli/Command` focused on APIs li
 ## Starter example
 
 ```ts
-import { Console } from "effect"
-import { Argument, Command, Flag } from "effect/unstable/cli"
+import { Console } from "effect";
+import { Argument, Command, Flag } from "effect/unstable/cli";
 
 // Simple command with no configuration
-const version: Command.Command<"version", {}, never, never> = Command.make(
-  "version"
-)
+const version: Command.Command<"version", {}, never, never> = Command.make("version");
 
 // Command with flags and arguments
 const deploy: Command.Command<
   "deploy",
   {
-    readonly env: string
-    readonly force: boolean
-    readonly files: ReadonlyArray<string>
+    readonly env: string;
+    readonly force: boolean;
+    readonly files: ReadonlyArray<string>;
   },
   never,
   never
 > = Command.make("deploy", {
   env: Flag.string("env"),
   force: Flag.boolean("force"),
-  files: Argument.string("files").pipe(Argument.variadic())
-})
-
+  files: Argument.string("files").pipe(Argument.variadic()),
+});
 ```
 
 ## Common pitfalls

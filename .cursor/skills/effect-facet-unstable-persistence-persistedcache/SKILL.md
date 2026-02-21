@@ -30,9 +30,9 @@ description: Guidance for facet `effect/unstable/persistence/PersistedCache` foc
 ## Starter example
 
 ```ts
-import { PersistedCache } from "effect/unstable/persistence/PersistedCache"
+import { PersistedCache } from "effect/unstable/persistence/PersistedCache";
 
-const value = PersistedCache.make()
+const value = PersistedCache.make();
 ```
 
 ## Common pitfalls

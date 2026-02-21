@@ -47,18 +47,18 @@ description: Guidance for `effect/SchemaAST` focused on APIs like Filter, getAST
 ## Starter example
 
 ```ts
-import { Schema, SchemaAST } from "effect"
+import { Schema, SchemaAST } from "effect";
 
-const schema = Schema.Struct({ name: Schema.String, age: Schema.Number })
-const ast = schema.ast
+const schema = Schema.Struct({ name: Schema.String, age: Schema.Number });
+const ast = schema.ast;
 
 if (SchemaAST.isObjects(ast)) {
-  console.log(ast.propertySignatures.map(ps => ps.name))
+  console.log(ast.propertySignatures.map((ps) => ps.name));
   // ["name", "age"]
 }
 
-const encoded = SchemaAST.toEncoded(ast)
-console.log(SchemaAST.isObjects(encoded)) // true
+const encoded = SchemaAST.toEncoded(ast);
+console.log(SchemaAST.isObjects(encoded)); // true
 ```
 
 ## Common pitfalls

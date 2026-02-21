@@ -21,10 +21,10 @@ HttpApiSchema provides helpers to annotate Effect Schema values with HTTP API me
 ## Starter Example
 
 ```ts
-import { HttpApiSchema } from "effect/unstable/httpapi/HttpApiSchema"
+import { HttpApiSchema } from "effect/unstable/httpapi/HttpApiSchema";
 
-const value = HttpApiSchema.Empty()
-const next = HttpApiSchema.getPayloadEncoding(value)
+const value = HttpApiSchema.Empty();
+const next = HttpApiSchema.getPayloadEncoding(value);
 ```
 
 ## Test Anchors

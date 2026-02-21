@@ -46,10 +46,10 @@ description: Guidance for facet `effect/unstable/http/HttpServerRequest` focused
 ## Starter example
 
 ```ts
-import { HttpServerRequest } from "effect/unstable/http/HttpServerRequest"
+import { HttpServerRequest } from "effect/unstable/http/HttpServerRequest";
 
-const value = HttpServerRequest.fromWeb()
-const next = HttpServerRequest.ParsedSearchParams(value)
+const value = HttpServerRequest.fromWeb();
+const next = HttpServerRequest.ParsedSearchParams(value);
 ```
 
 ## Common pitfalls

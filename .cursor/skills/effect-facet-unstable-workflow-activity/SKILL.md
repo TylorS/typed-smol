@@ -37,9 +37,9 @@ description: Guidance for facet `effect/unstable/workflow/Activity` focused on A
 ## Starter example
 
 ```ts
-import { Activity } from "effect/unstable/workflow/Activity"
+import { Activity } from "effect/unstable/workflow/Activity";
 
-const value = Activity.make()
+const value = Activity.make();
 ```
 
 ## Common pitfalls

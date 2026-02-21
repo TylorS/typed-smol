@@ -22,10 +22,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { McpSchema } from "effect/unstable/ai/McpSchema"
+import { McpSchema } from "effect/unstable/ai/McpSchema";
 
-const value = McpSchema.FromClientEncoded()
-const next = McpSchema.SetLevel(value)
+const value = McpSchema.FromClientEncoded();
+const next = McpSchema.SetLevel(value);
 ```
 
 ## Test Anchors

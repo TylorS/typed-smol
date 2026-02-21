@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { devtools } from "effect/unstable/devtools"
+import { devtools } from "effect/unstable/devtools";
 
-const value = devtools.DevTools()
+const value = devtools.DevTools();
 ```
 
 ## Test Anchors

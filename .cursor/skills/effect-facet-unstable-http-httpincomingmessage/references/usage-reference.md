@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpIncomingMessage } from "effect/unstable/http/HttpIncomingMessage"
+import { HttpIncomingMessage } from "effect/unstable/http/HttpIncomingMessage";
 
-const value = HttpIncomingMessage.isHttpIncomingMessage()
+const value = HttpIncomingMessage.isHttpIncomingMessage();
 ```
 
 ## Test Anchors

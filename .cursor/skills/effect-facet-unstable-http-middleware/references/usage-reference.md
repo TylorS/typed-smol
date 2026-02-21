@@ -21,9 +21,9 @@ middleware/effect/tracing glue. Module-specific APIs and usage patterns for Effe
 ## Starter Example
 
 ```ts
-import { http } from "effect/unstable/http"
+import { http } from "effect/unstable/http";
 
-const value = http.Headers()
+const value = http.Headers();
 ```
 
 ## Test Anchors

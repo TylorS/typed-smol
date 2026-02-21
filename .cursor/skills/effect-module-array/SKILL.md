@@ -45,18 +45,18 @@ description: Guidance for `effect/Array` focused on APIs like of, get, and map. 
 ## Starter example
 
 ```ts
-import { Array } from "effect"
+import { Array } from "effect";
 
-const numbers = Array.make(1, 2, 3, 4, 5)
+const numbers = Array.make(1, 2, 3, 4, 5);
 
-const doubled = Array.map(numbers, (n) => n * 2)
-console.log(doubled) // [2, 4, 6, 8, 10]
+const doubled = Array.map(numbers, (n) => n * 2);
+console.log(doubled); // [2, 4, 6, 8, 10]
 
-const evens = Array.filter(numbers, (n) => n % 2 === 0)
-console.log(evens) // [2, 4]
+const evens = Array.filter(numbers, (n) => n % 2 === 0);
+console.log(evens); // [2, 4]
 
-const sum = Array.reduce(numbers, 0, (acc, n) => acc + n)
-console.log(sum) // 15
+const sum = Array.reduce(numbers, 0, (acc, n) => acc + n);
+console.log(sum); // 15
 ```
 
 ## Common pitfalls

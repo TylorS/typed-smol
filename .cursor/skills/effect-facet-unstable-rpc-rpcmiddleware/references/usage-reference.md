@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcMiddleware } from "effect/unstable/rpc/RpcMiddleware"
+import { RpcMiddleware } from "effect/unstable/rpc/RpcMiddleware";
 
-const value = RpcMiddleware.Service()
-const next = RpcMiddleware.ErrorServicesDecode(value)
+const value = RpcMiddleware.Service();
+const next = RpcMiddleware.ErrorServicesDecode(value);
 ```
 
 ## Test Anchors

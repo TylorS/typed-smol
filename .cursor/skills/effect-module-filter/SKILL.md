@@ -45,13 +45,13 @@ description: Guidance for `effect/Filter` focused on APIs like Fail, make, and F
 ## Starter example
 
 ```ts
-import { Filter, Result } from "effect"
+import { Filter, Result } from "effect";
 
 // A filter that only passes positive numbers
-const positiveFilter: Filter.Filter<number> = (n) => n > 0 ? Result.succeed(n) : Result.fail(n)
+const positiveFilter: Filter.Filter<number> = (n) => (n > 0 ? Result.succeed(n) : Result.fail(n));
 
-console.log(positiveFilter(5)) // Result.succeed(5)
-console.log(positiveFilter(-3)) // Result.fail(-3)
+console.log(positiveFilter(5)); // Result.succeed(5)
+console.log(positiveFilter(-3)); // Result.fail(-3)
 ```
 
 ## Common pitfalls

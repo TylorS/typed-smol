@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcServer } from "effect/unstable/rpc/RpcServer"
+import { RpcServer } from "effect/unstable/rpc/RpcServer";
 
-const value = RpcServer.make()
-const next = RpcServer.layerProtocolWorkerRunner(value)
+const value = RpcServer.make();
+const next = RpcServer.layerProtocolWorkerRunner(value);
 ```
 
 ## Test Anchors

@@ -46,9 +46,9 @@ description: Guidance for facet `effect/unstable/eventlog/Event` focused on APIs
 ## Starter example
 
 ```ts
-import { Event } from "effect/unstable/eventlog/Event"
+import { Event } from "effect/unstable/eventlog/Event";
 
-const value = Event.make()
+const value = Event.make();
 ```
 
 ## Common pitfalls

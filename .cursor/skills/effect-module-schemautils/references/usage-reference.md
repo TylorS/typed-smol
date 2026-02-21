@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SchemaUtils } from "effect/SchemaUtils"
+import { SchemaUtils } from "effect/SchemaUtils";
 
-const value = SchemaUtils.getNativeClassSchema()
+const value = SchemaUtils.getNativeClassSchema();
 ```
 
 ## Test Anchors

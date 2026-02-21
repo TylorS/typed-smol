@@ -34,10 +34,10 @@ description: Guidance for `effect/ScopedRef` focused on APIs like get, set, and 
 ## Starter example
 
 ```ts
-import { ScopedRef } from "effect/ScopedRef"
+import { ScopedRef } from "effect/ScopedRef";
 
-const value = ScopedRef.make()
-const next = ScopedRef.get(value)
+const value = ScopedRef.make();
+const next = ScopedRef.get(value);
 ```
 
 ## Common pitfalls

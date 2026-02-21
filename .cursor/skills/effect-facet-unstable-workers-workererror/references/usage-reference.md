@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { WorkerError } from "effect/unstable/workers/WorkerError"
+import { WorkerError } from "effect/unstable/workers/WorkerError";
 
-const value = WorkerError.isWorkerError()
-const next = WorkerError.WorkerUnknownError(value)
+const value = WorkerError.isWorkerError();
+const next = WorkerError.WorkerUnknownError(value);
 ```
 
 ## Test Anchors

@@ -20,10 +20,10 @@ entity/shard core domain. Module-specific APIs and usage patterns for Effect pro
 ## Starter Example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.Runner()
-const next = cluster.Runners(value)
+const value = cluster.Runner();
+const next = cluster.Runners(value);
 ```
 
 ## Test Anchors

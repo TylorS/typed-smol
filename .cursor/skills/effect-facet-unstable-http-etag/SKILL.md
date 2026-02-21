@@ -35,9 +35,9 @@ description: Guidance for facet `effect/unstable/http/Etag` focused on APIs like
 ## Starter example
 
 ```ts
-import { Etag } from "effect/unstable/http/Etag"
+import { Etag } from "effect/unstable/http/Etag";
 
-const value = Etag.layer()
+const value = Etag.layer();
 ```
 
 ## Common pitfalls

@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpRunner } from "effect/unstable/cluster/HttpRunner"
+import { HttpRunner } from "effect/unstable/cluster/HttpRunner";
 
-const value = HttpRunner.layerHttp()
+const value = HttpRunner.layerHttp();
 ```
 
 ## Test Anchors

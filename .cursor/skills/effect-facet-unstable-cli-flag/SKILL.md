@@ -47,9 +47,9 @@ description: Guidance for facet `effect/unstable/cli/Flag` focused on APIs like 
 ## Starter example
 
 ```ts
-import { Flag } from "effect/unstable/cli"
+import { Flag } from "effect/unstable/cli";
 
-const nameFlag = Flag.string("name")
+const nameFlag = Flag.string("name");
 // Usage: --name "John Doe"
 ```
 

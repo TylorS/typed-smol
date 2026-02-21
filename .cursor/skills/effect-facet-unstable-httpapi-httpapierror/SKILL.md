@@ -46,9 +46,9 @@ description: Guidance for facet `effect/unstable/httpapi/HttpApiError` focused o
 ## Starter example
 
 ```ts
-import { HttpApiError } from "effect/unstable/httpapi/HttpApiError"
+import { HttpApiError } from "effect/unstable/httpapi/HttpApiError";
 
-const value = HttpApiError.ServiceUnavailable()
+const value = HttpApiError.ServiceUnavailable();
 ```
 
 ## Common pitfalls

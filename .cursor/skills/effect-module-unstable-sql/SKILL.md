@@ -36,9 +36,9 @@ description: Guidance for `effect/unstable/sql` focused on APIs like Migrator, S
 ## Starter example
 
 ```ts
-import { sql } from "effect/unstable/sql"
+import { sql } from "effect/unstable/sql";
 
-const value = sql.Migrator()
+const value = sql.Migrator();
 ```
 
 ## Common pitfalls

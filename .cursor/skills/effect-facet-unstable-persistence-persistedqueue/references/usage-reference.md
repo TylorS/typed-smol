@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { PersistedQueue } from "effect/unstable/persistence/PersistedQueue"
+import { PersistedQueue } from "effect/unstable/persistence/PersistedQueue";
 
-const value = PersistedQueue.make()
+const value = PersistedQueue.make();
 ```
 
 ## Test Anchors

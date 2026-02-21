@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { socket } from "effect/unstable/socket"
+import { socket } from "effect/unstable/socket";
 
-const value = socket.Socket()
+const value = socket.Socket();
 ```
 
 ## Test Anchors

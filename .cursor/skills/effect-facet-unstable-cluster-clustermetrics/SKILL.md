@@ -34,10 +34,10 @@ description: Guidance for facet `effect/unstable/cluster/ClusterMetrics` focused
 ## Starter example
 
 ```ts
-import { ClusterMetrics } from "effect/unstable/cluster/ClusterMetrics"
+import { ClusterMetrics } from "effect/unstable/cluster/ClusterMetrics";
 
-const value = ClusterMetrics.runners()
-const next = ClusterMetrics.runnersHealthy(value)
+const value = ClusterMetrics.runners();
+const next = ClusterMetrics.runnersHealthy(value);
 ```
 
 ## Common pitfalls

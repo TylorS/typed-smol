@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpApiEndpoint } from "effect/unstable/httpapi/HttpApiEndpoint"
+import { HttpApiEndpoint } from "effect/unstable/httpapi/HttpApiEndpoint";
 
-const value = HttpApiEndpoint.make()
-const next = HttpApiEndpoint.get(value)
+const value = HttpApiEndpoint.make();
+const next = HttpApiEndpoint.get(value);
 ```
 
 ## Test Anchors

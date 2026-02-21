@@ -18,6 +18,7 @@ if (!sys) {
 const reportDiagnostic: ts.DiagnosticReporter = (diagnostic) => {
   const message = ts.formatDiagnostic(diagnostic, {
     getCanonicalFileName: (f) => f,
+    // oxlint-disable-next-line typescript/unbound-method
     getCurrentDirectory: sys.getCurrentDirectory,
     getNewLine: () => sys.newLine,
   });
@@ -53,6 +54,7 @@ function main(): number {
   }
 
   const watchArgs = watchIndex >= 0 ? args.filter((_, i) => i !== watchIndex) : args;
+  // oxlint-disable-next-line typescript/unbound-method
   let commandLine = ts.parseCommandLine(watchArgs, sys.readFile);
   commandLine = resolveCommandLine(ts, commandLine, sys);
 
@@ -73,11 +75,14 @@ function main(): number {
       resolver,
       reportDiagnostic,
       reportWatchStatus: (diag, newLine, _opts, _errorCount) => {
-        sys.write(ts.formatDiagnostic(diag, {
-          getCanonicalFileName: (f) => f,
-          getCurrentDirectory: sys.getCurrentDirectory,
-          getNewLine: () => newLine,
-        }));
+        sys.write(
+          ts.formatDiagnostic(diag, {
+            getCanonicalFileName: (f) => f,
+            // oxlint-disable-next-line typescript/unbound-method
+            getCurrentDirectory: sys.getCurrentDirectory,
+            getNewLine: () => newLine,
+          }),
+        );
       },
     });
     return 0;

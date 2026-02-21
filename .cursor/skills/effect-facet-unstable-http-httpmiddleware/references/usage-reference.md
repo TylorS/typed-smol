@@ -20,10 +20,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpMiddleware } from "effect/unstable/http/HttpMiddleware"
+import { HttpMiddleware } from "effect/unstable/http/HttpMiddleware";
 
-const value = HttpMiddleware.make()
-const next = HttpMiddleware.searchParamsParser(value)
+const value = HttpMiddleware.make();
+const next = HttpMiddleware.searchParamsParser(value);
 ```
 
 ## Test Anchors

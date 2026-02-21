@@ -31,10 +31,10 @@ description: Guidance for facet `effect/unstable/cluster#storage` focused on API
 ## Starter example
 
 ```ts
-import { cluster } from "effect/unstable/cluster"
+import { cluster } from "effect/unstable/cluster";
 
-const value = cluster.RunnerStorage()
-const next = cluster.SqlRunnerStorage(value)
+const value = cluster.RunnerStorage();
+const next = cluster.SqlRunnerStorage(value);
 ```
 
 ## Common pitfalls

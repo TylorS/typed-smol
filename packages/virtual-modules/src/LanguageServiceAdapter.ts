@@ -29,15 +29,13 @@ const toTsDiagnostic = (
 export const attachLanguageServiceAdapter = (
   options: LanguageServiceAdapterOptions,
 ): VirtualModuleAdapterHandle => {
-  if (
-    typeof options.projectRoot !== "string" ||
-    options.projectRoot.trim() === ""
-  ) {
+  if (typeof options.projectRoot !== "string" || options.projectRoot.trim() === "") {
     throw new Error("projectRoot must be a non-empty string");
   }
 
   const host = options.languageServiceHost as ts.LanguageServiceHost & Record<string, unknown>;
-  const watchHost = (options.watchHost ?? (options.languageServiceHost as unknown as LanguageServiceWatchHost)) as
+  const watchHost = (options.watchHost ??
+    (options.languageServiceHost as unknown as LanguageServiceWatchHost)) as
     | LanguageServiceWatchHost
     | undefined;
 
@@ -47,20 +45,34 @@ export const attachLanguageServiceAdapter = (
   let inResolveRecord = false;
 
   const originalGetScriptFileNames = host.getScriptFileNames?.bind(host);
-  const originalResolveModuleNameLiterals = (host as {
-    resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[];
-  }).resolveModuleNameLiterals?.bind(host);
-  const originalResolveModuleNames = (host as {
-    resolveModuleNames?: (...args: readonly unknown[]) => readonly (ts.ResolvedModule | undefined)[];
-  }).resolveModuleNames?.bind(host);
+  const originalResolveModuleNameLiterals = (
+    host as {
+      resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[];
+    }
+  ).resolveModuleNameLiterals?.bind(host);
+  const originalResolveModuleNames = (
+    host as {
+      resolveModuleNames?: (
+        ...args: readonly unknown[]
+      ) => readonly (ts.ResolvedModule | undefined)[];
+    }
+  ).resolveModuleNames?.bind(host);
   const originalGetScriptSnapshot = host.getScriptSnapshot?.bind(host);
   const originalGetScriptVersion = host.getScriptVersion?.bind(host);
   const originalGetProjectVersion = host.getProjectVersion?.bind(host);
-  const originalFileExists = (host as { fileExists?: (path: string) => boolean }).fileExists?.bind(host);
-  const originalReadFile = (host as { readFile?: (path: string) => string | undefined }).readFile?.bind(host);
+  const originalFileExists = (host as { fileExists?: (path: string) => boolean }).fileExists?.bind(
+    host,
+  );
+  const originalReadFile = (
+    host as { readFile?: (path: string) => string | undefined }
+  ).readFile?.bind(host);
 
-  const originalGetSemanticDiagnostics = options.languageService.getSemanticDiagnostics.bind(options.languageService);
-  const originalGetSyntacticDiagnostics = options.languageService.getSyntacticDiagnostics.bind(options.languageService);
+  const originalGetSemanticDiagnostics = options.languageService.getSemanticDiagnostics.bind(
+    options.languageService,
+  );
+  const originalGetSyntacticDiagnostics = options.languageService.getSyntacticDiagnostics.bind(
+    options.languageService,
+  );
 
   const addDiagnosticForFile = (filePath: string, message: string): void => {
     const diagnostic = toTsDiagnostic(options.ts, message);
@@ -80,9 +92,7 @@ export const attachLanguageServiceAdapter = (
     debounceMs: options.debounceMs,
     watchHost,
     shouldEvictRecord: (record) => {
-      const currentFiles = new Set(
-        originalGetScriptFileNames ? originalGetScriptFileNames() : [],
-      );
+      const currentFiles = new Set(originalGetScriptFileNames ? originalGetScriptFileNames() : []);
       return !currentFiles.has(record.importer);
     },
     onFlushStale: () => {
@@ -113,7 +123,8 @@ export const attachLanguageServiceAdapter = (
         diagnostic: {
           code: "re-entrant-resolution",
           pluginName: "",
-          message: "Re-entrant resolution not allowed; plugins must not trigger module resolution during build()",
+          message:
+            "Re-entrant resolution not allowed; plugins must not trigger module resolution during build()",
         },
       };
     }
@@ -149,29 +160,31 @@ export const attachLanguageServiceAdapter = (
     containingFile: string,
     compilerOptions: ts.CompilerOptions | undefined,
   ): ts.ResolvedModuleFull | undefined => {
-    const result = options.ts.resolveModuleName(
-      moduleName,
-      containingFile,
-      compilerOptions ?? {},
-      {
-        fileExists: (path) => (host as { fileExists?: (value: string) => boolean }).fileExists?.(path) ?? false,
-        readFile: (path) => (host as { readFile?: (value: string) => string | undefined }).readFile?.(path),
-        directoryExists: (path) =>
-          (host as { directoryExists?: (value: string) => boolean }).directoryExists?.(path) ??
-          options.ts.sys.directoryExists(path),
-        getCurrentDirectory: () => host.getCurrentDirectory?.() ?? options.ts.sys.getCurrentDirectory(),
-        getDirectories: (path) => {
-          const fromHost = (host as { getDirectories?: (value: string) => string[] }).getDirectories?.(path);
-          if (fromHost !== undefined) return [...fromHost];
-          const fromSys = options.ts.sys.getDirectories?.(path);
-          return fromSys !== undefined ? [...fromSys] : [];
-        },
-        realpath: (path) =>
-          (host as { realpath?: (value: string) => string }).realpath?.(path) ?? options.ts.sys.realpath?.(path) ?? path,
-        useCaseSensitiveFileNames:
-          host.useCaseSensitiveFileNames?.() ?? options.ts.sys.useCaseSensitiveFileNames,
+    const result = options.ts.resolveModuleName(moduleName, containingFile, compilerOptions ?? {}, {
+      fileExists: (path) =>
+        (host as { fileExists?: (value: string) => boolean }).fileExists?.(path) ?? false,
+      readFile: (path) =>
+        (host as { readFile?: (value: string) => string | undefined }).readFile?.(path),
+      directoryExists: (path) =>
+        (host as { directoryExists?: (value: string) => boolean }).directoryExists?.(path) ??
+        options.ts.sys.directoryExists(path),
+      getCurrentDirectory: () =>
+        host.getCurrentDirectory?.() ?? options.ts.sys.getCurrentDirectory(),
+      getDirectories: (path) => {
+        const fromHost = (
+          host as { getDirectories?: (value: string) => string[] }
+        ).getDirectories?.(path);
+        if (fromHost !== undefined) return [...fromHost];
+        const fromSys = options.ts.sys.getDirectories?.(path);
+        return fromSys !== undefined ? [...fromSys] : [];
       },
-    );
+      realpath: (path) =>
+        (host as { realpath?: (value: string) => string }).realpath?.(path) ??
+        options.ts.sys.realpath?.(path) ??
+        path,
+      useCaseSensitiveFileNames:
+        host.useCaseSensitiveFileNames?.() ?? options.ts.sys.useCaseSensitiveFileNames,
+    });
 
     return result.resolvedModule as ts.ResolvedModuleFull | undefined;
   };
@@ -208,7 +221,9 @@ export const attachLanguageServiceAdapter = (
             compilerOptions,
             containingSourceFile,
           )
-        : moduleNames.map((moduleName) => fallbackResolveModule(moduleName, containingFile, compilerOptions));
+        : moduleNames.map((moduleName) =>
+            fallbackResolveModule(moduleName, containingFile, compilerOptions),
+          );
 
       return moduleNames.map((moduleName, index) => {
         const resolved = getOrBuildRecord(moduleName, containingFile);
@@ -253,36 +268,41 @@ export const attachLanguageServiceAdapter = (
 
     inResolution = true;
     try {
-      const fallback: readonly ts.ResolvedModuleWithFailedLookupLocations[] = originalResolveModuleNameLiterals
-        ? (originalResolveModuleNameLiterals(
-            moduleLiterals as unknown as readonly ts.StringLiteralLike[],
-            containingFile,
-            redirectedReference,
-            compilerOptions,
-            containingSourceFile,
-            reusedNames as readonly ts.StringLiteralLike[] | undefined,
-          ) as readonly ts.ResolvedModuleWithFailedLookupLocations[])
-        : moduleLiterals.map((moduleLiteral) => ({
-            resolvedModule: fallbackResolveModule(moduleLiteral.text, containingFile, compilerOptions),
-          }));
+      const fallback: readonly ts.ResolvedModuleWithFailedLookupLocations[] =
+        originalResolveModuleNameLiterals
+          ? (originalResolveModuleNameLiterals(
+              moduleLiterals as unknown as readonly ts.StringLiteralLike[],
+              containingFile,
+              redirectedReference,
+              compilerOptions,
+              containingSourceFile,
+              reusedNames as readonly ts.StringLiteralLike[] | undefined,
+            ) as readonly ts.ResolvedModuleWithFailedLookupLocations[])
+          : moduleLiterals.map((moduleLiteral) => ({
+              resolvedModule: fallbackResolveModule(
+                moduleLiteral.text,
+                containingFile,
+                compilerOptions,
+              ),
+            }));
 
       return moduleLiterals.map((moduleLiteral, index) => {
-      const resolved = getOrBuildRecord(moduleLiteral.text, containingFile);
-      if (resolved.status === "resolved") {
-        return {
-          resolvedModule: toResolvedModule(options.ts, resolved.record.virtualFileName),
-        };
-      }
-
-      if (resolved.status === "error") {
-        addDiagnosticForFile(containingFile, resolved.diagnostic.message);
-        if (resolved.diagnostic.code === "re-entrant-resolution") {
-          return fallback[index];
+        const resolved = getOrBuildRecord(moduleLiteral.text, containingFile);
+        if (resolved.status === "resolved") {
+          return {
+            resolvedModule: toResolvedModule(options.ts, resolved.record.virtualFileName),
+          };
         }
-      }
 
-      return fallback[index];
-    });
+        if (resolved.status === "error") {
+          addDiagnosticForFile(containingFile, resolved.diagnostic.message);
+          if (resolved.diagnostic.code === "re-entrant-resolution") {
+            return fallback[index];
+          }
+        }
+
+        return fallback[index];
+      });
     } finally {
       inResolution = false;
     }
@@ -329,7 +349,9 @@ export const attachLanguageServiceAdapter = (
     return originalFileExists ? originalFileExists(path) : false;
   };
 
-  (host as { readFile: (path: string) => string | undefined }).readFile = (path: string): string | undefined => {
+  (host as { readFile: (path: string) => string | undefined }).readFile = (
+    path: string,
+  ): string | undefined => {
     const record = recordsByVirtualFile.get(path);
     if (record) {
       return rebuildRecordIfNeeded(record).sourceText;
@@ -347,23 +369,32 @@ export const attachLanguageServiceAdapter = (
     return [...diagnostics, ...adapterDiagnostics];
   };
 
-  options.languageService.getSyntacticDiagnostics = (fileName: string): ts.DiagnosticWithLocation[] => {
+  options.languageService.getSyntacticDiagnostics = (
+    fileName: string,
+  ): ts.DiagnosticWithLocation[] => {
     const diagnostics = originalGetSyntacticDiagnostics(fileName);
     const adapterDiagnostics = diagnosticsByFile.get(fileName);
     if (!adapterDiagnostics || adapterDiagnostics.length === 0) {
       return [...diagnostics];
     }
-    const withLocation = adapterDiagnostics.filter((d): d is ts.DiagnosticWithLocation => d.file !== undefined);
+    const withLocation = adapterDiagnostics.filter(
+      (d): d is ts.DiagnosticWithLocation => d.file !== undefined,
+    );
     return [...diagnostics, ...withLocation];
   };
 
   return {
     dispose(): void {
-      (host as { resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[] }).resolveModuleNameLiterals =
-        originalResolveModuleNameLiterals;
-      (host as {
-        resolveModuleNames?: (...args: readonly unknown[]) => readonly (ts.ResolvedModule | undefined)[];
-      }).resolveModuleNames = originalResolveModuleNames;
+      (
+        host as { resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[] }
+      ).resolveModuleNameLiterals = originalResolveModuleNameLiterals;
+      (
+        host as {
+          resolveModuleNames?: (
+            ...args: readonly unknown[]
+          ) => readonly (ts.ResolvedModule | undefined)[];
+        }
+      ).resolveModuleNames = originalResolveModuleNames;
       if (originalGetScriptSnapshot) {
         host.getScriptSnapshot = originalGetScriptSnapshot;
       }

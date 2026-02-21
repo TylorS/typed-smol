@@ -39,9 +39,9 @@ description: Guidance for facet `effect/unstable/sql/Migrator` focused on APIs l
 ## Starter example
 
 ```ts
-import { Migrator } from "effect/unstable/sql/Migrator"
+import { Migrator } from "effect/unstable/sql/Migrator";
 
-const value = Migrator.make()
+const value = Migrator.make();
 ```
 
 ## Common pitfalls

@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Hydration } from "effect/unstable/reactivity/Hydration"
+import { Hydration } from "effect/unstable/reactivity/Hydration";
 
-const value = Hydration.hydrate()
+const value = Hydration.hydrate();
 ```
 
 ## Test Anchors

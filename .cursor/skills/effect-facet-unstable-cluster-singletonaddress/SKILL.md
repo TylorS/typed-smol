@@ -29,9 +29,9 @@ description: Guidance for facet `effect/unstable/cluster/SingletonAddress` focus
 ## Starter example
 
 ```ts
-import { SingletonAddress } from "effect/unstable/cluster/SingletonAddress"
+import { SingletonAddress } from "effect/unstable/cluster/SingletonAddress";
 
-const value = SingletonAddress.SingletonAddress()
+const value = SingletonAddress.SingletonAddress();
 ```
 
 ## Common pitfalls

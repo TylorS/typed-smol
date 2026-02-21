@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { RpcGroup } from "effect/unstable/rpc/RpcGroup"
+import { RpcGroup } from "effect/unstable/rpc/RpcGroup";
 
-const value = RpcGroup.make()
+const value = RpcGroup.make();
 ```
 
 ## Test Anchors

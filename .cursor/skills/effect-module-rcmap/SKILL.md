@@ -39,19 +39,18 @@ description: Guidance for `effect/RcMap` focused on APIs like get, make, and has
 ## Starter example
 
 ```ts
-import { Effect, RcMap } from "effect"
+import { Effect, RcMap } from "effect";
 
-Effect.gen(function*() {
+Effect.gen(function* () {
   // Create an RcMap that manages database connections
   const dbConnectionMap = yield* RcMap.make({
     lookup: (dbName: string) =>
-      Effect.acquireRelease(
-        Effect.succeed(`Connection to ${dbName}`),
-        (conn) => Effect.log(`Closing ${conn}`)
+      Effect.acquireRelease(Effect.succeed(`Connection to ${dbName}`), (conn) =>
+        Effect.log(`Closing ${conn}`),
       ),
     capacity: 10,
-    idleTimeToLive: "5 minutes"
-  })
+    idleTimeToLive: "5 minutes",
+  });
 
   // The RcMap interface provides access to:
   // - lookup: Function to acquire resources
@@ -59,8 +58,8 @@ Effect.gen(function*() {
   // - idleTimeToLive: Time before idle resources are released
   // - state: Current state of the map
 
-  console.log(`Capacity: ${dbConnectionMap.capacity}`)
-}).pipe(Effect.scoped)
+  console.log(`Capacity: ${dbConnectionMap.capacity}`);
+}).pipe(Effect.scoped);
 ```
 
 ## Common pitfalls

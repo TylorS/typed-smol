@@ -33,9 +33,9 @@ description: Guidance for `effect/Terminal` focused on APIs like make, isQuitErr
 ## Starter example
 
 ```ts
-import { Terminal } from "effect/Terminal"
+import { Terminal } from "effect/Terminal";
 
-const value = Terminal.make()
+const value = Terminal.make();
 ```
 
 ## Common pitfalls

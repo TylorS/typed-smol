@@ -31,9 +31,9 @@ description: Guidance for facet `effect/unstable/workflow/WorkflowProxyServer` f
 ## Starter example
 
 ```ts
-import { WorkflowProxyServer } from "effect/unstable/workflow/WorkflowProxyServer"
+import { WorkflowProxyServer } from "effect/unstable/workflow/WorkflowProxyServer";
 
-const value = WorkflowProxyServer.layerHttpApi()
+const value = WorkflowProxyServer.layerHttpApi();
 ```
 
 ## Common pitfalls

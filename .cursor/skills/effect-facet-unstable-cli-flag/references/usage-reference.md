@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Flag } from "effect/unstable/cli"
+import { Flag } from "effect/unstable/cli";
 
-const nameFlag = Flag.string("name")
+const nameFlag = Flag.string("name");
 // Usage: --name "John Doe"
 ```
 

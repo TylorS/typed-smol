@@ -34,10 +34,10 @@ description: Guidance for facet `effect/unstable/cluster/RunnerStorage` focused 
 ## Starter example
 
 ```ts
-import { RunnerStorage } from "effect/unstable/cluster/RunnerStorage"
+import { RunnerStorage } from "effect/unstable/cluster/RunnerStorage";
 
-const value = RunnerStorage.makeMemory()
-const next = RunnerStorage.Encoded(value)
+const value = RunnerStorage.makeMemory();
+const next = RunnerStorage.Encoded(value);
 ```
 
 ## Common pitfalls

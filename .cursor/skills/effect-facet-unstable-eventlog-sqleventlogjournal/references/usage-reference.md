@@ -21,9 +21,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { SqlEventLogJournal } from "effect/unstable/eventlog/SqlEventLogJournal"
+import { SqlEventLogJournal } from "effect/unstable/eventlog/SqlEventLogJournal";
 
-const value = SqlEventLogJournal.make()
+const value = SqlEventLogJournal.make();
 ```
 
 ## Test Anchors

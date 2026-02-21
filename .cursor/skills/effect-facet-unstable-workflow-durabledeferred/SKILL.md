@@ -45,10 +45,10 @@ description: Guidance for facet `effect/unstable/workflow/DurableDeferred` focus
 ## Starter example
 
 ```ts
-import { DurableDeferred } from "effect/unstable/workflow/DurableDeferred"
+import { DurableDeferred } from "effect/unstable/workflow/DurableDeferred";
 
-const value = DurableDeferred.make()
-const next = DurableDeferred.TokenParsed(value)
+const value = DurableDeferred.make();
+const next = DurableDeferred.TokenParsed(value);
 ```
 
 ## Common pitfalls

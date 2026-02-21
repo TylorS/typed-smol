@@ -22,10 +22,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpApiGroup } from "effect/unstable/httpapi/HttpApiGroup"
+import { HttpApiGroup } from "effect/unstable/httpapi/HttpApiGroup";
 
-const value = HttpApiGroup.make()
-const next = HttpApiGroup.ErrorServicesDecode(value)
+const value = HttpApiGroup.make();
+const next = HttpApiGroup.ErrorServicesDecode(value);
 ```
 
 ## Test Anchors

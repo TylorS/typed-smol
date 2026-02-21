@@ -46,20 +46,17 @@ description: Guidance for `effect/ConfigProvider` focused on APIs like make, lay
 ## Starter example
 
 ```ts
-import { Config, ConfigProvider, Effect } from "effect"
+import { Config, ConfigProvider, Effect } from "effect";
 
 const provider = ConfigProvider.fromEnv({
-  env: { APP_PORT: "3000", APP_HOST: "localhost" }
-})
+  env: { APP_PORT: "3000", APP_HOST: "localhost" },
+});
 
-const port = Config.number("port")
+const port = Config.number("port");
 
 const program = port.parse(
-  provider.pipe(
-    ConfigProvider.nested("app"),
-    ConfigProvider.constantCase
-  )
-)
+  provider.pipe(ConfigProvider.nested("app"), ConfigProvider.constantCase),
+);
 
 // Effect.runSync(program) // 3000
 ```

@@ -46,20 +46,20 @@ description: Guidance for `effect/FiberMap` focused on APIs like get, run, and s
 ## Starter example
 
 ```ts
-import { Effect, FiberMap } from "effect"
+import { Effect, FiberMap } from "effect";
 
 // Create a FiberMap with string keys
-const program = Effect.gen(function*() {
-  const map = yield* FiberMap.make<string>()
+const program = Effect.gen(function* () {
+  const map = yield* FiberMap.make<string>();
 
   // Add some fibers to the map
-  yield* FiberMap.run(map, "task1", Effect.succeed("Hello"))
-  yield* FiberMap.run(map, "task2", Effect.succeed("World"))
+  yield* FiberMap.run(map, "task1", Effect.succeed("Hello"));
+  yield* FiberMap.run(map, "task2", Effect.succeed("World"));
 
   // Get the size of the map
-  const size = yield* FiberMap.size(map)
-  console.log(size) // 2
-})
+  const size = yield* FiberMap.size(map);
+  console.log(size); // 2
+});
 ```
 
 ## Common pitfalls

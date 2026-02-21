@@ -21,10 +21,10 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { HttpServerResponse } from "effect/unstable/http/HttpServerResponse"
+import { HttpServerResponse } from "effect/unstable/http/HttpServerResponse";
 
-const value = HttpServerResponse.empty()
-const next = HttpServerResponse.setBody(value)
+const value = HttpServerResponse.empty();
+const next = HttpServerResponse.setBody(value);
 ```
 
 ## Test Anchors

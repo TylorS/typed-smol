@@ -18,13 +18,13 @@ Utilities for converting arbitrary JavaScript values into human-readable strings
 ## Starter Example
 
 ```ts
-import { Formatter } from "effect"
+import { Formatter } from "effect";
 
-const obj = { name: "Alice", scores: [100, 97] }
-console.log(Formatter.format(obj))
+const obj = { name: "Alice", scores: [100, 97] };
+console.log(Formatter.format(obj));
 // {"name":"Alice","scores":[100,97]}
 
-console.log(Formatter.format(obj, { space: 2 }))
+console.log(Formatter.format(obj, { space: 2 }));
 // {
 //   "name": "Alice",
 //   "scores": [

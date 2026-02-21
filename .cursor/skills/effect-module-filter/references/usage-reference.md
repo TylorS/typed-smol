@@ -19,13 +19,13 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Filter, Result } from "effect"
+import { Filter, Result } from "effect";
 
 // A filter that only passes positive numbers
-const positiveFilter: Filter.Filter<number> = (n) => n > 0 ? Result.succeed(n) : Result.fail(n)
+const positiveFilter: Filter.Filter<number> = (n) => (n > 0 ? Result.succeed(n) : Result.fail(n));
 
-console.log(positiveFilter(5)) // Result.succeed(5)
-console.log(positiveFilter(-3)) // Result.fail(-3)
+console.log(positiveFilter(5)); // Result.succeed(5)
+console.log(positiveFilter(-3)); // Result.fail(-3)
 ```
 
 ## Test Anchors

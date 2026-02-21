@@ -33,9 +33,7 @@ const manager = new PluginManager([
 ]);
 
 export default defineConfig({
-  plugins: [
-    virtualModulesVitePlugin({ resolver: manager }),
-  ],
+  plugins: [virtualModulesVitePlugin({ resolver: manager })],
 });
 ```
 
