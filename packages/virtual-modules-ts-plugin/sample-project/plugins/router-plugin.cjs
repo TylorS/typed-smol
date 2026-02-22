@@ -696,7 +696,13 @@ var emitRouterMatchSource = (descriptors, targetDirectory, importer, guardExport
     }
     dirMatcherExpr.set(dir, expr);
   }
-  const rootExpr = dirMatcherExpr.get("") ?? "Router.merge()";
+  let rootExpr = dirMatcherExpr.get("") ?? "Router.merge()";
+  if (rootExpr === "Router.merge()" && descriptors.length > 0) {
+    const flatParts = descriptors.map((d) => leafMatchExprByPath.get(d.filePath));
+    rootExpr = flatParts.length === 1 ? flatParts[0] : `Router.merge(
+  ${flatParts.join(",\n  ")}
+)`;
+  }
   return `${importLines.join("\n")}
 
 export default ${rootExpr};
