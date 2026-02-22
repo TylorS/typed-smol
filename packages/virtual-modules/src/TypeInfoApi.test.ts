@@ -174,6 +174,30 @@ export const fn = (input: Box): U => input.value;
     expect(nullByte.error).toBe("invalid-input");
   });
 
+  it("resolves re-exports to the type from the target file", () => {
+    const dir = createTempDir();
+    const routeShape = `export const route = { ast: null, path: "/", paramsSchema: null, pathSchema: null, querySchema: null };`;
+    const bPath = join(dir, "b.ts");
+    const aPath = join(dir, "a.ts");
+    writeFileSync(bPath, routeShape, "utf8");
+    writeFileSync(aPath, 'export { route } from "./b";', "utf8");
+    const program = makeProgram([aPath, bPath]);
+    const session = createTypeInfoApiSession({ ts, program });
+    const result = session.api.file("./a.ts", { baseDir: dir });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const routeExport = result.snapshot.exports.find((e) => e.name === "route");
+    expect(routeExport).toBeDefined();
+    expect(routeExport!.type.kind).toBe("object");
+    const obj = routeExport!.type as { kind: "object"; properties: ReadonlyArray<{ name: string }> };
+    const names = new Set(obj.properties.map((p) => p.name));
+    expect(names.has("ast")).toBe(true);
+    expect(names.has("path")).toBe(true);
+    expect(names.has("paramsSchema")).toBe(true);
+    expect(names.has("pathSchema")).toBe(true);
+    expect(names.has("querySchema")).toBe(true);
+  });
+
   it("applies maxDepth when serializing deep types", () => {
     const dir = createTempDir();
     const filePath = join(dir, "deep.ts");
@@ -202,4 +226,5 @@ export type Deep = L1;
       expect(type.kind === "reference" || type.kind === "object").toBe(true);
     }
   });
+
 });

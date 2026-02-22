@@ -101,6 +101,34 @@ importers:
         specifier: ^0.5.1
         version: 0.5.1(vite@7.3.1(@types/node@25.3.0)(yaml@2.8.2))
 
+  packages/app:
+    dependencies:
+      '@typed/router':
+        specifier: workspace:*
+        version: link:../router
+      '@typed/virtual-modules':
+        specifier: workspace:*
+        version: link:../virtual-modules
+    devDependencies:
+      '@typed/fx':
+        specifier: workspace:*
+        version: link:../fx
+      '@types/node':
+        specifier: ^25.3.0
+        version: 25.3.0
+      '@vitest/coverage-v8':
+        specifier: ^4.0.0
+        version: 4.0.18(vitest@4.0.18(@types/node@25.3.0)(happy-dom@20.6.3)(yaml@2.8.2))
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@types/node@25.3.0)(happy-dom@20.6.3)(yaml@2.8.2)
+
   packages/async-data:
     dependencies:
       effect:

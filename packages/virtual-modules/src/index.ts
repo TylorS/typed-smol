@@ -4,4 +4,3 @@ export * from "./TypeInfoApi.js";
 export * from "./NodeModulePluginLoader.js";
 export * from "./LanguageServiceAdapter.js";
 export * from "./CompilerHostAdapter.js";
-export * from "./RouterVirtualModulePlugin.js";

@@ -237,6 +237,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
         virtualFileName,
         sourceText: resolution.sourceText,
         dependencies: resolution.dependencies,
+        ...(resolution.warnings?.length ? { warnings: resolution.warnings } : {}),
         version: previous ? previous.version + 1 : 1,
         stale: false,
       };

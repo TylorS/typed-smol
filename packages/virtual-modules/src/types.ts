@@ -184,10 +184,26 @@ export interface TypeInfoApiFactoryParams {
 
 export type CreateTypeInfoApiSession = (params: TypeInfoApiFactoryParams) => TypeInfoApiSession;
 
+/** Result of a successful build; plain string is treated as { sourceText }. */
+export interface VirtualModuleBuildSuccess {
+  readonly sourceText: string;
+  readonly warnings?: readonly VirtualModuleDiagnostic[];
+}
+
+/** Result of a failed build with structured errors. */
+export interface VirtualModuleBuildError {
+  readonly errors: readonly VirtualModuleDiagnostic[];
+}
+
+export type VirtualModuleBuildResult =
+  | string
+  | VirtualModuleBuildSuccess
+  | VirtualModuleBuildError;
+
 export interface VirtualModulePlugin {
   readonly name: string;
   shouldResolve(id: string, importer: string): boolean;
-  build(id: string, importer: string, api: TypeInfoApi): string;
+  build(id: string, importer: string, api: TypeInfoApi): VirtualModuleBuildResult;
 }
 
 export interface VirtualModuleDiagnostic {
@@ -197,7 +213,8 @@ export interface VirtualModuleDiagnostic {
     | "session-creation-failed"
     | "invalid-build-output"
     | "invalid-options"
-    | "re-entrant-resolution";
+    | "re-entrant-resolution"
+    | (string & {}); // allow plugin-specific codes e.g. RVM-GUARD-001
   readonly message: string;
   readonly pluginName: string;
 }
@@ -207,6 +224,7 @@ export interface VirtualModuleResolved {
   readonly pluginName: string;
   readonly sourceText: string;
   readonly dependencies: readonly WatchDependencyDescriptor[];
+  readonly warnings?: readonly VirtualModuleDiagnostic[];
 }
 
 export interface VirtualModuleUnresolved {
@@ -270,6 +288,7 @@ export interface VirtualModuleRecord {
   readonly sourceText: string;
   readonly dependencies: readonly WatchDependencyDescriptor[];
   readonly diagnostic?: VirtualModuleDiagnostic;
+  readonly warnings?: readonly VirtualModuleDiagnostic[];
   readonly version: number;
   readonly stale: boolean;
 }

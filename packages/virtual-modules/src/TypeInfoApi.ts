@@ -287,21 +287,37 @@ const serializeTypeNode = (
   return object;
 };
 
+/**
+ * Resolve an export symbol to the symbol it aliases when present (re-exports and import-then-export),
+ * so we derive the type from the target file for cross-file type resolution.
+ * getAliasedSymbol must only be called for symbols that are aliases (SymbolFlags.Alias).
+ */
+const resolveExportSymbol = (
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): ts.Symbol => {
+  if ((symbol.flags & tsMod.SymbolFlags.Alias) === 0) return symbol;
+  const aliased = (checker as ts.TypeChecker & { getAliasedSymbol(s: ts.Symbol): ts.Symbol }).getAliasedSymbol(symbol);
+  return aliased ?? symbol;
+};
+
 const serializeExport = (
   symbol: ts.Symbol,
   checker: ts.TypeChecker,
   tsMod: typeof import("typescript"),
   maxDepth: number,
 ): ExportedTypeInfo => {
-  const declaration = symbol.valueDeclaration ?? symbol.declarations?.[0];
+  const resolved = resolveExportSymbol(symbol, checker, tsMod);
+  const declaration = resolved.valueDeclaration ?? resolved.declarations?.[0];
   const useDeclaredType =
     declaration &&
     (tsMod.isTypeAliasDeclaration(declaration) || tsMod.isInterfaceDeclaration(declaration));
   const exportedType = useDeclaredType
-    ? checker.getDeclaredTypeOfSymbol(symbol)
+    ? checker.getDeclaredTypeOfSymbol(resolved)
     : declaration
-      ? checker.getTypeOfSymbolAtLocation(symbol, declaration)
-      : checker.getDeclaredTypeOfSymbol(symbol);
+      ? checker.getTypeOfSymbolAtLocation(resolved, declaration)
+      : checker.getDeclaredTypeOfSymbol(resolved);
 
   return {
     name: symbol.getName(),

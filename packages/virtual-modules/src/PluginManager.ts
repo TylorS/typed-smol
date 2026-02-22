@@ -4,6 +4,7 @@ import type {
   ResolveVirtualModuleOptions,
   TypeInfoApi,
   TypeInfoApiSession,
+  VirtualModuleBuildResult,
   VirtualModuleDiagnostic,
   VirtualModulePlugin,
   VirtualModuleResolution,
@@ -113,24 +114,47 @@ export class PluginManager implements VirtualModuleResolver {
       }
 
       try {
-        const sourceText = plugin.build(options.id, options.importer, session.api);
+        const result: VirtualModuleBuildResult = plugin.build(options.id, options.importer, session.api);
 
-        if (typeof sourceText !== "string") {
+        if (typeof result === "string") {
           return {
-            status: "error",
-            diagnostic: createDiagnostic(
-              "invalid-build-output",
-              plugin.name,
-              `Plugin "${plugin.name}" returned a non-string build result`,
-            ),
+            status: "resolved",
+            pluginName: plugin.name,
+            sourceText: result,
+            dependencies: session.consumeDependencies(),
           };
         }
 
+        if (result !== null && typeof result === "object") {
+          if ("errors" in result && Array.isArray(result.errors) && result.errors.length > 0) {
+            const first = result.errors[0];
+            return {
+              status: "error",
+              diagnostic: {
+                code: first.code,
+                message: first.message,
+                pluginName: first.pluginName,
+              },
+            };
+          }
+          if ("sourceText" in result && typeof result.sourceText === "string") {
+            return {
+              status: "resolved",
+              pluginName: plugin.name,
+              sourceText: result.sourceText,
+              dependencies: session.consumeDependencies(),
+              ...(result.warnings?.length ? { warnings: result.warnings } : {}),
+            };
+          }
+        }
+
         return {
-          status: "resolved",
-          pluginName: plugin.name,
-          sourceText,
-          dependencies: session.consumeDependencies(),
+          status: "error",
+          diagnostic: createDiagnostic(
+            "invalid-build-output",
+            plugin.name,
+            `Plugin "${plugin.name}" returned a non-string build result`,
+          ),
         };
       } catch (error) {
         return {
