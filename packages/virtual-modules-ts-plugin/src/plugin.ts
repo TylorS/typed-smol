@@ -23,6 +23,7 @@ import {
   PluginManager,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
+import { dirname } from "node:path";
 import ts, { DirectoryWatcherCallback, FileWatcherCallback } from "typescript";
 import type { PluginCreateInfo } from "./types.js";
 
@@ -41,11 +42,16 @@ function init(modules: { typescript: typeof import("typescript") }): {
     const pluginSpecifiers = config.plugins ?? [];
     const debounceMs = config.debounceMs ?? 50;
 
+    const project = info.project as {
+      getCurrentDirectory?: () => string;
+      configFilePath?: string;
+    };
     const projectRoot =
-      typeof (info.project as { getCurrentDirectory?: () => string }).getCurrentDirectory ===
-      "function"
-        ? (info.project as { getCurrentDirectory: () => string }).getCurrentDirectory()
-        : process.cwd();
+      typeof project.configFilePath === "string" && project.configFilePath.length > 0
+        ? dirname(project.configFilePath)
+        : typeof project.getCurrentDirectory === "function"
+          ? project.getCurrentDirectory()
+          : process.cwd();
 
     const loader = new NodeModulePluginLoader();
     const loadResults = loader.loadMany(

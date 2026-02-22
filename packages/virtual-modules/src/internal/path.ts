@@ -49,18 +49,33 @@ export const stableHash = (input: string): string =>
 
 const sanitizeSegment = (value: string): string => value.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
 
+/** URI scheme for virtual module identifiers (e.g. `typed-virtual://0/...`). Single source of truth for all consumers. */
+export const VIRTUAL_MODULE_URI_SCHEME = "typed-virtual" as const;
+
 export const createVirtualKey = (id: string, importer: string): string => `${importer}::${id}`;
 
+export interface CreateVirtualFileNameParams {
+  readonly id: string;
+  readonly importer: string;
+}
+
+/**
+ * Virtual file name for the TS program. Always returns a typed-virtual:// URI; content
+ * is served by the host from memory (no disk write). Prefer passing params so the URI
+ * includes id and importer in the query for resolution; when omitted, returns a URI without query.
+ */
 export const createVirtualFileName = (
-  projectRoot: string,
   pluginName: string,
   virtualKey: string,
+  params?: CreateVirtualFileNameParams,
 ): string => {
   const safePluginName = sanitizeSegment(pluginName);
   const hash = stableHash(virtualKey);
-  return toPosixPath(
-    posix.join(toPosixPath(projectRoot), ".typed", "virtual", safePluginName, `${hash}.d.ts`),
-  );
+  if (params) {
+    const q = new URLSearchParams({ id: params.id, importer: params.importer });
+    return `${VIRTUAL_MODULE_URI_SCHEME}://0/${safePluginName}/${hash}.d.ts?${q.toString()}`;
+  }
+  return `${VIRTUAL_MODULE_URI_SCHEME}://0/${safePluginName}/${hash}.d.ts`;
 };
 
 export const createWatchDescriptorKey = (descriptor: WatchDependencyDescriptor): string => {

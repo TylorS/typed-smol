@@ -3,7 +3,8 @@ import * as vscode from "vscode";
 import { buildVirtualModuleUri } from "./VirtualModuleProvider";
 import type { createResolver } from "./resolver";
 
-const VIRTUAL_IMPORT_REGEX = /(?:from|import\s*\(?)\s*["'](virtual:[^"']+)["']/g;
+/** Matches any virtual-style specifier (virtual:foo, router:./routes, etc.) in import/from. */
+const VIRTUAL_IMPORT_REGEX = /(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/g;
 
 export type VirtualModuleTreeItem = VirtualModuleFolderItem | VirtualModuleLeafItem;
 

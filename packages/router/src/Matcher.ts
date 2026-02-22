@@ -300,6 +300,15 @@ export interface Matcher<A, E = never, R = never> extends Pipeable {
   readonly layout: <B, E2, R2>(
     layout: Layout<any, A, E, R, B, E2, R2>,
   ) => Matcher<B, E | E2, R | R2>;
+
+  /** Merge this matcher with one or more others. Combined matcher matches all routes; each matcher's layouts/provide apply only to its own routes. */
+  readonly merge: <const Others extends ReadonlyArray<Matcher.Any>>(
+    ...others: Others
+  ) => Matcher<
+    A | Matcher.MergeSuccess<Others>,
+    E | Matcher.MergeError<Others>,
+    R | Matcher.MergeServices<Others>
+  >;
 }
 
 export declare namespace Matcher {
@@ -311,6 +320,13 @@ export declare namespace Matcher {
   export type Success<T> = [T] extends [Matcher<infer A, infer _E, infer _R>] ? A : never;
   export type Error<T> = [T] extends [Matcher<infer _A, infer E, infer _R>] ? E : never;
   export type Services<T> = [T] extends [Matcher<infer _A, infer _E, infer R>] ? R : never;
+  
+  /** Union of Success types from each matcher in a tuple. */
+  export type MergeSuccess<Matchers extends ReadonlyArray<Matcher.Any>> = Success<Matchers[number]>;
+  /** Union of Error types from each matcher in a tuple. */
+  export type MergeError<Matchers extends ReadonlyArray<Matcher.Any>> = Error<Matchers[number]>;
+  /** Union of Services types from each matcher in a tuple. */
+  export type MergeServices<Matchers extends ReadonlyArray<Matcher.Any>> = Services<Matchers[number]>;
 }
 
 export type MatchHandler<Params, A, E, R> =
@@ -610,6 +626,24 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     ]) as Matcher<B, E | E2, R | R2>;
   }
 
+  merge<const Others extends ReadonlyArray<Matcher.Any>>(
+    ...others: Others
+  ): Matcher<
+    A | Matcher.MergeSuccess<Others>,
+    E | Matcher.MergeError<Others>,
+    R | Matcher.MergeServices<Others>
+  > {
+    const allCases = [
+      ...this.cases,
+      ...others.flatMap((m) => m.cases),
+    ];
+    return new MatcherImpl(allCases) as Matcher<
+      A | Matcher.MergeSuccess<Others>,
+      E | Matcher.MergeError<Others>,
+      R | Matcher.MergeServices<Others>
+    >;
+  }
+
   pipe() {
     return pipeArguments(this, arguments);
   }
@@ -633,6 +667,50 @@ function toFx<A, E, R>(
 
 export const empty: Matcher<never> = new MatcherImpl([]);
 export const match = empty.match.bind(empty);
+
+/**
+ * Merge multiple matchers into one. Each matcher's layouts and provide apply only to its own routes.
+ * Use this so directory layouts (e.g. api/_layout) and directory dependencies apply only to routes under that directory.
+ */
+export function merge<const Matchers extends ReadonlyArray<Matcher.Any>>(
+  ...matchers: Matchers
+): Matcher<
+  Matcher.MergeSuccess<Matchers>,
+  Matcher.MergeError<Matchers>,
+  Matcher.MergeServices<Matchers>
+> {
+  if (matchers.length === 0) {
+    return empty as unknown as Matcher<
+      Matcher.MergeSuccess<Matchers>,
+      Matcher.MergeError<Matchers>,
+      Matcher.MergeServices<Matchers>
+    >;
+  }
+  if (matchers.length === 1) {
+    return matchers[0] as unknown as Matcher<
+      Matcher.MergeSuccess<Matchers>,
+      Matcher.MergeError<Matchers>,
+      Matcher.MergeServices<Matchers>
+    >;
+  }
+  const first = matchers[0] as MatcherImpl<
+    Matcher.MergeSuccess<Matchers>,
+    Matcher.MergeError<Matchers>,
+    Matcher.MergeServices<Matchers>
+  >;
+  const rest = matchers.slice(1) as ReadonlyArray<
+    Matcher<
+      Matcher.MergeSuccess<Matchers>,
+      Matcher.MergeError<Matchers>,
+      Matcher.MergeServices<Matchers>
+    >
+  >;
+  return first.merge(...rest) as unknown as Matcher<
+    Matcher.MergeSuccess<Matchers>,
+    Matcher.MergeError<Matchers>,
+    Matcher.MergeServices<Matchers>
+  >;
+}
 
 export class RouteGuardError extends Schema.ErrorClass<RouteGuardError>(
   "@typed/router/RouteGuardError",

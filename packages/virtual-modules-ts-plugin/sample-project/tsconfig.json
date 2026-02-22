@@ -9,14 +9,11 @@
     "plugins": [
       {
         "name": "@typed/virtual-modules-ts-plugin",
-        "plugins": [
-          "./plugin.cjs"
-        ],
+        "plugins": ["./plugin.cjs", "./plugins/router-plugin.cjs"],
         "debounceMs": 50
       }
     ]
   },
-  "include": [
-    "*.ts"
-  ]
+  "include": ["entry.ts", "router-demo.ts", "routes/**/*.ts"],
+  "exclude": ["routes/**/*.example.ts"]
 }

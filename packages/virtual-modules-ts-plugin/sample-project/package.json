@@ -1,8 +1,22 @@
 {
   "name": "virtual-modules-ts-plugin-sample",
   "private": true,
+  "scripts": {
+    "build:plugins": "node scripts/build-router-plugin.cjs",
+    "vmc": "node ../../virtual-modules-compiler/dist/cli.js",
+    "verify:virtual-modules": "node scripts/verify-virtual-modules.mjs",
+    "typecheck": "node scripts/typecheck-with-plugin.mjs"
+  },
   "dependencies": {
+    "@typed/app": "workspace:*",
+    "@typed/router": "workspace:*",
     "@typed/virtual-modules-ts-plugin": "file:..",
-    "typescript": "^5.9.0"
+    "effect": "catalog:",
+    "typescript": "^5.9.0",
+    "@typed/virtual-modules": "workspace:*",
+    "@typed/fx": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
   }
 }

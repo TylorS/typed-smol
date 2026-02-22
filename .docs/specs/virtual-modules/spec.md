@@ -1,3 +1,11 @@
+## Terminology (canonical)
+
+Use these terms consistently across packages and docs. Implementations must use the exports from `@typed/virtual-modules` so URIs and keys are produced in one place.
+
+- **virtualKey** – Deterministic identity for a resolved virtual module: `"<importer>::<id>"`. Produced by `createVirtualKey(id, importer)`.
+- **Virtual file** – The identifier used in the TypeScript program for a virtual module’s source. It is always a **`typed-virtual://` URI** (e.g. `typed-virtual://0/<pluginName>/<hash>.d.ts?...`), not a disk path. Content is served from memory by the host. Produced by `createVirtualFileName(pluginName, virtualKey, { id, importer })`.
+- **VIRTUAL_MODULE_URI_SCHEME** – The URI scheme name `"typed-virtual"`. Single constant exported from `@typed/virtual-modules`; all consumers (e.g. VS Code extension) must use it instead of hardcoding the string.
+
 ## System Context and Scope
 
 `@typed/virtual-modules` provides a synchronous core for virtual module resolution and source generation in TypeScript-centric workflows. It targets two integration surfaces:
@@ -86,9 +94,9 @@ This section is normative and defines which TypeScript APIs are extended/overrid
   - load and normalize plugin modules,
   - register/swap plugin snapshots in manager,
   - never run inside per-import runtime resolution.
-- Deterministic virtual identity:
-  - `virtualKey = "<importer>::<id>"`,
-  - `virtualFileName = "<projectRoot>/.typed/virtual/<pluginName>/<stableHash(virtualKey)>.d.ts"`.
+- Deterministic virtual identity (see **Terminology** above):
+  - `virtualKey` via `createVirtualKey(id, importer)`.
+  - `virtualFileName` via `createVirtualFileName(pluginName, virtualKey, { id, importer })` — always a `typed-virtual://` URI; content served from memory, no disk paths.
 - Required adapter state:
   - `recordsByKey: Map<virtualKey, MutableVirtualRecord>`,
   - `recordsByVirtualFile: Map<virtualFileName, MutableVirtualRecord>` (holds the full record, not just the key),

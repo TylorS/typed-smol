@@ -4,6 +4,7 @@ import {
   type LanguageServiceWatchHost,
   type VirtualModuleAdapterHandle,
 } from "./types.js";
+import { VIRTUAL_MODULE_URI_SCHEME } from "./internal/path.js";
 import {
   createVirtualRecordStore,
   toResolvedModule,
@@ -329,7 +330,12 @@ export const attachLanguageServiceAdapter = (
 
     const freshRecord = rebuildRecordIfNeeded(record);
 
-    if (projectService?.getOrCreateOpenScriptInfo) {
+    // Do not call getOrCreateOpenScriptInfo for virtual URIs; some hosts write "open" scripts to disk.
+    // Virtual content is served only from memory via this snapshot and the host's fileExists/readFile.
+    if (
+      projectService?.getOrCreateOpenScriptInfo &&
+      !fileName.startsWith(`${VIRTUAL_MODULE_URI_SCHEME}://`)
+    ) {
       projectService.getOrCreateOpenScriptInfo(
         fileName,
         freshRecord.sourceText,
@@ -337,7 +343,6 @@ export const attachLanguageServiceAdapter = (
         false,
         options.projectRoot,
       );
-      return originalGetScriptSnapshot?.(fileName);
     }
 
     return options.ts.ScriptSnapshot.fromString(freshRecord.sourceText);

@@ -22,9 +22,9 @@
 Virtual module identity:
 
 - **Key:** `virtualKey = importer::id` (e.g. `entry.ts::virtual:foo`)
-- **Path:** `projectRoot/.typed/virtual/<pluginName>/<hash>.d.ts` where `hash = sha1(virtualKey).slice(0, 16)`
+- **Virtual file:** `typed-virtual://` URI (e.g. `typed-virtual://0/<pluginName>/<hash>.d.ts?...`); content served from memory, no disk path. Hash from virtualKey.
 
-The path is **hashed** and does not encode `(id, importer)` in a reversible way. To resolve content we need either:
+The URI may include `id` and `importer` in the query for resolution. To resolve content we need either:
 
 1. **`(id, importer)`** – then we can call `resolver.resolveModule({ id, importer })` via `@typed/virtual-modules`
 2. **`path -> content` mapping** – something that maps virtual file path to source text
@@ -61,14 +61,14 @@ The path is **hashed** and does not encode `(id, importer)` in a reversible way.
 
 ### Option B: Path → Content Manifest (Opt-In)
 
-**Idea:** ts-plugin optionally writes a manifest at `projectRoot/.typed/virtual-manifest.json` mapping `virtualFileName → sourceText` when records are created/updated/evicted.
+**Idea:** ts-plugin optionally writes a manifest mapping `typed-virtual://` URI → sourceText when records are created/updated/evicted.
 
 **Flow:**
 
 1. User enables `virtualModulesManifest: true` in tsconfig plugin config
 2. LanguageServiceAdapter writes/updates manifest on record resolution and eviction
-3. Extension watches manifest, registers `FileSystemProvider` or `TextDocumentContentProvider` for paths under `.typed/virtual/`
-4. When user opens a virtual path (e.g. from Go to definition), provider serves content from manifest
+3. Extension watches manifest, registers `FileSystemProvider` or `TextDocumentContentProvider` for `typed-virtual://` URIs
+4. When user opens a virtual URI (e.g. from Go to definition), provider serves content from manifest
 
 **Pros:**
 
@@ -105,8 +105,8 @@ The path is **hashed** and does not encode `(id, importer)` in a reversible way.
 
 - Add **opt-in manifest** in ts-plugin: `virtualModulesManifest: true` in plugin config.
 - Manifest: `{ [virtualPath: string]: string }` (path → sourceText).
-- Extension provides `FileSystemProvider` for `vscode-vfs-.typed-virtual` or `TextDocumentContentProvider` for file paths under `.typed/virtual/`.
-- When TS "Go to definition" returns a path like `.../project/.typed/virtual/plugin/hash.d.ts`, extension serves that path from the manifest.
+- Extension provides `FileSystemProvider` for `typed-virtual://` URIs (or `TextDocumentContentProvider` for that scheme).
+- When TS "Go to definition" returns a `typed-virtual://` URI, extension serves that URI's content from the manifest or by resolving on-demand.
 
 **Phase 1 does not require any ts-plugin changes.** Phase 2 adds an optional adapter capability.
 

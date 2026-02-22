@@ -1,0 +1,4 @@
+# Virtual module content is served via typed-virtual:// URIs only; nothing should write here.
+.typed/
+
+node_modules/

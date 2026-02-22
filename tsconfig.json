@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "packages/app" },
     { "path": "packages/async-data" },
     { "path": "packages/fx" },
     { "path": "packages/guard" },

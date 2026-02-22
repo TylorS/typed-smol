@@ -1,6 +1,6 @@
 import type * as ts from "typescript";
 import type { VirtualModuleResolver } from "@typed/virtual-modules";
-import { attachCompilerHostAdapter } from "@typed/virtual-modules";
+import { attachCompilerHostAdapter, createTypeInfoApiSessionFactory } from "@typed/virtual-modules";
 
 export interface CompileParams {
   readonly ts: typeof import("typescript");
@@ -58,11 +58,25 @@ export function compile(params: CompileParams): number {
   const projectRoot = sys.getCurrentDirectory();
   const host = ts.createCompilerHost(options);
 
+  // Preliminary program for TypeInfo API (plugins that use api.file()/api.directory() need it).
+  const preliminaryProgram = ts.createProgram({
+    rootNames: fileNames,
+    options,
+    host,
+    projectReferences,
+    configFileParsingDiagnostics: allConfigErrors,
+  });
+  const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
+    ts,
+    program: preliminaryProgram,
+  });
+
   const adapter = attachCompilerHostAdapter({
     ts,
     compilerHost: host,
     resolver,
     projectRoot,
+    createTypeInfoApiSession,
   });
 
   let exitCode = 0;

@@ -1,27 +1,16 @@
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, posix, resolve } from "node:path";
-// @ts-expect-error ESM
-import { NodeModulePluginLoader, PluginManager } from "@typed/virtual-modules";
+import { dirname, join, resolve } from "node:path";
+import * as ts from "typescript";
+import {
+  createTypeInfoApiSession,
+  createVirtualFileName,
+  createVirtualKey,
+  NodeModulePluginLoader,
+  PluginManager,
+  // @ts-expect-error ESM
+} from "@typed/virtual-modules";
 // @ts-expect-error ESM
 import type { VirtualModulePlugin } from "@typed/virtual-modules";
-
-const toPosixPath = (path: string) => path.replaceAll("\\", "/");
-const sanitizeSegment = (value: string) => value.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
-const stableHash = (input: string) =>
-  createHash("sha1").update(input).digest("hex").slice(0, 16);
-
-function createVirtualFileName(
-  projectRoot: string,
-  pluginName: string,
-  virtualKey: string,
-): string {
-  const safePluginName = sanitizeSegment(pluginName);
-  const hash = stableHash(virtualKey);
-  return toPosixPath(
-    posix.join(toPosixPath(projectRoot), ".typed", "virtual", safePluginName, `${hash}.d.ts`),
-  );
-}
 
 const TSPLUGIN_NAME = "@typed/virtual-modules-ts-plugin";
 
@@ -40,7 +29,7 @@ export interface ResolverResult {
 /**
  * Find tsconfig.json from a directory upward.
  */
-function findTsconfig(fromDir: string): string | undefined {
+export function findTsconfig(fromDir: string): string | undefined {
   let dir = resolve(fromDir);
   const root = resolve(dir, "/");
   while (dir !== root) {
@@ -51,6 +40,15 @@ function findTsconfig(fromDir: string): string | undefined {
     dir = parent;
   }
   return undefined;
+}
+
+/**
+ * Project root for a file: directory of the nearest tsconfig that contains it.
+ * Use this so virtual module resolution uses the correct tsconfig (e.g. sample-project, not monorepo root).
+ */
+export function getProjectRootForFile(filePath: string): string | undefined {
+  const tsconfigPath = findTsconfig(dirname(resolve(filePath)));
+  return tsconfigPath ? dirname(tsconfigPath) : undefined;
 }
 
 /**
@@ -66,11 +64,49 @@ function getPluginConfig(tsconfigPath: string): TsPluginConfig | undefined {
     if (!Array.isArray(plugins)) return undefined;
     const entry = plugins.find(
       (p): p is TsPluginConfig =>
-        typeof p === "object" &&
-        p !== null &&
-        (p as TsPluginConfig).name === TSPLUGIN_NAME,
+        typeof p === "object" && p !== null && (p as TsPluginConfig).name === TSPLUGIN_NAME,
     );
     return entry as TsPluginConfig | undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const programCache = new Map<string, ts.Program>();
+
+/**
+ * Create a TypeScript Program for the project so plugins that need type info (e.g. router)
+ * can use the TypeInfo API. Cached per project root.
+ */
+function getProgramForProject(projectRoot: string): ts.Program | undefined {
+  const cached = programCache.get(projectRoot);
+  if (cached !== undefined) return cached;
+
+  const tsconfigPath = findTsconfig(projectRoot);
+  if (!tsconfigPath) return undefined;
+
+  try {
+    // oxlint-disable-next-line typescript/unbound-method
+    const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+    if (configFile.error) return undefined;
+
+    const configDir = dirname(tsconfigPath);
+    const parsed = ts.parseJsonConfigFileContent(
+      configFile.config,
+      ts.sys,
+      configDir,
+      undefined,
+      tsconfigPath,
+    );
+    if (parsed.errors.length > 0) return undefined;
+
+    const program = ts.createProgram(
+      parsed.fileNames,
+      parsed.options,
+      ts.createCompilerHost(parsed.options),
+    );
+    programCache.set(projectRoot, program);
+    return program;
   } catch {
     return undefined;
   }
@@ -118,13 +154,25 @@ export function createResolver(projectRoot: string): {
 
   return {
     resolve(id: string, importer: string): ResolverResult | undefined {
-      const resolution = resolver.resolveModule({ id, importer });
+      const program = getProgramForProject(projectRoot);
+      const createTypeInfoApiSessionOption = program
+        ? () => createTypeInfoApiSession({ ts, program })
+        : undefined;
+
+      const resolution = resolver.resolveModule({
+        id,
+        importer,
+        createTypeInfoApiSession: createTypeInfoApiSessionOption,
+      });
       if (resolution.status === "resolved") {
-        const virtualKey = `${importer}::${id}`;
+        const virtualKey = createVirtualKey(id, importer);
         return {
           sourceText: resolution.sourceText,
           pluginName: resolution.pluginName,
-          virtualFileName: createVirtualFileName(projectRoot, resolution.pluginName, virtualKey),
+          virtualFileName: createVirtualFileName(resolution.pluginName, virtualKey, {
+            id,
+            importer,
+          }),
         };
       }
       return undefined;
@@ -132,4 +180,3 @@ export function createResolver(projectRoot: string): {
     getPluginSpecifiers: () => pluginSpecifiers,
   };
 }
-

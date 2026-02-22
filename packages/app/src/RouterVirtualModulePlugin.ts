@@ -1,5 +1,5 @@
 import { readdirSync, statSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, extname, join, relative } from "node:path";
 import {
   typeNodeIsEffectOptionReturn,
   typeNodeIsRouteCompatible,
@@ -25,6 +25,36 @@ const ENTRYPOINT_EXPORTS = ["handler", "template", "default"] as const;
 const COMPANION_SUFFIXES = [".guard.ts", ".dependencies.ts", ".layout.ts", ".catch.ts"] as const;
 const DIRECTORY_COMPANIONS = new Set(["_guard.ts", "_dependencies.ts", "_layout.ts", "_catch.ts"]);
 
+/** Strip the extension from a path using path.extname; returns path unchanged if no extension. */
+const stripScriptExtension = (path: string): string => {
+  const ext = extname(path);
+  return ext ? path.slice(0, -ext.length) : path;
+};
+
+/** Extensions that count as route/script files when checking if a directory should resolve (used with extname() result). */
+const SCRIPT_EXTENSION_SET = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mts",
+  ".cts",
+  ".mjs",
+  ".cjs",
+]);
+
+/** Glob patterns for discovering route files. We include any file that has a Route + compatible handler export (no filename pattern). */
+const ROUTE_FILE_GLOBS: readonly string[] = [
+  "**/*.ts",
+  "**/*.tsx",
+  "**/*.js",
+  "**/*.jsx",
+  "**/*.mts",
+  "**/*.cts",
+  "**/*.mjs",
+  "**/*.cjs",
+];
+
 type ConcernKind = "guard" | "dependencies" | "layout" | "catch";
 
 type ComposedConcerns = {
@@ -42,6 +72,9 @@ export interface RouterVirtualModulePluginOptions {
 type EntryPointExport = (typeof ENTRYPOINT_EXPORTS)[number];
 type RuntimeKind = import("./internal/routeTypeNode.js").RuntimeKind;
 
+/** Which concerns (layout, dependencies, catch, guard) are exported from the route file itself. */
+type InFileConcerns = Partial<Record<ConcernKind, true>>;
+
 type RouteDescriptor = {
   readonly filePath: string;
   readonly entrypointExport: EntryPointExport;
@@ -49,6 +82,8 @@ type RouteDescriptor = {
   /** True when the entrypoint export's type is a function (e.g. (params) => Fx). */
   readonly entrypointIsFunction: boolean;
   readonly composedConcerns: ComposedConcerns;
+  /** Concerns exported by the route module itself; in-file wins over companion, and both together trigger a warning. */
+  readonly inFileConcerns: InFileConcerns;
   readonly routeTypeText: string;
 };
 
@@ -60,7 +95,8 @@ type RouteContractViolation = {
     | "RVM-ENTRY-002"
     | "RVM-LEAF-001"
     | "RVM-AMBIGUOUS-001"
-    | "RVM-GUARD-001";
+    | "RVM-GUARD-001"
+    | "RVM-INFILE-COMPANION-001";
   readonly message: string;
 };
 
@@ -93,7 +129,18 @@ export function parseRouterVirtualModuleId(
     };
   }
 
-  const relativeDirectory = id.slice(prefix.length);
+  let relativeDirectory = id.slice(prefix.length);
+  // Normalize so "router:routes" and "router:./routes" both resolve (Node resolve treats them the same; explicit ./ is clearer).
+  if (
+    relativeDirectory.length > 0 &&
+    relativeDirectory !== "." &&
+    relativeDirectory !== ".." &&
+    !relativeDirectory.startsWith("./") &&
+    !relativeDirectory.startsWith("../") &&
+    !relativeDirectory.startsWith("/")
+  ) {
+    relativeDirectory = `./${relativeDirectory}`;
+  }
   const relativeResult = validatePathSegment(relativeDirectory, "relativeDirectory");
   if (!relativeResult.ok) {
     return { ok: false, reason: relativeResult.reason };
@@ -159,12 +206,17 @@ const isExistingDirectory = (absolutePath: string): boolean => {
   }
 };
 
-const directoryHasTsFiles = (dir: string): boolean => {
+const directoryHasScriptFiles = (dir: string): boolean => {
   try {
     const items = readdirSync(dir, { withFileTypes: true });
     for (const e of items) {
-      if (e.name.endsWith(".ts") && !e.name.endsWith(".d.ts")) return true;
-      if (e.isDirectory() && directoryHasTsFiles(join(dir, e.name))) return true;
+      if (
+        e.isFile() &&
+        SCRIPT_EXTENSION_SET.has(extname(e.name).toLowerCase()) &&
+        !e.name.toLowerCase().endsWith(".d.ts")
+      )
+        return true;
+      if (e.isDirectory() && directoryHasScriptFiles(join(dir, e.name))) return true;
     }
     return false;
   } catch {
@@ -213,7 +265,7 @@ const resolveComposedConcernsForLeaf = (
   existingPaths: ReadonlySet<string>,
 ): ComposedConcerns => {
   const leafDir = dirname(leafFilePath);
-  const leafBaseName = basename(leafFilePath, ".ts");
+  const leafBaseName = basename(stripScriptExtension(leafFilePath));
   const ancestorDirs: string[] = [""];
   if (leafDir !== "." && leafDir !== "") {
     const segments = leafDir.split("/").filter(Boolean);
@@ -246,7 +298,7 @@ const resolveComposedConcernsForLeaf = (
   };
 };
 
-/** Path relative to baseDir (e.g. "nested/X.ts") → import specifier relative to importerDir (e.g. "./routes/nested/X.js"). */
+/** Path relative to baseDir → import specifier relative to importerDir (script ext → .js for ESM). */
 const toImportSpecifier = (
   importerDir: string,
   targetDir: string,
@@ -255,7 +307,7 @@ const toImportSpecifier = (
   const absPath = join(targetDir, relativeFilePath);
   const rel = toPosixPath(relative(importerDir, absPath));
   const specifier = rel.startsWith(".") ? rel : `./${rel}`;
-  return specifier.replace(/\.ts$/i, ".js");
+  return stripScriptExtension(specifier) + ".js";
 };
 
 /**
@@ -263,15 +315,17 @@ const toImportSpecifier = (
  * Empty after sanitization is skipped (returns "").
  */
 const segmentToIdentifierPart = (seg: string): string => {
-  let name = seg.startsWith("_") ? seg.slice(1) : seg;
-  name = name.replace(/^\[|\]$/g, "").replace(/[^a-zA-Z0-9]/g, "");
+  let name = seg.trim().startsWith("_") ? seg.trim().slice(1) : seg.trim();
+  // Remove all bracket chars so [id], [[id]], [ id ] all become a single token; then strip non-alphanumeric
+  name = name.replace(/[[\]]/g, "").replace(/[^a-zA-Z0-9]/g, "");
   if (!name) return "";
   return name.charAt(0).toUpperCase() + name.slice(1);
 };
 
 /** Path relative to baseDir → valid JS identifier. Safe for special chars in filenames; never emits invalid identifiers. */
 const pathToIdentifier = (relativeFilePath: string): string => {
-  const withoutExt = relativeFilePath.replace(/\.ts$/i, "");
+  const posix = toPosixPath(relativeFilePath);
+  const withoutExt = stripScriptExtension(posix);
   const raw = withoutExt
     .split("/")
     .filter(Boolean)
@@ -284,6 +338,14 @@ const pathToIdentifier = (relativeFilePath: string): string => {
   return safe;
 };
 
+/** Final guard: ensure a string is a valid JS identifier (no spaces, brackets, or leading digit). */
+const toSafeIdentifier = (s: string): string => {
+  const cleaned = s.replace(/[\s[\]]/g, "").replace(/[^a-zA-Z0-9_$]/g, "");
+  if (!cleaned) return "Module";
+  if (/^\d/.test(cleaned)) return `M${cleaned}`;
+  return cleaned;
+};
+
 const RESERVED_NAMES = new Set(["Router", "Fx", "Effect", "Stream"]);
 /** Route module identifier: prefix with M to avoid clashing with Router/Fx/Effect/Stream. */
 const routeModuleIdentifier = (relativeFilePath: string): string => {
@@ -291,10 +353,55 @@ const routeModuleIdentifier = (relativeFilePath: string): string => {
   return RESERVED_NAMES.has(base) ? `M${base}` : base;
 };
 
-/** Sibling companion path for a leaf file (e.g. "nested/Y.ts" + "layout" → "nested/Y.layout.ts"). */
+/** True if the path has a dynamic segment (bracket). */
+const pathHasParamSegment = (relativePath: string): boolean => /\[[^\]]*\]/.test(relativePath);
+
+/**
+ * Assign unique var names when proposed names collide (e.g. users/[id].ts and users/id.ts both → UsersId).
+ * First occurrence keeps the base name; others get base + "Param" (if path has [x]), "Literal", or numeric suffix.
+ */
+const makeUniqueVarNames = (
+  entries: readonly { path: string; proposedName: string }[],
+): Map<string, string> => {
+  const sorted = [...entries].sort((a, b) => a.path.localeCompare(b.path));
+  const nameToPaths = new Map<string, string[]>();
+  for (const { path, proposedName } of sorted) {
+    const base = toSafeIdentifier(proposedName);
+    const list = nameToPaths.get(base) ?? [];
+    list.push(path);
+    nameToPaths.set(base, list);
+  }
+  const pathToUnique = new Map<string, string>();
+  const used = new Set<string>();
+  for (const [base, paths] of nameToPaths) {
+    for (let i = 0; i < paths.length; i++) {
+      const path = paths[i];
+      let name: string;
+      if (paths.length === 1) {
+        name = base;
+      } else if (i === 0) {
+        name = base;
+      } else {
+        const suffix = pathHasParamSegment(path) ? "Param" : "Literal";
+        let candidate = base + suffix;
+        let n = 0;
+        while (used.has(candidate)) {
+          n += 1;
+          candidate = base + String(n);
+        }
+        name = candidate;
+      }
+      used.add(name);
+      pathToUnique.set(path, name);
+    }
+  }
+  return pathToUnique;
+};
+
+/** Sibling companion path for a leaf file (e.g. "nested/Y.tsx" + "layout" → "nested/Y.layout.ts"). */
 const siblingCompanionPath = (leafFilePath: string, kind: ConcernKind): string => {
   const dir = dirname(leafFilePath);
-  const base = basename(leafFilePath, ".ts");
+  const base = basename(stripScriptExtension(leafFilePath));
   const file = kind === "dependencies" ? `${base}.dependencies.ts` : `${base}.${kind}.ts`;
   return dir ? toPosixPath(join(dir, file)) : file;
 };
@@ -323,6 +430,7 @@ const buildRouteDescriptors = (
     const entrypoints = listEntrypointExports(snapshot);
     const routeExport = snapshot.exports.find((value) => value.name === "route");
 
+    // Include any file that has a Route export + compatible handler (no filename pattern; [id].ts and id.ts are both valid).
     if (!routeExport) {
       if (entrypoints.length > 0) {
         violations.push({
@@ -361,12 +469,18 @@ const buildRouteDescriptors = (
     const relPath = toPosixPath(relative(baseDir, snapshot.filePath));
     const runtimeKind = classifyEntrypointKind(entrypoint);
     const entrypointIsFunction = entrypoint.type.kind === "function";
+    const composedConcerns = resolveComposedConcernsForLeaf(relPath, existingPaths);
+    const inFileConcerns: InFileConcerns = {};
+    for (const name of ["layout", "dependencies", "catch", "guard"] as const) {
+      if (snapshot.exports.some((e) => e.name === name)) inFileConcerns[name] = true;
+    }
     descriptors.push({
       filePath: relPath,
       entrypointExport: getEntryPointName(entrypoint),
       runtimeKind,
       entrypointIsFunction,
-      composedConcerns: resolveComposedConcernsForLeaf(relPath, existingPaths),
+      composedConcerns,
+      inFileConcerns,
       routeTypeText: routeExport.type.text,
     });
   }
@@ -433,7 +547,21 @@ const buildRouteDescriptors = (
     guardExportByPath[relPath] = guardExport.name as "default" | "guard";
   }
 
-  const allViolations = [...violations, ...ambiguousViolations, ...guardViolations].sort(
+  const infileCompanionViolations: RouteContractViolation[] = [];
+  for (const d of dedupedDescriptors) {
+    for (const kind of ["layout", "dependencies", "catch", "guard"] as const) {
+      if (!d.inFileConcerns[kind]) continue;
+      const siblingPath = siblingCompanionPath(d.filePath, kind);
+      if (d.composedConcerns[kind].includes(siblingPath)) {
+        infileCompanionViolations.push({
+          code: "RVM-INFILE-COMPANION-001",
+          message: `${d.filePath} exports "${kind}" in-file and has companion ${siblingPath}; in-file wins but this is ambiguous. Remove one.`,
+        });
+      }
+    }
+  }
+
+  const allViolations = [...violations, ...ambiguousViolations, ...guardViolations, ...infileCompanionViolations].sort(
     (left, right) => left.message.localeCompare(right.message),
   );
 
@@ -447,7 +575,7 @@ const buildRouteDescriptors = (
 /** Collect unique paths in leaf→ancestor order (closest to route first; first occurrence wins). */
 const collectOrderedCompanionPaths = (
   descriptors: readonly RouteDescriptor[],
-  kind: "dependencies" | "layout" | "guard",
+  kind: ConcernKind,
 ): readonly string[] => {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -492,10 +620,79 @@ const handlerExprFor = (
   }
 };
 
+/** True iff the companion path is directory-level (e.g. api/_layout.ts), not sibling (e.g. route.layout.ts). */
+const isDirectoryCompanion = (p: string) => basename(p).startsWith("_");
+
 /**
- * Emit type-driven Router.match(...) source: imports + chain + .provide/.layout.
- * Modules that don't match contract are already excluded by buildRouteDescriptors.
- * guardExportByPath: for each guard path, the export name to use (default | guard) so we emit a single property, no ?? at runtime.
+ * Build match options for a single route: handler plus layout/dependencies/catch/guard from in-file (route module)
+ * or sibling companion only. In-file wins; directory companions are never in match opts (they wrap the directory matcher).
+ * Guard can also come from a directory _guard.ts when the route has no in-file or sibling guard.
+ */
+const matchOptsForRoute = (
+  d: RouteDescriptor,
+  varName: string,
+  varNameByPath: Map<string, string>,
+  guardExportByPath: GuardExportByPath,
+): string[] => {
+  const exportName = d.entrypointExport;
+  const isFn = d.entrypointIsFunction;
+  const handlerExpr = handlerExprFor(d.runtimeKind, isFn, varName, exportName);
+  const opts: string[] = [`handler: ${handlerExpr}`];
+
+  const add = (kind: ConcernKind, fromModule: string, exportKey: keyof typeof d.inFileConcerns) => {
+    opts.push(`${kind}: ${fromModule}.${exportKey}`);
+  };
+  const sibling = (kind: ConcernKind) => siblingCompanionPath(d.filePath, kind);
+  const hasSibling = (kind: ConcernKind) => d.composedConcerns[kind].includes(sibling(kind));
+  const dirGuardPath = d.composedConcerns.guard.find(isDirectoryCompanion);
+
+  if (d.inFileConcerns.dependencies) add("dependencies", varName, "dependencies");
+  else if (hasSibling("dependencies")) opts.push(`dependencies: ${varNameByPath.get(sibling("dependencies"))}`);
+
+  if (d.inFileConcerns.layout) add("layout", varName, "layout");
+  else if (hasSibling("layout")) opts.push(`layout: ${varNameByPath.get(sibling("layout"))}`);
+
+  if (d.inFileConcerns.guard) add("guard", varName, "guard");
+  else if (hasSibling("guard")) {
+    const g = varNameByPath.get(sibling("guard"))!;
+    opts.push(`guard: ${g}.${guardExportByPath[sibling("guard")] ?? "guard"}`);
+  } else if (dirGuardPath) {
+    const g = varNameByPath.get(dirGuardPath)!;
+    opts.push(`guard: ${g}.${guardExportByPath[dirGuardPath] ?? "guard"}`);
+  }
+
+  if (d.inFileConcerns.catch) add("catch", varName, "catch");
+  else if (hasSibling("catch")) opts.push(`catch: ${varNameByPath.get(sibling("catch"))}`);
+
+  return opts;
+};
+
+/** Directory path -> companion paths for that directory (only _layout, _dependencies, _catch; guard is per-route). */
+const directoryCompanionPaths = (
+  descriptors: readonly RouteDescriptor[],
+): Map<string, { layout?: string; dependencies?: string; catch?: string }> => {
+  const map = new Map<string, { layout?: string; dependencies?: string; catch?: string }>();
+  for (const d of descriptors) {
+    for (const kind of ["layout", "dependencies", "catch"] as const) {
+      for (const p of d.composedConcerns[kind]) {
+        if (!isDirectoryCompanion(p)) continue;
+        const dir = dirname(p);
+        let entry = map.get(dir);
+        if (!entry) {
+          entry = {};
+          map.set(dir, entry);
+        }
+        if (!entry[kind]) entry[kind] = p;
+      }
+    }
+  }
+  return map;
+};
+
+/**
+ * Emit Router.merge(...) of directory matchers. Each route compiles to .match(route, { handler, ...opts })
+ * with opts only from in-file or sibling. Directory companions (_layout, _dependencies, _catch) apply to
+ * all routes in that directory and are added once per directory via .layout(), .provide(), .catchCause().
  */
 const emitRouterMatchSource = (
   descriptors: readonly RouteDescriptor[],
@@ -507,21 +704,16 @@ const emitRouterMatchSource = (
   const depPaths = collectOrderedCompanionPaths(descriptors, "dependencies");
   const layoutPaths = collectOrderedCompanionPaths(descriptors, "layout");
   const guardPaths = collectOrderedCompanionPaths(descriptors, "guard");
+  const catchPaths = collectOrderedCompanionPaths(descriptors, "catch");
 
-  type CompanionStep = { path: string; kind: "provide" | "layout" };
-  const depth = (p: string) => p.split("/").filter(Boolean).length;
-  const isDirectoryCompanion = (p: string) => basename(p).startsWith("_");
-  const steps: CompanionStep[] = [
-    ...depPaths.map((path) => ({ path, kind: "provide" as const })),
-    ...layoutPaths.map((path) => ({ path, kind: "layout" as const })),
-  ].sort((a, b) => {
-    const aDir = isDirectoryCompanion(a.path);
-    const bDir = isDirectoryCompanion(b.path);
-    if (aDir !== bDir) return aDir ? 1 : -1;
-    const depthDiff = depth(b.path) - depth(a.path);
-    if (depthDiff !== 0) return depthDiff;
-    return a.kind === "layout" && b.kind === "provide" ? -1 : a.kind === "provide" && b.kind === "layout" ? 1 : 0;
-  });
+  const nameEntries: { path: string; proposedName: string }[] = [
+    ...descriptors.map((d) => ({ path: d.filePath, proposedName: routeModuleIdentifier(d.filePath) })),
+    ...depPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
+    ...layoutPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
+    ...guardPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
+    ...catchPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
+  ];
+  const varNameByPath = makeUniqueVarNames(nameEntries);
 
   const importLines: string[] = [
     `import * as Router from "@typed/router";`,
@@ -530,66 +722,68 @@ const emitRouterMatchSource = (
 
   for (const d of descriptors) {
     const spec = toImportSpecifier(importerDir, targetDirectory, d.filePath);
-    const varName = routeModuleIdentifier(d.filePath);
+    const varName = varNameByPath.get(d.filePath)!;
     importLines.push(`import * as ${varName} from ${JSON.stringify(spec)};`);
   }
-
   for (const p of depPaths) {
-    const spec = toImportSpecifier(importerDir, targetDirectory, p);
-    const varName = pathToIdentifier(p);
-    importLines.push(`import ${varName} from ${JSON.stringify(spec)};`);
+    importLines.push(`import ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`);
   }
-
   for (const p of layoutPaths) {
-    const spec = toImportSpecifier(importerDir, targetDirectory, p);
-    const varName = pathToIdentifier(p);
-    importLines.push(`import ${varName} from ${JSON.stringify(spec)};`);
+    importLines.push(`import ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`);
   }
-
   for (const p of guardPaths) {
-    const spec = toImportSpecifier(importerDir, targetDirectory, p);
-    const varName = pathToIdentifier(p);
-    importLines.push(`import * as ${varName} from ${JSON.stringify(spec)};`);
+    importLines.push(`import * as ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`);
+  }
+  for (const p of catchPaths) {
+    importLines.push(`import ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`);
   }
 
-  const matchParts: string[] = [];
-  for (let i = 0; i < descriptors.length; i++) {
-    const d = descriptors[i];
-    const varName = routeModuleIdentifier(d.filePath);
-    const exportName = d.entrypointExport;
-    const isFn = d.entrypointIsFunction;
-    const handlerExpr = handlerExprFor(d.runtimeKind, isFn, varName, exportName);
+  const dirToCompanions = directoryCompanionPaths(descriptors);
+  const allDirs = new Set(descriptors.map((d) => dirname(d.filePath)));
+  for (const [dir] of dirToCompanions) allDirs.add(dir);
+  if (allDirs.size > 0) allDirs.add("");
+  const sortedDirs = [...allDirs].sort(
+    (a, b) => b.split("/").filter(Boolean).length - a.split("/").filter(Boolean).length,
+  );
 
-    const siblingLayoutPath = siblingCompanionPath(d.filePath, "layout");
-    const hasSiblingLayout = d.composedConcerns.layout.includes(siblingLayoutPath);
-    const siblingDepsPath = siblingCompanionPath(d.filePath, "dependencies");
-    const hasSiblingDeps = d.composedConcerns.dependencies.includes(siblingDepsPath);
-    const siblingGuardPath = siblingCompanionPath(d.filePath, "guard");
-    const hasSiblingGuard = d.composedConcerns.guard.includes(siblingGuardPath);
+  const leafMatchExprByPath = new Map<string, string>();
+  for (const d of descriptors) {
+    const varName = varNameByPath.get(d.filePath)!;
+    const opts = matchOptsForRoute(d, varName, varNameByPath, guardExportByPath);
+    leafMatchExprByPath.set(d.filePath, `Router.match(${varName}.route, { ${opts.join(", ")} })`);
+  }
 
-    const opts: string[] = [`handler: ${handlerExpr}`];
-    if (hasSiblingDeps) opts.push(`dependencies: ${varName}.dependencies`);
-    if (hasSiblingLayout) opts.push(`layout: ${varName}.layout`);
-    if (hasSiblingGuard) {
-      const guardVarName = pathToIdentifier(siblingGuardPath);
-      const exportName = guardExportByPath[siblingGuardPath] ?? "guard";
-      opts.push(`guard: ${guardVarName}.${exportName}`);
+  const dirMatcherExpr = new Map<string, string>();
+  for (const dir of sortedDirs) {
+    const directRoutes = descriptors.filter((d) => dirname(d.filePath) === dir);
+    const isImmediateChild = (s: string) =>
+      s !== dir && (dir === "" ? s.indexOf("/") === -1 : s.startsWith(dir + "/") && s.slice((dir + "/").length).indexOf("/") === -1);
+    const childDirs = sortedDirs.filter(isImmediateChild);
+    const parts: string[] = [];
+    for (const d of directRoutes) parts.push(leafMatchExprByPath.get(d.filePath)!);
+    for (const s of childDirs) parts.push(dirMatcherExpr.get(s)!);
+    let expr = parts.length === 0 ? "Router.merge()" : parts.length === 1 ? parts[0]! : `Router.merge(\n  ${parts.join(",\n  ")}\n)`;
+    const companions = dirToCompanions.get(dir);
+    if (companions) {
+      if (companions.layout) expr += `\n  .layout(${varNameByPath.get(companions.layout)})`;
+      if (companions.catch) expr += `\n  .catchCause(${varNameByPath.get(companions.catch)})`;
+      if (companions.dependencies) expr += `\n  .provide(${varNameByPath.get(companions.dependencies)})`;
     }
-
-    const matchCall = `${varName}.route, { ${opts.join(", ")} }`;
-    matchParts.push(i === 0 ? `Router.match(${matchCall})` : `.match(${matchCall})`);
+    dirMatcherExpr.set(dir, expr);
   }
 
-  let chain = matchParts.join("\n  ");
-
-  for (const { path: p, kind } of steps) {
-    const varName = pathToIdentifier(p);
-    chain += kind === "provide" ? `\n  .provide(${varName})` : `\n  .layout(${varName})`;
+  let rootExpr = dirMatcherExpr.get("") ?? "Router.merge()";
+  if (rootExpr === "Router.merge()" && descriptors.length > 0) {
+    const flatParts = descriptors.map((d) => leafMatchExprByPath.get(d.filePath)!);
+    rootExpr =
+      flatParts.length === 1
+        ? flatParts[0]!
+        : `Router.merge(\n  ${flatParts.join(",\n  ")}\n)`;
   }
 
   return `${importLines.join("\n")}
 
-export default ${chain};
+export default ${rootExpr};
 `;
 };
 
@@ -609,7 +803,7 @@ export const createRouterVirtualModulePlugin = (
       if (!isExistingDirectory(resolved.targetDirectory)) {
         return false;
       }
-      return directoryHasTsFiles(resolved.targetDirectory);
+      return directoryHasScriptFiles(resolved.targetDirectory);
     },
     build(id, importer, api) {
       const resolved = resolveRouterTargetDirectory(id, importer, prefix);
@@ -632,7 +826,7 @@ export const createRouterVirtualModulePlugin = (
         return err;
       }
 
-      const snapshots = api.directory("**/*.ts", {
+      const snapshots = api.directory(ROUTE_FILE_GLOBS, {
         baseDir: resolved.targetDirectory,
         recursive: true,
         watch: true,

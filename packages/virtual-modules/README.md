@@ -19,8 +19,6 @@ Peer / dev: `typescript` (project supplies its own).
 - **LanguageServiceAdapter** – `attachLanguageServiceAdapter({ ts, languageService, languageServiceHost, resolver, projectRoot, watchHost?, debounceMs? })`; patches resolution, script snapshot/version, fileExists, readFile, and diagnostics; returns a handle with `dispose()`. Adapter state is bounded by necessary files: records whose importer file no longer exists are evicted.
 - **CompilerHostAdapter** – `attachCompilerHostAdapter({ ts, compilerHost, resolver, projectRoot, watchHost?, debounceMs? })`; patches resolution, getSourceFile/getSourceFileByPath, fileExists, readFile, hasInvalidatedResolutions; returns a handle with `dispose()`. Same eviction of records when the importer file no longer exists.
 
-Virtual module identity: `virtualKey = importer::id`, virtual file path under `projectRoot/.typed/virtual/<pluginName>/<hash>.d.ts`.
-
 ## Production considerations
 
 - **Path contract** – `baseDir` must be an absolute path; `relativePath` (and resolved paths) must not escape `baseDir`. Path containment is enforced: escaping returns an error (`path-escapes-base` or `invalid-input`).

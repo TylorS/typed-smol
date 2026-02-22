@@ -152,7 +152,7 @@ describe("Virtual modules with real TypeScript", () => {
         expect(diagnostics).toHaveLength(0);
         const program = languageService.getProgram();
         expect(program).toBeDefined();
-        expect(program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+        expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("typed-virtual://"))).toBe(
           true,
         );
       } finally {
@@ -191,7 +191,7 @@ describe("Virtual modules with real TypeScript", () => {
         const program = ts.createProgram([entryPath], standardCompilerOptions, host);
         const diagnostics = ts.getPreEmitDiagnostics(program);
         expect(diagnostics).toHaveLength(0);
-        expect(program.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+        expect(program.getSourceFiles().some((sf) => sf.fileName.includes("typed-virtual://"))).toBe(
           true,
         );
       } finally {
@@ -257,7 +257,7 @@ describe("Virtual modules with real TypeScript", () => {
         expect(diagnostics).toHaveLength(0);
         const program = languageService.getProgram();
         expect(program).toBeDefined();
-        expect(program!.getSourceFiles().some((sf) => sf.fileName.includes(".typed/virtual"))).toBe(
+        expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("typed-virtual://"))).toBe(
           true,
         );
       } finally {

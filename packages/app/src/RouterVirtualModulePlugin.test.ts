@@ -126,9 +126,9 @@ describe("RouterVirtualModulePlugin", () => {
     expect(parsed.ok).toBe(false);
   });
 
-  it("accepts router:routes without ./ prefix", () => {
+  it("accepts router:routes without ./ prefix (normalized to ./routes)", () => {
     const parsed = parseRouterVirtualModuleId("router:routes");
-    expect(parsed).toEqual({ ok: true, relativeDirectory: "routes" });
+    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
   });
 
   it("resolves target directory from importer", () => {
@@ -200,9 +200,11 @@ describe("RouterVirtualModulePlugin", () => {
       import Dependencies from "./routes/_dependencies.js";
       import UsersProfiledependencies from "./routes/users/profile.dependencies.js";
 
-      export default Router.match(UsersProfile.route, { handler: () => Fx.succeed(UsersProfile.handler), dependencies: UsersProfile.dependencies })
-        .provide(UsersProfiledependencies)
-        .provide(Dependencies);
+      export default Router.merge(
+        Router.match(UsersProfile.route, { handler: () => Fx.succeed(UsersProfile.handler), dependencies: UsersProfiledependencies }),
+        Router.merge()
+        .provide(Dependencies)
+      );
       "
     `);
   });
@@ -220,10 +222,14 @@ describe("RouterVirtualModulePlugin", () => {
       import * as ApiItem from "./routes/api/item.js";
       import Dependencies from "./routes/_dependencies.js";
       import ApiLayout from "./routes/api/_layout.js";
+      import ApiItemcatch from "./routes/api/item.catch.js";
 
-      export default Router.match(ApiItem.route, { handler: () => Fx.succeed(ApiItem.handler) })
-        .layout(ApiLayout)
-        .provide(Dependencies);
+      export default Router.merge(
+        Router.match(ApiItem.route, { handler: () => Fx.succeed(ApiItem.handler), catch: ApiItemcatch })
+        .layout(ApiLayout),
+        Router.merge()
+        .provide(Dependencies)
+      );
       "
     `);
   });
@@ -241,9 +247,7 @@ describe("RouterVirtualModulePlugin", () => {
       import Pagedependencies from "./routes/page.dependencies.js";
       import Pagelayout from "./routes/page.layout.js";
 
-      export default Router.match(Page.route, { handler: () => Fx.succeed(Page.handler), dependencies: Page.dependencies, layout: Page.layout })
-        .layout(Pagelayout)
-        .provide(Pagedependencies);
+      export default Router.match(Page.route, { handler: () => Fx.succeed(Page.handler), dependencies: Pagedependencies, layout: Pagelayout });
       "
     `);
   });
@@ -261,9 +265,11 @@ describe("RouterVirtualModulePlugin", () => {
       import Dependencies from "./routes/_dependencies.js";
       import UsersProfiledependencies from "./routes/users/profile.dependencies.js";
 
-      export default Router.match(UsersProfile.route, { handler: () => Fx.succeed(UsersProfile.handler), dependencies: UsersProfile.dependencies })
-        .provide(UsersProfiledependencies)
-        .provide(Dependencies);
+      export default Router.merge(
+        Router.match(UsersProfile.route, { handler: () => Fx.succeed(UsersProfile.handler), dependencies: UsersProfiledependencies }),
+        Router.merge()
+        .provide(Dependencies)
+      );
       "
     `);
   });
@@ -281,9 +287,12 @@ describe("RouterVirtualModulePlugin", () => {
       import ApiDependencies from "./routes/api/_dependencies.js";
       import Dependencies from "./routes/_dependencies.js";
 
-      export default Router.match(ApiItem.route, { handler: () => Fx.succeed(ApiItem.handler) })
-        .provide(ApiDependencies)
-        .provide(Dependencies);
+      export default Router.merge(
+        Router.match(ApiItem.route, { handler: () => Fx.succeed(ApiItem.handler) })
+        .provide(ApiDependencies),
+        Router.merge()
+        .provide(Dependencies)
+      );
       "
     `);
   });
@@ -301,8 +310,7 @@ describe("RouterVirtualModulePlugin", () => {
       import ApiLayout from "./routes/api/_layout.js";
       import ApiItemlayout from "./routes/api/item.layout.js";
 
-      export default Router.match(ApiItem.route, { handler: () => Fx.succeed(ApiItem.handler), layout: ApiItem.layout })
-        .layout(ApiItemlayout)
+      export default Router.match(ApiItem.route, { handler: () => Fx.succeed(ApiItem.handler), layout: ApiItemlayout })
         .layout(ApiLayout);
       "
     `);
@@ -736,9 +744,11 @@ describe("RouterVirtualModulePlugin", () => {
       import * as Contact from "./routes/contact.js";
       import * as Home from "./routes/home.js";
 
-      export default Router.match(About.route, { handler: () => Fx.succeed(About.handler) })
-        .match(Contact.route, { handler: () => Fx.succeed(Contact.handler) })
-        .match(Home.route, { handler: () => Fx.succeed(Home.handler) });
+      export default Router.merge(
+        Router.match(About.route, { handler: () => Fx.succeed(About.handler) }),
+        Router.match(Contact.route, { handler: () => Fx.succeed(Contact.handler) }),
+        Router.match(Home.route, { handler: () => Fx.succeed(Home.handler) })
+      );
       "
     `);
   });
@@ -756,9 +766,11 @@ describe("RouterVirtualModulePlugin", () => {
       import * as UsersIndex from "./routes/users/index.js";
       import * as UsersProfile from "./routes/users/profile.js";
 
-      export default Router.match(UsersId.route, { handler: () => Fx.succeed(UsersId.handler) })
-        .match(UsersIndex.route, { handler: () => Fx.succeed(UsersIndex.handler) })
-        .match(UsersProfile.route, { handler: () => Fx.succeed(UsersProfile.handler) });
+      export default Router.merge(
+        Router.match(UsersId.route, { handler: () => Fx.succeed(UsersId.handler) }),
+        Router.match(UsersIndex.route, { handler: () => Fx.succeed(UsersIndex.handler) }),
+        Router.match(UsersProfile.route, { handler: () => Fx.succeed(UsersProfile.handler) })
+      );
       "
     `);
   });
@@ -808,11 +820,14 @@ describe("RouterVirtualModulePlugin", () => {
       import ApiItemsLayout from "./routes/api/items/_layout.js";
       import ApiLayout from "./routes/api/_layout.js";
 
-      export default Router.match(ApiItemsX.route, { handler: () => Fx.succeed(ApiItemsX.handler) })
+      export default Router.merge(
+        Router.match(ApiItemsX.route, { handler: () => Fx.succeed(ApiItemsX.handler) })
         .layout(ApiItemsLayout)
         .layout(ApiLayout)
-        .provide(ApiDependencies)
-        .provide(Dependencies);
+        .provide(ApiDependencies),
+        Router.merge()
+        .provide(Dependencies)
+      );
       "
     `);
   });
@@ -829,8 +844,10 @@ describe("RouterVirtualModulePlugin", () => {
       import * as A from "./routes/a.js";
       import * as B from "./routes/b.js";
 
-      export default Router.match(A.route, { handler: () => Fx.succeed(A.handler) })
-        .match(B.route, { handler: () => Fx.succeed(B.handler) });
+      export default Router.merge(
+        Router.match(A.route, { handler: () => Fx.succeed(A.handler) }),
+        Router.match(B.route, { handler: () => Fx.succeed(B.handler) })
+      );
       "
     `);
   });
@@ -847,8 +864,10 @@ describe("RouterVirtualModulePlugin", () => {
       import * as A from "./routes/a.js";
       import * as B from "./routes/b.js";
 
-      export default Router.match(A.route, { handler: () => Fx.succeed(A.handler) })
-        .match(B.route, { handler: () => Fx.succeed(B.handler) });
+      export default Router.merge(
+        Router.match(A.route, { handler: () => Fx.succeed(A.handler) }),
+        Router.match(B.route, { handler: () => Fx.succeed(B.handler) })
+      );
       "
     `);
   });

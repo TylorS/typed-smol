@@ -6,27 +6,9 @@ settings:
 
 catalogs:
   default:
-    '@effect/platform-node':
-      specifier: 4.0.0-beta.4
-      version: 4.0.0-beta.4
     effect:
       specifier: 4.0.0-beta.4
       version: 4.0.0-beta.4
-    happy-dom:
-      specifier: '*'
-      version: 20.6.3
-    oxfmt:
-      specifier: 0.33.0
-      version: 0.33.0
-    oxlint:
-      specifier: 1.48.0
-      version: 1.48.0
-    typescript:
-      specifier: 5.9.3
-      version: 5.9.3
-    vitest:
-      specifier: 4.0.18
-      version: 4.0.18
 
 importers:
 
@@ -339,6 +321,28 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.0.18(@types/node@25.3.0)(happy-dom@20.6.3)(yaml@2.8.2)
+
+  packages/virtual-modules-ts-plugin/sample-project:
+    dependencies:
+      '@typed/app':
+        specifier: workspace:*
+        version: link:../../app
+      '@typed/router':
+        specifier: workspace:*
+        version: link:../../router
+      '@typed/virtual-modules-ts-plugin':
+        specifier: file:..
+        version: file:packages/virtual-modules-ts-plugin(typescript@5.9.3)
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.4
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+    devDependencies:
+      esbuild:
+        specifier: ^0.24.2
+        version: 0.24.2
 
   packages/virtual-modules-vite:
     dependencies:
@@ -1276,6 +1280,11 @@ packages:
     resolution: {integrity: sha512-xkNdrHnow25tNOuUpUxXyTnkIO14XUW35PYbTiypOLNqCoFLPEOUlrj7PkCdJKm0NW6DR0kbG/LzBUCso+VkIA==}
     engines: {node: '>=0.10.0', npm: '>2.7.0'}
     os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+
+  '@typed/virtual-modules-ts-plugin@file:packages/virtual-modules-ts-plugin':
+    resolution: {directory: packages/virtual-modules-ts-plugin, type: directory}
+    peerDependencies:
+      typescript: '>=5.0.0'
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -2673,6 +2682,11 @@ snapshots:
     dependencies:
       '@stdlib/utils-constructor-name': 0.1.1
       '@stdlib/utils-global': 0.1.1
+
+  '@typed/virtual-modules-ts-plugin@file:packages/virtual-modules-ts-plugin(typescript@5.9.3)':
+    dependencies:
+      '@typed/virtual-modules': link:packages/virtual-modules
+      typescript: 5.9.3
 
   '@types/chai@5.2.3':
     dependencies:

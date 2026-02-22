@@ -6,20 +6,36 @@
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll } from "vitest";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const sampleProjectDir = join(__dirname, "..", "sample-project");
 const vmcCliPath = join(__dirname, "..", "..", "virtual-modules-compiler", "dist", "cli.js");
 
 describe("sample-project integration", () => {
+  beforeAll(() => {
+    const build = spawnSync("pnpm", ["run", "build:plugins"], {
+      cwd: sampleProjectDir,
+      encoding: "utf8",
+      timeout: 15_000,
+    });
+    if (build.status !== 0) {
+      throw new Error(`build:plugins failed: ${build.stderr || build.stdout}`);
+    }
+  });
+
   it("vmc --noEmit passes (mirrors tsc with virtual modules)", () => {
-    const result = spawnSync("node", [vmcCliPath, "--noEmit"], {
+    // Use entry-only tsconfig so virtual:foo is resolved via vmc.config.js plugins.
+    // Full project typecheck (including router:routes) is done via scripts/typecheck-with-plugin.mjs.
+    const result = spawnSync("node", [vmcCliPath, "--noEmit", "-p", "tsconfig.vmc.json"], {
       cwd: sampleProjectDir,
       encoding: "utf8",
       timeout: 10_000,
     });
-    expect(result.status).toBe(0);
+    if (result.status !== 0) {
+      const out = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
+      expect.fail(`vmc --noEmit failed (exit ${result.status}):\n${out || "(no output)"}`);
+    }
     expect(result.stderr).toBe("");
   });
 });

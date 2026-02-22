@@ -66,7 +66,7 @@ export const value: Foo = { n: 1 };
 
     expect(diagnostics).toHaveLength(0);
     expect(
-      program.getSourceFiles().some((sourceFile) => sourceFile.fileName.includes(".typed/virtual")),
+      program.getSourceFiles().some((sourceFile) => sourceFile.fileName.includes("typed-virtual://")),
     ).toBe(true);
 
     adapter.dispose();
@@ -124,7 +124,7 @@ export const value: Foo = { n: 1 };
     const program1 = ts.createProgram([entry1, entry2], compilerOptions, host);
     const virtualFooFile = program1
       .getSourceFiles()
-      .find((sf) => sf.fileName.includes(".typed/virtual") && sf.fileName.includes("virtual-foo"));
+      .find((sf) => sf.fileName.includes("typed-virtual://") && sf.fileName.includes("virtual-foo"));
     expect(virtualFooFile).toBeDefined();
     const virtualFooFileName = virtualFooFile!.fileName;
 
@@ -169,7 +169,7 @@ export const value: Foo = { n: 1 };
     const program = ts.createProgram([entry], compilerOptions, host);
     const virtualFile = program
       .getSourceFiles()
-      .find((sf) => sf.fileName.includes(".typed/virtual"));
+      .find((sf) => sf.fileName.includes("typed-virtual://"));
     expect(virtualFile).toBeDefined();
     const virtualFileName = virtualFile!.fileName;
 

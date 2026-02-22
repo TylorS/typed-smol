@@ -248,6 +248,18 @@ const serializeTypeNode = (
     return array;
   }
 
+  const referenceArguments = checker.getTypeArguments(type as ts.TypeReference);
+  if (referenceArguments.length > 0) {
+    const ref: ReferenceTypeNode = {
+      kind: "reference",
+      text,
+      typeArguments: referenceArguments.map((value) =>
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+      ),
+    };
+    return ref;
+  }
+
   const callSignatures = checker.getSignaturesOfType(type, tsMod.SignatureKind.Call);
   if (callSignatures.length > 0) {
     const signature = serializeFunctionSignature(
@@ -265,18 +277,6 @@ const serializeTypeNode = (
       returnType: signature.returnType,
     };
     return fn;
-  }
-
-  const referenceArguments = checker.getTypeArguments(type as ts.TypeReference);
-  if (referenceArguments.length > 0) {
-    const ref: ReferenceTypeNode = {
-      kind: "reference",
-      text,
-      typeArguments: referenceArguments.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
-      ),
-    };
-    return ref;
   }
 
   const object: ObjectTypeNode = {

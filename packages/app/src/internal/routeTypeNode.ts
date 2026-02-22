@@ -62,14 +62,10 @@ export function typeNodeToRuntimeKind(node: TypeNode): RuntimeKind {
   return runtimeKindFromNode(root);
 }
 
-/**
- * True iff the type node is a function whose return type is structurally Effect<Option<*>, *, *>.
- * Used to validate guard exports.
- */
-export function typeNodeIsEffectOptionReturn(node: TypeNode): boolean {
-  const returnType = node.kind === "function" ? (node as FunctionTypeNode).returnType : node;
-  if (returnType.kind !== "reference") return false;
-  const ref = returnType as ReferenceTypeNode;
+/** True iff a single type node is a reference to Effect<Option<*>, *, *>. */
+function typeNodeIsEffectOptionRef(node: TypeNode): boolean {
+  if (node.kind !== "reference") return false;
+  const ref = node as ReferenceTypeNode;
   const name = getReferenceTypeName(ref.text);
   if (name !== "Effect") return false;
   const args = ref.typeArguments;
@@ -78,4 +74,18 @@ export function typeNodeIsEffectOptionReturn(node: TypeNode): boolean {
   if (first.kind !== "reference") return false;
   const optionName = getReferenceTypeName((first as ReferenceTypeNode).text);
   return optionName === "Option";
+}
+
+/**
+ * True iff the type node is a function whose return type is structurally Effect<Option<*>, *, *>.
+ * Used to validate guard exports. Recurses into union/intersection so Pipeable & Effect<Option<...>> is accepted.
+ */
+export function typeNodeIsEffectOptionReturn(node: TypeNode): boolean {
+  const returnType = node.kind === "function" ? (node as FunctionTypeNode).returnType : node;
+  if (typeNodeIsEffectOptionRef(returnType)) return true;
+  if (returnType.kind === "union")
+    return (returnType as UnionTypeNode).elements.some(typeNodeIsEffectOptionReturn);
+  if (returnType.kind === "intersection")
+    return (returnType as IntersectionTypeNode).elements.some(typeNodeIsEffectOptionReturn);
+  return false;
 }
