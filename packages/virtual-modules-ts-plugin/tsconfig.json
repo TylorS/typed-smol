@@ -10,5 +10,10 @@
     "declarationMap": true
   },
   "include": ["src"],
-  "exclude": ["**/*.test.ts"]
+  "exclude": ["**/*.test.ts"],
+  "references": [
+    {
+      "path": "../virtual-modules"
+    }
+  ]
 }

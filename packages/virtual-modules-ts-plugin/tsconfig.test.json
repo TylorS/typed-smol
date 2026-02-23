@@ -6,5 +6,10 @@
     "noEmit": true
   },
   "include": ["src/**/*.test.ts"],
-  "exclude": []
+  "exclude": [],
+  "references": [
+    {
+      "path": "../virtual-modules"
+    }
+  ]
 }

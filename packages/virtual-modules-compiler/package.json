@@ -15,7 +15,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {

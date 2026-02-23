@@ -18,7 +18,6 @@ import { type Uuid5, uuid5, Uuid5Namespace } from "./Uuid5.js";
 import type { Uuid7 } from "./Uuid7.js";
 import { uuid7, Uuid7State } from "./Uuid7.js";
 import { TestClock } from "effect/testing";
-import { withSeed } from "effect/Random";
 
 export class Ids extends ServiceMap.Service<Ids>()("@typed/id/Ids", {
   make: Effect.gen(function* () {

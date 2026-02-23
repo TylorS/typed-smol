@@ -6,5 +6,10 @@
     "types": ["node"]
   },
   "include": ["src"],
-  "exclude": ["**/*.test.ts", "**/*.integration.test.ts"]
+  "exclude": ["**/*.test.ts", "**/*.integration.test.ts"],
+  "references": [
+    {
+      "path": "../virtual-modules"
+    }
+  ]
 }

@@ -12,13 +12,14 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@typed/virtual-modules": "workspace:*"
   },
   "devDependencies": {
+    "@typed/virtual-modules": "workspace:*",
     "@types/node": "^25.3.0",
     "typescript": "catalog:",
     "vite": "^7.3.1",

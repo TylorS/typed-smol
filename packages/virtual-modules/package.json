@@ -16,8 +16,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist",
+    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage"
   },

@@ -2,7 +2,7 @@
   "name": "typed-smol",
   "private": true,
   "scripts": {
-    "build": "tsc -b && pnpm -r build",
+    "build": "pnpm -r build && tsc -b",
     "lint": "oxlint",
     "format": "oxfmt",
     "test": "pnpm -r run test"
