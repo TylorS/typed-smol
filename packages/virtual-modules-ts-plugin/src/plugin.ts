@@ -25,7 +25,8 @@ import {
   loadResolverFromVmcConfig,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import ts, { DirectoryWatcherCallback, FileWatcherCallback } from "typescript";
 import type { PluginCreateInfo } from "./types.js";
 
@@ -38,6 +39,47 @@ type LoadedVirtualResolver = import(
   "@typed/virtual-modules",
   { with: { "resolution-mode": "import" } }
 ).VirtualModuleResolver;
+
+function findTsconfig(fromDir: string): string | undefined {
+  let dir = resolve(fromDir);
+  const root = resolve(dir, "/");
+  while (dir !== root) {
+    const candidate = join(dir, "tsconfig.json");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return undefined;
+}
+
+function createFallbackProgram(
+  tsMod: typeof import("typescript"),
+  projectRoot: string,
+): import("typescript").Program | undefined {
+  const tsconfigPath = findTsconfig(projectRoot);
+  if (!tsconfigPath) return undefined;
+  try {
+    const configFile = tsMod.readConfigFile(tsconfigPath, tsMod.sys.readFile);
+    if (configFile.error) return undefined;
+    const configDir = dirname(tsconfigPath);
+    const parsed = tsMod.parseJsonConfigFileContent(
+      configFile.config,
+      tsMod.sys,
+      configDir,
+      undefined,
+      tsconfigPath,
+    );
+    if (parsed.errors.length > 0) return undefined;
+    return tsMod.createProgram(
+      parsed.fileNames,
+      parsed.options,
+      tsMod.createCompilerHost(parsed.options),
+    );
+  } catch {
+    return undefined;
+  }
+}
 
 function init(modules: { typescript: typeof import("typescript") }): {
   create: (info: PluginCreateInfo) => import("typescript").LanguageService;
@@ -122,6 +164,20 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
     logger?.info?.(`[@typed/virtual-modules-ts-plugin] Virtual module resolver initialized`);
 
+    let cachedFallbackProgram: ts.Program | undefined;
+
+    const getProgramForTypeInfo = (): ts.Program | undefined => {
+      const fromLS = info.languageService.getProgram();
+      if (fromLS !== undefined) return fromLS;
+      const projectLike = info.project as { getProgram?: () => ts.Program };
+      const fromProject = projectLike.getProgram?.();
+      if (fromProject !== undefined) return fromProject;
+      if (cachedFallbackProgram !== undefined) return cachedFallbackProgram;
+      const fallback = createFallbackProgram(ts, projectRoot);
+      if (fallback !== undefined) cachedFallbackProgram = fallback;
+      return fallback;
+    };
+
     const createTypeInfoApiSessionFactory = ({
       id: _id,
       importer: _importer,
@@ -134,7 +190,15 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
       const getSession = () => {
         if (session) return session;
-        const program = info.languageService.getProgram()!;
+        const program = getProgramForTypeInfo();
+        if (program === undefined) {
+          logger?.info?.(
+            "[@typed/virtual-modules-ts-plugin] Program unavailable at boot; cannot create TypeInfo session. Virtual modules requiring type info (e.g. router) will retry when program is ready.",
+          );
+          throw new Error(
+            "TypeInfo session creation failed: Program not yet available. Retry when project is loaded.",
+          );
+        }
         session = createTypeInfoApiSession({ ts, program });
         return session;
       };

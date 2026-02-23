@@ -249,6 +249,113 @@ export default { plugins: [plugin] };
     expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
   });
 
+  it(
+    "resolves TypeInfo-dependent virtual modules on first boot when getProgram() is initially undefined",
+    { timeout: 15_000 },
+    () => {
+      const dir = createTempDirInWorkspace();
+      writeFileSync(
+        join(dir, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            strict: true,
+            noEmit: true,
+            target: "ESNext",
+            module: "ESNext",
+            moduleResolution: "bundler",
+            skipLibCheck: true,
+          },
+        }),
+        "utf8",
+      );
+      writeFileSync(
+        join(dir, "vmc.config.ts"),
+        `const path = require("path");
+const plugin = {
+  name: "typeinfo-boot-test",
+  shouldResolve: (id) => id === "typeinfo:boot-test",
+  build: (id, importer, api) => {
+    api.directory("*.ts", { baseDir: path.dirname(importer), recursive: false });
+    return { sourceText: "export const x = 1;" };
+  },
+};
+export default { plugins: [plugin] };
+`,
+        "utf8",
+      );
+      const entryPath = join(dir, "entry.ts");
+      writeFileSync(
+        entryPath,
+        'import { x } from "typeinfo:boot-test";\nexport const value = x;\n',
+        "utf8",
+      );
+
+      const compilerOptions: ts.CompilerOptions = {
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      };
+
+      const host: ts.LanguageServiceHost & { configFilePath?: string } = {
+        getCompilationSettings: () => compilerOptions,
+        getScriptFileNames: () => [entryPath],
+        getScriptVersion: () => "1",
+        getScriptSnapshot: (fileName: string) => {
+          const content = ts.sys.readFile(fileName);
+          return content != null ? ts.ScriptSnapshot.fromString(content) : undefined;
+        },
+        getCurrentDirectory: () => dir,
+        getDefaultLibFileName: (opts) => ts.getDefaultLibFilePath(opts),
+        fileExists: (fileName) => ts.sys.fileExists(fileName),
+        readFile: (fileName) => ts.sys.readFile(fileName),
+        readDirectory: (path, extensions, exclude, include, depth) =>
+          path === dir || path.startsWith(dir + sep)
+            ? ["entry.ts", "vmc.config.ts", "tsconfig.json"]
+            : ts.sys.readDirectory(path, extensions, exclude, include, depth),
+      };
+      host.configFilePath = join(dir, "tsconfig.json");
+
+      const realLS = ts.createLanguageService(host);
+      let getProgramCallCount = 0;
+      const wrappedLS: ts.LanguageService = {
+        ...realLS,
+        getProgram: () => {
+          getProgramCallCount++;
+          if (getProgramCallCount <= 1) return undefined;
+          return realLS.getProgram();
+        },
+      };
+
+      const pluginDistPath = join(__dirname, "..", "dist", "plugin.js");
+      const init = require(pluginDistPath) as (modules: {
+        typescript: typeof import("typescript");
+      }) => {
+        create: (info: {
+          languageService: ts.LanguageService;
+          project: ts.LanguageServiceHost;
+          config?: unknown;
+        }) => ts.LanguageService;
+      };
+
+      const { create } = init({ typescript: ts });
+      const wrapped = create({
+        languageService: wrappedLS,
+        project: host,
+        config: {},
+      });
+
+      const diagnostics = wrapped.getSemanticDiagnostics(entryPath);
+      expect(diagnostics).toHaveLength(0);
+
+      const program = wrapped.getProgram();
+      expect(program).toBeDefined();
+      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
+    },
+  );
+
   it("resolves virtual modules when using attachLanguageServiceAdapter directly (adapter works)", () => {
     const dir = createTempDir();
     const entryPath = join(dir, "entry.ts");
