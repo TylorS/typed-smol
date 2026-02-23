@@ -42,8 +42,8 @@ function getTsconfig(rootDir) {
 function loadPlugins() {
   const loader = new NodeModulePluginLoader();
   const results = loader.loadMany([
-    { specifier: "./plugin.cjs", baseDir: projectRoot },
-    { specifier: "./plugins/router-plugin.cjs", baseDir: projectRoot },
+    { specifier: "./plugin.mjs", baseDir: projectRoot },
+    { specifier: "./plugins/router-plugin.mjs", baseDir: projectRoot },
   ]);
   const plugins = [];
   for (const r of results) {

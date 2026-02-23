@@ -3,25 +3,26 @@
  * TypeScript Language Service plugin that integrates @typed/virtual-modules.
  * Resolves virtual modules (e.g. virtual:foo) during editor type-checking.
  *
- * Configure in tsconfig.json:
+ * Preferred setup:
+ * 1) Define plugins/resolver in vmc.config.ts in the project root.
+ * 2) Enable this TS plugin in tsconfig.json.
+ *
+ * tsconfig.json:
  * {
  *   "compilerOptions": {
  *     "plugins": [{
  *       "name": "@typed/virtual-modules-ts-plugin",
- *       "plugins": ["./virtual/foo.cjs"],
  *       "debounceMs": 50
  *     }]
  *   }
  * }
  *
- * The "plugins" array contains specifiers (paths or package names) loaded via
- * NodeModulePluginLoader from the project root.
+ * Plugin definitions are loaded from vmc.config.ts.
  */
 import {
   attachLanguageServiceAdapter,
   createTypeInfoApiSession,
-  NodeModulePluginLoader,
-  PluginManager,
+  loadResolverFromVmcConfig,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
 import { dirname } from "node:path";
@@ -29,9 +30,14 @@ import ts, { DirectoryWatcherCallback, FileWatcherCallback } from "typescript";
 import type { PluginCreateInfo } from "./types.js";
 
 interface VirtualModulesTsPluginConfig {
-  readonly plugins?: readonly string[];
   readonly debounceMs?: number;
+  readonly vmcConfigPath?: string;
 }
+
+type LoadedVirtualResolver = import(
+  "@typed/virtual-modules",
+  { with: { "resolution-mode": "import" } }
+).VirtualModuleResolver;
 
 function init(modules: { typescript: typeof import("typescript") }): {
   create: (info: PluginCreateInfo) => import("typescript").LanguageService;
@@ -40,8 +46,6 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
   function create(info: PluginCreateInfo) {
     const config = (info.config ?? {}) as VirtualModulesTsPluginConfig;
-    const pluginSpecifiers = config.plugins ?? [];
-    const debounceMs = config.debounceMs ?? 50;
 
     const project = info.project as {
       getCurrentDirectory?: () => string;
@@ -54,40 +58,69 @@ function init(modules: { typescript: typeof import("typescript") }): {
           ? project.getCurrentDirectory()
           : process.cwd();
 
-    const loader = new NodeModulePluginLoader();
-    const loadResults = loader.loadMany(
-      pluginSpecifiers.map((spec) => ({ specifier: spec, baseDir: projectRoot })),
-    );
-
-    const plugins: import(
-      "@typed/virtual-modules",
-      { with: { "resolution-mode": "import" } }
-    ).VirtualModulePlugin[] = [];
-    for (const result of loadResults) {
-      if (result.status === "loaded") {
-        plugins.push(result.plugin);
-      } else {
-        const logger = (
-          info.project as { projectService?: { logger?: { info?: (s: string) => void } } }
-        )?.projectService?.logger;
-        logger?.info?.(
-          `[@typed/virtual-modules-ts-plugin] Failed to load plugin "${result.specifier}": ${result.message}`,
-        );
-      }
-    }
-
-    if (plugins.length === 0) {
-      return info.languageService;
-    }
-
     const logger = (
       info.project as { projectService?: { logger?: { info?: (s: string) => void } } }
     )?.projectService?.logger;
-    logger?.info?.(
-      `[@typed/virtual-modules-ts-plugin] Loaded ${plugins.length} virtual module plugin(s)`,
-    );
 
-    const resolver = new PluginManager(plugins);
+    const debounceMs =
+      typeof config.debounceMs === "number" &&
+      Number.isFinite(config.debounceMs) &&
+      config.debounceMs >= 0
+        ? config.debounceMs
+        : 50;
+    if (
+      config.debounceMs !== undefined &&
+      (typeof config.debounceMs !== "number" || !Number.isFinite(config.debounceMs))
+    ) {
+      logger?.info?.(
+        "[@typed/virtual-modules-ts-plugin] Ignoring invalid debounceMs; expected finite number",
+      );
+    }
+    const vmcConfigPath =
+      typeof config.vmcConfigPath === "string" && config.vmcConfigPath.trim().length > 0
+        ? config.vmcConfigPath
+        : undefined;
+    if (config.vmcConfigPath !== undefined && vmcConfigPath === undefined) {
+      logger?.info?.(
+        "[@typed/virtual-modules-ts-plugin] Ignoring invalid vmcConfigPath; expected non-empty string",
+      );
+    }
+
+    let resolver: LoadedVirtualResolver | undefined;
+    const loadedResolver = loadResolverFromVmcConfig({
+      projectRoot,
+      ts,
+      ...(vmcConfigPath ? { configPath: vmcConfigPath } : {}),
+    });
+    if (loadedResolver.status === "error") {
+      logger?.info?.(`[@typed/virtual-modules-ts-plugin] ${loadedResolver.message}`);
+      return info.languageService;
+    }
+
+    if (loadedResolver.status === "loaded") {
+      for (const pluginLoadError of loadedResolver.pluginLoadErrors) {
+        logger?.info?.(
+          `[@typed/virtual-modules-ts-plugin] Failed to load plugin "${pluginLoadError.specifier}": ${pluginLoadError.message}`,
+        );
+      }
+
+      resolver = loadedResolver.resolver as LoadedVirtualResolver | undefined;
+      if (!resolver) {
+        logger?.info?.(
+          `[@typed/virtual-modules-ts-plugin] ${loadedResolver.path} has no resolver/plugins`,
+        );
+        return info.languageService;
+      }
+    }
+
+    if (!resolver || loadedResolver.status === "not-found") {
+      logger?.info?.(
+        "[@typed/virtual-modules-ts-plugin] vmc.config.ts not found; virtual module resolution disabled",
+      );
+      return info.languageService;
+    }
+
+    logger?.info?.(`[@typed/virtual-modules-ts-plugin] Virtual module resolver initialized`);
 
     const createTypeInfoApiSessionFactory = ({
       id: _id,

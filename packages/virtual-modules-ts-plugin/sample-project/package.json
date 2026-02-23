@@ -2,7 +2,7 @@
   "name": "virtual-modules-ts-plugin-sample",
   "private": true,
   "scripts": {
-    "build:plugins": "node scripts/build-router-plugin.cjs",
+    "build:plugins": "node scripts/build-router-plugin.mjs",
     "vmc": "node ../../virtual-modules-compiler/dist/cli.js",
     "verify:virtual-modules": "node scripts/verify-virtual-modules.mjs",
     "typecheck": "node scripts/typecheck-with-plugin.mjs"

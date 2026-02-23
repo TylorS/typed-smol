@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   name: "sample-virtual",
   shouldResolve: (id) => id === "virtual:foo",
   build: () =>

@@ -1,7 +1,7 @@
 /**
- * Entry for bundling the router virtual module plugin to CJS.
- * Used by scripts/build-router-plugin.cjs so the sample project can load
- * the plugin via require() (NodeModulePluginLoader is sync CJS).
+ * Entry for bundling the router virtual module plugin to sync ESM.
+ * Used by scripts/build-router-plugin.mjs so the sample project can load
+ * the plugin as an ESM module without top-level await.
  */
 import { createRouterVirtualModulePlugin } from "@typed/app";
 

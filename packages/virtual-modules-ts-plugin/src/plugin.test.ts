@@ -72,8 +72,8 @@ describe("virtual-modules-ts-plugin", () => {
   it("loads plugin from disk via NodeModulePluginLoader", () => {
     const dir = createTempDirCanonical();
     writeFileSync(
-      join(dir, "test-plugin.cjs"),
-      `module.exports = {
+      join(dir, "test-plugin.mjs"),
+      `export default {
   name: "test-virtual",
   shouldResolve: (id) => id === "virtual:foo",
   build: () => "export interface Foo { n: number }"
@@ -82,7 +82,7 @@ describe("virtual-modules-ts-plugin", () => {
       "utf8",
     );
     const loader = new NodeModulePluginLoader();
-    const result = loader.load({ specifier: "./test-plugin.cjs", baseDir: dir });
+    const result = loader.load({ specifier: "./test-plugin.mjs", baseDir: dir });
     if (result.status === "error") {
       throw new Error(`Plugin load failed: ${result.message} (code: ${result.code})`);
     }
@@ -97,15 +97,20 @@ describe("virtual-modules-ts-plugin", () => {
     { timeout: 15_000 },
     () => {
       const dir = createTempDirInWorkspace();
-      const pluginPath = join(dir, "test-plugin.cjs");
+      const pluginPath = join(dir, "test-plugin.mjs");
       writeFileSync(
         pluginPath,
-        `module.exports = {
+        `export default {
   name: "test-virtual",
   shouldResolve: (id) => id === "virtual:foo",
   build: () => "export interface Foo { n: number }"
 };
 `,
+        "utf8",
+      );
+      writeFileSync(
+        join(dir, "vmc.config.ts"),
+        `export default { plugins: ["./test-plugin.mjs"] };`,
         "utf8",
       );
 
@@ -139,7 +144,7 @@ describe("virtual-modules-ts-plugin", () => {
         readFile: (fileName) => ts.sys.readFile(fileName),
         readDirectory: (path, extensions, exclude, include, depth) =>
           path === dir || path.startsWith(dir + sep)
-            ? ["entry.ts", "test-plugin.cjs"]
+            ? ["entry.ts", "test-plugin.mjs", "vmc.config.ts"]
             : ts.sys.readDirectory(path, extensions, exclude, include, depth),
       };
 
@@ -160,7 +165,7 @@ describe("virtual-modules-ts-plugin", () => {
       const wrapped = create({
         languageService,
         project: host,
-        config: { plugins: ["./test-plugin.cjs"] },
+        config: {},
       });
 
       const diagnostics = wrapped.getSemanticDiagnostics(entryPath);
@@ -171,6 +176,78 @@ describe("virtual-modules-ts-plugin", () => {
       expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
     },
   );
+
+  it("loads plugins from vmc.config.ts when tsconfig plugin list is omitted", () => {
+    const dir = createTempDirInWorkspace();
+    writeFileSync(
+      join(dir, "vmc.config.ts"),
+      `const plugin = {
+  name: "test-virtual",
+  shouldResolve: (id) => id === "virtual:foo",
+  build: () => "export interface Foo { n: number }"
+};
+
+export default { plugins: [plugin] };
+`,
+      "utf8",
+    );
+
+    const entryPath = join(dir, "entry.ts");
+    writeFileSync(
+      entryPath,
+      'import type { Foo } from "virtual:foo";\nexport const value: Foo = { n: 1 };\n',
+      "utf8",
+    );
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => compilerOptions,
+      getScriptFileNames: () => [entryPath],
+      getScriptVersion: () => "1",
+      getScriptSnapshot: (fileName: string) => {
+        const content = ts.sys.readFile(fileName);
+        return content != null ? ts.ScriptSnapshot.fromString(content) : undefined;
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (opts) => ts.getDefaultLibFilePath(opts),
+      fileExists: (fileName) => ts.sys.fileExists(fileName),
+      readFile: (fileName) => ts.sys.readFile(fileName),
+      readDirectory: (...args) => ts.sys.readDirectory(...args),
+    };
+
+    const languageService = ts.createLanguageService(host);
+    const pluginDistPath = join(__dirname, "..", "dist", "plugin.js");
+    const init = require(pluginDistPath) as (modules: {
+      typescript: typeof import("typescript");
+    }) => {
+      create: (info: {
+        languageService: ts.LanguageService;
+        project: ts.LanguageServiceHost;
+        config?: unknown;
+      }) => ts.LanguageService;
+    };
+
+    const { create } = init({ typescript: ts });
+    const wrapped = create({
+      languageService,
+      project: host,
+      config: {},
+    });
+
+    const diagnostics = wrapped.getSemanticDiagnostics(entryPath);
+    expect(diagnostics).toHaveLength(0);
+    const program = wrapped.getProgram();
+    expect(program).toBeDefined();
+    expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
+  });
 
   it("resolves virtual modules when using attachLanguageServiceAdapter directly (adapter works)", () => {
     const dir = createTempDir();

@@ -10,7 +10,18 @@ pnpm add -D @typed/virtual-modules-ts-plugin
 
 ## Configuration
 
-Add to `tsconfig.json`:
+Define your virtual module resolver/plugins in `vmc.config.ts` (project root):
+
+```ts
+// vmc.config.ts
+import { createRouterVirtualModulePlugin } from "@typed/app";
+
+export default {
+  plugins: [createRouterVirtualModulePlugin()],
+};
+```
+
+Then add the TS plugin to `tsconfig.json`:
 
 ```json
 {
@@ -18,7 +29,6 @@ Add to `tsconfig.json`:
     "plugins": [
       {
         "name": "@typed/virtual-modules-ts-plugin",
-        "plugins": ["./virtual/foo.cjs"],
         "debounceMs": 50
       }
     ]
@@ -30,16 +40,16 @@ Add to `tsconfig.json`:
 
 | Option       | Type       | Default | Description                                                                                                            |
 | ------------ | ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `plugins`    | `string[]` | `[]`    | Specifiers (paths or package names) for virtual module plugins. Loaded from project root via `NodeModulePluginLoader`. |
+| `vmcConfigPath` | `string` | `"vmc.config.ts"` (auto-discovered) | Optional explicit path to vmc config, relative to project root. |
 | `debounceMs` | `number`   | `50`    | Debounce rapid watch events (ms).                                                                                      |
 
 ## Plugin format
 
-Each plugin specifier must resolve to a CommonJS module exporting a `VirtualModulePlugin`:
+Plugin modules referenced from `vmc.config.ts` can be synchronous ESM modules (no top-level await):
 
 ```js
-// virtual/foo.cjs
-module.exports = {
+// virtual/foo.mjs
+export default {
   name: "foo",
   shouldResolve: (id) => id === "virtual:foo",
   build: () => "export interface Foo { n: number }",

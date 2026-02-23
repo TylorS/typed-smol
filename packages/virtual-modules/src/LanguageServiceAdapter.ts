@@ -16,7 +16,6 @@ import { Mutable } from "effect/Types";
 
 /** Prefix VSCode uses when sending non-file URIs to tsserver (query params are dropped). */
 const IN_MEMORY_RESOURCE_PREFIX = "^";
-const EMPTY_AUTHORITY = "ts-nul-authority";
 
 /** Schemes used by VSCode extension for virtual module preview docs. */
 const PREVIEW_SCHEMES = ["virtual-module", VIRTUAL_MODULE_URI_SCHEME] as const;
@@ -62,7 +61,7 @@ function tryParsePathBasedFromTsServer(fileName: string): { virtualPath: string 
   const rest = fileName.slice(IN_MEMORY_RESOURCE_PREFIX.length);
   const parts = rest.split("/");
   if (parts.length < 4) return undefined;
-  const [scheme, authority] = [parts[1], parts[2]];
+  const [scheme] = [parts[1], parts[2]];
   if (!PREVIEW_SCHEMES.includes(scheme as (typeof PREVIEW_SCHEMES)[number])) return undefined;
   const path = "/" + parts.slice(3).join("/");
   if (!path.includes("__virtual_")) return undefined;

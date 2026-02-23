@@ -28,13 +28,11 @@ vmc --build
 
 ## Configuration
 
-Place a `vmc.config.js`, `vmc.config.mjs`, or `vmc.config.cjs` in your project root to configure virtual module plugins:
+Place a `vmc.config.ts` in your project root (preferred) to configure virtual module plugins:
 
-```js
-// vmc.config.js
-const { PluginManager } = require("@typed/virtual-modules");
-
-module.exports = {
+```ts
+// vmc.config.ts
+export default {
   plugins: [
     {
       name: "virtual-types",
@@ -48,10 +46,20 @@ module.exports = {
 };
 ```
 
+You can also provide plugin module specifiers (including sync ESM modules):
+
+```ts
+export default {
+  plugins: ["./plugins/virtual-types.mjs"],
+};
+```
+
+`vmc` plugin modules must be synchronous (no top-level await).
+
 Or provide a custom resolver:
 
-```js
-module.exports = {
+```ts
+export default {
   resolver: myCustomResolver,
 };
 ```

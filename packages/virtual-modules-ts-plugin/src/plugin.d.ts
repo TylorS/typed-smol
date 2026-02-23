@@ -1,8 +1,8 @@
 import type * as ts from "typescript";
 
 interface VirtualModulesTsPluginConfig {
-  readonly plugins?: readonly string[];
   readonly debounceMs?: number;
+  readonly vmcConfigPath?: string;
 }
 
 declare function init(modules: { typescript: typeof import("typescript") }): {

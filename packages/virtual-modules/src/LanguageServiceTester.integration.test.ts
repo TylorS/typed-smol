@@ -206,8 +206,8 @@ describe("Virtual modules with real TypeScript", () => {
     () => {
       const dir = createTempDir();
       writeFileSync(
-        join(dir, "plugin.cjs"),
-        `module.exports = {
+        join(dir, "plugin.mjs"),
+        `export default {
   name: "virtual",
   shouldResolve: (id) => id === "virtual:foo",
   build: () => "export interface Foo { n: number }"
@@ -221,7 +221,7 @@ describe("Virtual modules with real TypeScript", () => {
       );
 
       const loader = new NodeModulePluginLoader();
-      const loadResult = loader.load({ specifier: "./plugin.cjs", baseDir: dir });
+      const loadResult = loader.load({ specifier: "./plugin.mjs", baseDir: dir });
       expect(loadResult.status).toBe("loaded");
       if (loadResult.status !== "loaded") return;
 

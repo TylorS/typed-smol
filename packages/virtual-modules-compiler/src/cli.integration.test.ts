@@ -47,7 +47,7 @@ function runVmc(
 }
 
 describe("vmc CLI integration", () => {
-  it("compiles project with virtual modules via vmc.config.js", () => {
+  it("compiles project with virtual modules via vmc.config.ts", () => {
     const dir = createTempDir();
     const srcDir = join(dir, "src");
     mkdirSync(srcDir, { recursive: true });
@@ -68,8 +68,8 @@ describe("vmc CLI integration", () => {
       "utf8",
     );
     writeFileSync(
-      join(dir, "vmc.config.js"),
-      `module.exports = {
+      join(dir, "vmc.config.ts"),
+      `export default {
   plugins: [{
     name: "virtual",
     shouldResolve: (id) => id === "virtual:foo",
@@ -111,8 +111,8 @@ describe("vmc CLI integration", () => {
       "utf8",
     );
     writeFileSync(
-      join(dir, "vmc.config.js"),
-      `module.exports = {
+      join(dir, "vmc.config.ts"),
+      `export default {
   plugins: [{
     name: "virtual",
     shouldResolve: (id) => id === "virtual:foo",

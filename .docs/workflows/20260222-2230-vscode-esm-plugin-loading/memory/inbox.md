@@ -1,0 +1,5 @@
+- VS Code resolver regression root cause: config source drift (tsconfig plugin list vs vmc config migration).
+- vmc config parity pattern should be shared across compiler, ts plugin, and VS Code extension paths.
+- Legacy tsconfig plugin list fallback still needed for older repos and incremental migration.
+- Shared bootstrap now lives in `packages/virtual-modules/src/VmcResolverLoader.ts`; consumer-specific behavior should be expressed only in post-load handling, not duplicated bootstrap code.
+- Validation sequence guardrail: when adding new exports in `@typed/virtual-modules`, rebuild that package before testing dependent packages that bundle from `dist`.

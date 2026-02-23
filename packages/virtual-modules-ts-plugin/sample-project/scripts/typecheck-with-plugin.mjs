@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   attachCompilerHostAdapter,
   createTypeInfoApiSession,
+  loadVmcConfig,
   NodeModulePluginLoader,
   PluginManager,
 } from "@typed/virtual-modules";
@@ -37,18 +38,39 @@ function getTsconfig(rootDir) {
   return { fileNames: parsed.fileNames, options: parsed.options };
 }
 
-function loadPlugins() {
-  const loader = new NodeModulePluginLoader();
-  const results = loader.loadMany([
-    { specifier: "./plugin.cjs", baseDir: projectRoot },
-    { specifier: "./plugins/router-plugin.cjs", baseDir: projectRoot },
-  ]);
-  const plugins = [];
-  for (const r of results) {
-    if (r.status === "loaded") plugins.push(r.plugin);
-    else console.error("Plugin load failed:", r.specifier, r.message);
+function loadResolver(rootDir) {
+  const loaded = loadVmcConfig({ projectRoot: rootDir, ts });
+  if (loaded.status === "not-found") {
+    throw new Error("vmc config not found. Expected vmc.config.ts in the project root.");
   }
-  return plugins;
+  if (loaded.status === "error") {
+    throw new Error(loaded.message);
+  }
+  if (loaded.config.resolver) {
+    return loaded.config.resolver;
+  }
+
+  const pluginEntries = loaded.config.plugins ?? [];
+  const baseDir = dirname(loaded.path);
+  const loader = new NodeModulePluginLoader();
+  const plugins = [];
+  for (const entry of pluginEntries) {
+    if (typeof entry === "string") {
+      const result = loader.load({ specifier: entry, baseDir });
+      if (result.status === "loaded") {
+        plugins.push(result.plugin);
+      } else {
+        throw new Error(`Plugin load failed (${entry}): ${result.message}`);
+      }
+    } else {
+      plugins.push(entry);
+    }
+  }
+  if (plugins.length === 0) {
+    throw new Error("No plugins found in vmc config.");
+  }
+
+  return new PluginManager(plugins);
 }
 
 const { fileNames, options } = getTsconfig(projectRoot);
@@ -57,13 +79,16 @@ const innerProgram = ts.createProgram(fileNames, options, innerHost);
 const createTypeInfoApiSessionFactory = () =>
   createTypeInfoApiSession({ ts, program: innerProgram });
 
-const plugins = loadPlugins();
-if (plugins.length === 0) {
-  console.error("No plugins loaded. Run pnpm build:plugins first.");
-  process.exit(1);
-}
+const resolver = (() => {
+  try {
+    return loadResolver(projectRoot);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    process.exit(1);
+  }
+})();
 
-const resolver = new PluginManager(plugins);
 const outerHost = ts.createCompilerHost(options);
 attachCompilerHostAdapter({
   ts,

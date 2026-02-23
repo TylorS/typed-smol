@@ -5,10 +5,11 @@ import {
   createTypeInfoApiSession,
   createVirtualFileName,
   createVirtualKey,
-  NodeModulePluginLoader,
+  loadPluginsFromEntries,
+  loadResolverFromVmcConfig,
   PluginManager,
 } from "@typed/virtual-modules";
-import type { VirtualModulePlugin } from "@typed/virtual-modules";
+import type { VirtualModuleResolver } from "@typed/virtual-modules";
 
 const TSPLUGIN_NAME = "@typed/virtual-modules-ts-plugin";
 
@@ -16,6 +17,7 @@ interface TsPluginConfig {
   name?: string;
   plugins?: readonly string[];
   debounceMs?: number;
+  vmcConfigPath?: string;
 }
 
 export interface ResolverResult {
@@ -70,6 +72,13 @@ function getPluginConfig(tsconfigPath: string): TsPluginConfig | undefined {
   }
 }
 
+function getVmcConfigPath(config: TsPluginConfig | undefined): string | undefined {
+  const vmcConfigPath = config?.vmcConfigPath;
+  return typeof vmcConfigPath === "string" && vmcConfigPath.trim().length > 0
+    ? vmcConfigPath.trim()
+    : undefined;
+}
+
 export const programCache = new Map<string, ts.Program>();
 
 /**
@@ -120,7 +129,7 @@ function getProgramForProject(projectRoot: string): ts.Program | undefined {
 
 /**
  * Create a resolver for a workspace folder.
- * Loads plugins from tsconfig and returns a resolve function.
+ * Prefers vmc config loading, with legacy tsconfig plugin fallback.
  */
 export function createResolver(projectRoot: string): {
   resolve: (id: string, importer: string) => ResolverResult | undefined;
@@ -128,38 +137,40 @@ export function createResolver(projectRoot: string): {
   clearProgramCache: () => void;
 } {
   const tsconfigPath = findTsconfig(projectRoot);
-  const config = tsconfigPath ? getPluginConfig(tsconfigPath) : undefined;
-  const pluginSpecifiers = config?.plugins ?? [];
+  const tsPluginConfig = tsconfigPath ? getPluginConfig(tsconfigPath) : undefined;
+  const vmcConfigPath = getVmcConfigPath(tsPluginConfig);
+  const legacyPluginSpecifiers = tsPluginConfig?.plugins ?? [];
 
-  if (pluginSpecifiers.length === 0) {
-    return {
-      resolve: () => undefined,
-      getPluginSpecifiers: () => [],
-      clearProgramCache: () => {},
-    };
+  let resolver: VirtualModuleResolver | undefined;
+  let pluginSpecifiers: readonly string[] = [];
+
+  const loadedResolver = loadResolverFromVmcConfig({
+    projectRoot,
+    ts,
+    ...(vmcConfigPath ? { configPath: vmcConfigPath } : {}),
+  });
+
+  if (loadedResolver.status === "loaded") {
+    resolver = loadedResolver.resolver;
+    pluginSpecifiers = loadedResolver.pluginSpecifiers;
   }
 
-  const loader = new NodeModulePluginLoader();
-  const loadResults = loader.loadMany(
-    pluginSpecifiers.map((spec) => ({ specifier: spec, baseDir: projectRoot })),
-  );
-
-  const plugins: VirtualModulePlugin[] = [];
-  for (const result of loadResults) {
-    if (result.status === "loaded") {
-      plugins.push(result.plugin);
+  // Backward-compatible fallback for legacy tsconfig plugin-specifier lists.
+  if (!resolver && legacyPluginSpecifiers.length > 0) {
+    const plugins = loadPluginsFromEntries(legacyPluginSpecifiers, projectRoot).plugins;
+    pluginSpecifiers = legacyPluginSpecifiers;
+    if (plugins.length > 0) {
+      resolver = new PluginManager(plugins);
     }
   }
 
-  if (plugins.length === 0) {
+  if (!resolver) {
     return {
       resolve: () => undefined,
       getPluginSpecifiers: () => pluginSpecifiers,
       clearProgramCache: () => {},
     };
   }
-
-  const resolver = new PluginManager(plugins);
 
   return {
     resolve(id: string, importer: string): ResolverResult | undefined {

@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { runInThisContext } from "node:vm";
 import type {
   NodeModulePluginLoadError,
   NodeModulePluginLoadInput,
@@ -85,6 +87,11 @@ const invalidRequestError = (message: string): NodeModulePluginLoadError => ({
   message,
 });
 
+const getErrorCode = (error: unknown): string | undefined =>
+  typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code)
+    : undefined;
+
 export class NodeModulePluginLoader {
   load(input: NodeModulePluginLoadInput): NodeModulePluginLoadResult {
     if (isPluginLike(input)) {
@@ -129,33 +136,109 @@ export class NodeModulePluginLoader {
       );
     }
 
+    let mod: unknown;
     try {
-      const mod = require(resolvedPath) as unknown;
-      const normalizedPlugin = this.#normalizeModuleExport(mod);
-      if (!normalizedPlugin) {
-        return invalidPluginError(
+      mod = require(resolvedPath) as unknown;
+    } catch (error) {
+      const errorCode = getErrorCode(error);
+      if (errorCode === "ERR_REQUIRE_ASYNC_MODULE") {
+        return loadFailedError(
           request,
           sanitizeErrorMessage(
-            `Resolved module "${resolvedPath}" does not export a valid VirtualModulePlugin`,
+            `Could not load plugin module "${resolvedPath}": plugin module uses top-level await and cannot be loaded synchronously`,
           ),
         );
       }
+      if (errorCode === "ERR_REQUIRE_ESM") {
+        const esmFallback = this.#loadSyncEsmModule(resolvedPath, require);
+        if (esmFallback.status === "loaded") {
+          mod = esmFallback.moduleExport;
+        } else {
+          return loadFailedError(request, esmFallback.message);
+        }
+      } else {
+        return loadFailedError(
+          request,
+          `Could not load plugin module "${resolvedPath}": ${sanitizeErrorMessage(toMessage(error))}`,
+        );
+      }
+    }
 
-      return {
-        status: "loaded",
-        plugin: normalizedPlugin,
-        resolvedPath,
-      };
-    } catch (error) {
-      return loadFailedError(
+    const normalizedPlugin = this.#normalizeModuleExport(mod);
+    if (!normalizedPlugin) {
+      return invalidPluginError(
         request,
-        `Could not load plugin module "${resolvedPath}": ${sanitizeErrorMessage(toMessage(error))}`,
+        sanitizeErrorMessage(
+          `Resolved module "${resolvedPath}" does not export a valid VirtualModulePlugin`,
+        ),
       );
     }
+
+    return {
+      status: "loaded",
+      plugin: normalizedPlugin,
+      resolvedPath,
+    };
   }
 
   loadMany(inputs: readonly NodeModulePluginLoadInput[]): readonly NodeModulePluginLoadResult[] {
     return inputs.map((input) => this.load(input));
+  }
+
+  #loadSyncEsmModule(
+    resolvedPath: string,
+    localRequire: NodeJS.Require,
+  ):
+    | { readonly status: "loaded"; readonly moduleExport: unknown }
+    | { readonly status: "error"; readonly message: string } {
+    let tsMod: typeof import("typescript");
+    try {
+      tsMod = localRequire("typescript") as typeof import("typescript");
+    } catch (error) {
+      return loadFailedError(
+        { specifier: resolvedPath, baseDir: dirname(resolvedPath) },
+        sanitizeErrorMessage(
+          `Could not load sync ESM plugin "${resolvedPath}": failed to load TypeScript for transpilation: ${toMessage(error)}`,
+        ),
+      );
+    }
+
+    try {
+      const sourceText = readFileSync(resolvedPath, "utf8");
+      const transpiled = tsMod.transpileModule(sourceText, {
+        fileName: resolvedPath,
+        compilerOptions: {
+          module: tsMod.ModuleKind.CommonJS,
+          target: tsMod.ScriptTarget.ES2020,
+          moduleResolution: tsMod.ModuleResolutionKind.NodeNext,
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+        },
+        reportDiagnostics: false,
+      }).outputText;
+
+      const module = { exports: {} as unknown };
+      const evaluate = runInThisContext(
+        `(function (exports, require, module, __filename, __dirname) {${transpiled}\n})`,
+        { filename: resolvedPath },
+      ) as (
+        exportsObject: unknown,
+        requireFn: NodeJS.Require,
+        moduleObject: { exports: unknown },
+        filename: string,
+        dirname: string,
+      ) => void;
+      evaluate(module.exports, localRequire, module, resolvedPath, dirname(resolvedPath));
+
+      return { status: "loaded", moduleExport: module.exports };
+    } catch (error) {
+      return {
+        status: "error",
+        message: sanitizeErrorMessage(
+          `Could not load sync ESM plugin "${resolvedPath}": ${toMessage(error)}`,
+        ),
+      };
+    }
   }
 
   #normalizeModuleExport(mod: unknown): VirtualModulePlugin | undefined {
