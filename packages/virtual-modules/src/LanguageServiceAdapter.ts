@@ -35,21 +35,22 @@ function parsePreviewUri(
   if (!fileName.includes("://")) return undefined;
   try {
     const url = new URL(fileName);
-    if (!PREVIEW_SCHEMES.includes(url.protocol.replace(":", "") as (typeof PREVIEW_SCHEMES)[number]))
+    if (
+      !PREVIEW_SCHEMES.includes(url.protocol.replace(":", "") as (typeof PREVIEW_SCHEMES)[number])
+    )
       return undefined;
     const id = url.searchParams.get("id");
     const importerRaw = url.searchParams.get("importer");
     if (!id || !importerRaw) return undefined;
-    const importer =
-      importerRaw.startsWith("file:")
-        ? (() => {
-            try {
-              return fileURLToPath(importerRaw);
-            } catch {
-              return importerRaw;
-            }
-          })()
-        : importerRaw;
+    const importer = importerRaw.startsWith("file:")
+      ? (() => {
+          try {
+            return fileURLToPath(importerRaw);
+          } catch {
+            return importerRaw;
+          }
+        })()
+      : importerRaw;
     return { id, importer };
   } catch {
     return undefined;
@@ -290,6 +291,7 @@ export const attachLanguageServiceAdapter = (
           );
 
       let hadVirtualError = false;
+      let hadUnresolvedVirtual = false;
       const results = moduleNames.map((moduleName, index) => {
         const resolved = getOrBuildRecord(moduleName, importerForVirtual);
         if (resolved.status === "resolved") {
@@ -305,10 +307,14 @@ export const attachLanguageServiceAdapter = (
           }
         }
 
+        if (resolved.status === "unresolved" && moduleName.includes(":")) {
+          hadUnresolvedVirtual = true;
+        }
+
         return fallback[index];
       });
 
-      if (hadVirtualError && !pendingRetry) {
+      if ((hadVirtualError || hadUnresolvedVirtual) && !pendingRetry) {
         pendingRetry = true;
         epoch += 1;
       }
@@ -327,9 +333,6 @@ export const attachLanguageServiceAdapter = (
     containingSourceFile: ts.SourceFile | undefined,
     reusedNames?: readonly { readonly text: string }[],
   ): readonly ts.ResolvedModuleWithFailedLookupLocations[] => {
-    // #region agent log
-    fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:resolveModuleNameLiterals:entry',message:'resolveModuleNameLiterals called',data:{hypothesisId:'H3',moduleNames:moduleLiterals.map(m=>m.text),inResolution,inResolveRecord,containingFile},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (inResolution) {
       if (inResolveRecord) {
         const diagnostic = toTsDiagnostic(
@@ -383,11 +386,9 @@ export const attachLanguageServiceAdapter = (
             }));
 
       let hadVirtualError = false;
+      let hadUnresolvedVirtual = false;
       const results = moduleLiterals.map((moduleLiteral, index) => {
         const resolved = getOrBuildRecord(moduleLiteral.text, importerForVirtual);
-        // #region agent log
-        fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:resolveModuleNameLiterals',message:'resolution result',data:{hypothesisId:'H2',moduleName:moduleLiteral.text,status:resolved.status,diagnostic:resolved.status==='error'?(resolved as any).diagnostic:undefined,virtualFile:resolved.status==='resolved'?(resolved as any).record.virtualFileName:undefined,containingFile},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (resolved.status === "resolved") {
           pendingRetry = false;
           return {
@@ -403,15 +404,16 @@ export const attachLanguageServiceAdapter = (
           }
         }
 
+        if (resolved.status === "unresolved" && moduleLiteral.text.includes(":")) {
+          hadUnresolvedVirtual = true;
+        }
+
         return fallback[index];
       });
 
-      if (hadVirtualError && !pendingRetry) {
+      if ((hadVirtualError || hadUnresolvedVirtual) && !pendingRetry) {
         pendingRetry = true;
         epoch += 1;
-        // #region agent log
-        fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:resolveModuleNameLiterals:epochBump',message:'epoch bumped for retry after virtual module error',data:{hypothesisId:'H5',epoch,pendingRetry},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
       }
 
       return results;
@@ -439,9 +441,6 @@ export const attachLanguageServiceAdapter = (
     if (!record) {
       return originalGetScriptSnapshot?.(fileName);
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:getScriptSnapshot',message:'serving virtual file',data:{hypothesisId:'H4',fileName,sourceTextLen:record.sourceText.length,sourceTextPreview:record.sourceText.slice(0,200)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     const freshRecord = rebuildRecordIfNeeded(record);
 

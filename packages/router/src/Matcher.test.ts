@@ -28,6 +28,25 @@ describe("typed/router/Matcher", () => {
     void matcher;
   });
 
+  it("match with { handler, layout } returns layout output type and composes correctly", () =>
+    Effect.gen(function* () {
+      const route = Route.Parse("dashboard");
+
+      const matcher = Matcher.empty.match(route, {
+        handler: Fx.succeed(42),
+        layout: ({ content }) => Fx.map(content, (n) => `wrapped:${n}`),
+      });
+
+      const fx = Matcher.run(matcher);
+      const values = yield* Fx.collectAll(Fx.take(fx, 1));
+
+      assert.deepStrictEqual(values, ["wrapped:42"]);
+    }).pipe(
+      Effect.provide(ServerRouter({ url: "http://localhost/dashboard" })),
+      Effect.scoped,
+      Effect.runPromise,
+    ));
+
   it("matches routes and emits values as the path changes", () =>
     Effect.gen(function* () {
       const users = Route.Join(Route.Parse("users"), Route.Param("id"));

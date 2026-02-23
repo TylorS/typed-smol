@@ -455,13 +455,17 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     E2 = never,
     R2 = never,
     D extends ReadonlyArray<AnyDependency> | undefined = undefined,
+    LB = B,
+    LE2 = never,
+    LR2 = never,
+    C extends CatchHandler<any, any, any, any> | undefined = undefined,
   >(
     route: Rt,
-    options: MatchHandlerOptions<Route.Type<Rt>, B, E2, R2, D, B, never, never, undefined>,
+    options: MatchHandlerOptions<Route.Type<Rt>, B, E2, R2, D, LB, LE2, LR2, C>,
   ): Matcher<
-    A | B,
-    E | E2 | DependencyError<D extends ReadonlyArray<infer Dep> ? Dep : never>,
-    R | R2 | Scope.Scope
+    A | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, never, never>["a"],
+    E | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, never, never>["e"],
+    R | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, never, never>["r"] | Scope.Scope
   >;
   match<Rt extends Route.Any, B>(route: Rt, handler: B): Matcher<A | B, E, R | Scope.Scope>;
   match<Rt extends Route.Any, G extends GuardInput<Route.Type<Rt>, any, any, any>, B, E2, R2>(
@@ -481,14 +485,20 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     E2 = never,
     R2 = never,
     D extends ReadonlyArray<AnyDependency> | undefined = undefined,
+    LB = B,
+    LE2 = never,
+    LR2 = never,
+    C extends CatchHandler<any, any, any, any> | undefined = undefined,
   >(
     route: Rt,
     guard: G,
-    options: MatchHandlerOptions<GuardOutput<G>, B, E2, R2, D, B, never, never, undefined>,
+    options: MatchHandlerOptions<GuardOutput<G>, B, E2, R2, D, LB, LE2, LR2, C>,
   ): Matcher<
-    A | B,
-    E | E2 | GuardError<G> | DependencyError<D extends ReadonlyArray<infer Dep> ? Dep : never>,
-    R | R2 | GuardServices<G> | Scope.Scope
+    A | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GuardError<G>, GuardServices<G>>["a"],
+    E | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GuardError<G>, GuardServices<G>>["e"],
+    | R
+    | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GuardError<G>, GuardServices<G>>["r"]
+    | Scope.Scope
   >;
   match<Rt extends Route.Any, G extends GuardInput<Route.Type<Rt>, any, any, any>, B>(
     route: Rt,
@@ -501,12 +511,16 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     E2 = never,
     R2 = never,
     D extends ReadonlyArray<AnyDependency> | undefined = undefined,
+    LB = B,
+    LE2 = never,
+    LR2 = never,
+    C extends CatchHandler<any, any, any, any> | undefined = undefined,
   >(
-    options: MatchOptions<Rt, B, E2, R2, D, B, never, never, undefined>,
+    options: MatchOptions<Rt, B, E2, R2, D, LB, LE2, LR2, C>,
   ): Matcher<
-    A | B,
-    E | E2 | DependencyError<D extends ReadonlyArray<infer Dep> ? Dep : never>,
-    R | R2 | Scope.Scope
+    A | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, never, never>["a"],
+    E | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, never, never>["e"],
+    R | ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, never, never>["r"] | Scope.Scope
   >;
   match(...args: [unknown, ...Array<unknown>]): Matcher<any, any, any> {
     const parsed = parseMatchArgs(args);
