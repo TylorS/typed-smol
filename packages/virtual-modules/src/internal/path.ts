@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { posix } from "node:path";
 import type { WatchDependencyDescriptor } from "../types.js";
 
@@ -60,9 +60,10 @@ export interface CreateVirtualFileNameParams {
 }
 
 /**
- * Virtual file name for the TS program. Always returns a typed-virtual:// URI; content
- * is served by the host from memory (no disk write). Prefer passing params so the URI
- * includes id and importer in the query for resolution; when omitted, returns a URI without query.
+ * Virtual file name for the TS program. Places the virtual file adjacent to the
+ * importer so that relative imports and node_modules resolution within the
+ * generated code work correctly. Falls back to a typed-virtual:// URI when
+ * importer is not provided.
  */
 export const createVirtualFileName = (
   pluginName: string,
@@ -72,10 +73,10 @@ export const createVirtualFileName = (
   const safePluginName = sanitizeSegment(pluginName);
   const hash = stableHash(virtualKey);
   if (params) {
-    const q = new URLSearchParams({ id: params.id, importer: params.importer });
-    return `${VIRTUAL_MODULE_URI_SCHEME}://0/${safePluginName}/${hash}.d.ts?${q.toString()}`;
+    const importerDir = dirname(toPosixPath(params.importer));
+    return `${importerDir}/__virtual_${safePluginName}_${hash}.ts`;
   }
-  return `${VIRTUAL_MODULE_URI_SCHEME}://0/${safePluginName}/${hash}.d.ts`;
+  return `${VIRTUAL_MODULE_URI_SCHEME}://0/${safePluginName}/${hash}.ts`;
 };
 
 export const createWatchDescriptorKey = (descriptor: WatchDependencyDescriptor): string => {

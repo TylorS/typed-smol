@@ -1,2 +1,4 @@
-/** Directory layout for docs/* routes. */
-export const layout = <T>(x: T): T => x;
+import { Fx } from "@typed/fx";
+
+/** Directory layout for docs/* routes - passthrough. */
+export const layout = <A, E, R>({ content }: { content: Fx.Fx<A, E, R> }) => content;

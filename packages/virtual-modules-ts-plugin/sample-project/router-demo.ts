@@ -3,6 +3,7 @@
  * Resolves in VS Code when the TS plugin loads plugins/router-plugin.cjs.
  * After `pnpm build:plugins`, run `pnpm verify:virtual-modules` or `pnpm typecheck`.
  */
-import router from "router:routes";
+import routes from "router:./routes";
+import * as Router from "@typed/router";
 
-export { router };
+const x = Router.run(routes);

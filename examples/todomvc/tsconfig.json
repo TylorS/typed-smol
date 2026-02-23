@@ -4,10 +4,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "module": "ESNext",
-    "target": "ES2022",
+    "target": "ES2024",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "lib": ["ESNext", "DOM"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

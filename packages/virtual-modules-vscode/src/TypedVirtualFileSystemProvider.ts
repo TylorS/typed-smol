@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-// @ts-expect-error ESM import
 import { VIRTUAL_MODULE_URI_SCHEME } from "@typed/virtual-modules";
 import type { createResolver } from "./resolver";
 
@@ -24,11 +23,21 @@ export interface TypedVirtualFileSystemProviderOptions {
  */
 export function createTypedVirtualFileSystemProvider(
   options: TypedVirtualFileSystemProviderOptions,
-): vscode.FileSystemProvider {
+): vscode.FileSystemProvider & {
+  fireVirtualModuleChanges: (uris: vscode.Uri[]) => void;
+} {
   const { getResolver, getProjectRoot } = options;
   const changeEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
-  return {
+  function fireVirtualModuleChanges(uris: vscode.Uri[]): void {
+    if (uris.length > 0) {
+      changeEmitter.fire(
+        uris.map((uri) => ({ type: vscode.FileChangeType.Changed, uri })),
+      );
+    }
+  }
+
+  const provider: vscode.FileSystemProvider = {
     onDidChangeFile: changeEmitter.event,
 
     readFile(uri: vscode.Uri): Uint8Array {
@@ -84,4 +93,6 @@ export function createTypedVirtualFileSystemProvider(
       return new vscode.Disposable(() => {});
     },
   };
+
+  return Object.assign(provider, { fireVirtualModuleChanges });
 }

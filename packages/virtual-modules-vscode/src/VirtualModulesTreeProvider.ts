@@ -1,6 +1,5 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { buildVirtualModuleUri } from "./VirtualModuleProvider";
 import type { createResolver } from "./resolver";
 
 /** Matches any virtual-style specifier (virtual:foo, router:./routes, etc.) in import/from. */
@@ -24,6 +23,10 @@ export interface VirtualModuleLeafItem {
 export interface VirtualModulesTreeProviderOptions {
   getResolver: (projectRoot: string) => ReturnType<typeof createResolver>;
   getProjectRoot: (filePath: string) => string | undefined;
+  /** Called when a virtual module is discovered; use to register for refresh. */
+  onResolved?: (projectRoot: string, moduleId: string, importer: string) => void;
+  /** Called when resolved; use to cache for path-based preview. */
+  onCache?: (result: { virtualFileName: string; sourceText: string }) => void;
 }
 
 export interface VirtualModulesTreeProvider
@@ -34,6 +37,7 @@ export interface VirtualModulesTreeProvider
 async function discoverVirtualImports(
   folder: vscode.WorkspaceFolder,
   getResolver: (projectRoot: string) => ReturnType<typeof createResolver>,
+  onResolved?: (projectRoot: string, moduleId: string, importer: string) => void,
 ): Promise<Array<{ moduleId: string; importer: string }>> {
   const projectRoot = folder.uri.fsPath;
   const resolver = getResolver(projectRoot);
@@ -67,6 +71,7 @@ async function discoverVirtualImports(
 
       const result = resolver.resolve(moduleId, importer);
       if (result) {
+        onResolved?.(projectRoot, moduleId, importer);
         items.push({ moduleId, importer });
       }
     }
@@ -78,7 +83,7 @@ async function discoverVirtualImports(
 export function createVirtualModulesTreeProvider(
   options: VirtualModulesTreeProviderOptions,
 ): VirtualModulesTreeProvider {
-  const { getResolver } = options;
+  const { getResolver, onResolved, onCache } = options;
 
   const _onDidChangeTreeData = new vscode.EventEmitter<
     VirtualModuleTreeItem | undefined
@@ -94,7 +99,7 @@ export function createVirtualModulesTreeProvider(
     if (!folders?.length) return;
 
     for (const folder of folders) {
-      const items = await discoverVirtualImports(folder, getResolver);
+      const items = await discoverVirtualImports(folder, getResolver, onResolved);
       cache.set(folder.uri.fsPath, items);
     }
   }
@@ -152,15 +157,18 @@ export function createVirtualModulesTreeProvider(
         };
       }
 
-      const uri = buildVirtualModuleUri(element.moduleId, element.importer);
+      const projectRoot = element.folder.uri.fsPath;
+      const resolver = getResolver(projectRoot);
+      const result = resolver.resolve(element.moduleId, element.importer);
+      if (result) onCache?.(result);
       const importerBasename = path.basename(element.importer);
       return {
         collapsibleState: vscode.TreeItemCollapsibleState.None,
         label: element.moduleId,
         description: importerBasename,
         command: {
-          command: "vscode.open",
-          arguments: [uri],
+          command: "typed.virtualModules.openFromTree",
+          arguments: [element.moduleId, element.importer, projectRoot],
           title: "Open Virtual Module",
         },
       };

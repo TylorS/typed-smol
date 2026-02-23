@@ -1,16 +1,72 @@
+import { fileURLToPath } from "node:url";
 import type * as ts from "typescript";
 import {
   type LanguageServiceAdapterOptions,
   type LanguageServiceWatchHost,
   type VirtualModuleAdapterHandle,
 } from "./types.js";
-import { VIRTUAL_MODULE_URI_SCHEME } from "./internal/path.js";
 import {
   createVirtualRecordStore,
   toResolvedModule,
   type MutableVirtualRecord,
   type ResolveRecordResult,
 } from "./internal/VirtualRecordStore.js";
+import { VIRTUAL_MODULE_URI_SCHEME } from "./internal/path.js";
+import { Mutable } from "effect/Types";
+
+/** Prefix VSCode uses when sending non-file URIs to tsserver (query params are dropped). */
+const IN_MEMORY_RESOURCE_PREFIX = "^";
+const EMPTY_AUTHORITY = "ts-nul-authority";
+
+/** Schemes used by VSCode extension for virtual module preview docs. */
+const PREVIEW_SCHEMES = ["virtual-module", VIRTUAL_MODULE_URI_SCHEME] as const;
+
+/**
+ * Parse a fileName that may be:
+ * 1) Full URI: virtual-module:///module.ts?id=x&importer=y (query may be dropped by VSCode)
+ * 2) tsserver path: ^/virtual-module/ts-nul-authority/path/to/__virtual_plugin_hash.ts
+ */
+function parsePreviewUri(
+  fileName: string,
+): { id: string; importer: string } | { virtualPath: string } | undefined {
+  const pathBased = tryParsePathBasedFromTsServer(fileName);
+  if (pathBased) return pathBased;
+
+  if (!fileName.includes("://")) return undefined;
+  try {
+    const url = new URL(fileName);
+    if (!PREVIEW_SCHEMES.includes(url.protocol.replace(":", "") as (typeof PREVIEW_SCHEMES)[number]))
+      return undefined;
+    const id = url.searchParams.get("id");
+    const importerRaw = url.searchParams.get("importer");
+    if (!id || !importerRaw) return undefined;
+    const importer =
+      importerRaw.startsWith("file:")
+        ? (() => {
+            try {
+              return fileURLToPath(importerRaw);
+            } catch {
+              return importerRaw;
+            }
+          })()
+        : importerRaw;
+    return { id, importer };
+  } catch {
+    return undefined;
+  }
+}
+
+function tryParsePathBasedFromTsServer(fileName: string): { virtualPath: string } | undefined {
+  if (!fileName.startsWith(IN_MEMORY_RESOURCE_PREFIX + "/")) return undefined;
+  const rest = fileName.slice(IN_MEMORY_RESOURCE_PREFIX.length);
+  const parts = rest.split("/");
+  if (parts.length < 4) return undefined;
+  const [scheme, authority] = [parts[1], parts[2]];
+  if (!PREVIEW_SCHEMES.includes(scheme as (typeof PREVIEW_SCHEMES)[number])) return undefined;
+  const path = "/" + parts.slice(3).join("/");
+  if (!path.includes("__virtual_")) return undefined;
+  return { virtualPath: path };
+}
 
 interface ProjectServiceLike {
   getOrCreateOpenScriptInfo?(
@@ -54,30 +110,16 @@ export const attachLanguageServiceAdapter = (
   let epoch = 0;
   let inResolution = false;
   let inResolveRecord = false;
+  let pendingRetry = false;
 
   const originalGetScriptFileNames = host.getScriptFileNames?.bind(host);
-  const originalResolveModuleNameLiterals = (
-    host as {
-      resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[];
-    }
-  ).resolveModuleNameLiterals?.bind(host);
-  const originalResolveModuleNames = (
-    host as {
-      resolveModuleNames?: (
-        ...args: readonly unknown[]
-      ) => readonly (ts.ResolvedModule | undefined)[];
-    }
-  ).resolveModuleNames?.bind(host);
+  const originalResolveModuleNameLiterals = host.resolveModuleNameLiterals?.bind(host);
+  const originalResolveModuleNames = host.resolveModuleNames?.bind(host);
   const originalGetScriptSnapshot = host.getScriptSnapshot?.bind(host);
   const originalGetScriptVersion = host.getScriptVersion?.bind(host);
   const originalGetProjectVersion = host.getProjectVersion?.bind(host);
-  const originalFileExists = (host as { fileExists?: (path: string) => boolean }).fileExists?.bind(
-    host,
-  );
-  const originalReadFile = (
-    host as { readFile?: (path: string) => string | undefined }
-  ).readFile?.bind(host);
-
+  const originalFileExists = host.fileExists?.bind(host);
+  const originalReadFile = host.readFile?.bind(host);
   const originalGetSemanticDiagnostics = options.languageService.getSemanticDiagnostics.bind(
     options.languageService,
   );
@@ -172,27 +214,19 @@ export const attachLanguageServiceAdapter = (
     compilerOptions: ts.CompilerOptions | undefined,
   ): ts.ResolvedModuleFull | undefined => {
     const result = options.ts.resolveModuleName(moduleName, containingFile, compilerOptions ?? {}, {
-      fileExists: (path) =>
-        (host as { fileExists?: (value: string) => boolean }).fileExists?.(path) ?? false,
-      readFile: (path) =>
-        (host as { readFile?: (value: string) => string | undefined }).readFile?.(path),
+      fileExists: (path) => host.fileExists?.(path) ?? false,
+      readFile: (path) => host.readFile?.(path),
       directoryExists: (path) =>
-        (host as { directoryExists?: (value: string) => boolean }).directoryExists?.(path) ??
-        options.ts.sys.directoryExists(path),
+        host.directoryExists?.(path) ?? options.ts.sys.directoryExists(path),
       getCurrentDirectory: () =>
         host.getCurrentDirectory?.() ?? options.ts.sys.getCurrentDirectory(),
       getDirectories: (path) => {
-        const fromHost = (
-          host as { getDirectories?: (value: string) => string[] }
-        ).getDirectories?.(path);
+        const fromHost = host.getDirectories?.(path);
         if (fromHost !== undefined) return [...fromHost];
         const fromSys = options.ts.sys.getDirectories?.(path);
         return fromSys !== undefined ? [...fromSys] : [];
       },
-      realpath: (path) =>
-        (host as { realpath?: (value: string) => string }).realpath?.(path) ??
-        options.ts.sys.realpath?.(path) ??
-        path,
+      realpath: (path) => host.realpath?.(path) ?? options.ts.sys.realpath?.(path) ?? path,
       useCaseSensitiveFileNames:
         host.useCaseSensitiveFileNames?.() ?? options.ts.sys.useCaseSensitiveFileNames,
     });
@@ -200,7 +234,7 @@ export const attachLanguageServiceAdapter = (
     return result.resolvedModule as ts.ResolvedModuleFull | undefined;
   };
 
-  (host as ts.LanguageServiceHost).resolveModuleNames = (
+  host.resolveModuleNames = (
     moduleNames: string[],
     containingFile: string,
     reusedNames: string[] | undefined,
@@ -223,26 +257,48 @@ export const attachLanguageServiceAdapter = (
 
     inResolution = true;
     try {
+      const parsed = parsePreviewUri(containingFile);
+      let effectiveContainingFile = containingFile;
+      let importerForVirtual = containingFile;
+      if (parsed) {
+        if ("virtualPath" in parsed) {
+          const r = recordsByVirtualFile.get(parsed.virtualPath);
+          if (r) {
+            effectiveContainingFile = r.virtualFileName;
+            importerForVirtual = r.importer;
+          }
+        } else {
+          const r = getOrBuildRecord(parsed.id, parsed.importer);
+          if (r.status === "resolved") {
+            effectiveContainingFile = r.record.virtualFileName;
+            importerForVirtual = r.record.importer;
+          }
+        }
+      }
+
       const fallback = originalResolveModuleNames
         ? originalResolveModuleNames(
-            moduleNames as readonly unknown[],
-            containingFile,
+            moduleNames,
+            effectiveContainingFile,
             reusedNames,
             redirectedReference,
             compilerOptions,
             containingSourceFile,
           )
         : moduleNames.map((moduleName) =>
-            fallbackResolveModule(moduleName, containingFile, compilerOptions),
+            fallbackResolveModule(moduleName, effectiveContainingFile, compilerOptions),
           );
 
-      return moduleNames.map((moduleName, index) => {
-        const resolved = getOrBuildRecord(moduleName, containingFile);
+      let hadVirtualError = false;
+      const results = moduleNames.map((moduleName, index) => {
+        const resolved = getOrBuildRecord(moduleName, importerForVirtual);
         if (resolved.status === "resolved") {
+          pendingRetry = false;
           return toResolvedModule(options.ts, resolved.record.virtualFileName);
         }
 
         if (resolved.status === "error") {
+          hadVirtualError = true;
           addDiagnosticForFile(containingFile, resolved.diagnostic.message);
           if (resolved.diagnostic.code === "re-entrant-resolution") {
             return undefined;
@@ -251,6 +307,13 @@ export const attachLanguageServiceAdapter = (
 
         return fallback[index];
       });
+
+      if (hadVirtualError && !pendingRetry) {
+        pendingRetry = true;
+        epoch += 1;
+      }
+
+      return results;
     } finally {
       inResolution = false;
     }
@@ -264,6 +327,9 @@ export const attachLanguageServiceAdapter = (
     containingSourceFile: ts.SourceFile | undefined,
     reusedNames?: readonly { readonly text: string }[],
   ): readonly ts.ResolvedModuleWithFailedLookupLocations[] => {
+    // #region agent log
+    fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:resolveModuleNameLiterals:entry',message:'resolveModuleNameLiterals called',data:{hypothesisId:'H3',moduleNames:moduleLiterals.map(m=>m.text),inResolution,inResolveRecord,containingFile},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (inResolution) {
       if (inResolveRecord) {
         const diagnostic = toTsDiagnostic(
@@ -279,33 +345,58 @@ export const attachLanguageServiceAdapter = (
 
     inResolution = true;
     try {
+      const parsed = parsePreviewUri(containingFile);
+      let effectiveContainingFile = containingFile;
+      let importerForVirtual = containingFile;
+      if (parsed) {
+        if ("virtualPath" in parsed) {
+          const r = recordsByVirtualFile.get(parsed.virtualPath);
+          if (r) {
+            effectiveContainingFile = r.virtualFileName;
+            importerForVirtual = r.importer;
+          }
+        } else {
+          const r = getOrBuildRecord(parsed.id, parsed.importer);
+          if (r.status === "resolved") {
+            effectiveContainingFile = r.record.virtualFileName;
+            importerForVirtual = r.record.importer;
+          }
+        }
+      }
+
       const fallback: readonly ts.ResolvedModuleWithFailedLookupLocations[] =
         originalResolveModuleNameLiterals
           ? (originalResolveModuleNameLiterals(
               moduleLiterals as unknown as readonly ts.StringLiteralLike[],
-              containingFile,
+              effectiveContainingFile,
               redirectedReference,
               compilerOptions,
-              containingSourceFile,
+              containingSourceFile!,
               reusedNames as readonly ts.StringLiteralLike[] | undefined,
             ) as readonly ts.ResolvedModuleWithFailedLookupLocations[])
           : moduleLiterals.map((moduleLiteral) => ({
               resolvedModule: fallbackResolveModule(
                 moduleLiteral.text,
-                containingFile,
+                effectiveContainingFile,
                 compilerOptions,
               ),
             }));
 
-      return moduleLiterals.map((moduleLiteral, index) => {
-        const resolved = getOrBuildRecord(moduleLiteral.text, containingFile);
+      let hadVirtualError = false;
+      const results = moduleLiterals.map((moduleLiteral, index) => {
+        const resolved = getOrBuildRecord(moduleLiteral.text, importerForVirtual);
+        // #region agent log
+        fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:resolveModuleNameLiterals',message:'resolution result',data:{hypothesisId:'H2',moduleName:moduleLiteral.text,status:resolved.status,diagnostic:resolved.status==='error'?(resolved as any).diagnostic:undefined,virtualFile:resolved.status==='resolved'?(resolved as any).record.virtualFileName:undefined,containingFile},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         if (resolved.status === "resolved") {
+          pendingRetry = false;
           return {
             resolvedModule: toResolvedModule(options.ts, resolved.record.virtualFileName),
           };
         }
 
         if (resolved.status === "error") {
+          hadVirtualError = true;
           addDiagnosticForFile(containingFile, resolved.diagnostic.message);
           if (resolved.diagnostic.code === "re-entrant-resolution") {
             return fallback[index];
@@ -314,28 +405,50 @@ export const attachLanguageServiceAdapter = (
 
         return fallback[index];
       });
+
+      if (hadVirtualError && !pendingRetry) {
+        pendingRetry = true;
+        epoch += 1;
+        // #region agent log
+        fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:resolveModuleNameLiterals:epochBump',message:'epoch bumped for retry after virtual module error',data:{hypothesisId:'H5',epoch,pendingRetry},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      }
+
+      return results;
     } finally {
       inResolution = false;
     }
   };
-  (host as ts.LanguageServiceHost).resolveModuleNameLiterals = assignResolveModuleNameLiterals;
+  host.resolveModuleNameLiterals = assignResolveModuleNameLiterals;
 
   const projectService = (host as { projectService?: ProjectServiceLike }).projectService;
 
   host.getScriptSnapshot = (fileName: string): ts.IScriptSnapshot | undefined => {
-    const record = recordsByVirtualFile.get(fileName);
+    let record = recordsByVirtualFile.get(fileName);
+    if (!record) {
+      const parsed = parsePreviewUri(fileName);
+      if (parsed) {
+        if ("virtualPath" in parsed) {
+          record = recordsByVirtualFile.get(parsed.virtualPath) ?? undefined;
+        } else {
+          const resolved = getOrBuildRecord(parsed.id, parsed.importer);
+          if (resolved.status === "resolved") record = resolved.record;
+        }
+      }
+    }
     if (!record) {
       return originalGetScriptSnapshot?.(fileName);
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7563/ingest/ae4c829f-512d-4a3a-9ef6-9b34461b49d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'df380b'},body:JSON.stringify({sessionId:'df380b',location:'adapter:getScriptSnapshot',message:'serving virtual file',data:{hypothesisId:'H4',fileName,sourceTextLen:record.sourceText.length,sourceTextPreview:record.sourceText.slice(0,200)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     const freshRecord = rebuildRecordIfNeeded(record);
 
-    // Do not call getOrCreateOpenScriptInfo for virtual URIs; some hosts write "open" scripts to disk.
-    // Virtual content is served only from memory via this snapshot and the host's fileExists/readFile.
-    if (
-      projectService?.getOrCreateOpenScriptInfo &&
-      !fileName.startsWith(`${VIRTUAL_MODULE_URI_SCHEME}://`)
-    ) {
+    // In tsserver, setDocument(key, path, sourceFile) requires a ScriptInfo for path (Debug.checkDefined(getScriptInfoForPath(path))).
+    // If we never register the virtual file, createProgram → acquireOrUpdateDocument → setDocument throws "Debug Failure".
+    // So when projectService exists (tsserver), always register the virtual file so setDocument can find it.
+    if (projectService?.getOrCreateOpenScriptInfo) {
       projectService.getOrCreateOpenScriptInfo(
         fileName,
         freshRecord.sourceText,
@@ -350,10 +463,19 @@ export const attachLanguageServiceAdapter = (
 
   if (originalGetScriptVersion) {
     host.getScriptVersion = (fileName: string): string => {
-      const record = recordsByVirtualFile.get(fileName);
+      let record = recordsByVirtualFile.get(fileName);
       if (!record) {
-        return originalGetScriptVersion(fileName);
+        const parsed = parsePreviewUri(fileName);
+        if (parsed) {
+          if ("virtualPath" in parsed) {
+            record = recordsByVirtualFile.get(parsed.virtualPath) ?? undefined;
+          } else {
+            const resolved = getOrBuildRecord(parsed.id, parsed.importer);
+            if (resolved.status === "resolved") record = resolved.record;
+          }
+        }
       }
+      if (!record) return originalGetScriptVersion(fileName);
       return String(record.version);
     };
   }
@@ -363,29 +485,41 @@ export const attachLanguageServiceAdapter = (
   }
 
   if (originalGetScriptFileNames) {
-    (host as ts.LanguageServiceHost).getScriptFileNames = (): string[] => {
+    host.getScriptFileNames = (): string[] => {
       const files = originalGetScriptFileNames();
       const virtualFiles = [...recordsByVirtualFile.keys()];
       return [...new Set([...files, ...virtualFiles])];
     };
   }
 
-  (host as { fileExists: (path: string) => boolean }).fileExists = (path: string): boolean => {
-    if (recordsByVirtualFile.has(path)) {
-      return true;
+  host.fileExists = (path: string): boolean => {
+    if (recordsByVirtualFile.has(path)) return true;
+    const parsed = parsePreviewUri(path);
+    if (parsed) {
+      if ("virtualPath" in parsed) {
+        if (recordsByVirtualFile.has(parsed.virtualPath)) return true;
+      } else {
+        const resolved = getOrBuildRecord(parsed.id, parsed.importer);
+        if (resolved.status === "resolved") return true;
+      }
     }
-
     return originalFileExists ? originalFileExists(path) : false;
   };
 
-  (host as { readFile: (path: string) => string | undefined }).readFile = (
-    path: string,
-  ): string | undefined => {
-    const record = recordsByVirtualFile.get(path);
-    if (record) {
-      return rebuildRecordIfNeeded(record).sourceText;
+  host.readFile = (path: string): string | undefined => {
+    let record = recordsByVirtualFile.get(path);
+    if (!record) {
+      const parsed = parsePreviewUri(path);
+      if (parsed) {
+        if ("virtualPath" in parsed) {
+          record = recordsByVirtualFile.get(parsed.virtualPath) ?? undefined;
+        } else {
+          const resolved = getOrBuildRecord(parsed.id, parsed.importer);
+          if (resolved.status === "resolved") record = resolved.record;
+        }
+      }
     }
-
+    if (record) return rebuildRecordIfNeeded(record).sourceText;
     return originalReadFile?.(path);
   };
 
@@ -414,16 +548,9 @@ export const attachLanguageServiceAdapter = (
 
   return {
     dispose(): void {
-      (
-        host as { resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[] }
-      ).resolveModuleNameLiterals = originalResolveModuleNameLiterals;
-      (
-        host as {
-          resolveModuleNames?: (
-            ...args: readonly unknown[]
-          ) => readonly (ts.ResolvedModule | undefined)[];
-        }
-      ).resolveModuleNames = originalResolveModuleNames;
+      (host as Mutable<ts.LanguageServiceHost>).resolveModuleNameLiterals =
+        originalResolveModuleNameLiterals;
+      host.resolveModuleNames = originalResolveModuleNames;
       if (originalGetScriptSnapshot) {
         host.getScriptSnapshot = originalGetScriptSnapshot;
       }

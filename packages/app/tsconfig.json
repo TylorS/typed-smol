@@ -15,8 +15,6 @@
     "**/*.test.ts"
   ],
   "references": [
-    {
-      "name": "../virtual-modules"
-    }
+    { "path": "../virtual-modules" }
   ]
 }

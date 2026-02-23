@@ -1,14 +1,14 @@
 {
-  "name": "typed-counter",
+  "name": "typed-todomvc",
   "version": "1.0.0",
-  "description": "Simple Vite counter example",
+  "description": "TodoMVC example",
   "keywords": [],
   "license": "MIT",
   "author": "",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {

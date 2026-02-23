@@ -95,7 +95,7 @@ export const value: Foo = { n: 1 };
       languageService
         .getProgram()
         ?.getSourceFiles()
-        .some((sourceFile) => sourceFile.fileName.includes("typed-virtual://")),
+        .some((sourceFile) => sourceFile.fileName.includes("__virtual_")),
     ).toBe(true);
 
     adapter.dispose();
@@ -445,7 +445,7 @@ export const value: Foo = { n: 1 };
     languageService.getSemanticDiagnostics(entryFile);
     const program = languageService.getProgram();
     const virtualFiles =
-      program?.getSourceFiles().filter((sf) => sf.fileName.includes("typed-virtual://")) ?? [];
+      program?.getSourceFiles().filter((sf) => sf.fileName.includes("__virtual_")) ?? [];
     expect(virtualFiles.length).toBeGreaterThan(0);
     const virtualFileName = virtualFiles[0].fileName;
 
@@ -510,7 +510,7 @@ export const value: Foo = { n: 1 };
     const program = languageService.getProgram();
     const virtualFile = program
       ?.getSourceFiles()
-      .find((sf) => sf.fileName.includes("typed-virtual://"));
+      .find((sf) => sf.fileName.includes("__virtual_"));
     expect(virtualFile).toBeDefined();
     const virtualFileName = virtualFile!.fileName;
 

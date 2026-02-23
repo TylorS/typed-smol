@@ -1064,14 +1064,31 @@ const matchesTag = <E, K extends string>(
   return tag.some((t) => t === error._tag);
 };
 
+function isServiceMap(dep: AnyDependency): dep is AnyServiceMap {
+  return !Layer.isLayer(dep);
+}
+
+function toSingleLayer(dep: AnyDependency): AnyLayer {
+  if (isServiceMap(dep)) return Layer.succeedServices(dep);
+  return dep;
+}
+
 function normalizeDependencies(
   dependencies: ReadonlyArray<AnyDependency>,
 ): ReadonlyArray<AnyLayer> {
-  return dependencies.map((dep) =>
-    Layer.isLayer(dep)
-      ? dep
-      : (Layer.succeedServices(dep as ServiceMap.ServiceMap<any>) as AnyLayer),
-  );
+  return dependencies.map(toSingleLayer);
+}
+
+/**
+ * Normalize dependency input (ServiceMap | Layer | Array of either) into a single Layer.
+ * Use with `.provide(normalizeDependencyInput(deps))`.
+ */
+export function normalizeDependencyInput(
+  input: AnyDependency | ReadonlyArray<AnyDependency>,
+): AnyLayer {
+  const arr = Array.isArray(input) ? input : [input];
+  const layers = normalizeDependencies(arr);
+  return mergeLayers(layers);
 }
 
 function getGuard<I, O, E, R>(guard: GuardInput<I, O, E, R>): GuardType<I, O, E, R> {
@@ -1083,6 +1100,7 @@ function defaultGuard<A>(): GuardType<A, A> {
 }
 
 function mergeLayers(layers: ReadonlyArray<AnyLayer>): AnyLayer {
+  if (layers.length === 0) return Layer.empty;
   if (layers.length === 1) return layers[0];
   let current = layers[0];
   for (let i = 1; i < layers.length; i++) {

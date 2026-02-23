@@ -7,9 +7,7 @@ import {
   createVirtualKey,
   NodeModulePluginLoader,
   PluginManager,
-  // @ts-expect-error ESM
 } from "@typed/virtual-modules";
-// @ts-expect-error ESM
 import type { VirtualModulePlugin } from "@typed/virtual-modules";
 
 const TSPLUGIN_NAME = "@typed/virtual-modules-ts-plugin";
@@ -72,7 +70,15 @@ function getPluginConfig(tsconfigPath: string): TsPluginConfig | undefined {
   }
 }
 
-const programCache = new Map<string, ts.Program>();
+export const programCache = new Map<string, ts.Program>();
+
+/**
+ * Clear the program cache for a project. Call when source files change so plugins
+ * re-read fresh content on next resolve.
+ */
+export function clearProgramCache(projectRoot: string): void {
+  programCache.delete(projectRoot);
+}
 
 /**
  * Create a TypeScript Program for the project so plugins that need type info (e.g. router)
@@ -119,6 +125,7 @@ function getProgramForProject(projectRoot: string): ts.Program | undefined {
 export function createResolver(projectRoot: string): {
   resolve: (id: string, importer: string) => ResolverResult | undefined;
   getPluginSpecifiers: () => readonly string[];
+  clearProgramCache: () => void;
 } {
   const tsconfigPath = findTsconfig(projectRoot);
   const config = tsconfigPath ? getPluginConfig(tsconfigPath) : undefined;
@@ -128,6 +135,7 @@ export function createResolver(projectRoot: string): {
     return {
       resolve: () => undefined,
       getPluginSpecifiers: () => [],
+      clearProgramCache: () => {},
     };
   }
 
@@ -147,6 +155,7 @@ export function createResolver(projectRoot: string): {
     return {
       resolve: () => undefined,
       getPluginSpecifiers: () => pluginSpecifiers,
+      clearProgramCache: () => {},
     };
   }
 
@@ -178,5 +187,6 @@ export function createResolver(projectRoot: string): {
       return undefined;
     },
     getPluginSpecifiers: () => pluginSpecifiers,
+    clearProgramCache: () => clearProgramCache(projectRoot),
   };
 }

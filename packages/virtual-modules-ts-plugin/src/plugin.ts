@@ -1,3 +1,4 @@
+// oxlint-disable typescript/unbound-method
 /**
  * TypeScript Language Service plugin that integrates @typed/virtual-modules.
  * Resolves virtual modules (e.g. virtual:foo) during editor type-checking.
@@ -97,22 +98,10 @@ function init(modules: { typescript: typeof import("typescript") }): {
     }) => {
       let session: ReturnType<typeof createTypeInfoApiSession> | null = null;
       let apiUsed = false;
+
       const getSession = () => {
         if (session) return session;
-        const program = info.languageService.getProgram();
-        if (!program) {
-          return {
-            api: {
-              file: () => {
-                throw new Error(
-                  "TypeInfoApi is not available: program not yet created during resolution",
-                );
-              },
-              directory: () => [],
-            },
-            consumeDependencies: () => [] as const,
-          };
-        }
+        const program = info.languageService.getProgram()!;
         session = createTypeInfoApiSession({ ts, program });
         return session;
       };
@@ -148,20 +137,35 @@ function init(modules: { typescript: typeof import("typescript") }): {
         recursive?: boolean,
       ) => ts.FileWatcher;
     };
+    const sys = ts.sys;
+    const projectWatchFile = projectWithWatch.watchFile;
+    const projectWatchDirectory = projectWithWatch.watchDirectory;
+    const sysWatchFile = sys?.watchFile;
+    const sysWatchDirectory = sys?.watchDirectory;
     const watchHost =
-      typeof projectWithWatch.watchFile === "function"
+      typeof projectWatchFile === "function"
         ? {
             watchFile: (path: string, callback: FileWatcherCallback) =>
-              projectWithWatch.watchFile!(path, callback),
+              projectWatchFile!(path, callback),
             watchDirectory:
-              typeof projectWithWatch.watchDirectory === "function"
+              typeof projectWatchDirectory === "function"
                 ? (path: string, callback: DirectoryWatcherCallback, recursive?: boolean) =>
-                    projectWithWatch.watchDirectory!(path, callback, recursive)
+                    projectWatchDirectory!(path, callback, recursive)
                 : undefined,
           }
-        : undefined;
+        : typeof sysWatchFile === "function"
+          ? {
+              watchFile: (path: string, callback: FileWatcherCallback) =>
+                sysWatchFile!(path, callback),
+              watchDirectory:
+                typeof sysWatchDirectory === "function"
+                  ? (path: string, callback: DirectoryWatcherCallback, recursive?: boolean) =>
+                      sysWatchDirectory!(path, callback, recursive)
+                  : undefined,
+            }
+          : undefined;
 
-    const _handle = attachLanguageServiceAdapter({
+    attachLanguageServiceAdapter({
       ts,
       languageService: info.languageService,
       languageServiceHost: info.project as import("typescript").LanguageServiceHost,
@@ -172,18 +176,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
       debounceMs,
     });
 
-    const proxy = Object.create(null) as import("typescript").LanguageService;
-    for (const k of Object.keys(info.languageService) as Array<
-      keyof import("typescript").LanguageService
-    >) {
-      const x = info.languageService[k];
-      if (typeof x === "function") {
-        (proxy as unknown as Record<string, unknown>)[k] = (...args: unknown[]) =>
-          (x as (...a: unknown[]) => unknown).apply(info.languageService, args);
-      }
-    }
-
-    return proxy;
+    return info.languageService;
   }
 
   return { create };

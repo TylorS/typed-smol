@@ -109,12 +109,19 @@ export interface ObjectTypeNode {
   readonly properties: readonly ObjectProperty[];
 }
 
+/**
+ * Result of structural assignability checks. When `typeTargets` are provided to
+ * createTypeInfoApiSession, each export gets assignableTo[id] = true iff the export's
+ * type is assignable to that target. Enables plugins to use checker.isTypeAssignableTo
+ * instead of string-based type name parsing.
+ */
 export interface ExportedTypeInfo {
   readonly name: string;
   readonly declarationKind?: string;
   readonly declarationText?: string;
   readonly docs?: string;
   readonly type: TypeNode;
+  readonly assignableTo?: Readonly<Record<string, boolean>>;
 }
 
 export interface TypeInfoFileSnapshot {

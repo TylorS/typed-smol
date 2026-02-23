@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
-// @ts-expect-error ESM import
 import { VIRTUAL_MODULE_URI_SCHEME } from "@typed/virtual-modules";
 import { createTypedVirtualFileSystemProvider } from "./TypedVirtualFileSystemProvider";
 import {
+  buildTypedVirtualUri,
   buildVirtualModuleUri,
   createVirtualModuleProvider,
 } from "./VirtualModuleProvider";
+import { writeVirtualPreviewAndGetPath } from "./virtualPreviewDisk";
 import { createResolver, getProjectRootForFile } from "./resolver";
 import {
   createVirtualModulesTreeProvider,
@@ -13,9 +14,20 @@ import {
 } from "./VirtualModulesTreeProvider";
 
 const SCHEME = "virtual-module";
+const REFRESH_DEBOUNCE_MS = 150;
 
 export function activate(context: vscode.ExtensionContext): void {
   const resolversByRoot = new Map<string, ReturnType<typeof createResolver>>();
+  const virtualModuleRegistry = new Map<string, Set<string>>();
+  const contentByVirtualPath = new Map<string, string>();
+  const onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
+  let refreshDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let pendingRefreshRoots = new Set<string>();
+
+  function cacheVirtualModule(result: { virtualFileName: string; sourceText: string }): void {
+    const path = result.virtualFileName.startsWith("/") ? result.virtualFileName : `/${result.virtualFileName}`;
+    contentByVirtualPath.set(path.replace(/\\/g, "/").replace(/^\/+/, "/"), result.sourceText);
+  }
 
   function getResolver(projectRoot: string): ReturnType<typeof createResolver> {
     let r = resolversByRoot.get(projectRoot);
@@ -26,8 +38,59 @@ export function activate(context: vscode.ExtensionContext): void {
     return r;
   }
 
+  function registerVirtualModule(projectRoot: string, moduleId: string, importer: string): void {
+    let set = virtualModuleRegistry.get(projectRoot);
+    if (!set) {
+      set = new Set();
+      virtualModuleRegistry.set(projectRoot, set);
+    }
+    set.add(`${moduleId}::${importer}`);
+  }
+
+  function fireRefreshesForProject(
+    projectRoot: string,
+    fireTypedVirtualChanges: (uris: vscode.Uri[]) => void,
+  ): void {
+    const resolver = getResolver(projectRoot);
+    resolver.clearProgramCache();
+
+    const entries = virtualModuleRegistry.get(projectRoot);
+    if (!entries?.size) return;
+
+    const typedVirtualUris: vscode.Uri[] = [];
+    for (const key of entries) {
+      const idx = key.indexOf("::");
+      if (idx < 0) continue;
+      const moduleId = key.slice(0, idx);
+      const importer = key.slice(idx + 2);
+      const resolver = getResolver(projectRoot);
+      const result = resolver.resolve(moduleId, importer);
+      if (result) {
+        cacheVirtualModule(result);
+        onDidChangeEmitter.fire(buildVirtualModuleUri(moduleId, importer, result));
+        writeVirtualPreviewAndGetPath(
+          projectRoot,
+          importer,
+          result.virtualFileName,
+          result.sourceText,
+        );
+      } else {
+        onDidChangeEmitter.fire(buildVirtualModuleUri(moduleId, importer));
+      }
+      typedVirtualUris.push(buildTypedVirtualUri(moduleId, importer));
+    }
+    fireTypedVirtualChanges(typedVirtualUris);
+  }
+
   const provider = createVirtualModuleProvider({
     getResolver,
+    onDidChangeEmitter,
+    onResolved: (moduleId, importer) => {
+      const path = importer.startsWith("file:") ? vscode.Uri.parse(importer).fsPath : importer;
+      const root = getProjectRoot(path);
+      if (root) registerVirtualModule(root, moduleId, importer);
+    },
+    getContentByVirtualPath: (virtualPath) => contentByVirtualPath.get(virtualPath),
   });
 
   const typedVirtualFs = createTypedVirtualFileSystemProvider({
@@ -41,9 +104,42 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  function scheduleRefreshForFile(filePath: string): void {
+    const projectRoot = getProjectRoot(filePath);
+    if (!projectRoot) return;
+    if (filePath.includes("node_modules")) return;
+
+    pendingRefreshRoots.add(projectRoot);
+    if (refreshDebounceTimer !== undefined) clearTimeout(refreshDebounceTimer);
+    refreshDebounceTimer = setTimeout(() => {
+      refreshDebounceTimer = undefined;
+      for (const root of pendingRefreshRoots) {
+        fireRefreshesForProject(root, (uris) => typedVirtualFs.fireVirtualModuleChanges(uris));
+      }
+      pendingRefreshRoots.clear();
+    }, REFRESH_DEBOUNCE_MS);
+  }
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      const uri = e.document.uri;
+      if (uri.scheme !== "file") return;
+      scheduleRefreshForFile(uri.fsPath);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((doc) => {
+      if (doc.uri.scheme !== "file") return;
+      scheduleRefreshForFile(doc.uri.fsPath);
+    }),
+  );
+
   const treeProvider: VirtualModulesTreeProvider = createVirtualModulesTreeProvider({
     getResolver,
     getProjectRoot,
+    onResolved: (projectRoot, moduleId, importer) => registerVirtualModule(projectRoot, moduleId, importer),
+    onCache: cacheVirtualModule,
   });
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("typedVirtualModules", treeProvider),
@@ -54,6 +150,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  context.subscriptions.push(onDidChangeEmitter);
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(SCHEME, provider),
   );
@@ -67,29 +164,71 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  context.subscriptions.push(
-    vscode.languages.registerDefinitionProvider(
-      { language: "typescript", scheme: "file" },
-      createVirtualModuleDefinitionProvider(getResolver, getProjectRoot),
-    ),
-  );
-  context.subscriptions.push(
-    vscode.languages.registerDefinitionProvider(
-      { language: "javascript", scheme: "file" },
-      createVirtualModuleDefinitionProvider(getResolver, getProjectRoot),
-    ),
+  const definitionProvider = createVirtualModuleDefinitionProvider(
+    getResolver,
+    getProjectRoot,
+    (moduleId, importer) => {
+      const root = getProjectRoot(importer);
+      if (root) registerVirtualModule(root, moduleId, importer);
+    },
+    cacheVirtualModule,
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "typed.virtualModules.openFromTree",
+      async (moduleId: string, importer: string, projectRoot: string) => {
+        const resolver = getResolver(projectRoot);
+        const result = resolver.resolve(moduleId, importer);
+        if (!result) {
+          vscode.window.showErrorMessage(`Could not resolve virtual module "${moduleId}"`);
+          return;
+        }
+        registerVirtualModule(projectRoot, moduleId, importer);
+        cacheVirtualModule(result);
+        const absPath = writeVirtualPreviewAndGetPath(
+          projectRoot,
+          importer,
+          result.virtualFileName,
+          result.sourceText,
+        );
+        const doc = await vscode.workspace.openTextDocument(absPath);
+        await vscode.window.showTextDocument(doc, { preview: false });
+      },
+    ),
+  );
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(
+      { language: "typescript", scheme: "file" },
+      definitionProvider,
+    ),
+  );
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(
+      { language: "javascript", scheme: "file" },
+      definitionProvider,
+    ),
+  );
+
+  const documentLinkProvider = createVirtualModuleDocumentLinkProvider(
+    getResolver,
+    getProjectRoot,
+    (moduleId, importer) => {
+      const root = getProjectRoot(importer);
+      if (root) registerVirtualModule(root, moduleId, importer);
+    },
+    cacheVirtualModule,
+  );
+  context.subscriptions.push(
     vscode.languages.registerDocumentLinkProvider(
       { language: "typescript", scheme: "file" },
-      createVirtualModuleDocumentLinkProvider(getResolver, getProjectRoot),
+      documentLinkProvider,
     ),
   );
   context.subscriptions.push(
     vscode.languages.registerDocumentLinkProvider(
       { language: "javascript", scheme: "file" },
-      createVirtualModuleDocumentLinkProvider(getResolver, getProjectRoot),
+      documentLinkProvider,
     ),
   );
 
@@ -135,8 +274,15 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      const uri = buildVirtualModuleUri(moduleId.trim(), importer);
-      const doc = await vscode.workspace.openTextDocument(uri);
+      registerVirtualModule(projectRoot, moduleId.trim(), importer);
+      cacheVirtualModule(result);
+      const absPath = writeVirtualPreviewAndGetPath(
+        projectRoot,
+        importer,
+        result.virtualFileName,
+        result.sourceText,
+      );
+      const doc = await vscode.workspace.openTextDocument(absPath);
       await vscode.window.showTextDocument(doc, { preview: false });
     }),
   );
@@ -174,8 +320,15 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      const uri = buildVirtualModuleUri(moduleId, importer);
-      const virtualDoc = await vscode.workspace.openTextDocument(uri);
+      registerVirtualModule(projectRoot, moduleId, importer);
+      cacheVirtualModule(result);
+      const absPath = writeVirtualPreviewAndGetPath(
+        projectRoot,
+        importer,
+        result.virtualFileName,
+        result.sourceText,
+      );
+      const virtualDoc = await vscode.workspace.openTextDocument(absPath);
       await vscode.window.showTextDocument(virtualDoc, { preview: false });
     }),
   );
@@ -207,6 +360,8 @@ function extractVirtualImportAtPosition(
 function createVirtualModuleDefinitionProvider(
   getResolver: (root: string) => ReturnType<typeof createResolver>,
   getProjectRoot: (path: string) => string | undefined,
+  onResolved?: (moduleId: string, importer: string) => void,
+  onCache?: (result: { virtualFileName: string; sourceText: string }) => void,
 ): vscode.DefinitionProvider {
   return {
     provideDefinition(
@@ -225,8 +380,15 @@ function createVirtualModuleDefinitionProvider(
       const result = resolver.resolve(moduleId, importer);
       if (!result) return null;
 
-      const uri = buildVirtualModuleUri(moduleId, importer);
-      return [new vscode.Location(uri, new vscode.Position(0, 0))];
+      onResolved?.(moduleId, importer);
+      onCache?.(result);
+      const absPath = writeVirtualPreviewAndGetPath(
+        projectRoot,
+        importer,
+        result.virtualFileName,
+        result.sourceText,
+      );
+      return [new vscode.Location(vscode.Uri.file(absPath), new vscode.Position(0, 0))];
     },
   };
 }
@@ -234,6 +396,8 @@ function createVirtualModuleDefinitionProvider(
 function createVirtualModuleDocumentLinkProvider(
   getResolver: (root: string) => ReturnType<typeof createResolver>,
   getProjectRoot: (path: string) => string | undefined,
+  onResolved?: (moduleId: string, importer: string) => void,
+  onCache?: (result: { virtualFileName: string; sourceText: string }) => void,
 ): vscode.DocumentLinkProvider {
   return {
     provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
@@ -249,13 +413,20 @@ function createVirtualModuleDocumentLinkProvider(
         const result = resolver.resolve(moduleId, importer);
         if (!result) continue;
 
+        onResolved?.(moduleId, importer);
+        onCache?.(result);
         const position = document.positionAt(match.index + match[0].indexOf(moduleId));
         const range = new vscode.Range(
           position,
           new vscode.Position(position.line, position.character + moduleId.length),
         );
-        const uri = buildVirtualModuleUri(moduleId, importer);
-        links.push(new vscode.DocumentLink(range, uri));
+        const absPath = writeVirtualPreviewAndGetPath(
+          projectRoot,
+          importer,
+          result.virtualFileName,
+          result.sourceText,
+        );
+        links.push(new vscode.DocumentLink(range, vscode.Uri.file(absPath)));
       }
       return links;
     },

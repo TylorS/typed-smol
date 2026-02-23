@@ -1,7 +1,13 @@
 import { realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { extname, isAbsolute, relative, resolve } from "node:path";
 
 export const toPosixPath = (path: string): string => path.replaceAll("\\", "/");
+
+/** Strip the extension from a path using extname; returns path unchanged if no extension. */
+export const stripScriptExtension = (path: string): string => {
+  const ext = extname(path);
+  return ext ? path.slice(0, -ext.length) : path;
+};
 
 export const resolveRelativePath = (baseDir: string, relativePath: string): string =>
   toPosixPath(resolve(baseDir, relativePath));

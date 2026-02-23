@@ -64,7 +64,7 @@ export function toResolvedModule(
 ): ts.ResolvedModuleFull {
   return {
     resolvedFileName: fileName,
-    extension: tsMod.Extension.Dts,
+    extension: tsMod.Extension.Ts,
     isExternalLibraryImport: false,
   };
 }

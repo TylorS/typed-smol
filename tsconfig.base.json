@@ -10,8 +10,7 @@
     "incremental": true,
     "noEmit": false,
     "outDir": "dist",
-    "composite": true,
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "composite": true
   },
   "exclude": ["node_modules", "dist"]
 }

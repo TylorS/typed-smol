@@ -6,9 +6,27 @@ settings:
 
 catalogs:
   default:
+    '@effect/platform-node':
+      specifier: 4.0.0-beta.4
+      version: 4.0.0-beta.4
     effect:
       specifier: 4.0.0-beta.4
       version: 4.0.0-beta.4
+    happy-dom:
+      specifier: '*'
+      version: 20.6.3
+    oxfmt:
+      specifier: 0.33.0
+      version: 0.33.0
+    oxlint:
+      specifier: 1.48.0
+      version: 1.48.0
+    typescript:
+      specifier: 5.9.3
+      version: 5.9.3
+    vitest:
+      specifier: 4.0.18
+      version: 4.0.18
 
 importers:
 
@@ -321,15 +339,25 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.0.18(@types/node@25.3.0)(happy-dom@20.6.3)(yaml@2.8.2)
+    optionalDependencies:
+      '@typed/app':
+        specifier: workspace:*
+        version: link:../app
 
   packages/virtual-modules-ts-plugin/sample-project:
     dependencies:
       '@typed/app':
         specifier: workspace:*
         version: link:../../app
+      '@typed/fx':
+        specifier: workspace:*
+        version: link:../../fx
       '@typed/router':
         specifier: workspace:*
         version: link:../../router
+      '@typed/virtual-modules':
+        specifier: workspace:*
+        version: link:../../virtual-modules
       '@typed/virtual-modules-ts-plugin':
         specifier: file:..
         version: file:packages/virtual-modules-ts-plugin(typescript@5.9.3)
@@ -2687,6 +2715,8 @@ snapshots:
     dependencies:
       '@typed/virtual-modules': link:packages/virtual-modules
       typescript: 5.9.3
+    optionalDependencies:
+      '@typed/app': link:packages/app
 
   '@types/chai@5.2.3':
     dependencies:

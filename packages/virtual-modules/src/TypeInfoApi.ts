@@ -39,10 +39,20 @@ import { validatePathSegment, validateRelativeGlobs } from "./internal/validatio
 const TYPE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".d.ts"];
 const DEFAULT_MAX_DEPTH = 6;
 
+/**
+ * Pre-resolved type for structural assignability checks.
+ * Host resolves ts.Type from the program (e.g. Fx from @typed/fx) and passes it.
+ */
+export interface ResolvedTypeTarget {
+  readonly id: string;
+  readonly type: ts.Type;
+}
+
 export interface CreateTypeInfoApiSessionOptions {
   readonly ts: typeof import("typescript");
   readonly program: ts.Program;
   readonly maxTypeDepth?: number;
+  readonly typeTargets?: readonly ResolvedTypeTarget[];
 }
 
 const compareByName = <T extends { readonly name: string }>(a: T, b: T): number =>
@@ -307,6 +317,7 @@ const serializeExport = (
   checker: ts.TypeChecker,
   tsMod: typeof import("typescript"),
   maxDepth: number,
+  typeTargets: readonly ResolvedTypeTarget[] | undefined,
 ): ExportedTypeInfo => {
   const resolved = resolveExportSymbol(symbol, checker, tsMod);
   const declaration = resolved.valueDeclaration ?? resolved.declarations?.[0];
@@ -319,12 +330,23 @@ const serializeExport = (
       ? checker.getTypeOfSymbolAtLocation(resolved, declaration)
       : checker.getDeclaredTypeOfSymbol(resolved);
 
+  const assignableTo: Record<string, boolean> | undefined =
+    typeTargets && typeTargets.length > 0
+      ? Object.fromEntries(
+          typeTargets.map((t) => [
+            t.id,
+            checker.isTypeAssignableTo(exportedType, t.type),
+          ]),
+        )
+      : undefined;
+
   return {
     name: symbol.getName(),
     declarationKind: declaration ? tsMod.SyntaxKind[declaration.kind] : undefined,
     declarationText: declaration ? declaration.getText() : undefined,
     docs: tsMod.displayPartsToString(symbol.getDocumentationComment(checker)) || undefined,
     type: serializeTypeNode(exportedType, checker, tsMod, 0, maxDepth, new Set()),
+    ...(assignableTo !== undefined && { assignableTo }),
   };
 };
 
@@ -334,6 +356,7 @@ const createFileSnapshot = (
   program: ts.Program,
   tsMod: typeof import("typescript"),
   maxDepth: number,
+  typeTargets: readonly ResolvedTypeTarget[] | undefined,
 ): TypeInfoFileSnapshot => {
   const sourceFile = program.getSourceFile(filePath);
   if (!sourceFile) {
@@ -350,7 +373,7 @@ const createFileSnapshot = (
 
   const exports = checker
     .getExportsOfModule(moduleSymbol)
-    .map((value) => serializeExport(value, checker, tsMod, maxDepth));
+    .map((value) => serializeExport(value, checker, tsMod, maxDepth, typeTargets));
 
   return {
     filePath,
@@ -431,6 +454,7 @@ export const createTypeInfoApiSession = (
       options.program,
       options.ts,
       maxDepth,
+      options.typeTargets,
     );
     snapshotCache.set(absolutePath, snapshot);
     return { ok: true, snapshot };
@@ -483,7 +507,9 @@ export const createTypeInfoApiSession = (
     const tsMod = options.ts;
     return filteredMatches
       .filter((filePath) => program.getSourceFile(filePath) !== undefined)
-      .map((filePath) => createFileSnapshot(filePath, checker, program, tsMod, maxDepth));
+      .map((filePath) =>
+        createFileSnapshot(filePath, checker, program, tsMod, maxDepth, options.typeTargets),
+      );
   };
 
   return {

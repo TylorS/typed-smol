@@ -168,9 +168,7 @@ describe("virtual-modules-ts-plugin", () => {
 
       const program = wrapped.getProgram();
       expect(program).toBeDefined();
-      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("typed-virtual://"))).toBe(
-        true,
-      );
+      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
     },
   );
 
@@ -229,9 +227,7 @@ describe("virtual-modules-ts-plugin", () => {
       expect(diagnostics).toHaveLength(0);
       const program = languageService.getProgram();
       expect(program).toBeDefined();
-      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("typed-virtual://"))).toBe(
-        true,
-      );
+      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
     } finally {
       handle.dispose();
     }

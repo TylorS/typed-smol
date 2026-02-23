@@ -1,6 +1,7 @@
 packages:
   - "examples/*"
   - "packages/*"
+  - "packages/virtual-modules-ts-plugin/sample-project"
 
 catalog:
   effect: 4.0.0-beta.4
