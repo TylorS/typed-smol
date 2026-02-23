@@ -115,7 +115,7 @@ export function emitRouterMatchSource(
 
   const importLines: string[] = [
     `import * as Router from "@typed/router";`,
-    `import * as Fx from "@typed/fx";`,
+    `import * as Fx from "@typed/fx/Fx";`,
     `import { constant } from "effect/Function";`,
     ...(needsFnErrorImports
       ? [
