@@ -11,6 +11,7 @@
     "@typed/app": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
+    "@typed/tsconfig": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
     "@typed/virtual-modules-ts-plugin": "file:..",
     "effect": "catalog:",

@@ -1,14 +1,10 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@typed/tsconfig/dom",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "module": "ESNext",
-    "target": "ES2024",
-    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "lib": ["ESNext", "DOM"]
+    "esModuleInterop": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

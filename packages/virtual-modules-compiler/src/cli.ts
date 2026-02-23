@@ -6,6 +6,7 @@ import { loadResolver } from "./resolverLoader.js";
 import { compile } from "./compile.js";
 import { runWatch } from "./watch.js";
 import { runBuild } from "./build.js";
+import { runInit } from "./init.js";
 
 const args = process.argv.slice(2);
 const sys = ts.sys;
@@ -30,6 +31,20 @@ const reportDiagnostic: ts.DiagnosticReporter = (diagnostic) => {
 };
 
 function main(): number {
+  if (args[0] === "init") {
+    const force = args.includes("--force");
+    const result = runInit({
+      projectRoot: sys.getCurrentDirectory(),
+      force,
+    });
+    if (result.ok) {
+      sys.write(result.message + sys.newLine);
+      return 0;
+    }
+    sys.write(result.message + sys.newLine);
+    return 1;
+  }
+
   const buildIndex = args.findIndex((a) => a === "--build" || a === "-b");
   const watchIndex = args.findIndex((a) => a === "--watch" || a === "-w");
 

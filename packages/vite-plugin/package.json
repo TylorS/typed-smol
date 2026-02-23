@@ -1,0 +1,35 @@
+{
+  "name": "@typed/vite-plugin",
+  "version": "1.0.0-beta.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@typed/app": "workspace:*",
+    "@typed/virtual-modules": "workspace:*",
+    "@typed/virtual-modules-vite": "workspace:*",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-tsconfig-paths": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "catalog:",
+    "vite": "^7.3.1",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  }
+}

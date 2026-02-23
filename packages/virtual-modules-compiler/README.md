@@ -13,6 +13,9 @@ pnpm add @typed/virtual-modules-compiler typescript
 The `vmc` CLI mirrors `tsc` 100%:
 
 ```bash
+# Initialize vmc.config.ts in project root
+vmc init
+
 # Single-shot compile (same as tsc)
 vmc
 
@@ -24,6 +27,15 @@ vmc --watch
 
 # Build mode (project references)
 vmc --build
+```
+
+### `vmc init`
+
+Creates an initial `vmc.config.ts` in the current directory with a starter plugin. Use `--force` to overwrite an existing config:
+
+```bash
+vmc init
+vmc init --force
 ```
 
 ## Configuration

@@ -1,15 +1,9 @@
 import { defineConfig } from "vite";
-import viteCompression from "vite-plugin-compression";
+import { typedVitePlugin } from "@typed/vite-plugin";
 
 export default defineConfig({
   root: ".",
-  plugins: [
-    viteCompression({
-      algorithm: "brotliCompress",
-      ext: ".br",
-      threshold: 1024, // Only compress files larger than 1KB
-    }),
-  ],
+  plugins: [...typedVitePlugin()],
   build: {
     outDir: "dist",
     sourcemap: true,

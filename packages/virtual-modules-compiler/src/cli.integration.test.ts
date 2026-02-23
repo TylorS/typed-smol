@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -47,6 +47,50 @@ function runVmc(
 }
 
 describe("vmc CLI integration", () => {
+  it("vmc init creates vmc.config.ts in project root", () => {
+    const dir = createTempDir();
+
+    const { exitCode, stdout, stderr } = runVmc(dir, ["init"]);
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
+    expect(stdout).toMatch(/Created .*vmc\.config\.ts/);
+
+    const configPath = join(dir, "vmc.config.ts");
+    const config = readFileSync(configPath, "utf8");
+    expect(config).toContain("export default");
+    expect(config).toContain("plugins:");
+    expect(config).toContain("shouldResolve");
+    expect(config).toContain("build");
+  });
+
+  it("vmc init refuses to overwrite existing config without --force", () => {
+    const dir = createTempDir();
+    const configPath = join(dir, "vmc.config.ts");
+    writeFileSync(configPath, "export default {};\n", "utf8");
+
+    const { exitCode, stdout, stderr } = runVmc(dir, ["init"]);
+    expect(exitCode).toBe(1);
+    expect(stdout).toMatch(/already exists/);
+    expect(stdout).toMatch(/--force/);
+
+    const config = readFileSync(configPath, "utf8");
+    expect(config).toBe("export default {};\n");
+  });
+
+  it("vmc init --force overwrites existing config", () => {
+    const dir = createTempDir();
+    const configPath = join(dir, "vmc.config.ts");
+    writeFileSync(configPath, "export default {};\n", "utf8");
+
+    const { exitCode, stdout } = runVmc(dir, ["init", "--force"]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toMatch(/Created/);
+
+    const config = readFileSync(configPath, "utf8");
+    expect(config).toContain("plugins:");
+    expect(config).not.toBe("export default {};\n");
+  });
+
   it("compiles project with virtual modules via vmc.config.ts", () => {
     const dir = createTempDir();
     const srcDir = join(dir, "src");
