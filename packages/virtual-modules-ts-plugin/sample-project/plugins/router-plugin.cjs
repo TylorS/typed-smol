@@ -901,7 +901,7 @@ function emitRouterMatchSource(descriptors, targetDirectory, importer, guardExpo
   const varNameByPath = makeUniqueVarNames(nameEntries);
   const importLines = [
     `import * as Router from "@typed/router";`,
-    `import * as Fx from "@typed/fx";`,
+    `import * as Fx from "@typed/fx/Fx";`,
     `import { constant } from "effect/Function";`,
     ...needsFnErrorImports ? [
       `import * as Effect from "effect";`,

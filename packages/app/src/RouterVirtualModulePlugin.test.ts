@@ -250,7 +250,7 @@ describe("RouterVirtualModulePlugin", () => {
     const source = result as string;
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Users from "./routes/users.js";
 
@@ -295,7 +295,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof source).toBe("string");
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
@@ -316,7 +316,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Effect from "effect";
       import * as Cause from "effect/Cause";
@@ -340,7 +340,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Page from "./routes/page.js";
       import * as Pagedependencies from "./routes/page.dependencies.js";
@@ -360,7 +360,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
@@ -380,7 +380,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as ApiItem from "./routes/api/item.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
@@ -400,7 +400,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as ApiItem from "./routes/api/item.js";
       import * as ApiLayout from "./routes/api/_layout.js";
@@ -516,7 +516,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Home from "./routes/home.js";
 
@@ -532,7 +532,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as MEffect from "./routes/effect.js";
 
@@ -548,7 +548,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
@@ -564,7 +564,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as MStream from "./routes/stream.js";
 
@@ -580,7 +580,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Page from "./routes/page.js";
 
@@ -598,7 +598,7 @@ describe("RouterVirtualModulePlugin", () => {
     const source = result as string;
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Async from "./routes/async.js";
 
@@ -614,7 +614,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as V from "./routes/v.js";
 
@@ -630,7 +630,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as F from "./routes/f.js";
 
@@ -647,7 +647,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as E from "./routes/e.js";
 
@@ -664,7 +664,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Ef from "./routes/ef.js";
 
@@ -681,7 +681,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as S from "./routes/s.js";
 
@@ -698,7 +698,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Sf from "./routes/sf.js";
 
@@ -715,7 +715,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as X from "./routes/x.js";
 
@@ -732,7 +732,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Xf from "./routes/xf.js";
 
@@ -808,7 +808,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Home from "./routes/home.js";
 
@@ -824,7 +824,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Home from "./routes/home.js";
 
@@ -840,7 +840,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Page from "./routes/page.js";
 
@@ -857,7 +857,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
@@ -874,7 +874,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as MEffect from "./routes/effect.js";
 
@@ -890,7 +890,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as MStream from "./routes/stream.js";
 
@@ -906,7 +906,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Template from "./routes/template.js";
 
@@ -924,7 +924,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as About from "./routes/about.js";
       import * as Contact from "./routes/contact.js";
@@ -948,7 +948,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as UsersId from "./routes/users/[id].js";
       import * as UsersIndex from "./routes/users/index.js";
@@ -994,7 +994,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Index from "./routes/index.js";
 
@@ -1010,7 +1010,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as Default from "./routes/default.js";
 
@@ -1030,7 +1030,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as ApiItemsX from "./routes/api/items/x.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
@@ -1052,7 +1052,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as A from "./routes/a.js";
       import * as B from "./routes/b.js";
@@ -1074,7 +1074,7 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx";
+      import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
       import * as A from "./routes/a.js";
       import * as B from "./routes/b.js";
