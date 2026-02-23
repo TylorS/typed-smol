@@ -12,11 +12,11 @@
 
 ## 1. Layout Input Shapes
 
-| Name | Signature | Behavior |
-|------|-----------|----------|
-| **Layout** (existing) | `(params: LayoutParams) => Fx` | Full layout; add to stack |
-| **ContentLayout** | `(content: Fx<A,E,R>) => Fx<B,E2,R2>` | Content-only; normalize to Layout, add to stack |
-| **Passthrough** | `identity` or `(content) => content` | **Skip** — do not add to stack |
+| Name                  | Signature                             | Behavior                                        |
+| --------------------- | ------------------------------------- | ----------------------------------------------- |
+| **Layout** (existing) | `(params: LayoutParams) => Fx`        | Full layout; add to stack                       |
+| **ContentLayout**     | `(content: Fx<A,E,R>) => Fx<B,E2,R2>` | Content-only; normalize to Layout, add to stack |
+| **Passthrough**       | `identity` or `(content) => content`  | **Skip** — do not add to stack                  |
 
 ---
 
@@ -34,10 +34,10 @@ Plugin uses routeTypeNode-style classification on the layout export's type to pi
 
 ## 3. Type Aliases (for user ergonomics)
 
-| Alias | Purpose |
-|-------|---------|
-| **LayoutParams** | Already exists: `{ params, content }` for full layouts |
-| **LayoutContent** | `Fx<A, E, R>` — content stream type |
+| Alias             | Purpose                                                     |
+| ----------------- | ----------------------------------------------------------- |
+| **LayoutParams**  | Already exists: `{ params, content }` for full layouts      |
+| **LayoutContent** | `Fx<A, E, R>` — content stream type                         |
 | **ContentLayout** | `(content: Fx<A,E,R>) => Fx<B,E2,R2>` — content-only layout |
 
 No PassthroughLayout type — passthroughs are skipped, not typed.

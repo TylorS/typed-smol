@@ -1,5 +1,4 @@
-import assert from "node:assert";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import { Effect } from "effect";
 import * as Layer from "effect/Layer";
 import { Fx } from "@typed/fx";

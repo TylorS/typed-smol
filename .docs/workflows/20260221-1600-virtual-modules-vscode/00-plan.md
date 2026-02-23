@@ -8,12 +8,12 @@
 
 ## 1. Use Cases
 
-| Use case | Description | Entry point |
-|----------|-------------|-------------|
-| **Go to definition** | User Cmd+clicks `virtual:foo`; editor opens generated content | TypeScript returns definition location |
-| **Peek definition** | User hovers or peeks on import; shows content inline | Peek UI |
-| **Open virtual module** | Command palette: "Virtual Modules: Open virtual:foo" | Command |
-| **List virtual modules** | Tree / quick pick of resolved virtual modules in workspace | Sidebar or command |
+| Use case                 | Description                                                   | Entry point                            |
+| ------------------------ | ------------------------------------------------------------- | -------------------------------------- |
+| **Go to definition**     | User Cmd+clicks `virtual:foo`; editor opens generated content | TypeScript returns definition location |
+| **Peek definition**      | User hovers or peeks on import; shows content inline          | Peek UI                                |
+| **Open virtual module**  | Command palette: "Virtual Modules: Open virtual:foo"          | Command                                |
+| **List virtual modules** | Tree / quick pick of resolved virtual modules in workspace    | Sidebar or command                     |
 
 ---
 
@@ -166,11 +166,11 @@ When provider is asked for this URI, parse `moduleId` and `importer`, resolve, r
 
 ## 8. Commands
 
-| Command ID | Description |
-|------------|-------------|
-| `virtualModules.open` | Open virtual module: prompt for module ID or derive from cursor (import specifier); use active editor as importer |
-| `virtualModules.openFromImport` | Run from context menu on import specifier; extract `virtual:foo`, use current file as importer |
-| `virtualModules.list` | (Phase 2) List virtual modules in workspace; open selected |
+| Command ID                      | Description                                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `virtualModules.open`           | Open virtual module: prompt for module ID or derive from cursor (import specifier); use active editor as importer |
+| `virtualModules.openFromImport` | Run from context menu on import specifier; extract `virtual:foo`, use current file as importer                    |
+| `virtualModules.list`           | (Phase 2) List virtual modules in workspace; open selected                                                        |
 
 ---
 

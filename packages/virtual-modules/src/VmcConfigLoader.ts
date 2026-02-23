@@ -7,9 +7,7 @@ import { sanitizeErrorMessage } from "./internal/sanitize.js";
 import { validatePathSegment } from "./internal/validation.js";
 import type { VirtualModulePlugin, VirtualModuleResolver } from "./types.js";
 
-const VMC_CONFIG_NAMES = [
-  "vmc.config.ts",
-] as const;
+const VMC_CONFIG_NAMES = ["vmc.config.ts"] as const;
 
 export type VmcPluginEntry = VirtualModulePlugin | string;
 
@@ -103,7 +101,10 @@ function validateProjectRoot(projectRoot: unknown): LoadVmcConfigResult | string
   return resolvedProjectRoot;
 }
 
-function resolveConfigPath(projectRoot: string, configPath?: unknown): LoadVmcConfigResult | string {
+function resolveConfigPath(
+  projectRoot: string,
+  configPath?: unknown,
+): LoadVmcConfigResult | string {
   if (configPath !== undefined) {
     const configPathResult = validatePathSegment(configPath, "configPath");
     if (!configPathResult.ok) {
@@ -168,10 +169,7 @@ function resolveConfigPath(projectRoot: string, configPath?: unknown): LoadVmcCo
   return { status: "not-found" };
 }
 
-function loadTsConfigModule(
-  tsMod: typeof import("typescript"),
-  configPath: string,
-): unknown {
+function loadTsConfigModule(tsMod: typeof import("typescript"), configPath: string): unknown {
   // vmc config is executable project code.
   const sourceText = readFileSync(configPath, "utf8");
   const transpiled = tsMod.transpileModule(sourceText, {

@@ -19,9 +19,7 @@ const projectRoot = join(__dirname, "..");
 function getTsconfig(rootDir) {
   const configPath = join(rootDir, "tsconfig.json");
   const content = readFileSync(configPath, "utf8");
-  const configFile = ts.readConfigFile(configPath, (p) =>
-    readFileSync(p, "utf8"),
-  );
+  const configFile = ts.readConfigFile(configPath, (p) => readFileSync(p, "utf8"));
   if (configFile.error) {
     throw new Error(`Failed to read tsconfig: ${configFile.error.messageText}`);
   }
@@ -56,8 +54,7 @@ function loadPlugins() {
 const { fileNames, options } = getTsconfig(projectRoot);
 const host = ts.createCompilerHost(options);
 const program = ts.createProgram(fileNames, options, host);
-const sessionFactory = () =>
-  createTypeInfoApiSession({ ts, program });
+const sessionFactory = () => createTypeInfoApiSession({ ts, program });
 
 const plugins = loadPlugins();
 if (plugins.length === 0) {

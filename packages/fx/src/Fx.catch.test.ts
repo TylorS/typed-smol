@@ -1,5 +1,4 @@
-import assert from "node:assert";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import { Cause, Data, Effect, Exit } from "effect";
 import { Fx } from "./index.js";
 

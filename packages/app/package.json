@@ -26,12 +26,12 @@
     "@typed/virtual-modules": "workspace:*"
   },
   "devDependencies": {
+    "@typed/fx": "workspace:*",
     "@types/node": "^25.3.0",
     "@vitest/coverage-v8": "^4.0.0",
+    "effect": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@typed/fx": "workspace:*",
-    "effect": "catalog:"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": "catalog:"

@@ -57,6 +57,7 @@ When memory is relevant, perform explicit `retain -> reflect -> promote -> recal
 - Robustness: obvious edge cases considered for modified logic.
 - Efficiency: avoid unnecessary operations.
 - Safety: no policy-violating or destructive behavior.
+- **Lint and type-check:** Call `ReadLints` on modified files; run `pnpm build` or `tsc -b` and resolve any errors before finishing. Do not leave lint/type errors in modified code.
 
 ### 6) Safety and Governance Constraints
 - Never trade safety for speed.

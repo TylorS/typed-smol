@@ -78,12 +78,12 @@ Expect emitted source to contain nested `Router.merge(` calls matching the direc
 
 ## Summary of file changes
 
-| File | Changes |
-|------|---------|
-| TypeInfoApi.ts | Resolve exportedType to literal/structural type before assignableTo checks |
-| resolveTypeTargets.ts | Ensure typeTargets available when program lacks target imports (or document requirement) |
-| routeTypeNode.ts | Remove getReferenceTypeName fallbacks; use assignableTo only; unknown → fail |
-| emitRouterSource.ts | Fx import: `import * as Fx` |
-| buildRouteDescriptors.ts | Type guards; remove `as` casts |
-| routerDescriptorTree.ts | Remove ?? fallbacks; throw for 0 children; remove needsParensForChain |
+| File                              | Changes                                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| TypeInfoApi.ts                    | Resolve exportedType to literal/structural type before assignableTo checks                                       |
+| resolveTypeTargets.ts             | Ensure typeTargets available when program lacks target imports (or document requirement)                         |
+| routeTypeNode.ts                  | Remove getReferenceTypeName fallbacks; use assignableTo only; unknown → fail                                     |
+| emitRouterSource.ts               | Fx import: `import * as Fx`                                                                                      |
+| buildRouteDescriptors.ts          | Type guards; remove `as` casts                                                                                   |
+| routerDescriptorTree.ts           | Remove ?? fallbacks; throw for 0 children; remove needsParensForChain                                            |
 | RouterVirtualModulePlugin.test.ts | Update snapshots (Fx import, no parens); add nested merge golden; ensure buildRouterFromFixture uses typeTargets |

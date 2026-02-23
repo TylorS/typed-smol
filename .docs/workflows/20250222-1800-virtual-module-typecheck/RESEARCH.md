@@ -23,11 +23,15 @@ export function getSemanticSupportedSchemes() {
 `typescriptServiceClient.ts` line 768–772:
 
 ```ts
-return inMemoryResourcePrefix + '/'
-  + resource.scheme + '/'
-  + (resource.authority || emptyAuthority)
-  + (resource.path.startsWith('/') ? resource.path : '/' + resource.path)
-  + (resource.fragment ? '#' + resource.fragment : '');
+return (
+  inMemoryResourcePrefix +
+  "/" +
+  resource.scheme +
+  "/" +
+  (resource.authority || emptyAuthority) +
+  (resource.path.startsWith("/") ? resource.path : "/" + resource.path) +
+  (resource.fragment ? "#" + resource.fragment : "")
+);
 ```
 
 For `virtual-module:///module.ts?id=router:routes&importer=/path/to/router-demo.ts` this produces:
@@ -67,7 +71,7 @@ Cons: Still subject to `getSemanticSupportedSchemes` filtering for some flows.
 ```ts
 vscode.workspace.openTextDocument({
   content: result.sourceText,
-  language: 'typescript',
+  language: "typescript",
 });
 ```
 
@@ -134,11 +138,11 @@ In Take Over Mode, Volar runs its own TypeScript language service. Virtual code 
 
 #### 5. VS Code APIs for our use case
 
-| API | Use case | Save / write behavior |
-|-----|----------|------------------------|
-| `TextDocumentContentProvider` | Custom scheme, `provideTextDocumentContent` | No save callback; document can become dirty; save may fail or be ignored |
-| `FileSystemProvider` | Full virtual FS, `readFile`/`stat` | Can throw `NoPermissions` on `writeFile`; can return `readonly: true` in `FileStat` for "(read-only)" tab badge |
-| `untitled` scheme | `openTextDocument({ content })` | In `getSemanticSupportedSchemes()`; no stable URI; users may try to save |
+| API                           | Use case                                    | Save / write behavior                                                                                           |
+| ----------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `TextDocumentContentProvider` | Custom scheme, `provideTextDocumentContent` | No save callback; document can become dirty; save may fail or be ignored                                        |
+| `FileSystemProvider`          | Full virtual FS, `readFile`/`stat`          | Can throw `NoPermissions` on `writeFile`; can return `readonly: true` in `FileStat` for "(read-only)" tab badge |
+| `untitled` scheme             | `openTextDocument({ content })`             | In `getSemanticSupportedSchemes()`; no stable URI; users may try to save                                        |
 
 #### 6. typed-smol’s different requirement
 

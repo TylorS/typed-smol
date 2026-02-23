@@ -187,31 +187,31 @@ sequenceDiagram
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1 | Router Virtual Module Plugin, Target Resolver | `router:./<directory>` resolution through synchronous plugin contract |
-| FR-2 | Candidate Discovery, Route Contract Validator | regular `*.ts` discovery + type-driven leaf validation |
-| FR-3 | Route Contract Validator | one-of `handler/template/default` enforcement |
-| FR-4 | Companion Resolver | sibling companion support |
-| FR-5 | Companion Resolver | directory companion support |
-| FR-6 | Composition Planner | ancestor->leaf composition policy |
-| FR-7 | Entrypoint Classifier, Source Generator | normalize `template/default` into canonical handler path |
-| FR-8 | Composition Planner, Source Generator | `Matcher.match(...)`-equivalent behavior |
-| FR-9 | Diagnostic Catalog | typed diagnostics for contract violations |
-| FR-10 | Source Generator | readonly descriptor metadata (`as const`) |
-| FR-11 | Target Resolver, Candidate Discovery, Source Generator | deterministic path/order behavior |
-| FR-12 | Router Virtual Module Plugin, Target Resolver | explicit unresolved policy for non-resolvable target |
-| FR-13 | Entrypoint Classifier | TypeInfo-driven runtime-kind classification |
-| FR-14 | Source Generator | generation-time lifting of plain values into `Fx` |
-| NFR-1 | all components | fully synchronous pipeline |
-| NFR-2 | Candidate Discovery, Composition Planner, Source Generator | deterministic behavior per filesystem snapshot |
-| NFR-3 | Diagnostic Catalog | explicit, non-crashing error outcomes |
-| NFR-4 | Source Generator | stable output for incremental workflows |
-| NFR-5 | Target Resolver, Candidate Discovery | cross-platform path normalization |
-| NFR-6 | Router Virtual Module Plugin | first-match manager compatibility |
-| NFR-7 | Candidate Discovery, Route Contract Validator | per-build query reuse/memoization |
-| NFR-8 | Companion Resolver, Diagnostic Catalog | canonical naming and ambiguity prevention |
-| NFR-9 | Route Contract Validator, Entrypoint Classifier | deterministic TypeInfo validation/classification errors |
+| requirement_id | design_element                                             | notes                                                                 |
+| -------------- | ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| FR-1           | Router Virtual Module Plugin, Target Resolver              | `router:./<directory>` resolution through synchronous plugin contract |
+| FR-2           | Candidate Discovery, Route Contract Validator              | regular `*.ts` discovery + type-driven leaf validation                |
+| FR-3           | Route Contract Validator                                   | one-of `handler/template/default` enforcement                         |
+| FR-4           | Companion Resolver                                         | sibling companion support                                             |
+| FR-5           | Companion Resolver                                         | directory companion support                                           |
+| FR-6           | Composition Planner                                        | ancestor->leaf composition policy                                     |
+| FR-7           | Entrypoint Classifier, Source Generator                    | normalize `template/default` into canonical handler path              |
+| FR-8           | Composition Planner, Source Generator                      | `Matcher.match(...)`-equivalent behavior                              |
+| FR-9           | Diagnostic Catalog                                         | typed diagnostics for contract violations                             |
+| FR-10          | Source Generator                                           | readonly descriptor metadata (`as const`)                             |
+| FR-11          | Target Resolver, Candidate Discovery, Source Generator     | deterministic path/order behavior                                     |
+| FR-12          | Router Virtual Module Plugin, Target Resolver              | explicit unresolved policy for non-resolvable target                  |
+| FR-13          | Entrypoint Classifier                                      | TypeInfo-driven runtime-kind classification                           |
+| FR-14          | Source Generator                                           | generation-time lifting of plain values into `Fx`                     |
+| NFR-1          | all components                                             | fully synchronous pipeline                                            |
+| NFR-2          | Candidate Discovery, Composition Planner, Source Generator | deterministic behavior per filesystem snapshot                        |
+| NFR-3          | Diagnostic Catalog                                         | explicit, non-crashing error outcomes                                 |
+| NFR-4          | Source Generator                                           | stable output for incremental workflows                               |
+| NFR-5          | Target Resolver, Candidate Discovery                       | cross-platform path normalization                                     |
+| NFR-6          | Router Virtual Module Plugin                               | first-match manager compatibility                                     |
+| NFR-7          | Candidate Discovery, Route Contract Validator              | per-build query reuse/memoization                                     |
+| NFR-8          | Companion Resolver, Diagnostic Catalog                     | canonical naming and ambiguity prevention                             |
+| NFR-9          | Route Contract Validator, Entrypoint Classifier            | deterministic TypeInfo validation/classification errors               |
 
 ## Testing Strategy
 
@@ -232,17 +232,17 @@ sequenceDiagram
 
 ### Critical Path Scenarios
 
-| ts_id | scenario | maps_to_fr_nfr | maps_to_ac | blocking |
-| ----- | -------- | -------------- | ---------- | -------- |
-| TS-1 | `router:./routes` resolves synchronously via manager | FR-1, NFR-1, NFR-6 | AC-1 | yes |
-| TS-2 | regular `*.ts` discovery only accepts TypeInfo-valid route leaves in stable order | FR-2, FR-11, NFR-2, NFR-5, NFR-9 | AC-2, AC-10 | yes |
-| TS-3 | invalid route contract or invalid one-of entrypoint yields structured diagnostics | FR-3, FR-9, FR-13, NFR-3, NFR-9 | AC-3, AC-7 | yes |
-| TS-4 | sibling + directory companions compose exactly ancestor->leaf | FR-4, FR-5, FR-6 | AC-4 | yes |
-| TS-5 | `fx/effect/stream/plain` classification chooses correct generated normalization path | FR-7, FR-13, FR-14, NFR-9 | AC-5, AC-11 | yes |
-| TS-6 | unchanged inputs generate semantically identical output | FR-8, FR-11, NFR-4 | AC-6 | no |
-| TS-7 | readonly descriptor metadata preserves literal inference | FR-10 | AC-8 | no |
-| TS-8 | unresolvable target directory returns unresolved, no crash | FR-12, NFR-3 | AC-9 | yes |
-| TS-9 | ambiguous route definitions produce deterministic diagnostics | FR-9, NFR-8 | AC-7 | yes |
+| ts_id | scenario                                                                             | maps_to_fr_nfr                   | maps_to_ac  | blocking |
+| ----- | ------------------------------------------------------------------------------------ | -------------------------------- | ----------- | -------- |
+| TS-1  | `router:./routes` resolves synchronously via manager                                 | FR-1, NFR-1, NFR-6               | AC-1        | yes      |
+| TS-2  | regular `*.ts` discovery only accepts TypeInfo-valid route leaves in stable order    | FR-2, FR-11, NFR-2, NFR-5, NFR-9 | AC-2, AC-10 | yes      |
+| TS-3  | invalid route contract or invalid one-of entrypoint yields structured diagnostics    | FR-3, FR-9, FR-13, NFR-3, NFR-9  | AC-3, AC-7  | yes      |
+| TS-4  | sibling + directory companions compose exactly ancestor->leaf                        | FR-4, FR-5, FR-6                 | AC-4        | yes      |
+| TS-5  | `fx/effect/stream/plain` classification chooses correct generated normalization path | FR-7, FR-13, FR-14, NFR-9        | AC-5, AC-11 | yes      |
+| TS-6  | unchanged inputs generate semantically identical output                              | FR-8, FR-11, NFR-4               | AC-6        | no       |
+| TS-7  | readonly descriptor metadata preserves literal inference                             | FR-10                            | AC-8        | no       |
+| TS-8  | unresolvable target directory returns unresolved, no crash                           | FR-12, NFR-3                     | AC-9        | yes      |
+| TS-9  | ambiguous route definitions produce deterministic diagnostics                        | FR-9, NFR-8                      | AC-7        | yes      |
 
 ### Coverage Targets
 
@@ -252,27 +252,27 @@ sequenceDiagram
 
 ### Dependency Readiness Matrix
 
-| dependency | status | unblock_action |
-| ---------- | ------ | -------------- |
-| `typescript@5.9.x` | ready | none |
-| `@typed/virtual-modules` core (`PluginManager`, `TypeInfoApi`) | ready | none |
-| `@typed/router` matcher runtime | ready | none |
-| cross-platform CI path matrix | partial | add Windows CI job for path/ordering tests |
-| deterministic golden snapshot harness | partial | add canonical source normalizer + snapshot comparer |
-| nested companion fixture generator | partial | add fixture builder for deep ancestor/leaf composition |
+| dependency                                                     | status  | unblock_action                                         |
+| -------------------------------------------------------------- | ------- | ------------------------------------------------------ |
+| `typescript@5.9.x`                                             | ready   | none                                                   |
+| `@typed/virtual-modules` core (`PluginManager`, `TypeInfoApi`) | ready   | none                                                   |
+| `@typed/router` matcher runtime                                | ready   | none                                                   |
+| cross-platform CI path matrix                                  | partial | add Windows CI job for path/ordering tests             |
+| deterministic golden snapshot harness                          | partial | add canonical source normalizer + snapshot comparer    |
+| nested companion fixture generator                             | partial | add fixture builder for deep ancestor/leaf composition |
 
 ### Acceptance Failure Policy
 
-- Any blocking TS-* failure blocks release for this scope.
+- Any blocking TS-\* failure blocks release for this scope.
 - Failing scenario must record violated FR/NFR/AC IDs before fixes.
-- After fix, rerun failed TS-* plus affected blocking TS-* set.
+- After fix, rerun failed TS-_ plus affected blocking TS-_ set.
 - If a blocking scenario depends on an incomplete dependency, unblock dependency first and re-run.
 
 ## Memory Lifecycle and Governance
 
 - Canonical durable behavior lives in this spec and its linked `requirements.md`.
 - Workflow notes remain transient under `.docs/workflows/20260221-1705-router-virtual-module-brainstorm/`.
-- Promote lessons to `.docs/_meta/memory/` only after implementation validates blocking TS-* scenarios.
+- Promote lessons to `.docs/_meta/memory/` only after implementation validates blocking TS-\* scenarios.
 - Keep single source of truth for route discovery/composition contracts in this spec + linked ADR.
 
 ## References Consulted

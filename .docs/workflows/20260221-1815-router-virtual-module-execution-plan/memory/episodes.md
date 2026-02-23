@@ -11,10 +11,10 @@
   - Friction risk: TS scenario coverage can get bolted on too late, weakening sequencing and safeguards.
 
 - diagnose:
-  - Root cause: plans often separate implementation steps from TS-* acceptance mapping until execution.
+  - Root cause: plans often separate implementation steps from TS-\* acceptance mapping until execution.
 
 - propose:
-  - P1: Use checkpoint gates tied to TS-* scenarios (CP-A/CP-B/CP-C).
+  - P1: Use checkpoint gates tied to TS-\* scenarios (CP-A/CP-B/CP-C).
   - P2: Define rollback at task granularity before coding starts.
   - P3: Make unresolved-vs-error policy explicit in early tasks.
 
@@ -64,7 +64,7 @@
   - Emit composedConcerns (guard/dependencies/layout/catch) in route descriptors; full Matcher codegen deferred to SG-B2.
 
 - validate:
-  - TS-4 test: nested users/profile.ts with _guard.ts at base and users/, plus profile.guard.ts; order verified.
+  - TS-4 test: nested users/profile.ts with \_guard.ts at base and users/, plus profile.guard.ts; order verified.
   - All 47 virtual-modules tests pass.
 
 - apply_next:

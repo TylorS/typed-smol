@@ -17,6 +17,8 @@ import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
 import type * as Scope from "effect/Scope";
 import * as ServiceMap from "effect/ServiceMap";
+import { filterMap as fxFilterMap } from "../Fx/combinators/filterMap.js";
+import { filterMapEffect as fxFilterMapEffect } from "../Fx/combinators/filterMapEffect.js";
 import { map as fxMap } from "../Fx/combinators/map.js";
 import { mapEffect as fxMapEffect } from "../Fx/combinators/mapEffect.js";
 import {
@@ -328,6 +330,80 @@ export const mapEffect: {
       versioned,
       (fx) => fxMapEffect(fx, options.onFx),
       Effect.flatMap(options.onEffect),
+    );
+  },
+);
+
+/**
+ * Filter-maps a Versioned's output as both an Fx and Effect; the Effect value becomes `Option` (Some when the predicate holds, None otherwise).
+ * @since 1.18.0
+ * @category combinators
+ */
+export const filterMap: {
+  <A, E, R, C, B, D>(options: {
+    onFx: (a: A) => Option.Option<C>;
+    onEffect: (b: B) => Option.Option<D>;
+  }): <R0, E0, R2, E2>(
+    versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
+  ) => Versioned<never, never, C, E, R, Option.Option<D>, E0 | E2, R0 | R2>;
+
+  <R0, E0, A, E, R, B, E2, R2, C, D>(
+    versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
+    options: {
+      onFx: (a: A) => Option.Option<C>;
+      onEffect: (b: B) => Option.Option<D>;
+    },
+  ): Versioned<never, never, C, E, R, Option.Option<D>, E0 | E2, R0 | R2>;
+} = dual(
+  2,
+  function filterMap<R0, E0, A, E, R, B, E2, R2, C, D>(
+    versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
+    options: {
+      onFx: (a: A) => Option.Option<C>;
+      onEffect: (b: B) => Option.Option<D>;
+    },
+  ): Versioned<never, never, C, E, R, Option.Option<D>, E0 | E2, R0 | R2> {
+    return transform(
+      versioned,
+      (fx) => fxFilterMap(fx, options.onFx),
+      (effect) => Effect.map(effect, options.onEffect),
+    );
+  },
+);
+
+/**
+ * Filter-maps a Versioned's output as both an Fx and Effect using an Effect; the Effect value becomes `Option`.
+ * @since 1.18.0
+ * @category combinators
+ */
+export const filterMapEffect: {
+  <A, C, E3, R3, B, D, E4, R4>(options: {
+    onFx: (a: A) => Effect.Effect<Option.Option<C>, E3, R3>;
+    onEffect: (b: B) => Effect.Effect<Option.Option<D>, E4, R4>;
+  }): <R0, E0, R, E, R2, E2>(
+    versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
+  ) => Versioned<never, never, C, E | E3, R | R3, Option.Option<D>, E0 | E2 | E4, R0 | R2 | R4>;
+
+  <R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4>(
+    versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
+    options: {
+      onFx: (a: A) => Effect.Effect<Option.Option<C>, E3, R3>;
+      onEffect: (b: B) => Effect.Effect<Option.Option<D>, E4, R4>;
+    },
+  ): Versioned<never, never, C, E | E3, R | R3, Option.Option<D>, E0 | E2 | E4, R0 | R2 | R4>;
+} = dual(
+  2,
+  function filterMapEffect<R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4>(
+    versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
+    options: {
+      onFx: (a: A) => Effect.Effect<Option.Option<C>, E3, R3>;
+      onEffect: (b: B) => Effect.Effect<Option.Option<D>, E4, R4>;
+    },
+  ): Versioned<never, never, C, E | E3, R | R3, Option.Option<D>, E0 | E2 | E4, R0 | R2 | R4> {
+    return transform(
+      versioned,
+      (fx) => fxFilterMapEffect(fx, options.onFx),
+      (effect) => Effect.flatMap(effect, options.onEffect),
     );
   },
 );

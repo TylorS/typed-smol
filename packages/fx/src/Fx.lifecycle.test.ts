@@ -1,5 +1,4 @@
-import assert from "node:assert";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";

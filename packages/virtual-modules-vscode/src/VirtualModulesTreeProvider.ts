@@ -29,8 +29,7 @@ export interface VirtualModulesTreeProviderOptions {
   onCache?: (result: { virtualFileName: string; sourceText: string }) => void;
 }
 
-export interface VirtualModulesTreeProvider
-  extends vscode.TreeDataProvider<VirtualModuleTreeItem> {
+export interface VirtualModulesTreeProvider extends vscode.TreeDataProvider<VirtualModuleTreeItem> {
   refresh(): void;
 }
 
@@ -85,13 +84,8 @@ export function createVirtualModulesTreeProvider(
 ): VirtualModulesTreeProvider {
   const { getResolver, onResolved, onCache } = options;
 
-  const _onDidChangeTreeData = new vscode.EventEmitter<
-    VirtualModuleTreeItem | undefined
-  >();
-  const cache = new Map<
-    string,
-    Array<{ moduleId: string; importer: string }>
-  >();
+  const _onDidChangeTreeData = new vscode.EventEmitter<VirtualModuleTreeItem | undefined>();
+  const cache = new Map<string, Array<{ moduleId: string; importer: string }>>();
 
   async function loadCache(): Promise<void> {
     cache.clear();

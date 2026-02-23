@@ -202,10 +202,7 @@ export interface VirtualModuleBuildError {
   readonly errors: readonly VirtualModuleDiagnostic[];
 }
 
-export type VirtualModuleBuildResult =
-  | string
-  | VirtualModuleBuildSuccess
-  | VirtualModuleBuildError;
+export type VirtualModuleBuildResult = string | VirtualModuleBuildSuccess | VirtualModuleBuildError;
 
 export interface VirtualModulePlugin {
   readonly name: string;

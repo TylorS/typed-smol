@@ -309,7 +309,8 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("golden: directory dependencies and layout", () => {
     const source = buildRouterFromFixture({
-      "src/routes/_dependencies.ts": "import * as Layer from 'effect/Layer'; export default Layer.empty;",
+      "src/routes/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default Layer.empty;",
       "src/routes/api/_layout.ts": "export const layout = (x: unknown) => x;",
       "src/routes/api/item.ts": route("/", "export const handler = 1;"),
       "src/routes/api/item.catch.ts": "export const catchFn = () => null;",
@@ -354,7 +355,8 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("golden: sibling and directory companions", () => {
     const source = buildRouterFromFixture({
-      "src/routes/_dependencies.ts": "import * as Layer from 'effect/Layer'; export default Layer.empty;",
+      "src/routes/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default Layer.empty;",
       "src/routes/users/profile.ts": route("/", "export const handler = 1;"),
       "src/routes/users/profile.dependencies.ts": "export const dependencies = [];",
     });
@@ -374,8 +376,10 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("golden: multiple ancestors dependencies", () => {
     const source = buildRouterFromFixture({
-      "src/routes/_dependencies.ts": "import * as Layer from 'effect/Layer'; export default Layer.empty;",
-      "src/routes/api/_dependencies.ts": "import * as Layer from 'effect/Layer'; export default Layer.empty;",
+      "src/routes/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default Layer.empty;",
+      "src/routes/api/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default Layer.empty;",
       "src/routes/api/item.ts": route("/", "export const handler = 1;"),
     });
     expect(source).toMatchInlineSnapshot(`
@@ -445,7 +449,9 @@ describe("RouterVirtualModulePlugin", () => {
   });
 
   it("build returns RVM-ID-001 when virtual module id is invalid (e.g. empty relative path)", () => {
-    const fixture = createFixture({ "src/routes/home.ts": route("/", "export const handler = 1;") });
+    const fixture = createFixture({
+      "src/routes/home.ts": route("/", "export const handler = 1;"),
+    });
     const plugin = createRouterVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
     const session = createTypeInfoApiSession({ ts, program });
@@ -1022,8 +1028,10 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("golden: provide and layout order leaf to ancestor (chain: closest first)", () => {
     const source = buildRouterFromFixture({
-      "src/routes/_dependencies.ts": "import * as Layer from 'effect/Layer'; export default Layer.empty;",
-      "src/routes/api/_dependencies.ts": "import * as Layer from 'effect/Layer'; export default Layer.empty;",
+      "src/routes/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default Layer.empty;",
+      "src/routes/api/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default Layer.empty;",
       "src/routes/api/_layout.ts": "export const layout = (x: unknown) => x;",
       "src/routes/api/items/_layout.ts": "export const layout = (x: unknown) => x;",
       "src/routes/api/items/x.ts": route("/", "export const handler = 1;"),

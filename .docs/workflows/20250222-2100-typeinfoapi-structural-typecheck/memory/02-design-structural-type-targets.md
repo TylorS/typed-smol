@@ -7,7 +7,7 @@ Host passes `ts.Type` instances when creating the session. TypeInfoApi runs `che
 ```ts
 // types.ts
 export interface ResolvedTypeTarget {
-  readonly id: string;  // "Fx" | "Effect" | "Stream" | "Route" | "RefSubject" | "Option"
+  readonly id: string; // "Fx" | "Effect" | "Stream" | "Route" | "RefSubject" | "Option"
   readonly type: import("typescript").Type;
 }
 
@@ -25,7 +25,7 @@ export interface ExportedTypeInfo {
   readonly declarationText?: string;
   readonly docs?: string;
   readonly type: TypeNode;
-  readonly assignableTo?: Readonly<Record<string, boolean>>;  // id -> boolean
+  readonly assignableTo?: Readonly<Record<string, boolean>>; // id -> boolean
 }
 ```
 
@@ -38,7 +38,8 @@ const streamType = resolveTypeFromModule(program, checker, "effect", "Stream");
 const routeType = resolveTypeFromModule(program, checker, "@typed/router", "Route");
 // ...
 const session = createTypeInfoApiSession({
-  ts, program,
+  ts,
+  program,
   typeTargets: [
     { id: "Fx", type: fxType },
     { id: "Effect", type: effectType },

@@ -1,8 +1,7 @@
-import { deepEqual, deepStrictEqual } from "assert";
+import { assert, describe, expect, it } from "vitest";
 import { templateHash } from "./internal/templateHash.js";
 import * as Parser from "./Parser.js";
 import * as Template from "./Template.js";
-import { describe, expect, it } from "vitest";
 
 describe("Parser", () => {
   it("parses a simple template", () => {
@@ -82,7 +81,7 @@ describe("Parser", () => {
     const expected = new Template.Template([div], templateHash(template), [[sparse, [0]]]);
     const actual = Parser.parse(template);
 
-    deepStrictEqual(actual, expected);
+    assert.deepStrictEqual(actual, expected);
   });
 
   it("parses boolean attributes", () => {
@@ -528,7 +527,7 @@ describe("Parser", () => {
       [],
     );
 
-    deepStrictEqual(Parser.parse(template), expected);
+    assert.deepStrictEqual(Parser.parse(template), expected);
   });
 
   it("parses templates with spread props", () => {
@@ -540,7 +539,7 @@ describe("Parser", () => {
       [[props, [0]]],
     );
 
-    deepStrictEqual(Parser.parse(template), expected);
+    assert.deepStrictEqual(Parser.parse(template), expected);
   });
 
   it("parses large svg templates", () => {
@@ -835,7 +834,7 @@ c192 -183 322 -427 380 -715 22 -107 22 -146 -10 -621 -11 -164 0 -383 25
       [],
     );
 
-    deepEqual(actual, expected);
+    assert.deepEqual(actual, expected);
 
     const iterations = 1000;
     let totalTime = 0;

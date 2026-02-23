@@ -17,13 +17,9 @@ export function handlerExprFor(
   }
   switch (runtimeKind) {
     case "plain":
-      return isFn
-        ? `(params) => Fx.map(params, ${ref})`
-        : `constant(Fx.succeed(${ref}))`;
+      return isFn ? `(params) => Fx.map(params, ${ref})` : `constant(Fx.succeed(${ref}))`;
     case "effect":
-      return isFn
-        ? `(params) => Fx.mapEffect(params, ${ref})`
-        : `constant(Fx.fromEffect(${ref}))`;
+      return isFn ? `(params) => Fx.mapEffect(params, ${ref})` : `constant(Fx.fromEffect(${ref}))`;
     case "stream":
       return isFn
         ? `(params) => Fx.switchMap(params, (p) => Fx.fromStream(${ref}(p)))`
@@ -51,11 +47,7 @@ export function liftToFx(expr: string, kind: RuntimeKind): string {
  * Emit the catch expression that converts to (causeRef) => Fx form.
  * Supports: value fallbacks, (Cause) => ..., (E) => ..., and native (causeRef) => Fx.
  */
-export function catchExprFor(
-  catchForm: CatchForm,
-  varName: string,
-  exportName: string,
-): string {
+export function catchExprFor(catchForm: CatchForm, varName: string, exportName: string): string {
   const ref = `${varName}.${exportName}`;
   const { form, returnKind } = catchForm;
 

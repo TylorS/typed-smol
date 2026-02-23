@@ -320,13 +320,15 @@ export declare namespace Matcher {
   export type Success<T> = [T] extends [Matcher<infer A, infer _E, infer _R>] ? A : never;
   export type Error<T> = [T] extends [Matcher<infer _A, infer E, infer _R>] ? E : never;
   export type Services<T> = [T] extends [Matcher<infer _A, infer _E, infer R>] ? R : never;
-  
+
   /** Union of Success types from each matcher in a tuple. */
   export type MergeSuccess<Matchers extends ReadonlyArray<Matcher.Any>> = Success<Matchers[number]>;
   /** Union of Error types from each matcher in a tuple. */
   export type MergeError<Matchers extends ReadonlyArray<Matcher.Any>> = Error<Matchers[number]>;
   /** Union of Services types from each matcher in a tuple. */
-  export type MergeServices<Matchers extends ReadonlyArray<Matcher.Any>> = Services<Matchers[number]>;
+  export type MergeServices<Matchers extends ReadonlyArray<Matcher.Any>> = Services<
+    Matchers[number]
+  >;
 }
 
 export type MatchHandler<Params, A, E, R> =
@@ -647,10 +649,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     E | Matcher.MergeError<Others>,
     R | Matcher.MergeServices<Others>
   > {
-    const allCases = [
-      ...this.cases,
-      ...others.flatMap((m) => m.cases),
-    ];
+    const allCases = [...this.cases, ...others.flatMap((m) => m.cases)];
     return new MatcherImpl(allCases) as Matcher<
       A | Matcher.MergeSuccess<Others>,
       E | Matcher.MergeError<Others>,

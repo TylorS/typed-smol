@@ -19,7 +19,7 @@
 - **routeTypeNode**: Refactor to use `entrypoint.assignableTo` when present; remove string-based `getReferenceTypeName` / `runtimeKindFromTypeText` for Fx/Effect/Stream/Route.
 - **RouterVirtualModulePlugin test**: Update `buildRouterFromFixture` to use `typeTargets: resolveRouterTypeTargets(program, ts)`.
 - **virtual-modules-ts-plugin**: Update session factory to pass typeTargets for router: resolution.
-- **Nested assignableTo**: For guard (Effect<Option<*>>) and RefSubject param, extend serializeTypeNode to add assignableTo to nested TypeNodes when typeTargets provided. Requires threading typeTargets through serializeTypeNode.
+- **Nested assignableTo**: For guard (Effect<Option<\*>>) and RefSubject param, extend serializeTypeNode to add assignableTo to nested TypeNodes when typeTargets provided. Requires threading typeTargets through serializeTypeNode.
 
 ## Validation Performed
 

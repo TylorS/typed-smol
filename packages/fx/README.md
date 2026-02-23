@@ -82,6 +82,8 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 
 - `map(f)` — Transform emitted values.
 - `mapEffect(f)` — Transform with an Effect.
+- `mapError(f)` — Transform typed failures.
+- `mapBoth({ onSuccess, onFailure })` — Transform both success values and typed failures.
 - `flatMap(f)` — Map to inner Fx and merge (concurrent; like mergeMap).
 - `flatMapEffect(f)` — FlatMap with an Effect returning Fx.
 - `flatMapConcurrently(f, concurrency?)` — FlatMap with a concurrency limit.
@@ -98,19 +100,37 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `filterMapEffect(f)` — FilterMap with Effect.
 - `compact` — Filter out `None`, unwrap `Some`.
 - `take(n)` — Take first n elements.
+- `takeEffect(effect)` — Take first n elements, where n is computed by an Effect.
 - `takeUntil(fx)` — Take until another Fx emits.
+- `takeUntilEffect(f)` — Take until an effectful predicate returns true.
+- `takeWhile(f)` — Take while predicate holds.
+- `takeWhileEffect(f)` — Take while effectful predicate holds.
 - `skip(n)` — Skip first n elements.
+- `skipEffect(effect)` — Skip first n elements, where n is computed by an Effect.
+- `skipWhile(f)` / `dropWhile(f)` — Skip while predicate holds.
+- `skipWhileEffect(f)` / `dropWhileEffect(f)` — Skip while effectful predicate holds.
 - `slice(options)` — Skip/take by bounds.
+- `sliceEffect(effect)` — Skip/take by bounds produced by an Effect.
 - `skipRepeats` — Drop consecutive duplicates (Equal).
 - `skipRepeatsWith(equiv)` — Drop consecutive duplicates with custom equivalence.
+- `changesWithEffect(f)` — Effectful consecutive deduplication predicate.
+- `merge(fx)` — Merge with another Fx.
 - `mergeAll(fxs)` — Merge multiple Fx streams.
 - `mergeOrdered(fxs)` — Merge with ordering guarantees.
+- `concat(fx)` — Concatenate with another Fx (run second after first completes).
+- `zip(fx)` / `zipWith(fx, f)` — Zip streams in lockstep.
+- `zipLatest(fx)` / `zipLatestWith(fx, f)` — Zip latest values after both emit once.
 - `catch(f)` — Recover from errors.
+- `catchIf(refinement, f)` — Recover conditionally from typed failures.
+- `catchCauseIf(predicate, f)` — Recover conditionally from failure causes.
+- `catchTags(handlers)` — Recover from multiple tagged failures with handler map.
 - `onError(f)` — Run an effect on failure.
 - `onExit(f)` — Run an effect on exit (success/failure/interrupt).
 - `onInterrupt(f)` — Run an effect on interrupt.
 - `ensuring(effect)` — Run effect when Fx ends (success, failure, or interrupt).
 - `provide(services)` — Provide context to the Fx.
+- `provideService(tag, service)` — Provide a single service to the Fx.
+- `provideServiceEffect(tag, effect)` — Provide a service produced by an Effect.
 - `when(condition, fx)` — Run Fx only when condition holds.
 - `unwrap` — Unwrap Fx of Fx (flatten one level).
 - `unwrapScoped` — Unwrap with Scope for inner Fx.
@@ -118,6 +138,8 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `genScoped(f)` — gen with Scope.
 - `loop(initial, f)` — Loop with state and Option for continue/exit.
 - `loopEffect(initial, f)` — Loop with Effect.
+- `scan(initial, f)` — Emit running accumulation (includes initial value).
+- `scanEffect(initial, f)` — Effectful running accumulation.
 - `loopCause(initial, f)` — Loop with Cause handling.
 - `loopCauseEffect(initial, f)` — Loop with Cause and Effect.
 - `filterMapLoop(initial, f)` — Loop yielding Option.
@@ -127,6 +149,7 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `keyed(keyFn, f)` — Keyed stream (e.g. by id) with inner Fx per key.
 - `tapEffect(f)` — Run effect for each value, pass value through.
 - `exit` — Turn Fx of Exit into Fx that fails/succeeds accordingly.
+- `result` — Materialize successes/failures as `Result`.
 - `causes` — Expose failures as Cause emissions.
 - `continueWith(f)` — When Fx ends, continue with another Fx.
 - `flip` — Swap success and error types.

@@ -63,7 +63,7 @@ Before starting the Per-Task Loop, load the testing strategy artifact produced d
 1. Reconfirm active subgoal, requirement IDs, and relevant `AGENTS.md` / `.agents/*.md` context.
 2. Break task into concrete sub-steps.
 3. Implement the smallest valuable increment.
-4. Validate with tests/checks/logs. Execute applicable TS-* scenarios from the testing strategy; record pass/fail per scenario.
+4. Validate with tests/checks/logs. **Required:** Run `ReadLints` on modified files/directories and fix any issues; run `pnpm build` or `tsc -b` to ensure type-check passes before marking complete. Execute applicable TS-* scenarios from the testing strategy; record pass/fail per scenario.
 5. Review for correctness, regressions, and requirement coverage.
 6. If blocked or invalidated, replan locally and continue.
 7. Mark task complete only with evidence.

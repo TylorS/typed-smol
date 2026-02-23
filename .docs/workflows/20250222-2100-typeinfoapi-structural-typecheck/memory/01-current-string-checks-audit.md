@@ -8,14 +8,14 @@
 
 ### packages/app/src/internal/routeTypeNode.ts
 
-| Function | String dependency | Purpose |
-|----------|-------------------|---------|
+| Function                     | String dependency                                     | Purpose                                      |
+| ---------------------------- | ----------------------------------------------------- | -------------------------------------------- |
 | `getReferenceTypeName(text)` | Parses `text` via `split("<")`, `split(".")`, `pop()` | Extract unqualified name from display string |
-| `typeNodeIsRouteCompatible` | `name === "Route"` | Is type a Route? |
-| `runtimeKindFromTypeText` | `name === "Fx"` \| `"Stream"` \| `"Effect"` | Classify Fx/Effect/Stream |
-| `typeNodeToRuntimeKind` | Uses `runtimeKindFromTypeText(n.text)` | Route handler kind |
-| `typeNodeIsRefSubject` | `name === "RefSubject"` | First param expects RefSubject? |
-| `typeNodeIsEffectOptionRef` | `name === "Effect"`, `optionName === "Option"` | Guard return type validation |
+| `typeNodeIsRouteCompatible`  | `name === "Route"`                                    | Is type a Route?                             |
+| `runtimeKindFromTypeText`    | `name === "Fx"` \| `"Stream"` \| `"Effect"`           | Classify Fx/Effect/Stream                    |
+| `typeNodeToRuntimeKind`      | Uses `runtimeKindFromTypeText(n.text)`                | Route handler kind                           |
+| `typeNodeIsRefSubject`       | `name === "RefSubject"`                               | First param expects RefSubject?              |
+| `typeNodeIsEffectOptionRef`  | `name === "Effect"`, `optionName === "Option"`        | Guard return type validation                 |
 
 Root cause: `node.text` comes from `checker.typeToString(type)`. Format depends on TS config, module resolution, and imports. Different projects can produce `"Fx.Fx<number>"`, `"Fx<number>"`, or namespace-qualified variants. String matching is brittle.
 

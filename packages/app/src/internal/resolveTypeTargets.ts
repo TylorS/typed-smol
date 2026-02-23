@@ -22,10 +22,7 @@ const ROUTER_TYPE_SPECS: readonly { id: string; module: string; exportName: stri
  * @returns Array of ResolvedTypeTarget; entries may be missing if the program
  *   does not import from the required modules.
  */
-export function resolveRouterTypeTargets(
-  program: ts.Program,
-  tsMod: TS,
-): ResolvedTypeTarget[] {
+export function resolveRouterTypeTargets(program: ts.Program, tsMod: TS): ResolvedTypeTarget[] {
   const checker = program.getTypeChecker();
   const found = new Map<string, ts.Type>();
 
@@ -47,8 +44,10 @@ export function resolveRouterTypeTargets(
         if (!spec || found.has(spec.id)) return;
         const symbol = checker.getSymbolAtLocation(name.name);
         if (!symbol) return;
-        const aliased = (checker as ts.TypeChecker & { getAliasedSymbol?(s: ts.Symbol): ts.Symbol })
-          .getAliasedSymbol?.(symbol) ?? symbol;
+        const aliased =
+          (
+            checker as ts.TypeChecker & { getAliasedSymbol?(s: ts.Symbol): ts.Symbol }
+          ).getAliasedSymbol?.(symbol) ?? symbol;
         const decl = aliased.valueDeclaration ?? aliased.declarations?.[0];
         const type = decl
           ? checker.getTypeOfSymbolAtLocation(aliased, decl)
@@ -70,10 +69,7 @@ export function resolveRouterTypeTargets(
         if (!spec || found.has(spec.id)) return;
         const symbol = checker.getSymbolAtLocation(binding.name);
         if (!symbol) return;
-        const nsType = checker.getTypeOfSymbolAtLocation(
-          symbol,
-          binding.name,
-        );
+        const nsType = checker.getTypeOfSymbolAtLocation(symbol, binding.name);
         const prop = nsType.getProperty?.(spec.exportName);
         if (!prop) return;
         const decl = prop.valueDeclaration ?? prop.declarations?.[0];

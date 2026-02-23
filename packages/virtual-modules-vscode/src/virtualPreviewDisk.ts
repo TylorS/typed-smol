@@ -10,10 +10,7 @@ export const VIRTUAL_PREVIEW_RELATIVE = "node_modules/.typed/virtual";
  * Absolute path for a virtual preview file under projectRoot/node_modules/.typed/virtual/.
  * Uses the basename from virtualFileName (e.g. __virtual_router_abc123.ts) for uniqueness.
  */
-export function getVirtualPreviewPath(
-  projectRoot: string,
-  virtualFileName: string,
-): string {
+export function getVirtualPreviewPath(projectRoot: string, virtualFileName: string): string {
   const base = virtualFileName.replace(/^.*[/\\]/, ""); // basename
   const dir = join(projectRoot, VIRTUAL_PREVIEW_RELATIVE);
   return resolve(dir, base);
@@ -28,16 +25,13 @@ function rewriteImportsForPreviewLocation(
   importerDir: string,
   previewDir: string,
 ): string {
-  return sourceText.replace(
-    /from\s+['"](\.\.?\/[^'"]+)['"]/g,
-    (match, spec: string) => {
-      const absoluteTarget = resolve(importerDir, spec);
-      const newRel = toPosix(relative(previewDir, absoluteTarget));
-      const newSpec = newRel.startsWith(".") ? newRel : `./${newRel}`;
-      const quote = match.includes('"') ? '"' : "'";
-      return `from ${quote}${newSpec}${quote}`;
-    },
-  );
+  return sourceText.replace(/from\s+['"](\.\.?\/[^'"]+)['"]/g, (match, spec: string) => {
+    const absoluteTarget = resolve(importerDir, spec);
+    const newRel = toPosix(relative(previewDir, absoluteTarget));
+    const newSpec = newRel.startsWith(".") ? newRel : `./${newRel}`;
+    const quote = match.includes('"') ? '"' : "'";
+    return `from ${quote}${newSpec}${quote}`;
+  });
 }
 
 /**
@@ -52,11 +46,7 @@ export function writeVirtualPreviewAndGetPath(
 ): string {
   const importerDir = dirname(resolve(importer));
   const previewDir = resolve(projectRoot, VIRTUAL_PREVIEW_RELATIVE);
-  const rewritten = rewriteImportsForPreviewLocation(
-    sourceText,
-    importerDir,
-    previewDir,
-  );
+  const rewritten = rewriteImportsForPreviewLocation(sourceText, importerDir, previewDir);
   const absPath = getVirtualPreviewPath(projectRoot, virtualFileName);
   mkdirSync(dirname(absPath), { recursive: true });
   writeFileSync(absPath, rewritten, "utf8");

@@ -190,7 +190,10 @@ export const fn = (input: Box): U => input.value;
     const routeExport = result.snapshot.exports.find((e) => e.name === "route");
     expect(routeExport).toBeDefined();
     expect(routeExport!.type.kind).toBe("object");
-    const obj = routeExport!.type as { kind: "object"; properties: ReadonlyArray<{ name: string }> };
+    const obj = routeExport!.type as {
+      kind: "object";
+      properties: ReadonlyArray<{ name: string }>;
+    };
     const names = new Set(obj.properties.map((p) => p.name));
     expect(names.has("ast")).toBe(true);
     expect(names.has("path")).toBe(true);
@@ -227,5 +230,4 @@ export type Deep = L1;
       expect(type.kind === "reference" || type.kind === "object").toBe(true);
     }
   });
-
 });

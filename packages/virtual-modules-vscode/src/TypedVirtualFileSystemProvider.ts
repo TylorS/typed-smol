@@ -31,9 +31,7 @@ export function createTypedVirtualFileSystemProvider(
 
   function fireVirtualModuleChanges(uris: vscode.Uri[]): void {
     if (uris.length > 0) {
-      changeEmitter.fire(
-        uris.map((uri) => ({ type: vscode.FileChangeType.Changed, uri })),
-      );
+      changeEmitter.fire(uris.map((uri) => ({ type: vscode.FileChangeType.Changed, uri })));
     }
   }
 

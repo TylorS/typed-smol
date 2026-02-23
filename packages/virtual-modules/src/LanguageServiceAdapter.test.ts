@@ -508,9 +508,7 @@ export const value: Foo = { n: 1 };
     });
     languageService.getProgram();
     const program = languageService.getProgram();
-    const virtualFile = program
-      ?.getSourceFiles()
-      .find((sf) => sf.fileName.includes("__virtual_"));
+    const virtualFile = program?.getSourceFiles().find((sf) => sf.fileName.includes("__virtual_"));
     expect(virtualFile).toBeDefined();
     const virtualFileName = virtualFile!.fileName;
 

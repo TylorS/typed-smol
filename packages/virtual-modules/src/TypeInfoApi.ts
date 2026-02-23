@@ -308,7 +308,9 @@ const resolveExportSymbol = (
   tsMod: typeof import("typescript"),
 ): ts.Symbol => {
   if ((symbol.flags & tsMod.SymbolFlags.Alias) === 0) return symbol;
-  const aliased = (checker as ts.TypeChecker & { getAliasedSymbol(s: ts.Symbol): ts.Symbol }).getAliasedSymbol(symbol);
+  const aliased = (
+    checker as ts.TypeChecker & { getAliasedSymbol(s: ts.Symbol): ts.Symbol }
+  ).getAliasedSymbol(symbol);
   return aliased ?? symbol;
 };
 
@@ -333,10 +335,7 @@ const serializeExport = (
   const assignableTo: Record<string, boolean> | undefined =
     typeTargets && typeTargets.length > 0
       ? Object.fromEntries(
-          typeTargets.map((t) => [
-            t.id,
-            checker.isTypeAssignableTo(exportedType, t.type),
-          ]),
+          typeTargets.map((t) => [t.id, checker.isTypeAssignableTo(exportedType, t.type)]),
         )
       : undefined;
 

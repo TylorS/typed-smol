@@ -432,6 +432,68 @@ export const mapEffect: {
   return make(push, Fx.mapEffect(push, f));
 });
 
+/**
+ * Transforms the output (Fx) error channel of a `Push` using the provided function.
+ *
+ * Failures (Cause) are mapped via `Cause.map`, so only the typed failure (`Fail`)
+ * is transformed; defects and interrupts are preserved unchanged.
+ *
+ * Mirrors `Effect.mapError` on the Fx side.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export const mapError: {
+  <E2, E3>(
+    f: (e: E2) => E3,
+  ): <A, E, R, B, R2>(push: Push<A, E, R, B, E2, R2>) => Push<A, E, R, B, E3, R2>;
+  <A, E, R, B, E2, R2, E3>(
+    push: Push<A, E, R, B, E2, R2>,
+    f: (e: E2) => E3,
+  ): Push<A, E, R, B, E3, R2>;
+} = dual(2, function mapError<
+  A,
+  E,
+  R,
+  B,
+  E2,
+  R2,
+  E3,
+>(push: Push<A, E, R, B, E2, R2>, f: (e: E2) => E3): Push<A, E, R, B, E3, R2> {
+  return make(push, Fx.mapError(push, f));
+});
+
+/**
+ * Transforms both the output (Fx) success and error channels of a `Push` using the provided options.
+ *
+ * Mirrors `Effect.mapBoth` on the Fx side: `onSuccess` maps emitted values,
+ * `onFailure` maps the typed failure (via `Cause.map`); defects and interrupts are preserved.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export const mapBoth: {
+  <B, C, E2, E3>(options: {
+    readonly onFailure: (e: E2) => E3;
+    readonly onSuccess: (b: B) => C;
+  }): <A, E, R, R2>(push: Push<A, E, R, B, E2, R2>) => Push<A, E, R, C, E3, R2>;
+  <A, E, R, B, E2, R2, C, E3>(
+    push: Push<A, E, R, B, E2, R2>,
+    options: { readonly onFailure: (e: E2) => E3; readonly onSuccess: (b: B) => C },
+  ): Push<A, E, R, C, E3, R2>;
+} = dual(
+  2,
+  function mapBoth<A, E, R, B, E2, R2, C, E3>(
+    push: Push<A, E, R, B, E2, R2>,
+    options: {
+      readonly onFailure: (e: E2) => E3;
+      readonly onSuccess: (b: B) => C;
+    },
+  ): Push<A, E, R, C, E3, R2> {
+    return make(push, Fx.mapBoth(push, options));
+  },
+);
+
 export const filter: {
   <B>(
     f: (b: B) => boolean,
@@ -842,6 +904,108 @@ export const exhaustLatestMapEffect: {
   R2 | R3 | Scope.Scope
 > {
   return make(push, Fx.exhaustLatestMapEffect(push, f));
+});
+
+/**
+ * Maps over the output (Fx) side of a `Push` with an accumulator: for each emitted value `b`,
+ * applies `f(state, b)` to get `[nextState, emitted]` and emits the second element.
+ * The first element is the initial state; subsequent states are updated by each step.
+ *
+ * @param initial - Initial accumulator state.
+ * @param f - Reducer `(state, value) => [nextState, emitted]`.
+ * @returns A `Push` whose Fx side emits the accumulated/mapped values.
+ * @since 1.0.0
+ * @category combinators
+ */
+export const mapAccum: {
+  <S, B, C>(
+    initial: S,
+    f: (s: S, b: B) => readonly [S, C],
+  ): <A, E, R, E2, R2>(push: Push<A, E, R, B, E2, R2>) => Push<A, E, R, C, E2, R2>;
+  <A, E, R, B, E2, R2, S, C>(
+    push: Push<A, E, R, B, E2, R2>,
+    initial: S,
+    f: (s: S, b: B) => readonly [S, C],
+  ): Push<A, E, R, C, E2, R2>;
+} = dual(3, function mapAccum<
+  A,
+  E,
+  R,
+  B,
+  E2,
+  R2,
+  S,
+  C,
+>(push: Push<A, E, R, B, E2, R2>, initial: S, f: (s: S, b: B) => readonly [S, C]): Push<
+  A,
+  E,
+  R,
+  C,
+  E2,
+  R2
+> {
+  return make(
+    push,
+    Fx.make((sink) =>
+      push.run(
+        Sink.loop(sink, initial, (s, b) => {
+          const [sNext, c] = f(s, b);
+          return [c, sNext];
+        }),
+      ),
+    ),
+  );
+});
+
+/**
+ * Maps over the output (Fx) side of a `Push` with an effectful accumulator: for each emitted value `b`,
+ * runs `f(state, b)` to get `[nextState, emitted]` and emits the second element.
+ *
+ * @param initial - Initial accumulator state.
+ * @param f - Effectful reducer `(state, value) => Effect<[nextState, emitted]>`.
+ * @returns A `Push` whose Fx side emits the accumulated/mapped values.
+ * @since 1.0.0
+ * @category combinators
+ */
+export const mapAccumEffect: {
+  <S, B, C, E3, R3>(
+    initial: S,
+    f: (s: S, b: B) => Effect.Effect<readonly [S, C], E3, R3>,
+  ): <A, E, R, E2, R2>(push: Push<A, E, R, B, E2, R2>) => Push<A, E, R, C, E2 | E3, R2 | R3>;
+  <A, E, R, B, E2, R2, S, C, E3, R3>(
+    push: Push<A, E, R, B, E2, R2>,
+    initial: S,
+    f: (s: S, b: B) => Effect.Effect<readonly [S, C], E3, R3>,
+  ): Push<A, E, R, C, E2 | E3, R2 | R3>;
+} = dual(3, function mapAccumEffect<
+  A,
+  E,
+  R,
+  B,
+  E2,
+  R2,
+  S,
+  C,
+  E3,
+  R3,
+>(push: Push<A, E, R, B, E2, R2>, initial: S, f: (s: S, b: B) => Effect.Effect<readonly [S, C], E3, R3>): Push<
+  A,
+  E,
+  R,
+  C,
+  E2 | E3,
+  R2 | R3
+> {
+  return make(
+    push,
+    Fx.make((sink) =>
+      push.run(
+        Sink.loopEffect(sink, initial, (s, b) =>
+          Effect.map(f(s, b), ([sNext, c]) => [c, sNext] as const),
+        ),
+      ),
+    ),
+  );
 });
 
 export function Service<Self, A, E = never, B = never, E2 = never>() {

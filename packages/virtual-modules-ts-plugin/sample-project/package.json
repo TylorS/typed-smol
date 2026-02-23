@@ -9,12 +9,12 @@
   },
   "dependencies": {
     "@typed/app": "workspace:*",
+    "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
+    "@typed/virtual-modules": "workspace:*",
     "@typed/virtual-modules-ts-plugin": "file:..",
     "effect": "catalog:",
-    "typescript": "^5.9.0",
-    "@typed/virtual-modules": "workspace:*",
-    "@typed/fx": "workspace:*"
+    "typescript": "^5.9.0"
   },
   "devDependencies": {
     "esbuild": "^0.24.2"

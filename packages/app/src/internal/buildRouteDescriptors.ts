@@ -308,7 +308,9 @@ export function buildRouteDescriptors(
       continue;
     }
     if (!isGuardExportName(guardExport.name)) {
-      throw new Error(`RVM: guard export name ${JSON.stringify(guardExport.name)} not in GUARD_EXPORT_NAMES`);
+      throw new Error(
+        `RVM: guard export name ${JSON.stringify(guardExport.name)} not in GUARD_EXPORT_NAMES`,
+      );
     }
     guardExportByPath[relPath] = guardExport.name;
   }
@@ -335,7 +337,9 @@ export function buildRouteDescriptors(
       continue;
     }
     if (!isCatchExportName(catchExport.name)) {
-      throw new Error(`RVM: catch export name ${JSON.stringify(catchExport.name)} not in CATCH_EXPORT_NAMES`);
+      throw new Error(
+        `RVM: catch export name ${JSON.stringify(catchExport.name)} not in CATCH_EXPORT_NAMES`,
+      );
     }
     catchExportByPath[relPath] = catchExport.name;
     catchFormByPath[relPath] = classifyCatchForm(catchExport.type, catchExport.assignableTo);
@@ -343,14 +347,18 @@ export function buildRouteDescriptors(
 
   for (const d of dedupedDescriptors) {
     if (!d.inFileConcerns.catch) continue;
-    const snapshot = snapshots.find((s) => toPosixPath(relative(baseDir, s.filePath)) === d.filePath);
+    const snapshot = snapshots.find(
+      (s) => toPosixPath(relative(baseDir, s.filePath)) === d.filePath,
+    );
     if (!snapshot) continue;
     const catchExport =
       snapshot.exports.find((e) => e.name === CATCH_EXPORT_NAMES[0]) ??
       snapshot.exports.find((e) => e.name === CATCH_EXPORT_NAMES[1]);
     if (catchExport) {
       if (!isCatchExportName(catchExport.name)) {
-        throw new Error(`RVM: catch export name ${JSON.stringify(catchExport.name)} not in CATCH_EXPORT_NAMES`);
+        throw new Error(
+          `RVM: catch export name ${JSON.stringify(catchExport.name)} not in CATCH_EXPORT_NAMES`,
+        );
       }
       catchExportByPath[d.filePath] = catchExport.name;
       catchFormByPath[d.filePath] = classifyCatchForm(catchExport.type, catchExport.assignableTo);
@@ -365,9 +373,7 @@ export function buildRouteDescriptors(
   }
   const depsViolations: RouteContractViolation[] = [];
   for (const relPath of depsPaths) {
-    const snapshot = snapshots.find(
-      (s) => toPosixPath(relative(baseDir, s.filePath)) === relPath,
-    );
+    const snapshot = snapshots.find((s) => toPosixPath(relative(baseDir, s.filePath)) === relPath);
     if (!snapshot) continue;
     const defaultExport = snapshot.exports.find((e) => e.name === "default");
     if (!defaultExport) {

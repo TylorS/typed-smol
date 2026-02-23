@@ -1,0 +1,15 @@
+# Test Conventions
+
+## Assert Import
+
+Tests MUST use `assert` from `vitest`, never from `node:assert`.
+
+```ts
+import { assert, describe, it } from "vitest";
+```
+
+For `deepEqual` / `deepStrictEqual`, use `assert.deepEqual` / `assert.deepStrictEqual` from the vitest import.
+
+## Rationale
+
+Single test runtime (Vitest); consistent imports; avoids mixing Node assert with Vitest runtime.

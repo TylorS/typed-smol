@@ -50,7 +50,7 @@ export abstract class RenderQueue implements Disposable {
     dispose: () => void,
     priority: number,
   ) => Disposable = (key, task, dispose, priority) => {
-  // Disposable is available under the "es2022" or later lib in tsconfig.json (e.g., "lib": ["es2022"])
+    // Disposable is available under the "es2022" or later lib in tsconfig.json (e.g., "lib": ["es2022"])
     insert(this.buckets, priority, key, { task, dispose }, (entry) => entry.dispose());
     this.scheduleNext();
     return disposable(() => remove(this.buckets, priority, key));

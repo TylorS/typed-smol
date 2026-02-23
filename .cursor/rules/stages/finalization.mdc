@@ -57,6 +57,7 @@ Include:
 
 Before closing, verify:
 
+- Lint and type-check are clean: `ReadLints` on modified files shows no errors; `pnpm build` (or `tsc -b`) passes.
 - No concept was defined in more than one file during this run. If it was, consolidate into one canonical location and replace the other with a pointer.
 - All cross-file references added or modified during this run resolve to existing files.
 - Handoff contracts, naming conventions, and field lists remain consistent with their canonical sources.

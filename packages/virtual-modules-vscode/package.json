@@ -1,16 +1,28 @@
 {
   "name": "@typed/virtual-modules-vscode",
-  "version": "1.0.0-beta.0",
   "displayName": "Typed Virtual Modules",
+  "version": "1.0.0-beta.0",
   "publisher": "typed",
   "main": "./dist/extension.js",
-  "engines": {
-    "vscode": "^1.74.0"
+  "publishConfig": {
+    "access": "public"
   },
-  "activationEvents": [
-    "onLanguage:typescript",
-    "onLanguage:typescriptreact"
-  ],
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --format=cjs --outfile=dist/extension.js --external:vscode --platform=node",
+    "compile": "npm run build"
+  },
+  "dependencies": {
+    "@typed/virtual-modules": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@types/vscode": "^1.74.0",
+    "esbuild": "^0.24.0",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
   "contributes": {
     "commands": [
       {
@@ -61,23 +73,11 @@
       }
     ]
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "esbuild src/extension.ts --bundle --format=cjs --outfile=dist/extension.js --external:vscode --platform=node",
-    "compile": "npm run build"
-  },
-  "dependencies": {
-    "@typed/virtual-modules": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "^25.3.0",
-    "@types/vscode": "^1.74.0",
-    "esbuild": "^0.24.0",
-    "typescript": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "engines": {
+    "vscode": "^1.74.0"
   }
 }

@@ -25,7 +25,9 @@ export function activate(context: vscode.ExtensionContext): void {
   let pendingRefreshRoots = new Set<string>();
 
   function cacheVirtualModule(result: { virtualFileName: string; sourceText: string }): void {
-    const path = result.virtualFileName.startsWith("/") ? result.virtualFileName : `/${result.virtualFileName}`;
+    const path = result.virtualFileName.startsWith("/")
+      ? result.virtualFileName
+      : `/${result.virtualFileName}`;
     contentByVirtualPath.set(path.replace(/\\/g, "/").replace(/^\/+/, "/"), result.sourceText);
   }
 
@@ -138,7 +140,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const treeProvider: VirtualModulesTreeProvider = createVirtualModulesTreeProvider({
     getResolver,
     getProjectRoot,
-    onResolved: (projectRoot, moduleId, importer) => registerVirtualModule(projectRoot, moduleId, importer),
+    onResolved: (projectRoot, moduleId, importer) =>
+      registerVirtualModule(projectRoot, moduleId, importer),
     onCache: cacheVirtualModule,
   });
   context.subscriptions.push(
@@ -158,7 +161,10 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((doc) => {
       const scheme = doc.uri.scheme;
-      if ((scheme === SCHEME || scheme === VIRTUAL_MODULE_URI_SCHEME) && doc.languageId !== "typescript") {
+      if (
+        (scheme === SCHEME || scheme === VIRTUAL_MODULE_URI_SCHEME) &&
+        doc.languageId !== "typescript"
+      ) {
         void vscode.languages.setTextDocumentLanguage(doc, "typescript");
       }
     }),
@@ -296,9 +302,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const pos = editor.selection.active;
       const line = doc.lineAt(pos.line).text;
 
-      const match = line.match(
-        /(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/,
-      );
+      const match = line.match(/(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/);
       const moduleId = match?.[1];
       if (!moduleId) {
         vscode.window.showInformationMessage(
@@ -314,9 +318,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const resolver = getResolver(projectRoot);
       const result = resolver.resolve(moduleId, importer);
       if (!result) {
-        vscode.window.showErrorMessage(
-          `Could not resolve virtual module "${moduleId}"`,
-        );
+        vscode.window.showErrorMessage(`Could not resolve virtual module "${moduleId}"`);
         return;
       }
 
@@ -332,12 +334,10 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.window.showTextDocument(virtualDoc, { preview: false });
     }),
   );
-
 }
 
 /** Matches virtual module specifiers (e.g. virtual:foo, router:./routes) in import/from. */
-const VIRTUAL_IMPORT_SPECIFIER_REGEX =
-  /(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/g;
+const VIRTUAL_IMPORT_SPECIFIER_REGEX = /(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/g;
 
 function extractVirtualImportAtPosition(
   document: vscode.TextDocument,
@@ -454,17 +454,16 @@ function createVirtualModuleReferenceProvider(
       const params = new URLSearchParams(document.uri.query);
       const importer = params.get("importer");
       const projectRoot = importer
-        ? getProjectRoot(importer.startsWith("file:") ? vscode.Uri.parse(importer).fsPath : importer)
+        ? getProjectRoot(
+            importer.startsWith("file:") ? vscode.Uri.parse(importer).fsPath : importer,
+          )
         : undefined;
       if (!projectRoot) return undefined;
 
       const pattern = new vscode.RelativePattern(projectRoot, "**/*.{ts,tsx,js,jsm,mjs,cjs}");
       const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 1000);
       const locations: vscode.Location[] = [];
-      const re = new RegExp(
-        `(?:from|import\\s*\\(?)\\s*["'](${escapeRegex(moduleId)})["']`,
-        "g",
-      );
+      const re = new RegExp(`(?:from|import\\s*\\(?)\\s*["'](${escapeRegex(moduleId)})["']`, "g");
 
       for (const fileUri of files) {
         const doc = await vscode.workspace.openTextDocument(fileUri);
@@ -473,10 +472,7 @@ function createVirtualModuleReferenceProvider(
         re.lastIndex = 0;
         while ((match = re.exec(text)) !== null) {
           const start = doc.positionAt(match.index + match[0].indexOf(moduleId));
-          const end = new vscode.Position(
-            start.line,
-            start.character + moduleId.length,
-          );
+          const end = new vscode.Position(start.line, start.character + moduleId.length);
           locations.push(new vscode.Location(fileUri, new vscode.Range(start, end)));
         }
       }

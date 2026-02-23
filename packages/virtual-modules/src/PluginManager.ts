@@ -114,7 +114,11 @@ export class PluginManager implements VirtualModuleResolver {
       }
 
       try {
-        const result: VirtualModuleBuildResult = plugin.build(options.id, options.importer, session.api);
+        const result: VirtualModuleBuildResult = plugin.build(
+          options.id,
+          options.importer,
+          session.api,
+        );
 
         if (typeof result === "string") {
           return {

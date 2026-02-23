@@ -1,9 +1,6 @@
 import ts from "typescript";
 import type { VirtualModuleResolver, VmcPluginEntry } from "@typed/virtual-modules";
-import {
-  loadResolverFromVmcConfig,
-  PluginManager,
-} from "@typed/virtual-modules";
+import { loadResolverFromVmcConfig, PluginManager } from "@typed/virtual-modules";
 
 export interface VmcConfig {
   readonly resolver?: VirtualModuleResolver;

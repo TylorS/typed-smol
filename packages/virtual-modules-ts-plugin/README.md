@@ -38,10 +38,10 @@ Then add the TS plugin to `tsconfig.json`:
 
 ### Config options
 
-| Option       | Type       | Default | Description                                                                                                            |
-| ------------ | ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Option          | Type     | Default                             | Description                                                     |
+| --------------- | -------- | ----------------------------------- | --------------------------------------------------------------- |
 | `vmcConfigPath` | `string` | `"vmc.config.ts"` (auto-discovered) | Optional explicit path to vmc config, relative to project root. |
-| `debounceMs` | `number`   | `50`    | Debounce rapid watch events (ms).                                                                                      |
+| `debounceMs`    | `number` | `50`                                | Debounce rapid watch events (ms).                               |
 
 ## Plugin format
 

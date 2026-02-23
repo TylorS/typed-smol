@@ -693,6 +693,66 @@ export function fromStream<A, E, R>(
   });
 }
 
+/**
+ * Creates a `RefSubject` from an `Option` value.
+ *
+ * @example
+ * ```ts
+ * import { Effect, Option } from "effect"
+ * import * as RefSubject from "@typed/fx/RefSubject"
+ *
+ * const program = Effect.gen(function* () {
+ *   const ref = yield* RefSubject.fromOption(Option.some(42))
+ *   const value = yield* ref
+ *   console.log(Option.isSome(value)) // true
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category constructors
+ */
+export function fromOption<A>(
+  option: Option.Option<A>,
+  options?: RefSubjectOptions<Option.Option<A>>,
+): Effect.Effect<RefSubject<Option.Option<A>>, never, Scope.Scope> {
+  return make(option, options);
+}
+
+/**
+ * Creates a `RefSubject` from a nullable value (null/undefined become `Option.none()`).
+ *
+ * @example
+ * ```ts
+ * import { Effect, Option } from "effect"
+ * import * as RefSubject from "@typed/fx/RefSubject"
+ *
+ * const program = Effect.gen(function* () {
+ *   const ref = yield* RefSubject.fromNullable("hello")
+ *   const value = yield* ref
+ *   console.log(Option.isSome(value)) // true
+ *
+ *   const empty = yield* RefSubject.fromNullable(null)
+ *   const none = yield* empty
+ *   console.log(Option.isNone(none)) // true
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category constructors
+ */
+function optionFromNullable<A>(value: A | null | undefined): Option.Option<NonNullable<A>> {
+  return value === null || value === undefined
+    ? Option.none()
+    : Option.some(value as NonNullable<A>);
+}
+
+export function fromNullable<A>(
+  value: A | null | undefined,
+  options?: RefSubjectOptions<Option.Option<NonNullable<A>>>,
+): Effect.Effect<RefSubject<Option.Option<NonNullable<A>>>, never, Scope.Scope> {
+  return make(optionFromNullable(value), options);
+}
+
 function redirectCause<A, E, R>(core: RefSubjectCore<A, E, R, R | Scope.Scope>) {
   return Stream.catchCause((cause: Cause.Cause<E>) =>
     Stream.unwrap(Effect.as(onFailureCore(core, cause), Stream.empty)),
@@ -1740,6 +1800,46 @@ export const compact: {
 ): any {
   return new FilteredImpl(versioned, Effect.succeed);
 };
+
+/**
+ * Returns a `Computed` that yields the value inside the `Option`, or the fallback when `None`.
+ * Works with `Computed<Option<A>>` (e.g. from `fromOption` / `fromNullable`) and with `Filtered<A>`.
+ *
+ * @example
+ * ```ts
+ * import { Effect, Option } from "effect"
+ * import * as RefSubject from "@typed/fx/RefSubject"
+ *
+ * const program = Effect.gen(function* () {
+ *   const ref = yield* RefSubject.fromOption(Option.some(42))
+ *   const withDefault = RefSubject.getOrElse(ref, () => 0)
+ *   expect(yield* withDefault).toBe(42)
+ *
+ *   const empty = yield* RefSubject.fromNullable(null)
+ *   const fallback = RefSubject.getOrElse(empty, () => 99)
+ *   expect(yield* fallback).toBe(99)
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export const getOrElse: {
+  <A>(
+    fallback: () => A,
+  ): <E, R>(ref: Computed<Option.Option<A>, E, R> | Filtered<A, E, R>) => Computed<A, E, R>;
+  <A, E, R>(
+    ref: Computed<Option.Option<A>, E, R> | Filtered<A, E, R>,
+    fallback: () => A,
+  ): Computed<A, E, R>;
+} = dual(2, function getOrElse<
+  A,
+  E,
+  R,
+>(ref: Computed<Option.Option<A>, E, R> | Filtered<A, E, R>, fallback: () => A): Computed<A, E, R> {
+  const computed = FilteredTypeId in ref ? (ref as Filtered<A, E, R>).asComputed() : ref;
+  return map(computed, (opt) => Option.getOrElse(opt, fallback));
+});
 
 class RefSubjectSimpleTransform<A, E, R, R2, R3>
   extends YieldableFx<A, E, R | R2 | Scope.Scope, A, E, R | R3>

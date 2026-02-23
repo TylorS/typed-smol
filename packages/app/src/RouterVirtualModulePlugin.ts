@@ -145,7 +145,11 @@ const FAIL_ORDER: RouteContractViolation["code"][] = [
 
 function failOnViolations(
   violations: readonly RouteContractViolation[],
-  toDiagnostic: (v: RouteContractViolation) => { code: string; message: string; pluginName: string },
+  toDiagnostic: (v: RouteContractViolation) => {
+    code: string;
+    message: string;
+    pluginName: string;
+  },
 ): VirtualModuleBuildError | null {
   for (const code of FAIL_ORDER) {
     const found = violations.filter((v) => v.code === code);

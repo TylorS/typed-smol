@@ -72,6 +72,40 @@ export function map<A, E, R, B>(sink: Sink<A, E, R>, f: (b: B) => A): Sink<B, E,
   return MapSink.make(sink, f);
 }
 
+/** Alias for `map`: transforms input values before they reach the sink. @since 1.0.0 @category combinators */
+export const mapInput = map;
+
+/**
+ * Maps the error channel of a sink using the provided function.
+ * Failures are mapped via `Cause.map`; defects and interrupts are preserved.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export function mapError<A, E, E2, R>(sink: Sink<A, E2, R>, f: (e: E) => E2): Sink<A, E, R> {
+  return new MapErrorSink(sink, f);
+}
+
+class MapErrorSink<A, E, E2, R> implements Sink<A, E, R> {
+  readonly sink: Sink<A, E2, R>;
+  readonly f: (e: E) => E2;
+
+  constructor(sink: Sink<A, E2, R>, f: (e: E) => E2) {
+    this.sink = sink;
+    this.f = f;
+    this.onSuccess = this.onSuccess.bind(this);
+    this.onFailure = this.onFailure.bind(this);
+  }
+
+  onSuccess(value: A): Effect.Effect<unknown, never, R> {
+    return this.sink.onSuccess(value);
+  }
+
+  onFailure(cause: Cause.Cause<E>): Effect.Effect<unknown, never, R> {
+    return this.sink.onFailure(Cause.map(cause, this.f));
+  }
+}
+
 class FilterMapSink<A, E, R, B> implements Sink<B, E, R> {
   readonly sink: Sink<A, E, R>;
   readonly f: (b: B) => Option.Option<A>;
@@ -776,6 +810,9 @@ class MapEffectSink<A, E, R, B, E2, R2> implements Sink<B, E | E2, R | R2> {
   }
 }
 
+/** Alias for `mapEffect`: transforms input with an effect before the sink. @since 1.0.0 @category combinators */
+export const mapInputEffect = mapEffect;
+
 export const filterMapEffect: {
   <B, A, E2, R2>(
     f: (b: B) => Effect.Effect<Option.Option<A>, E2, R2>,
@@ -991,3 +1028,87 @@ export const skipInterrupt = <A, E, R>(sink: Sink<A, E, R>): Sink<A, E, R> => {
       cause.reasons.every(Cause.isInterruptReason) ? Effect.void : sink.onFailure(cause),
   };
 };
+
+// -----------------------------------------------------------------------------
+// Reducing / collecting combinators (additive)
+// -----------------------------------------------------------------------------
+
+/**
+ * Reduces values into a single result using a pure function. Pass a `Ref<B>`
+ * (e.g. from `Ref.make(initial)`); after running, read the result with `Ref.get(ref)`.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export function reduce<A, B, E>(ref: Ref.Ref<B>, f: (b: B, a: A) => B): Sink<A, E, never> {
+  return {
+    onSuccess: (value) => Ref.update(ref, (b) => f(b, value)),
+    onFailure: () => Effect.void,
+  };
+}
+
+/**
+ * Reduces values into a single result using an effectful function. Pass a `Ref<B>`;
+ * after running, read the result with `Ref.get(ref)`. If the reducer effect fails,
+ * the ref is left unchanged (Sink onSuccess is typed as never failing).
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export function reduceEffect<A, B, E, E2, R2>(
+  ref: Ref.Ref<B>,
+  f: (b: B, a: A) => Effect.Effect<B, E2, R2>,
+): Sink<A, E | E2, R2> {
+  return {
+    onSuccess: (value) =>
+      Effect.flatMap(Ref.get(ref), (b) =>
+        Effect.matchCauseEffect(f(b, value), {
+          onFailure: () => Effect.void,
+          onSuccess: (next) => Ref.set(ref, next),
+        }),
+      ),
+    onFailure: () => Effect.void,
+  };
+}
+
+/**
+ * Collects all values into an array. Pass a `Ref<ReadonlyArray<A>>` (e.g. `Ref.make([])`);
+ * after running, read the result with `Ref.get(ref)`.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export function collect<A, E>(ref: Ref.Ref<ReadonlyArray<A>>): Sink<A, E, never> {
+  return {
+    onSuccess: (value) => Ref.update(ref, (arr) => [...arr, value]),
+    onFailure: () => Effect.void,
+  };
+}
+
+/**
+ * Keeps only the first value. Pass a `Ref<Option.Option<A>>` (e.g. `Ref.make(Option.none())`);
+ * after running, read the result with `Ref.get(ref)`.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export function head<A, E>(ref: Ref.Ref<Option.Option<A>>): Sink<A, E, never> {
+  return {
+    onSuccess: (value) => Ref.update(ref, (opt) => (Option.isNone(opt) ? Option.some(value) : opt)),
+    onFailure: () => Effect.void,
+  };
+}
+
+/**
+ * Keeps only the last value. Pass a `Ref<Option.Option<A>>` (e.g. `Ref.make(Option.none())`);
+ * after running, read the result with `Ref.get(ref)`.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export function last<A, E>(ref: Ref.Ref<Option.Option<A>>): Sink<A, E, never> {
+  return {
+    onSuccess: (value) => Ref.set(ref, Option.some(value)),
+    onFailure: () => Effect.void,
+  };
+}
