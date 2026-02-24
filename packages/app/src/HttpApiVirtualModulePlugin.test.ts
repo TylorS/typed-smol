@@ -4,13 +4,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
-import { createTypeInfoApiSession, PluginManager } from "@typed/virtual-modules";
+import {
+  createTypeInfoApiSession,
+  PluginManager,
+  resolveTypeTargetsFromSpecs,
+} from "@typed/virtual-modules";
 import type { VirtualModuleBuildError } from "@typed/virtual-modules";
 import {
   createHttpApiVirtualModulePlugin,
   parseHttpApiVirtualModuleId,
   resolveHttpApiTargetDirectory,
-  resolveHttpApiTypeTargets,
+  HTTPAPI_TYPE_TARGET_SPECS,
 } from "./index.js";
 import {
   collectExposureRoutes,
@@ -84,8 +88,11 @@ function buildApiFromFixture(spec: FixtureSpec) {
   const fixture = createApiFixture(spec);
   const plugin = createHttpApiVirtualModulePlugin();
   const program = makeProgram(fixture.paths);
-  const typeTargets = resolveHttpApiTypeTargets(program, ts);
-  const session = createTypeInfoApiSession({ ts, program, typeTargets });
+  const session = createTypeInfoApiSession({
+    ts,
+    program,
+    typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+  });
   return plugin.build("api:./apis", fixture.importer, session.api);
 }
 
@@ -401,9 +408,16 @@ describe("createHttpApiVirtualModulePlugin", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
     const plugin = createHttpApiVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
-    const typeTargets = resolveHttpApiTypeTargets(program, ts);
-    const session1 = createTypeInfoApiSession({ ts, program, typeTargets });
-    const session2 = createTypeInfoApiSession({ ts, program, typeTargets });
+    const session1 = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+    });
+    const session2 = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+    });
     const source1 = plugin.build("api:./apis", fixture.importer, session1.api);
     const source2 = plugin.build("api:./apis", fixture.importer, session2.api);
     expect(source1).toBe(source2);
@@ -494,11 +508,11 @@ describe("HttpApiVirtualModulePlugin integration", () => {
   });
 });
 
-describe("resolveHttpApiTypeTargets", () => {
+describe("resolveTypeTargetsFromSpecs with HTTPAPI_TYPE_TARGET_SPECS", () => {
   it("returns array (possibly empty) from program", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": "export {};" });
     const program = makeProgram(fixture.paths);
-    const targets = resolveHttpApiTypeTargets(program, ts);
+    const targets = resolveTypeTargetsFromSpecs(program, ts, HTTPAPI_TYPE_TARGET_SPECS);
     expect(Array.isArray(targets)).toBe(true);
   });
 });

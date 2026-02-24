@@ -11,7 +11,6 @@ import {
   resolveRelativePath,
   toPosixPath,
 } from "./internal/path.js";
-import { typeCheckRouterVirtualModule } from "./internal/typeCheckRouterVirtualModule.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
 
@@ -45,9 +44,6 @@ const ROUTE_FILE_GLOBS: readonly string[] = [
 export interface RouterVirtualModulePluginOptions {
   readonly prefix?: string;
   readonly name?: string;
-  readonly typeCheck?: boolean;
-  readonly ts?: typeof import("typescript");
-  readonly compilerOptions?: import("typescript").CompilerOptions;
 }
 
 export type ParseRouterVirtualModuleIdResult =
@@ -229,7 +225,7 @@ export const createRouterVirtualModulePlugin = (
         };
       }
 
-      const emittedSource = emitRouterMatchSource(
+      return emitRouterMatchSource(
         descriptors,
         resolved.targetDirectory,
         importer,
@@ -238,25 +234,6 @@ export const createRouterVirtualModulePlugin = (
         catchFormByPath,
         depsFormByPath,
       );
-
-      if (options.typeCheck && options.ts) {
-        const tcResult = typeCheckRouterVirtualModule({
-          ts: options.ts,
-          id,
-          importer,
-          emittedSource,
-          compilerOptions: options.compilerOptions,
-          pluginName: name,
-        });
-        if (tcResult.kind === "errors") {
-          return { errors: tcResult.errors };
-        }
-        if (tcResult.kind === "warnings") {
-          return { sourceText: emittedSource, warnings: tcResult.warnings };
-        }
-      }
-
-      return emittedSource;
     },
   };
 };

@@ -6,7 +6,10 @@ export {
   type ResolveRouterTargetDirectoryResult,
   type RouterVirtualModulePluginOptions,
 } from "./RouterVirtualModulePlugin.js";
-export { resolveRouterTypeTargets } from "./internal/resolveTypeTargets.js";
+export {
+  ROUTER_TYPE_TARGET_SPECS,
+  HTTPAPI_TYPE_TARGET_SPECS,
+} from "./internal/typeTargetSpecs.js";
 
 export {
   createHttpApiVirtualModulePlugin,
@@ -16,7 +19,6 @@ export {
   type ParseHttpApiVirtualModuleIdResult,
   type ResolveHttpApiTargetDirectoryResult,
 } from "./HttpApiVirtualModulePlugin.js";
-export { resolveHttpApiTypeTargets } from "./internal/resolveHttpApiTypeTargets.js";
 export {
   defineApiHandler,
   emptyRecordString,

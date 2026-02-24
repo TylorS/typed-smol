@@ -14,6 +14,7 @@ import type {
   AnyTypeNode,
   ArrayTypeNode,
   FunctionTypeNode,
+  ImportInfo,
   IntersectionTypeNode,
   LiteralTypeNode,
   NeverTypeNode,
@@ -24,6 +25,7 @@ import type {
   TupleTypeNode,
   TypeNode,
   TypeParameter,
+  TypeTargetSpec,
   UnionTypeNode,
   UnknownTypeNode,
 } from "./types.js";
@@ -52,7 +54,13 @@ export interface CreateTypeInfoApiSessionOptions {
   readonly ts: typeof import("typescript");
   readonly program: ts.Program;
   readonly maxTypeDepth?: number;
+  /** Pre-resolved types for assignability checks. Takes precedence over typeTargetSpecs when both exist. */
   readonly typeTargets?: readonly ResolvedTypeTarget[];
+  /**
+   * Specs to resolve from program imports for assignability checks.
+   * Resolution happens internally; use this instead of typeTargets when you have module+export specs.
+   */
+  readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
 
 const compareByName = <T extends { readonly name: string }>(a: T, b: T): number =>
@@ -298,6 +306,84 @@ const serializeTypeNode = (
 };
 
 /**
+ * Resolve type targets from program imports using the given specs.
+ * Scans source files for imports from the specified modules and extracts types.
+ */
+export function resolveTypeTargetsFromSpecs(
+  program: ts.Program,
+  tsMod: typeof import("typescript"),
+  specs: readonly TypeTargetSpec[],
+): ResolvedTypeTarget[] {
+  const checker = program.getTypeChecker();
+  const found = new Map<string, ts.Type>();
+
+  const getAliasedSymbol = (
+    checker: ts.TypeChecker,
+    symbol: ts.Symbol,
+    tsMod: typeof import("typescript"),
+  ): ts.Symbol => {
+    if ((symbol.flags & tsMod.SymbolFlags.Alias) === 0) return symbol;
+    const aliased = (
+      checker as ts.TypeChecker & { getAliasedSymbol(s: ts.Symbol): ts.Symbol }
+    ).getAliasedSymbol(symbol);
+    return aliased ?? symbol;
+  };
+
+  for (const sourceFile of program.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile) continue;
+    tsMod.forEachChild(sourceFile, (node) => {
+      if (!tsMod.isImportDeclaration(node)) return;
+      const moduleSpecifier = node.moduleSpecifier;
+      if (!tsMod.isStringLiteral(moduleSpecifier)) return;
+      const moduleSpec = moduleSpecifier.text;
+      const binding = node.importClause;
+      if (!binding) return;
+
+      const addNamed = (name: ts.ImportSpecifier) => {
+        const exportName = (name.propertyName ?? name.name).getText(sourceFile);
+        const spec = specs.find((s) => s.module === moduleSpec && s.exportName === exportName);
+        if (!spec || found.has(spec.id)) return;
+        const symbol = checker.getSymbolAtLocation(name.name);
+        if (!symbol) return;
+        const aliased = getAliasedSymbol(checker, symbol, tsMod);
+        const decl = aliased.valueDeclaration ?? aliased.declarations?.[0];
+        const type = decl
+          ? checker.getTypeOfSymbolAtLocation(aliased, decl)
+          : checker.getDeclaredTypeOfSymbol(aliased);
+        if (type && !(type.flags & tsMod.TypeFlags.Any)) {
+          found.set(spec.id, type);
+        }
+      };
+
+      if (binding.namedBindings) {
+        if (tsMod.isNamedImports(binding.namedBindings)) {
+          for (const elem of binding.namedBindings.elements) {
+            addNamed(elem);
+          }
+        }
+      } else if (binding.name) {
+        const spec = specs.find((s) => s.module === moduleSpec);
+        if (!spec || found.has(spec.id)) return;
+        const symbol = checker.getSymbolAtLocation(binding.name);
+        if (!symbol) return;
+        const nsType = checker.getTypeOfSymbolAtLocation(symbol, binding.name);
+        const prop = nsType.getProperty?.(spec.exportName);
+        if (!prop) return;
+        const decl = prop.valueDeclaration ?? prop.declarations?.[0];
+        const type = decl
+          ? checker.getTypeOfSymbolAtLocation(prop, decl)
+          : checker.getDeclaredTypeOfSymbol(prop);
+        if (type && !(type.flags & tsMod.TypeFlags.Any)) {
+          found.set(spec.id, type);
+        }
+      }
+    });
+  }
+
+  return specs.filter((s) => found.has(s.id)).map((s) => ({ id: s.id, type: found.get(s.id)! }));
+}
+
+/**
  * Resolve an export symbol to the symbol it aliases when present (re-exports and import-then-export),
  * so we derive the type from the target file for cross-file type resolution.
  * getAliasedSymbol must only be called for symbols that are aliases (SymbolFlags.Alias).
@@ -349,6 +435,44 @@ const serializeExport = (
   };
 };
 
+const collectImports = (
+  sourceFile: ts.SourceFile,
+  program: ts.Program,
+  tsMod: typeof import("typescript"),
+): ImportInfo[] => {
+  const imports: ImportInfo[] = [];
+  tsMod.forEachChild(sourceFile, (node) => {
+    if (!tsMod.isImportDeclaration(node)) return;
+    const moduleSpecifier = node.moduleSpecifier;
+    if (!tsMod.isStringLiteral(moduleSpecifier)) return;
+    const spec = moduleSpecifier.text;
+    const binding = node.importClause;
+    let info: ImportInfo = { moduleSpecifier: spec };
+    if (binding) {
+      if (binding.namedBindings) {
+        if (tsMod.isNamedImports(binding.namedBindings)) {
+          info = {
+            ...info,
+            importedNames: binding.namedBindings.elements.map((el) =>
+              (el.propertyName ?? el.name).getText(sourceFile),
+            ),
+          };
+        } else if (tsMod.isNamespaceImport(binding.namedBindings)) {
+          info = {
+            ...info,
+            namespaceImport: binding.namedBindings.name.getText(sourceFile),
+          };
+        }
+      }
+      if (binding.name) {
+        info = { ...info, defaultImport: binding.name.getText(sourceFile) };
+      }
+    }
+    imports.push(info);
+  });
+  return imports;
+};
+
 const createFileSnapshot = (
   filePath: string,
   checker: ts.TypeChecker,
@@ -356,6 +480,7 @@ const createFileSnapshot = (
   tsMod: typeof import("typescript"),
   maxDepth: number,
   typeTargets: readonly ResolvedTypeTarget[] | undefined,
+  includeImports: boolean,
 ): TypeInfoFileSnapshot => {
   const sourceFile = program.getSourceFile(filePath);
   if (!sourceFile) {
@@ -363,26 +488,30 @@ const createFileSnapshot = (
   }
 
   const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
-  if (!moduleSymbol) {
-    return {
-      filePath,
-      exports: [],
-    };
-  }
-
-  const exports = checker
-    .getExportsOfModule(moduleSymbol)
-    .map((value) => serializeExport(value, checker, tsMod, maxDepth, typeTargets));
+  const exports =
+    moduleSymbol
+      ? checker
+          .getExportsOfModule(moduleSymbol)
+          .map((value) => serializeExport(value, checker, tsMod, maxDepth, typeTargets))
+          .sort(compareByName)
+      : [];
+  const imports = includeImports ? collectImports(sourceFile, program, tsMod) : undefined;
 
   return {
     filePath,
-    exports: exports.sort(compareByName),
+    exports,
+    ...(imports !== undefined && imports.length > 0 ? { imports } : {}),
   };
 };
 
 export const createTypeInfoApiSession = (
   options: CreateTypeInfoApiSessionOptions,
 ): TypeInfoApiSession => {
+  const effectiveTypeTargets =
+    options.typeTargets ??
+    (options.typeTargetSpecs?.length
+      ? resolveTypeTargetsFromSpecs(options.program, options.ts, options.typeTargetSpecs)
+      : undefined);
   const checker = options.program.getTypeChecker();
   const descriptors = new Map<string, WatchDependencyDescriptor>();
   const snapshotCache = new Map<string, TypeInfoFileSnapshot>();
@@ -453,7 +582,8 @@ export const createTypeInfoApiSession = (
       options.program,
       options.ts,
       maxDepth,
-      options.typeTargets,
+      effectiveTypeTargets,
+      true,
     );
     snapshotCache.set(absolutePath, snapshot);
     return { ok: true, snapshot };
@@ -507,14 +637,33 @@ export const createTypeInfoApiSession = (
     return filteredMatches
       .filter((filePath) => program.getSourceFile(filePath) !== undefined)
       .map((filePath) =>
-        createFileSnapshot(filePath, checker, program, tsMod, maxDepth, options.typeTargets),
+        createFileSnapshot(
+          filePath,
+          checker,
+          program,
+          tsMod,
+          maxDepth,
+          effectiveTypeTargets,
+          true,
+        ),
       );
+  };
+
+  const resolveExport = (
+    baseDir: string,
+    filePath: string,
+    exportName: string,
+  ): ExportedTypeInfo | undefined => {
+    const result = file(filePath, { baseDir });
+    if (!result.ok) return undefined;
+    return result.snapshot.exports.find((e) => e.name === exportName);
   };
 
   return {
     api: {
       file,
       directory,
+      resolveExport,
     },
     consumeDependencies: () => [...descriptors.values()],
   };

@@ -10,7 +10,7 @@ import {
   createRouterVirtualModulePlugin,
   parseRouterVirtualModuleId,
   resolveRouterTargetDirectory,
-  resolveRouterTypeTargets,
+  ROUTER_TYPE_TARGET_SPECS,
 } from "./index.js";
 
 const tempDirs: string[] = [];
@@ -70,36 +70,11 @@ function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[]) {
   const plugin = createRouterVirtualModulePlugin();
   const files = programFiles ?? fixture.paths;
   const program = makeProgram(files);
-  const typeTargets = resolveRouterTypeTargets(program, ts);
-  const session = createTypeInfoApiSession({ ts, program, typeTargets });
-  return plugin.build("router:./routes", fixture.importer, session.api);
-}
-
-/**
- * Entry content that imports the router virtual module so a one-off type-check program loads it.
- * Use in fixture when testing typeCheck: true (e.g. "src/entry.ts": ENTRY_IMPORTING_ROUTER).
- */
-const ENTRY_IMPORTING_ROUTER = 'import _routes from "router:./routes"; export { _routes };';
-
-/**
- * Build with type-check enabled. Fixture should include entry that imports router (e.g. ENTRY_IMPORTING_ROUTER).
- */
-function buildRouterFromFixtureWithTypeCheck(spec: FixtureSpec) {
-  const fixture = createFixture(spec);
-  const plugin = createRouterVirtualModulePlugin({
-    typeCheck: true,
+  const session = createTypeInfoApiSession({
     ts,
-    compilerOptions: {
-      strict: true,
-      target: ts.ScriptTarget.ESNext,
-      module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.Bundler,
-      skipLibCheck: true,
-      noEmit: true,
-    },
+    program,
+    typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
   });
-  const program = makeProgram(fixture.paths);
-  const session = createTypeInfoApiSession({ ts, program });
   return plugin.build("router:./routes", fixture.importer, session.api);
 }
 
@@ -748,51 +723,16 @@ describe("RouterVirtualModulePlugin", () => {
     `);
   });
 
-  it("when typeCheck is false or ts not provided, build returns source string (no type check)", () => {
+  it("build returns source string", () => {
     const fixture = createFixture({
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
-    const plugin = createRouterVirtualModulePlugin(); // no typeCheck
+    const plugin = createRouterVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
     const session = createTypeInfoApiSession({ ts, program });
     const result = plugin.build("router:./routes", fixture.importer, session.api);
     expect(typeof result).toBe("string");
     expect((result as string).length).toBeGreaterThan(0);
-  });
-
-  it("when typeCheck is true and ts provided, valid routes produce source or type-check diagnostics", () => {
-    const result = buildRouterFromFixtureWithTypeCheck({
-      "src/entry.ts": ENTRY_IMPORTING_ROUTER,
-      "src/routes/home.ts": route("/", "export const handler = 1;"),
-    });
-    if (typeof result === "string") {
-      expect(result).toContain("Router.match");
-      return;
-    }
-    if ("sourceText" in result && typeof result.sourceText === "string") {
-      expect(result.sourceText).toContain("Router.match");
-      return;
-    }
-    // One-off type-check program may fail to resolve @typed/router or @typed/fx in test env; errors are RVM-TC-*
-    expect(result).toMatchObject({ errors: expect.any(Array) });
-    const errs = (result as VirtualModuleBuildError).errors;
-    expect(errs.every((e) => e.code.startsWith("RVM-TC"))).toBe(true);
-  });
-
-  it("when typeCheck is true, handler params mismatch route params produce RVM-TC errors", () => {
-    // Route /users/:id implies params { id: string }; handler expects { x: number } -> type error in virtual file
-    const result = buildRouterFromFixtureWithTypeCheck({
-      "src/entry.ts": ENTRY_IMPORTING_ROUTER,
-      "src/routes/users/[id].ts": route(
-        "/users/:id",
-        'import * as Fx from "@typed/fx"; export const handler = (params: { x: number }) => Fx.succeed(1);',
-      ),
-    });
-    expect(result).toMatchObject({ errors: expect.any(Array) });
-    const err = (result as VirtualModuleBuildError).errors[0];
-    expect(err.code).toMatch(/^RVM-TC/);
-    expect(err.message).toBeDefined();
-    expect(err.pluginName).toBe("router-virtual-module");
   });
 
   it("unchanged inputs produce identical output (T-08, TS-6)", () => {

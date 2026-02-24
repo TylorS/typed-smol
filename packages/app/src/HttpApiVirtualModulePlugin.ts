@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
 import {
   pathIsUnderBase,
@@ -290,8 +290,7 @@ export const createHttpApiVirtualModulePlugin = (
       for (const endpoint of endpoints) {
         const snapshot = snapshotsByRelativePath.get(endpoint.path);
         if (snapshot) {
-          const source = readFileSync(snapshot.filePath, "utf8");
-          const literals = extractEndpointLiterals(source, snapshot.filePath, endpoint.stem);
+          const literals = extractEndpointLiterals(snapshot, endpoint.stem);
           extractedLiteralsByPath.set(endpoint.path, literals);
           const exportedNames = new Set(snapshot.exports.map((e) => e.name));
           const present = new Set(

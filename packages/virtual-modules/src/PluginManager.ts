@@ -18,6 +18,9 @@ const emptyTypeInfoApi: TypeInfoApi = {
   directory: () => {
     throw new Error("TypeInfoApi is not configured for this resolver context");
   },
+  resolveExport: () => {
+    throw new Error("TypeInfoApi is not configured for this resolver context");
+  },
 };
 
 const emptySession: TypeInfoApiSession = {

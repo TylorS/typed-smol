@@ -124,9 +124,34 @@ export interface ExportedTypeInfo {
   readonly assignableTo?: Readonly<Record<string, boolean>>;
 }
 
+/**
+ * Spec for resolving a type from program imports for structural assignability checks.
+ * Used with createTypeInfoApiSession typeTargetSpecs option; resolution happens internally.
+ */
+export interface TypeTargetSpec {
+  readonly id: string;
+  readonly module: string;
+  readonly exportName: string;
+}
+
+/**
+ * Import information for cross-file reference resolution.
+ * Enables plugins to trace symbols to their source declarations.
+ */
+export interface ImportInfo {
+  readonly moduleSpecifier: string;
+  readonly importedNames?: readonly string[];
+  readonly defaultImport?: string;
+  readonly namespaceImport?: string;
+  /** Resolved absolute path when the module resolves to a project file. */
+  readonly resolvedFilePath?: string;
+}
+
 export interface TypeInfoFileSnapshot {
   readonly filePath: string;
   readonly exports: readonly ExportedTypeInfo[];
+  /** Imports present in the file for cross-file reference resolution. */
+  readonly imports?: readonly ImportInfo[];
 }
 
 export interface FileSnapshotSuccess {
@@ -177,6 +202,15 @@ export interface TypeInfoApi {
     relativeGlobs: string | readonly string[],
     options: TypeInfoDirectoryQueryOptions,
   ): readonly TypeInfoFileSnapshot[];
+  /**
+   * Resolve an export by name from a file. Use baseDir-relative filePath.
+   * Returns undefined when the file is not in the program or the export is not found.
+   */
+  resolveExport(
+    baseDir: string,
+    filePath: string,
+    exportName: string,
+  ): ExportedTypeInfo | undefined;
 }
 
 export interface TypeInfoApiSession {

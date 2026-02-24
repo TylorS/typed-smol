@@ -202,6 +202,71 @@ export const fn = (input: Box): U => input.value;
     expect(names.has("querySchema")).toBe(true);
   });
 
+  it("resolveExport returns export by name from a file", () => {
+    const dir = createTempDir();
+    const filePath = join(dir, "mod.ts");
+    writeFileSync(filePath, "export const foo = 1; export type Bar = string;", "utf8");
+    const program = makeProgram([filePath]);
+    const session = createTypeInfoApiSession({ ts, program });
+
+    const foo = session.api.resolveExport(dir, "./mod.ts", "foo");
+    expect(foo).toBeDefined();
+    expect(foo!.name).toBe("foo");
+    expect(["primitive", "literal"]).toContain(foo!.type.kind);
+
+    const bar = session.api.resolveExport(dir, "./mod.ts", "Bar");
+    expect(bar).toBeDefined();
+    expect(bar!.name).toBe("Bar");
+
+    const missing = session.api.resolveExport(dir, "./mod.ts", "nonexistent");
+    expect(missing).toBeUndefined();
+  });
+
+  it("includes imports in file snapshot when present", () => {
+    const dir = createTempDir();
+    const filePath = join(dir, "mod.ts");
+    writeFileSync(
+      filePath,
+      'import { a, b } from "./other"; import * as ns from "./ns"; export const x = a;',
+      "utf8",
+    );
+    const otherPath = join(dir, "other.ts");
+    writeFileSync(otherPath, "export const a = 1; export const b = 2;", "utf8");
+    const nsPath = join(dir, "ns.ts");
+    writeFileSync(nsPath, "export const y = 3;", "utf8");
+    const program = makeProgram([filePath, otherPath, nsPath]);
+    const session = createTypeInfoApiSession({ ts, program });
+    const result = session.api.file("./mod.ts", { baseDir: dir });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.imports).toBeDefined();
+    expect(result.snapshot.imports!.length).toBe(2);
+    const named = result.snapshot.imports!.find((i) => i.importedNames);
+    expect(named?.moduleSpecifier).toBe("./other");
+    expect(named?.importedNames).toEqual(["a", "b"]);
+    const ns = result.snapshot.imports!.find((i) => i.namespaceImport);
+    expect(ns?.moduleSpecifier).toBe("./ns");
+    expect(ns?.namespaceImport).toBe("ns");
+  });
+
+  it("accepts typeTargetSpecs and resolves them for assignableTo", () => {
+    const dir = createTempDir();
+    const filePath = join(dir, "mod.ts");
+    writeFileSync(filePath, "export const x: number = 1;", "utf8");
+    const program = makeProgram([filePath]);
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: [{ id: "Num", module: "effect/Number", exportName: "Number" }],
+    });
+    const result = session.api.file("./mod.ts", { baseDir: dir });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const xExport = result.snapshot.exports.find((e) => e.name === "x");
+    expect(xExport).toBeDefined();
+    expect(xExport!.type.kind).toBe("primitive");
+  });
+
   it("applies maxDepth when serializing deep types", () => {
     const dir = createTempDir();
     const filePath = join(dir, "deep.ts");
