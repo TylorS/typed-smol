@@ -1,6 +1,7 @@
 import type {
   FunctionTypeNode,
   IntersectionTypeNode,
+  ObjectTypeNode,
   ReferenceTypeNode,
   TypeNode,
   UnionTypeNode,
@@ -18,13 +19,34 @@ export function getReferenceTypeName(text: string): string {
 /** Optional assignability result from TypeInfoApi when typeTargets are provided. */
 export type AssignableTo = Readonly<Record<string, boolean>> | undefined;
 
+/** Collect property names from object or intersection of objects (legacy plain route shape). */
+function collectPropertyNames(n: TypeNode): Set<string> {
+  const names = new Set<string>();
+  const visit = (node: TypeNode): void => {
+    if (node.kind === "object")
+      for (const p of (node as ObjectTypeNode).properties) names.add(p.name);
+    else if (node.kind === "intersection")
+      for (const el of (node as IntersectionTypeNode).elements) visit(el);
+  };
+  visit(n);
+  return names;
+}
+
+/** Check if type has pathSchema and querySchema (legacy plain route shape). */
+function typeHasRequiredRouteProps(node: TypeNode): boolean {
+  const names = collectPropertyNames(node);
+  return names.has("pathSchema") && names.has("querySchema");
+}
+
 /**
  * True iff the type is structurally assignable to Route.
  * Uses assignableTo.Route when available (structural); fallback to type text when absent.
  * Route.Slash, Route.Param, etc. have text like "Route.Slash" — accept when text starts with "Route" or first segment is "Route".
+ * Plain object with pathSchema and querySchema is accepted (legacy route shape).
  */
 export function typeNodeIsRouteCompatible(node: TypeNode, assignableTo?: AssignableTo): boolean {
   if (assignableTo?.Route === true) return true;
+  if (typeHasRequiredRouteProps(node)) return true;
   const text = node.text;
   if (!text || typeof text !== "string") return false;
   const trimmed = text.trim();

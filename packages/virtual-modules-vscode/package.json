@@ -40,6 +40,10 @@
       {
         "command": "typed.virtualModules.refresh",
         "title": "Refresh Virtual Modules"
+      },
+      {
+        "command": "typed.virtualModules.diagnoseDefinition",
+        "title": "Virtual Modules: Diagnose go-to-definition at cursor"
       }
     ],
     "menus": {

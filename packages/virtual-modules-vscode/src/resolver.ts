@@ -189,10 +189,12 @@ export function createResolver(projectRoot: string): {
         return {
           sourceText: resolution.sourceText,
           pluginName: resolution.pluginName,
-          virtualFileName: createVirtualFileName(resolution.pluginName, virtualKey, {
-            id,
-            importer,
-          }),
+          virtualFileName: createVirtualFileName(
+            resolution.pluginName,
+            virtualKey,
+            { id, importer },
+            { projectRoot },
+          ),
         };
       }
       return undefined;

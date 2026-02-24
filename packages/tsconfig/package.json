@@ -16,5 +16,8 @@
     "dom.json",
     "test.json",
     "webworker.json"
-  ]
+  ],
+  "dependencies": {
+    "@typed/virtual-modules-ts-plugin": "workspace:*"
+  }
 }

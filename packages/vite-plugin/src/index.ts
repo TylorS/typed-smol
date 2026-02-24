@@ -3,13 +3,25 @@
  * Brotli compression, virtual-modules Vite plugin, and @typed/app VM plugins.
  */
 import type { Plugin } from "vite";
-import type { CreateTypeInfoApiSession } from "@typed/virtual-modules";
+import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
 import { PluginManager } from "@typed/virtual-modules";
-import { createRouterVirtualModulePlugin } from "@typed/app";
+import {
+  createHttpApiVirtualModulePlugin,
+  createRouterVirtualModulePlugin,
+} from "@typed/app";
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { visualizer } from "rollup-plugin-visualizer";
 import viteCompression from "vite-plugin-compression";
+
+/**
+ * Options passed through to the HttpApi virtual-module plugin when enabled.
+ * Forwarded to createHttpApiVirtualModulePlugin from the package that provides it
+ * (e.g. @typed/app when the export is added). See httpapi-virtual-module-plugin spec.
+ */
+export interface HttpApiVirtualModulePluginOptions {
+  readonly [key: string]: unknown;
+}
 
 /** Options for vite-plugin-compression when compression is enabled. */
 export type TypedViteCompressionOptions =
@@ -26,6 +38,13 @@ export interface TypedVitePluginOptions {
    * Options for the router VM plugin from @typed/app.
    */
   readonly routerVmOptions?: import("@typed/app").RouterVirtualModulePluginOptions;
+
+  /**
+   * When set, enables the HttpApi virtual-module plugin and forwards these options to it.
+   * Requires createHttpApiVirtualModulePlugin to be exported from @typed/app (or the
+   * configured provider). Order: router VM plugin is registered first, then HttpApi VM plugin.
+   */
+  readonly apiVmOptions?: HttpApiVirtualModulePluginOptions;
 
   /**
    * Session factory for TypeInfo API (required for router VM type-checking).
@@ -54,14 +73,41 @@ export interface TypedVitePluginOptions {
   readonly compression?: TypedViteCompressionOptions;
 }
 
+/** Optional dependency injection for createTypedViteResolver (e.g. for tests). */
+export interface TypedViteResolverDependencies {
+  createHttpApiVirtualModulePlugin?: (
+    opts: HttpApiVirtualModulePluginOptions,
+  ) => import("@typed/virtual-modules").VirtualModulePlugin;
+}
+
+/**
+ * Builds the virtual-module resolver used by typedVitePlugin with deterministic plugin order:
+ * 1) router VM plugin, 2) HttpApi VM plugin (when apiVmOptions is set).
+ * Exported for tests that assert plugin order and options pass-through.
+ * When `dependencies.createHttpApiVirtualModulePlugin` is provided (e.g. in tests), it overrides the direct import.
+ */
+export function createTypedViteResolver(
+  options: TypedVitePluginOptions = {},
+  dependencies?: TypedViteResolverDependencies,
+): VirtualModuleResolver {
+  const plugins: import("@typed/virtual-modules").VirtualModulePlugin[] = [
+    createRouterVirtualModulePlugin(options.routerVmOptions ?? {}),
+  ];
+  if (options.apiVmOptions !== undefined) {
+    const factory =
+      dependencies?.createHttpApiVirtualModulePlugin ??
+      createHttpApiVirtualModulePlugin;
+    plugins.push(factory(options.apiVmOptions));
+  }
+  return new PluginManager(plugins);
+}
+
 /**
  * Returns Vite plugins: tsconfig paths, virtual modules (@typed/app), and optional bundle analyzer.
  * Use as: `defineConfig({ plugins: typedVitePlugin() })`.
  */
 export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] {
-  const resolver = new PluginManager([
-    createRouterVirtualModulePlugin(options.routerVmOptions ?? {}),
-  ]);
+  const resolver = createTypedViteResolver(options);
   const analyze =
     options.analyze ?? (process.env.ANALYZE === "1" ? true : false);
 

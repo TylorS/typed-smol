@@ -37,7 +37,7 @@ export interface KeyedOptions<A, B, C, E2, R2> {
   /**
    * Optional debounce duration for emission.
    */
-  readonly debounce?: Duration.DurationInput;
+  readonly debounce?: Duration.Input;
 }
 
 /**
@@ -323,7 +323,7 @@ function withDebounceFork<A, E, R>(
     fork: <R>(effect: Effect.Effect<A, never, R>) => Effect.Effect<void, never, R>,
     scope: Scope.Scope,
   ) => Effect.Effect<A, E, R>,
-  duration: Duration.DurationInput,
+  duration: Duration.Input,
 ): Effect.Effect<unknown, E, R | Scope.Scope> {
   return withScopedFork(
     (fork, scope) =>

@@ -2,6 +2,7 @@ import { assert, describe, it } from "vitest";
 import * as Cause from "effect/Cause";
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
+import * as Latch from "effect/Latch";
 import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -59,8 +60,8 @@ describe("typed/router/Matcher", () => {
       );
 
       const values: Array<string> = [];
-      const first = Effect.makeLatchUnsafe();
-      const done = Effect.makeLatchUnsafe();
+      const first = Latch.makeUnsafe();
+      const done = Latch.makeUnsafe();
       const fiber = yield* Effect.forkChild(
         Fx.observe(fx, (value) =>
           Effect.sync(() => {
@@ -118,8 +119,8 @@ describe("typed/router/Matcher", () => {
       const fx = Matcher.run(matcher);
 
       const values: Array<string> = [];
-      const first = Effect.makeLatchUnsafe();
-      const done = Effect.makeLatchUnsafe();
+      const first = Latch.makeUnsafe();
+      const done = Latch.makeUnsafe();
       const fiber = yield* Effect.forkChild(
         Fx.observe(fx, (value) =>
           Effect.sync(() => {
@@ -224,8 +225,8 @@ describe("typed/router/Matcher", () => {
       );
 
       const values: Array<string> = [];
-      const first = Effect.makeLatchUnsafe();
-      const done = Effect.makeLatchUnsafe();
+      const first = Latch.makeUnsafe();
+      const done = Latch.makeUnsafe();
       const fiber = yield* Effect.forkChild(
         Fx.observe(fx, (value) =>
           Effect.sync(() => {
@@ -407,8 +408,8 @@ describe("typed/router/Matcher", () => {
       const fx = Matcher.run(matcher);
 
       const values: Array<string> = [];
-      const first = Effect.makeLatchUnsafe();
-      const done = Effect.makeLatchUnsafe();
+      const first = Latch.makeUnsafe();
+      const done = Latch.makeUnsafe();
       const fiber = yield* Effect.forkChild(
         Fx.observe(fx, (value) =>
           Effect.sync(() => {

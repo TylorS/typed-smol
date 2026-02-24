@@ -1,5 +1,5 @@
 /**
- * Verifies that virtual modules "router:routes" and "virtual:foo" resolve and build.
+ * Verifies that virtual modules "router:routes", "api:./api", and "virtual:foo" resolve and build.
  * Run from sample-project: node scripts/verify-virtual-modules.mjs
  * Requires: pnpm install, pnpm build:plugins, and @typed/virtual-modules + @typed/app built.
  */
@@ -42,6 +42,7 @@ function loadPlugins() {
   const results = loader.loadMany([
     { specifier: "./plugin.mjs", baseDir: projectRoot },
     { specifier: "./plugins/router-plugin.mjs", baseDir: projectRoot },
+    { specifier: "./plugins/httpapi-plugin.mjs", baseDir: projectRoot },
   ]);
   const plugins = [];
   for (const r of results) {
@@ -78,6 +79,13 @@ const fooResult = resolver.resolveModule({
   createTypeInfoApiSession: sessionFactory,
 });
 
+const serverImporter = join(projectRoot, "server.ts");
+const apiResult = resolver.resolveModule({
+  id: "api:./api",
+  importer: serverImporter,
+  createTypeInfoApiSession: sessionFactory,
+});
+
 let failed = false;
 if (routerResult.status !== "resolved") {
   console.error(
@@ -97,6 +105,16 @@ if (fooResult.status !== "resolved") {
   failed = true;
 } else {
   console.log("OK virtual:foo resolved");
+}
+
+if (apiResult.status !== "resolved") {
+  console.error(
+    "api:./api failed:",
+    apiResult.status === "error" ? apiResult.diagnostic?.message : "unresolved",
+  );
+  failed = true;
+} else {
+  console.log("OK api:./api resolved, source length:", apiResult.sourceText?.length ?? 0);
 }
 
 process.exit(failed ? 1 : 0);

@@ -23,9 +23,11 @@
   },
   "dependencies": {
     "@typed/router": "workspace:*",
-    "@typed/virtual-modules": "workspace:*"
+    "@typed/virtual-modules": "workspace:*",
+    "effect": "catalog:"
   },
   "devDependencies": {
+    "@effect/platform-node": "catalog:",
     "@typed/fx": "workspace:*",
     "@types/node": "^25.3.0",
     "@vitest/coverage-v8": "^4.0.0",

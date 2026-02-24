@@ -368,7 +368,7 @@ export const catchTag: {
   R | R2
 > {
   const g = getGuard(guard);
-  return (i: I) => Effect.catchTag(g(i), tag as any, (e) => Effect.asSome(f(e)));
+  return (i: I) => Effect.catchTag(g(i), tag as any, (e) => Effect.asSome(f(e as any)));
 });
 
 /**

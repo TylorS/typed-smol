@@ -224,10 +224,12 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
       }
 
       const key = createVirtualKey(id, importer);
-      const virtualFileName = createVirtualFileName(resolution.pluginName, key, {
-        id,
-        importer,
-      });
+      const virtualFileName = createVirtualFileName(
+        resolution.pluginName,
+        key,
+        { id, importer },
+        { projectRoot: options.projectRoot },
+      );
       const record: MutableVirtualRecord = {
         key,
         id,

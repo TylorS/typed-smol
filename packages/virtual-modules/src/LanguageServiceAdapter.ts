@@ -5,13 +5,21 @@ import {
   type LanguageServiceWatchHost,
   type VirtualModuleAdapterHandle,
 } from "./types.js";
+import { unlinkSync } from "node:fs";
+import {
+  materializeVirtualFile,
+  rewriteSourceForPreviewLocation,
+} from "./internal/materializeVirtualFile.js";
 import {
   createVirtualRecordStore,
   toResolvedModule,
   type MutableVirtualRecord,
   type ResolveRecordResult,
 } from "./internal/VirtualRecordStore.js";
-import { VIRTUAL_MODULE_URI_SCHEME } from "./internal/path.js";
+import {
+  VIRTUAL_MODULE_URI_SCHEME,
+  VIRTUAL_NODE_MODULES_RELATIVE,
+} from "./internal/path.js";
 import { Mutable } from "effect/Types";
 
 /** Prefix VSCode uses when sending non-file URIs to tsserver (query params are dropped). */
@@ -162,6 +170,13 @@ export const attachLanguageServiceAdapter = (
     },
     onEvictRecord: (record) => {
       clearDiagnosticsForFile(record.importer);
+      if (record.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
+        try {
+          unlinkSync(record.virtualFileName);
+        } catch {
+          /* ignore if already deleted or missing */
+        }
+      }
     },
   });
 
@@ -443,20 +458,31 @@ export const attachLanguageServiceAdapter = (
 
     const freshRecord = rebuildRecordIfNeeded(record);
 
+    let sourceToServe = freshRecord.sourceText;
+    const isNodeModulesPath = fileName.includes(VIRTUAL_NODE_MODULES_RELATIVE);
+    if (isNodeModulesPath) {
+      sourceToServe = rewriteSourceForPreviewLocation(
+        freshRecord.sourceText,
+        freshRecord.importer,
+        fileName,
+      );
+      materializeVirtualFile(fileName, freshRecord.importer, freshRecord.sourceText);
+    }
+
     // In tsserver, setDocument(key, path, sourceFile) requires a ScriptInfo for path (Debug.checkDefined(getScriptInfoForPath(path))).
     // If we never register the virtual file, createProgram → acquireOrUpdateDocument → setDocument throws "Debug Failure".
     // So when projectService exists (tsserver), always register the virtual file so setDocument can find it.
     if (projectService?.getOrCreateOpenScriptInfo) {
       projectService.getOrCreateOpenScriptInfo(
         fileName,
-        freshRecord.sourceText,
+        sourceToServe,
         options.ts.ScriptKind.TS,
         false,
         options.projectRoot,
       );
     }
 
-    return options.ts.ScriptSnapshot.fromString(freshRecord.sourceText);
+    return options.ts.ScriptSnapshot.fromString(sourceToServe);
   };
 
   if (originalGetScriptVersion) {
@@ -546,6 +572,15 @@ export const attachLanguageServiceAdapter = (
 
   return {
     dispose(): void {
+      for (const [virtualPath] of recordsByVirtualFile) {
+        if (virtualPath.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
+          try {
+            unlinkSync(virtualPath);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
       (host as Mutable<ts.LanguageServiceHost>).resolveModuleNameLiterals =
         originalResolveModuleNameLiterals;
       host.resolveModuleNames = originalResolveModuleNames;

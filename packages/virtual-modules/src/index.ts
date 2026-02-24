@@ -10,5 +10,7 @@ export {
   createVirtualFileName,
   createVirtualKey,
   VIRTUAL_MODULE_URI_SCHEME,
+  VIRTUAL_NODE_MODULES_RELATIVE,
   type CreateVirtualFileNameParams,
+  type CreateVirtualFileNameOptions,
 } from "./internal/path.js";

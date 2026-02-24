@@ -4,6 +4,7 @@
 import * as Array from "effect/Array";
 import type * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
+import * as Semaphore from "effect/Semaphore";
 import { equals } from "effect/Equal";
 import type { Equivalence } from "effect/Equivalence";
 import * as Exit from "effect/Exit";
@@ -459,14 +460,14 @@ class RefSubjectCore<A, E, R, R2> {
   readonly services: ServiceMap.ServiceMap<R2>;
   readonly scope: Scope.Closeable;
   readonly deferredRef: DeferredRef.DeferredRef<E, A>;
-  readonly semaphore: Effect.Semaphore;
+  readonly semaphore: Semaphore.Semaphore;
   constructor(
     initial: Effect.Effect<A, E, R>,
     subject: Subject.HoldSubjectImpl<A, E>,
     services: ServiceMap.ServiceMap<R2>,
     scope: Scope.Closeable,
     deferredRef: DeferredRef.DeferredRef<E, A>,
-    semaphore: Effect.Semaphore,
+    semaphore: Semaphore.Semaphore,
   ) {
     this.initial = initial;
     this.subject = subject;
@@ -776,7 +777,7 @@ function makeCore<A, E, R>(
       scope,
       deferredRef ??
         DeferredRef.unsafeMake(id, getExitEquivalence(options?.eq ?? equals), subject.lastValue),
-      Effect.makeSemaphoreUnsafe(1),
+      Semaphore.makeUnsafe(1),
     );
     yield* Scope.addFinalizer(scope, core.subject.interrupt);
     return core;

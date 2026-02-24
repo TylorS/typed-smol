@@ -1,5 +1,6 @@
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
+import * as Semaphore from "effect/Semaphore";
 import * as Exit from "effect/Exit";
 import { dual, flow, identity } from "effect/Function";
 import * as MutableRef from "effect/MutableRef";
@@ -270,7 +271,7 @@ export function withStateSemaphore<A, E, R, B, R2>(
 ) {
   return withEarlyExit(sink, (sink, params) => {
     const stateRef = MutableRef.make(state);
-    const semaphore = Effect.makeSemaphoreUnsafe(1);
+    const semaphore = Semaphore.makeUnsafe(1);
     const lock = semaphore.withPermits(1);
     const modifyEffect = <C, E2, R2>(f: (state: B) => Effect.Effect<readonly [C, B], E2, R2>) =>
       Effect.suspend(() => f(MutableRef.get(stateRef))).pipe(

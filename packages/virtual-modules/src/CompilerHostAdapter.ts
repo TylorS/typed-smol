@@ -1,10 +1,12 @@
 import type * as ts from "typescript";
 import { type CompilerHostAdapterOptions, type VirtualModuleAdapterHandle } from "./types.js";
+import { rewriteSourceForPreviewLocation } from "./internal/materializeVirtualFile.js";
 import {
   createVirtualRecordStore,
   toResolvedModule,
   type MutableVirtualRecord,
 } from "./internal/VirtualRecordStore.js";
+import { VIRTUAL_NODE_MODULES_RELATIVE } from "./internal/path.js";
 
 export const attachCompilerHostAdapter = (
   options: CompilerHostAdapterOptions,
@@ -163,6 +165,18 @@ export const attachCompilerHostAdapter = (
   };
   (host as ts.CompilerHost).resolveModuleNameLiterals = assignResolveModuleNameLiterals;
 
+  const getSourceTextForRecord = (record: MutableVirtualRecord): string => {
+    const fresh = rebuildIfStale(record);
+    if (record.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
+      return rewriteSourceForPreviewLocation(
+        fresh.sourceText,
+        fresh.importer,
+        record.virtualFileName,
+      );
+    }
+    return fresh.sourceText;
+  };
+
   host.getSourceFile = (
     fileName: string,
     languageVersionOrOptions: ts.ScriptTarget | ts.CreateSourceFileOptions,
@@ -179,10 +193,10 @@ export const attachCompilerHostAdapter = (
       );
     }
 
-    const freshRecord = rebuildIfStale(record);
+    const sourceText = getSourceTextForRecord(record);
     return options.ts.createSourceFile(
       fileName,
-      freshRecord.sourceText,
+      sourceText,
       languageVersionOrOptions as ts.ScriptTarget,
       true,
       options.ts.ScriptKind.TS,
@@ -208,10 +222,10 @@ export const attachCompilerHostAdapter = (
         );
       }
 
-      const freshRecord = rebuildIfStale(record);
+      const sourceText = getSourceTextForRecord(record);
       return options.ts.createSourceFile(
         fileName,
-        freshRecord.sourceText,
+        sourceText,
         languageVersionOrOptions as ts.ScriptTarget,
         true,
         options.ts.ScriptKind.TS,
@@ -233,7 +247,7 @@ export const attachCompilerHostAdapter = (
       return originalReadFile(fileName);
     }
 
-    return rebuildIfStale(record).sourceText;
+    return getSourceTextForRecord(record);
   };
 
   if (originalHasInvalidatedResolutions) {

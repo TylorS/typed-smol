@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { posix } from "node:path";
 import type { WatchDependencyDescriptor } from "../types.js";
+
+/** Base directory for virtual files under node_modules (enables go-to-definition to resolve correctly). */
+export const VIRTUAL_NODE_MODULES_RELATIVE = "node_modules/.typed/virtual";
 
 export const toPosixPath = (path: string): string => path.replaceAll("\\", "/");
 
@@ -59,22 +62,33 @@ export interface CreateVirtualFileNameParams {
   readonly importer: string;
 }
 
+export interface CreateVirtualFileNameOptions {
+  /** When provided, virtual files use projectRoot/node_modules/.typed/virtual/ so go-to-definition resolves correctly. */
+  readonly projectRoot?: string;
+}
+
 /**
- * Virtual file name for the TS program. Places the virtual file adjacent to the
- * importer so that relative imports and node_modules resolution within the
- * generated code work correctly. Falls back to a typed-virtual:// URI when
- * importer is not provided.
+ * Virtual file name for the TS program. When projectRoot is provided, uses
+ * node_modules/.typed/virtual/ so the path exists on disk (after materialization)
+ * and go-to-definition works like node_modules packages. Falls back to
+ * importer-adjacent path or typed-virtual:// URI when projectRoot is not set.
  */
 export const createVirtualFileName = (
   pluginName: string,
   virtualKey: string,
   params?: CreateVirtualFileNameParams,
+  options?: CreateVirtualFileNameOptions,
 ): string => {
   const safePluginName = sanitizeSegment(pluginName);
   const hash = stableHash(virtualKey);
+  const basename = `__virtual_${safePluginName}_${hash}.ts`;
   if (params) {
+    const projectRoot = options?.projectRoot;
+    if (typeof projectRoot === "string" && projectRoot.trim().length > 0) {
+      return toPosixPath(join(resolve(projectRoot), VIRTUAL_NODE_MODULES_RELATIVE, basename));
+    }
     const importerDir = dirname(toPosixPath(params.importer));
-    return `${importerDir}/__virtual_${safePluginName}_${hash}.ts`;
+    return `${importerDir}/${basename}`;
   }
   return `${VIRTUAL_MODULE_URI_SCHEME}://0/${safePluginName}/${hash}.ts`;
 };

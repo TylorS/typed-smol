@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect";
 import * as FiberSet from "effect/FiberSet";
+import * as Semaphore from "effect/Semaphore";
 import { dual } from "effect/Function";
 import type * as Scope from "effect/Scope";
 import { make as makeSink } from "../../Sink/Sink.js";
@@ -26,10 +27,12 @@ export const flatMapConcurrently: FlatMapLike<[concurrency: number]> = dual(
   ): Fx<B, E | E2, R | R2 | Scope.Scope> =>
     make<B, E | E2, R | R2 | Scope.Scope>(
       Effect.fn(function* (sink) {
-        const semaphore = yield* Effect.makeSemaphore(concurrency);
+        const semaphore = yield* Semaphore.make(concurrency);
         const lock = semaphore.withPermits(1);
         const set = yield* FiberSet.make<void, never>();
-        yield* self.run(makeSink(sink.onFailure, (a) => FiberSet.run(set, lock(f(a).run(sink)))));
+        yield* self.run(
+          makeSink(sink.onFailure, (a) => FiberSet.run(set, lock(Effect.asVoid(f(a).run(sink))))),
+        );
         yield* FiberSet.awaitEmpty(set);
       }, extendScope),
     ),

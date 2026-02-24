@@ -170,6 +170,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  const outputChannel = vscode.window.createOutputChannel("Typed Virtual Modules");
   const definitionProvider = createVirtualModuleDefinitionProvider(
     getResolver,
     getProjectRoot,
@@ -178,6 +179,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (root) registerVirtualModule(root, moduleId, importer);
     },
     cacheVirtualModule,
+    outputChannel,
   );
 
   context.subscriptions.push(
@@ -294,6 +296,61 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("typed.virtualModules.diagnoseDefinition", async () => {
+      outputChannel.show();
+      outputChannel.clear();
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        outputChannel.appendLine("No active editor.");
+        return;
+      }
+      const doc = editor.document;
+      const pos = editor.selection.active;
+      const line = doc.lineAt(pos.line).text;
+      outputChannel.appendLine(`Cursor: line ${pos.line} col ${pos.character}`);
+      outputChannel.appendLine(`Line: "${line}"`);
+
+      const extracted = extractVirtualImportAtPosition(doc, pos);
+      if (!extracted) {
+        outputChannel.appendLine(
+          "FAIL: Cursor is not on a virtual import specifier. Place cursor inside the quoted part (e.g. 'api:./api').",
+        );
+        return;
+      }
+      outputChannel.appendLine(`Extracted moduleId: "${extracted.moduleId}"`);
+
+      const importer = doc.uri.fsPath;
+      const projectRoot = getProjectRoot(importer);
+      if (!projectRoot) {
+        outputChannel.appendLine(`FAIL: No project root for "${importer}"`);
+        return;
+      }
+      outputChannel.appendLine(`Project root: "${projectRoot}"`);
+
+      const resolver = getResolver(projectRoot);
+      const result = resolver.resolve(extracted.moduleId, importer);
+      if (!result) {
+        outputChannel.appendLine(
+          `FAIL: resolver.resolve("${extracted.moduleId}", "${importer}") returned null. Check vmc.config.ts and plugin setup.`,
+        );
+        return;
+      }
+      outputChannel.appendLine(`Resolved: virtualFileName="${result.virtualFileName}"`);
+
+      try {
+        const absPath = writeVirtualPreviewAndGetPath(
+          projectRoot,
+          importer,
+          result.virtualFileName,
+          result.sourceText,
+        );
+        outputChannel.appendLine(`OK: would open "${absPath}"`);
+      } catch (err) {
+        outputChannel.appendLine(`FAIL: ${err}`);
+      }
+    }),
+  );
+  context.subscriptions.push(
     vscode.commands.registerCommand("typed.virtualModules.openFromImport", async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) return;
@@ -344,6 +401,7 @@ function extractVirtualImportAtPosition(
   position: vscode.Position,
 ): { moduleId: string; range: vscode.Range } | undefined {
   const line = document.lineAt(position.line).text;
+  VIRTUAL_IMPORT_SPECIFIER_REGEX.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = VIRTUAL_IMPORT_SPECIFIER_REGEX.exec(line)) !== null) {
     const moduleId = match[1];
@@ -362,33 +420,58 @@ function createVirtualModuleDefinitionProvider(
   getProjectRoot: (path: string) => string | undefined,
   onResolved?: (moduleId: string, importer: string) => void,
   onCache?: (result: { virtualFileName: string; sourceText: string }) => void,
+  outputChannel?: vscode.OutputChannel,
 ): vscode.DefinitionProvider {
+  const log = (msg: string) => outputChannel?.appendLine(`[go-to-def] ${msg}`);
   return {
     provideDefinition(
       document: vscode.TextDocument,
       position: vscode.Position,
     ): vscode.DefinitionLink[] | vscode.Location[] | null {
+      log(`called doc=${document.uri.fsPath} pos=(${position.line},${position.character})`);
+      const line = document.lineAt(position.line).text;
+      log(`line: "${line}"`);
+
       const extracted = extractVirtualImportAtPosition(document, position);
-      if (!extracted) return null;
+      if (extracted) {
+        log(`extracted moduleId="${extracted.moduleId}"`);
+        const { moduleId } = extracted;
+        const importer = document.uri.fsPath;
+        const projectRoot = getProjectRoot(importer);
+        if (!projectRoot) {
+          log(`FAIL: getProjectRoot("${importer}") returned undefined`);
+          return null;
+        }
+        log(`projectRoot="${projectRoot}"`);
+        const resolver = getResolver(projectRoot);
+        const result = resolver.resolve(moduleId, importer);
+        if (!result) {
+          log(`FAIL: resolver.resolve("${moduleId}", "${importer}") returned null`);
+          return null;
+        }
+        log(`resolved virtualFileName="${result.virtualFileName}"`);
+        try {
+          onResolved?.(moduleId, importer);
+          onCache?.(result);
+          const absPath = writeVirtualPreviewAndGetPath(
+            projectRoot,
+            importer,
+            result.virtualFileName,
+            result.sourceText,
+          );
+          log(`OK returning Location(${absPath}) [import specifier]`);
+          return [new vscode.Location(vscode.Uri.file(absPath), new vscode.Position(0, 0))];
+        } catch (err) {
+          log(`FAIL: writeVirtualPreviewAndGetPath threw: ${err}`);
+          throw err;
+        }
+      }
 
-      const { moduleId } = extracted;
-      const importer = document.uri.fsPath;
-      const projectRoot = getProjectRoot(importer);
-      if (!projectRoot) return null;
-
-      const resolver = getResolver(projectRoot);
-      const result = resolver.resolve(moduleId, importer);
-      if (!result) return null;
-
-      onResolved?.(moduleId, importer);
-      onCache?.(result);
-      const absPath = writeVirtualPreviewAndGetPath(
-        projectRoot,
-        importer,
-        result.virtualFileName,
-        result.sourceText,
-      );
-      return [new vscode.Location(vscode.Uri.file(absPath), new vscode.Position(0, 0))];
+      // Cursor not on import specifier (e.g. Api.serve()) - return null so tsserver's
+      // DefinitionProvider handles it. The TS plugin patches the host so virtual
+      // modules are in the program; tsserver will resolve definitions correctly.
+      log("not on import specifier, delegating to tsserver");
+      return null;
     },
   };
 }
@@ -407,6 +490,7 @@ function createVirtualModuleDocumentLinkProvider(
       if (!projectRoot) return links;
 
       const resolver = getResolver(projectRoot);
+      VIRTUAL_IMPORT_SPECIFIER_REGEX.lastIndex = 0;
       let match: RegExpExecArray | null;
       while ((match = VIRTUAL_IMPORT_SPECIFIER_REGEX.exec(document.getText())) !== null) {
         const moduleId = match[1];

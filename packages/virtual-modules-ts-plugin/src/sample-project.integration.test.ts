@@ -25,9 +25,7 @@ describe("sample-project integration", () => {
   });
 
   it("vmc --noEmit passes (mirrors tsc with virtual modules)", () => {
-    // Use entry-only tsconfig so virtual:foo is resolved via vmc.config.ts plugins.
-    // Full project typecheck (including router:routes) is done via scripts/typecheck-with-plugin.mjs.
-    const result = spawnSync("node", [vmcCliPath, "--noEmit", "-p", "tsconfig.vmc.json"], {
+    const result = spawnSync("node", [vmcCliPath, "--noEmit"], {
       cwd: sampleProjectDir,
       encoding: "utf8",
       timeout: 10_000,

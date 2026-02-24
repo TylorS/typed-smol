@@ -14,10 +14,10 @@ import { make } from "./make.js";
  * @category constructors
  */
 export const at: {
-  (delay: Duration.DurationInput): <A>(value: A) => Fx<A>;
-  <A>(value: A, delay: Duration.DurationInput): Fx<A>;
+  (delay: Duration.Input): <A>(value: A) => Fx<A>;
+  <A>(value: A, delay: Duration.Input): Fx<A>;
 } = dual(
   2,
-  <A>(value: A, delay: Duration.DurationInput): Fx<A> =>
+  <A>(value: A, delay: Duration.Input): Fx<A> =>
     make<A, never, never>((sink) => flatMap(sleep(delay), () => sink.onSuccess(value))),
 );

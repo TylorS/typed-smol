@@ -8,7 +8,7 @@ import type * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import { dual, identity } from "effect/Function";
 import * as Layer from "effect/Layer";
-import type * as Option from "effect/Option";
+import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
 import type * as Scope from "effect/Scope";
 import * as ServiceMap from "effect/ServiceMap";
@@ -998,10 +998,15 @@ export const mapAccumEffect: {
 > {
   return make(
     push,
-    Fx.make((sink) =>
+    Fx.make(<RSink>(sink: Sink.Sink<C, E2 | E3, RSink>) =>
       push.run(
-        Sink.loopEffect(sink, initial, (s, b) =>
-          Effect.map(f(s, b), ([sNext, c]) => [c, sNext] as const),
+        Sink.filterMapLoopEffect(sink, initial, (s, b) =>
+          f(s, b).pipe(
+            Effect.map(([sNext, c]) => [Option.some(c), sNext] as const),
+            Effect.catchCause((cause) =>
+              sink.onFailure(cause).pipe(Effect.as([Option.none(), s] as const)),
+            ),
+          ),
         ),
       ),
     ),

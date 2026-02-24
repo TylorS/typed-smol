@@ -11,5 +11,5 @@ import { fromSchedule } from "./fromSchedule.js";
  * @since 1.0.0
  * @category constructors
  */
-export const periodic = (period: Duration.DurationInput): Fx<void> =>
+export const periodic = (period: Duration.Input): Fx<void> =>
   /*#__PURE__*/ fromSchedule(spaced(period));

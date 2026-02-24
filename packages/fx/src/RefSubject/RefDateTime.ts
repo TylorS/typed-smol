@@ -110,13 +110,13 @@ export const add: {
  */
 export const addDuration: {
   (
-    duration: Duration.DurationInput,
+    duration: Duration.Input,
   ): <E, R>(ref: RefDateTime<E, R>) => RefSubject.Computed<DateTime.DateTime, E, R>;
   <E, R>(
     ref: RefDateTime<E, R>,
-    duration: Duration.DurationInput,
+    duration: Duration.Input,
   ): RefSubject.Computed<DateTime.DateTime, E, R>;
-} = dual(2, function addDuration<E, R>(ref: RefDateTime<E, R>, duration: Duration.DurationInput) {
+} = dual(2, function addDuration<E, R>(ref: RefDateTime<E, R>, duration: Duration.Input) {
   return RefSubject.map(ref, (self) => DateTime.addDuration(self, duration));
 });
 
@@ -177,16 +177,16 @@ export const subtract: {
  */
 export const subtractDuration: {
   (
-    duration: Duration.DurationInput,
+    duration: Duration.Input,
   ): <E, R>(ref: RefDateTime<E, R>) => RefSubject.Computed<DateTime.DateTime, E, R>;
   <E, R>(
     ref: RefDateTime<E, R>,
-    duration: Duration.DurationInput,
+    duration: Duration.Input,
   ): RefSubject.Computed<DateTime.DateTime, E, R>;
 } = dual(2, function subtractDuration<
   E,
   R,
->(ref: RefDateTime<E, R>, duration: Duration.DurationInput) {
+>(ref: RefDateTime<E, R>, duration: Duration.Input) {
   return RefSubject.map(ref, (self) => DateTime.subtractDuration(self, duration));
 });
 
