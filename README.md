@@ -75,9 +75,33 @@ The same resolution works in three places:
 | **Vite plugin** (`@typed/vite-plugin`)             | Resolves virtual imports during `vite dev` and `vite build` |
 | **TS plugin** (`@typed/virtual-modules-ts-plugin`) | Provides IntelliSense and type-checking in your editor      |
 | **vmc** (`@typed/virtual-modules-compiler`)        | Drop-in `tsc` replacement for CI type-checking              |
+| **VS Code extension** (`@typed/virtual-modules-vscode`) | Go-to-definition and source viewing for virtual modules |
 
 
-All three share the same `vmc.config.ts` (or inline config), so virtual modules resolve identically everywhere.
+All four share the same `vmc.config.ts` (or inline config), so virtual modules resolve identically everywhere.
+
+### VS Code Extension
+
+Virtual modules don't exist on disk, so standard Go to Definition fails on them. The **Typed Virtual Modules** extension bridges this gap -- it resolves virtual modules through your configured plugins and opens the generated TypeScript source on demand.
+
+**Features:**
+
+- **Go to Definition** -- Cmd/Ctrl+click a virtual import to open the generated source
+- **Document links** -- virtual imports are clickable links in the editor
+- **Virtual Module Imports view** -- Explorer sidebar listing all virtual imports in the workspace
+- **Open from import** -- right-click an import and choose "Virtual Modules: Open virtual module from import"
+- **Find references** -- from a virtual module tab, see every file that imports it
+- **Live refresh** -- generated content updates automatically when source files change
+
+**Setup:**
+
+Build and run from the monorepo via Run and Debug (Ctrl/Cmd+Shift+D), or install a published `.vsix`:
+
+```bash
+pnpm --filter @typed/virtual-modules-vscode build
+```
+
+Preview files are written to `node_modules/.typed/virtual/` so relative imports resolve correctly in the generated source.
 
 ## Tutorial: File-Based Routing
 
@@ -92,7 +116,7 @@ src/
     about.ts          →  /about
     users/
       index.ts        →  /users
-      [id].ts         →  /users/:id
+      id.ts           →  /users/:id
 ```
 
 **src/routes/index.ts**
@@ -191,9 +215,10 @@ src/
     users/
       list.ts
       create.ts
+      [id].ts
 ```
 
-**src/api/status.ts**
+**src/api/status.ts** -- simple health check
 
 ```ts
 import { Effect } from "effect";
@@ -207,7 +232,7 @@ export const success = Schema.Struct({ status: Schema.Literal("ok") });
 export const handler = () => Effect.succeed({ status: "ok" as const });
 ```
 
-**src/api/users/list.ts**
+**src/api/users/list.ts** -- list endpoint
 
 ```ts
 import { Effect } from "effect";
@@ -216,11 +241,84 @@ import * as Route from "@typed/router";
 
 export const route = Route.Parse("/users");
 export const method = "GET" as const;
-export const success = Schema.Array(Schema.Struct({ id: Schema.String, name: Schema.String }));
+export const success = Schema.Array(
+  Schema.Struct({ id: Schema.String, name: Schema.String }),
+);
 
 export const handler = () =>
   Effect.succeed([{ id: "1", name: "Alice" }]);
 ```
+
+**src/api/users/create.ts** -- POST with request body and error schema
+
+```ts
+import type { ApiHandlerParams } from "@typed/app";
+import { Effect } from "effect";
+import * as Schema from "effect/Schema";
+import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
+import * as Route from "@typed/router";
+
+export const route = Route.Parse("/users");
+export const method = "POST" as const;
+
+export const body = Schema.Struct({
+  name: Schema.String,
+  email: Schema.String,
+});
+
+export const success = HttpApiSchema.status(201)(
+  Schema.Struct({ id: Schema.String, name: Schema.String, email: Schema.String }),
+);
+
+export const error = HttpApiSchema.status(400)(
+  Schema.Struct({ message: Schema.String }),
+);
+
+export const handler = ({
+  body,
+}: ApiHandlerParams<{
+  route: typeof route;
+  method: typeof method;
+  body: typeof body;
+  success: typeof success;
+  error: typeof error;
+}>) =>
+  Effect.succeed({ id: "2", name: body.name, email: body.email });
+```
+
+**src/api/users/[id].ts** -- path params with typed handler
+
+```ts
+import type { ApiHandlerParams } from "@typed/app";
+import { Effect } from "effect";
+import * as Schema from "effect/Schema";
+import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
+import * as Route from "@typed/router";
+
+export const route = Route.Join(Route.Parse("/users"), Route.Param("id"));
+export const method = "GET" as const;
+
+export const success = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+});
+
+export const error = HttpApiSchema.status(404)(
+  Schema.Struct({ message: Schema.String }),
+);
+
+export const handler = ({
+  path,
+}: ApiHandlerParams<{
+  route: typeof route;
+  method: typeof method;
+  success: typeof success;
+  error: typeof error;
+}>) =>
+  Effect.succeed({ id: path.id, name: "Alice" });
+```
+
+`ApiHandlerParams` infers `path`, `query`, `headers`, and `body` types from the endpoint's route and schemas. Path params like `id` above are typed as `{ id: string }` -- no manual type annotations or casts needed.
 
 ### 2. Import the virtual module
 
@@ -228,36 +326,79 @@ export const handler = () =>
 import * as Api from "api:./api";
 ```
 
-The plugin generates:
+The plugin scans the directory, validates each file's exports, and generates a single TypeScript module. Here's what the generated source looks like (use the VS Code extension to inspect it on demand):
 
+```ts
+import * as HttpApi from "effect/unstable/httpapi/HttpApi";
+import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
+import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";
+import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";
+import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
+import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
+import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
+import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
+// ... endpoint imports
 
-| Export         | What it is                                  |
-| -------------- | ------------------------------------------- |
-| `Api.Api`      | The `HttpApi` definition with all endpoints |
-| `Api.ApiLayer` | A Layer wiring all handlers to the API      |
-| `Api.Client`   | A typed HTTP client for calling the API     |
-| `Api.OpenApi`  | The OpenAPI spec object                     |
-| `Api.Swagger`  | Swagger UI layer                            |
-| `Api.Scalar`   | Scalar docs layer                           |
-| `Api.serve`    | One-liner to start the server               |
+export const Api = HttpApi.make("api")
+  .add(
+    HttpApiGroup.make("users")
+      .add(HttpApiEndpoint.get("list", "/users", { success: /* ... */ }))
+      .add(HttpApiEndpoint.post("create", "/users", { body: /* ... */, success: /* ... */, error: /* ... */ }))
+      .add(HttpApiEndpoint.get("getById", "/users/:id", { success: /* ... */, error: /* ... */ }))
+  );
 
+export const ApiLayer = HttpApiBuilder.layer(Api).pipe(
+  Layer.provideMerge(
+    HttpApiBuilder.group(Api, "users", (handlers) =>
+      handlers
+        .handle("list", (ctx) => ListModule.handler({ path: ctx.params, query: ctx.query, ... }))
+        .handle("create", (ctx) => CreateModule.handler({ ..., body: ctx.payload }))
+        .handle("getById", (ctx) => GetByIdModule.handler({ path: ctx.params, ... }))
+    ),
+  ),
+);
+
+export const OpenApi = OpenApiModule.fromApi(Api);
+export const Swagger = HttpApiSwagger.layer(Api);
+export const Scalar = HttpApiScalar.layer(Api);
+export const Client = HttpApiClient.make(Api);
+export const App = (config?, ...layers) => /* Layer composing ApiLayer + HttpRouter.serve */;
+export const serve = (config?, ...layers) => /* Layer that starts a Node HTTP server */;
+```
+
+Every export is fully typed. `Client` gives you a typed HTTP client that mirrors the API's endpoints, `OpenApi` is the spec object you can serialize to JSON, and `Swagger`/`Scalar` are ready-made documentation layers.
+
+| Export         | What it is                                         |
+| -------------- | -------------------------------------------------- |
+| `Api.Api`      | The `HttpApi` definition with all endpoints        |
+| `Api.ApiLayer` | A Layer wiring all handlers to the API             |
+| `Api.Client`   | A typed HTTP client for calling the API            |
+| `Api.OpenApi`  | The OpenAPI spec object                            |
+| `Api.Swagger`  | Swagger UI layer                                   |
+| `Api.Scalar`   | Scalar docs layer                                  |
+| `Api.App`      | Layer composing the API with an HTTP server        |
+| `Api.serve`    | One-liner to start a Node HTTP server              |
 
 ### 3. Serve it
 
 ```ts
 import * as Api from "api:./api";
+import { Layer } from "effect";
+import { NodeRuntime } from "@effect/platform-node";
 
-Api.serve({ port: 3000 });
+Api.serve({ port: 3000 }).pipe(
+  Layer.launch,
+  NodeRuntime.runMain,
+);
 ```
 
-Or compose into a larger app:
+Or compose into a larger app with additional layers:
 
 ```ts
 import { Layer } from "effect";
 import * as Api from "api:./api";
 
-const app = Api.App({ port: 3000 });
-// Add more layers, middleware, etc.
+const app = Api.App({ disableListenLog: true });
 ```
 
 ### Endpoint conventions
@@ -508,6 +649,7 @@ build(id, importer, api) {
 | [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md)           | Low-level Vite adapter for virtual module resolution                         |
 | [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md)   | `vmc` CLI -- drop-in `tsc` with virtual module support                       |
 | [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md) | TypeScript Language Service plugin for editor IntelliSense                   |
+| [@typed/virtual-modules-vscode](packages/virtual-modules-vscode/README.md)       | VS Code extension for go-to-definition and source viewing of virtual modules |
 | [@typed/fx](packages/fx/README.md)                                               | `Fx` -- push-based reactive abstraction extending Effect                     |
 | [@typed/template](packages/template/README.md)                                   | Streaming templates with Fx/Stream/Effect integration and hydration          |
 | [@typed/router](packages/router/README.md)                                       | Type-safe routing with compile-time literal parsing and Schema decoding      |
