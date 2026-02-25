@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PluginManager } from "@typed/virtual-modules";
+import { encodeVirtualId } from "./encodeVirtualId.js";
 import { virtualModulesVitePlugin } from "./vitePlugin.js";
 
 type ResolveId = (specifier: string, importer: string | undefined) => string | null;
@@ -55,6 +56,31 @@ describe("virtualModulesVitePlugin", () => {
     const load = plugin.load! as Load;
     const resolvedId = resolveId("virtual:config", "/app/main.ts") as string;
     const result = load(resolvedId);
+    const code = typeof result === "string" ? result : result?.code;
+    expect(code).toBe("export const x = 1;");
+  });
+
+  it("resolveId with encoded virtual id as importer resolves virtual-to-virtual import", () => {
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: () => `import { x } from "virtual:b"; export { x };`,
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: () => "export const x = 1;",
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager });
+    const resolveId = plugin.resolveId! as ResolveId;
+    const load = plugin.load! as Load;
+    const rootImporter = "/app/main.ts";
+    const encodedA = encodeVirtualId("virtual:a", rootImporter);
+    const resolvedB = resolveId("virtual:b", encodedA);
+    expect(resolvedB).not.toBeNull();
+    const result = load(resolvedB as string);
     const code = typeof result === "string" ? result : result?.code;
     expect(code).toBe("export const x = 1;");
   });

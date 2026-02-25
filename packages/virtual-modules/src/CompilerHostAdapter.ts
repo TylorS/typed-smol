@@ -140,8 +140,9 @@ export const attachCompilerHostAdapter = (
           fallbackResolveModule(moduleName, containingFile, compilerOptions),
         );
 
+    const effectiveImporter = store.resolveEffectiveImporter(containingFile);
     return moduleNames.map((moduleName, index) => {
-      const record = getOrBuildRecord(moduleName, containingFile);
+      const record = getOrBuildRecord(moduleName, effectiveImporter);
       if (!record) {
         return fallback[index];
       }
@@ -174,8 +175,9 @@ export const attachCompilerHostAdapter = (
           ),
         }));
 
+    const effectiveImporter = store.resolveEffectiveImporter(containingFile);
     return moduleLiterals.map((moduleLiteral, index) => {
-      const record = getOrBuildRecord(moduleLiteral.text, containingFile);
+      const record = getOrBuildRecord(moduleLiteral.text, effectiveImporter);
       if (!record) {
         return fallback[index];
       }

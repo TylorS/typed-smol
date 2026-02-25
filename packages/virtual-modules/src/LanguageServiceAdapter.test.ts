@@ -457,6 +457,171 @@ export const value: Foo = { n: 1 };
     expect(snapshot).toBeUndefined();
   });
 
+  it("resolves virtual module that imports another virtual module (virtual-to-virtual)", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    writeFileSync(
+      entryFile,
+      `import { x } from "virtual:a"; export const out = x;`,
+      "utf8",
+    );
+
+    const receivedImporters: string[] = [];
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: (id, importer) => {
+          receivedImporters.push(`a:${importer}`);
+          return `import { x } from "virtual:b"; export { x };`;
+        },
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: (id, importer) => {
+          receivedImporters.push(`b:${importer}`);
+          return `export const x = 1;`;
+        },
+      },
+    ]);
+
+    const languageService = ts.createLanguageService(host);
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+    });
+
+    const diagnostics = languageService.getSemanticDiagnostics(entryFile);
+    expect(diagnostics).toHaveLength(0);
+    expect(receivedImporters).toContain(`a:${entryFile}`);
+    expect(receivedImporters).toContain(`b:${entryFile}`);
+    expect(
+      languageService
+        .getProgram()
+        ?.getSourceFiles()
+        .some((sf) => sf.fileName.includes("__virtual_virtual-a_")),
+    ).toBe(true);
+    expect(
+      languageService
+        .getProgram()
+        ?.getSourceFiles()
+        .some((sf) => sf.fileName.includes("__virtual_virtual-b_")),
+    ).toBe(true);
+  });
+
+  it("resolves chain virtual:a -> virtual:b -> virtual:c with root importer", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    writeFileSync(
+      entryFile,
+      `import { z } from "virtual:a"; export const out = z;`,
+      "utf8",
+    );
+
+    const receivedImporters: string[] = [];
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: (_id, importer) => {
+          receivedImporters.push(`a:${importer}`);
+          return `import { y } from "virtual:b"; export { y as z };`;
+        },
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: (_id, importer) => {
+          receivedImporters.push(`b:${importer}`);
+          return `import { y } from "virtual:c"; export { y };`;
+        },
+      },
+      {
+        name: "virtual-c",
+        shouldResolve: (id) => id === "virtual:c",
+        build: (_id, importer) => {
+          receivedImporters.push(`c:${importer}`);
+          return `export const y = 42;`;
+        },
+      },
+    ]);
+
+    const languageService = ts.createLanguageService(host);
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+    });
+
+    const diagnostics = languageService.getSemanticDiagnostics(entryFile);
+    expect(diagnostics).toHaveLength(0);
+    expect(receivedImporters).toContain(`a:${entryFile}`);
+    expect(receivedImporters).toContain(`b:${entryFile}`);
+    expect(receivedImporters).toContain(`c:${entryFile}`);
+  });
+
   it("dispose then getScriptSnapshot does not throw and returns original behavior", () => {
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");

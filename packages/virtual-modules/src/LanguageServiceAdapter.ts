@@ -281,7 +281,7 @@ export const attachLanguageServiceAdapter = (
           const r = recordsByVirtualFile.get(parsed.virtualPath);
           if (r) {
             effectiveContainingFile = r.virtualFileName;
-            importerForVirtual = r.importer;
+            importerForVirtual = store.resolveEffectiveImporter(parsed.virtualPath);
           }
         } else {
           const r = getOrBuildRecord(parsed.id, parsed.importer);
@@ -289,6 +289,12 @@ export const attachLanguageServiceAdapter = (
             effectiveContainingFile = r.record.virtualFileName;
             importerForVirtual = r.record.importer;
           }
+        }
+      } else {
+        const virtualRecord = recordsByVirtualFile.get(containingFile);
+        if (virtualRecord) {
+          effectiveContainingFile = virtualRecord.virtualFileName;
+          importerForVirtual = store.resolveEffectiveImporter(containingFile);
         }
       }
 
@@ -371,7 +377,7 @@ export const attachLanguageServiceAdapter = (
           const r = recordsByVirtualFile.get(parsed.virtualPath);
           if (r) {
             effectiveContainingFile = r.virtualFileName;
-            importerForVirtual = r.importer;
+            importerForVirtual = store.resolveEffectiveImporter(parsed.virtualPath);
           }
         } else {
           const r = getOrBuildRecord(parsed.id, parsed.importer);
@@ -379,6 +385,12 @@ export const attachLanguageServiceAdapter = (
             effectiveContainingFile = r.record.virtualFileName;
             importerForVirtual = r.record.importer;
           }
+        }
+      } else {
+        const virtualRecord = recordsByVirtualFile.get(containingFile);
+        if (virtualRecord) {
+          effectiveContainingFile = virtualRecord.virtualFileName;
+          importerForVirtual = store.resolveEffectiveImporter(containingFile);
         }
       }
 
@@ -404,23 +416,6 @@ export const attachLanguageServiceAdapter = (
       let hadUnresolvedVirtual = false;
       const results = moduleLiterals.map((moduleLiteral, index) => {
         const resolved = getOrBuildRecord(moduleLiteral.text, importerForVirtual);
-        if (moduleLiteral.text.includes(":")) {
-          try {
-            require("node:fs").appendFileSync(
-              "/tmp/vm-ts-plugin-debug.log",
-              JSON.stringify({
-                tag: "LS:resolveLiterals",
-                id: moduleLiteral.text,
-                status: resolved.status,
-                err: resolved.status === "error" ? (resolved as { diagnostic?: { message?: string } }).diagnostic?.message : undefined,
-                t: Date.now(),
-              }) + "\n",
-              { flag: "a" },
-            );
-          } catch {
-            /* noop */
-          }
-        }
         if (resolved.status === "resolved") {
           pendingRetry = false;
           return {

@@ -271,6 +271,25 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     return resolveRecord(id, importer, existing);
   };
 
+  /**
+   * Walk the virtual-file chain from containingFile back to the root real-file importer.
+   * When a virtual module imports another virtual module, the containing file is a virtual
+   * file path; plugins must receive the real file as importer. Returns input unchanged if
+   * not a virtual file. Handles cycles by breaking the loop.
+   */
+  const resolveEffectiveImporter = (containingFile: string): string => {
+    let current = containingFile;
+    const visited = new Set<string>();
+    while (true) {
+      if (visited.has(current)) break;
+      visited.add(current);
+      const record = recordsByVirtualFile.get(current);
+      if (!record) break;
+      current = record.importer;
+    }
+    return current;
+  };
+
   const dispose = (): void => {
     if (debounceTimer !== undefined) {
       clearTimeout(debounceTimer);
@@ -299,6 +318,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     flushPendingStale,
     resolveRecord,
     getOrBuildRecord,
+    resolveEffectiveImporter,
     dispose,
   };
 }

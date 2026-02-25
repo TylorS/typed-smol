@@ -72,6 +72,60 @@ export const value: Foo = { n: 1 };
     adapter.dispose();
   });
 
+  it("resolves virtual module that imports another virtual module (virtual-to-virtual)", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    writeFileSync(entry, `import { x } from "virtual:a"; export const out = x;`, "utf8");
+
+    const receivedImporters: string[] = [];
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: (_id, importer) => {
+          receivedImporters.push(`a:${importer}`);
+          return `import { x } from "virtual:b"; export { x };`;
+        },
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: (_id, importer) => {
+          receivedImporters.push(`b:${importer}`);
+          return `export const x = 1;`;
+        },
+      },
+    ]);
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+    });
+
+    const program = ts.createProgram([entry], compilerOptions, host);
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+    expect(diagnostics).toHaveLength(0);
+    expect(receivedImporters).toContain(`a:${entry}`);
+    expect(receivedImporters).toContain(`b:${entry}`);
+    expect(
+      program.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_virtual-a_")),
+    ).toBe(true);
+    expect(
+      program.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_virtual-b_")),
+    ).toBe(true);
+  });
+
   it("evicts virtual record when importer no longer exists (fileExists returns false)", () => {
     const dir = createTempDir();
     const entry1 = join(dir, "entry1.ts");

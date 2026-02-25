@@ -42,13 +42,20 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       if (!importer) {
         return null;
       }
+      let effectiveImporter = importer;
+      if (isVirtualId(importer)) {
+        const decoded = decodeVirtualId(importer);
+        if (decoded && validateDecodedPayload(decoded.id, decoded.importer)) {
+          effectiveImporter = decoded.importer;
+        }
+      }
       const result = resolver.resolveModule({
         id,
-        importer,
+        importer: effectiveImporter,
         createTypeInfoApiSession,
       });
       if (result.status === "resolved") {
-        return encodeVirtualId(id, importer);
+        return encodeVirtualId(id, effectiveImporter);
       }
       if (result.status === "error" && warnOnError) {
         console.warn(
