@@ -36,6 +36,8 @@ Then add the TS plugin to `tsconfig.json`:
 }
 ```
 
+**Important:** Use the package name `@typed/virtual-modules-ts-plugin` rather than path-style names like `"../"`. Path-style names often fail to resolve when the workspace root is a monorepo parent, because tsserver loads plugins from `node_modules` using the plugin name.
+
 ### Config options
 
 | Option          | Type     | Default                             | Description                                                     |
@@ -78,3 +80,15 @@ pnpm install
 Then open `sample-project` in VS Code (or another editor that uses tsserver). The `entry.ts` file imports `virtual:foo`; with the plugin enabled, you should get full type-checking and no diagnostics.
 
 To test changes: rebuild the plugin, then run **TypeScript: Restart TS Server** in VS Code (Command Palette) to pick up the new build.
+
+## Debug log
+
+The plugin writes diagnostic events to `/tmp/vm-ts-plugin-debug.log` when the file is writable. Use this to confirm whether the plugin loads and whether resolution runs.
+
+- **`create`** – Plugin `create()` was called; includes `projectRoot` and `configPath`
+- **`attach`** – Adapter was attached to the language service host
+- **`vmc`** – vmc.config load result; includes `status`, `hasResolver`, `typeTargetSpecs` count
+- **`LS:resolve`** / **`LS:resolveLiterals`** – `resolveModuleNames` / `resolveModuleNameLiterals` were invoked (resolution is using the patched host)
+- **`fallbackProgram`** – Fallback program creation result
+
+If virtual modules still show "Cannot find module" but the log shows `create` and `attach`, resolution is being invoked and the issue is likely in the resolver or vmc.config. If the log has no `create`, the plugin did not load (check plugin name and `node_modules`).

@@ -1,13 +1,22 @@
 import { dirname } from "node:path";
+import { collectTypeTargetSpecsFromPlugins } from "./collectTypeTargetSpecs.js";
 import { NodeModulePluginLoader } from "./NodeModulePluginLoader.js";
 import { PluginManager } from "./PluginManager.js";
 import { loadVmcConfig } from "./VmcConfigLoader.js";
 import type { VmcPluginEntry } from "./VmcConfigLoader.js";
 import type {
   NodeModulePluginLoadError,
+  TypeTargetSpec,
   VirtualModulePlugin,
   VirtualModuleResolver,
 } from "./types.js";
+
+function collectFromResolver(resolver: VirtualModuleResolver): readonly TypeTargetSpec[] | undefined {
+  const pm = resolver as { plugins?: readonly VirtualModulePlugin[] };
+  if (!Array.isArray(pm.plugins) || pm.plugins.length === 0) return undefined;
+  const merged = collectTypeTargetSpecsFromPlugins(pm.plugins);
+  return merged.length > 0 ? merged : undefined;
+}
 
 export interface LoadPluginsFromEntriesResult {
   readonly plugins: readonly VirtualModulePlugin[];
@@ -55,6 +64,8 @@ export type LoadResolverFromVmcConfigResult =
       readonly resolver?: VirtualModuleResolver;
       readonly pluginSpecifiers: readonly string[];
       readonly pluginLoadErrors: readonly NodeModulePluginLoadError[];
+      /** Type target specs from config for structural assignability in TypeInfo API. */
+      readonly typeTargetSpecs?: readonly TypeTargetSpec[];
     };
 
 export interface LoadResolverFromVmcConfigOptions {
@@ -78,23 +89,28 @@ export function loadResolverFromVmcConfig(
   const pluginSpecifiers = vmcPlugins.filter((entry): entry is string => typeof entry === "string");
 
   if (loadedVmcConfig.config.resolver) {
+    const resolver = loadedVmcConfig.config.resolver;
+    const typeTargetSpecs = collectFromResolver(resolver);
     return {
       status: "loaded",
       path: loadedVmcConfig.path,
-      resolver: loadedVmcConfig.config.resolver,
+      resolver,
       pluginSpecifiers,
       pluginLoadErrors: [],
+      ...(typeTargetSpecs ? { typeTargetSpecs } : {}),
     };
   }
 
   const loadedPlugins = loadPluginsFromEntries(vmcPlugins, dirname(loadedVmcConfig.path));
+  const resolver =
+    loadedPlugins.plugins.length > 0 ? new PluginManager(loadedPlugins.plugins) : undefined;
+  const typeTargetSpecs = resolver ? collectFromResolver(resolver) : undefined;
   return {
     status: "loaded",
     path: loadedVmcConfig.path,
-    ...(loadedPlugins.plugins.length > 0
-      ? { resolver: new PluginManager(loadedPlugins.plugins) }
-      : {}),
+    ...(resolver ? { resolver } : {}),
     pluginSpecifiers: loadedPlugins.pluginSpecifiers,
     pluginLoadErrors: loadedPlugins.errors,
+    ...(typeTargetSpecs ? { typeTargetSpecs } : {}),
   };
 }

@@ -19,6 +19,14 @@ export interface VirtualModulesVitePluginOptions {
   readonly warnOnError?: boolean;
 }
 
+/** Validate decoded id/importer before passing to resolver (defense in depth). */
+function validateDecodedPayload(id: string, importer: string): boolean {
+  if (typeof id !== "string" || id.length === 0 || id.includes("\0")) return false;
+  if (typeof importer !== "string" || importer.length === 0 || importer.includes("\0")) return false;
+  if (id.length > 4096 || importer.length > 4096) return false;
+  return true;
+}
+
 /**
  * Vite plugin that integrates @typed/virtual-modules: resolves and loads virtual
  * modules via the given resolver (e.g. PluginManager) in both dev and build.
@@ -55,7 +63,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         return null;
       }
       const parsed = decodeVirtualId(resolvedId);
-      if (!parsed) {
+      if (!parsed || !validateDecodedPayload(parsed.id, parsed.importer)) {
         return null;
       }
       const { id, importer } = parsed;

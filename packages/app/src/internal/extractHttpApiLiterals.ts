@@ -1,8 +1,15 @@
 /**
  * Extract path and method from endpoint TypeInfo snapshot.
  * Uses TypeInfoApi export types instead of parsing source with TypeScript.
+ * Handles literal, object, and reference (e.g. Route<P,S>) shapes; unknown kinds return null.
  */
-import type { LiteralTypeNode, TypeInfoFileSnapshot, TypeNode } from "@typed/virtual-modules";
+import type {
+  LiteralTypeNode,
+  ObjectTypeNode,
+  ReferenceTypeNode,
+  TypeInfoFileSnapshot,
+  TypeNode,
+} from "@typed/virtual-modules";
 
 export interface ExtractedEndpointLiterals {
   readonly path: string;
@@ -17,14 +24,18 @@ function getLiteralText(node: TypeNode | undefined): string | null {
 
 function getPathFromRouteType(type: TypeNode): string | null {
   if (type.kind === "literal") {
-    const raw = type.text;
+    const raw = (type as LiteralTypeNode).text;
     return raw ? (raw.startsWith("/") ? raw : `/${raw}`) : null;
   }
   if (type.kind === "object") {
-    const pathProp = type.properties.find((p) => p.name === "path");
+    const pathProp = (type as ObjectTypeNode).properties.find((p) => p.name === "path");
     if (!pathProp) return null;
     const raw = getLiteralText(pathProp.type);
     return raw ? (raw.startsWith("/") ? raw : `/${raw}`) : null;
+  }
+  if (type.kind === "reference") {
+    const typeArgs = (type as ReferenceTypeNode).typeArguments;
+    if (typeArgs?.length) return getPathFromRouteType(typeArgs[0]);
   }
   return null;
 }

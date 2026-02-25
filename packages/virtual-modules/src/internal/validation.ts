@@ -57,8 +57,9 @@ export function validatePathSegment(
 }
 
 /**
- * Validates relativeGlobs: array or single string; each element non-empty, no null byte, optional max length.
- * Returns validated string array or failure.
+ * Validates relativeGlobs: array or single string; each element non-empty, no null byte,
+ * no parent-segment (..) or absolute paths, optional max length.
+ * Rejects patterns that could escape the intended base directory.
  */
 export function validateRelativeGlobs(
   value: unknown,
@@ -71,6 +72,13 @@ export function validateRelativeGlobs(
     const v = arr[i];
     const r = validatePathSegment(v, `${name}[${i}]`, maxLength);
     if (!r.ok) return r;
+    const normalized = (r.value as string).replaceAll("\\", "/");
+    if (normalized.includes("..")) {
+      return { ok: false, reason: `${name}[${i}] must not contain parent path segments (..)` };
+    }
+    if (normalized.startsWith("/") || /^[A-Za-z]:/.test(normalized)) {
+      return { ok: false, reason: `${name}[${i}] must be a relative glob, not absolute` };
+    }
     result.push(r.value);
   }
   return { ok: true, value: result };

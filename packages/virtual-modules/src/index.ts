@@ -1,8 +1,10 @@
 export * from "./types.js";
 export * from "./PluginManager.js";
+export { collectTypeTargetSpecsFromPlugins } from "./collectTypeTargetSpecs.js";
 export {
   createTypeInfoApiSession,
   createTypeInfoApiSessionFactory,
+  createTypeTargetBootstrapContent,
   resolveTypeTargetsFromSpecs,
   type CreateTypeInfoApiSessionOptions,
   type ResolvedTypeTarget,
@@ -20,3 +22,10 @@ export {
   type CreateVirtualFileNameParams,
   type CreateVirtualFileNameOptions,
 } from "./internal/path.js";
+export {
+  ensureTypeTargetBootstrapFile,
+  getProgramWithTypeTargetBootstrap,
+  getTypeTargetBootstrapPath,
+  TYPE_TARGET_BOOTSTRAP_RELATIVE,
+  type EnsureTypeTargetBootstrapFileFs,
+} from "./typeTargetBootstrap.js";

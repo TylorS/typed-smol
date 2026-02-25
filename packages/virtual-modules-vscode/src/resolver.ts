@@ -2,9 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import * as ts from "typescript";
 import {
+  collectTypeTargetSpecsFromPlugins,
   createTypeInfoApiSession,
   createVirtualFileName,
   createVirtualKey,
+  getProgramWithTypeTargetBootstrap,
   loadPluginsFromEntries,
   loadResolverFromVmcConfig,
   PluginManager,
@@ -92,6 +94,7 @@ export function clearProgramCache(projectRoot: string): void {
 /**
  * Create a TypeScript Program for the project so plugins that need type info (e.g. router)
  * can use the TypeInfo API. Cached per project root.
+ * Does not include the type-target bootstrap; call getProgramWithTypeTargetBootstrap when building the session.
  */
 function getProgramForProject(projectRoot: string): ts.Program | undefined {
   const cached = programCache.get(projectRoot);
@@ -150,17 +153,20 @@ export function createResolver(projectRoot: string): {
     ...(vmcConfigPath ? { configPath: vmcConfigPath } : {}),
   });
 
+  let typeTargetSpecs: readonly import("@typed/virtual-modules").TypeTargetSpec[] | undefined;
   if (loadedResolver.status === "loaded") {
     resolver = loadedResolver.resolver;
     pluginSpecifiers = loadedResolver.pluginSpecifiers;
+    typeTargetSpecs = loadedResolver.typeTargetSpecs;
   }
 
   // Backward-compatible fallback for legacy tsconfig plugin-specifier lists.
   if (!resolver && legacyPluginSpecifiers.length > 0) {
-    const plugins = loadPluginsFromEntries(legacyPluginSpecifiers, projectRoot).plugins;
+    const loadedPlugins = loadPluginsFromEntries(legacyPluginSpecifiers, projectRoot);
     pluginSpecifiers = legacyPluginSpecifiers;
-    if (plugins.length > 0) {
-      resolver = new PluginManager(plugins);
+    if (loadedPlugins.plugins.length > 0) {
+      resolver = new PluginManager(loadedPlugins.plugins);
+      typeTargetSpecs ??= collectTypeTargetSpecsFromPlugins(loadedPlugins.plugins);
     }
   }
 
@@ -174,10 +180,28 @@ export function createResolver(projectRoot: string): {
 
   return {
     resolve(id: string, importer: string): ResolverResult | undefined {
-      const program = getProgramForProject(projectRoot);
-      const createTypeInfoApiSessionOption = program
-        ? () => createTypeInfoApiSession({ ts, program })
-        : undefined;
+      const baseProgram = getProgramForProject(projectRoot);
+      const createTypeInfoApiSessionOption =
+        baseProgram !== undefined
+          ? () => {
+              const program = getProgramWithTypeTargetBootstrap(
+                ts,
+                baseProgram,
+                projectRoot,
+                typeTargetSpecs ?? [],
+              );
+              return createTypeInfoApiSession({
+                ts,
+                program,
+                ...(typeTargetSpecs && typeTargetSpecs.length > 0
+                  ? {
+                      typeTargetSpecs,
+                      failWhenNoTargetsResolved: false,
+                    }
+                  : {}),
+              });
+            }
+          : undefined;
 
       const resolution = resolver.resolveModule({
         id,

@@ -628,6 +628,296 @@ export namespace Route {
       const unregisteredNode = { kind: "primitive" as const, text: "number" } as TypeNode;
       expect(session.api.isAssignableTo(unregisteredNode, "Route")).toBe(false);
     });
+
+    it("ensure passes and continues chain - (...) => Effect<Option<*>> pattern", () => {
+      const dir = createTempDir();
+      const effectMod = join(dir, "effect.ts");
+      const optionMod = join(dir, "option.ts");
+      const bootstrap = join(dir, "bootstrap.ts");
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        effectMod,
+        `
+export interface Effect<A, E, R> { readonly _tag: "Effect"; readonly _A: A; readonly _E: E; readonly _R: R }
+export namespace Effect {
+  export type Any = Effect<any, any, any>;
+}
+`,
+        "utf8",
+      );
+      writeFileSync(
+        optionMod,
+        `
+export interface Option<A> { readonly _tag: "Option"; readonly _A: A }
+export namespace Option {
+  export type Any = Option<any>;
+}
+`,
+        "utf8",
+      );
+      writeFileSync(
+        bootstrap,
+        `import * as Effect from "./effect.js"; import * as Option from "./option.js"; void Effect; void Option; export {};`,
+        "utf8",
+      );
+      writeFileSync(
+        main,
+        `import * as Effect from "./effect.js"; import * as Option from "./option.js";
+export function fn(): Effect.Effect<Option.Option<string>, never, never> {
+  return {} as Effect.Effect<Option.Option<string>, never, never>;
+}`,
+        "utf8",
+      );
+      const program = makeProgram([bootstrap, main]);
+      const specs = [
+        { id: "Effect", module: "./effect.js", exportName: "Effect", typeMember: "Any" },
+        { id: "Option", module: "./option.js", exportName: "Option", typeMember: "Any" },
+      ] as const;
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: specs,
+        failWhenNoTargetsResolved: false,
+      });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const fnExport = result.snapshot.exports.find((e) => e.name === "fn");
+      expect(fnExport).toBeDefined();
+      expect(
+        session.api.isAssignableTo(fnExport!.type, "Option", [
+          { kind: "returnType" },
+          { kind: "ensure", targetId: "Effect" },
+          { kind: "typeArg", index: 0 },
+        ]),
+      ).toBe(true);
+    });
+
+    it("ensure fails when return type is not Effect", () => {
+      const dir = createTempDir();
+      const effectMod = join(dir, "effect.ts");
+      const optionMod = join(dir, "option.ts");
+      const bootstrap = join(dir, "bootstrap.ts");
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        effectMod,
+        `
+export interface Effect<A, E, R> { readonly _tag: "Effect"; readonly _A: A; readonly _E: E; readonly _R: R }
+export namespace Effect { export type Any = Effect<any, any, any>; }
+`,
+        "utf8",
+      );
+      writeFileSync(
+        optionMod,
+        `
+export interface Option<A> { readonly _tag: "Option"; readonly _A: A }
+export namespace Option { export type Any = Option<any>; }
+`,
+        "utf8",
+      );
+      writeFileSync(
+        bootstrap,
+        `import * as Effect from "./effect.js"; import * as Option from "./option.js"; void Effect; void Option; export {};`,
+        "utf8",
+      );
+      writeFileSync(
+        main,
+        `import * as Option from "./option.js";
+export function fn(): Option.Option<string> {
+  return {} as Option.Option<string>;
+}`,
+        "utf8",
+      );
+      const program = makeProgram([bootstrap, main]);
+      const specs = [
+        { id: "Effect", module: "./effect.js", exportName: "Effect", typeMember: "Any" },
+        { id: "Option", module: "./option.js", exportName: "Option", typeMember: "Any" },
+      ] as const;
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: specs,
+        failWhenNoTargetsResolved: false,
+      });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const fnExport = result.snapshot.exports.find((e) => e.name === "fn");
+      expect(fnExport).toBeDefined();
+      expect(
+        session.api.isAssignableTo(fnExport!.type, "Option", [
+          { kind: "returnType" },
+          { kind: "ensure", targetId: "Effect" },
+          { kind: "typeArg", index: 0 },
+        ]),
+      ).toBe(false);
+    });
+
+    it("ensure with unknown targetId returns false", () => {
+      const dir = createTempDir();
+      const routeMod = join(dir, "route.ts");
+      const bootstrap = join(dir, "bootstrap.ts");
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        routeMod,
+        `export interface Route<P, S> { readonly path: P; readonly schema: S }
+export namespace Route { export type Any = Route<any, any>; export const Parse = (p: string) => ({} as Route<any, any>); }`,
+        "utf8",
+      );
+      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        main,
+        `import * as Route from "./route.js";
+export function getRoute(): Route.Route<string, any> { return Route.Parse("/") as Route.Route<string, any>; }`,
+        "utf8",
+      );
+      const program = makeProgram([bootstrap, main]);
+      const specs = [
+        { id: "Route", module: "./route.js", exportName: "Route", typeMember: "Any" },
+      ] as const;
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: specs,
+        failWhenNoTargetsResolved: false,
+      });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const fnExport = result.snapshot.exports.find((e) => e.name === "getRoute");
+      expect(fnExport).toBeDefined();
+      expect(
+        session.api.isAssignableTo(fnExport!.type, "Route", [
+          { kind: "returnType" },
+          { kind: "ensure", targetId: "UnknownTarget" },
+        ]),
+      ).toBe(false);
+    });
+
+    it("predicate on node kind passes", () => {
+      const dir = createTempDir();
+      const routeMod = join(dir, "route.ts");
+      const bootstrap = join(dir, "bootstrap.ts");
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        routeMod,
+        `export interface Route<P, S> { readonly path: P; readonly schema: S }
+export namespace Route { export type Any = Route<any, any>; export const Parse = (p: string) => ({} as Route<any, any>); }`,
+        "utf8",
+      );
+      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        main,
+        `import * as Route from "./route.js";
+export function getRoute(): Route.Route<string, any> { return Route.Parse("/") as Route.Route<string, any>; }`,
+        "utf8",
+      );
+      const program = makeProgram([bootstrap, main]);
+      const specs = [
+        { id: "Route", module: "./route.js", exportName: "Route", typeMember: "Any" },
+      ] as const;
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: specs,
+        failWhenNoTargetsResolved: false,
+      });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const fnExport = result.snapshot.exports.find((e) => e.name === "getRoute");
+      expect(fnExport).toBeDefined();
+      expect(
+        session.api.isAssignableTo(fnExport!.type, "Route", [
+          { kind: "returnType" },
+          { kind: "predicate", fn: (n) => n.kind === "reference" || n.kind === "object" },
+        ]),
+      ).toBe(true);
+    });
+
+    it("predicate returns false - whole check fails", () => {
+      const dir = createTempDir();
+      const routeMod = join(dir, "route.ts");
+      const bootstrap = join(dir, "bootstrap.ts");
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        routeMod,
+        `export interface Route<P, S> { readonly path: P; readonly schema: S }
+export namespace Route { export type Any = Route<any, any>; export const Parse = (p: string) => ({} as Route<any, any>); }`,
+        "utf8",
+      );
+      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        main,
+        `import * as Route from "./route.js";
+export function getRoute(): Route.Route<string, any> { return Route.Parse("/") as Route.Route<string, any>; }`,
+        "utf8",
+      );
+      const program = makeProgram([bootstrap, main]);
+      const specs = [
+        { id: "Route", module: "./route.js", exportName: "Route", typeMember: "Any" },
+      ] as const;
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: specs,
+        failWhenNoTargetsResolved: false,
+      });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const fnExport = result.snapshot.exports.find((e) => e.name === "getRoute");
+      expect(fnExport).toBeDefined();
+      expect(
+        session.api.isAssignableTo(fnExport!.type, "Route", [
+          { kind: "returnType" },
+          { kind: "predicate", fn: () => false },
+        ]),
+      ).toBe(false);
+    });
+
+    it("predicate with typeArguments cardinality check", () => {
+      const dir = createTempDir();
+      const effectMod = join(dir, "effect.ts");
+      const bootstrap = join(dir, "bootstrap.ts");
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        effectMod,
+        `export interface Effect<A, E, R> { readonly _tag: "Effect"; readonly _A: A; readonly _E: E; readonly _R: R }
+export namespace Effect { export type Any = Effect<any, any, any>; }`,
+        "utf8",
+      );
+      writeFileSync(bootstrap, `import * as Effect from "./effect.js"; void Effect; export {};`, "utf8");
+      writeFileSync(
+        main,
+        `import * as Effect from "./effect.js";
+export function fn(): Effect.Effect<string, never, never> {
+  return {} as Effect.Effect<string, never, never>;
+}`,
+        "utf8",
+      );
+      const program = makeProgram([bootstrap, main]);
+      const specs = [
+        { id: "Effect", module: "./effect.js", exportName: "Effect", typeMember: "Any" },
+      ] as const;
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: specs,
+        failWhenNoTargetsResolved: false,
+      });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const fnExport = result.snapshot.exports.find((e) => e.name === "fn");
+      expect(fnExport).toBeDefined();
+      expect(
+        session.api.isAssignableTo(fnExport!.type, "Effect", [
+          { kind: "returnType" },
+          { kind: "predicate", fn: (n) => n.kind === "reference" && (n.typeArguments?.length ?? 0) >= 2 },
+        ]),
+      ).toBe(true);
+    });
   });
 
   it("applies maxDepth when serializing deep types", () => {

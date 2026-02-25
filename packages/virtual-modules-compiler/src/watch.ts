@@ -1,6 +1,11 @@
+import { mkdirSync } from "node:fs";
 import type * as ts from "typescript";
-import type { VirtualModuleResolver } from "@typed/virtual-modules";
-import { attachCompilerHostAdapter } from "@typed/virtual-modules";
+import type { TypeTargetSpec, VirtualModuleResolver } from "@typed/virtual-modules";
+import {
+  attachCompilerHostAdapter,
+  createTypeInfoApiSessionFactory,
+  ensureTypeTargetBootstrapFile,
+} from "@typed/virtual-modules";
 
 export interface WatchParams {
   readonly ts: typeof import("typescript");
@@ -8,13 +13,15 @@ export interface WatchParams {
   readonly resolver: VirtualModuleResolver;
   readonly reportDiagnostic: ts.DiagnosticReporter;
   readonly reportWatchStatus?: ts.WatchStatusReporter;
+  readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
 
 /**
  * Run the compiler in watch mode. Mirrors tsc --watch.
  */
 export function runWatch(params: WatchParams): void {
-  const { ts, commandLine, resolver, reportDiagnostic, reportWatchStatus } = params;
+  const { ts, commandLine, resolver, reportDiagnostic, reportWatchStatus, typeTargetSpecs } =
+    params;
   const { options, fileNames, projectReferences, watchOptions } = commandLine;
 
   const sys = ts.sys;
@@ -26,6 +33,30 @@ export function runWatch(params: WatchParams): void {
   }
 
   const projectRoot = sys.getCurrentDirectory();
+
+  let effectiveFileNames = fileNames;
+  if (typeTargetSpecs && typeTargetSpecs.length > 0) {
+    const bootstrapPath = ensureTypeTargetBootstrapFile(projectRoot, typeTargetSpecs, {
+      mkdirSync,
+      writeFile: (path, content) => sys.writeFile(path, content),
+    });
+    effectiveFileNames = fileNames.includes(bootstrapPath)
+      ? fileNames
+      : [...fileNames, bootstrapPath];
+  }
+
+  const preliminaryHost = ts.createCompilerHost(options);
+  const preliminaryProgram = ts.createProgram({
+    rootNames: effectiveFileNames,
+    options,
+    host: preliminaryHost,
+    projectReferences,
+  });
+  const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
+    ts,
+    program: preliminaryProgram,
+    ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
+  });
 
   const createProgram: ts.CreateProgram<ts.EmitAndSemanticDiagnosticsBuilderProgram> = (
     rootNames,
@@ -43,6 +74,7 @@ export function runWatch(params: WatchParams): void {
       compilerHost: host,
       resolver,
       projectRoot,
+      createTypeInfoApiSession,
     });
     try {
       return ts.createEmitAndSemanticDiagnosticsBuilderProgram(
@@ -59,7 +91,7 @@ export function runWatch(params: WatchParams): void {
   };
 
   const host = ts.createWatchCompilerHost(
-    fileNames,
+    effectiveFileNames,
     options,
     sys,
     createProgram,

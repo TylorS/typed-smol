@@ -1,7 +1,12 @@
+import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type * as ts from "typescript";
-import type { VirtualModuleResolver } from "@typed/virtual-modules";
-import { attachCompilerHostAdapter } from "@typed/virtual-modules";
+import type { TypeTargetSpec, VirtualModuleResolver } from "@typed/virtual-modules";
+import {
+  attachCompilerHostAdapter,
+  createTypeInfoApiSessionFactory,
+  ensureTypeTargetBootstrapFile,
+} from "@typed/virtual-modules";
 
 function inferProjectRoot(
   sys: ts.System,
@@ -20,13 +25,15 @@ export interface BuildParams {
   readonly resolver: VirtualModuleResolver;
   readonly reportDiagnostic: ts.DiagnosticReporter;
   readonly reportSolutionBuilderStatus?: ts.DiagnosticReporter;
+  readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
 
 /**
  * Run the compiler in build mode (tsc -b). Mirrors tsc --build.
  */
 export function runBuild(params: BuildParams): number {
-  const { ts, buildCommand, resolver, reportDiagnostic, reportSolutionBuilderStatus } = params;
+  const { ts, buildCommand, resolver, reportDiagnostic, reportSolutionBuilderStatus, typeTargetSpecs } =
+    params;
   const { projects, buildOptions } = buildCommand;
 
   const sys = ts.sys;
@@ -38,6 +45,14 @@ export function runBuild(params: BuildParams): number {
   }
 
   const projectRoot = sys.getCurrentDirectory();
+
+  const createProgramForSession = (
+    rootNames: readonly string[],
+    opts: ts.CompilerOptions,
+  ): ts.Program => {
+    const h = ts.createCompilerHost(opts ?? {});
+    return ts.createProgram(rootNames, opts ?? {}, h);
+  };
 
   const createProgram: ts.CreateProgram<ts.EmitAndSemanticDiagnosticsBuilderProgram> = (
     rootNames,
@@ -51,15 +66,32 @@ export function runBuild(params: BuildParams): number {
       host = ts.createCompilerHost(opts ?? {});
     }
     const root = inferProjectRoot(sys, rootNames, projectRoot);
+    let effectiveRootNames = rootNames ?? [];
+    if (typeTargetSpecs && typeTargetSpecs.length > 0) {
+      const bootstrapPath = ensureTypeTargetBootstrapFile(root, typeTargetSpecs, {
+        mkdirSync,
+        writeFile: (path, content) => sys.writeFile(path, content),
+      });
+      effectiveRootNames = effectiveRootNames.includes(bootstrapPath)
+        ? [...effectiveRootNames]
+        : [...effectiveRootNames, bootstrapPath];
+    }
+    const preliminaryProgram = createProgramForSession(effectiveRootNames, opts ?? {});
+    const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
+      ts,
+      program: preliminaryProgram,
+      ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
+    });
     const adapter = attachCompilerHostAdapter({
       ts,
       compilerHost: host,
       resolver,
       projectRoot: root,
+      createTypeInfoApiSession,
     });
     try {
       return ts.createEmitAndSemanticDiagnosticsBuilderProgram(
-        rootNames ?? [],
+        effectiveRootNames,
         opts ?? {},
         host,
         oldProgram,

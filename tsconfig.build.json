@@ -10,7 +10,6 @@
     { "path": "packages/router" },
     { "path": "packages/template" },
     { "path": "packages/ui" },
-    { "path": "packages/virtual-modules" },
-    { "path": "packages/virtual-modules-ts-plugin/sample-project" }
+    { "path": "packages/virtual-modules" }
   ]
 }

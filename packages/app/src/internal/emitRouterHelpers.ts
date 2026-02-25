@@ -3,6 +3,7 @@ import type { CatchForm, DepsExportKind, RuntimeKind } from "./routeTypeNode.js"
 /**
  * Emit the handler expression that converts to a function returning Fx.
  * Router passes RefSubject<Params> (an Fx) to function handlers.
+ * Plain sync handlers (value in, value out) always use Fx.map(params, handler).
  */
 export function handlerExprFor(
   runtimeKind: RuntimeKind,
@@ -12,12 +13,13 @@ export function handlerExprFor(
   exportName: string,
 ): string {
   const ref = `${varName}.${exportName}`;
+  if (runtimeKind === "plain") {
+    return isFn ? `(params) => Fx.map(params, ${ref})` : `constant(Fx.succeed(${ref}))`;
+  }
   if (isFn && expectsRefSubject) {
     return `(params) => ${ref}(params)`;
   }
   switch (runtimeKind) {
-    case "plain":
-      return isFn ? `(params) => Fx.map(params, ${ref})` : `constant(Fx.succeed(${ref}))`;
     case "effect":
       return isFn ? `(params) => Fx.mapEffect(params, ${ref})` : `constant(Fx.fromEffect(${ref}))`;
     case "stream":
@@ -26,6 +28,8 @@ export function handlerExprFor(
         : `constant(Fx.fromStream(${ref}))`;
     case "fx":
       return isFn ? ref : `constant(${ref})`;
+    case "unknown":
+      throw new Error("RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)");
   }
 }
 
@@ -40,6 +44,8 @@ export function liftToFx(expr: string, kind: RuntimeKind): string {
       return `Fx.fromStream(${expr})`;
     case "fx":
       return expr;
+    case "unknown":
+      throw new Error("RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)");
   }
 }
 

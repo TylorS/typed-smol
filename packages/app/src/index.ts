@@ -10,6 +10,10 @@ export {
   ROUTER_TYPE_TARGET_SPECS,
   HTTPAPI_TYPE_TARGET_SPECS,
 } from "./internal/typeTargetSpecs.js";
+export {
+  createTypeInfoApiSessionForApp,
+  APP_TYPE_TARGET_BOOTSTRAP_CONTENT,
+} from "./createTypeInfoApiSessionForApp.js";
 
 export {
   createHttpApiVirtualModulePlugin,

@@ -83,11 +83,12 @@ export function typeNodeExpectsRefSubjectParam(node: TypeNode, api: TypeInfoApi)
 }
 
 /**
- * True iff the function's return type success (Effect<A,E,R>) is assignable to Option.
+ * True iff the function's return type is Effect and Effect's success type (first type arg) is assignable to Option.
  */
 export function typeNodeIsEffectOptionReturn(node: TypeNode, api: TypeInfoApi): boolean {
   return api.isAssignableTo(node, "Option", [
     { kind: "returnType" },
+    { kind: "ensure", targetId: "Effect" },
     { kind: "typeArg", index: 0 },
   ]);
 }

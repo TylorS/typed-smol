@@ -3,11 +3,13 @@
  * Run from sample-project: node scripts/verify-virtual-modules.mjs
  * Requires: pnpm install, pnpm build:plugins, and @typed/virtual-modules + @typed/app built.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  collectTypeTargetSpecsFromPlugins,
   createTypeInfoApiSession,
+  createTypeTargetBootstrapContent,
   NodeModulePluginLoader,
   PluginManager,
 } from "@typed/virtual-modules";
@@ -52,16 +54,34 @@ function loadPlugins() {
   return plugins;
 }
 
-const { fileNames, options } = getTsconfig(projectRoot);
-const host = ts.createCompilerHost(options);
-const program = ts.createProgram(fileNames, options, host);
-const sessionFactory = () => createTypeInfoApiSession({ ts, program });
-
 const plugins = loadPlugins();
 if (plugins.length === 0) {
   console.error("No plugins loaded. Run pnpm build:plugins first.");
   process.exit(1);
 }
+
+const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(plugins);
+const { fileNames, options } = getTsconfig(projectRoot);
+const host = ts.createCompilerHost(options);
+
+// Add bootstrap file so resolveTypeTargetsFromSpecs can find Layer, Route, etc.
+const bootstrapPath = join(projectRoot, ".typed", "type-target-bootstrap.ts");
+if (typeTargetSpecs.length > 0) {
+  mkdirSync(dirname(bootstrapPath), { recursive: true });
+  writeFileSync(bootstrapPath, createTypeTargetBootstrapContent(typeTargetSpecs), "utf8");
+}
+const programFileNames =
+  typeTargetSpecs.length > 0 && existsSync(bootstrapPath)
+    ? [...fileNames, bootstrapPath]
+    : fileNames;
+const program = ts.createProgram(programFileNames, options, host);
+const sessionFactory = () =>
+  createTypeInfoApiSession({
+    ts,
+    program,
+    typeTargetSpecs: typeTargetSpecs.length ? typeTargetSpecs : undefined,
+    failWhenNoTargetsResolved: false,
+  });
 
 const resolver = new PluginManager(plugins);
 

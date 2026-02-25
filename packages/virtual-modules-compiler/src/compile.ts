@@ -1,12 +1,19 @@
+import { mkdirSync } from "node:fs";
 import type * as ts from "typescript";
-import type { VirtualModuleResolver } from "@typed/virtual-modules";
-import { attachCompilerHostAdapter, createTypeInfoApiSessionFactory } from "@typed/virtual-modules";
+import type { TypeTargetSpec, VirtualModuleResolver } from "@typed/virtual-modules";
+import {
+  attachCompilerHostAdapter,
+  createTypeInfoApiSessionFactory,
+  ensureTypeTargetBootstrapFile,
+} from "@typed/virtual-modules";
 
 export interface CompileParams {
   readonly ts: typeof import("typescript");
   readonly commandLine: ts.ParsedCommandLine;
   readonly resolver: VirtualModuleResolver;
   readonly reportDiagnostic: ts.DiagnosticReporter;
+  /** Type target specs for structural assignability in TypeInfo API. From vmc.config when using loadResolver. */
+  readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
 
 /**
@@ -14,7 +21,7 @@ export interface CompileParams {
  * Mirrors tsc behavior: create program, emit, report diagnostics, return exit code.
  */
 export function compile(params: CompileParams): number {
-  const { ts, commandLine, resolver, reportDiagnostic } = params;
+  const { ts, commandLine, resolver, reportDiagnostic, typeTargetSpecs } = params;
   const { options, fileNames, projectReferences } = commandLine;
   const configFileParsingDiagnostics = (
     commandLine as { configFileParsingDiagnostics?: readonly ts.Diagnostic[] }
@@ -56,11 +63,23 @@ export function compile(params: CompileParams): number {
   }
 
   const projectRoot = sys.getCurrentDirectory();
+
+  let effectiveRootNames = fileNames;
+  if (typeTargetSpecs && typeTargetSpecs.length > 0) {
+    const bootstrapPath = ensureTypeTargetBootstrapFile(projectRoot, typeTargetSpecs, {
+      mkdirSync,
+      writeFile: (path, content) => sys.writeFile(path, content),
+    });
+    effectiveRootNames = fileNames.includes(bootstrapPath)
+      ? fileNames
+      : [...fileNames, bootstrapPath];
+  }
+
   const host = ts.createCompilerHost(options);
 
   // Preliminary program for TypeInfo API (plugins that use api.file()/api.directory() need it).
   const preliminaryProgram = ts.createProgram({
-    rootNames: fileNames,
+    rootNames: effectiveRootNames,
     options,
     host,
     projectReferences,
@@ -69,6 +88,7 @@ export function compile(params: CompileParams): number {
   const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
     ts,
     program: preliminaryProgram,
+    ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
   });
 
   const adapter = attachCompilerHostAdapter({
@@ -82,7 +102,7 @@ export function compile(params: CompileParams): number {
   let exitCode = 0;
   try {
     const program = ts.createProgram({
-      rootNames: fileNames,
+      rootNames: effectiveRootNames,
       options,
       host,
       projectReferences,
@@ -90,6 +110,7 @@ export function compile(params: CompileParams): number {
     });
 
     const preEmit = ts.getPreEmitDiagnostics(program);
+    // oxlint-disable-next-line typescript/unbound-method
     const emitResult = program.emit(undefined, sys.writeFile);
     const allDiagnostics = [...preEmit, ...emitResult.diagnostics];
 

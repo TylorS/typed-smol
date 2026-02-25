@@ -58,6 +58,11 @@
 - README has an API overview but no “Production considerations”, path contract (e.g. “baseDir must be absolute”, “relativePath must not escape baseDir”), or TypeScript version compatibility.
 - **Recommendation:** Add a short “Production / security” section, path and plugin contracts, and a note on supported TS versions.
 
+#### Internal API usage (TypeInfoApi)
+
+- TypeInfoApi centralizes use of non-public TypeScript APIs in `src/internal/tsInternal.ts`: `getIndexInfosOfType`, `getAliasedSymbol`, `getBaseTypes`, and TypeReference/symbol shape access for assignability fallbacks. These are not part of the public TS contract and may change across versions.
+- **Supported:** Tested with TypeScript 5.x. When upgrading TS, run the test suite and consider updating or guarding the helpers in `tsInternal.ts`.
+
 ### 9. Test coverage gaps
 
 - No tests for: path traversal attempt, `file()` when file is not in program, empty plugin list, duplicate plugin names, maxDepth behavior, watch-driven invalidation (deterministic), dispose-then-use, or double attach/detach.

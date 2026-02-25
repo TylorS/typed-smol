@@ -119,7 +119,7 @@ export function emitRouterMatchSource(
     `import { constant } from "effect/Function";`,
     ...(needsFnErrorImports
       ? [
-          `import * as Effect from "effect";`,
+          `import * as Effect from "effect/Effect";`,
           `import * as Cause from "effect/Cause";`,
           `import * as Result from "effect/Result";`,
         ]

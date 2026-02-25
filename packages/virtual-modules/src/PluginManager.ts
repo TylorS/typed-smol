@@ -111,12 +111,20 @@ export class PluginManager implements VirtualModuleResolver {
       try {
         session = createSession?.({ id: options.id, importer: options.importer }) ?? emptySession;
       } catch (error) {
+        const msg = toMessage(error);
+        // Treat temporary unavailability (e.g. program not loaded) as unresolved so retry can succeed later.
+        if (
+          msg.includes("Program not yet available") ||
+          msg.includes("TypeInfo session creation failed")
+        ) {
+          continue;
+        }
         return {
           status: "error",
           diagnostic: createDiagnostic(
             "session-creation-failed",
             plugin.name,
-            `Session creation failed: ${sanitizeErrorMessage(toMessage(error))}`,
+            `Session creation failed: ${sanitizeErrorMessage(msg)}`,
           ),
         };
       }

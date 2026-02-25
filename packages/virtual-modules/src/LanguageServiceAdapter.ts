@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type * as ts from "typescript";
 import {
@@ -403,6 +404,23 @@ export const attachLanguageServiceAdapter = (
       let hadUnresolvedVirtual = false;
       const results = moduleLiterals.map((moduleLiteral, index) => {
         const resolved = getOrBuildRecord(moduleLiteral.text, importerForVirtual);
+        if (moduleLiteral.text.includes(":")) {
+          try {
+            require("node:fs").appendFileSync(
+              "/tmp/vm-ts-plugin-debug.log",
+              JSON.stringify({
+                tag: "LS:resolveLiterals",
+                id: moduleLiteral.text,
+                status: resolved.status,
+                err: resolved.status === "error" ? (resolved as { diagnostic?: { message?: string } }).diagnostic?.message : undefined,
+                t: Date.now(),
+              }) + "\n",
+              { flag: "a" },
+            );
+          } catch {
+            /* noop */
+          }
+        }
         if (resolved.status === "resolved") {
           pendingRetry = false;
           return {

@@ -23,7 +23,8 @@ Peer / dev: `typescript` (project supplies its own).
 
 - **Path contract** – `baseDir` must be an absolute path; `relativePath` (and resolved paths) must not escape `baseDir`. Path containment is enforced: escaping returns an error (`path-escapes-base` or `invalid-input`).
 - **Plugin contract** – `build()` must not trigger module resolution. Re-entrancy is detected and may surface as unresolved resolution or a diagnostic (`re-entrant-resolution`).
-- **TypeScript** – Tested with TypeScript 5.x. The host supplies its own `typescript` instance.
+- **TypeScript** – Tested with TypeScript 5.x. The host supplies its own `typescript` instance. TypeInfoApi uses a small set of **internal** TypeScript APIs (see [Internal API usage](.docs/production-readiness.md#internal-api-usage) in production-readiness) for type-target resolution and assignability fallbacks; these are centralized in `internal/tsInternal.ts` and may require adjustment when upgrading TS.
+- **Type targets and resolution** – Type targets (e.g. for `assignableTo`) are resolved from the **same TypeScript program** only: “remote” here means types from other packages already in the program (e.g. in `node_modules`), not from a registry. Resolution matches the **exact module specifier** used in imports; path/alias mapping is not applied. For targets not imported by app code, use `createTypeTargetBootstrapContent(specs)` and include the generated file in the program’s `rootNames`.
 - **Watch debouncing** – Optional `debounceMs` on adapter options coalesces rapid file/glob watch events to avoid recomputation storms.
 
 ## Errors

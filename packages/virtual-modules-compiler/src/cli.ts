@@ -57,12 +57,13 @@ function main(): number {
     if (parsed.errors.length > 0) {
       return 1;
     }
-    const projectRoot = sys.getCurrentDirectory();
-    const resolver = loadResolver(projectRoot);
-    return runBuild({
-      ts,
-      buildCommand: parsed,
-      resolver,
+  const projectRoot = sys.getCurrentDirectory();
+  const { resolver, typeTargetSpecs } = loadResolver(projectRoot);
+  return runBuild({
+    ts,
+    buildCommand: parsed,
+    resolver,
+    typeTargetSpecs,
       reportDiagnostic,
       reportSolutionBuilderStatus: reportDiagnostic,
     });
@@ -81,13 +82,14 @@ function main(): number {
   }
 
   const projectRoot = sys.getCurrentDirectory();
-  const resolver = loadResolver(projectRoot);
+  const { resolver, typeTargetSpecs } = loadResolver(projectRoot);
 
   if (watchIndex >= 0) {
     runWatch({
       ts,
       commandLine,
       resolver,
+      typeTargetSpecs,
       reportDiagnostic,
       reportWatchStatus: (diag, newLine, _opts, _errorCount) => {
         sys.write(
@@ -108,6 +110,7 @@ function main(): number {
     commandLine,
     resolver,
     reportDiagnostic,
+    typeTargetSpecs,
   });
 }
 

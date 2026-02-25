@@ -58,6 +58,48 @@ export default {
     expect(result.pluginLoadErrors).toHaveLength(0);
   });
 
+  it("collects typeTargetSpecs from plugins when they declare them", () => {
+    const dir = createTempDir();
+    writeFileSync(
+      join(dir, "file-plugin.cjs"),
+      `module.exports = {
+  name: "file-plugin",
+  typeTargetSpecs: [
+    { id: "Route", module: "@typed/router", exportName: "Route" },
+    { id: "Effect", module: "effect", exportName: "Effect" },
+  ],
+  shouldResolve(id) {
+    return id === "virtual:file";
+  },
+  build() {
+    return "export const fileValue = 1;";
+  },
+};
+`,
+      "utf8",
+    );
+    writeFileSync(
+      join(dir, "vmc.config.ts"),
+      `export default {
+  plugins: ["./file-plugin.cjs"],
+};
+`,
+      "utf8",
+    );
+
+    const result = loadResolverFromVmcConfig({ projectRoot: dir, ts });
+    expect(result.status).toBe("loaded");
+    if (result.status !== "loaded") return;
+
+    expect(result.typeTargetSpecs).toBeDefined();
+    expect(result.typeTargetSpecs).toHaveLength(2);
+    expect(result.typeTargetSpecs?.[0]).toEqual({
+      id: "Route",
+      module: "@typed/router",
+      exportName: "Route",
+    });
+  });
+
   it("builds a plugin-manager resolver from plugin entries", () => {
     const dir = createTempDir();
     writeFileSync(

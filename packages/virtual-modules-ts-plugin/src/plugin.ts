@@ -17,11 +17,17 @@
  *   }
  * }
  *
+ * Use the package name; path-style names (e.g. "../") often fail when the workspace
+ * root is a monorepo parent.
+ *
  * Plugin definitions are loaded from vmc.config.ts.
  */
 import {
   attachLanguageServiceAdapter,
   createTypeInfoApiSession,
+  ensureTypeTargetBootstrapFile,
+  getProgramWithTypeTargetBootstrap,
+  getTypeTargetBootstrapPath,
   loadResolverFromVmcConfig,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
@@ -56,27 +62,51 @@ function findTsconfig(fromDir: string): string | undefined {
 function createFallbackProgram(
   tsMod: typeof import("typescript"),
   projectRoot: string,
+  log: (msg: string) => void,
+  tsconfigPath?: string,
+  typeTargetSpecs?: ReadonlyArray<
+    import("@typed/virtual-modules", { with: { "resolution-mode": "import" } }).TypeTargetSpec
+  >,
 ): import("typescript").Program | undefined {
-  const tsconfigPath = findTsconfig(projectRoot);
-  if (!tsconfigPath) return undefined;
+  const configPath = tsconfigPath ?? findTsconfig(projectRoot);
+  if (!configPath) {
+    log(`fallback program: no tsconfig found from ${projectRoot}`);
+    return undefined;
+  }
   try {
-    const configFile = tsMod.readConfigFile(tsconfigPath, tsMod.sys.readFile);
-    if (configFile.error) return undefined;
-    const configDir = dirname(tsconfigPath);
+    const configFile = tsMod.readConfigFile(configPath, tsMod.sys.readFile);
+    if (configFile.error) {
+      log(`fallback program: tsconfig read error: ${configFile.error.messageText}`);
+      return undefined;
+    }
+    const configDir = dirname(configPath);
     const parsed = tsMod.parseJsonConfigFileContent(
       configFile.config,
       tsMod.sys,
       configDir,
       undefined,
-      tsconfigPath,
+      configPath,
     );
-    if (parsed.errors.length > 0) return undefined;
-    return tsMod.createProgram(
-      parsed.fileNames,
+    if (parsed.errors.length > 0) {
+      log(`fallback program: tsconfig parse errors: ${parsed.errors.map((e) => e.messageText).join(", ")}`);
+      return undefined;
+    }
+    let rootNames = parsed.fileNames;
+    if (typeTargetSpecs && typeTargetSpecs.length > 0) {
+      ensureTypeTargetBootstrapFile(projectRoot, typeTargetSpecs);
+      const bootstrapPath = getTypeTargetBootstrapPath(projectRoot);
+      rootNames = [...rootNames, bootstrapPath];
+      log(`fallback program: added bootstrap ${bootstrapPath}`);
+    }
+    const program = tsMod.createProgram(
+      rootNames,
       parsed.options,
       tsMod.createCompilerHost(parsed.options),
     );
-  } catch {
+    log(`fallback program: created with ${rootNames.length} root files`);
+    return program;
+  } catch (err) {
+    log(`fallback program: exception: ${err instanceof Error ? err.message : String(err)}`);
     return undefined;
   }
 }
@@ -88,6 +118,11 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
   function create(info: PluginCreateInfo) {
     const config = (info.config ?? {}) as VirtualModulesTsPluginConfig;
+    const logger = (
+      info.project as { projectService?: { logger?: { info?: (s: string) => void } } }
+    )?.projectService?.logger;
+    const log = (msg: string) =>
+      logger?.info?.(`[@typed/virtual-modules-ts-plugin] ${msg}`);
 
     const project = info.project as {
       getCurrentDirectory?: () => string;
@@ -100,9 +135,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
           ? project.getCurrentDirectory()
           : process.cwd();
 
-    const logger = (
-      info.project as { projectService?: { logger?: { info?: (s: string) => void } } }
-    )?.projectService?.logger;
+    log(`create: projectRoot=${projectRoot}`);
 
     const debounceMs =
       typeof config.debounceMs === "number" &&
@@ -114,18 +147,14 @@ function init(modules: { typescript: typeof import("typescript") }): {
       config.debounceMs !== undefined &&
       (typeof config.debounceMs !== "number" || !Number.isFinite(config.debounceMs))
     ) {
-      logger?.info?.(
-        "[@typed/virtual-modules-ts-plugin] Ignoring invalid debounceMs; expected finite number",
-      );
+      log("Ignoring invalid debounceMs; expected finite number");
     }
     const vmcConfigPath =
       typeof config.vmcConfigPath === "string" && config.vmcConfigPath.trim().length > 0
         ? config.vmcConfigPath
         : undefined;
     if (config.vmcConfigPath !== undefined && vmcConfigPath === undefined) {
-      logger?.info?.(
-        "[@typed/virtual-modules-ts-plugin] Ignoring invalid vmcConfigPath; expected non-empty string",
-      );
+      log("Ignoring invalid vmcConfigPath; expected non-empty string");
     }
 
     let resolver: LoadedVirtualResolver | undefined;
@@ -134,37 +163,71 @@ function init(modules: { typescript: typeof import("typescript") }): {
       ts,
       ...(vmcConfigPath ? { configPath: vmcConfigPath } : {}),
     });
+    log(`vmc: status=${loadedResolver.status}`);
     if (loadedResolver.status === "error") {
-      logger?.info?.(`[@typed/virtual-modules-ts-plugin] ${loadedResolver.message}`);
+      log(`vmc error: ${loadedResolver.message}`);
       return info.languageService;
     }
 
     if (loadedResolver.status === "loaded") {
       for (const pluginLoadError of loadedResolver.pluginLoadErrors) {
-        logger?.info?.(
-          `[@typed/virtual-modules-ts-plugin] Failed to load plugin "${pluginLoadError.specifier}": ${pluginLoadError.message}`,
-        );
+        log(`plugin load error: "${pluginLoadError.specifier}": ${pluginLoadError.message}`);
       }
 
       resolver = loadedResolver.resolver as LoadedVirtualResolver | undefined;
       if (!resolver) {
-        logger?.info?.(
-          `[@typed/virtual-modules-ts-plugin] ${loadedResolver.path} has no resolver/plugins`,
-        );
+        log(`${loadedResolver.path} has no resolver/plugins`);
         return info.languageService;
       }
     }
 
     if (!resolver || loadedResolver.status === "not-found") {
-      logger?.info?.(
-        "[@typed/virtual-modules-ts-plugin] vmc.config.ts not found; virtual module resolution disabled",
-      );
+      log("vmc.config.ts not found; virtual module resolution disabled");
       return info.languageService;
     }
 
-    logger?.info?.(`[@typed/virtual-modules-ts-plugin] Virtual module resolver initialized`);
+    log("Virtual module resolver initialized");
 
-    let cachedFallbackProgram: ts.Program | undefined;
+    const typeTargetSpecs = loadedResolver.typeTargetSpecs ?? [];
+    log(`typeTargetSpecs: ${typeTargetSpecs.length} specs`);
+
+    const projectConfigPath = (info.project as { configFilePath?: string }).configFilePath;
+    const tsconfigPath =
+      typeof projectConfigPath === "string" && projectConfigPath.length > 0
+        ? projectConfigPath
+        : undefined;
+
+    let cachedFallbackProgram: ts.Program | undefined = createFallbackProgram(
+      ts,
+      projectRoot,
+      log,
+      tsconfigPath,
+      typeTargetSpecs,
+    );
+
+    // Pre-validate that TypeInfoApiSession can be created from the fallback program.
+    // This catches issues early (missing type targets, checker errors) and caches the result.
+    let preCreatedSession: ReturnType<typeof createTypeInfoApiSession> | undefined;
+    if (cachedFallbackProgram) {
+      try {
+        const programWithBootstrap = getProgramWithTypeTargetBootstrap(
+          ts,
+          cachedFallbackProgram,
+          projectRoot,
+          typeTargetSpecs,
+        );
+        preCreatedSession = createTypeInfoApiSession({
+          ts,
+          program: programWithBootstrap,
+          ...(typeTargetSpecs.length > 0
+            ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
+            : {}),
+        });
+        log("pre-created TypeInfoApiSession OK");
+      } catch (err) {
+        log(`pre-created TypeInfoApiSession failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
 
     const getProgramForTypeInfo = (): ts.Program | undefined => {
       const fromLS = info.languageService.getProgram();
@@ -173,7 +236,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
       const fromProject = projectLike.getProgram?.();
       if (fromProject !== undefined) return fromProject;
       if (cachedFallbackProgram !== undefined) return cachedFallbackProgram;
-      const fallback = createFallbackProgram(ts, projectRoot);
+      const fallback = createFallbackProgram(ts, projectRoot, log, tsconfigPath, typeTargetSpecs);
       if (fallback !== undefined) cachedFallbackProgram = fallback;
       return fallback;
     };
@@ -190,16 +253,45 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
       const getSession = () => {
         if (session) return session;
+
+        // Prefer the LS/project program once available, but fall back to the
+        // pre-created session from the fallback program.
         const program = getProgramForTypeInfo();
         if (program === undefined) {
-          logger?.info?.(
-            "[@typed/virtual-modules-ts-plugin] Program unavailable at boot; cannot create TypeInfo session. Virtual modules requiring type info (e.g. router) will retry when program is ready.",
-          );
+          if (preCreatedSession) {
+            session = preCreatedSession;
+            return session;
+          }
+          log(`getSession: no program available for ${_id}`);
           throw new Error(
             "TypeInfo session creation failed: Program not yet available. Retry when project is loaded.",
           );
         }
-        session = createTypeInfoApiSession({ ts, program });
+
+        try {
+          const programWithBootstrap = getProgramWithTypeTargetBootstrap(
+            ts,
+            program,
+            projectRoot,
+            typeTargetSpecs,
+          );
+          session = createTypeInfoApiSession({
+            ts,
+            program: programWithBootstrap,
+            ...(typeTargetSpecs.length > 0
+              ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
+              : {}),
+          });
+        } catch (err) {
+          // If session creation from the real program fails, fall back to the
+          // pre-created session (from the fallback program).
+          if (preCreatedSession) {
+            log(`getSession: real program session failed, using pre-created session: ${err instanceof Error ? err.message : String(err)}`);
+            session = preCreatedSession;
+            return session;
+          }
+          throw err;
+        }
         return session;
       };
       return {
@@ -217,6 +309,18 @@ function init(modules: { typescript: typeof import("typescript") }): {
           ) => {
             apiUsed = true;
             return getSession().api.directory(glob, opts);
+          },
+          resolveExport: (
+            baseDir: string,
+            filePath: string,
+            exportName: string,
+          ) => {
+            apiUsed = true;
+            return getSession().api.resolveExport(baseDir, filePath, exportName);
+          },
+          isAssignableTo: (node: unknown, targetId: string, projection?: readonly unknown[]) => {
+            apiUsed = true;
+            return getSession().api.isAssignableTo(node as never, targetId, projection as never);
           },
         },
         consumeDependencies: () => (apiUsed ? getSession().consumeDependencies() : ([] as const)),
@@ -272,6 +376,30 @@ function init(modules: { typescript: typeof import("typescript") }): {
       watchHost,
       debounceMs,
     });
+
+    // Force program rebuild so resolution uses our patched host.
+    const projectWithDirty = info.project as {
+      markAsDirty?: () => void;
+      invalidateResolutionsOfFailedLookupLocations?: () => void;
+    };
+    if (typeof projectWithDirty.invalidateResolutionsOfFailedLookupLocations === "function") {
+      projectWithDirty.invalidateResolutionsOfFailedLookupLocations();
+    } else if (typeof projectWithDirty.markAsDirty === "function") {
+      projectWithDirty.markAsDirty();
+    }
+
+    // Schedule a deferred invalidation: if any virtual modules failed during the initial
+    // graph build (e.g., TypeInfoApi not ready yet), this second pass picks them up after
+    // the program is fully built.
+    setTimeout(() => {
+      log("deferred retry: invalidating failed lookups");
+      if (typeof projectWithDirty.invalidateResolutionsOfFailedLookupLocations === "function") {
+        projectWithDirty.invalidateResolutionsOfFailedLookupLocations();
+      }
+      if (typeof projectWithDirty.markAsDirty === "function") {
+        projectWithDirty.markAsDirty();
+      }
+    }, 200);
 
     return info.languageService;
   }

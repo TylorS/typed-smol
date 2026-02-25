@@ -388,6 +388,8 @@ export function emitHttpApiSource(input: {
     { readonly path: string; readonly method: string; readonly name: string }
   >;
   readonly optionalExportsByPath: ReadonlyMap<string, ReadonlySet<OptionalExport>>;
+  /** When true for an endpoint path, handler returns HttpServerResponse; use handleRaw instead of handle. */
+  readonly handlerIsRawByPath?: ReadonlyMap<string, boolean>;
 }): string {
   const directoryConventions = indexDirectoryConventions(input.tree);
   const endpointSpecs = buildEndpointRenderSpecs(input.tree, directoryConventions);
@@ -472,11 +474,16 @@ export function emitHttpApiSource(input: {
     const endpointsInGroup = endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
     const groupName = groupSpec.defaultName;
+    const handlerIsRaw = input.handlerIsRawByPath;
     const handleCalls = endpointsInGroup
       .map((e) => {
         const varName = varNameByPath.get(e.modulePath)!;
         const literals = input.extractedLiteralsByPath.get(e.path);
         const name = literals?.name ?? e.stem;
+        const isRaw = handlerIsRaw?.get(e.path) === true;
+        if (isRaw) {
+          return `.handleRaw(${JSON.stringify(name)}, (ctx) => ${varName}.handler(ctx))`;
+        }
         const optPresent = input.optionalExportsByPath.get(e.path) ?? new Set<OptionalExport>();
         const headersArg = optPresent.has("headers") ? "ctx.headers" : "emptyRecordString";
         const bodyArg = optPresent.has("body") ? "ctx.payload" : "undefined";

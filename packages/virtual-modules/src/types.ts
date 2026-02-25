@@ -217,7 +217,9 @@ export type TypeProjectionStep =
   | { readonly kind: "returnType" }
   | { readonly kind: "param"; readonly index: number }
   | { readonly kind: "typeArg"; readonly index: number }
-  | { readonly kind: "property"; readonly name: string };
+  | { readonly kind: "property"; readonly name: string }
+  | { readonly kind: "ensure"; readonly targetId: string }
+  | { readonly kind: "predicate"; readonly fn: (node: TypeNode) => boolean };
 
 /**
  * Spec for resolving a type from program imports for structural assignability checks.

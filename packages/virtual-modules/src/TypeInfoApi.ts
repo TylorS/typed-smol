@@ -790,12 +790,18 @@ const isAssignableTo = (
   if (matchSymbol(srcSymbol)) return true;
 
   if ((source.flags & tsMod.TypeFlags.Object) !== 0) {
-    const bases = getBaseTypesInternal(source as ts.InterfaceType, checker);
-    const hasMatchingBase = (bases ?? []).some((b) => {
-      const bSym = getTypeSymbol(b);
-      return bSym && matchSymbol(bSym);
-    });
-    if (hasMatchingBase) return true;
+    const srcSym = (source as ts.Type & { symbol?: ts.Symbol }).symbol;
+    const isClassOrInterface =
+      srcSym &&
+      (srcSym.flags & (tsMod.SymbolFlags.Class | tsMod.SymbolFlags.Interface)) !== 0;
+    if (isClassOrInterface) {
+      const bases = getBaseTypesInternal(source as ts.InterfaceType, checker);
+      const hasMatchingBase = (bases ?? []).some((b) => {
+        const bSym = getTypeSymbol(b);
+        return bSym && matchSymbol(bSym);
+      });
+      if (hasMatchingBase) return true;
+    }
   }
 
   const tgtName = tgtSymbol?.getName();
@@ -914,8 +920,14 @@ const applyProjection = (
   steps: readonly TypeProjectionStep[],
   checker: ts.TypeChecker,
   tsMod: typeof import("typescript"),
-  onInternalError?: (err: unknown, context: string) => void,
+  opts: {
+    onInternalError?: (err: unknown, context: string) => void;
+    targetsByIdMap: Map<string, ts.Type>;
+    assignabilityMode: AssignabilityMode;
+    maxDepth: number;
+  },
 ): ts.Type | undefined => {
+  const { onInternalError, targetsByIdMap, assignabilityMode, maxDepth } = opts;
   let current: ts.Type = type;
   for (const step of steps) {
     try {
@@ -951,6 +963,26 @@ const applyProjection = (
           current = decl
             ? checker.getTypeOfSymbolAtLocation(prop, decl)
             : checker.getDeclaredTypeOfSymbol(prop);
+          break;
+        }
+        case "ensure": {
+          const target = targetsByIdMap.get(step.targetId);
+          if (!target) return undefined;
+          if (!isAssignableTo(current, target, checker, tsMod, assignabilityMode))
+            return undefined;
+          break;
+        }
+        case "predicate": {
+          const serialized = serializeTypeNode(
+            current,
+            checker,
+            tsMod,
+            0,
+            maxDepth,
+            new Set(),
+            onInternalError,
+          );
+          if (!step.fn(serialized)) return undefined;
           break;
         }
         default:
@@ -1165,7 +1197,12 @@ export const createTypeInfoApiSession = (
     const targetType = targetsByIdMap.get(targetId);
     if (!targetType) return false;
     const projected = projection?.length
-      ? applyProjection(sourceType, projection, checker, options.ts, options.onInternalError)
+      ? applyProjection(sourceType, projection, checker, options.ts, {
+          onInternalError: options.onInternalError,
+          targetsByIdMap,
+          assignabilityMode,
+          maxDepth,
+        })
       : sourceType;
     if (!projected) return false;
     return isAssignableTo(projected, targetType, checker, options.ts, assignabilityMode);

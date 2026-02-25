@@ -1,5 +1,9 @@
 import ts from "typescript";
-import type { VirtualModuleResolver, VmcPluginEntry } from "@typed/virtual-modules";
+import type {
+  TypeTargetSpec,
+  VirtualModuleResolver,
+  VmcPluginEntry,
+} from "@typed/virtual-modules";
 import { loadResolverFromVmcConfig, PluginManager } from "@typed/virtual-modules";
 
 export interface VmcConfig {
@@ -7,13 +11,19 @@ export interface VmcConfig {
   readonly plugins?: readonly VmcPluginEntry[];
 }
 
+export interface LoadResolverResult {
+  readonly resolver: VirtualModuleResolver;
+  readonly typeTargetSpecs?: readonly TypeTargetSpec[];
+}
+
 /**
  * Load the resolver from vmc.config.* in projectRoot, or return an empty PluginManager.
+ * Also returns typeTargetSpecs when configured for structural assignability in TypeInfo API.
  */
-export function loadResolver(projectRoot: string): VirtualModuleResolver {
+export function loadResolver(projectRoot: string): LoadResolverResult {
   const loaded = loadResolverFromVmcConfig({ projectRoot, ts });
   if (loaded.status === "not-found") {
-    return new PluginManager();
+    return { resolver: new PluginManager() };
   }
   if (loaded.status === "error") {
     console.error(`[vmc] ${loaded.message}`);
@@ -27,5 +37,8 @@ export function loadResolver(projectRoot: string): VirtualModuleResolver {
     process.exit(1);
   }
 
-  return loaded.resolver ?? new PluginManager();
+  return {
+    resolver: loaded.resolver ?? new PluginManager(),
+    ...(loaded.typeTargetSpecs ? { typeTargetSpecs: loaded.typeTargetSpecs } : {}),
+  };
 }

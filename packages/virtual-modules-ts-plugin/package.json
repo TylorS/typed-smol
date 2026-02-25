@@ -14,6 +14,7 @@
   },
   "scripts": {
     "build": "tsup && cp src/plugin.d.ts dist/plugin.d.ts",
+    "build:plugins": "pnpm --filter virtual-modules-ts-plugin-sample run build:plugins",
     "pretest": "pnpm run build && pnpm --filter @typed/virtual-modules-compiler run build",
     "test": "vitest run --passWithNoTests"
   },

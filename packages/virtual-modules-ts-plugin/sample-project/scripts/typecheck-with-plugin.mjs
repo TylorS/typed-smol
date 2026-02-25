@@ -8,7 +8,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   attachCompilerHostAdapter,
+  collectTypeTargetSpecsFromPlugins,
   createTypeInfoApiSession,
+  createTypeTargetBootstrapContent,
   loadVmcConfig,
   NodeModulePluginLoader,
   PluginManager,
@@ -74,11 +76,6 @@ function loadResolver(rootDir) {
 }
 
 const { fileNames, options } = getTsconfig(projectRoot);
-const innerHost = ts.createCompilerHost(options);
-const innerProgram = ts.createProgram(fileNames, options, innerHost);
-const createTypeInfoApiSessionFactory = () =>
-  createTypeInfoApiSession({ ts, program: innerProgram });
-
 const resolver = (() => {
   try {
     return loadResolver(projectRoot);
@@ -88,6 +85,27 @@ const resolver = (() => {
     process.exit(1);
   }
 })();
+
+const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(resolver.plugins);
+const bootstrapPath = join(projectRoot, ".typed", "type-target-bootstrap.ts");
+let programFileNames = fileNames;
+if (typeTargetSpecs.length > 0) {
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  const { dirname } = await import("node:path");
+  mkdirSync(dirname(bootstrapPath), { recursive: true });
+  writeFileSync(bootstrapPath, createTypeTargetBootstrapContent(typeTargetSpecs), "utf8");
+  programFileNames = [...fileNames, bootstrapPath];
+}
+
+const innerHost = ts.createCompilerHost(options);
+const innerProgram = ts.createProgram(programFileNames, options, innerHost);
+const createTypeInfoApiSessionFactory = () =>
+  createTypeInfoApiSession({
+    ts,
+    program: innerProgram,
+    typeTargetSpecs: typeTargetSpecs.length ? typeTargetSpecs : undefined,
+    failWhenNoTargetsResolved: false,
+  });
 
 const outerHost = ts.createCompilerHost(options);
 attachCompilerHostAdapter({
