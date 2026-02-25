@@ -70,12 +70,12 @@ src/app.ts                        Your code
 The same resolution works in three places:
 
 
-| Tool                                               | What it does                                                |
-| -------------------------------------------------- | ----------------------------------------------------------- |
-| **Vite plugin** (`@typed/vite-plugin`)             | Resolves virtual imports during `vite dev` and `vite build` |
-| **TS plugin** (`@typed/virtual-modules-ts-plugin`) | Provides IntelliSense and type-checking in your editor      |
-| **vmc** (`@typed/virtual-modules-compiler`)        | Drop-in `tsc` replacement for CI type-checking              |
-| **VS Code extension** (`@typed/virtual-modules-vscode`) | Go-to-definition and source viewing for virtual modules |
+| Tool                                                    | What it does                                                |
+| ------------------------------------------------------- | ----------------------------------------------------------- |
+| **Vite plugin** (`@typed/vite-plugin`)                  | Resolves virtual imports during `vite dev` and `vite build` |
+| **TS plugin** (`@typed/virtual-modules-ts-plugin`)      | Provides IntelliSense and type-checking in your editor      |
+| **vmc** (`@typed/virtual-modules-compiler`)             | Drop-in `tsc` replacement for CI type-checking              |
+| **VS Code extension** (`@typed/virtual-modules-vscode`) | Go-to-definition and source viewing for virtual modules     |
 
 
 All four share the same `vmc.config.ts` (or inline config), so virtual modules resolve identically everywhere.
@@ -215,7 +215,7 @@ src/
     users/
       list.ts
       create.ts
-      [id].ts
+      id.ts
 ```
 
 **src/api/status.ts** -- simple health check
@@ -368,16 +368,18 @@ export const serve = (config?, ...layers) => /* Layer that starts a Node HTTP se
 
 Every export is fully typed. `Client` gives you a typed HTTP client that mirrors the API's endpoints, `OpenApi` is the spec object you can serialize to JSON, and `Swagger`/`Scalar` are ready-made documentation layers.
 
-| Export         | What it is                                         |
-| -------------- | -------------------------------------------------- |
-| `Api.Api`      | The `HttpApi` definition with all endpoints        |
-| `Api.ApiLayer` | A Layer wiring all handlers to the API             |
-| `Api.Client`   | A typed HTTP client for calling the API            |
-| `Api.OpenApi`  | The OpenAPI spec object                            |
-| `Api.Swagger`  | Swagger UI layer                                   |
-| `Api.Scalar`   | Scalar docs layer                                  |
-| `Api.App`      | Layer composing the API with an HTTP server        |
-| `Api.serve`    | One-liner to start a Node HTTP server              |
+
+| Export         | What it is                                  |
+| -------------- | ------------------------------------------- |
+| `Api.Api`      | The `HttpApi` definition with all endpoints |
+| `Api.ApiLayer` | A Layer wiring all handlers to the API      |
+| `Api.Client`   | A typed HTTP client for calling the API     |
+| `Api.OpenApi`  | The OpenAPI spec object                     |
+| `Api.Swagger`  | Swagger UI layer                            |
+| `Api.Scalar`   | Scalar docs layer                           |
+| `Api.App`      | Layer composing the API with an HTTP server |
+| `Api.serve`    | One-liner to start a Node HTTP server       |
+
 
 ### 3. Serve it
 
@@ -642,11 +644,12 @@ build(id, importer, api) {
 
 All packages are published under the `@typed` scope on npm. Install with the `beta` tag: `pnpm add @typed/<package>@beta`.
 
+
 | Package                                                                          | Description                                                                  |
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [@typed/app](packages/app/README.md)                                             | Router and HttpApi virtual module plugins, `defineApiHandler` helper         |
 | [@typed/async-data](packages/async-data/README.md)                               | Async data states (NoData, Loading, Success, Failure, Optimistic)            |
-| [@typed/fx](packages/fx/README.md)                                               | `Fx` — push-based reactive abstraction extending Effect                     |
+| [@typed/fx](packages/fx/README.md)                                               | `Fx` — push-based reactive abstraction extending Effect                      |
 | [@typed/guard](packages/guard/README.md)                                         | Effect-based guards with Schema decode/encode and composition                |
 | [@typed/id](packages/id/README.md)                                               | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid                               |
 | [@typed/navigation](packages/navigation/README.md)                               | Browser/memory navigation and routing types                                  |
@@ -654,10 +657,10 @@ All packages are published under the `@typed` scope on npm. Install with the `be
 | [@typed/template](packages/template/README.md)                                   | Streaming templates with Fx/Stream/Effect integration and hydration          |
 | [@typed/tsconfig](packages/tsconfig)                                             | Shared TypeScript configs (base, dom, test, webworker)                       |
 | [@typed/ui](packages/ui/README.md)                                               | Web integration: HttpRouter, Link (builds on router + template + navigation) |
-| [@typed/vite-plugin](packages/vite-plugin/README.md)                             | Vite integration — `typedVitePlugin()` for zero-config virtual modules      |
+| [@typed/vite-plugin](packages/vite-plugin/README.md)                             | Vite integration — `typedVitePlugin()` for zero-config virtual modules       |
 | [@typed/virtual-modules](packages/virtual-modules/README.md)                     | Core virtual module plugin system and TypeInfoApi                            |
-| [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md)   | `vmc` CLI — drop-in `tsc` with virtual module support                       |
-| [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md)   | TypeScript Language Service plugin for editor IntelliSense                   |
+| [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md)   | `vmc` CLI — drop-in `tsc` with virtual module support                        |
+| [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md) | TypeScript Language Service plugin for editor IntelliSense                   |
 | [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md)           | Low-level Vite adapter for virtual module resolution                         |
 | [@typed/virtual-modules-vscode](packages/virtual-modules-vscode/README.md)       | VS Code extension for go-to-definition and source viewing of virtual modules |
 
@@ -710,23 +713,24 @@ pnpm build
 
 Install with the `beta` tag: `pnpm add @typed/<package>@beta`
 
-| Package                      | Version       |
-| ---------------------------- | ------------- |
-| @typed/app                   | 1.0.0-beta.1 |
-| @typed/async-data            | 1.0.0-beta.1 |
-| @typed/fx                    | 2.0.0-beta.1 |
-| @typed/guard                 | 1.0.0-beta.1 |
-| @typed/id                    | 1.0.0-beta.1 |
-| @typed/navigation            | 1.0.0-beta.1 |
-| @typed/router                | 1.0.0-beta.1 |
-| @typed/template              | 1.0.0-beta.1 |
-| @typed/tsconfig               | 1.0.0-beta.1 |
-| @typed/ui                    | 1.0.0-beta.1 |
-| @typed/vite-plugin           | 1.0.0-beta.1 |
-| @typed/virtual-modules        | 1.0.0-beta.1 |
-| @typed/virtual-modules-compiler | 1.0.0-beta.1 |
+
+| Package                          | Version      |
+| -------------------------------- | ------------ |
+| @typed/app                       | 1.0.0-beta.1 |
+| @typed/async-data                | 1.0.0-beta.1 |
+| @typed/fx                        | 2.0.0-beta.1 |
+| @typed/guard                     | 1.0.0-beta.1 |
+| @typed/id                        | 1.0.0-beta.1 |
+| @typed/navigation                | 1.0.0-beta.1 |
+| @typed/router                    | 1.0.0-beta.1 |
+| @typed/template                  | 1.0.0-beta.1 |
+| @typed/tsconfig                  | 1.0.0-beta.1 |
+| @typed/ui                        | 1.0.0-beta.1 |
+| @typed/vite-plugin               | 1.0.0-beta.1 |
+| @typed/virtual-modules           | 1.0.0-beta.1 |
+| @typed/virtual-modules-compiler  | 1.0.0-beta.1 |
 | @typed/virtual-modules-ts-plugin | 1.0.0-beta.1 |
-| @typed/virtual-modules-vite   | 1.0.0-beta.1 |
-| @typed/virtual-modules-vscode | 1.0.0-beta.1 |
+| @typed/virtual-modules-vite      | 1.0.0-beta.1 |
+| @typed/virtual-modules-vscode    | 1.0.0-beta.1 |
 
 
