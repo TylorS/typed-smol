@@ -8,27 +8,47 @@ import {
   type TypeInfoApiSession,
   type TypeInfoFileQueryOptions,
   type TypeInfoFileSnapshot,
+  type TypeProjectionStep,
   type WatchDependencyDescriptor,
 } from "./types.js";
 import type {
   AnyTypeNode,
   ArrayTypeNode,
+  ConditionalTypeNode,
+  ConstructorTypeNode,
+  EnumTypeNode,
+  FunctionSignature,
   FunctionTypeNode,
+  IndexedAccessTypeNode,
+  IndexSignatureInfo,
   ImportInfo,
   IntersectionTypeNode,
   LiteralTypeNode,
+  MappedTypeNode,
   NeverTypeNode,
   ObjectProperty,
   ObjectTypeNode,
+  OverloadSetTypeNode,
   PrimitiveTypeNode,
   ReferenceTypeNode,
+  TemplateLiteralTypeNode,
   TupleTypeNode,
   TypeNode,
+  TypeOperatorTypeNode,
   TypeParameter,
   TypeTargetSpec,
   UnionTypeNode,
   UnknownTypeNode,
 } from "./types.js";
+import {
+  getAliasedSymbol as resolveAliasedSymbol,
+  getBaseTypes as getBaseTypesInternal,
+  getIndexInfosOfType,
+  getSymbolExports,
+  getTypeReferenceTarget,
+  getTypeSymbol,
+  FALLBACK_OBJECT_FLAGS_MAPPED,
+} from "./internal/tsInternal.js";
 import {
   dedupeSorted,
   pathIsUnderBase,
@@ -61,6 +81,25 @@ export interface CreateTypeInfoApiSessionOptions {
    * Resolution happens internally; use this instead of typeTargets when you have module+export specs.
    */
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
+  /**
+   * When true (default) and typeTargetSpecs are provided but resolution finds zero targets,
+   * session creation throws. Set false to allow empty resolution (assignableTo will be undefined for all exports).
+   */
+  readonly failWhenNoTargetsResolved?: boolean;
+  /**
+   * Assignability check mode.
+   * - "strict": Use only checker.isTypeAssignableTo; no heuristic fallbacks. Correct TS semantics.
+   * - "compatibility" (default): Use checker.isTypeAssignableTo first, then fallbacks for generic/inheritance
+   *   when types come from different files (e.g. fixture vs bootstrap). Union sources require ALL
+   *   constituents to be assignable (sound union semantics).
+   */
+  readonly assignabilityMode?: "strict" | "compatibility";
+  /**
+   * Optional callback when an internal TS API or fallback path catches an error.
+   * Assignability and serialization may degrade (e.g. "not assignable" or safe fallback) without throwing.
+   * Use for observability in production; default behavior is unchanged when not provided.
+   */
+  readonly onInternalError?: (err: unknown, context: string) => void;
 }
 
 const compareByName = <T extends { readonly name: string }>(a: T, b: T): number =>
@@ -105,6 +144,8 @@ const serializeFunctionSignature = (
   depth: number,
   maxDepth: number,
   visited: Set<string>,
+  onInternalError?: (err: unknown, context: string) => void,
+  registry?: WeakMap<TypeNode, ts.Type>,
 ): { parameters: readonly TypeParameter[]; returnType: TypeNode } => {
   const parameters: TypeParameter[] = signature.getParameters().map((parameter) => {
     const declaration = parameter.valueDeclaration ?? parameter.declarations?.[0];
@@ -115,7 +156,7 @@ const serializeFunctionSignature = (
     return {
       name: parameter.getName(),
       optional: toOptionalFlag(parameter, tsMod),
-      type: serializeTypeNode(parameterType, checker, tsMod, depth + 1, maxDepth, visited),
+      type: serializeTypeNode(parameterType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
     };
   });
 
@@ -126,6 +167,8 @@ const serializeFunctionSignature = (
     depth + 1,
     maxDepth,
     visited,
+    onInternalError,
+    registry,
   );
 
   return {
@@ -141,6 +184,8 @@ const serializeObjectProperties = (
   depth: number,
   maxDepth: number,
   visited: Set<string>,
+  onInternalError?: (err: unknown, context: string) => void,
+  registry?: WeakMap<TypeNode, ts.Type>,
 ): readonly ObjectProperty[] => {
   const properties = checker.getPropertiesOfType(type);
   const snapshots = properties.map((property): ObjectProperty => {
@@ -153,11 +198,32 @@ const serializeObjectProperties = (
       name: property.getName(),
       optional: toOptionalFlag(property, tsMod),
       readonly: hasReadonlyModifier(declaration, tsMod),
-      type: serializeTypeNode(propertyType, checker, tsMod, depth + 1, maxDepth, visited),
+      type: serializeTypeNode(propertyType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
     };
   });
 
   return snapshots.sort(compareByName);
+};
+
+const serializeIndexSignature = (
+  type: ts.Type,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+  depth: number,
+  maxDepth: number,
+  visited: Set<string>,
+  onInternalError?: (err: unknown, context: string) => void,
+  registry?: WeakMap<TypeNode, ts.Type>,
+): IndexSignatureInfo | undefined => {
+  const infos = getIndexInfosOfType(type, checker);
+  if (!infos || infos.length === 0) return undefined;
+  const first = infos[0];
+  if (!first) return undefined;
+  return {
+    keyType: serializeTypeNode(first.keyType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+    valueType: serializeTypeNode(first.type, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+    readonly: first.isReadonly ?? false,
+  };
 };
 
 const primitiveTypeNode = (
@@ -199,19 +265,25 @@ const serializeTypeNode = (
   depth: number,
   maxDepth: number,
   visited: Set<string>,
+  onInternalError?: (err: unknown, context: string) => void,
+  registry?: WeakMap<TypeNode, ts.Type>,
 ): TypeNode => {
   const text = checker.typeToString(type);
+  const reg = <T extends TypeNode>(node: T): T => {
+    registry?.set(node, type);
+    return node;
+  };
   const typeId = `${(type as { id?: number }).id ?? "anon"}:${text}`;
 
   if (depth > maxDepth || visited.has(typeId)) {
-    return { kind: "reference", text };
+    return reg({ kind: "reference", text });
   }
 
   visited.add(typeId);
 
   const literal = asLiteral(type, checker, tsMod);
   if (literal) {
-    return literal;
+    return reg(literal);
   }
 
   if (type.isUnion()) {
@@ -219,10 +291,10 @@ const serializeTypeNode = (
       kind: "union",
       text,
       elements: type.types.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
       ),
     };
-    return union;
+    return reg(union);
   }
 
   if (type.isIntersection()) {
@@ -230,15 +302,139 @@ const serializeTypeNode = (
       kind: "intersection",
       text,
       elements: type.types.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
       ),
     };
-    return intersection;
+    return reg(intersection);
   }
 
   const primitive = primitiveTypeNode(type, checker, tsMod);
   if (primitive) {
-    return primitive;
+    return reg(primitive);
+  }
+
+  if ((type.flags & tsMod.TypeFlags.Enum) !== 0) {
+    const members: { name: string; value?: string | number }[] = [];
+    try {
+      const props = checker.getPropertiesOfType(type);
+      for (const sym of props) {
+        const name = sym.name;
+        let value: string | number | undefined;
+        const decl = sym.valueDeclaration;
+        if (decl && tsMod.isEnumMember?.(decl) && decl.initializer) {
+          const init = decl.initializer;
+          if (tsMod.isNumericLiteral?.(init)) {
+            value = parseInt((init as { text: string }).text, 10);
+          } else if (tsMod.isStringLiteral?.(init) || tsMod.isNoSubstitutionTemplateLiteral?.(init)) {
+            value = (init as { text: string }).text;
+          } else {
+            const cv = (checker as ts.TypeChecker & { getConstantValue?(n: ts.Node): string | number | undefined }).getConstantValue?.(init);
+            if (cv !== undefined) value = cv;
+          }
+        }
+        members.push(value !== undefined ? { name, value } : { name });
+      }
+    } catch (err) {
+      onInternalError?.(err, "enum-members");
+    }
+    const enumNode: EnumTypeNode = {
+      kind: "enum",
+      text,
+      members: members.length > 0 ? members : undefined,
+    };
+    return reg(enumNode);
+  }
+
+  if ((type.flags & tsMod.TypeFlags.Conditional) !== 0) {
+    const ct = type as ts.Type & {
+      checkType: ts.Type;
+      extendsType: ts.Type;
+      resolvedTrueType?: ts.Type;
+      resolvedFalseType?: ts.Type;
+      root?: { node?: { trueType?: ts.TypeNode; falseType?: ts.TypeNode } };
+    };
+    const trueType =
+      ct.resolvedTrueType ??
+      (ct.root?.node?.trueType
+        ? (checker as ts.TypeChecker & { getTypeFromTypeNode?(n: ts.TypeNode): ts.Type }).getTypeFromTypeNode?.(ct.root.node.trueType!)
+        : undefined);
+    const falseType =
+      ct.resolvedFalseType ??
+      (ct.root?.node?.falseType
+        ? (checker as ts.TypeChecker & { getTypeFromTypeNode?(n: ts.TypeNode): ts.Type }).getTypeFromTypeNode?.(ct.root.node.falseType!)
+        : undefined);
+    const conditional: ConditionalTypeNode = {
+      kind: "conditional",
+      text,
+      checkType: serializeTypeNode(ct.checkType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      extendsType: serializeTypeNode(ct.extendsType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      trueType: trueType
+        ? serializeTypeNode(trueType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        : UNKNOWN_NODE,
+      falseType: falseType
+        ? serializeTypeNode(falseType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        : UNKNOWN_NODE,
+    };
+    return reg(conditional);
+  }
+
+  if ((type.flags & tsMod.TypeFlags.IndexedAccess) !== 0) {
+    const iat = type as ts.Type & { objectType: ts.Type; indexType: ts.Type };
+    const indexed: IndexedAccessTypeNode = {
+      kind: "indexedAccess",
+      text,
+      objectType: serializeTypeNode(iat.objectType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      indexType: serializeTypeNode(iat.indexType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+    };
+    return reg(indexed);
+  }
+
+  if ((type.flags & tsMod.TypeFlags.TemplateLiteral) !== 0) {
+    const tlt = type as ts.Type & { texts?: readonly string[]; types?: readonly ts.Type[] };
+    const texts = tlt.texts ?? [];
+    const types = tlt.types ?? [];
+    const template: TemplateLiteralTypeNode = {
+      kind: "templateLiteral",
+      text,
+      texts,
+      types: types.map((t) => serializeTypeNode(t, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)),
+    };
+    return reg(template);
+  }
+
+  const objType = type as ts.Type & { objectFlags?: number };
+  const mappedFlag = tsMod.ObjectFlags?.Mapped ?? FALLBACK_OBJECT_FLAGS_MAPPED;
+  if (objType.objectFlags !== undefined && (objType.objectFlags & mappedFlag) !== 0) {
+    const mt = type as ts.Type & {
+      constraint?: ts.Type;
+      templateType?: ts.Type;
+      mappedType?: ts.Type;
+      modifierFlags?: number;
+    };
+    const constraintType = mt.constraint ?? (mt as ts.Type & { typeParameter?: { constraint?: ts.Type } }).typeParameter?.constraint;
+    const mappedType = mt.templateType ?? mt.mappedType;
+    const mapped: MappedTypeNode = {
+      kind: "mapped",
+      text,
+      constraintType: constraintType
+        ? serializeTypeNode(constraintType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        : UNKNOWN_NODE,
+      mappedType: mappedType
+        ? serializeTypeNode(mappedType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        : UNKNOWN_NODE,
+    };
+    return reg(mapped);
+  }
+
+  if ((type.flags & tsMod.TypeFlags.Index) !== 0) {
+    const idxType = type as ts.Type & { type: ts.Type };
+    const typeOperator: TypeOperatorTypeNode = {
+      kind: "typeOperator",
+      text,
+      operator: "keyof",
+      type: serializeTypeNode(idxType.type, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+    };
+    return reg(typeOperator);
   }
 
   if (checker.isTupleType(type)) {
@@ -247,10 +443,10 @@ const serializeTypeNode = (
       kind: "tuple",
       text,
       elements: typeArguments.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
       ),
     };
-    return tuple;
+    return reg(tuple);
   }
 
   if (checker.isArrayType(type)) {
@@ -260,10 +456,10 @@ const serializeTypeNode = (
       kind: "array",
       text,
       elements: element
-        ? [serializeTypeNode(element, checker, tsMod, depth + 1, maxDepth, visited)]
+        ? [serializeTypeNode(element, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)]
         : [UNKNOWN_NODE],
     };
-    return array;
+    return reg(array);
   }
 
   const referenceArguments = checker.getTypeArguments(type as ts.TypeReference);
@@ -272,14 +468,43 @@ const serializeTypeNode = (
       kind: "reference",
       text,
       typeArguments: referenceArguments.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited),
+        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
       ),
     };
-    return ref;
+    return reg(ref);
+  }
+
+  const constructSignatures = checker.getSignaturesOfType(type, tsMod.SignatureKind.Construct);
+  if (constructSignatures.length > 0) {
+    const sig = serializeFunctionSignature(
+      constructSignatures[0],
+      checker,
+      tsMod,
+      depth,
+      maxDepth,
+      visited,
+      onInternalError,
+      registry,
+    );
+    const ctor: ConstructorTypeNode = {
+      kind: "constructor",
+      text,
+      parameters: sig.parameters,
+      returnType: sig.returnType,
+    };
+    return reg(ctor);
   }
 
   const callSignatures = checker.getSignaturesOfType(type, tsMod.SignatureKind.Call);
   if (callSignatures.length > 0) {
+    if (callSignatures.length > 1) {
+      const signatures: FunctionSignature[] = callSignatures.map((s) => {
+        const serialized = serializeFunctionSignature(s, checker, tsMod, depth, maxDepth, visited, onInternalError, registry);
+        return { parameters: serialized.parameters, returnType: serialized.returnType };
+      });
+      const overload: OverloadSetTypeNode = { kind: "overloadSet", text, signatures };
+      return reg(overload);
+    }
     const signature = serializeFunctionSignature(
       callSignatures[0],
       checker,
@@ -287,6 +512,8 @@ const serializeTypeNode = (
       depth,
       maxDepth,
       visited,
+      onInternalError,
+      registry,
     );
     const fn: FunctionTypeNode = {
       kind: "function",
@@ -294,20 +521,72 @@ const serializeTypeNode = (
       parameters: signature.parameters,
       returnType: signature.returnType,
     };
-    return fn;
+    return reg(fn);
   }
 
+  const indexSig = serializeIndexSignature(type, checker, tsMod, depth, maxDepth, visited, onInternalError, registry);
   const object: ObjectTypeNode = {
     kind: "object",
     text,
-    properties: serializeObjectProperties(type, checker, tsMod, depth, maxDepth, visited),
+    properties: serializeObjectProperties(type, checker, tsMod, depth, maxDepth, visited, onInternalError, registry),
+    ...(indexSig !== undefined && { indexSignature: indexSig }),
   };
-  return object;
+  return reg(object);
 };
+
+/**
+ * Serialize a TypeScript type to TypeNode. For testing serializer branches (typeOperator, enum, etc).
+ * @internal
+ */
+export function serializeTypeForTest(
+  type: ts.Type,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+  maxDepth = 6,
+): TypeNode {
+  return serializeTypeNode(type, checker, tsMod, 0, maxDepth, new Set());
+}
+
+/**
+ * Generate bootstrap file content that imports all modules from typeTargetSpecs.
+ * Include this file in the program's rootNames so resolveTypeTargetsFromSpecs can
+ * find types without requiring user source to import them.
+ *
+ * @example
+ * ```ts
+ * const bootstrapContent = createTypeTargetBootstrapContent(HTTPAPI_TYPE_TARGET_SPECS);
+ * const bootstrapPath = join(tmpDir, "__typeTargetBootstrap.ts");
+ * writeFileSync(bootstrapPath, bootstrapContent);
+ * const program = ts.createProgram([...rootFiles, bootstrapPath], options, host);
+ * ```
+ */
+export function createTypeTargetBootstrapContent(
+  specs: readonly TypeTargetSpec[],
+): string {
+  const seen = new Set<string>();
+  const lines: string[] = [
+    "/**",
+    " * Auto-generated bootstrap for type target resolution.",
+    " * Imports canonical modules so resolveTypeTargetsFromSpecs can find types.",
+    " * Include in program rootNames when using typeTargetSpecs without user imports.",
+    " */",
+  ];
+  for (const spec of specs) {
+    if (seen.has(spec.module)) continue;
+    seen.add(spec.module);
+    const id = spec.module.replace(/\W+/g, "_").replace(/_+/g, "_") || "m";
+    lines.push(`import * as _${id} from "${spec.module}";`);
+    lines.push(`void _${id};`);
+  }
+  lines.push("export {};");
+  return lines.join("\n");
+}
 
 /**
  * Resolve type targets from program imports using the given specs.
  * Scans source files for imports from the specified modules and extracts types.
+ * Requires the program to include files that import from these modules (e.g.
+ * use createTypeTargetBootstrapContent and add to rootNames).
  */
 export function resolveTypeTargetsFromSpecs(
   program: ts.Program,
@@ -317,16 +596,63 @@ export function resolveTypeTargetsFromSpecs(
   const checker = program.getTypeChecker();
   const found = new Map<string, ts.Type>();
 
-  const getAliasedSymbol = (
-    checker: ts.TypeChecker,
+  const getTypeFromSymbol = (symbol: ts.Symbol): ts.Type | undefined => {
+    const aliased = resolveAliasedSymbol(symbol, checker, tsMod);
+    const decls = aliased.declarations ?? (aliased.valueDeclaration ? [aliased.valueDeclaration] : []);
+    const typeDecl = decls.find(
+      (d) =>
+        tsMod.isTypeAliasDeclaration(d) ||
+        tsMod.isInterfaceDeclaration(d) ||
+        tsMod.isTypeParameterDeclaration(d),
+    );
+    const decl = typeDecl ?? decls[0];
+    const useDeclaredType =
+      decl &&
+      (tsMod.isTypeAliasDeclaration(decl) ||
+        tsMod.isInterfaceDeclaration(decl) ||
+        tsMod.isTypeParameterDeclaration(decl));
+    const type = useDeclaredType
+      ? checker.getDeclaredTypeOfSymbol(aliased)
+      : decl
+        ? checker.getTypeOfSymbolAtLocation(aliased, decl)
+        : checker.getDeclaredTypeOfSymbol(aliased);
+    if (!type || (type.flags & tsMod.TypeFlags.Any) !== 0) return undefined;
+    return type;
+  };
+
+  const getTypeFromSpec = (
     symbol: ts.Symbol,
-    tsMod: typeof import("typescript"),
-  ): ts.Symbol => {
-    if ((symbol.flags & tsMod.SymbolFlags.Alias) === 0) return symbol;
-    const aliased = (
-      checker as ts.TypeChecker & { getAliasedSymbol(s: ts.Symbol): ts.Symbol }
-    ).getAliasedSymbol(symbol);
-    return aliased ?? symbol;
+    spec: (typeof specs)[number],
+  ): ts.Type | undefined => {
+    const primaryType = getTypeFromSymbol(symbol);
+    if (!primaryType || !spec.typeMember) return primaryType;
+    const aliased = resolveAliasedSymbol(symbol, checker, tsMod);
+    const exports = getSymbolExports(aliased);
+    if (!exports) return primaryType;
+    const memberSymbol = Array.from(exports.values()).find(
+      (s) => s.getName() === spec.typeMember,
+    );
+    if (!memberSymbol) return primaryType;
+    const memberType = checker.getDeclaredTypeOfSymbol(memberSymbol);
+    if (!memberType || (memberType.flags & tsMod.TypeFlags.Any) !== 0) return primaryType;
+    return memberType;
+  };
+
+  const addFromModuleSymbol = (moduleSymbol: ts.Symbol | undefined, moduleSpec: string): void => {
+    if (!moduleSymbol) return;
+    const exportsByName = new Map(
+      checker.getExportsOfModule(moduleSymbol).map((moduleExport) => [
+        moduleExport.getName(),
+        moduleExport,
+      ]),
+    );
+    for (const spec of specs) {
+      if (spec.module !== moduleSpec || found.has(spec.id)) continue;
+      const moduleExport = exportsByName.get(spec.exportName);
+      if (!moduleExport) continue;
+      const type = getTypeFromSpec(moduleExport, spec);
+      if (type) found.set(spec.id, type);
+    }
   };
 
   for (const sourceFile of program.getSourceFiles()) {
@@ -338,6 +664,7 @@ export function resolveTypeTargetsFromSpecs(
       const moduleSpec = moduleSpecifier.text;
       const binding = node.importClause;
       if (!binding) return;
+      const moduleSymbol = checker.getSymbolAtLocation(moduleSpecifier);
 
       const addNamed = (name: ts.ImportSpecifier) => {
         const exportName = (name.propertyName ?? name.name).getText(sourceFile);
@@ -345,14 +672,8 @@ export function resolveTypeTargetsFromSpecs(
         if (!spec || found.has(spec.id)) return;
         const symbol = checker.getSymbolAtLocation(name.name);
         if (!symbol) return;
-        const aliased = getAliasedSymbol(checker, symbol, tsMod);
-        const decl = aliased.valueDeclaration ?? aliased.declarations?.[0];
-        const type = decl
-          ? checker.getTypeOfSymbolAtLocation(aliased, decl)
-          : checker.getDeclaredTypeOfSymbol(aliased);
-        if (type && !(type.flags & tsMod.TypeFlags.Any)) {
-          found.set(spec.id, type);
-        }
+        const type = getTypeFromSpec(symbol, spec);
+        if (type) found.set(spec.id, type);
       };
 
       if (binding.namedBindings) {
@@ -360,22 +681,30 @@ export function resolveTypeTargetsFromSpecs(
           for (const elem of binding.namedBindings.elements) {
             addNamed(elem);
           }
+        } else if (tsMod.isNamespaceImport(binding.namedBindings)) {
+          const nsName = binding.namedBindings.name;
+          const symbol = checker.getSymbolAtLocation(nsName);
+          const nsType = symbol ? checker.getTypeOfSymbolAtLocation(symbol, nsName) : undefined;
+          for (const spec of specs) {
+            if (spec.module !== moduleSpec || found.has(spec.id)) continue;
+            const prop = nsType?.getProperty?.(spec.exportName);
+            if (!prop) continue;
+            const type = getTypeFromSpec(prop, spec);
+            if (type) found.set(spec.id, type);
+          }
+          addFromModuleSymbol(moduleSymbol, moduleSpec);
         }
       } else if (binding.name) {
-        const spec = specs.find((s) => s.module === moduleSpec);
-        if (!spec || found.has(spec.id)) return;
         const symbol = checker.getSymbolAtLocation(binding.name);
-        if (!symbol) return;
-        const nsType = checker.getTypeOfSymbolAtLocation(symbol, binding.name);
-        const prop = nsType.getProperty?.(spec.exportName);
-        if (!prop) return;
-        const decl = prop.valueDeclaration ?? prop.declarations?.[0];
-        const type = decl
-          ? checker.getTypeOfSymbolAtLocation(prop, decl)
-          : checker.getDeclaredTypeOfSymbol(prop);
-        if (type && !(type.flags & tsMod.TypeFlags.Any)) {
-          found.set(spec.id, type);
+        const nsType = symbol ? checker.getTypeOfSymbolAtLocation(symbol, binding.name) : undefined;
+        for (const spec of specs) {
+          if (spec.module !== moduleSpec || found.has(spec.id)) continue;
+          const prop = nsType?.getProperty?.(spec.exportName);
+          if (!prop) continue;
+          const type = getTypeFromSpec(prop, spec);
+          if (type) found.set(spec.id, type);
         }
+        addFromModuleSymbol(moduleSymbol, moduleSpec);
       }
     });
   }
@@ -386,18 +715,94 @@ export function resolveTypeTargetsFromSpecs(
 /**
  * Resolve an export symbol to the symbol it aliases when present (re-exports and import-then-export),
  * so we derive the type from the target file for cross-file type resolution.
- * getAliasedSymbol must only be called for symbols that are aliases (SymbolFlags.Alias).
  */
 const resolveExportSymbol = (
   symbol: ts.Symbol,
   checker: ts.TypeChecker,
   tsMod: typeof import("typescript"),
-): ts.Symbol => {
-  if ((symbol.flags & tsMod.SymbolFlags.Alias) === 0) return symbol;
-  const aliased = (
-    checker as ts.TypeChecker & { getAliasedSymbol(s: ts.Symbol): ts.Symbol }
-  ).getAliasedSymbol(symbol);
-  return aliased ?? symbol;
+): ts.Symbol => resolveAliasedSymbol(symbol, checker, tsMod);
+
+/** Get the base GenericType from a generic instantiation (TypeReference). */
+const getGenericBase = (
+  type: ts.Type,
+  checker: ts.TypeChecker,
+): (ts.Type & { symbol?: ts.Symbol }) | undefined => getTypeReferenceTarget(type, checker);
+
+/** Get the symbol representing the "root" type for comparison (handles GenericType and TypeReference). */
+const getComparisonSymbol = (
+  type: ts.Type,
+  checker: ts.TypeChecker,
+): ts.Symbol | undefined => {
+  const base = getGenericBase(type, checker);
+  if (base?.symbol) return base.symbol;
+  return getTypeSymbol(type);
+};
+
+type AssignabilityMode = "strict" | "compatibility";
+
+/**
+ * Assignability and serialization may use internal TS APIs or heuristics. When those
+ * paths throw, errors are caught and behavior degrades (e.g. "not assignable" or a
+ * safe fallback node); no errors are thrown to the caller. Use session option
+ * onInternalError for observability when provided.
+ */
+
+/**
+ * Check assignability. In strict mode, uses only checker.isTypeAssignableTo.
+ * In compatibility mode, adds fallbacks for generic instantiations and inheritance
+ * when types come from different files. Union sources require ALL constituents to
+ * be assignable (sound semantics).
+ */
+const isAssignableTo = (
+  source: ts.Type,
+  target: ts.Type,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+  mode: AssignabilityMode,
+): boolean => {
+  if (checker.isTypeAssignableTo(source, target)) return true;
+  if (mode === "strict") return false;
+
+  const tgtBase = getGenericBase(target, checker);
+  const tgtSymbol = tgtBase?.symbol ?? getTypeSymbol(target);
+  const matchSymbol = (sym: ts.Symbol | undefined) =>
+    sym && tgtSymbol && sym === tgtSymbol;
+
+  if (source.isUnion()) {
+    const constituents = source.types;
+    if (
+      !constituents.every((t) =>
+        isAssignableTo(t, target, checker, tsMod, mode),
+      )
+    )
+      return false;
+    return true;
+  }
+
+  const srcBase = getGenericBase(source, checker);
+  if (srcBase?.symbol && matchSymbol(srcBase.symbol)) return true;
+
+  const tgtTarget = getTypeReferenceTarget(target, checker);
+  if (srcBase?.symbol && tgtTarget?.symbol && srcBase.symbol === tgtTarget.symbol)
+    return true;
+
+  const srcSymbol = getComparisonSymbol(source, checker);
+  if (matchSymbol(srcSymbol)) return true;
+
+  if ((source.flags & tsMod.TypeFlags.Object) !== 0) {
+    const bases = getBaseTypesInternal(source as ts.InterfaceType, checker);
+    const hasMatchingBase = (bases ?? []).some((b) => {
+      const bSym = getTypeSymbol(b);
+      return bSym && matchSymbol(bSym);
+    });
+    if (hasMatchingBase) return true;
+  }
+
+  const tgtName = tgtSymbol?.getName();
+  if (tgtName && srcBase?.symbol?.getName() === tgtName) return true;
+  if (tgtName && srcSymbol?.getName() === tgtName) return true;
+
+  return false;
 };
 
 const serializeExport = (
@@ -405,7 +810,8 @@ const serializeExport = (
   checker: ts.TypeChecker,
   tsMod: typeof import("typescript"),
   maxDepth: number,
-  typeTargets: readonly ResolvedTypeTarget[] | undefined,
+  onInternalError?: (err: unknown, context: string) => void,
+  registry?: WeakMap<TypeNode, ts.Type>,
 ): ExportedTypeInfo => {
   const resolved = resolveExportSymbol(symbol, checker, tsMod);
   const declaration = resolved.valueDeclaration ?? resolved.declarations?.[0];
@@ -418,20 +824,12 @@ const serializeExport = (
       ? checker.getTypeOfSymbolAtLocation(resolved, declaration)
       : checker.getDeclaredTypeOfSymbol(resolved);
 
-  const assignableTo: Record<string, boolean> | undefined =
-    typeTargets && typeTargets.length > 0
-      ? Object.fromEntries(
-          typeTargets.map((t) => [t.id, checker.isTypeAssignableTo(exportedType, t.type)]),
-        )
-      : undefined;
-
   return {
     name: symbol.getName(),
     declarationKind: declaration ? tsMod.SyntaxKind[declaration.kind] : undefined,
     declarationText: declaration ? declaration.getText() : undefined,
     docs: tsMod.displayPartsToString(symbol.getDocumentationComment(checker)) || undefined,
-    type: serializeTypeNode(exportedType, checker, tsMod, 0, maxDepth, new Set()),
-    ...(assignableTo !== undefined && { assignableTo }),
+    type: serializeTypeNode(exportedType, checker, tsMod, 0, maxDepth, new Set(), onInternalError, registry),
   };
 };
 
@@ -479,8 +877,9 @@ const createFileSnapshot = (
   program: ts.Program,
   tsMod: typeof import("typescript"),
   maxDepth: number,
-  typeTargets: readonly ResolvedTypeTarget[] | undefined,
   includeImports: boolean,
+  onInternalError?: (err: unknown, context: string) => void,
+  registry?: WeakMap<TypeNode, ts.Type>,
 ): TypeInfoFileSnapshot => {
   const sourceFile = program.getSourceFile(filePath);
   if (!sourceFile) {
@@ -492,7 +891,9 @@ const createFileSnapshot = (
     moduleSymbol
       ? checker
           .getExportsOfModule(moduleSymbol)
-          .map((value) => serializeExport(value, checker, tsMod, maxDepth, typeTargets))
+          .map((value) =>
+            serializeExport(value, checker, tsMod, maxDepth, onInternalError, registry),
+          )
           .sort(compareByName)
       : [];
   const imports = includeImports ? collectImports(sourceFile, program, tsMod) : undefined;
@@ -504,18 +905,98 @@ const createFileSnapshot = (
   };
 };
 
+/**
+ * Apply a sequence of projection steps to a ts.Type, navigating to a sub-type.
+ * Returns undefined when any step fails (e.g. returnType on non-function).
+ */
+const applyProjection = (
+  type: ts.Type,
+  steps: readonly TypeProjectionStep[],
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+  onInternalError?: (err: unknown, context: string) => void,
+): ts.Type | undefined => {
+  let current: ts.Type = type;
+  for (const step of steps) {
+    try {
+      switch (step.kind) {
+        case "returnType": {
+          const sigs = checker.getSignaturesOfType(current, tsMod.SignatureKind.Call);
+          if (sigs.length === 0) return undefined;
+          current = checker.getReturnTypeOfSignature(sigs[0]);
+          break;
+        }
+        case "param": {
+          const sigs = checker.getSignaturesOfType(current, tsMod.SignatureKind.Call);
+          if (sigs.length === 0) return undefined;
+          const params = sigs[0].getParameters();
+          if (step.index < 0 || step.index >= params.length) return undefined;
+          const param = params[step.index];
+          const decl = param.valueDeclaration ?? param.declarations?.[0];
+          current = decl
+            ? checker.getTypeOfSymbolAtLocation(param, decl)
+            : checker.getDeclaredTypeOfSymbol(param);
+          break;
+        }
+        case "typeArg": {
+          const args = checker.getTypeArguments(current as ts.TypeReference);
+          if (step.index < 0 || step.index >= args.length) return undefined;
+          current = args[step.index];
+          break;
+        }
+        case "property": {
+          const prop = current.getProperty(step.name);
+          if (!prop) return undefined;
+          const decl = prop.valueDeclaration ?? prop.declarations?.[0];
+          current = decl
+            ? checker.getTypeOfSymbolAtLocation(prop, decl)
+            : checker.getDeclaredTypeOfSymbol(prop);
+          break;
+        }
+        default:
+          return undefined;
+      }
+    } catch (err) {
+      onInternalError?.(err, `applyProjection:${step.kind}`);
+      return undefined;
+    }
+  }
+  return current;
+};
+
 export const createTypeInfoApiSession = (
   options: CreateTypeInfoApiSessionOptions,
 ): TypeInfoApiSession => {
-  const effectiveTypeTargets =
+  let effectiveTypeTargets: readonly ResolvedTypeTarget[] | undefined =
     options.typeTargets ??
     (options.typeTargetSpecs?.length
       ? resolveTypeTargetsFromSpecs(options.program, options.ts, options.typeTargetSpecs)
       : undefined);
+
+  const failWhenNoTargets = options.failWhenNoTargetsResolved !== false;
+  if (
+    failWhenNoTargets &&
+    options.typeTargetSpecs &&
+    options.typeTargetSpecs.length > 0 &&
+    (!effectiveTypeTargets || effectiveTypeTargets.length === 0)
+  ) {
+    const modules = [...new Set(options.typeTargetSpecs.map((s) => s.module))].join(", ");
+    throw new Error(
+      `type targets could not be resolved; ensure program includes imports from: ${modules}. ` +
+        "Use createTypeTargetBootstrapContent(typeTargetSpecs) to generate a bootstrap file and add it to program rootNames.",
+    );
+  }
   const checker = options.program.getTypeChecker();
   const descriptors = new Map<string, WatchDependencyDescriptor>();
   const snapshotCache = new Map<string, TypeInfoFileSnapshot>();
+  const directoryCache = new Map<string, TypeInfoFileSnapshot[]>();
   const maxDepth = options.maxTypeDepth ?? DEFAULT_MAX_DEPTH;
+  const assignabilityMode: AssignabilityMode =
+    options.assignabilityMode ?? "compatibility";
+  const typeNodeRegistry = new WeakMap<TypeNode, ts.Type>();
+  const targetsByIdMap = new Map<string, ts.Type>(
+    (effectiveTypeTargets ?? []).map((t) => [t.id, t.type]),
+  );
 
   const registerDescriptor = (descriptor: WatchDependencyDescriptor): void => {
     if (descriptor.type === "file") {
@@ -582,12 +1063,20 @@ export const createTypeInfoApiSession = (
       options.program,
       options.ts,
       maxDepth,
-      effectiveTypeTargets,
       true,
+      options.onInternalError,
+      typeNodeRegistry,
     );
     snapshotCache.set(absolutePath, snapshot);
     return { ok: true, snapshot };
   };
+
+  const directoryCacheKey = (
+    baseDir: string,
+    normalizedGlobs: readonly string[],
+    recursive: boolean,
+  ): string =>
+    `${baseDir}\0${normalizedGlobs.join("\0")}\0${recursive ? "r" : "nr"}`;
 
   const directory: TypeInfoApi["directory"] = (relativeGlobs, queryOptions) => {
     const baseDirResult = validatePathSegment(queryOptions.baseDir, "baseDir");
@@ -597,6 +1086,10 @@ export const createTypeInfoApiSession = (
     const globsResult = validateRelativeGlobs(relativeGlobs, "relativeGlobs");
     if (!globsResult.ok) return [];
     const normalizedGlobs = dedupeSorted(globsResult.value);
+
+    const cacheKey = directoryCacheKey(baseDir, normalizedGlobs, queryOptions.recursive ?? false);
+    const cached = directoryCache.get(cacheKey);
+    if (cached !== undefined) return cached;
 
     if (queryOptions.watch) {
       registerDescriptor({
@@ -634,7 +1127,7 @@ export const createTypeInfoApiSession = (
 
     const program = options.program;
     const tsMod = options.ts;
-    return filteredMatches
+    const snapshots = filteredMatches
       .filter((filePath) => program.getSourceFile(filePath) !== undefined)
       .map((filePath) =>
         createFileSnapshot(
@@ -643,10 +1136,13 @@ export const createTypeInfoApiSession = (
           program,
           tsMod,
           maxDepth,
-          effectiveTypeTargets,
           true,
+          options.onInternalError,
+          typeNodeRegistry,
         ),
       );
+    directoryCache.set(cacheKey, snapshots);
+    return snapshots;
   };
 
   const resolveExport = (
@@ -659,11 +1155,28 @@ export const createTypeInfoApiSession = (
     return result.snapshot.exports.find((e) => e.name === exportName);
   };
 
+  const apiIsAssignableTo = (
+    node: TypeNode,
+    targetId: string,
+    projection?: readonly TypeProjectionStep[],
+  ): boolean => {
+    const sourceType = typeNodeRegistry.get(node);
+    if (!sourceType) return false;
+    const targetType = targetsByIdMap.get(targetId);
+    if (!targetType) return false;
+    const projected = projection?.length
+      ? applyProjection(sourceType, projection, checker, options.ts, options.onInternalError)
+      : sourceType;
+    if (!projected) return false;
+    return isAssignableTo(projected, targetType, checker, options.ts, assignabilityMode);
+  };
+
   return {
     api: {
       file,
       directory,
       resolveExport,
+      isAssignableTo: apiIsAssignableTo,
     },
     consumeDependencies: () => [...descriptors.values()],
   };

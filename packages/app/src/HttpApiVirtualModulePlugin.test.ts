@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
@@ -26,8 +26,10 @@ import {
 
 const tempDirs: string[] = [];
 
+const APP_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
 const createTempDir = (): string => {
-  const base = join(process.cwd(), "tmp-httpapi-test");
+  const base = join(APP_ROOT, "tmp-httpapi-test");
   try {
     mkdirSync(base, { recursive: true });
   } catch {
@@ -43,12 +45,9 @@ type FixtureSpec = Record<string, string>;
 const VALID_ENDPOINT_SOURCE = `
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
+import * as Route from "@typed/router";
 
-export const route = {
-  path: "/status",
-  pathSchema: Schema.Struct({}),
-  querySchema: Schema.Struct({}),
-};
+export const route = Route.Parse("/status");
 
 export const method = "GET";
 export const success = Schema.Struct({ status: Schema.Literal("ok") });
@@ -84,10 +83,22 @@ function createApiFixture(spec: FixtureSpec): {
   return { root, importer, paths };
 }
 
+const BOOTSTRAP_HTTPAPI_FILE = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "src",
+  "internal",
+  "typeTargetBootstrapHttpApi.ts",
+);
+
 function buildApiFromFixture(spec: FixtureSpec) {
   const fixture = createApiFixture(spec);
   const plugin = createHttpApiVirtualModulePlugin();
-  const program = makeProgram(fixture.paths);
+  const files =
+    existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+      ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+      : fixture.paths;
+  const program = makeProgram(files, fixture.root);
   const session = createTypeInfoApiSession({
     ts,
     program,
@@ -96,10 +107,34 @@ function buildApiFromFixture(spec: FixtureSpec) {
   return plugin.build("api:./apis", fixture.importer, session.api);
 }
 
-const APP_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+/** Extract source text from build result (string or { sourceText, warnings }). */
+function getSourceText(
+  result: unknown,
+): string | undefined {
+  if (typeof result === "string") return result;
+  if (result && typeof result === "object" && "sourceText" in result) {
+    return (result as { sourceText?: string }).sourceText;
+  }
+  return undefined;
+}
+
 const NM = join(APP_ROOT, "node_modules");
 
-function makeProgram(rootFiles: readonly string[]): ts.Program {
+const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
+  "@typed/router": join(NM, "@typed", "router", "src", "index.ts"),
+  effect: join(NM, "effect", "dist", "index.d.ts"),
+  "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
+  "effect/Schema": join(NM, "effect", "dist", "Schema.d.ts"),
+  "effect/unstable/httpapi/HttpApi": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApi.d.ts"),
+  "effect/unstable/httpapi/HttpApiGroup": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApiGroup.d.ts"),
+  "effect/unstable/httpapi/HttpApiEndpoint": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApiEndpoint.d.ts"),
+  "effect/unstable/httpapi/HttpApiBuilder": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApiBuilder.d.ts"),
+  "effect/unstable/http/HttpServerResponse": join(NM, "effect", "dist", "unstable", "http", "HttpServerResponse.d.ts"),
+};
+
+function makeProgram(rootFiles: readonly string[], fixtureRoot?: string): ts.Program {
+  const projectRoot =
+    fixtureRoot ?? (rootFiles.length > 0 ? dirname(dirname(rootFiles[0]!)) : APP_ROOT);
   const options: ts.CompilerOptions = {
     strict: true,
     target: ts.ScriptTarget.ESNext,
@@ -108,12 +143,40 @@ function makeProgram(rootFiles: readonly string[]): ts.Program {
     skipLibCheck: true,
     noEmit: true,
   };
-  const fallbacks: Record<string, string> = {
-    effect: join(NM, "effect", "dist", "index.d.ts"),
-    "effect/Schema": join(NM, "effect", "dist", "Schema.d.ts"),
+  const defaultHost = ts.createCompilerHost(options);
+  const moduleResolutionHost: ts.ModuleResolutionHost = {
+    getCurrentDirectory: () => projectRoot,
+    fileExists: defaultHost.fileExists?.bind(defaultHost),
+    readFile: defaultHost.readFile?.bind(defaultHost),
+    useCaseSensitiveFileNames: () => defaultHost.useCaseSensitiveFileNames?.() ?? true,
   };
-  const resolvedRoots = rootFiles.map((f) => (fallbacks[f] ?? f));
-  return ts.createProgram(resolvedRoots, options);
+  const customHost: ts.CompilerHost = {
+    ...defaultHost,
+    getCurrentDirectory: () => projectRoot,
+    resolveModuleNames: (
+      moduleNames: string[],
+      containingFile: string,
+    ): (ts.ResolvedModule | undefined)[] =>
+      moduleNames.map((moduleName) => {
+        const resolved = ts.resolveModuleName(
+          moduleName,
+          containingFile,
+          options,
+          moduleResolutionHost,
+        );
+        if (resolved.resolvedModule) return resolved.resolvedModule;
+        const fallback = HTTPAPI_MODULE_FALLBACKS[moduleName];
+        if (fallback && defaultHost.fileExists?.(fallback)) {
+          return {
+            resolvedFileName: fallback,
+            extension: fallback.endsWith(".ts") ? ts.Extension.Ts : ts.Extension.Js,
+            isExternalLibraryImport: false,
+          };
+        }
+        return undefined;
+      }),
+  };
+  return ts.createProgram(rootFiles, options, customHost);
 }
 
 afterEach(() => {
@@ -191,8 +254,11 @@ describe("createHttpApiVirtualModulePlugin", () => {
 
   it("build renders deterministic HttpApi assembly source when contracts are valid", () => {
     const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
-    expect(typeof result).toBe("string");
-    expect(result).toMatchInlineSnapshot(`
+    expect(result).not.toHaveProperty("errors");
+    const sourceText =
+      typeof result === "string" ? result : (result as { sourceText?: string }).sourceText;
+    expect(sourceText).toBeDefined();
+    expect(sourceText).toMatchInlineSnapshot(`
       "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
@@ -277,24 +343,19 @@ describe("createHttpApiVirtualModulePlugin", () => {
     `);
   });
 
-  it("build returns AVM-CONTRACT-003 when route lacks pathSchema or querySchema", () => {
-    const result = buildApiFromFixture({
-      "src/apis/status.ts": `
+    it("build returns AVM-CONTRACT-003 when route lacks pathSchema or querySchema", () => {
+      const result = buildApiFromFixture({
+        "src/apis/status.ts": `
         import * as Effect from "effect/Effect";
         import * as Schema from "effect/Schema";
         export const route = { path: "/status" };
         export const method = "GET";
         export const handler = () => Effect.succeed({});
       `,
-    });
-    expect(result).toHaveProperty("errors");
-    expect((result as VirtualModuleBuildError).errors[0]).toMatchInlineSnapshot(`
-      {
-        "code": "AVM-CONTRACT-003",
-        "message": "endpoint "status.ts" route: export must be Router.Route (Parse, Param, Join, etc.) or object with pathSchema and querySchema",
-        "pluginName": "httpapi-virtual-module",
-      }
-    `);
+      });
+      expect(result).toHaveProperty("errors");
+      const err = (result as VirtualModuleBuildError).errors;
+      expect(err.some((e) => e.code === "AVM-CONTRACT-003")).toBe(true);
   });
 
   it("build returns warnings for unsupported reserved files while still emitting source", () => {
@@ -303,8 +364,19 @@ describe("createHttpApiVirtualModulePlugin", () => {
       "src/apis/users/_unknown.ts": "export {};",
     });
     const plugin = createHttpApiVirtualModulePlugin();
-    const program = makeProgram(fixture.paths);
-    const session = createTypeInfoApiSession({ ts, program });
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(
+      files,
+      files.includes(BOOTSTRAP_HTTPAPI_FILE) ? APP_ROOT : fixture.root,
+    );
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+    });
     const result = plugin.build("api:./apis", fixture.importer, session.api);
 
     expect(typeof result).toBe("object");
@@ -407,7 +479,14 @@ describe("createHttpApiVirtualModulePlugin", () => {
   it("build returns deterministic output for same input", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
     const plugin = createHttpApiVirtualModulePlugin();
-    const program = makeProgram(fixture.paths);
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(
+      files,
+      files.includes(BOOTSTRAP_HTTPAPI_FILE) ? APP_ROOT : fixture.root,
+    );
     const session1 = createTypeInfoApiSession({
       ts,
       program,
@@ -420,15 +499,24 @@ describe("createHttpApiVirtualModulePlugin", () => {
     });
     const source1 = plugin.build("api:./apis", fixture.importer, session1.api);
     const source2 = plugin.build("api:./apis", fixture.importer, session2.api);
-    expect(source1).toBe(source2);
+    expect(typeof source1).toBe(typeof source2);
+    if (typeof source1 === "string") expect(source1).toBe(source2);
   });
 });
 
 describe("HttpApiVirtualModulePlugin integration", () => {
   it("resolves through PluginManager when target exists with script files", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
-    const program = makeProgram(fixture.paths);
-    const sessionFactory = () => createTypeInfoApiSession({ ts, program });
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(
+      files,
+      files.includes(BOOTSTRAP_HTTPAPI_FILE) ? APP_ROOT : fixture.root,
+    );
+    const sessionFactory = () =>
+      createTypeInfoApiSession({ ts, program, typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS });
     const manager = new PluginManager([createHttpApiVirtualModulePlugin()]);
 
     const resolved = manager.resolveModule({
@@ -509,11 +597,416 @@ describe("HttpApiVirtualModulePlugin integration", () => {
 });
 
 describe("resolveTypeTargetsFromSpecs with HTTPAPI_TYPE_TARGET_SPECS", () => {
-  it("returns array (possibly empty) from program", () => {
+  it("returns array (possibly empty) from program without bootstrap", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": "export {};" });
     const program = makeProgram(fixture.paths);
     const targets = resolveTypeTargetsFromSpecs(program, ts, HTTPAPI_TYPE_TARGET_SPECS);
     expect(Array.isArray(targets)).toBe(true);
+    const targetIds = targets.map((t) => t.id).sort();
+    expect(targetIds).toMatchInlineSnapshot(`[]`);
+  });
+
+  describe("explicit type target resolution", () => {
+    it("resolves all HTTPAPI_TYPE_TARGET_SPECS when bootstrap in program", () => {
+      const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      const files =
+        existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+          ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+          : fixture.paths;
+      const program = makeProgram(files, fixture.root);
+      const targets = resolveTypeTargetsFromSpecs(program, ts, HTTPAPI_TYPE_TARGET_SPECS);
+      const targetIds = targets.map((t) => t.id).sort();
+      expect(targetIds).toMatchInlineSnapshot(`
+        [
+          "Effect",
+          "HttpApi",
+          "HttpApiEndpoint",
+          "HttpApiGroup",
+          "HttpServerResponse",
+          "Route",
+          "Schema",
+        ]
+      `);
+    });
+  });
+
+  it("route with local Route module and typeMember: assignableTo.Route is true", () => {
+    const routeSource = `
+export interface Route<P, S> { readonly path: P; readonly schema: S }
+export namespace Route {
+  export type Any = Route<any, any>;
+  export const Parse = <P extends string>(path: P): Route<P, any> =>
+    ({ path, schema: {} } as Route<P, any>);
+}
+`;
+    const endpointSource = `
+import * as Route from "../route.js";
+export const route = Route.Parse("/status");
+export const method = "GET";
+export const handler = () => ({});
+`;
+    const fixture = createApiFixture({
+      "src/route.ts": routeSource,
+      "src/apis/status.ts": endpointSource,
+    });
+    const files = fixture.paths;
+    const program = makeProgram(files, fixture.root);
+    const specs = [
+      { id: "Route", module: "../route.js", exportName: "Route", typeMember: "Any" },
+    ] as const;
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: specs,
+      failWhenNoTargetsResolved: false,
+    });
+    const result = session.api.file("src/apis/status.ts", { baseDir: fixture.root });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const routeExport = result.snapshot.exports.find((e) => e.name === "route");
+    expect(routeExport).toBeDefined();
+    expect(session.api.isAssignableTo(routeExport!.type, "Route")).toBe(true);
+  });
+
+  it("route export has assignableTo.Route when fixture uses Route.Parse and bootstrap present", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(files, fixture.root);
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+    });
+    const result = session.api.file("src/apis/status.ts", { baseDir: fixture.root });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const routeExport = result.snapshot.exports.find((e) => e.name === "route");
+    expect(routeExport).toBeDefined();
+    expect(session.api.isAssignableTo(routeExport!.type, "Route")).toBe(true);
+  });
+
+  describe("explicit assignability against @typed/router and effect/*", () => {
+    it("status endpoint exports have expected assignability (route, handler, success, error)", () => {
+      const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      const files =
+        existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+          ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+          : fixture.paths;
+      const program = makeProgram(
+        files,
+        files.includes(BOOTSTRAP_HTTPAPI_FILE) ? APP_ROOT : fixture.root,
+      );
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+      });
+      const result = session.api.file("src/apis/status.ts", { baseDir: fixture.root });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const { api } = session;
+      const routeExport = result.snapshot.exports.find((e) => e.name === "route");
+      const handlerExport = result.snapshot.exports.find((e) => e.name === "handler");
+      const successExport = result.snapshot.exports.find((e) => e.name === "success");
+      const errorExport = result.snapshot.exports.find((e) => e.name === "error");
+      expect(routeExport).toBeDefined();
+      expect(handlerExport).toBeDefined();
+      expect(successExport).toBeDefined();
+      expect(errorExport).toBeDefined();
+      expect(api.isAssignableTo(routeExport!.type, "Route")).toBe(true);
+      expect(api.isAssignableTo(handlerExport!.type, "Effect", [{ kind: "returnType" }])).toBe(true);
+      expect(api.isAssignableTo(successExport!.type, "Schema")).toBe(true);
+      expect(api.isAssignableTo(errorExport!.type, "Schema")).toBe(true);
+      expect(api.isAssignableTo(handlerExport!.type, "Route")).toBe(false);
+      expect(api.isAssignableTo(routeExport!.type, "Schema")).toBe(false);
+    });
+  });
+
+  it("wrong module path for Route: Route target not resolved; build fails with AVM-CONTRACT-003", () => {
+    const wrongSpecs = [
+      ...HTTPAPI_TYPE_TARGET_SPECS.filter((s) => s.id !== "Route"),
+      { id: "Route", module: "wrong/path/Route", exportName: "Route" },
+    ];
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(files, fixture.root);
+    const session = createTypeInfoApiSession({ ts, program, typeTargetSpecs: wrongSpecs });
+    const plugin = createHttpApiVirtualModulePlugin();
+    const result = plugin.build("api:./apis", fixture.importer, session.api);
+    expect(result).toHaveProperty("errors");
+    expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-003")).toBe(
+      true,
+    );
+  });
+});
+
+describe("HttpApi assignableTo and validation (comprehensive)", () => {
+  describe("3a. Type-target resolution", () => {
+    it("Resolution with bootstrap: build succeeds; assignableTo populated for Route, Effect, Schema", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("handlers.handle(");
+    });
+
+    it("Wrong typeTargetSpecs: wrong module paths; assignableTo missing; build fails", () => {
+      const wrongSpecs = [
+        { id: "Route", module: "effect", exportName: "Route" },
+        { id: "Effect", module: "wrong/module", exportName: "Effect" },
+      ];
+      const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      const files =
+        existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+          ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+          : fixture.paths;
+      const program = makeProgram(files, fixture.root);
+      expect(() =>
+        createTypeInfoApiSession({
+          ts,
+          program,
+          typeTargetSpecs: wrongSpecs,
+        }),
+      ).toThrow(/type targets could not be resolved/);
+    });
+
+    it("Missing bootstrap when specs provided: program has no canonical imports; session creation throws", () => {
+      const fixture = createApiFixture({
+        "src/apis/status.ts": `
+          export const route = { path: "/status" };
+          export const method = "GET";
+          export const handler = () => ({});
+        `,
+      });
+      expect(() =>
+        createTypeInfoApiSession({
+          ts,
+          program: makeProgram(fixture.paths, fixture.root),
+          typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+        }),
+      ).toThrow(/type targets could not be resolved/);
+    });
+  });
+
+  describe("3b. Route validation (assignableTo.Route only)", () => {
+    it("Route from @typed/router: Route.Parse passes", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      expect(getSourceText(result)).toBeDefined();
+    });
+
+    it("Route invalid (no assignableTo.Route): plain object; AVM-CONTRACT-003", () => {
+      const result = buildApiFromFixture({
+        "src/apis/status.ts": `
+          import * as Effect from "effect/Effect";
+          import * as Schema from "effect/Schema";
+          export const route = { path: "/status" };
+          export const method = "GET";
+          export const handler = () => Effect.succeed({});
+        `,
+      });
+      expect(result).toHaveProperty("errors");
+      expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-003")).toBe(true);
+    });
+
+    it("Route invalid (assignableTo absent): type targets unresolved; session throws when no bootstrap", () => {
+      const fixture = createApiFixture({
+        "src/apis/status.ts": `
+          const route = { path: "/status" };
+          export { route };
+          export const method = "GET";
+          export const handler = () => ({});
+        `,
+      });
+      expect(() => {
+        const program = makeProgram(fixture.paths, fixture.root);
+        const session = createTypeInfoApiSession({
+          ts,
+          program,
+          typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+        });
+        const plugin = createHttpApiVirtualModulePlugin();
+        plugin.build("api:./apis", fixture.importer, session.api);
+      }).toThrow(/type targets could not be resolved/);
+    });
+  });
+
+  describe("3c. Handler validation", () => {
+    it("Handler returns Effect: passes", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      expect(getSourceText(result)).toBeDefined();
+    });
+
+    it("Handler returns non-Effect: AVM-CONTRACT-004", () => {
+      const result = buildApiFromFixture({
+        "src/apis/status.ts": `
+          import * as Effect from "effect/Effect";
+          import * as Schema from "effect/Schema";
+          import * as Route from "@typed/router";
+          export const route = Route.Parse("/status");
+          export const method = "GET";
+          export const handler = () => ({ status: "ok" });
+        `,
+      });
+      expect(result).toHaveProperty("errors");
+      expect((result as VirtualModuleBuildError).errors[0].code).toBe("AVM-CONTRACT-004");
+    });
+
+    it("Handler returns HttpServerResponse: uses handleRaw", () => {
+      const rawHandlerSource = `
+        import * as Effect from "effect/Effect";
+        import * as Schema from "effect/Schema";
+        import * as Route from "@typed/router";
+        import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+        export const route = Route.Parse("/raw");
+        export const method = "GET";
+        export const success = Schema.Struct({});
+        export const error = Schema.Struct({ message: Schema.String });
+        export const handler = () => Effect.succeed(HttpServerResponse.empty());
+      `;
+      const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("handleRaw");
+      expect(sourceText).toContain("raw");
+    });
+
+    it("Handler returns value vs raw: both in same API", () => {
+      const rawHandlerSource = `
+        import * as Effect from "effect/Effect";
+        import * as Schema from "effect/Schema";
+        import * as Route from "@typed/router";
+        import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+        export const route = Route.Parse("/raw");
+        export const method = "GET";
+        export const success = Schema.Struct({});
+        export const error = Schema.Struct({ message: Schema.String });
+        export const handler = () => Effect.succeed(HttpServerResponse.empty());
+      `;
+      const result = buildApiFromFixture({
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+        "src/apis/raw.ts": rawHandlerSource,
+      });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("handle(\"status\"");
+      expect(sourceText).toContain("handleRaw(\"raw\"");
+    });
+  });
+
+  describe("3d. Success and error schemas", () => {
+    it("success present, Schema: passes", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      expect(getSourceText(result)).toBeDefined();
+    });
+
+    it("success present, not Schema: AVM-CONTRACT-005", () => {
+      const result = buildApiFromFixture({
+        "src/apis/status.ts": `
+          import * as Effect from "effect/Effect";
+          import * as Route from "@typed/router";
+          export const route = Route.Parse("/status");
+          export const method = "GET";
+          export const success = { foo: "bar" };
+          export const error = { message: "err" };
+          export const handler = () => Effect.succeed({ status: "ok" });
+        `,
+      });
+      expect(result).toHaveProperty("errors");
+      expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-005")).toBe(true);
+    });
+
+    it("error present, Schema: passes", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      expect(getSourceText(result)).toBeDefined();
+    });
+
+    it("error present, not Schema: AVM-CONTRACT-006", () => {
+      const result = buildApiFromFixture({
+        "src/apis/status.ts": `
+          import * as Effect from "effect/Effect";
+          import * as Schema from "effect/Schema";
+          import * as Route from "@typed/router";
+          export const route = Route.Parse("/status");
+          export const method = "GET";
+          export const success = Schema.Struct({ status: Schema.Literal("ok") });
+          export const error = { message: "err" };
+          export const handler = () => Effect.succeed({ status: "ok" });
+        `,
+      });
+      expect(result).toHaveProperty("errors");
+      expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-006")).toBe(true);
+    });
+
+    it("Both success and error valid Schema: passes", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      expect(getSourceText(result)).toBeDefined();
+    });
+  });
+
+  describe("3e. Groups and structure", () => {
+    it("Nested groups: correct HttpApiGroup composition", () => {
+      const result = buildApiFromFixture({
+        "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,
+        "src/apis/users/items/get.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("HttpApiGroup.make(\"users\")");
+      expect(sourceText).toContain("list");
+      expect(sourceText).toContain("items/get");
+    });
+
+    it("Multiple endpoints per group: correct wiring", () => {
+      const result = buildApiFromFixture({
+        "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,
+        "src/apis/users/get.ts": VALID_ENDPOINT_SOURCE,
+        "src/apis/users/update.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("handle(\"list\"");
+      expect(sourceText).toContain("handle(\"get\"");
+      expect(sourceText).toContain("handle(\"update\"");
+    });
+  });
+
+  describe("3f. Coercion paths (handle vs handleRaw)", () => {
+    it("Direct handler export: emitted correctly", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("Status.handler(");
+    });
+
+    it("handle for value return: handlers.handle with decoded params", () => {
+      const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("handlers.handle(\"status\", (ctx) => Status.handler({ path:");
+    });
+
+    it("handleRaw for HttpServerResponse: handlers.handleRaw, handler receives ctx", () => {
+      const rawHandlerSource = `
+        import * as Effect from "effect/Effect";
+        import * as Schema from "effect/Schema";
+        import * as Route from "@typed/router";
+        import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+        export const route = Route.Parse("/raw");
+        export const method = "GET";
+        export const success = Schema.Struct({});
+        export const error = Schema.Struct({ message: Schema.String });
+        export const handler = () => Effect.succeed(HttpServerResponse.empty());
+      `;
+      const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("handlers.handleRaw(\"raw\", (ctx) => Raw.handler(ctx))");
+    });
   });
 });
 

@@ -1,5 +1,9 @@
 import { basename, dirname, join, relative } from "node:path";
-import type { ExportedTypeInfo, TypeInfoFileSnapshot } from "@typed/virtual-modules";
+import type {
+  ExportedTypeInfo,
+  TypeInfoApi,
+  TypeInfoFileSnapshot,
+} from "@typed/virtual-modules";
 import { stripScriptExtension, toPosixPath } from "./path.js";
 import {
   type CatchForm,
@@ -7,6 +11,8 @@ import {
   type RuntimeKind,
   classifyCatchForm,
   classifyDepsExport,
+  getCallableReturnType,
+  isCallableNode,
   typeNodeExpectsRefSubjectParam,
   typeNodeIsEffectOptionReturn,
   typeNodeIsRouteCompatible,
@@ -79,12 +85,14 @@ export type RouteContractViolation = {
     | "RVM-ROUTE-002"
     | "RVM-ENTRY-001"
     | "RVM-ENTRY-002"
+    | "RVM-ENTRY-003"
     | "RVM-LEAF-001"
     | "RVM-AMBIGUOUS-001"
     | "RVM-GUARD-001"
     | "RVM-CATCH-001"
     | "RVM-DEPS-001"
-    | "RVM-INFILE-COMPANION-001";
+    | "RVM-INFILE-COMPANION-001"
+    | "RVM-KIND-001";
   readonly message: string;
 };
 
@@ -105,19 +113,36 @@ function listEntrypointExports(snapshot: TypeInfoFileSnapshot): readonly Exporte
   );
 }
 
-function isRouteExportCompatible(routeExport: ExportedTypeInfo): boolean {
-  return typeNodeIsRouteCompatible(routeExport.type, routeExport.assignableTo);
+function isRouteExportCompatible(
+  routeExport: ExportedTypeInfo,
+  api: TypeInfoApi,
+): boolean {
+  return typeNodeIsRouteCompatible(routeExport.type, api);
 }
 
-function classifyEntrypointKind(entrypoint: ExportedTypeInfo): RuntimeKind {
-  return typeNodeToRuntimeKind(entrypoint.type, entrypoint.assignableTo);
+function classifyEntrypointKind(
+  entrypoint: ExportedTypeInfo,
+  api: TypeInfoApi,
+): RuntimeKind {
+  const { type } = entrypoint;
+  const nodeForKind = isCallableNode(type) ? (getCallableReturnType(type) ?? type) : type;
+  return typeNodeToRuntimeKind(nodeForKind, api);
 }
 
-function getEntryPointName(entrypoint: ExportedTypeInfo): EntryPointExport {
+function getEntryPointName(
+  entrypoint: ExportedTypeInfo,
+  relPath: string,
+): { ok: true; value: EntryPointExport } | { ok: false; violation: RouteContractViolation } {
   if (!isEntryPointExport(entrypoint.name)) {
-    throw new Error(`RVM: invalid entrypoint export name ${JSON.stringify(entrypoint.name)}`);
+    return {
+      ok: false,
+      violation: {
+        code: "RVM-ENTRY-003",
+        message: `invalid entrypoint export name ${JSON.stringify(entrypoint.name)} in ${relPath}`,
+      },
+    };
   }
-  return entrypoint.name;
+  return { ok: true, value: entrypoint.name };
 }
 
 function resolveComposedConcernsForLeaf(
@@ -178,6 +203,7 @@ export function siblingCompanionPath(leafFilePath: string, kind: ConcernKind): s
 export function buildRouteDescriptors(
   snapshots: readonly TypeInfoFileSnapshot[],
   baseDir: string,
+  api: TypeInfoApi,
 ): {
   readonly descriptors: readonly RouteDescriptor[];
   readonly violations: readonly RouteContractViolation[];
@@ -205,7 +231,7 @@ export function buildRouteDescriptors(
       continue;
     }
 
-    if (!isRouteExportCompatible(routeExport)) {
+    if (!isRouteExportCompatible(routeExport, api)) {
       violations.push({
         code: "RVM-ROUTE-002",
         message: `route export is not structurally compatible with Route in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
@@ -231,10 +257,23 @@ export function buildRouteDescriptors(
 
     const entrypoint = entrypoints[0]!;
     const relPath = toPosixPath(relative(baseDir, snapshot.filePath));
-    const runtimeKind = classifyEntrypointKind(entrypoint);
-    const entrypointIsFunction = entrypoint.type.kind === "function";
+    const entrypointNameResult = getEntryPointName(entrypoint, relPath);
+    if (!entrypointNameResult.ok) {
+      violations.push(entrypointNameResult.violation);
+      continue;
+    }
+    const runtimeKind = classifyEntrypointKind(entrypoint, api);
+    if (runtimeKind === "unknown") {
+      violations.push({
+        code: "RVM-KIND-001",
+        message: `handler/template/default runtime kind could not be determined (type targets missing). Ensure route files import from @typed/fx, effect, etc. in ${relPath}`,
+      });
+      continue;
+    }
+    const entrypointIsFunction = isCallableNode(entrypoint.type);
     const entrypointExpectsRefSubject =
-      entrypointIsFunction && typeNodeExpectsRefSubjectParam(entrypoint.type);
+      entrypointIsFunction &&
+      typeNodeExpectsRefSubjectParam(entrypoint.type, api);
     const composedConcerns = resolveComposedConcernsForLeaf(relPath, existingPaths);
     const inFileConcerns: InFileConcerns = {};
     for (const name of ["layout", "dependencies", "catch", "guard"] as const) {
@@ -242,7 +281,7 @@ export function buildRouteDescriptors(
     }
     descriptors.push({
       filePath: relPath,
-      entrypointExport: getEntryPointName(entrypoint),
+      entrypointExport: entrypointNameResult.value,
       runtimeKind,
       entrypointIsFunction,
       entrypointExpectsRefSubject,
@@ -293,14 +332,14 @@ export function buildRouteDescriptors(
       });
       continue;
     }
-    if (guardExport.type.kind !== "function") {
+    if (!isCallableNode(guardExport.type)) {
       guardViolations.push({
         code: "RVM-GUARD-001",
         message: `guard export must be a function (Effect<Option<*>, *, *>): ${relPath}`,
       });
       continue;
     }
-    if (!typeNodeIsEffectOptionReturn(guardExport.type)) {
+    if (!typeNodeIsEffectOptionReturn(guardExport.type, api)) {
       guardViolations.push({
         code: "RVM-GUARD-001",
         message: `guard return type must be Effect<Option<*>, *, *>: ${relPath}`,
@@ -308,9 +347,11 @@ export function buildRouteDescriptors(
       continue;
     }
     if (!isGuardExportName(guardExport.name)) {
-      throw new Error(
-        `RVM: guard export name ${JSON.stringify(guardExport.name)} not in GUARD_EXPORT_NAMES`,
-      );
+      guardViolations.push({
+        code: "RVM-GUARD-001",
+        message: `guard export name ${JSON.stringify(guardExport.name)} not in [guard, default]: ${relPath}`,
+      });
+      continue;
     }
     guardExportByPath[relPath] = guardExport.name;
   }
@@ -337,12 +378,22 @@ export function buildRouteDescriptors(
       continue;
     }
     if (!isCatchExportName(catchExport.name)) {
-      throw new Error(
-        `RVM: catch export name ${JSON.stringify(catchExport.name)} not in CATCH_EXPORT_NAMES`,
-      );
+      catchViolations.push({
+        code: "RVM-CATCH-001",
+        message: `catch export name ${JSON.stringify(catchExport.name)} not in [catch, catchFn]: ${relPath}`,
+      });
+      continue;
+    }
+    const catchForm = classifyCatchForm(catchExport.type, api);
+    if (catchForm.returnKind === "unknown") {
+      catchViolations.push({
+        code: "RVM-KIND-001",
+        message: `catch return kind could not be determined (type targets missing): ${relPath}`,
+      });
+      continue;
     }
     catchExportByPath[relPath] = catchExport.name;
-    catchFormByPath[relPath] = classifyCatchForm(catchExport.type, catchExport.assignableTo);
+    catchFormByPath[relPath] = catchForm;
   }
 
   for (const d of dedupedDescriptors) {
@@ -356,12 +407,22 @@ export function buildRouteDescriptors(
       snapshot.exports.find((e) => e.name === CATCH_EXPORT_NAMES[1]);
     if (catchExport) {
       if (!isCatchExportName(catchExport.name)) {
-        throw new Error(
-          `RVM: catch export name ${JSON.stringify(catchExport.name)} not in CATCH_EXPORT_NAMES`,
-        );
+        catchViolations.push({
+          code: "RVM-CATCH-001",
+          message: `catch export name ${JSON.stringify(catchExport.name)} not in [catch, catchFn]: ${d.filePath}`,
+        });
+        continue;
       }
-      catchExportByPath[d.filePath] = catchExport.name;
-      catchFormByPath[d.filePath] = classifyCatchForm(catchExport.type, catchExport.assignableTo);
+      const catchForm = classifyCatchForm(catchExport.type, api);
+      if (catchForm.returnKind === "unknown") {
+        catchViolations.push({
+          code: "RVM-KIND-001",
+          message: `catch return kind could not be determined (type targets missing): ${d.filePath}`,
+        });
+      } else {
+        catchExportByPath[d.filePath] = catchExport.name;
+        catchFormByPath[d.filePath] = catchForm;
+      }
     }
   }
 
@@ -383,7 +444,7 @@ export function buildRouteDescriptors(
       });
       continue;
     }
-    const kind = classifyDepsExport(defaultExport.type, defaultExport.assignableTo);
+    const kind = classifyDepsExport(defaultExport.type, api);
     if (kind === "unknown") {
       depsViolations.push({
         code: "RVM-DEPS-001",

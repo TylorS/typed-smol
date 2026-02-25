@@ -13,6 +13,7 @@ import {
 } from "./internal/path.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
+import { ROUTER_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
 const DEFAULT_PREFIX = "router:";
 const DEFAULT_PLUGIN_NAME = "router-virtual-module";
@@ -137,6 +138,7 @@ const FAIL_ORDER: RouteContractViolation["code"][] = [
   "RVM-GUARD-001",
   "RVM-CATCH-001",
   "RVM-DEPS-001",
+  "RVM-KIND-001",
 ];
 
 function failOnViolations(
@@ -162,6 +164,7 @@ export const createRouterVirtualModulePlugin = (
 
   return {
     name,
+    typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
     shouldResolve(id, importer) {
       const resolved = resolveRouterTargetDirectory(id, importer, prefix);
       if (!resolved.ok) return false;
@@ -199,7 +202,7 @@ export const createRouterVirtualModulePlugin = (
         catchExportByPath,
         catchFormByPath,
         depsFormByPath,
-      } = buildRouteDescriptors(snapshots, resolved.targetDirectory);
+      } = buildRouteDescriptors(snapshots, resolved.targetDirectory, api);
 
       const toDiagnostic = (v: RouteContractViolation) => ({
         code: v.code,

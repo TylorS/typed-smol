@@ -1,10 +1,14 @@
 /// <reference types="node" />
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
-import { createTypeInfoApiSession, PluginManager } from "@typed/virtual-modules";
+import {
+  createTypeInfoApiSession,
+  PluginManager,
+  resolveTypeTargetsFromSpecs,
+} from "@typed/virtual-modules";
 import type { VirtualModuleBuildError } from "@typed/virtual-modules";
 import {
   createRouterVirtualModulePlugin,
@@ -12,7 +16,6 @@ import {
   resolveRouterTargetDirectory,
   ROUTER_TYPE_TARGET_SPECS,
 } from "./index.js";
-
 const tempDirs: string[] = [];
 
 const createTempDir = (): string => {
@@ -58,7 +61,7 @@ function createFixture(spec: FixtureSpec): {
 
 /** Valid guard export: function returning Effect<Option<*>> so guard validation passes. */
 const validGuardExport =
-  'import * as Effect from "effect"; import * as Option from "effect/Option"; export const guard = (): Effect.Effect<Option.Option<unknown>> => Effect.succeed(Option.none());';
+  'import * as Effect from "effect/Effect"; import * as Option from "effect/Option"; export const guard = (): Effect.Effect<Option.Option<unknown>> => Effect.succeed(Option.none());';
 
 /**
  * Build router virtual module source from a declarative fixture and optional program file list.
@@ -69,7 +72,14 @@ function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[]) {
   const fixture = createFixture(spec);
   const plugin = createRouterVirtualModulePlugin();
   const files = programFiles ?? fixture.paths;
-  const program = makeProgram(files);
+  const programFilesWithBootstrap =
+    existsSync(BOOTSTRAP_FILE) && !files.includes(BOOTSTRAP_FILE)
+      ? [...files, BOOTSTRAP_FILE]
+      : files;
+  const program = makeProgram(
+    programFilesWithBootstrap,
+    programFilesWithBootstrap.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root,
+  );
   const session = createTypeInfoApiSession({
     ts,
     program,
@@ -80,16 +90,23 @@ function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[]) {
 
 const APP_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const NM = join(APP_ROOT, "node_modules");
+/** Bootstrap file in the real project to ensure type target resolution finds canonical targets. */
+const BOOTSTRAP_FILE = resolve(APP_ROOT, "src", "internal", "typeTargetBootstrap.ts");
 
 const MODULE_FALLBACKS: Record<string, string> = {
   "@typed/router": join(NM, "@typed", "router", "src", "index.ts"),
   "@typed/fx": join(NM, "@typed", "fx", "src", "index.ts"),
+  "@typed/fx/Fx": join(NM, "@typed", "fx", "src", "Fx", "index.ts"),
+  "@typed/fx/RefSubject": join(NM, "@typed", "fx", "src", "RefSubject", "index.ts"),
   effect: join(NM, "effect", "dist", "index.d.ts"),
+  "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
+  "effect/Stream": join(NM, "effect", "dist", "Stream.d.ts"),
   "effect/Layer": join(NM, "effect", "dist", "Layer.d.ts"),
   "effect/ServiceMap": join(NM, "effect", "dist", "ServiceMap.d.ts"),
 };
 
-function makeProgram(rootFiles: readonly string[]): ts.Program {
+function makeProgram(rootFiles: readonly string[], fixtureRoot?: string): ts.Program {
+  const projectRoot = fixtureRoot ?? (rootFiles.length > 0 ? dirname(dirname(rootFiles[0])) : APP_ROOT);
   const options: ts.CompilerOptions = {
     strict: true,
     target: ts.ScriptTarget.ESNext,
@@ -100,14 +117,14 @@ function makeProgram(rootFiles: readonly string[]): ts.Program {
   };
   const defaultHost = ts.createCompilerHost(options);
   const moduleResolutionHost: ts.ModuleResolutionHost = {
-    getCurrentDirectory: () => APP_ROOT,
+    getCurrentDirectory: () => projectRoot,
     fileExists: defaultHost.fileExists?.bind(defaultHost),
     readFile: defaultHost.readFile?.bind(defaultHost),
     useCaseSensitiveFileNames: () => defaultHost.useCaseSensitiveFileNames?.() ?? true,
   };
   const customHost: ts.CompilerHost = {
     ...defaultHost,
-    getCurrentDirectory: () => APP_ROOT,
+    getCurrentDirectory: () => projectRoot,
     resolveModuleNames: (
       moduleNames: string[],
       containingFile: string,
@@ -167,6 +184,88 @@ afterEach(() => {
       rmSync(dir, { recursive: true, force: true });
     }
   }
+});
+
+describe("resolveTypeTargetsFromSpecs with ROUTER_TYPE_TARGET_SPECS", () => {
+  describe("explicit type target resolution", () => {
+    it("resolves all ROUTER_TYPE_TARGET_SPECS when bootstrap in program", () => {
+      const fixture = createFixture({
+        "src/routes/home.ts": route("/", "export const handler = 1;"),
+      });
+      const files =
+        existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
+          ? [...fixture.paths, BOOTSTRAP_FILE]
+          : fixture.paths;
+      const program = makeProgram(files, files.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root);
+      const targets = resolveTypeTargetsFromSpecs(program, ts, ROUTER_TYPE_TARGET_SPECS);
+      const targetIds = targets.map((t) => t.id).sort();
+      expect(targetIds).toMatchInlineSnapshot(`
+        [
+          "Cause",
+          "Effect",
+          "Fx",
+          "Layer",
+          "Option",
+          "RefSubject",
+          "Route",
+          "ServiceMap",
+          "Stream",
+        ]
+      `);
+    });
+  });
+
+  describe("explicit assignability against @typed/router and effect/*", () => {
+    it("route and handler exports have expected assignability (Route, Fx/Effect)", () => {
+      const fixture = createFixture({
+        "src/routes/home.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
+      });
+      const files =
+        existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
+          ? [...fixture.paths, BOOTSTRAP_FILE]
+          : fixture.paths;
+      const program = makeProgram(files, files.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root);
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+      });
+      const result = session.api.file("src/routes/home.ts", { baseDir: fixture.root });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const { api } = session;
+      const routeExport = result.snapshot.exports.find((e) => e.name === "route");
+      const handlerExport = result.snapshot.exports.find((e) => e.name === "handler");
+      expect(routeExport).toBeDefined();
+      expect(handlerExport).toBeDefined();
+      expect(api.isAssignableTo(routeExport!.type, "Route")).toBe(true);
+      expect(api.isAssignableTo(routeExport!.type, "Fx")).toBe(false);
+      expect(api.isAssignableTo(handlerExport!.type, "Fx")).toBe(true);
+      expect(api.isAssignableTo(handlerExport!.type, "Route")).toBe(false);
+    });
+
+    it("Effect-valued handler has returnTypeAssignableTo.Effect when returning Effect", () => {
+      const fixture = createFixture({
+        "src/routes/effect.ts": `import * as Effect from "effect/Effect"; ${routeExportForPath("/")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
+      });
+      const files =
+        existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
+          ? [...fixture.paths, BOOTSTRAP_FILE]
+          : fixture.paths;
+      const program = makeProgram(files, files.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root);
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+      });
+      const result = session.api.file("src/routes/effect.ts", { baseDir: fixture.root });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const handlerExport = result.snapshot.exports.find((e) => e.name === "handler");
+      expect(handlerExport).toBeDefined();
+      expect(session.api.isAssignableTo(handlerExport!.type, "Effect")).toBe(true);
+    });
+  });
 });
 
 // Snapshot test matrix and naming: .docs/workflows/20250221-1200-router-snapshot-test-design/00-router-snapshot-test-design.md
@@ -290,11 +389,12 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/api/item.ts": route("/", "export const handler = 1;"),
       "src/routes/api/item.catch.ts": "export const catchFn = () => null;",
     });
+    expect(typeof source).toBe("string");
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Effect from "effect";
+      import * as Effect from "effect/Effect";
       import * as Cause from "effect/Cause";
       import * as Result from "effect/Result";
       import * as ApiItem from "./routes/api/item.js";
@@ -476,7 +576,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("guard default export is accepted and emitted", () => {
     const defaultGuardExport =
-      'import * as Effect from "effect"; import * as Option from "effect/Option"; export default function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.succeed(Option.none()); }';
+      'import * as Effect from "effect/Effect"; import * as Option from "effect/Option"; export default function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.succeed(Option.none()); }';
     const result = buildRouterFromFixture({
       "src/routes/users.ts": route("/", "export const handler = 1;"),
       "src/routes/users.guard.ts": defaultGuardExport,
@@ -509,7 +609,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("effect-valued handler is lifted with Fx.fromEffect (T-07, TS-5)", () => {
     const source = buildRouterFromFixture({
-      "src/routes/effect.ts": `import * as Effect from "effect"; ${routeExportForPath("/")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
+      "src/routes/effect.ts": `import * as Effect from "effect/Effect"; ${routeExportForPath("/")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
@@ -517,7 +617,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as MEffect from "./routes/effect.js";
 
-      const router = Router.match(MEffect.route, constant(Fx.succeed(MEffect.handler)));
+      const router = Router.match(MEffect.route, constant(Fx.fromEffect(MEffect.handler)));
       export default router;
       "
     `);
@@ -525,7 +625,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("fx-valued handler is passed through (constant(ref)) since already Fx (T-07, TS-5)", () => {
     const source = buildRouterFromFixture({
-      "src/routes/fx.ts": `import * as Fx from "@typed/fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
+      "src/routes/fx.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
@@ -533,7 +633,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
-      const router = Router.match(MFx.route, constant(Fx.succeed(MFx.handler)));
+      const router = Router.match(MFx.route, constant(MFx.handler));
       export default router;
       "
     `);
@@ -541,7 +641,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("stream-valued handler is classified as stream (fromStream) (T-07, TS-5)", () => {
     const source = buildRouterFromFixture({
-      "src/routes/stream.ts": `import { Stream } from "effect"; ${routeExportForPath("/")} export const handler = Stream.succeed(1);`,
+      "src/routes/stream.ts": `import * as Stream from "effect/Stream"; ${routeExportForPath("/")} export const handler = Stream.succeed(1);`,
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
@@ -573,7 +673,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("effect-like function handler: passes through when return type is Fx", () => {
     const result = buildRouterFromFixture({
-      "src/routes/async.ts": `import * as Fx from "@typed/fx"; ${routeExportForPath("/")} export const handler = (_p: unknown): Fx.Fx<number> => Fx.succeed(1);`,
+      "src/routes/async.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler = (_p: unknown): Fx.Fx<number> => Fx.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     const source = result as string;
@@ -583,7 +683,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as Async from "./routes/async.js";
 
-      const router = Router.match(Async.route, (params) => Fx.map(params, Async.handler));
+      const router = Router.match(Async.route, Async.handler);
       export default router;
       "
     `);
@@ -623,7 +723,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("handler matrix: Effect value uses fromEffect when type resolves as Effect", () => {
     const result = buildRouterFromFixture({
-      "src/routes/e.ts": `import * as Effect from "effect"; ${routeExportForPath("/")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
+      "src/routes/e.ts": `import * as Effect from "effect/Effect"; ${routeExportForPath("/")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -632,7 +732,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as E from "./routes/e.js";
 
-      const router = Router.match(E.route, constant(Fx.succeed(E.handler)));
+      const router = Router.match(E.route, constant(Fx.fromEffect(E.handler)));
       export default router;
       "
     `);
@@ -640,7 +740,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("handler matrix: Effect function uses fromEffect when return type resolves as Effect", () => {
     const result = buildRouterFromFixture({
-      "src/routes/ef.ts": `import * as Effect from "effect"; ${routeExportForPath("/")} export const handler = (_p: unknown): Effect.Effect<number> => Effect.succeed(1);`,
+      "src/routes/ef.ts": `import * as Effect from "effect/Effect"; ${routeExportForPath("/")} export const handler = (_p: unknown): Effect.Effect<number> => Effect.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -649,7 +749,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as Ef from "./routes/ef.js";
 
-      const router = Router.match(Ef.route, (params) => Fx.map(params, Ef.handler));
+      const router = Router.match(Ef.route, (params) => Fx.mapEffect(params, Ef.handler));
       export default router;
       "
     `);
@@ -657,7 +757,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("handler matrix: Stream value uses fromStream when type resolves as Stream", () => {
     const result = buildRouterFromFixture({
-      "src/routes/s.ts": `import { Stream } from "effect"; ${routeExportForPath("/")} export const handler = Stream.succeed(1);`,
+      "src/routes/s.ts": `import * as Stream from "effect/Stream"; ${routeExportForPath("/")} export const handler = Stream.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -674,7 +774,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("handler matrix: Stream function uses fromStream when return type resolves as Stream", () => {
     const result = buildRouterFromFixture({
-      "src/routes/sf.ts": `import { Stream } from "effect"; ${routeExportForPath("/")} export const handler = (_p: unknown) => Stream.succeed(1);`,
+      "src/routes/sf.ts": `import * as Stream from "effect/Stream"; ${routeExportForPath("/")} export const handler = (_p: unknown) => Stream.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -689,9 +789,39 @@ describe("RouterVirtualModulePlugin", () => {
     `);
   });
 
+  it("wrong typeTargetSpecs module path yields no assignableTo and RVM-KIND-001 (structural compatibility required)", () => {
+    const wrongSpecs = [
+      { id: "Fx", module: "nonexistent/fx", exportName: "Fx" } as const,
+      { id: "Route", module: "nonexistent/router", exportName: "Route" } as const,
+    ];
+    const fixture = createFixture({
+      "src/routes/fx.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
+    });
+    const program = makeProgram(fixture.paths);
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: wrongSpecs,
+      failWhenNoTargetsResolved: false,
+    });
+    const result = session.api.file("./src/routes/fx.ts", { baseDir: fixture.root });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const handlerExport = result.snapshot.exports.find((e) => e.name === "handler");
+    expect(handlerExport).toBeDefined();
+    expect(handlerExport!.assignableTo?.Fx).toBeUndefined();
+    const plugin = createRouterVirtualModulePlugin();
+    const buildResult = plugin.build("router:./routes", fixture.importer, session.api);
+    expect(buildResult).toMatchObject({ errors: expect.any(Array) });
+    const codes = (buildResult as VirtualModuleBuildError).errors.map((e) => e.code);
+    expect(
+      codes.some((c) => c === "RVM-KIND-001" || c === "RVM-ROUTE-002"),
+    ).toBe(true);
+  });
+
   it("handler matrix: Fx value pass-through when type resolves as Fx", () => {
     const result = buildRouterFromFixture({
-      "src/routes/x.ts": `import * as Fx from "@typed/fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
+      "src/routes/x.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -700,7 +830,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as X from "./routes/x.js";
 
-      const router = Router.match(X.route, constant(Fx.succeed(X.handler)));
+      const router = Router.match(X.route, constant(X.handler));
       export default router;
       "
     `);
@@ -708,7 +838,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("handler matrix: Fx function pass-through when return type resolves as Fx", () => {
     const result = buildRouterFromFixture({
-      "src/routes/xf.ts": `import * as Fx from "@typed/fx"; ${routeExportForPath("/")} export const handler = (_p: unknown): Fx.Fx<number> => Fx.succeed(1);`,
+      "src/routes/xf.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler = (_p: unknown): Fx.Fx<number> => Fx.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -717,7 +847,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as Xf from "./routes/xf.js";
 
-      const router = Router.match(Xf.route, (params) => Fx.map(params, Xf.handler));
+      const router = Router.match(Xf.route, Xf.handler);
       export default router;
       "
     `);
@@ -728,8 +858,15 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     const plugin = createRouterVirtualModulePlugin();
-    const program = makeProgram(fixture.paths);
-    const session = createTypeInfoApiSession({ ts, program });
+    const program = makeProgram(
+      existsSync(BOOTSTRAP_FILE) ? [...fixture.paths, BOOTSTRAP_FILE] : fixture.paths,
+      APP_ROOT,
+    );
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+    });
     const result = plugin.build("router:./routes", fixture.importer, session.api);
     expect(typeof result).toBe("string");
     expect((result as string).length).toBeGreaterThan(0);
@@ -740,12 +877,28 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     const plugin = createRouterVirtualModulePlugin();
-    const program = makeProgram(fixture.paths);
-    const session1 = createTypeInfoApiSession({ ts, program });
-    const session2 = createTypeInfoApiSession({ ts, program });
+    const program = makeProgram(
+      existsSync(BOOTSTRAP_FILE) ? [...fixture.paths, BOOTSTRAP_FILE] : fixture.paths,
+      APP_ROOT,
+    );
+    const session1 = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+    });
+    const session2 = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+    });
     const source1 = plugin.build("router:./routes", fixture.importer, session1.api);
     const source2 = plugin.build("router:./routes", fixture.importer, session2.api);
-    expect(source1).toBe(source2);
+    expect(typeof source1).toBe(typeof source2);
+    if (typeof source1 === "string") {
+      expect(source1).toBe(source2);
+    } else {
+      expect(source1).toStrictEqual(source2);
+    }
   });
 
   it("emits readonly descriptor metadata with as const (T-08, TS-7)", () => {
@@ -798,7 +951,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("golden: fx handler pass-through", () => {
     const result = buildRouterFromFixture({
-      "src/routes/fx.ts": `import * as Fx from "@typed/fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
+      "src/routes/fx.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -807,7 +960,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
-      const router = Router.match(MFx.route, constant(Fx.succeed(MFx.handler)));
+      const router = Router.match(MFx.route, constant(MFx.handler));
       export default router;
       "
     `);
@@ -815,7 +968,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("golden: effect handler pass-through", () => {
     const result = buildRouterFromFixture({
-      "src/routes/effect.ts": `import * as Effect from "effect"; ${routeExportForPath("/")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
+      "src/routes/effect.ts": `import * as Effect from "effect/Effect"; ${routeExportForPath("/")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
@@ -824,7 +977,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as MEffect from "./routes/effect.js";
 
-      const router = Router.match(MEffect.route, constant(Fx.succeed(MEffect.handler)));
+      const router = Router.match(MEffect.route, constant(Fx.fromEffect(MEffect.handler)));
       export default router;
       "
     `);
@@ -832,7 +985,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("golden: stream handler pass-through", () => {
     const source = buildRouterFromFixture({
-      "src/routes/stream.ts": `import { Stream } from "effect"; ${routeExportForPath("/")} export const handler = Stream.succeed(1);`,
+      "src/routes/stream.ts": `import * as Stream from "effect/Stream"; ${routeExportForPath("/")} export const handler = Stream.succeed(1);`,
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
@@ -1042,8 +1195,16 @@ describe("RouterVirtualModulePlugin integration", () => {
     const fixture = createFixture({
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
-    const program = makeProgram(fixture.paths);
-    const sessionFactory = () => createTypeInfoApiSession({ ts, program });
+    const program = makeProgram(
+      existsSync(BOOTSTRAP_FILE) ? [...fixture.paths, BOOTSTRAP_FILE] : fixture.paths,
+      APP_ROOT,
+    );
+    const sessionFactory = () =>
+      createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+      });
     const manager = new PluginManager([createRouterVirtualModulePlugin()]);
 
     const resolved = manager.resolveModule({

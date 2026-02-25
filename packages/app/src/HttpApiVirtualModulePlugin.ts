@@ -14,13 +14,19 @@ import {
 import { classifyHttpApiFileRole } from "./internal/httpapiFileRoles.js";
 import { emitHttpApiSource } from "./internal/emitHttpApiSource.js";
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
-import { typeNodeIsRouteCompatible } from "./internal/routeTypeNode.js";
+import {
+  getCallableReturnType,
+  isCallableNode,
+  typeNodeIsRouteCompatible,
+} from "./internal/routeTypeNode.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type {
+  TypeInfoApi,
   TypeInfoFileSnapshot,
   VirtualModuleBuildError,
   VirtualModulePlugin,
 } from "@typed/virtual-modules";
+import { HTTPAPI_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
 const DEFAULT_PREFIX = "api:";
 const DEFAULT_PLUGIN_NAME = "httpapi-virtual-module";
@@ -169,6 +175,7 @@ function mapSnapshotsByRelativePath(
 function validateEndpointContracts(
   endpoints: readonly HttpApiEndpointNode[],
   snapshotsByPath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+  api: TypeInfoApi,
 ): readonly { code: string; message: string }[] {
   const violations: Array<{ code: string; message: string }> = [];
   for (const endpoint of endpoints) {
@@ -191,10 +198,38 @@ function validateEndpointContracts(
     }
     const routeExport = snapshot.exports.find((e) => e.name === "route");
     if (!routeExport) continue;
-    if (!typeNodeIsRouteCompatible(routeExport.type, routeExport.assignableTo)) {
+    if (!typeNodeIsRouteCompatible(routeExport.type, api)) {
+      const hint = "; route must be assignable to Route from @typed/router";
       violations.push({
         code: "AVM-CONTRACT-003",
-        message: `endpoint "${endpoint.path}" route: export must be Router.Route (Parse, Param, Join, etc.) or object with pathSchema and querySchema`,
+        message: `endpoint "${endpoint.path}" route: export must be Route (Parse, Param, Join, etc.) from @typed/router${hint}`,
+      });
+    }
+    const handlerExport = snapshot.exports.find((e) => e.name === "handler");
+    if (handlerExport) {
+      const handlerNode = isCallableNode(handlerExport.type)
+        ? (getCallableReturnType(handlerExport.type) ?? handlerExport.type)
+        : handlerExport.type;
+      const handlerReturnsEffect = api.isAssignableTo(handlerNode, "Effect");
+      if (!handlerReturnsEffect) {
+        violations.push({
+          code: "AVM-CONTRACT-004",
+          message: `endpoint "${endpoint.path}" handler: return type must be Effect`,
+        });
+      }
+    }
+    const successExport = snapshot.exports.find((e) => e.name === "success");
+    if (successExport && !api.isAssignableTo(successExport.type, "Schema")) {
+      violations.push({
+        code: "AVM-CONTRACT-005",
+        message: `endpoint "${endpoint.path}" success: export must be Schema when present`,
+      });
+    }
+    const errorExport = snapshot.exports.find((e) => e.name === "error");
+    if (errorExport && !api.isAssignableTo(errorExport.type, "Schema")) {
+      violations.push({
+        code: "AVM-CONTRACT-006",
+        message: `endpoint "${endpoint.path}" error: export must be Schema when present`,
       });
     }
   }
@@ -212,6 +247,7 @@ export const createHttpApiVirtualModulePlugin = (
 
   return {
     name,
+    typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
     shouldResolve(id, importer) {
       const resolved = resolveHttpApiTargetDirectory(id, importer, prefix);
       if (!resolved.ok) return false;
@@ -273,7 +309,11 @@ export const createHttpApiVirtualModulePlugin = (
         } satisfies VirtualModuleBuildError;
       }
 
-      const contractViolations = validateEndpointContracts(endpoints, snapshotsByRelativePath);
+      const contractViolations = validateEndpointContracts(
+        endpoints,
+        snapshotsByRelativePath,
+        api,
+      );
       if (contractViolations.length > 0) {
         return {
           errors: contractViolations.map((violation) => ({
@@ -286,6 +326,7 @@ export const createHttpApiVirtualModulePlugin = (
 
       const extractedLiteralsByPath = new Map<string, { path: string; method: string; name: string }>();
       const optionalExportsByPath = new Map<string, ReadonlySet<"headers" | "body" | "success" | "error">>();
+      const handlerIsRawByPath = new Map<string, boolean>();
       const OPTIONAL_NAMES = ["headers", "body", "success", "error"] as const;
       for (const endpoint of endpoints) {
         const snapshot = snapshotsByRelativePath.get(endpoint.path);
@@ -297,6 +338,16 @@ export const createHttpApiVirtualModulePlugin = (
             OPTIONAL_NAMES.filter((n) => exportedNames.has(n)),
           ) as ReadonlySet<"headers" | "body" | "success" | "error">;
           optionalExportsByPath.set(endpoint.path, present);
+          const handlerExport = snapshot.exports.find((e) => e.name === "handler");
+          if (
+            handlerExport != null &&
+            api.isAssignableTo(handlerExport.type, "HttpServerResponse", [
+              { kind: "returnType" },
+              { kind: "typeArg", index: 0 },
+            ])
+          ) {
+            handlerIsRawByPath.set(endpoint.path, true);
+          }
         }
       }
 
@@ -306,6 +357,7 @@ export const createHttpApiVirtualModulePlugin = (
         importer,
         extractedLiteralsByPath,
         optionalExportsByPath,
+        handlerIsRawByPath,
       });
       if (tree.diagnostics.length > 0) {
         return {

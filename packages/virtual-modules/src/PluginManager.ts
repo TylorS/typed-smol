@@ -10,6 +10,10 @@ import type {
   VirtualModuleResolution,
   VirtualModuleResolver,
 } from "./types.js";
+import {
+  isVirtualModuleBuildError,
+  isVirtualModuleBuildSuccess,
+} from "./types.js";
 
 const emptyTypeInfoApi: TypeInfoApi = {
   file: () => {
@@ -21,6 +25,7 @@ const emptyTypeInfoApi: TypeInfoApi = {
   resolveExport: () => {
     throw new Error("TypeInfoApi is not configured for this resolver context");
   },
+  isAssignableTo: () => false,
 };
 
 const emptySession: TypeInfoApiSession = {
@@ -132,27 +137,31 @@ export class PluginManager implements VirtualModuleResolver {
           };
         }
 
-        if (result !== null && typeof result === "object") {
-          if ("errors" in result && Array.isArray(result.errors) && result.errors.length > 0) {
-            const first = result.errors[0];
-            return {
-              status: "error",
-              diagnostic: {
-                code: first.code,
-                message: first.message,
-                pluginName: first.pluginName,
-              },
-            };
-          }
-          if ("sourceText" in result && typeof result.sourceText === "string") {
-            return {
-              status: "resolved",
-              pluginName: plugin.name,
-              sourceText: result.sourceText,
-              dependencies: session.consumeDependencies(),
-              ...(result.warnings?.length ? { warnings: result.warnings } : {}),
-            };
-          }
+        if (isVirtualModuleBuildError(result)) {
+          const first = result.errors[0];
+          const diagnostic: VirtualModuleDiagnostic =
+            first &&
+            typeof first === "object" &&
+            typeof first.code === "string" &&
+            typeof first.message === "string" &&
+            typeof first.pluginName === "string"
+              ? first
+              : createDiagnostic(
+                  "invalid-build-output",
+                  plugin.name,
+                  `Plugin "${plugin.name}" returned errors with invalid diagnostic shape`,
+                );
+          return { status: "error", diagnostic };
+        }
+
+        if (isVirtualModuleBuildSuccess(result)) {
+          return {
+            status: "resolved",
+            pluginName: plugin.name,
+            sourceText: result.sourceText,
+            dependencies: session.consumeDependencies(),
+            ...(result.warnings?.length ? { warnings: result.warnings } : {}),
+          };
         }
 
         return {

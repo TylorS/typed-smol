@@ -4,6 +4,10 @@ import type * as ts from "typescript";
  * Type-safe AST for serialized types. Discriminated union by `kind`.
  * Use `node.kind` to narrow; each variant exposes only its fields (e.g. `UnionTypeNode.elements`, `FunctionTypeNode.parameters`).
  *
+ * Forward-compatible consumer guidance: Use a switch with a default branch that handles unknown kinds
+ * (e.g. `return node.text` or fallback behavior). New `kind` values may be added over time;
+ * consumers that only care about specific variants should explicitly list them and treat others as opaque.
+ *
  * @example
  * function visit(node: TypeNode): string {
  *   switch (node.kind) {
@@ -26,7 +30,16 @@ export type TypeNode =
   | ArrayTypeNode
   | FunctionTypeNode
   | ReferenceTypeNode
-  | ObjectTypeNode;
+  | ObjectTypeNode
+  | ConditionalTypeNode
+  | IndexedAccessTypeNode
+  | TemplateLiteralTypeNode
+  | MappedTypeNode
+  | TypeOperatorTypeNode
+  | ConstructorTypeNode
+  | IndexSignatureTypeNode
+  | OverloadSetTypeNode
+  | EnumTypeNode;
 
 export interface LiteralTypeNode {
   readonly kind: "literal";
@@ -107,22 +120,104 @@ export interface ObjectTypeNode {
   readonly kind: "object";
   readonly text: string;
   readonly properties: readonly ObjectProperty[];
+  /** Optional index signature for `[key: K]: V` when present. */
+  readonly indexSignature?: IndexSignatureInfo;
 }
 
-/**
- * Result of structural assignability checks. When `typeTargets` are provided to
- * createTypeInfoApiSession, each export gets assignableTo[id] = true iff the export's
- * type is assignable to that target. Enables plugins to use checker.isTypeAssignableTo
- * instead of string-based type name parsing.
- */
+export interface IndexSignatureInfo {
+  readonly keyType: TypeNode;
+  readonly valueType: TypeNode;
+  readonly readonly: boolean;
+}
+
+export interface ConditionalTypeNode {
+  readonly kind: "conditional";
+  readonly text: string;
+  readonly checkType: TypeNode;
+  readonly extendsType: TypeNode;
+  readonly trueType: TypeNode;
+  readonly falseType: TypeNode;
+}
+
+export interface IndexedAccessTypeNode {
+  readonly kind: "indexedAccess";
+  readonly text: string;
+  readonly objectType: TypeNode;
+  readonly indexType: TypeNode;
+}
+
+export interface TemplateLiteralTypeNode {
+  readonly kind: "templateLiteral";
+  readonly text: string;
+  readonly texts: readonly string[];
+  readonly types: readonly TypeNode[];
+}
+
+export interface MappedTypeNode {
+  readonly kind: "mapped";
+  readonly text: string;
+  readonly constraintType: TypeNode;
+  readonly mappedType: TypeNode;
+  readonly readonlyModifier?: "+" | "-" | undefined;
+  readonly optionalModifier?: "+" | "-" | undefined;
+}
+
+export interface TypeOperatorTypeNode {
+  readonly kind: "typeOperator";
+  readonly text: string;
+  readonly operator: "keyof" | "unique" | "readonly";
+  readonly type: TypeNode;
+}
+
+export interface ConstructorTypeNode {
+  readonly kind: "constructor";
+  readonly text: string;
+  readonly parameters: readonly TypeParameter[];
+  readonly returnType: TypeNode;
+}
+
+export interface IndexSignatureTypeNode {
+  readonly kind: "indexSignature";
+  readonly text: string;
+  readonly keyType: TypeNode;
+  readonly valueType: TypeNode;
+  readonly readonly: boolean;
+}
+
+export interface FunctionSignature {
+  readonly parameters: readonly TypeParameter[];
+  readonly returnType: TypeNode;
+}
+
+export interface OverloadSetTypeNode {
+  readonly kind: "overloadSet";
+  readonly text: string;
+  readonly signatures: readonly FunctionSignature[];
+}
+
+export interface EnumTypeNode {
+  readonly kind: "enum";
+  readonly text: string;
+  readonly members?: readonly { readonly name: string; readonly value?: string | number }[];
+}
+
 export interface ExportedTypeInfo {
   readonly name: string;
   readonly declarationKind?: string;
   readonly declarationText?: string;
   readonly docs?: string;
   readonly type: TypeNode;
-  readonly assignableTo?: Readonly<Record<string, boolean>>;
 }
+
+/**
+ * A step that navigates from one type to a sub-type during assignability checking.
+ * Steps chain left-to-right when composed in an array.
+ */
+export type TypeProjectionStep =
+  | { readonly kind: "returnType" }
+  | { readonly kind: "param"; readonly index: number }
+  | { readonly kind: "typeArg"; readonly index: number }
+  | { readonly kind: "property"; readonly name: string };
 
 /**
  * Spec for resolving a type from program imports for structural assignability checks.
@@ -132,6 +227,14 @@ export interface TypeTargetSpec {
   readonly id: string;
   readonly module: string;
   readonly exportName: string;
+  /**
+   * When the export is a merged interface+namespace with a type member that accepts
+   * all generic instantiations (e.g. Route.Any = Route<any, any>), use this to
+   * resolve that member's type for assignability checks.
+   * Enables Route.Parse("/status") (Route<"/status">) to pass assignableTo.Route
+   * by comparing against Route.Any instead of the uninstantiated generic.
+   */
+  readonly typeMember?: string;
 }
 
 /**
@@ -143,7 +246,10 @@ export interface ImportInfo {
   readonly importedNames?: readonly string[];
   readonly defaultImport?: string;
   readonly namespaceImport?: string;
-  /** Resolved absolute path when the module resolves to a project file. */
+  /**
+   * Resolved absolute path when the module resolves to a project file.
+   * Optional; not currently populated by the API. Reserved for future use (e.g. plugin navigation).
+   */
   readonly resolvedFilePath?: string;
 }
 
@@ -211,6 +317,23 @@ export interface TypeInfoApi {
     filePath: string,
     exportName: string,
   ): ExportedTypeInfo | undefined;
+  /**
+   * Dynamic structural assignability check. Looks up the ts.Type backing `node`
+   * (registered during serialization), optionally applies projection steps to
+   * navigate to a sub-type, then checks assignability against the resolved target.
+   *
+   * Returns false when: node was not created by this API, projection fails
+   * (e.g. returnType on non-function), or targetId was not resolved.
+   *
+   * Plugins can navigate the TypeNode tree themselves and pass any sub-node
+   * (e.g. `functionNode.returnType`, `referenceNode.typeArguments[0]`) since
+   * all nodes are registered during serialization.
+   */
+  isAssignableTo(
+    node: TypeNode,
+    targetId: string,
+    projection?: readonly TypeProjectionStep[],
+  ): boolean;
 }
 
 export interface TypeInfoApiSession {
@@ -238,10 +361,41 @@ export interface VirtualModuleBuildError {
 
 export type VirtualModuleBuildResult = string | VirtualModuleBuildSuccess | VirtualModuleBuildError;
 
+/** Type guard: true when the build result indicates failure with structured errors. */
+export function isVirtualModuleBuildError(
+  result: VirtualModuleBuildResult,
+): result is VirtualModuleBuildError {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "errors" in result &&
+    Array.isArray((result as VirtualModuleBuildError).errors) &&
+    (result as VirtualModuleBuildError).errors.length > 0
+  );
+}
+
+/** Type guard: true when the build result indicates success with sourceText. */
+export function isVirtualModuleBuildSuccess(
+  result: VirtualModuleBuildResult,
+): result is VirtualModuleBuildSuccess {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "sourceText" in result &&
+    typeof (result as VirtualModuleBuildSuccess).sourceText === "string"
+  );
+}
+
 export interface VirtualModulePlugin {
   readonly name: string;
   shouldResolve(id: string, importer: string): boolean;
   build(id: string, importer: string, api: TypeInfoApi): VirtualModuleBuildResult;
+  /**
+   * Optional type target specs for structural assignability checks.
+   * Plugins that need assignableTo (e.g. Route, Effect) should declare them here.
+   * Specs from all plugins are merged (deduped by id) when creating the TypeInfo session.
+   */
+  readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
 
 export interface VirtualModuleDiagnostic {
