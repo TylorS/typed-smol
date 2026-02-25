@@ -270,6 +270,12 @@ export const value: Foo = { n: 1 };
           {
             file: () => ({ ok: false as const, error: "file-not-in-program" as const }),
             directory: () => [],
+            resolveExport: () => {
+              throw new Error("not implemented")
+            },
+            isAssignableTo: () => {
+              throw new Error("not implemented")
+            }
           },
           { _host: host },
         ),
