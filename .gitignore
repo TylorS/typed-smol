@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Generated type-target bootstrap (legacy: was .typed/, now node_modules/.typed/)
+.typed/
+
 # Build output
 dist/
 *.tsbuildinfo

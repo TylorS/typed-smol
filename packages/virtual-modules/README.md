@@ -27,7 +27,7 @@ Peer / dev: `typescript` (project supplies its own).
 
 ### Plugin contract
 
-A `VirtualModulePlugin` implements `name`, `shouldResolve(id, importer)` → `boolean`, and `build(id, importer, api)` → `VirtualModuleBuildResult` (sync only). The host (Language Service adapter, CompilerHost adapter, or Vite plugin) provides `api` (TypeInfoApi) only when it supplies `createTypeInfoApiSession`; otherwise plugins receive a no-op api that throws on use. **Rule**: `build()` must not trigger module resolution—re-entrancy is detected and surfaces as diagnostics (see [Production considerations](#production-considerations)).
+A `VirtualModulePlugin` implements `name`, `shouldResolve(id, importer)` → `boolean`, and `build(id, importer, api)` → `VirtualModuleBuildResult` (sync only). The host (Language Service adapter, CompilerHost adapter, or Vite plugin) provides `api` (TypeInfoApi) when it supplies `createTypeInfoApiSession`; otherwise plugins receive a no-op api that returns safe defaults (`file()` → `{ ok: false }`, `directory()` → `[]`). Hosts should always supply `createTypeInfoApiSession` when plugins use the API for correct behavior. **Rule**: `build()` must not trigger module resolution—re-entrancy is detected and surfaces as diagnostics (see [Production considerations](#production-considerations)).
 
 Minimal static plugin (no `api` usage):
 
@@ -121,8 +121,11 @@ if (handlerExport && !api.isAssignableTo(handlerExport.type, "Effect", [{ kind: 
 - **Type targets and resolution** – Type targets (e.g. for `assignableTo`) are resolved from the **same TypeScript program** only: “remote” here means types from other packages already in the program (e.g. in `node_modules`), not from a registry. Resolution matches the **exact module specifier** used in imports; path/alias mapping is not applied. For targets not imported by app code, use `createTypeTargetBootstrapContent(specs)` and include the generated file in the program’s `rootNames`.
 - **Watch debouncing** – Optional `debounceMs` on adapter options coalesces rapid file/glob watch events to avoid recomputation storms.
 
-## Errors
+## Errors and gotchas
 
+Full reference: [virtual-modules-errors-and-gotchas](.docs/virtual-modules-errors-and-gotchas.md). Summary:
+
+- **`api.directory()`** may throw if TypeScript internal APIs throw during type serialization for a matched file. Not a typed error.
 - **`api.file()`** returns a `FileSnapshotResult`: either `{ ok: true, snapshot }` or `{ ok: false, error, path? }`. Possible `error` values: `'file-not-in-program'` (path not in the program), `'path-escapes-base'` (path would escape baseDir), `'invalid-input'` (e.g. empty baseDir, null bytes, or invalid relativePath). Always check `result.ok` before using `result.snapshot`.
 - **Adapter diagnostics** – The Language Service adapter may attach diagnostics for plugin failures (e.g. `plugin-build-threw`, `plugin-should-resolve-threw`), invalid build output (`invalid-build-output`), invalid options (`invalid-options`), re-entrant resolution (`re-entrant-resolution`), or virtual module rebuild failures. Plugin names and messages are included.
 - **Loader errors** – `NodeModulePluginLoader.load()` returns structured errors with codes such as `module-not-found`, `module-load-failed`, `invalid-plugin-export`, `path-escapes-base`, and `invalid-request` (e.g. empty baseDir or specifier).

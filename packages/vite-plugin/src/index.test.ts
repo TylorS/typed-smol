@@ -22,23 +22,16 @@ function fakeHttpApiPlugin(opts: HttpApiVirtualModulePluginOptions): VirtualModu
 }
 
 describe("createTypedViteResolver", () => {
-  it("registers only router VM plugin when apiVmOptions is absent", () => {
+  it("always registers router and HttpApi VM plugins", () => {
     const resolver = createTypedViteResolver({});
     expect(resolver).toBeInstanceOf(PluginManager);
-    const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(1);
-    expect(manager.plugins[0].name).toBe("router-virtual-module");
-  });
-
-  it("registers two plugins (router + HttpApi) when apiVmOptions is set with no DI override", () => {
-    const resolver = createTypedViteResolver({ apiVmOptions: {} });
     const manager = resolver as PluginManager;
     expect(manager.plugins).toHaveLength(2);
     expect(manager.plugins[0].name).toBe("router-virtual-module");
     expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
   });
 
-  it("registers router then HttpApi VM plugin in deterministic order when apiVmOptions and factory are provided via DI", () => {
+  it("uses DI override for HttpApi plugin when provided", () => {
     const resolver = createTypedViteResolver(
       { apiVmOptions: { prefix: "api:" } },
       { createHttpApiVirtualModulePlugin: fakeHttpApiPlugin },
@@ -47,6 +40,10 @@ describe("createTypedViteResolver", () => {
     expect(manager.plugins).toHaveLength(2);
     expect(manager.plugins[0].name).toBe("router-virtual-module");
     expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
+    const apiPlugin = manager.plugins[1] as VirtualModulePlugin & {
+      _testOpts: HttpApiVirtualModulePluginOptions;
+    };
+    expect(apiPlugin._testOpts).toEqual({ prefix: "api:" });
   });
 
   it("passes apiVmOptions through to createHttpApiVirtualModulePlugin", () => {
@@ -67,8 +64,9 @@ describe("createTypedViteResolver", () => {
       routerVmOptions: { prefix: "routes:", name: "custom-router" },
     });
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(1);
+    expect(manager.plugins).toHaveLength(2);
     expect(manager.plugins[0].name).toBe("custom-router");
+    expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
   });
 });
 
@@ -79,11 +77,21 @@ describe("typedVitePlugin", () => {
     expect(plugins.length).toBeGreaterThan(0);
   });
 
-  it("backward compatible when apiVmOptions is absent", () => {
+  it("returns virtual-modules plugin with resolveId and load", () => {
     const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
     const virtualPlugin = plugins.find(
       (p) => p && typeof p === "object" && "name" in p && (p as { name?: string }).name === "virtual-modules",
     );
     expect(virtualPlugin).toBeDefined();
+  });
+
+  it("auto-creates LS-backed session when createTypeInfoApiSession is not provided", () => {
+    const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
+    const virtualPlugin = plugins.find(
+      (p) => p && typeof p === "object" && "name" in p && (p as { name?: string }).name === "virtual-modules",
+    );
+    expect(virtualPlugin).toBeDefined();
+    expect(virtualPlugin).toHaveProperty("resolveId");
+    expect(virtualPlugin).toHaveProperty("load");
   });
 });

@@ -1,5 +1,9 @@
 import type * as ts from "typescript";
-import { type CompilerHostAdapterOptions, type VirtualModuleAdapterHandle } from "./types.js";
+import {
+  type CompilerHostAdapterOptions,
+  type VirtualModuleAdapterHandle,
+  type VirtualModuleDiagnostic,
+} from "./types.js";
 import { rewriteSourceForPreviewLocation } from "./internal/materializeVirtualFile.js";
 import {
   createVirtualRecordStore,
@@ -74,13 +78,31 @@ export const attachCompilerHostAdapter = (
     return result.status === "resolved" ? result.record : undefined;
   };
 
+  const ADAPTER_DIAGNOSTIC_CODE = 99001;
+
   const rebuildIfStale = (record: MutableVirtualRecord): MutableVirtualRecord => {
     if (!record.stale) {
       return record;
     }
 
     const rebuilt = store.resolveRecord(record.id, record.importer, record);
-    return rebuilt.status === "resolved" ? rebuilt.record : record;
+    if (rebuilt.status === "resolved") {
+      return rebuilt.record;
+    }
+
+    if (rebuilt.status === "error" && options.reportDiagnostic) {
+      const diag = rebuilt.diagnostic as VirtualModuleDiagnostic;
+      const message = `Virtual module rebuild failed: ${diag.message}`;
+      options.reportDiagnostic({
+        category: options.ts.DiagnosticCategory.Error,
+        code: ADAPTER_DIAGNOSTIC_CODE,
+        file: undefined,
+        start: 0,
+        length: 0,
+        messageText: message,
+      });
+    }
+    return record;
   };
 
   const fallbackResolveModule = (

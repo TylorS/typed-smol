@@ -119,6 +119,10 @@ For typed-smol apps using router and HttpApi virtual modules, use `createTypeInf
 
 Virtual modules resolved by your plugins are injected into the compilation graph and type-checked alongside real files.
 
+## Errors
+
+vmc does **not** throw itself. Errors are surfaced via exit code (1) and TypeScript diagnostics. If the underlying adapter or resolver throws (e.g. invalid `projectRoot`), that may propagate uncaught. See [virtual-modules-errors-and-gotchas](../virtual-modules/.docs/virtual-modules-errors-and-gotchas.md) for full reference.
+
 ## Ecosystem
 
 `vmc.config.ts` is shared by vmc, `@typed/virtual-modules-ts-plugin`, and `typedVitePlugin` (via `@typed/virtual-modules-vite`). The VS Code integration (`@typed/virtual-modules-vscode`) can use the same config via the `vmcConfigPath` option.

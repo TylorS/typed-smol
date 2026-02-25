@@ -37,7 +37,7 @@
 
 Both plugins implement `VirtualModulePlugin` from `@typed/virtual-modules`. They are consumed by:
 
-- **typedVitePlugin** (via `createTypedViteResolver`) — registers router then HttpApi plugin
+- **typedVitePlugin** (via `createTypedViteResolver`) — registers router then HttpApi plugin; **all app VM plugins are always enabled** (no optional/conditional registration)
 - **vmc** (virtual-modules-compiler)
 - **TS plugin** (virtual-modules-ts-plugin)
 
@@ -47,6 +47,7 @@ HttpApi plugin: discovers API root/groups/endpoints, validates contract (route, 
 
 ## Constraints
 
+- **All app VM plugins are always enabled** in typedVitePlugin. New plugins must be added to `createTypedViteResolver` and are never optional.
 - Effect skill loading: `.cursor/rules/effect-skill-loading.mdc`
 - Effect unstable/httpapi skills when modifying HttpApi plugin
 - Monorepo governance: `.cursor/rules/monorepo-governance.mdc`

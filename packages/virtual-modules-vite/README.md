@@ -134,3 +134,7 @@ The plugin uses `\0virtual:` + base64url encoding to carry `(id, importer)` thro
 - **`isVirtualId(resolvedId)`** — Returns `true` if the string is an encoded virtual id.
 
 Payload validation: decoded `id` and `importer` must not contain null bytes, be empty, or exceed 4096 characters.
+
+## Errors
+
+The plugin does **not** throw. When resolution or load fails, `resolveId` / `load` return `null` and the import fails at build/dev (module not found). When `warnOnError` is true (default), errors are logged to `console.warn`. See [virtual-modules-errors-and-gotchas](../virtual-modules/.docs/virtual-modules-errors-and-gotchas.md) for full reference.

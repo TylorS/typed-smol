@@ -22,6 +22,7 @@ Virtual modules are module IDs (e.g. `router:./routes`, `api:./endpoints`, `virt
 
 ## Constraints
 
+- **Type-target bootstrap path**: Always `projectRoot/node_modules/.typed/type-target-bootstrap.ts`. Never write to project root (e.g. `.typed/`); use node_modules so the file is git-ignored.
 - **Path contract**: `baseDir` must be absolute; `relativePath` must not escape `baseDir`.
 - **Plugin contract**: `build()` must not trigger module resolution; re-entrancy is detected and may surface as unresolved resolution or a diagnostic.
 - Effect skill loading N/A (no Effect dependency).

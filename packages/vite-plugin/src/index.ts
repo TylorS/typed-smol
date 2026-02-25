@@ -4,12 +4,17 @@
  */
 import type { Plugin } from "vite";
 import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
-import { PluginManager } from "@typed/virtual-modules";
+import {
+  collectTypeTargetSpecsFromPlugins,
+  createLanguageServiceSessionFactory,
+  PluginManager,
+} from "@typed/virtual-modules";
 import {
   createHttpApiVirtualModulePlugin,
   createRouterVirtualModulePlugin,
 } from "@typed/app";
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
+import ts from "typescript";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { visualizer } from "rollup-plugin-visualizer";
 import viteCompression from "vite-plugin-compression";
@@ -40,14 +45,15 @@ export interface TypedVitePluginOptions {
   readonly routerVmOptions?: import("@typed/app").RouterVirtualModulePluginOptions;
 
   /**
-   * When set, enables the HttpApi virtual-module plugin and forwards these options to it.
-   * Requires createHttpApiVirtualModulePlugin to be exported from @typed/app (or the
-   * configured provider). Order: router VM plugin is registered first, then HttpApi VM plugin.
+   * Options for the HttpApi VM plugin from @typed/app. HttpApi VM plugin is always
+   * registered (router first, then HttpApi). Use this to customize its behavior.
    */
   readonly apiVmOptions?: HttpApiVirtualModulePluginOptions;
 
   /**
-   * Session factory for TypeInfo API (required for router VM type-checking).
+   * Session factory for TypeInfo API. When not provided, a Language Service-backed
+   * session is auto-created from the project's tsconfig (evolves as files change).
+   * Override for custom session setup.
    */
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
 
@@ -81,35 +87,52 @@ export interface TypedViteResolverDependencies {
 }
 
 /**
- * Builds the virtual-module resolver used by typedVitePlugin with deterministic plugin order:
- * 1) router VM plugin, 2) HttpApi VM plugin (when apiVmOptions is set).
- * Exported for tests that assert plugin order and options pass-through.
- * When `dependencies.createHttpApiVirtualModulePlugin` is provided (e.g. in tests), it overrides the direct import.
+ * Invariant: ALL @typed/app VM plugins are always registered. There are no optional
+ * or conditional app plugins. When adding a new VM plugin to @typed/app, add it here.
  */
 export function createTypedViteResolver(
   options: TypedVitePluginOptions = {},
   dependencies?: TypedViteResolverDependencies,
 ): VirtualModuleResolver {
+  const httpApiFactory =
+    dependencies?.createHttpApiVirtualModulePlugin ??
+    createHttpApiVirtualModulePlugin;
   const plugins: import("@typed/virtual-modules").VirtualModulePlugin[] = [
     createRouterVirtualModulePlugin(options.routerVmOptions ?? {}),
+    httpApiFactory(options.apiVmOptions ?? {}),
   ];
-  if (options.apiVmOptions !== undefined) {
-    const factory =
-      dependencies?.createHttpApiVirtualModulePlugin ??
-      createHttpApiVirtualModulePlugin;
-    plugins.push(factory(options.apiVmOptions));
-  }
   return new PluginManager(plugins);
 }
 
 /**
  * Returns Vite plugins: tsconfig paths, virtual modules (@typed/app), and optional bundle analyzer.
  * Use as: `defineConfig({ plugins: typedVitePlugin() })`.
+ *
+ * When createTypeInfoApiSession is not provided, the plugin automatically creates a
+ * Language Service-backed session from the project's tsconfig. The type program evolves
+ * as files change during dev. Pass createTypeInfoApiSession to override.
  */
 export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] {
   const resolver = createTypedViteResolver(options);
   const analyze =
     options.analyze ?? (process.env.ANALYZE === "1" ? true : false);
+
+  let createTypeInfoApiSession: CreateTypeInfoApiSession | undefined =
+    options.createTypeInfoApiSession;
+
+  if (createTypeInfoApiSession === undefined) {
+    try {
+      const manager = resolver as PluginManager;
+      const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(manager.plugins);
+      createTypeInfoApiSession = createLanguageServiceSessionFactory({
+        ts,
+        projectRoot: process.cwd(),
+        typeTargetSpecs,
+      });
+    } catch {
+      // Graceful degradation: no session, plugins get noop TypeInfoApi
+    }
+  }
 
   const plugins: Plugin[] = [];
 
@@ -122,7 +145,7 @@ export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] 
   plugins.push(
     virtualModulesVitePlugin({
       resolver,
-      createTypeInfoApiSession: options.createTypeInfoApiSession,
+      createTypeInfoApiSession,
       warnOnError: options.warnOnError ?? true,
     }),
   );

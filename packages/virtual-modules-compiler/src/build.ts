@@ -88,6 +88,7 @@ export function runBuild(params: BuildParams): number {
       resolver,
       projectRoot: root,
       createTypeInfoApiSession,
+      reportDiagnostic,
     });
     try {
       return ts.createEmitAndSemanticDiagnosticsBuilderProgram(

@@ -523,6 +523,11 @@ export interface CompilerHostAdapterOptions {
   readonly watchHost?: LanguageServiceWatchHost;
   /** Coalesce rapid watch events (ms). When set, markStale is deferred until after the delay. */
   readonly debounceMs?: number;
+  /**
+   * When provided, called when a virtual module rebuild fails (stale record).
+   * Use to surface diagnostics to match LanguageServiceAdapter behavior.
+   */
+  readonly reportDiagnostic?: ts.DiagnosticReporter;
 }
 
 export interface VirtualModuleAdapterHandle {

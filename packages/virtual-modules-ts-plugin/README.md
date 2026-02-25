@@ -87,6 +87,15 @@ Then open `sample-project` in VS Code (or another editor that uses tsserver). Th
 
 To test changes: rebuild the plugin, then run **TypeScript: Restart TS Server** in VS Code (Command Palette) to pick up the new build.
 
+## When the plugin can throw
+
+The plugin may throw in these cases (see [virtual-modules-errors-and-gotchas](../virtual-modules/.docs/virtual-modules-errors-and-gotchas.md) for full reference):
+
+- **"Program not yet available"** — When virtual module resolution runs before the TypeScript project is fully loaded (e.g. first file open, before first compile). Retry when the project is loaded.
+- **Session creation failure** — When `createTypeInfoApiSession` throws (e.g. type targets cannot be resolved) and no fallback session exists. Ensure type targets are imported or use `createTypeTargetBootstrapContent`.
+
+Sample scripts (`typecheck-with-plugin.mjs`, `verify-virtual-modules.mjs`) throw on tsconfig read failure, missing vmc config, plugin load failure, or no plugins — document as expected for CLI entry points.
+
 ## Debug log
 
 The plugin writes diagnostic events to `/tmp/vm-ts-plugin-debug.log` when the file is writable. Use this to confirm whether the plugin loads and whether resolution runs.

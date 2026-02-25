@@ -55,6 +55,14 @@ The extension activates on TypeScript and TypeScript React files (`onLanguage:ty
 - `@typed/virtual-modules`
 - Peer: `typescript` (>=5)
 
+## Errors
+
+See [virtual-modules-errors-and-gotchas](../virtual-modules/.docs/virtual-modules-errors-and-gotchas.md) for full reference. Summary:
+
+- **FileNotFound** — Used for invalid `typed-virtual://` URIs, missing project root, or resolver returning nothing. Callers cannot distinguish without parsing the URI.
+- **NoPermissions** — Thrown for `createDirectory`, `writeFile`, `delete`, `rename`; the provider is read-only.
+- **Go to Definition** — If `writeVirtualPreviewAndGetPath` throws (e.g. disk full, permission denied), the error is re-thrown and surfaces as a definition failure in the editor.
+
 ## Troubleshooting
 
 ### Extension won't load (invalid / missing package.json)

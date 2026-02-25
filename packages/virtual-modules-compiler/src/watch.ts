@@ -75,6 +75,7 @@ export function runWatch(params: WatchParams): void {
       resolver,
       projectRoot,
       createTypeInfoApiSession,
+      reportDiagnostic,
     });
     try {
       return ts.createEmitAndSemanticDiagnosticsBuilderProgram(

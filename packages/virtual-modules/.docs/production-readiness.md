@@ -23,16 +23,17 @@
 - `resolveRelativePath(baseDir, relativePath)` uses `resolve(baseDir, relativePath)` with no check that the result stays under `baseDir` (or a configured root). A relative path like `../../../etc/passwd` can escape.
 - **Recommendation:** Add a path containment check (e.g. ensure resolved path is under `baseDir` after normalization) and either reject (throw or return a result type) or normalize to a safe path. Apply the same idea wherever plugin- or caller-controlled paths are resolved (e.g. `file(relativePath, { baseDir })`, directory glob base).
 
-### 2. TypeInfoApi.file() throws
+### 2. TypeInfoApi error contracts
 
-- `createFileSnapshot` throws if the requested file is not in the program. There is no typed error or result wrapper.
-- **Recommendation:** Either document the throw contract clearly (“throws if file not in program”) and recommend try/catch, or introduce a result type (e.g. `{ ok: true, snapshot } | { ok: false, error: 'file-not-in-program' | 'module-symbol-missing' }`) so callers can handle missing files without exceptions.
+- **Public `api.file()`** returns a `FileSnapshotResult` and does **not** throw for "file not in program". Always check `result.ok` before using `result.snapshot`.
+- **Internal `createFileSnapshot`** still throws if given a path not in the program; callers guard before calling. A planned refactor passes `ts.SourceFile` instead of `filePath` to eliminate this throw.
+- **`api.directory()`** may throw if TypeScript internal APIs throw during type serialization. Consider wrapping in try/catch.
+- **Legacy:** `createFileSnapshot` previously threw; the public API now uses a result type.
 
 ### 3. Stale record after failed rebuild
 
-- In both adapters, when a virtual record is stale and rebuild fails (e.g. plugin throws), the code sets `record.stale = false` and returns the old record. Callers then get stale content without a clear error.
-- **Recommendation:** Either keep `stale = true` on rebuild failure, or clear/evict the record and surface an error (e.g. adapter diagnostic) so the program doesn’t use outdated virtual source.
-
+- **LanguageServiceAdapter:** When rebuild fails, it adds a diagnostic and returns the old record.
+- **CompilerHostAdapter:** When rebuild fails, it returns the old record. If `reportDiagnostic` is passed to `attachCompilerHostAdapter`, a diagnostic is reported (vmc compile/build/watch pass it by default).
 ### 4. Unbounded adapter state
 
 - `recordsByKey` / `recordsByVirtualFile` (and related maps) grow with every distinct virtual module and are never evicted. Long-lived processes (e.g. editor LS) could accumulate many entries.

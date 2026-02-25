@@ -97,6 +97,7 @@ export function compile(params: CompileParams): number {
     resolver,
     projectRoot,
     createTypeInfoApiSession,
+    reportDiagnostic,
   });
 
   let exitCode = 0;

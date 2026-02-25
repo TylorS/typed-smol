@@ -15,21 +15,20 @@ import {
   isVirtualModuleBuildSuccess,
 } from "./types.js";
 
-const emptyTypeInfoApi: TypeInfoApi = {
-  file: () => {
-    throw new Error("TypeInfoApi is not configured for this resolver context");
-  },
-  directory: () => {
-    throw new Error("TypeInfoApi is not configured for this resolver context");
-  },
-  resolveExport: () => {
-    throw new Error("TypeInfoApi is not configured for this resolver context");
-  },
+/**
+ * TypeInfoApi used when createTypeInfoApiSession is not provided.
+ * Returns safe defaults instead of throwing.
+ * Hosts should always supply createTypeInfoApiSession when plugins use api.file(), api.directory(), or api.resolveExport() for correct behavior.
+ */
+const noopTypeInfoApi: TypeInfoApi = {
+  file: () => ({ ok: false as const, error: "invalid-input" }),
+  directory: () => [],
+  resolveExport: () => undefined,
   isAssignableTo: () => false,
 };
 
-const emptySession: TypeInfoApiSession = {
-  api: emptyTypeInfoApi,
+const noopSession: TypeInfoApiSession = {
+  api: noopTypeInfoApi,
   consumeDependencies: () => [],
 };
 
@@ -109,7 +108,7 @@ export class PluginManager implements VirtualModuleResolver {
 
       let session: TypeInfoApiSession;
       try {
-        session = createSession?.({ id: options.id, importer: options.importer }) ?? emptySession;
+        session = createSession?.({ id: options.id, importer: options.importer }) ?? noopSession;
       } catch (error) {
         const msg = toMessage(error);
         // Treat temporary unavailability (e.g. program not loaded) as unresolved so retry can succeed later.

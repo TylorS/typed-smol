@@ -9,8 +9,8 @@
 | Area | What it provides |
 |------|------------------|
 | **Router VM** | `router:./path` imports → typed Matcher from convention-based route files |
-| **HttpApi VM** | `api:./path` imports → typed Api + Client + OpenAPI when `apiVmOptions` is set |
-| **TypeInfo session** | Structural type-checking of route and endpoint contracts when `createTypeInfoApiSession` is provided |
+| **HttpApi VM** | `api:./path` imports → typed Api + Client + OpenAPI (always enabled) |
+| **TypeInfo session** | Structural type-checking of route and endpoint contracts (auto-created from tsconfig; override via `createTypeInfoApiSession`) |
 | **tsconfig paths** | Path alias resolution from `tsconfig.json` (enabled by default) |
 | **Analyzer** | Bundle treemap at `dist/stats.html` when `ANALYZE=1` |
 | **Compression** | Brotli `.br` for build output (enabled by default) |
@@ -18,18 +18,18 @@
 ## Key exports / surfaces
 
 - **`typedVitePlugin(options)`** — Returns the full plugin array; use as `defineConfig({ plugins: typedVitePlugin() })`
-- **`createTypedViteResolver(options)`** — Builds the virtual-module resolver (router + optional HttpApi); exported for tests or custom compositions
+- **`createTypedViteResolver(options)`** — Builds the virtual-module resolver (router + HttpApi); exported for tests or custom compositions
 - Dependencies: `@typed/app`, `@typed/virtual-modules`, `@typed/virtual-modules-vite`
 - Peer: `vite` (>=5)
 
 ## Architecture
 
-Plugin order within `typedVitePlugin`: 1) tsconfig paths, 2) virtual-modules Vite plugin (with resolver), 3) bundle analyzer (when `analyze`), 4) Brotli compression. The resolver built by `createTypedViteResolver` composes plugins in fixed order: router VM first, then HttpApi VM when `apiVmOptions` is set.
+Plugin order within `typedVitePlugin`: 1) tsconfig paths, 2) virtual-modules Vite plugin (with resolver), 3) bundle analyzer (when `analyze`), 4) Brotli compression. The resolver built by `createTypedViteResolver` composes plugins in fixed order: router VM first, then HttpApi VM. Both are always registered.
 
 ## Constraints
 
-- Router VM is always registered first; HttpApi VM is added only when `apiVmOptions` is set
-- `createTypeInfoApiSession` is required for router VM type-checking in dev
+- Router VM and HttpApi VM are always registered (order: router, then HttpApi)
+- `createTypeInfoApiSession` is auto-provided from the project tsconfig when not supplied
 - Monorepo governance: `.cursor/rules/monorepo-governance.mdc`
 
 ## Pointers

@@ -2,250 +2,144 @@
 
 > **Beta:** This repository and all packages are in **beta**. APIs may change without notice and breaking changes are possible. Use with that in mind and feedback is welcome.
 
-**Typed** is the only truly **Effect-native UI library** — built from the ground up to harness Effect's abstractions for typed, reliable, and blazingly fast web applications.
+**Typed** is a fully **Effect-native UI framework** for building typed, reliable web applications. Define your routes and API endpoints as plain files, and Typed generates type-safe routers, API clients, and OpenAPI specs at compile time -- with full IntelliSense in your editor.
 
-Unlike UI frameworks that bolt Effect support onto existing paradigms, Typed is architected entirely around Effect's ecosystem. We **extend the Effect model with one Push-based abstraction: `Fx`**. `Fx` is the backbone for realtime events and time-varying UI, while preserving Effect-native error handling, resource safety, and composition.
+## What You Get
 
-## Core Architecture
+- **File-based routing** -- drop route files in a directory, `import routes from "router:./routes"`, and get a fully typed router
+- **File-based APIs** -- drop endpoint files in a directory, `import * as Api from "api:./endpoints"`, and get a typed API server, client, and OpenAPI spec
+- **Full editor support** -- IntelliSense, go-to-definition, and type errors for virtual module imports work out of the box
+- **Effect-native** -- routes, handlers, templates, and state all compose through Effect's error handling, dependency injection, and resource safety
 
-### Effect + `Fx` (Push-Based)
-
-Typed adds exactly one new runtime abstraction to Effect: **`Fx`**.
-
-- **`Effect`** handles one-shot and scoped computations.
-- **`Fx`** handles push-driven values/events over time.
-- **Template rendering, routing, and UI event processing** all share this same model.
-
-### Pull vs Push (Event Reality)
-
-- **Pull-based** streams require consumers to ask for the next value (often by polling).
-- **Push-based** streams deliver values when producers have something to emit.
-- Browser systems are naturally push-driven: click, keydown, timer, and websocket events arrive over time.
-- `Fx` models this push behavior directly, so UI updates and event handling align with how the platform actually works.
-
-```mermaid
-flowchart LR
-  subgraph Pull["Pull (Polling)"]
-    C[Consumer] -->|request next| S1[Event Source]
-    S1 -->|value or none| C
-  end
-
-  subgraph Push["Push (Fx)"]
-    S2[Event Source] -->|event emitted| F[Fx]
-    F -->|update| U[Template / Handler]
-  end
-```
-
-#### Tradeoffs: Backpressure and Processing
-
-- **Pacing control:** Pull gives the consumer control over pace; push gives the producer control over emission timing.
-- **Backpressure:** Pull has natural backpressure (consumer requests next when ready). Push needs an explicit strategy when producers outrun consumers (buffering, dropping, sampling, or latest-only semantics).
-- **Processing model:** Pull tends to be demand-driven and often batch/sequential; push tends to be event-driven and continuous over time.
-- **Latency profile:** Pull can add wait/poll intervals; push reacts immediately to incoming events, which maps better to interactive UIs.
-- **Why `Fx` here:** UI events are producer-driven by nature, so `Fx` lets Typed coordinate push streams declaratively while still using Effect for cancellation, errors, and resource safety.
-
-### Type-Safe Routing
-
-Our **Router** builds on the battle-tested `find-my-way-ts` (the same routing foundation behind Effect's HTTP abstractions for maximum compatibility). You get:
-
-- **Type-level literal parsing** — routes are verified at compile time
-- **Schema-based decoding** — automatic validation and error handling for URL parameters
-- **find-my-way-ts URL syntax compatibility** — familiar patterns like `/:id`, wildcards, and query-style routes
-
-See `packages/router/README.md` and `examples/todomvc` for real matcher-based route definitions used in this repo.
-
-### `@typed/template`: UI Rendering
-
-Our template system is where Typed truly shines. Rather than forcing you into component models or virtual DOM abstractions, we give you **direct control**:
-
-- **Embed Fx, Stream, or Effect directly** — reactive values flow natively into your templates
-- **Surface errors from event handlers via templates** — error handling is declarative, not buried in callbacks
-- **Streaming HTML with built-in hydration** — send complete HTML to the client, then hydrate with minimal overhead
-- **Native event delegation** — no synthetic event system, just browser APIs
-- **Type-safe event handling** — handlers are checked at compile time
-
-### UI Update Cost Model
-
-- **Targeted text and attribute updates are `O(1)`** — updates write directly to bound DOM references.
-- **`Fx`/`Stream` bindings can target attributes and text content directly** — each emission updates only the bound target.
-- **`many(...)` list updates are `O(n)`** — keyed diffing over list items.
-
-## New with Effect v4
-
-- **Native `Stream` in templates** — Stream is no longer a bundle-breaker, so we can now embed `Stream` values directly without an adapter layer.
-- **Fiber-cost shift + runtime throughput** — rendering and event processing are **15x faster than v3** as Fibers became cheap; `Fx` always was and will be a declarative API for coordinating Fibers over time.
-- **Router URL syntax** — route definitions align with `find-my-way-ts` URL conventions for compatibility with Effect's HTTP ecosystem.
-- **Bundle size** - the default bundle size is ~5x smaller than previous versions.
-
-## Packages
-
-| Package                                     | Description                                                                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| [async-data](packages/async-data/README.md) | Async data states (NoData, Loading, Success, Failure, Optimistic) with Effect Schema and helpers                                     |
-| [fx](packages/fx/README.md)                 | **`Fx`**: Typed's Push-based abstraction that extends Effect for realtime updates, plus RefSubject/Subject/Sink/Versioned utilities. |
-| [guard](packages/guard/README.md)           | Effect-based guards (input → Option) with Schema decode/encode and composition                                                       |
-| [id](packages/id/README.md)                 | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid4/5/7, date-based, random                                                              |
-| [navigation](packages/navigation/README.md) | Navigation (browser/memory) and routing-related types                                                                                |
-| [router](packages/router/README.md)         | **Type-safe routing** with type-level literal parsing, Schema-based decoding, and find-my-way-ts compatibility                       |
-| [template](packages/template/README.md)     | **Streaming templates** with native Fx/Stream/Effect integration, error handling, hydration, and event delegation                    |
-| [ui](packages/ui/README.md)                 | Web integration: HttpRouter, Link (builds on router + template + navigation)                                                         |
-
-## Requirements
-
-- [Node.js](https://nodejs.org/)
-- [pnpm](https://pnpm.io/) (workspace uses `pnpm@10.0.0`)
-
-## Setup
-
-From the repo root:
+## Quick Start
 
 ```bash
-pnpm install
-pnpm build
+pnpm add @typed/vite-plugin @typed/virtual-modules-ts-plugin @typed/app @typed/router @typed/fx @typed/template
 ```
 
-## Examples
+**vite.config.ts**
 
-- **[Counter](examples/counter/README.md)** — Minimal app using `@typed/fx` and `@typed/template` (reactive state + DOM rendering).
-- **[TodoMVC](examples/todomvc/README.md)** — TodoMVC-style app using `@typed/fx`, `@typed/router`, `@typed/template`, and `@typed/ui`.
+```ts
+import { defineConfig } from "vite";
+import { typedVitePlugin } from "@typed/vite-plugin";
 
-**Run an example** (after `pnpm install` and `pnpm build` at root):
+export default defineConfig({
+  plugins: typedVitePlugin(),
+});
+```
 
-- **Counter:** `cd examples/counter && pnpm dev` (then `pnpm build`, `pnpm preview` as needed)
-- **TodoMVC:** `cd examples/todomvc && pnpm dev` (then `pnpm build`, `pnpm preview` as needed)
+The plugin auto-creates a Language Service-backed TypeInfo session from your tsconfig, so virtual modules stay type-aware as you edit. Pass `createTypeInfoApiSession` to override for custom setups.
 
-## Scripts
+**tsconfig.json** -- add the TS plugin for editor IntelliSense:
 
-From the repo root:
+```json
+{
+  "compilerOptions": {
+    "plugins": [{ "name": "@typed/virtual-modules-ts-plugin" }]
+  }
+}
+```
 
-- `pnpm build` — Build all packages
-- `pnpm test` — Run tests in all packages
-- `pnpm lint` — Lint (oxlint)
-- `pnpm format` — Format (oxfmt)
+That's it. You now have `router:` and `api:` virtual module imports available everywhere in your project.
 
-_All packages are in beta; APIs are subject to change._
+## How Virtual Modules Work
 
-## Releases
+Virtual modules are imports that don't point to files on disk. Instead, a plugin **generates TypeScript source on the fly** based on your project's file structure and types.
 
-Current beta versions (first public beta release; future betas will use `-beta.1`, `-beta.2`, etc.):
+```
+src/app.ts                        Your code
+  │
+  ├── import routes from "router:./routes"
+  │         │
+  │         ▼
+  │   ┌─────────────────────────────┐
+  │   │  Router Virtual Module      │
+  │   │  Plugin scans ./routes/     │
+  │   │  ├─ reads route exports     │
+  │   │  ├─ validates contracts     │
+  │   │  └─ emits typed Matcher     │
+  │   └─────────────────────────────┘
+  │         │
+  │         ▼
+  │   Generated TypeScript source
+  │   (fully typed, never written to disk)
+  │
+  └── Your app uses the typed router
+```
 
-| Package    | Version      |
-| ---------- | ------------ |
-| fx         | 2.0.0-beta.0 |
-| async-data | 1.0.0-beta.0 |
-| guard      | 1.0.0-beta.0 |
-| id         | 1.0.0-beta.0 |
-| navigation | 1.0.0-beta.0 |
-| router     | 1.0.0-beta.0 |
-| template   | 1.0.0-beta.0 |
-| ui         | 1.0.0-beta.0 |
+The same resolution works in three places:
 
-Install with the `beta` tag, e.g. `pnpm add @typed/fx@beta`.
+| Tool | What it does |
+| --- | --- |
+| **Vite plugin** (`@typed/vite-plugin`) | Resolves virtual imports during `vite dev` and `vite build` |
+| **TS plugin** (`@typed/virtual-modules-ts-plugin`) | Provides IntelliSense and type-checking in your editor |
+| **vmc** (`@typed/virtual-modules-compiler`) | Drop-in `tsc` replacement for CI type-checking |
 
-## From-Scratch Tutorial
+All three share the same `vmc.config.ts` (or inline config), so virtual modules resolve identically everywhere.
 
-These snippets are ordered so you can learn the model one layer at a time:
-`Fx` -> `RefSubject` -> `Route/Matcher/Router` -> `@typed/template` features.
+## Tutorial: File-Based Routing
 
-### 1) Start with `Fx`: a push stream over time
+### 1. Create route files
+
+Each route file exports a `route` and an entrypoint (`handler`, `template`, or `default`):
+
+```
+src/
+  routes/
+    index.ts          →  /
+    about.ts          →  /about
+    users/
+      index.ts        →  /users
+      [id].ts         →  /users/:id
+```
+
+**src/routes/index.ts**
+
+```ts
+import * as Route from "@typed/router";
+
+export const route = Route.Slash;
+export const handler = "Welcome home";
+```
+
+**src/routes/about.ts**
+
+```ts
+import * as Route from "@typed/router";
+
+export const route = Route.Parse("about");
+export const handler = "About us";
+```
+
+**src/routes/users/[id].ts**
 
 ```ts
 import { Effect } from "effect";
+import * as Route from "@typed/router";
+
+export const route = Route.Join(Route.Parse("users"), Route.Param("id"));
+
+export const handler = (params: { id: string }) =>
+  Effect.succeed(`User profile: ${params.id}`);
+```
+
+### 2. Import the virtual module
+
+```ts
+import routes from "router:./routes";
+```
+
+The plugin scans `./routes/`, validates each file's exports, and generates a fully typed `Router.Matcher`. The import is type-safe -- your editor shows the exact route params, handler types, and errors.
+
+### 3. Render it
+
+```ts
+import { Effect, Layer } from "effect";
 import { Fx } from "@typed/fx";
-
-// Create a push stream with 3 values.
-const numbers = Fx.fromIterable([1, 2, 3]);
-
-await numbers.pipe(
-  // Filter out even values
-  Fx.filter((n) => n % 2 === 0),
-  // Transform each value in the stream.
-  Fx.map((n) => n * 2),
-  // Observe each emitted value with an Effect.
-  Fx.observe((n) => Effect.log(`emitted: ${n}`)),
-  // Run the full program.
-  Effect.runPromise,
-);
-```
-
-### 2) Add state with `RefSubject`
-
-```ts
-import { Effect, Layer } from "effect";
-import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
-
-const Counter = Fx.gen(function* () {
-  // 1) Create reactive state.
-  const count = yield* RefSubject.make(0);
-
-  // 2) Create derived state from base state.
-  const doubled = RefSubject.map(count, (n) => n * 2);
-
-  // 3) Use state directly inside the template.
-  return html`<div>
-    <button onclick=${RefSubject.increment(count)}>Increment</button>
-    <button onclick=${RefSubject.decrement(count)}>Decrement</button>
-    <button onclick=${RefSubject.set(count, 0)}>Reset</button>
-
-    <p>Count: ${count}</p>
-    <p>Doubled: ${doubled}</p>
-  </div>`;
-});
-
-// Mount into the DOM with the DOM render template.
-await render(Counter, document.body).pipe(
-  Fx.drainLayer,
-  Layer.provide(DomRenderTemplate),
-  Layer.launch,
-  Effect.runPromise,
-);
-```
-
-### 3) Define typed routes with `Route` helpers
-
-```ts
-import * as Router from "@typed/router";
-
-// "/" route
-const Home = Router.Slash;
-
-// "/users/:id" route (id is a string param)
-const UserById = Router.Join(Router.Parse("users"), Router.Param("id"));
-
-// "/teams/:teamId" route (teamId is decoded as number)
-const TeamByNumber = Router.Join(Router.Parse("teams"), Router.Number("teamId"));
-
-console.log(Home.path); // "/"
-console.log(UserById.path); // "/users/:id"
-console.log(TeamByNumber.path); // "/teams/:teamId"
-```
-
-### 4) Match routes and render with `Router.run(...)`
-
-```ts
-import { Effect, Layer } from "effect";
-import { Fx, RefSubject } from "@typed/fx";
 import * as Router from "@typed/router";
 import { DomRenderTemplate, html, render } from "@typed/template";
+import routes from "router:./routes";
 
-const UserById = Router.Join(Router.Parse("users"), Router.Param("id"));
-
-const routes = Router.match(
-  Router.Slash,
-  // Static home route content
-  html`<h1>Home</h1>`,
-)
-  .match(
-    UserById,
-    // Route params are reactive.
-    // Here params has shape: { id: string }.
-    (params) => RefSubject.map(params, ({ id }) => html`User ${id}`),
-  )
-  // Redirect unmatched/decode/guard failures back to "/".
-  .pipe(Router.redirectTo("/"));
-
-// Router.run(...) turns a matcher into an Fx you can render.
 const App = html`<main>${Router.run(routes)}</main>`;
 
 await render(App, document.body).pipe(
@@ -256,9 +150,170 @@ await render(App, document.body).pipe(
 );
 ```
 
-### 5) `@typed/template` feature cookbook
+### Route conventions
 
-#### a) Embed `Effect`, `Fx`, and `Stream` directly
+**Required exports:**
+
+| Export | Type | Purpose |
+| --- | --- | --- |
+| `route` | `Route` from `@typed/router` | The URL pattern this file handles |
+| One of: `handler` / `template` / `default` | Value, Effect, Fx, Stream, or function | What to render when the route matches |
+
+**Companion files** (optional, applied automatically):
+
+| File | Purpose |
+| --- | --- |
+| `_layout.ts` | Layout wrapper for all routes in the directory |
+| `_dependencies.ts` | Shared dependencies (Layer/ServiceMap) for the directory |
+| `_guard.ts` | Guard that controls access to routes in the directory |
+| `_catch.ts` | Error handler for routes in the directory |
+| `myroute.guard.ts` | Guard for a specific route file |
+| `myroute.dependencies.ts` | Dependencies for a specific route file |
+
+Companions compose from ancestor directories down to the leaf route, so a `_layout.ts` at the root wraps everything.
+
+## Tutorial: Type-Safe APIs
+
+### 1. Create endpoint files
+
+Each endpoint exports `route`, `method`, and `handler`:
+
+```
+src/
+  api/
+    status.ts
+    users/
+      list.ts
+      create.ts
+```
+
+**src/api/status.ts**
+
+```ts
+import { Effect } from "effect";
+import * as Schema from "effect/Schema";
+import * as Route from "@typed/router";
+
+export const route = Route.Parse("/status");
+export const method = "GET" as const;
+export const success = Schema.Struct({ status: Schema.Literal("ok") });
+
+export const handler = () => Effect.succeed({ status: "ok" as const });
+```
+
+**src/api/users/list.ts**
+
+```ts
+import { Effect } from "effect";
+import * as Schema from "effect/Schema";
+import * as Route from "@typed/router";
+
+export const route = Route.Parse("/users");
+export const method = "GET" as const;
+export const success = Schema.Array(Schema.Struct({ id: Schema.String, name: Schema.String }));
+
+export const handler = () =>
+  Effect.succeed([{ id: "1", name: "Alice" }]);
+```
+
+### 2. Import the virtual module
+
+```ts
+import * as Api from "api:./api";
+```
+
+The plugin generates:
+
+| Export | What it is |
+| --- | --- |
+| `Api.Api` | The `HttpApi` definition with all endpoints |
+| `Api.ApiLayer` | A Layer wiring all handlers to the API |
+| `Api.Client` | A typed HTTP client for calling the API |
+| `Api.OpenApi` | The OpenAPI spec object |
+| `Api.Swagger` | Swagger UI layer |
+| `Api.Scalar` | Scalar docs layer |
+| `Api.serve` | One-liner to start the server |
+
+### 3. Serve it
+
+```ts
+import * as Api from "api:./api";
+
+Api.serve({ port: 3000 });
+```
+
+Or compose into a larger app:
+
+```ts
+import { Layer } from "effect";
+import * as Api from "api:./api";
+
+const app = Api.App({ port: 3000 });
+// Add more layers, middleware, etc.
+```
+
+### Endpoint conventions
+
+**Required exports:**
+
+| Export | Type | Purpose |
+| --- | --- | --- |
+| `route` | `Route` from `@typed/router` | The URL pattern |
+| `method` | `"GET"` / `"POST"` / `"PUT"` / `"DELETE"` / ... | HTTP method |
+| `handler` | `(ctx) => Effect<Success, Error, R>` | Request handler |
+
+**Optional exports:**
+
+| Export | Type | Purpose |
+| --- | --- | --- |
+| `success` | `Schema` | Response body schema (with optional status annotation) |
+| `error` | `Schema` | Error response schema |
+| `headers` | `Schema` | Request headers schema |
+| `body` | `Schema` | Request body schema |
+
+**Directory conventions:**
+
+| File | Purpose |
+| --- | --- |
+| `_api.ts` | API root configuration |
+| `_group.ts` | Group definition (creates an HttpApiGroup) |
+| `_dependencies.ts` | Shared dependencies for the directory |
+| `_middlewares.ts` | Shared middleware for the directory |
+| `(dirname)/` | Pathless group (no URL segment added) |
+
+## Templates and Reactive UI
+
+Typed's template system lets you embed `Effect`, `Fx`, and `Stream` values directly in HTML templates. No virtual DOM, no component model -- just tagged template literals with native reactivity.
+
+### Reactive state with RefSubject
+
+```ts
+import { Effect, Layer } from "effect";
+import { Fx, RefSubject } from "@typed/fx";
+import { DomRenderTemplate, html, render } from "@typed/template";
+
+const Counter = Fx.gen(function* () {
+  const count = yield* RefSubject.make(0);
+  const doubled = RefSubject.map(count, (n) => n * 2);
+
+  return html`<div>
+    <button onclick=${RefSubject.increment(count)}>+</button>
+    <button onclick=${RefSubject.decrement(count)}>-</button>
+    <button onclick=${RefSubject.set(count, 0)}>Reset</button>
+    <p>Count: ${count}</p>
+    <p>Doubled: ${doubled}</p>
+  </div>`;
+});
+
+await render(Counter, document.body).pipe(
+  Fx.drainLayer,
+  Layer.provide(DomRenderTemplate),
+  Layer.launch,
+  Effect.runPromise,
+);
+```
+
+### Embed any Effect type
 
 ```ts
 import { Effect } from "effect";
@@ -266,54 +321,24 @@ import * as Stream from "effect/Stream";
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 
-// A push stream that changes over time.
 const fxValue = Fx.mergeAll(Fx.at("A", 0), Fx.at("B", 250), Fx.at("C", 500));
-
-// Native Effect Stream is also directly renderable.
 const streamValue = Stream.fromIterable(["one", "two", "three"]);
 
 const view = html`<div data-current=${fxValue}>
-  Effect: ${Effect.succeed("ready")} Fx: ${fxValue} Stream: ${streamValue}
+  Effect: ${Effect.succeed("ready")}
+  Fx: ${fxValue}
+  Stream: ${streamValue}
 </div>`;
 ```
 
-#### b) Attributes, properties, data, spread, and refs
-
-```ts
-import { Effect } from "effect";
-import { Fx } from "@typed/fx";
-import { html } from "@typed/template";
-
-// Our syntax is
-const field = html`<input
-  <!-- Sparse attributes (requires quotes) -->
-  class="a ${Effect.succeed("b")} ${Stream.succeed("c")} ${Fx.succeed("d")}"
-  <!-- Boolean attributes -->
-  ?disabled=${Fx.succeed(false)}
-  <!-- Properties -->
-  .value=${Effect.succeed("typed")}
-  <!-- data-* attributes -->
-  .data=${{ source: "docs", mode: "demo" }}
-  <!-- Spread -->
-  ...${{ id: "name-input", "aria-label": "Name" }}
-  ref=${(el: HTMLInputElement) => {
-    // Called with the mounted element.
-    // Automatically runs any Effect/Stream/Fx returned.
-    return Effect.log("mounted", el.id);
-  }}
-/>`;
-```
-
-#### c) Event handlers with `Effect` and `EventHandler`
+### Event handlers
 
 ```ts
 import { Effect } from "effect";
 import { EventHandler, html } from "@typed/template";
 
-// Plain Effect handler (runs on click).
 const onClick = Effect.sync(() => console.log("clicked"));
 
-// EventHandler lets you attach behavior + listener options.
 const onSubmit = EventHandler.make(
   (ev: SubmitEvent) => Effect.sync(() => console.log("submitted", ev.type)),
   { preventDefault: true },
@@ -327,7 +352,7 @@ const view = html`<div>
 </div>`;
 ```
 
-#### d) Keyed list rendering with `many(...)`
+### Keyed list rendering
 
 ```ts
 import { Fx, RefSubject } from "@typed/fx";
@@ -336,7 +361,6 @@ import { html, many } from "@typed/template";
 type Todo = { id: string; text: string; done: boolean };
 
 const TodoList = Fx.gen(function* () {
-  // The whole list is reactive.
   const todos = yield* RefSubject.make<ReadonlyArray<Todo>>([
     { id: "1", text: "Learn Fx", done: false },
     { id: "2", text: "Use many()", done: false },
@@ -345,16 +369,31 @@ const TodoList = Fx.gen(function* () {
   return html`<ul>
     ${many(
       todos,
-      // Stable key for diffing.
       (todo) => todo.id,
-      // Each item gets its own RefSubject so updates stay granular.
-      (todoRef) => html`<li>${RefSubject.map(todoRef, (todo) => todo.text)}</li>`,
+      (todoRef) => html`<li>${RefSubject.map(todoRef, (t) => t.text)}</li>`,
     )}
   </ul>`;
 });
 ```
 
-#### e) SSR streaming with `renderToHtml`
+### Attributes, properties, and refs
+
+```ts
+import { Effect } from "effect";
+import { Fx } from "@typed/fx";
+import { html } from "@typed/template";
+
+const field = html`<input
+  class="a ${Effect.succeed("b")} ${Fx.succeed("c")}"
+  ?disabled=${Fx.succeed(false)}
+  .value=${Effect.succeed("typed")}
+  .data=${{ source: "docs", mode: "demo" }}
+  ...${{ id: "name-input", "aria-label": "Name" }}
+  ref=${(el: HTMLInputElement) => Effect.log("mounted", el.id)}
+/>`;
+```
+
+### SSR streaming
 
 ```ts
 import { Effect } from "effect";
@@ -365,10 +404,156 @@ import { HtmlRenderTemplate, renderToHtml } from "@typed/template/Html";
 const page = html`<main><h1>Typed SSR</h1></main>`;
 
 await renderToHtml(page).pipe(
-  // Provide the HTML renderer instead of DOM renderer.
   Fx.provide(HtmlRenderTemplate),
-  // Handle each HTML chunk as soon as it is emitted.
-  // In a real server, replace this with `response.write(chunk)`.
   Fx.tap((chunk) => Effect.sync(() => process.stdout.write(chunk))),
 );
 ```
+
+## Typed Routes
+
+You can also define routes programmatically without the virtual module system:
+
+```ts
+import * as Router from "@typed/router";
+
+const Home = Router.Slash;                                           // "/"
+const UserById = Router.Join(Router.Parse("users"), Router.Param("id"));   // "/users/:id"
+const TeamByNum = Router.Join(Router.Parse("teams"), Router.Number("teamId")); // "/teams/:teamId"
+
+const routes = Router.match(Home, html`<h1>Home</h1>`)
+  .match(UserById, (params) =>
+    RefSubject.map(params, ({ id }) => html`User ${id}`))
+  .pipe(Router.redirectTo("/"));
+
+const App = html`<main>${Router.run(routes)}</main>`;
+```
+
+## CI Type-Checking with vmc
+
+For CI or non-Vite builds, use `vmc` as a drop-in `tsc` replacement that resolves virtual modules:
+
+```bash
+npx vmc --noEmit -p tsconfig.json
+npx vmc --watch
+npx vmc --build
+```
+
+Initialize a config file (shared with the TS plugin and Vite plugin):
+
+```bash
+npx vmc init   # creates vmc.config.ts
+```
+
+## Custom Virtual Module Plugins
+
+The virtual module system is extensible. Create a plugin that implements the `VirtualModulePlugin` interface:
+
+```ts
+import type { VirtualModulePlugin } from "@typed/virtual-modules";
+
+const myPlugin: VirtualModulePlugin = {
+  name: "my-plugin",
+  shouldResolve(id) {
+    return id === "virtual:config";
+  },
+  build(id, importer, api) {
+    return `export const version = "1.0.0";`;
+  },
+};
+```
+
+Register it in `vmc.config.ts`:
+
+```ts
+export default {
+  plugins: [myPlugin],
+};
+```
+
+Plugins receive a `TypeInfoApi` in `build()` for type-aware code generation:
+
+```ts
+build(id, importer, api) {
+  const snapshot = api.file("types.ts", { baseDir: dirname(importer) });
+  if (!snapshot.ok) return `export const names: string[] = [];`;
+
+  const names = snapshot.snapshot.exports.map((e) => e.name);
+  return `export const names = ${JSON.stringify(names)} as const;`;
+}
+```
+
+## Packages
+
+| Package | Description |
+| --- | --- |
+| [@typed/app](packages/app/README.md) | Router and HttpApi virtual module plugins, `defineApiHandler` helper |
+| [@typed/vite-plugin](packages/vite-plugin/README.md) | Vite integration -- `typedVitePlugin()` for zero-config virtual modules |
+| [@typed/virtual-modules](packages/virtual-modules/README.md) | Core virtual module plugin system and TypeInfoApi |
+| [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md) | Low-level Vite adapter for virtual module resolution |
+| [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md) | `vmc` CLI -- drop-in `tsc` with virtual module support |
+| [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md) | TypeScript Language Service plugin for editor IntelliSense |
+| [@typed/fx](packages/fx/README.md) | `Fx` -- push-based reactive abstraction extending Effect |
+| [@typed/template](packages/template/README.md) | Streaming templates with Fx/Stream/Effect integration and hydration |
+| [@typed/router](packages/router/README.md) | Type-safe routing with compile-time literal parsing and Schema decoding |
+| [@typed/navigation](packages/navigation/README.md) | Browser/memory navigation and routing types |
+| [@typed/ui](packages/ui/README.md) | Web integration: HttpRouter, Link (builds on router + template + navigation) |
+| [@typed/async-data](packages/async-data/README.md) | Async data states (NoData, Loading, Success, Failure, Optimistic) |
+| [@typed/guard](packages/guard/README.md) | Effect-based guards with Schema decode/encode and composition |
+| [@typed/id](packages/id/README.md) | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid |
+
+## Architecture at a Glance
+
+Typed adds one runtime abstraction to Effect: **`Fx`**, a push-based stream for modeling time-varying values. Browser events are naturally push-driven (clicks, timers, websockets), and `Fx` models this directly so UI updates and event handling align with the platform.
+
+- **`Effect`** -- one-shot and scoped computations
+- **`Fx`** -- push-driven values and events over time
+- **Templates** -- tagged template literals with native `Fx`/`Stream`/`Effect` embedding
+- **Routing** -- type-level literal parsing built on `find-my-way-ts`
+
+Targeted text and attribute updates are O(1). `many(...)` list updates use O(n) keyed diffing.
+
+## Examples
+
+- **[Counter](examples/counter/README.md)** -- Minimal reactive counter with `@typed/fx` and `@typed/template`
+- **[TodoMVC](examples/todomvc/README.md)** -- Full TodoMVC with routing, state, and templates
+
+```bash
+cd examples/counter && pnpm dev
+cd examples/todomvc && pnpm dev
+```
+
+## Setup
+
+```bash
+pnpm install
+pnpm build
+```
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `pnpm build` | Build all packages |
+| `pnpm test` | Run tests |
+| `pnpm lint` | Lint (oxlint) |
+| `pnpm format` | Format (oxfmt) |
+
+## Requirements
+
+- [Node.js](https://nodejs.org/)
+- [pnpm](https://pnpm.io/) (workspace uses `pnpm@10.0.0`)
+
+## Releases
+
+Install with the `beta` tag: `pnpm add @typed/fx@beta`
+
+| Package | Version |
+| --- | --- |
+| fx | 2.0.0-beta.0 |
+| async-data | 1.0.0-beta.0 |
+| guard | 1.0.0-beta.0 |
+| id | 1.0.0-beta.0 |
+| navigation | 1.0.0-beta.0 |
+| router | 1.0.0-beta.0 |
+| template | 1.0.0-beta.0 |
+| ui | 1.0.0-beta.0 |

@@ -4,15 +4,19 @@ import type * as ts from "typescript";
 import { createTypeTargetBootstrapContent } from "./TypeInfoApi.js";
 import type { TypeTargetSpec } from "./types.js";
 
-/** Canonical relative path for the type-target bootstrap file under project root. */
-export const TYPE_TARGET_BOOTSTRAP_RELATIVE = ".typed/type-target-bootstrap.ts";
+/**
+ * Canonical relative path for the type-target bootstrap file.
+ * Always under node_modules so it is git-ignored and does not pollute the project.
+ */
+export const TYPE_TARGET_BOOTSTRAP_RELATIVE = "node_modules/.typed/type-target-bootstrap.ts";
 
 /**
  * Returns the canonical path for the type-target bootstrap file.
- * All consumers (TS plugin, VSCode resolver, VMC) should use this path.
+ * Always under projectRoot/node_modules/.typed/ so it is git-ignored.
+ * All consumers (TS plugin, VSCode resolver, VMC, Vite plugin) should use this path.
  */
 export function getTypeTargetBootstrapPath(projectRoot: string): string {
-  return join(projectRoot, ".typed", "type-target-bootstrap.ts");
+  return join(projectRoot, "node_modules", ".typed", "type-target-bootstrap.ts");
 }
 
 export interface EnsureTypeTargetBootstrapFileFs {
@@ -30,9 +34,10 @@ const defaultFs: EnsureTypeTargetBootstrapFileFs = {
 };
 
 /**
- * Ensures the type-target bootstrap file exists on disk. Creates .typed dir if needed,
- * writes createTypeTargetBootstrapContent(typeTargetSpecs) to the canonical path.
- * Returns the bootstrap path. Use default Node fs unless passing custom fs (e.g. ts.sys for VMC).
+ * Ensures the type-target bootstrap file exists on disk. Writes to
+ * projectRoot/node_modules/.typed/type-target-bootstrap.ts (git-ignored via node_modules).
+ * Creates node_modules/.typed if needed. Returns the bootstrap path.
+ * Use default Node fs unless passing custom fs (e.g. ts.sys for VMC).
  */
 export function ensureTypeTargetBootstrapFile(
   projectRoot: string,

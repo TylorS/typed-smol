@@ -878,7 +878,7 @@ const collectImports = (
 };
 
 const createFileSnapshot = (
-  filePath: string,
+  sourceFile: ts.SourceFile,
   checker: ts.TypeChecker,
   program: ts.Program,
   tsMod: typeof import("typescript"),
@@ -887,11 +887,7 @@ const createFileSnapshot = (
   onInternalError?: (err: unknown, context: string) => void,
   registry?: WeakMap<TypeNode, ts.Type>,
 ): TypeInfoFileSnapshot => {
-  const sourceFile = program.getSourceFile(filePath);
-  if (!sourceFile) {
-    throw new Error(`TypeInfoApi could not find source file in program: ${filePath}`);
-  }
-
+  const filePath = sourceFile.fileName;
   const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
   const exports =
     moduleSymbol
@@ -1090,7 +1086,7 @@ export const createTypeInfoApiSession = (
     }
 
     const snapshot = createFileSnapshot(
-      absolutePath,
+      sourceFile,
       checker,
       options.program,
       options.ts,
@@ -1159,20 +1155,27 @@ export const createTypeInfoApiSession = (
 
     const program = options.program;
     const tsMod = options.ts;
-    const snapshots = filteredMatches
-      .filter((filePath) => program.getSourceFile(filePath) !== undefined)
-      .map((filePath) =>
-        createFileSnapshot(
-          filePath,
-          checker,
-          program,
-          tsMod,
-          maxDepth,
-          true,
-          options.onInternalError,
-          typeNodeRegistry,
-        ),
-      );
+    const snapshots = filteredMatches.flatMap((filePath) => {
+      const sf = program.getSourceFile(filePath);
+      if (!sf) return [];
+      try {
+        return [
+          createFileSnapshot(
+            sf,
+            checker,
+            program,
+            tsMod,
+            maxDepth,
+            true,
+            options.onInternalError,
+            typeNodeRegistry,
+          ),
+        ];
+      } catch (err) {
+        options.onInternalError?.(err, `directory() serialization for ${filePath}`);
+        return [];
+      }
+    });
     directoryCache.set(cacheKey, snapshots);
     return snapshots;
   };

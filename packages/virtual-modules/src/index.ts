@@ -29,3 +29,7 @@ export {
   TYPE_TARGET_BOOTSTRAP_RELATIVE,
   type EnsureTypeTargetBootstrapFileFs,
 } from "./typeTargetBootstrap.js";
+export {
+  createLanguageServiceSessionFactory,
+  type CreateLanguageServiceSessionFactoryOptions,
+} from "./LanguageServiceSession.js";
