@@ -640,24 +640,26 @@ build(id, importer, api) {
 
 ## Packages
 
+All packages are published under the `@typed` scope on npm. Install with the `beta` tag: `pnpm add @typed/<package>@beta`.
 
 | Package                                                                          | Description                                                                  |
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [@typed/app](packages/app/README.md)                                             | Router and HttpApi virtual module plugins, `defineApiHandler` helper         |
-| [@typed/vite-plugin](packages/vite-plugin/README.md)                             | Vite integration -- `typedVitePlugin()` for zero-config virtual modules      |
-| [@typed/virtual-modules](packages/virtual-modules/README.md)                     | Core virtual module plugin system and TypeInfoApi                            |
-| [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md)           | Low-level Vite adapter for virtual module resolution                         |
-| [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md)   | `vmc` CLI -- drop-in `tsc` with virtual module support                       |
-| [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md) | TypeScript Language Service plugin for editor IntelliSense                   |
-| [@typed/virtual-modules-vscode](packages/virtual-modules-vscode/README.md)       | VS Code extension for go-to-definition and source viewing of virtual modules |
-| [@typed/fx](packages/fx/README.md)                                               | `Fx` -- push-based reactive abstraction extending Effect                     |
-| [@typed/template](packages/template/README.md)                                   | Streaming templates with Fx/Stream/Effect integration and hydration          |
-| [@typed/router](packages/router/README.md)                                       | Type-safe routing with compile-time literal parsing and Schema decoding      |
-| [@typed/navigation](packages/navigation/README.md)                               | Browser/memory navigation and routing types                                  |
-| [@typed/ui](packages/ui/README.md)                                               | Web integration: HttpRouter, Link (builds on router + template + navigation) |
 | [@typed/async-data](packages/async-data/README.md)                               | Async data states (NoData, Loading, Success, Failure, Optimistic)            |
+| [@typed/fx](packages/fx/README.md)                                               | `Fx` — push-based reactive abstraction extending Effect                     |
 | [@typed/guard](packages/guard/README.md)                                         | Effect-based guards with Schema decode/encode and composition                |
 | [@typed/id](packages/id/README.md)                                               | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid                               |
+| [@typed/navigation](packages/navigation/README.md)                               | Browser/memory navigation and routing types                                  |
+| [@typed/router](packages/router/README.md)                                       | Type-safe routing with compile-time literal parsing and Schema decoding      |
+| [@typed/template](packages/template/README.md)                                   | Streaming templates with Fx/Stream/Effect integration and hydration          |
+| [@typed/tsconfig](packages/tsconfig)                                             | Shared TypeScript configs (base, dom, test, webworker)                       |
+| [@typed/ui](packages/ui/README.md)                                               | Web integration: HttpRouter, Link (builds on router + template + navigation) |
+| [@typed/vite-plugin](packages/vite-plugin/README.md)                             | Vite integration — `typedVitePlugin()` for zero-config virtual modules      |
+| [@typed/virtual-modules](packages/virtual-modules/README.md)                     | Core virtual module plugin system and TypeInfoApi                            |
+| [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md)   | `vmc` CLI — drop-in `tsc` with virtual module support                       |
+| [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md)   | TypeScript Language Service plugin for editor IntelliSense                   |
+| [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md)           | Low-level Vite adapter for virtual module resolution                         |
+| [@typed/virtual-modules-vscode](packages/virtual-modules-vscode/README.md)       | VS Code extension for go-to-definition and source viewing of virtual modules |
 
 
 ## Architecture at a Glance
@@ -706,18 +708,25 @@ pnpm build
 
 ## Releases
 
-Install with the `beta` tag: `pnpm add @typed/fx@beta`
+Install with the `beta` tag: `pnpm add @typed/<package>@beta`
 
-
-| Package    | Version      |
-| ---------- | ------------ |
-| fx         | 2.0.0-beta.0 |
-| async-data | 1.0.0-beta.0 |
-| guard      | 1.0.0-beta.0 |
-| id         | 1.0.0-beta.0 |
-| navigation | 1.0.0-beta.0 |
-| router     | 1.0.0-beta.0 |
-| template   | 1.0.0-beta.0 |
-| ui         | 1.0.0-beta.0 |
+| Package                      | Version       |
+| ---------------------------- | ------------- |
+| @typed/app                   | 1.0.0-beta.1 |
+| @typed/async-data            | 1.0.0-beta.1 |
+| @typed/fx                    | 2.0.0-beta.1 |
+| @typed/guard                 | 1.0.0-beta.1 |
+| @typed/id                    | 1.0.0-beta.1 |
+| @typed/navigation            | 1.0.0-beta.1 |
+| @typed/router                | 1.0.0-beta.1 |
+| @typed/template              | 1.0.0-beta.1 |
+| @typed/tsconfig               | 1.0.0-beta.1 |
+| @typed/ui                    | 1.0.0-beta.1 |
+| @typed/vite-plugin           | 1.0.0-beta.1 |
+| @typed/virtual-modules        | 1.0.0-beta.1 |
+| @typed/virtual-modules-compiler | 1.0.0-beta.1 |
+| @typed/virtual-modules-ts-plugin | 1.0.0-beta.1 |
+| @typed/virtual-modules-vite   | 1.0.0-beta.1 |
+| @typed/virtual-modules-vscode | 1.0.0-beta.1 |
 
 
