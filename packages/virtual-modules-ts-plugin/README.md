@@ -1,6 +1,12 @@
 # @typed/virtual-modules-ts-plugin
 
-TypeScript Language Service plugin that integrates [@typed/virtual-modules](../virtual-modules) for virtual module resolution in editors (VS Code, etc.).
+TypeScript Language Service plugin that integrates [@typed/virtual-modules](../virtual-modules) into the TypeScript Language Service so editors (VS Code, Cursor, etc.) get full type-checking and IntelliSense for virtual imports such as `virtual:foo`, `router:./routes`, and `api:./endpoints`. Uses the same `vmc.config.ts` as the `vmc` CLI and Vite plugin — a single config for editor, build, and dev server.
+
+## What this enables
+
+- Live type-checking and IntelliSense for virtual modules in the editor
+- Support for plugins that use the TypeInfo API (e.g. router route validation, HttpApi endpoint validation)
+- No "Cannot find module" errors for virtual IDs when correctly configured
 
 ## Installation
 

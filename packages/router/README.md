@@ -2,7 +2,23 @@
 
 > **Beta:** This package is in beta; APIs may change.
 
-`@typed/router` provides **typed routing**: path and query parameters with Effect Schema, route definitions (**Route**), **Matcher** (pattern matching on routes), **CurrentRoute**, and **Router** (compile, layout/catch managers). Use it for type-safe routing in Effect apps, with parsable path/query and composable matchers that produce Fx streams.
+## Purpose
+
+`@typed/router` provides **typed routing** for Effect apps: path and query parameters derived from route strings and decoded via Effect Schema, **Route** definitions, **Matcher** (pattern matching on routes), **CurrentRoute**, and **Router** layers. Use it when you need type-safe routing with parsable path/query and composable matchers that produce Fx streams and react to path changes.
+
+## Use cases
+
+- **Typed SPAs** — `BrowserRouter()` + `run(matcher)` for client-side routing; matcher cases yield Fx that switch as the path changes.
+- **SSR** — `ServerRouter({ initialMemory })` for server rendering with in-memory navigation.
+- **Tests** — `TestRouter()` with deterministic IDs for predictable route tests.
+- **File-based routing** — `@typed/app` virtual modules generate Matcher source from route files; use `import { Matcher } from "router:./routes"` with typedVitePlugin or vmc.
+
+## Architecture
+
+1. **Route** — Define paths (`Route.Parse("/todos/:id")`), optionally with query (`?filter=`). Path and query types come from the route string.
+2. **Matcher** — Add cases via `match(route, handler)`; each case returns an Fx, Effect, Stream, or value. Nest routes with `prefix(route)`.
+3. **run(matcher)** — Compile the matcher and return an Fx that reacts to `CurrentPath` from `Navigation`. When the path changes, the matcher selects the matching case, scopes the previous handler, and yields the new handler's Fx.
+4. **Router layers** — Provide `BrowserRouter`, `ServerRouter`, or `TestRouter` to supply `Navigation` and `CurrentRoute`.
 
 ## Dependencies
 
@@ -36,6 +52,8 @@ const filterState = Router.match(Router.Slash, "all")
 
 // Provide Router.BrowserRouter() and use filterState (or other matchers) in your layers
 ```
+
+For file-based routing, see `@typed/app` and its virtual `router:./routes` imports.
 
 ## API reference
 

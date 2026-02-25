@@ -2,7 +2,7 @@
 
 > **Beta:** This package is in beta; APIs may change.
 
-`@typed/template` provides **declarative UI over Effect**: HTML literals (`html`), a stream of **RenderEvent**s, DOM and HTML rendering, hydration, and event handling. Templates are Fx streams; you provide **RenderTemplate** (e.g. **DomRenderTemplate** for the browser or **HtmlRenderTemplate** for SSR). Use it for type-safe, reactive UIs that integrate with Effect and RefSubject.
+`@typed/template` provides **type-safe, reactive UIs that integrate with Effect**. It is the core UI layer for typed-smol apps: HTML literals (`html`), DOM rendering, SSR (HTML strings), hydration, event handlers with Effect, and keyed list rendering. Templates are **Fx streams** (`Fx<RenderEvent, E, R>`); you provide a `RenderTemplate` service (e.g. `DomRenderTemplate` for the browser or `HtmlRenderTemplate` for SSR).
 
 ## Dependencies
 
@@ -10,6 +10,19 @@
 - `@typed/fx`
 - `html5parser`
 - `happy-dom` (dev)
+
+## Capabilities
+
+- **Reactive interpolation**: Interpolate `Renderable` values—primitives, `Effect`, `Fx`/`Stream`—directly in `html` templates; updates stream through to the DOM.
+- **DOM + SSR targets**: Same templates work in the browser (`DomRenderTemplate`) and on the server (`HtmlRenderTemplate`); choose the layer for your environment.
+- **Hydration**: Use `makeHydrateContext` to attach to existing SSR DOM instead of creating new nodes; supports keyed lists (`many`).
+- **Keyed lists**: `many(values, getKey, render)` renders reactive lists with efficient keyed diffing and per-item `RefSubject` state.
+- **EventHandler with Effect**: `EventHandler.make` for type-safe event handlers that return `Effect`; supports `preventDefault`, `stopPropagation`, etc.
+- **Batched render queue**: `RenderQueue` and `RenderPriority` (Sync, Raf, Idle) batch DOM updates for smoother rendering.
+
+## When to use
+
+Use `@typed/template` when building Effect-based web UIs, when you need SSR + hydration, or when you want type-safe templates and event handlers. For routing, combine with `@typed/router`. For Link and SSR helpers, use `@typed/ui` on top of template.
 
 ## API overview
 

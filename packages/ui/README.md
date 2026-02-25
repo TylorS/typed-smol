@@ -2,7 +2,12 @@
 
 > **Beta:** This package is in beta; APIs may change.
 
-`@typed/ui` provides **web integration** for the router and template: **Link** (typed anchor that uses Navigation for same-origin clicks) and **HttpRouter**-related helpers for SSR (`ssrForHttp`, `handleHttpServerError`). Use it when you need navigation-aware links and/or server-side rendering of the router with Effect’s HTTP server.
+`@typed/ui` is the **web integration layer** for `@typed/router` and `@typed/template`. It bridges typed-smol's routing and template system with the browser and Effect's HTTP stack.
+
+## Capabilities
+
+- **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics (href, target, keyboard, right-click).
+- **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for server-side rendering. Requests are parsed, matched, and the corresponding Fx is rendered to HTML. `handleHttpServerError` adds global middleware for 404/400/500.
 
 ## Dependencies
 
@@ -43,13 +48,13 @@ function Link<const Opts extends LinkOptions>(
 | `content` | `Renderable<string \| number \| boolean \| null \| undefined \| void \| RenderEvent, any, any>` | Yes      | Link body (text or template content).                             |
 | `replace` | `boolean`                                                                                       | No       | If `true`, use history replace instead of push. Default: `false`. |
 
-In addition, `LinkOptions` accepts standard anchor event handlers (e.g. `onclick`), `ref`, and other writable `HTMLAnchorElement` properties. Custom `onclick` runs first; if the event is not `preventDefault`’d, the built-in navigation handler runs.
+In addition, `LinkOptions` accepts standard anchor event handlers (e.g. `onclick`), `ref`, and other writable `HTMLAnchorElement` properties. Custom `onclick` runs first; if the event is not `preventDefault`'d, the built-in navigation handler runs.
 
 ---
 
 ### `ssrForHttp`
 
-Registers route handlers on an Effect **HttpRouter** for server-side rendering. The matcher’s routes are compiled and each case is exposed as a GET route; requests are parsed, matched, and the corresponding Fx is rendered to HTML. Requires **Router** and **Scope** to be provided elsewhere; other matcher services remain in the effect requirement.
+Registers route handlers on an Effect **HttpRouter** for server-side rendering. The matcher's routes are compiled and each case is exposed as a GET route; requests are parsed, matched, and the corresponding Fx is rendered to HTML. Requires **Router** and **Scope** to be provided elsewhere; other matcher services remain in the effect requirement.
 
 **Overloads:**
 
@@ -99,4 +104,4 @@ const nav = html`<nav>
 </nav>`;
 ```
 
-For SSR, provide the router and matcher to `ssrForHttp` when setting up the HTTP server; see Effect’s `HttpRouter` and the TodoMVC example structure.
+For SSR, provide the router and matcher to `ssrForHttp` when setting up the HTTP server; see Effect's `HttpRouter` and the TodoMVC example structure.

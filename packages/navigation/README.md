@@ -2,7 +2,12 @@
 
 > **Beta:** This package is in beta; APIs may change.
 
-`@typed/navigation` provides **browser and in-memory navigation**: current entry, history, and actions (navigate, back, forward, reload, etc.) with reactive state via RefSubject. It supports before-navigation and navigation events and integrates with the router. Use it when you need typed, Effect-based control over the browser history API or a memory-backed history for tests/SSR.
+`@typed/navigation` provides typed, Effect-based control over the browser history API and in-memory history. It solves the need for reactive navigation state (current entry, history stack, transition, canGoBack/canGoForward), programmatic actions (navigate, back, forward, reload), and lifecycle hooks (before/after navigation) that can intercept, redirect, or cancel. Use it when you need: browser navigation with full history control; in-memory history for tests or SSR; blocking navigation on unsaved changes (confirm/cancel/redirect). The router (`@typed/router`) builds on navigation: `BrowserRouter` uses browser history, `ServerRouter` and `TestRouter` use in-memory providers.
+
+## Integration
+
+- **@typed/router** — `Router` = `CurrentRoute | Navigation`; BrowserRouter uses `fromWindow`; ServerRouter and TestRouter use `memory` or `initialMemory` for tests and SSR
+- **@typed/ui** — Link component for programmatic navigation; HttpRouter uses `initialMemory` for server-side request handling
 
 ## Dependencies
 

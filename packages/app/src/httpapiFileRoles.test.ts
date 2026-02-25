@@ -4,7 +4,6 @@ import {
   compareHttpApiPathOrder,
   HTTPAPI_DIRECTORY_COMPANION_FILES,
   HTTPAPI_ENDPOINT_COMPANION_SUFFIXES,
-  HTTPAPI_SCRIPT_EXTENSION_SET,
   isHttpApiScriptExtension,
   normalizeHttpApiRelativePath,
   sortHttpApiPaths,
