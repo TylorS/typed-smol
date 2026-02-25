@@ -69,11 +69,13 @@ src/app.ts                        Your code
 
 The same resolution works in three places:
 
-| Tool | What it does |
-| --- | --- |
-| **Vite plugin** (`@typed/vite-plugin`) | Resolves virtual imports during `vite dev` and `vite build` |
-| **TS plugin** (`@typed/virtual-modules-ts-plugin`) | Provides IntelliSense and type-checking in your editor |
-| **vmc** (`@typed/virtual-modules-compiler`) | Drop-in `tsc` replacement for CI type-checking |
+
+| Tool                                               | What it does                                                |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| **Vite plugin** (`@typed/vite-plugin`)             | Resolves virtual imports during `vite dev` and `vite build` |
+| **TS plugin** (`@typed/virtual-modules-ts-plugin`) | Provides IntelliSense and type-checking in your editor      |
+| **vmc** (`@typed/virtual-modules-compiler`)        | Drop-in `tsc` replacement for CI type-checking              |
+
 
 All three share the same `vmc.config.ts` (or inline config), so virtual modules resolve identically everywhere.
 
@@ -154,21 +156,25 @@ await render(App, document.body).pipe(
 
 **Required exports:**
 
-| Export | Type | Purpose |
-| --- | --- | --- |
-| `route` | `Route` from `@typed/router` | The URL pattern this file handles |
+
+| Export                                     | Type                                   | Purpose                               |
+| ------------------------------------------ | -------------------------------------- | ------------------------------------- |
+| `route`                                    | `Route` from `@typed/router`           | The URL pattern this file handles     |
 | One of: `handler` / `template` / `default` | Value, Effect, Fx, Stream, or function | What to render when the route matches |
+
 
 **Companion files** (optional, applied automatically):
 
-| File | Purpose |
-| --- | --- |
-| `_layout.ts` | Layout wrapper for all routes in the directory |
-| `_dependencies.ts` | Shared dependencies (Layer/ServiceMap) for the directory |
-| `_guard.ts` | Guard that controls access to routes in the directory |
-| `_catch.ts` | Error handler for routes in the directory |
-| `myroute.guard.ts` | Guard for a specific route file |
-| `myroute.dependencies.ts` | Dependencies for a specific route file |
+
+| File                      | Purpose                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| `_layout.ts`              | Layout wrapper for all routes in the directory           |
+| `_dependencies.ts`        | Shared dependencies (Layer/ServiceMap) for the directory |
+| `_guard.ts`               | Guard that controls access to routes in the directory    |
+| `_catch.ts`               | Error handler for routes in the directory                |
+| `myroute.guard.ts`        | Guard for a specific route file                          |
+| `myroute.dependencies.ts` | Dependencies for a specific route file                   |
+
 
 Companions compose from ancestor directories down to the leaf route, so a `_layout.ts` at the root wraps everything.
 
@@ -224,15 +230,17 @@ import * as Api from "api:./api";
 
 The plugin generates:
 
-| Export | What it is |
-| --- | --- |
-| `Api.Api` | The `HttpApi` definition with all endpoints |
-| `Api.ApiLayer` | A Layer wiring all handlers to the API |
-| `Api.Client` | A typed HTTP client for calling the API |
-| `Api.OpenApi` | The OpenAPI spec object |
-| `Api.Swagger` | Swagger UI layer |
-| `Api.Scalar` | Scalar docs layer |
-| `Api.serve` | One-liner to start the server |
+
+| Export         | What it is                                  |
+| -------------- | ------------------------------------------- |
+| `Api.Api`      | The `HttpApi` definition with all endpoints |
+| `Api.ApiLayer` | A Layer wiring all handlers to the API      |
+| `Api.Client`   | A typed HTTP client for calling the API     |
+| `Api.OpenApi`  | The OpenAPI spec object                     |
+| `Api.Swagger`  | Swagger UI layer                            |
+| `Api.Scalar`   | Scalar docs layer                           |
+| `Api.serve`    | One-liner to start the server               |
+
 
 ### 3. Serve it
 
@@ -256,30 +264,36 @@ const app = Api.App({ port: 3000 });
 
 **Required exports:**
 
-| Export | Type | Purpose |
-| --- | --- | --- |
-| `route` | `Route` from `@typed/router` | The URL pattern |
-| `method` | `"GET"` / `"POST"` / `"PUT"` / `"DELETE"` / ... | HTTP method |
-| `handler` | `(ctx) => Effect<Success, Error, R>` | Request handler |
+
+| Export    | Type                                            | Purpose         |
+| --------- | ----------------------------------------------- | --------------- |
+| `route`   | `Route` from `@typed/router`                    | The URL pattern |
+| `method`  | `"GET"` / `"POST"` / `"PUT"` / `"DELETE"` / ... | HTTP method     |
+| `handler` | `(ctx) => Effect<Success, Error, R>`            | Request handler |
+
 
 **Optional exports:**
 
-| Export | Type | Purpose |
-| --- | --- | --- |
+
+| Export    | Type     | Purpose                                                |
+| --------- | -------- | ------------------------------------------------------ |
 | `success` | `Schema` | Response body schema (with optional status annotation) |
-| `error` | `Schema` | Error response schema |
-| `headers` | `Schema` | Request headers schema |
-| `body` | `Schema` | Request body schema |
+| `error`   | `Schema` | Error response schema                                  |
+| `headers` | `Schema` | Request headers schema                                 |
+| `body`    | `Schema` | Request body schema                                    |
+
 
 **Directory conventions:**
 
-| File | Purpose |
-| --- | --- |
-| `_api.ts` | API root configuration |
-| `_group.ts` | Group definition (creates an HttpApiGroup) |
-| `_dependencies.ts` | Shared dependencies for the directory |
-| `_middlewares.ts` | Shared middleware for the directory |
-| `(dirname)/` | Pathless group (no URL segment added) |
+
+| File               | Purpose                                    |
+| ------------------ | ------------------------------------------ |
+| `_api.ts`          | API root configuration                     |
+| `_group.ts`        | Group definition (creates an HttpApiGroup) |
+| `_dependencies.ts` | Shared dependencies for the directory      |
+| `_middlewares.ts`  | Shared middleware for the directory        |
+| `(dirname)/`       | Pathless group (no URL segment added)      |
+
 
 ## Templates and Reactive UI
 
@@ -405,7 +419,8 @@ const page = html`<main><h1>Typed SSR</h1></main>`;
 
 await renderToHtml(page).pipe(
   Fx.provide(HtmlRenderTemplate),
-  Fx.tap((chunk) => Effect.sync(() => process.stdout.write(chunk))),
+  Fx.observe((chunk) => Effect.sync(() => process.stdout.write(chunk))),
+  Effect.runPromise
 );
 ```
 
@@ -416,8 +431,8 @@ You can also define routes programmatically without the virtual module system:
 ```ts
 import * as Router from "@typed/router";
 
-const Home = Router.Slash;                                           // "/"
-const UserById = Router.Join(Router.Parse("users"), Router.Param("id"));   // "/users/:id"
+const Home = Router.Slash;                                                     // "/"
+const UserById = Router.Join(Router.Parse("users"), Router.Param("id"));       // "/users/:id"
 const TeamByNum = Router.Join(Router.Parse("teams"), Router.Number("teamId")); // "/teams/:teamId"
 
 const routes = Router.match(Home, html`<h1>Home</h1>`)
@@ -484,29 +499,31 @@ build(id, importer, api) {
 
 ## Packages
 
-| Package | Description |
-| --- | --- |
-| [@typed/app](packages/app/README.md) | Router and HttpApi virtual module plugins, `defineApiHandler` helper |
-| [@typed/vite-plugin](packages/vite-plugin/README.md) | Vite integration -- `typedVitePlugin()` for zero-config virtual modules |
-| [@typed/virtual-modules](packages/virtual-modules/README.md) | Core virtual module plugin system and TypeInfoApi |
-| [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md) | Low-level Vite adapter for virtual module resolution |
-| [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md) | `vmc` CLI -- drop-in `tsc` with virtual module support |
-| [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md) | TypeScript Language Service plugin for editor IntelliSense |
-| [@typed/fx](packages/fx/README.md) | `Fx` -- push-based reactive abstraction extending Effect |
-| [@typed/template](packages/template/README.md) | Streaming templates with Fx/Stream/Effect integration and hydration |
-| [@typed/router](packages/router/README.md) | Type-safe routing with compile-time literal parsing and Schema decoding |
-| [@typed/navigation](packages/navigation/README.md) | Browser/memory navigation and routing types |
-| [@typed/ui](packages/ui/README.md) | Web integration: HttpRouter, Link (builds on router + template + navigation) |
-| [@typed/async-data](packages/async-data/README.md) | Async data states (NoData, Loading, Success, Failure, Optimistic) |
-| [@typed/guard](packages/guard/README.md) | Effect-based guards with Schema decode/encode and composition |
-| [@typed/id](packages/id/README.md) | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid |
+
+| Package                                                                          | Description                                                                  |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [@typed/app](packages/app/README.md)                                             | Router and HttpApi virtual module plugins, `defineApiHandler` helper         |
+| [@typed/vite-plugin](packages/vite-plugin/README.md)                             | Vite integration -- `typedVitePlugin()` for zero-config virtual modules      |
+| [@typed/virtual-modules](packages/virtual-modules/README.md)                     | Core virtual module plugin system and TypeInfoApi                            |
+| [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md)           | Low-level Vite adapter for virtual module resolution                         |
+| [@typed/virtual-modules-compiler](packages/virtual-modules-compiler/README.md)   | `vmc` CLI -- drop-in `tsc` with virtual module support                       |
+| [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md) | TypeScript Language Service plugin for editor IntelliSense                   |
+| [@typed/fx](packages/fx/README.md)                                               | `Fx` -- push-based reactive abstraction extending Effect                     |
+| [@typed/template](packages/template/README.md)                                   | Streaming templates with Fx/Stream/Effect integration and hydration          |
+| [@typed/router](packages/router/README.md)                                       | Type-safe routing with compile-time literal parsing and Schema decoding      |
+| [@typed/navigation](packages/navigation/README.md)                               | Browser/memory navigation and routing types                                  |
+| [@typed/ui](packages/ui/README.md)                                               | Web integration: HttpRouter, Link (builds on router + template + navigation) |
+| [@typed/async-data](packages/async-data/README.md)                               | Async data states (NoData, Loading, Success, Failure, Optimistic)            |
+| [@typed/guard](packages/guard/README.md)                                         | Effect-based guards with Schema decode/encode and composition                |
+| [@typed/id](packages/id/README.md)                                               | ID generation: Cuid, Ksuid, NanoId, Ulid, Uuid                               |
+
 
 ## Architecture at a Glance
 
-Typed adds one runtime abstraction to Effect: **`Fx`**, a push-based stream for modeling time-varying values. Browser events are naturally push-driven (clicks, timers, websockets), and `Fx` models this directly so UI updates and event handling align with the platform.
+Typed adds one runtime abstraction to Effect: `**Fx**`, a push-based stream for modeling time-varying values. Browser events are naturally push-driven (clicks, timers, websockets), and `Fx` models this directly so UI updates and event handling align with the platform.
 
-- **`Effect`** -- one-shot and scoped computations
-- **`Fx`** -- push-driven values and events over time
+- `**Effect**` -- one-shot and scoped computations
+- `**Fx**` -- push-driven values and events over time
 - **Templates** -- tagged template literals with native `Fx`/`Stream`/`Effect` embedding
 - **Routing** -- type-level literal parsing built on `find-my-way-ts`
 
@@ -531,12 +548,14 @@ pnpm build
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run tests |
-| `pnpm lint` | Lint (oxlint) |
-| `pnpm format` | Format (oxfmt) |
+
+| Command       | Description        |
+| ------------- | ------------------ |
+| `pnpm build`  | Build all packages |
+| `pnpm test`   | Run tests          |
+| `pnpm lint`   | Lint (oxlint)      |
+| `pnpm format` | Format (oxfmt)     |
+
 
 ## Requirements
 
@@ -547,13 +566,16 @@ pnpm build
 
 Install with the `beta` tag: `pnpm add @typed/fx@beta`
 
-| Package | Version |
-| --- | --- |
-| fx | 2.0.0-beta.0 |
+
+| Package    | Version      |
+| ---------- | ------------ |
+| fx         | 2.0.0-beta.0 |
 | async-data | 1.0.0-beta.0 |
-| guard | 1.0.0-beta.0 |
-| id | 1.0.0-beta.0 |
+| guard      | 1.0.0-beta.0 |
+| id         | 1.0.0-beta.0 |
 | navigation | 1.0.0-beta.0 |
-| router | 1.0.0-beta.0 |
-| template | 1.0.0-beta.0 |
-| ui | 1.0.0-beta.0 |
+| router     | 1.0.0-beta.0 |
+| template   | 1.0.0-beta.0 |
+| ui         | 1.0.0-beta.0 |
+
+
