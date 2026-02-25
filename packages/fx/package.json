@@ -1,6 +1,6 @@
 {
   "name": "@typed/fx",
-  "version": "2.0.0-beta.0",
+  "version": "2.0.0-beta.1",
   "type": "module",
   "exports": {
     ".": {
@@ -25,5 +25,9 @@
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:"
-  }
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
 }

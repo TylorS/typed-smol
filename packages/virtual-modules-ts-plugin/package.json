@@ -1,6 +1,6 @@
 {
   "name": "@typed/virtual-modules-ts-plugin",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0-beta.1",
   "type": "commonjs",
   "main": "dist/plugin.js",
   "exports": {
@@ -32,5 +32,9 @@
   },
   "optionalDependencies": {
     "@typed/app": "workspace:*"
-  }
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
 }
