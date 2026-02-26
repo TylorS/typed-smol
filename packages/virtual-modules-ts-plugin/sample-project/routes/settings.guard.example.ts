@@ -1,4 +1,7 @@
+import { RouteGuard } from "@typed/app";
+import * as Route from "@typed/router";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 
-export const guard = (): Effect.Effect<Option.Option<unknown>> => Effect.succeed(Option.none());
+const route = Route.Parse("settings");
+export const guard = RouteGuard(route)(() => Effect.succeed(Option.none()));

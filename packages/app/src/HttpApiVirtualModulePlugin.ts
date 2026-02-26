@@ -14,6 +14,9 @@ import {
 import { classifyHttpApiFileRole } from "./internal/httpapiFileRoles.js";
 import { emitHttpApiSource } from "./internal/emitHttpApiSource.js";
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
+import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
+import { extractOpenApiExposureConfig } from "./internal/extractHttpApiOpenApi.js";
+import { normalizeOpenApiConfig } from "./internal/httpapiOpenApiConfig.js";
 import {
   getCallableReturnType,
   isCallableNode,
@@ -60,6 +63,8 @@ const REQUIRED_ENDPOINT_EXPORTS = ["route", "method", "handler"] as const;
 export interface HttpApiVirtualModulePluginOptions {
   readonly prefix?: string;
   readonly name?: string;
+  /** HTTP path prefix for all endpoints when conventions do not define one (e.g. "/api"). */
+  readonly pathPrefix?: `/${string}`;
 }
 
 export type ParseHttpApiVirtualModuleIdResult =
@@ -314,9 +319,35 @@ export const createHttpApiVirtualModulePlugin = (
         snapshotsByRelativePath,
         api,
       );
-      if (contractViolations.length > 0) {
+      const { violations: prefixViolations, prefixByScope } = validatePrefixConventions(
+        tree,
+        snapshotsByRelativePath,
+        api,
+      );
+      let openapiExposure: import("./internal/httpapiOpenApiConfig.js").OpenApiExposureConfig | undefined;
+      const apiRootConvention = tree.conventions.find(
+        (c): c is { path: string; kind: "api_root" } =>
+          (c as { kind?: string }).kind === "api_root",
+      );
+      const apiRootPath = apiRootConvention?.path;
+      if (apiRootPath) {
+        const apiRootSnapshot = snapshotsByRelativePath.get(apiRootPath);
+        if (apiRootSnapshot) {
+          const extracted = extractOpenApiExposureConfig(apiRootSnapshot);
+          if (extracted) {
+            const { config, diagnostics } = normalizeOpenApiConfig("api", {
+              exposure: extracted,
+            });
+            if (diagnostics.length === 0) {
+              openapiExposure = config.exposure;
+            }
+          }
+        }
+      }
+      const allViolations = [...contractViolations, ...prefixViolations];
+      if (allViolations.length > 0) {
         return {
-          errors: contractViolations.map((violation) => ({
+          errors: allViolations.map((violation) => ({
             code: violation.code,
             message: violation.message,
             pluginName: name,
@@ -358,6 +389,9 @@ export const createHttpApiVirtualModulePlugin = (
         extractedLiteralsByPath,
         optionalExportsByPath,
         handlerIsRawByPath,
+        prefixByScope,
+        pathPrefix: options.pathPrefix,
+        openapiExposure,
       });
       if (tree.diagnostics.length > 0) {
         return {

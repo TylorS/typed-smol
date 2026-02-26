@@ -1,7 +1,6 @@
-import { Effect } from "effect";
+import { RouteHandler } from "@typed/app";
 import * as Route from "@typed/router";
+import { html } from "@typed/template";
 
 export const route = Route.Parse("search");
-/** Effect function handler: (params) => Effect; plugin will lift via Fx.fromEffect. */
-export const handler = (_params: { q?: string }): Effect.Effect<string> =>
-  Effect.succeed("search-result");
+export const handler = RouteHandler(route)(() => html`<div>search-result</div>`);

@@ -1,6 +1,7 @@
-import { Stream } from "effect";
+import { RouteHandler } from "@typed/app";
 import * as Route from "@typed/router";
+import { html } from "@typed/template";
+import { Stream } from "effect";
 
 export const route = Route.Parse("stream-demo");
-/** Stream-valued handler (non-function). */
-export const handler = Stream.succeed("stream-demo");
+export const handler = RouteHandler(route)(() => html`<div>${Stream.succeed("stream-demo")}</div>`);

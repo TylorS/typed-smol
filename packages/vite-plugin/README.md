@@ -89,6 +89,7 @@ export default defineConfig({
 | `routerVmOptions` | `RouterVirtualModulePluginOptions` | `{}` | Options for the router VM plugin. |
 | `apiVmOptions` | `HttpApiVirtualModulePluginOptions` | — | When set, enables the HttpApi VM plugin. |
 | `createTypeInfoApiSession` | `CreateTypeInfoApiSession` | — | Required for router VM type-checking in dev. |
+| `tsconfig` | `string` | — | Path to `tsconfig.json` (relative to cwd or absolute). When set, both the Language Service session and vite-tsconfig-paths use this tsconfig. Default: auto-discovered from project root. |
 | `tsconfigPaths` | `boolean \| object` | `true` | Enable tsconfig path resolution. |
 | `analyze` | `boolean \| object` | `process.env.ANALYZE === '1'` | Enable bundle analyzer (dist/stats.html). |
 | `warnOnError` | `boolean` | `true` | Log virtual module resolution errors. |

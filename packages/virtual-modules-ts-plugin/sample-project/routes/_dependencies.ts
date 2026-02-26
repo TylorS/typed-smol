@@ -1,3 +1,3 @@
-import { Foo } from "./api/status.js";
+import { Layer, Scope } from "effect";
 
-export default Foo.Default;
+export default [Layer.effect(Scope.Scope, Scope.make())];

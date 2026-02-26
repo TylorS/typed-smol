@@ -1,0 +1,40 @@
+{
+  "name": "@typed/cli",
+  "version": "1.0.0-beta.1",
+  "type": "module",
+  "bin": {
+    "typed": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@typed/vite-plugin": "workspace:*",
+    "effect": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/platform-node": "catalog:",
+    "@types/node": "^25.3.0",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": ">=7.0.0",
+    "typescript": ">=5.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
+}

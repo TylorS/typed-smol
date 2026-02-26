@@ -76,6 +76,8 @@ Each route file must export `route` and exactly one of `handler`, `template`, or
 | ------- | ---- | -------- |
 | `_api.ts` | API root | Top-level API defaults (name, prefix, openapi) |
 | `_group.ts` | Group override | Group name, prefix, dependencies, middlewares |
+| `_prefix.ts` | Directory | Path prefix for all endpoints in that directory |
+| `*.prefix.ts` | Endpoint companion | Path prefix for that endpoint |
 | `(pathless)/` | Pathless dir | Organizational only, no path segment |
 | `*.name.ts` | Endpoint companion | Override endpoint name |
 | `*.dependencies.ts` | Endpoint companion | Endpoint dependencies |
@@ -84,6 +86,31 @@ Each route file must export `route` and exactly one of `handler`, `template`, or
 | `_middlewares.ts` | Directory | Inherited middlewares |
 
 Each endpoint file must export `route`, `method`, and `handler`. See [router-virtual-module-plugin spec](../../.docs/specs/router-virtual-module-plugin/spec.md) and [httpapi-virtual-module-plugin spec](../../.docs/specs/httpapi-virtual-module-plugin/spec.md) for full details.
+
+### Path prefix
+
+Path prefix for API routes can be set via:
+
+1. **Convention files** – `_api.ts`, `_group.ts`, `_prefix.ts`, or `*.prefix.ts` exporting a **Route from `@typed/router`** (e.g. `Route.Parse("/api")`). Export name: `prefix` in `_api.ts`/`_group.ts`, `default` in `_prefix.ts`/`*.prefix.ts`.
+2. **Plugin option** – `pathPrefix` when conventions are absent.
+
+Precedence: group override > API root + ancestor `_prefix.ts` chain > plugin `pathPrefix`. All prefix exports are validated as Route; invalid exports produce `AVM-CONTRACT-007`.
+
+### OpenAPI exposure (`_api.ts`)
+
+In `_api.ts` you can export `openapi.exposure` to define where OpenAPI docs are served:
+
+```ts
+export const openapi = {
+  exposure: {
+    jsonPath: "/api/docs/spec" as const,   // OpenAPI JSON spec
+    swaggerPath: "/api/docs/swagger" as const,
+    scalar: { path: "/api/docs" as const },
+  },
+};
+```
+
+These map to `HttpApiBuilder.layer(Api, { openapiPath })`, `HttpApiSwagger.layer(Api, { path })`, and `HttpApiScalar.layer(Api, { path })`.
 
 ## Dependencies
 
@@ -160,6 +187,7 @@ const handler = defineApiHandler(
 | -------- | ---- | ------- | ----------- |
 | `prefix` | `string` | `"api:"` | Virtual module ID prefix. |
 | `name` | `string` | `"httpapi-virtual-module"` | Plugin name for diagnostics. |
+| `pathPrefix` | `` `/${string}` `` | — | HTTP path prefix (e.g. `"/api"`) when no convention defines one. |
 
 ### createTypeInfoApiSessionForApp
 

@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     include: ["src/**/*.{test,spec}.ts"],
     exclude: ["**/node_modules/**", "**/dist/**"],
+    typecheck: {
+      enabled: true,
+    },
     coverage: {
       provider: "v8",
       include: ["src/RouterVirtualModulePlugin.ts"],

@@ -1,6 +1,6 @@
-import { Effect } from "effect";
+import { RouteHandler } from "@typed/app";
 import * as Route from "@typed/router";
+import { html } from "@typed/template";
 
 export const route = Route.Parse("dashboard");
-/** Effect-valued handler (non-function); plugin will lift via Fx.fromEffect. */
-export const handler: Effect.Effect<number> = Effect.succeed(1);
+export const handler = RouteHandler(route)(() => html`<div>1</div>`);

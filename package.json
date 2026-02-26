@@ -5,7 +5,8 @@
     "build": "pnpm -r build && tsc -b tsconfig.build.json && pnpm --filter @typed/virtual-modules-ts-plugin run build:plugins",
     "lint": "oxlint",
     "format": "oxfmt",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "typed": "npx tsx ./packages/cli/src/index.ts \"$@\""
   },
   "devDependencies": {
     "@typed/virtual-modules-ts-plugin": "workspace:*",

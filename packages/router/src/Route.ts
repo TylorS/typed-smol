@@ -35,6 +35,12 @@ export declare namespace Route {
   export type QueryType<T extends Any> = T["querySchema"]["Type"];
 }
 
+export type Any = Route.Any;
+export type Params<T> = Route.Params<T>;
+export type Type<T> = Route.Type<T>;
+export type PathType<T extends Any> = Route.PathType<T>;
+export type QueryType<T extends Any> = Route.QueryType<T>;
+
 export function make<
   const P extends string,
   S extends Schema.Codec<any, Path.Params<P>, any, any> = Schema.Codec<Path.Params<P>>,

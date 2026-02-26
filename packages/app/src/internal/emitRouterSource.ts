@@ -95,7 +95,6 @@ export function emitRouterMatchSource(
 ): string {
   const importerDir = dirname(toPosixPath(importer));
   const needsFnErrorImports = Object.values(catchFormByPath).some((f) => f.form === "fn-error");
-  const needsLayerImport = Object.values(depsFormByPath).includes("servicemap");
   const depPaths = collectOrderedCompanionPaths(descriptors, "dependencies");
   const layoutPaths = collectOrderedCompanionPaths(descriptors, "layout");
   const guardPaths = collectOrderedCompanionPaths(descriptors, "guard");
@@ -124,7 +123,6 @@ export function emitRouterMatchSource(
           `import * as Result from "effect/Result";`,
         ]
       : []),
-    ...(needsLayerImport ? [`import * as Layer from "effect/Layer";`] : []),
   ];
 
   for (const d of descriptors) {

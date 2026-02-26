@@ -63,14 +63,14 @@ export type DepsExportKind = "layer" | "servicemap" | "array";
 /** Result of classifyDepsExport; "unknown" means validation must fail. */
 export type DepsExportClassification = DepsExportKind | "unknown";
 
-/** Classify dependency default export for optimal provide lift. Uses api; node.kind "array" for T[]. */
+/** Classify dependency default export for optimal provide lift. Uses api; node.kind "array" or "tuple" for T[] / [T, ...]. */
 export function classifyDepsExport(
   node: TypeNode,
   api: TypeInfoApi,
 ): DepsExportClassification {
   if (api.isAssignableTo(node, "Layer")) return "layer";
   if (api.isAssignableTo(node, "ServiceMap")) return "servicemap";
-  if (node.kind === "array") return "array";
+  if (node.kind === "array" || node.kind === "tuple") return "array";
   return "unknown";
 }
 

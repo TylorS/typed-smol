@@ -1,5 +1,6 @@
+import { RouteHandler } from "@typed/app";
 import * as Route from "@typed/router";
+import { html } from "@typed/template";
 
 export const route = Route.Parse("profile");
-export const handler = "profile";
-// Uses profile.dependencies.ts (sibling) for provide step
+export const handler = RouteHandler(route)(() => html`<div>profile</div>`);

@@ -12,6 +12,7 @@
     "@typed/app": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
+    "@typed/template": "workspace:*",
     "@typed/tsconfig": "workspace:*",
     "@typed/ui": "workspace:*",
     "@typed/virtual-modules": "workspace:*",

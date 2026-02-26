@@ -13,6 +13,8 @@ import type * as Effect from "effect/Effect";
 import type * as Schema from "effect/Schema";
 import type { HttpMethod as EffectHttpMethod } from "effect/unstable/http/HttpMethod";
 import type * as Route from "@typed/router";
+import { Types } from "effect";
+import { HttpServerError } from "effect/unstable/http";
 
 /** Re-export Effect HttpMethod for helper consumers. */
 export type HttpMethod = EffectHttpMethod;
@@ -29,113 +31,130 @@ export type ApiRoute = Route.Route.Any;
 /**
  * Infers handler params from endpoint contract. Use with handler:
  * handler: (params: ApiHandlerParams<{ route, method?, success?, error?, headers?, body? }>) => Effect
+ * Supports both Schema.Top (schema types with .Type) and Schema.Schema<infer H> for headers/body.
  */
 export type ApiHandlerParams<
   T extends {
     readonly route: ApiRoute;
     readonly method: HttpMethod | "*";
-    readonly success?: Schema.Schema<any>;
-    readonly error?: Schema.Schema<any>;
-    readonly headers?: Schema.Schema<any>;
-    readonly body?: Schema.Schema<any>;
+    readonly success?: Schema.Schema<any> | Schema.Top;
+    readonly error?: Schema.Schema<any> | Schema.Top;
+    readonly headers?: Schema.Schema<any> | (Schema.Top & { Type: Record<string, string> });
+    readonly body?: Schema.Schema<any> | Schema.Top;
   },
 > = {
   readonly path: Route.Route.PathType<T["route"]>;
   readonly query: Route.Route.QueryType<T["route"]>;
-  readonly headers: T["headers"] extends Schema.Schema<infer H> ? H : Record<string, string>;
-  readonly body: T["body"] extends Schema.Schema<infer B> ? B : unknown;
+  readonly headers: T["headers"] extends Schema.Top
+    ? T["headers"]["Type"]
+    : T["headers"] extends Schema.Schema<infer H>
+      ? H
+      : Record<string, string>;
+  readonly body: T["body"] extends Schema.Top
+    ? T["body"]["Type"]
+    : T["body"] extends Schema.Schema<infer B>
+      ? B
+      : unknown;
 };
 
 /**
  * Optional schemas: headers, body (request decoders); error, success (response encoders).
+ * Type params extend Schema.Top; use .Type for decoded types.
  * Use HttpApiSchema.status(code)(schema) to annotate status codes, e.g.:
  * success: HttpApiSchema.status(200)(Schema.Struct({ ok: Schema.Boolean }))
  * error: HttpApiSchema.status(400)(Schema.Struct({ message: Schema.String }))
  */
-export interface EndpointSchemas<
-  THeaders = unknown,
-  TBody = unknown,
-  TSuccess = unknown,
-  TError = unknown,
-> {
-  readonly headers?: Schema.Schema<THeaders>;
-  readonly body?: Schema.Schema<TBody>;
-  readonly success?: Schema.Schema<TSuccess>;
-  readonly error?: Schema.Schema<TError>;
-}
+export type EndpointSchemas<
+  THeaders extends Schema.Top & { Type: Record<string, string> } = never,
+  TBody extends Schema.Top = never,
+  TSuccess extends Schema.Top = never,
+  TError extends Schema.Top = never,
+> = {
+  readonly headers?: THeaders;
+  readonly body?: TBody;
+  readonly success?: TSuccess;
+  readonly error?: TError;
+};
+
+/** When T is never (no schema), use default so emitted adapter (headers/body) is assignable. */
+type HeadersOrDefault<T> = [T] extends [never]
+  ? Record<string, string>
+  : T extends { Type: infer H }
+    ? H
+    : Record<string, string>;
+/** When T is never (no schema), use unknown so emitted adapter (body: undefined) is assignable. */
+type BodyOrDefault<T> = [T] extends [never] ? unknown : T extends { Type: infer B } ? B : unknown;
 
 /** Handler context: path params, query, headers, body (mirrors HttpServerRequest decoders). */
-export interface ApiHandlerContext<
-  TPath = Record<string, string>,
-  TQuery = Record<string, string | string[] | undefined>,
-  THeaders = Record<string, string>,
+export type ApiHandlerContext<
+  TPath extends Record<string, string>,
+  TQuery extends Record<string, string | string[] | undefined> = never,
+  THeaders extends Record<string, string> = never,
   TBody = unknown,
-> {
-  readonly path: TPath;
-  readonly query: TQuery;
-  readonly headers: THeaders;
-  readonly body: TBody;
-}
+> = Types.Simplify<
+  ([keyof TPath] extends [never] ? { path?: {} } : { readonly path: TPath }) &
+    ([keyof TQuery] extends [never] ? { query?: {} } : { readonly query: TQuery }) &
+    ([THeaders] extends [never]
+      ? { headers?: {} }
+      : [keyof THeaders] extends [never]
+        ? { headers?: {} }
+        : { readonly headers: THeaders }) &
+    ([TBody] extends [never] ? { readonly body?: unknown } : { readonly body: TBody })
+>;
 
 /** Handler function type: context -> Effect<Success, Error, Requirements> */
 export type ApiHandlerFn<
-  TPath = Record<string, string>,
-  TQuery = Record<string, string | string[] | undefined>,
-  THeaders = Record<string, string>,
-  TBody = unknown,
+  C extends ApiHandlerContext<any, any, any, any>,
   TSuccess = unknown,
   TError = unknown,
   Requirements = never,
-> = (
-  ctx: ApiHandlerContext<TPath, TQuery, THeaders, TBody>,
-) => Effect.Effect<TSuccess, TError, Requirements>;
+> = (ctx: C) => Effect.Effect<TSuccess, TError | HttpServerError.HttpServerError, Requirements>;
 
 /** Typed handler as returned by defineApiHandler */
 export type TypedApiHandler<
-  TPath = Record<string, string>,
-  TQuery = Record<string, string | string[] | undefined>,
-  THeaders = Record<string, string>,
-  TBody = unknown,
+  C extends ApiHandlerContext<any, any, any, any>,
   TSuccess = unknown,
   TError = unknown,
   Requirements = never,
-> = ApiHandlerFn<TPath, TQuery, THeaders, TBody, TSuccess, TError, Requirements>;
+> = ApiHandlerFn<C, TSuccess, TError, Requirements>;
 
 /**
- * Curried helper: (route, method, schemas?) => (handler) => typed handler.
+ * defineApiHandler(route, method, schemas?)(handler) — params from schemas (.Type); handler return Effect<TSuccess['Type'], TError['Type'], R>.
  * Route MUST be Router.Route (Router.Parse, Route.Join, Route.Param, etc.).
- * Enforces at compile time that the handler receives { path, query, headers, body }
- * and returns Effect<Success, Error> compatible with success/error schemas.
  */
-export function defineApiHandler<
+export function ApiHandler<
   TRoute extends ApiRoute,
   Method extends HttpMethod,
-  THeaders = Record<string, string>,
-  TBody = unknown,
-  TSuccess = unknown,
-  TError = unknown,
+  THeaders extends Schema.Top & { Type: Record<string, string> } = never,
+  TBody extends Schema.Top = never,
+  TSuccess extends Schema.Top = never,
+  TError extends Schema.Top = never,
 >(
   _route: TRoute,
   _method: Method,
   _schemas?: EndpointSchemas<THeaders, TBody, TSuccess, TError>,
-): <Requirements = never>(
+): <R = never>(
   handler: ApiHandlerFn<
-    Route.Route.PathType<TRoute>,
-    Route.Route.QueryType<TRoute>,
-    THeaders,
-    TBody,
-    TSuccess,
-    TError,
-    Requirements
+    {
+      path: Route.Route.PathType<TRoute>;
+      query: Route.Route.QueryType<TRoute>;
+      headers: HeadersOrDefault<THeaders>;
+      body: BodyOrDefault<TBody>;
+    },
+    TSuccess["Type"],
+    TError["Type"],
+    R
   >,
 ) => TypedApiHandler<
-  Route.Route.PathType<TRoute>,
-  Route.Route.QueryType<TRoute>,
-  THeaders,
-  TBody,
-  TSuccess,
-  TError,
-  Requirements
+  {
+    path: Route.Route.PathType<TRoute>;
+    query: Route.Route.QueryType<TRoute>;
+    headers: HeadersOrDefault<THeaders>;
+    body: BodyOrDefault<TBody>;
+  },
+  TSuccess["Type"],
+  TError["Type"],
+  R
 > {
   return (handler) => handler;
 }

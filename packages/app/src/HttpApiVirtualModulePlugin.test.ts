@@ -91,9 +91,12 @@ const BOOTSTRAP_HTTPAPI_FILE = resolve(
   "typeTargetBootstrapHttpApi.ts",
 );
 
-function buildApiFromFixture(spec: FixtureSpec) {
+function buildApiFromFixture(
+  spec: FixtureSpec,
+  pluginOptions?: { pathPrefix?: `/${string}` },
+) {
   const fixture = createApiFixture(spec);
-  const plugin = createHttpApiVirtualModulePlugin();
+  const plugin = createHttpApiVirtualModulePlugin(pluginOptions ?? {});
   const files =
     existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
       ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
@@ -1006,6 +1009,69 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
       expect(sourceText).toContain("handlers.handleRaw(\"raw\", (ctx) => Raw.handler(ctx))");
+    });
+  });
+
+  describe("3g. Path prefix and OpenAPI exposure", () => {
+    const API_PREFIX_SOURCE = `
+import * as Route from "@typed/router";
+export const prefix = Route.Parse("/api");
+`;
+
+    it("_api.ts with prefix Route: emits .prefix on group", () => {
+      const result = buildApiFromFixture({
+        "src/apis/_api.ts": API_PREFIX_SOURCE,
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain('.prefix("/api")');
+    });
+
+    it("_api.ts with prefix string literal: returns AVM-CONTRACT-007", () => {
+      const result = buildApiFromFixture({
+        "src/apis/_api.ts": 'export const prefix = "/api";',
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      expect(result).toHaveProperty("errors");
+      const err = result as VirtualModuleBuildError;
+      expect(err.errors.some((e) => e.code === "AVM-CONTRACT-007")).toBe(true);
+    });
+
+    it("plugin pathPrefix when no convention: emits .prefix from option", () => {
+      const result = buildApiFromFixture(
+        { "src/apis/status.ts": VALID_ENDPOINT_SOURCE },
+        { pathPrefix: "/api" },
+      );
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain('.prefix("/api")');
+    });
+
+    it("_api.ts openapi.exposure: emits HttpApiBuilder/Swagger/Scalar with paths", () => {
+      const apiWithExposure = `
+import * as Route from "@typed/router";
+export const prefix = Route.Parse("/api");
+export const openapi = {
+  exposure: {
+    jsonPath: "/api/docs/spec" as const,
+    swaggerPath: "/api/docs/swagger" as const,
+    scalar: { path: "/api/docs" as const },
+  },
+};
+`;
+      const result = buildApiFromFixture({
+        "src/apis/_api.ts": apiWithExposure,
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain('openapiPath: "/api/docs/spec"');
+      expect(sourceText).toContain('path: "/api/docs/swagger"');
+      expect(sourceText).toContain('path: "/api/docs"');
     });
   });
 });

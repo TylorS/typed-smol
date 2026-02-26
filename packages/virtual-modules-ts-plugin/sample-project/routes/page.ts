@@ -1,5 +1,6 @@
+import { RouteHandler } from "@typed/app";
 import * as Route from "@typed/router";
+import { html } from "@typed/template";
 
 export const route = Route.Parse("page");
-/** Template entrypoint (string). */
-export const template = "<div>page</div>";
+export const handler = RouteHandler(route)(() => html`<div>page</div>`);

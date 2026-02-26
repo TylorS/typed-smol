@@ -57,21 +57,21 @@ export type AnyLayer =
   | Layer.Layer<never, any, never>
   | Layer.Layer<never, never, any>;
 
-type AnyServiceMap = ServiceMap.ServiceMap<any> | ServiceMap.ServiceMap<never>;
-type AnyDependency = AnyLayer | AnyServiceMap;
+export type AnyServiceMap = ServiceMap.ServiceMap<any> | ServiceMap.ServiceMap<never>;
+export type AnyDependency = AnyLayer | AnyServiceMap;
 type AnyLayout = Layout<any, any, any, any, any, any, any>;
 type AnyCatch = CatchHandler<any, any, any, any>;
 type AnyGuard = GuardType<any, any, any, any>;
 type AnyMatchHandler = (params: RefSubject.RefSubject<any>) => Fx.Fx<any, any, any>;
 
-type DependencyProvided<D> =
+export type DependencyProvided<D> =
   D extends Layer.Layer<infer Provided, any, any>
     ? Provided
     : D extends ServiceMap.ServiceMap<infer Provided>
       ? Provided
       : never;
-type DependencyError<D> = D extends Layer.Layer<any, infer E, any> ? E : never;
-type DependencyRequirements<D> = D extends Layer.Layer<any, any, infer R> ? R : never;
+export type DependencyError<D> = D extends Layer.Layer<any, infer E, any> ? E : never;
+export type DependencyRequirements<D> = D extends Layer.Layer<any, any, infer R> ? R : never;
 
 type LayerSuccess<L> = L extends Layer.Layer<infer Provided, any, any> ? Provided : never;
 type LayerError<L> = L extends Layer.Layer<any, infer E, any> ? E : never;
@@ -85,19 +85,19 @@ export interface AsGuard<I, O, E = never, R = never> {
 }
 export type GuardInput<I, O, E = never, R = never> = GuardType<I, O, E, R> | AsGuard<I, O, E, R>;
 
-type GuardOutput<G> =
+export type GuardOutput<G> =
   G extends GuardType<any, infer O, any, any>
     ? O
     : G extends AsGuard<any, infer O, any, any>
       ? O
       : never;
-type GuardError<G> =
+export type GuardError<G> =
   G extends GuardType<any, any, infer E, any>
     ? E
     : G extends AsGuard<any, any, infer E, any>
       ? E
       : never;
-type GuardServices<G> =
+export type GuardServices<G> =
   G extends GuardType<any, any, any, infer R>
     ? R
     : G extends AsGuard<any, any, any, infer R>
@@ -114,7 +114,7 @@ type MatchOptions<Rt extends Route.Any, B, E2, R2, D, LB, LE2, LR2, C> = {
   readonly catch?: C;
 };
 
-type MatchHandlerReturnValue<A, E, R> =
+export type MatchHandlerReturnValue<A, E, R> =
   | Fx.Fx<A, E, R>
   | Stream.Stream<A, E, R>
   | Effect.Effect<A, E, R>
@@ -1092,16 +1092,37 @@ function normalizeDependencies(
   return dependencies.map(toSingleLayer);
 }
 
+type NormalizeLayer<T extends AnyDependency> = 
+  T extends Layer.Layer<infer A, infer E, infer R> ? Layer.Layer<A, E, R> : T extends ServiceMap.ServiceMap<infer R> ? Layer.Layer<R> : never
+    
+type NormalizeLayers<T extends ReadonlyArray<AnyDependency>> ={
+  [K in keyof T]: NormalizeLayer<T[K]>
+}
+
+type ToLayer<T> = 
+  T extends ReadonlyArray<AnyLayer> ? Layer.Layer<
+    Layer.Success<T[number]>,
+    Layer.Error<T[number]>,
+    Layer.Services<T[number]>
+  > : never
+
+type NormalizeDeps<T extends AnyDependency | ReadonlyArray<AnyDependency>> =
+  T extends AnyDependency
+  ? NormalizeLayer<T>
+  : T extends ReadonlyArray<AnyDependency>
+  ? ToLayer<NormalizeLayers<T>>
+  : never
+
 /**
  * Normalize dependency input (ServiceMap | Layer | Array of either) into a single Layer.
  * Use with `.provide(normalizeDependencyInput(deps))`.
  */
-export function normalizeDependencyInput(
-  input: AnyDependency | ReadonlyArray<AnyDependency>,
-): AnyLayer {
+export function normalizeDependencyInput<Deps extends AnyDependency | ReadonlyArray<AnyDependency>>(
+  input: Deps,
+): NormalizeDeps<Deps> {
   const arr = Array.isArray(input) ? input : [input];
-  const layers = normalizeDependencies(arr);
-  return mergeLayers(layers);
+  const layers = normalizeDependencies(arr as AnyDependency[]);
+  return mergeLayers(layers) as NormalizeDeps<Deps>;
 }
 
 function getGuard<I, O, E, R>(guard: GuardInput<I, O, E, R>): GuardType<I, O, E, R> {

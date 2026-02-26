@@ -360,6 +360,30 @@ describe("RouterVirtualModulePlugin", () => {
     expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-DEPS-001");
   });
 
+  it("supports tuple [Layer] in _dependencies default export", () => {
+    const source = buildRouterFromFixture({
+      "src/routes/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default [Layer.empty];",
+      "src/routes/home.ts": route("/", "export const handler = 1;"),
+    });
+    expect(typeof source).toBe("string");
+    expect(source).toContain('import * as Layer from "effect/Layer"');
+    expect(source).toContain("Router.normalizeDependencyInput(Dependencies.default)");
+    expect(source).toContain(".provide(");
+  });
+
+  it("supports Layer.mergeAll in _dependencies default export", () => {
+    const source = buildRouterFromFixture({
+      "src/routes/_dependencies.ts":
+        "import * as Layer from 'effect/Layer'; export default Layer.mergeAll(Layer.empty, Layer.empty);",
+      "src/routes/home.ts": route("/", "export const handler = 1;"),
+    });
+    expect(typeof source).toBe("string");
+    expect(source).toContain('import * as Layer from "effect/Layer"');
+    expect(source).toContain(".provide(Dependencies.default)");
+    expect(source).not.toContain("Router.normalizeDependencyInput");
+  });
+
   it("composes sibling and directory companions in ancestor->leaf order (TS-4)", () => {
     const source = buildRouterFromFixture({
       "src/routes/_dependencies.ts": "const deps: Array<unknown> = []; export default deps;",
@@ -371,6 +395,7 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
+      import * as Layer from "effect/Layer";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
@@ -397,6 +422,7 @@ describe("RouterVirtualModulePlugin", () => {
       import * as Effect from "effect/Effect";
       import * as Cause from "effect/Cause";
       import * as Result from "effect/Result";
+      import * as Layer from "effect/Layer";
       import * as ApiItem from "./routes/api/item.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as ApiLayout from "./routes/api/_layout.js";
@@ -418,6 +444,7 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
+      import * as Layer from "effect/Layer";
       import * as Page from "./routes/page.js";
       import * as Pagedependencies from "./routes/page.dependencies.js";
       import * as Pagelayout from "./routes/page.layout.js";
@@ -439,6 +466,7 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
+      import * as Layer from "effect/Layer";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
@@ -461,6 +489,7 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
+      import * as Layer from "effect/Layer";
       import * as ApiItem from "./routes/api/item.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
       import * as Dependencies from "./routes/_dependencies.js";
@@ -1133,6 +1162,7 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
+      import * as Layer from "effect/Layer";
       import * as ApiItemsX from "./routes/api/items/x.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
       import * as Dependencies from "./routes/_dependencies.js";

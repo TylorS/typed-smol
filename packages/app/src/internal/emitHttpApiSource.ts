@@ -24,8 +24,40 @@ import type {
 import { compareHttpApiPathOrder } from "./httpapiFileRoles.js";
 import { stripScriptExtension, toPosixPath } from "./path.js";
 import { makeUniqueVarNames, pathToIdentifier } from "./routeIdentifiers.js";
+import type { OpenApiExposureConfig } from "./httpapiOpenApiConfig.js";
+import type { PrefixByScope } from "./validatePrefixConventions.js";
 
 const ROOT_GROUP_KEY = "__root__";
+
+function joinPathSegments(segments: readonly string[]): string {
+  const combined = segments
+    .filter((s) => s.length > 0)
+    .map((s) => s.replace(/\/+$/, "").replace(/^\//, ""))
+    .filter((s) => s.length > 0)
+    .join("/");
+  return combined ? `/${combined}` : "";
+}
+
+function resolveEffectivePrefixForGroup(
+  groupDirPath: string,
+  prefixByScope: PrefixByScope | undefined,
+  pathPrefixOverride: `/${string}` | undefined,
+): string {
+  if (!prefixByScope) {
+    return pathPrefixOverride ?? "";
+  }
+  const groupPrefix = prefixByScope.byGroupDir.get(groupDirPath);
+  if (groupPrefix) return groupPrefix;
+  const parts: string[] = [];
+  if (prefixByScope.apiRoot) parts.push(prefixByScope.apiRoot);
+  for (const anc of ancestorDirs(groupDirPath)) {
+    const p = prefixByScope.byDirectory.get(anc);
+    if (p) parts.push(p);
+  }
+  const composed = joinPathSegments(parts);
+  if (composed) return composed;
+  return pathPrefixOverride ?? "";
+}
 
 const DIRECTORY_CONVENTION_KINDS = [
   "_dependencies.ts",
@@ -390,6 +422,9 @@ export function emitHttpApiSource(input: {
   readonly optionalExportsByPath: ReadonlyMap<string, ReadonlySet<OptionalExport>>;
   /** When true for an endpoint path, handler returns HttpServerResponse; use handleRaw instead of handle. */
   readonly handlerIsRawByPath?: ReadonlyMap<string, boolean>;
+  readonly prefixByScope?: PrefixByScope;
+  readonly pathPrefix?: `/${string}`;
+  readonly openapiExposure?: OpenApiExposureConfig;
 }): string {
   const directoryConventions = indexDirectoryConventions(input.tree);
   const endpointSpecs = buildEndpointRenderSpecs(input.tree, directoryConventions);
@@ -463,7 +498,13 @@ export function emitHttpApiSource(input: {
 
     const groupName = groupSpec.defaultName;
     const groupChain = endpointExprs.map((expr) => `.add(${expr})`).join("");
-    groupExprs.push(`HttpApiGroup.make(${JSON.stringify(groupName)})${groupChain}`);
+    const effectivePrefix = resolveEffectivePrefixForGroup(
+      groupSpec.dirPath,
+      input.prefixByScope,
+      input.pathPrefix,
+    );
+    const suffix = effectivePrefix ? `.prefix(${JSON.stringify(effectivePrefix)})` : "";
+    groupExprs.push(`HttpApiGroup.make(${JSON.stringify(groupName)})${groupChain}${suffix}`);
   }
 
   const apiChain = groupExprs.map((g) => `.add(${g})`).join("");
@@ -495,7 +536,26 @@ export function emitHttpApiSource(input: {
     );
   }
 
-  const baseApiLayer = `HttpApiBuilder.layer(Api)`;
+  const jsonPath = input.openapiExposure?.jsonPath;
+  const swaggerPath = input.openapiExposure?.swaggerPath;
+  const scalarConfig = input.openapiExposure?.scalar;
+  const apiLayerOptions =
+    jsonPath && typeof jsonPath === "string"
+      ? `{ openapiPath: ${JSON.stringify(jsonPath)} }`
+      : "";
+  const swaggerExpr =
+    swaggerPath && typeof swaggerPath === "string"
+      ? `HttpApiSwagger.layer(Api, { path: ${JSON.stringify(swaggerPath)} })`
+      : "HttpApiSwagger.layer(Api)";
+  const scalarExpr =
+    scalarConfig &&
+    typeof scalarConfig === "object" &&
+    scalarConfig.path
+      ? `HttpApiScalar.layer(Api, { path: ${JSON.stringify(scalarConfig.path)} })`
+      : "HttpApiScalar.layer(Api)";
+  const baseApiLayer = apiLayerOptions
+    ? `HttpApiBuilder.layer(Api, ${apiLayerOptions})`
+    : `HttpApiBuilder.layer(Api)`;
   const mergedApiLayer =
     groupLayerBlocks.length === 0
       ? baseApiLayer
@@ -524,8 +584,8 @@ export function emitHttpApiSource(input: {
 export const Api = ${apiExpr};
 export const ApiLayer = ${mergedApiLayer};
 export const OpenApi = OpenApiModule.fromApi(Api);
-export const Swagger = HttpApiSwagger.layer(Api);
-export const Scalar = HttpApiScalar.layer(Api);
+export const Swagger = ${swaggerExpr};
+export const Scalar = ${scalarExpr};
 export const Client = HttpApiClient.make(Api);
 
 export const App = <const Layers extends readonly LayerOrGroup[] = []>(

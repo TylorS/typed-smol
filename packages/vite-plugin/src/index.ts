@@ -10,23 +10,17 @@ import {
   PluginManager,
 } from "@typed/virtual-modules";
 import {
+  HttpApiVirtualModulePluginOptions,
+  RouterVirtualModulePluginOptions,
   createHttpApiVirtualModulePlugin,
   createRouterVirtualModulePlugin,
 } from "@typed/app";
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
+import { dirname, relative, resolve } from "node:path";
 import ts from "typescript";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { visualizer } from "rollup-plugin-visualizer";
 import viteCompression from "vite-plugin-compression";
-
-/**
- * Options passed through to the HttpApi virtual-module plugin when enabled.
- * Forwarded to createHttpApiVirtualModulePlugin from the package that provides it
- * (e.g. @typed/app when the export is added). See httpapi-virtual-module-plugin spec.
- */
-export interface HttpApiVirtualModulePluginOptions {
-  readonly [key: string]: unknown;
-}
 
 /** Options for vite-plugin-compression when compression is enabled. */
 export type TypedViteCompressionOptions =
@@ -42,7 +36,7 @@ export interface TypedVitePluginOptions {
   /**
    * Options for the router VM plugin from @typed/app.
    */
-  readonly routerVmOptions?: import("@typed/app").RouterVirtualModulePluginOptions;
+  readonly routerVmOptions?: RouterVirtualModulePluginOptions;
 
   /**
    * Options for the HttpApi VM plugin from @typed/app. HttpApi VM plugin is always
@@ -56,6 +50,13 @@ export interface TypedVitePluginOptions {
    * Override for custom session setup.
    */
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
+
+  /**
+   * Path to tsconfig.json (relative to cwd or absolute). When set, both the
+   * Language Service session and vite-tsconfig-paths use this tsconfig.
+   * Default: auto-discovered from project root.
+   */
+  readonly tsconfig?: string;
 
   /**
    * Enable tsconfig path resolution. Default true.
@@ -124,10 +125,16 @@ export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] 
     try {
       const manager = resolver as PluginManager;
       const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(manager.plugins);
+      const cwd = process.cwd();
+      const tsconfigPath = options.tsconfig
+        ? resolve(cwd, options.tsconfig)
+        : undefined;
+      const projectRoot = tsconfigPath ? dirname(tsconfigPath) : cwd;
       createTypeInfoApiSession = createLanguageServiceSessionFactory({
         ts,
-        projectRoot: process.cwd(),
+        projectRoot,
         typeTargetSpecs,
+        tsconfigPath,
       });
     } catch {
       // Graceful degradation: no session, plugins get noop TypeInfoApi
@@ -137,8 +144,20 @@ export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] 
   const plugins: Plugin[] = [];
 
   if (options.tsconfigPaths !== false) {
-    const pathsOpts =
+    const basePathsOpts =
       typeof options.tsconfigPaths === "object" ? options.tsconfigPaths : {};
+    const cwd = process.cwd();
+    const resolvedTsconfig = options.tsconfig
+      ? resolve(cwd, options.tsconfig)
+      : undefined;
+    const pathsOpts =
+      resolvedTsconfig !== undefined
+        ? {
+            ...basePathsOpts,
+            root: cwd,
+            projects: [relative(cwd, resolvedTsconfig)],
+          }
+        : basePathsOpts;
     plugins.push(tsconfigPaths(pathsOpts) as Plugin);
   }
 

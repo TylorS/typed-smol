@@ -1,6 +1,6 @@
-import { Effect } from "effect";
+import { RouteHandler } from "@typed/app";
 import * as Route from "@typed/router";
+import { html } from "@typed/template";
 
 export const route = Route.Parse("docs");
-/** Effect-valued handler (non-function). */
-export const handler: Effect.Effect<string> = Effect.succeed("docs");
+export const handler = RouteHandler(route)(() => html`<div>docs</div>`);
