@@ -2,27 +2,28 @@
  * @typed/vite-plugin — One-stop Vite preset: tsconfig paths, bundle analyzer,
  * Brotli compression, virtual-modules Vite plugin, and @typed/app VM plugins.
  */
-import type { Plugin } from "vite";
+import type { TypedConfig } from "@typed/app";
+import {
+  createHttpApiVirtualModulePlugin,
+  createRouterVirtualModulePlugin,
+  HttpApiVirtualModulePluginOptions,
+  loadTypedConfig,
+  RouterVirtualModulePluginOptions,
+} from "@typed/app";
 import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
 import {
   collectTypeTargetSpecsFromPlugins,
   createLanguageServiceSessionFactory,
   PluginManager,
 } from "@typed/virtual-modules";
-import {
-  HttpApiVirtualModulePluginOptions,
-  RouterVirtualModulePluginOptions,
-  createHttpApiVirtualModulePlugin,
-  createRouterVirtualModulePlugin,
-  loadTypedConfig,
-} from "@typed/app";
-import type { TypedConfig } from "@typed/app";
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
 import { dirname, relative, resolve } from "node:path";
-import ts from "typescript";
-import tsconfigPaths from "vite-tsconfig-paths";
+import process from "node:process";
 import { visualizer } from "rollup-plugin-visualizer";
+import ts from "typescript";
+import type { Plugin } from "vite";
 import viteCompression from "vite-plugin-compression";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 /** Options for vite-plugin-compression when compression is enabled. */
 export type TypedViteCompressionOptions =
@@ -98,8 +99,7 @@ export function createTypedViteResolver(
   dependencies?: TypedViteResolverDependencies,
 ): VirtualModuleResolver {
   const httpApiFactory =
-    dependencies?.createHttpApiVirtualModulePlugin ??
-    createHttpApiVirtualModulePlugin;
+    dependencies?.createHttpApiVirtualModulePlugin ?? createHttpApiVirtualModulePlugin;
   const plugins: import("@typed/virtual-modules").VirtualModulePlugin[] = [
     createRouterVirtualModulePlugin(options.routerVmOptions ?? {}),
     httpApiFactory(options.apiVmOptions ?? {}),
@@ -137,8 +137,7 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
   })();
 
   const resolver = createTypedViteResolver(resolvedOptions);
-  const analyze =
-    resolvedOptions.analyze ?? (process.env.ANALYZE === "1" ? true : false);
+  const analyze = resolvedOptions.analyze ?? (process.env.ANALYZE === "1" ? true : false);
 
   let createTypeInfoApiSession: CreateTypeInfoApiSession | undefined =
     resolvedOptions.createTypeInfoApiSession;
@@ -200,7 +199,8 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
       visualizer({
         filename: vizOpts.filename ?? "dist/stats.html",
         open: vizOpts.open ?? false,
-        template: (vizOpts.template as "treemap" | "sunburst" | "flamegraph" | "network") ?? "treemap",
+        template:
+          (vizOpts.template as "treemap" | "sunburst" | "flamegraph" | "network") ?? "treemap",
       }) as Plugin,
     );
   }
