@@ -14,7 +14,9 @@ import {
   RouterVirtualModulePluginOptions,
   createHttpApiVirtualModulePlugin,
   createRouterVirtualModulePlugin,
+  loadTypedConfig,
 } from "@typed/app";
+import type { TypedConfig } from "@typed/app";
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
 import { dirname, relative, resolve } from "node:path";
 import ts from "typescript";
@@ -105,29 +107,49 @@ export function createTypedViteResolver(
   return new PluginManager(plugins);
 }
 
+function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
+  return {
+    routerVmOptions: config.router ? { prefix: config.router.prefix } : undefined,
+    apiVmOptions: config.api
+      ? { prefix: config.api.prefix, pathPrefix: config.api.pathPrefix }
+      : undefined,
+    tsconfig: config.tsconfig,
+    tsconfigPaths: config.tsconfigPaths,
+    analyze: config.analyze,
+    warnOnError: config.warnOnError,
+    compression: config.compression,
+  };
+}
+
 /**
  * Returns Vite plugins: tsconfig paths, virtual modules (@typed/app), and optional bundle analyzer.
  * Use as: `defineConfig({ plugins: typedVitePlugin() })`.
  *
- * When createTypeInfoApiSession is not provided, the plugin automatically creates a
- * Language Service-backed session from the project's tsconfig. The type program evolves
- * as files change during dev. Pass createTypeInfoApiSession to override.
+ * When called with no arguments, auto-discovers `typed.config.ts` in the project root.
+ * When called with explicit options, those take full precedence (config file is not loaded).
  */
-export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] {
-  const resolver = createTypedViteResolver(options);
+export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
+  const resolvedOptions: TypedVitePluginOptions = (() => {
+    if (options) return options;
+    const result = loadTypedConfig({ projectRoot: process.cwd(), ts });
+    if (result.status === "loaded") return optionsFromTypedConfig(result.config);
+    return {};
+  })();
+
+  const resolver = createTypedViteResolver(resolvedOptions);
   const analyze =
-    options.analyze ?? (process.env.ANALYZE === "1" ? true : false);
+    resolvedOptions.analyze ?? (process.env.ANALYZE === "1" ? true : false);
 
   let createTypeInfoApiSession: CreateTypeInfoApiSession | undefined =
-    options.createTypeInfoApiSession;
+    resolvedOptions.createTypeInfoApiSession;
 
   if (createTypeInfoApiSession === undefined) {
     try {
       const manager = resolver as PluginManager;
       const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(manager.plugins);
       const cwd = process.cwd();
-      const tsconfigPath = options.tsconfig
-        ? resolve(cwd, options.tsconfig)
+      const tsconfigPath = resolvedOptions.tsconfig
+        ? resolve(cwd, resolvedOptions.tsconfig)
         : undefined;
       const projectRoot = tsconfigPath ? dirname(tsconfigPath) : cwd;
       createTypeInfoApiSession = createLanguageServiceSessionFactory({
@@ -143,12 +165,12 @@ export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] 
 
   const plugins: Plugin[] = [];
 
-  if (options.tsconfigPaths !== false) {
+  if (resolvedOptions.tsconfigPaths !== false) {
     const basePathsOpts =
-      typeof options.tsconfigPaths === "object" ? options.tsconfigPaths : {};
+      typeof resolvedOptions.tsconfigPaths === "object" ? resolvedOptions.tsconfigPaths : {};
     const cwd = process.cwd();
-    const resolvedTsconfig = options.tsconfig
-      ? resolve(cwd, options.tsconfig)
+    const resolvedTsconfig = resolvedOptions.tsconfig
+      ? resolve(cwd, resolvedOptions.tsconfig)
       : undefined;
     const pathsOpts =
       resolvedTsconfig !== undefined
@@ -165,7 +187,7 @@ export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] 
     virtualModulesVitePlugin({
       resolver,
       createTypeInfoApiSession,
-      warnOnError: options.warnOnError ?? true,
+      warnOnError: resolvedOptions.warnOnError ?? true,
     }),
   );
 
@@ -183,7 +205,7 @@ export function typedVitePlugin(options: TypedVitePluginOptions = {}): Plugin[] 
     );
   }
 
-  const compression = options.compression ?? true;
+  const compression = resolvedOptions.compression ?? true;
   if (compression !== false) {
     const compressionOpts =
       typeof compression === "object"

@@ -31,7 +31,13 @@
   },
   "peerDependencies": {
     "vite": ">=7.0.0",
-    "typescript": ">=5.0.0"
+    "typescript": ">=5.0.0",
+    "oxlint": ">=0.15.0",
+    "oxfmt": ">=0.30.0"
+  },
+  "peerDependenciesMeta": {
+    "oxlint": { "optional": true },
+    "oxfmt": { "optional": true }
   },
   "files": [
     "dist",

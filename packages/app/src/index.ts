@@ -18,3 +18,4 @@ export {
 export * from "./internal/resolveConfig.js";
 export type * from "./internal/appConfigTypes.js";
 export * from "./internal/appLayerTypes.js";
+export * from "./config/index.js";

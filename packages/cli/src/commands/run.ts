@@ -1,8 +1,9 @@
-import { Effect } from "effect";
-import { Argument, Command, Flag } from "effect/unstable/cli";
+import { Effect, Option } from "effect";
+import { Argument, Command } from "effect/unstable/cli";
 import { pathToFileURL } from "node:url";
 import { configFlag, modeFlag } from "../shared/flags.js";
-import { baseInlineConfig } from "../shared/resolveConfig.js";
+import { loadProjectConfig } from "../shared/loadConfig.js";
+import { resolveViteInlineConfig } from "../shared/resolveViteConfig.js";
 import { runnerImport } from "vite";
 
 export const run = Command.make("run", {
@@ -13,11 +14,23 @@ export const run = Command.make("run", {
   mode: modeFlag,
 }).pipe(
   Command.withDescription("Run a TypeScript file with Vite transforms"),
-  Command.withHandler((config) =>
+  Command.withHandler((flags) =>
     Effect.tryPromise({
       try: () => {
-        const inlineConfig = baseInlineConfig(config, process.cwd());
-        const fileUrl = pathToFileURL(config.file).href;
+        const projectRoot = process.cwd();
+        const loaded = loadProjectConfig(projectRoot);
+
+        const inlineConfig = resolveViteInlineConfig({
+          projectRoot,
+          typedConfig: loaded?.config,
+          explicitConfigFile: Option.getOrUndefined(flags.config ?? Option.none()),
+          baseInlineConfig: {
+            root: projectRoot,
+            mode: Option.getOrUndefined(flags.mode ?? Option.none()),
+          },
+        });
+
+        const fileUrl = pathToFileURL(flags.file).href;
         return runnerImport(fileUrl, inlineConfig).then(() => {});
       },
       catch: (e) => (e instanceof Error ? e : new Error(String(e))),

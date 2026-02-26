@@ -4,7 +4,7 @@
  * Resolves virtual modules (e.g. virtual:foo) during editor type-checking.
  *
  * Preferred setup:
- * 1) Define plugins/resolver in vmc.config.ts in the project root.
+ * 1) Define options in typed.config.ts in the project root.
  * 2) Enable this TS plugin in tsconfig.json.
  *
  * tsconfig.json:
@@ -20,17 +20,24 @@
  * Use the package name; path-style names (e.g. "../") often fail when the workspace
  * root is a monorepo parent.
  *
- * Plugin definitions are loaded from vmc.config.ts.
+ * Plugin definitions are loaded from typed.config.ts.
  */
 import {
   attachLanguageServiceAdapter,
+  collectTypeTargetSpecsFromPlugins,
   createTypeInfoApiSession,
   ensureTypeTargetBootstrapFile,
   getProgramWithTypeTargetBootstrap,
   getTypeTargetBootstrapPath,
-  loadResolverFromVmcConfig,
+  PluginManager,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
+import {
+  loadTypedConfig,
+  createRouterVirtualModulePlugin,
+  createHttpApiVirtualModulePlugin,
+  // @ts-expect-error It's ESM being imported by CJS
+} from "@typed/app";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import ts, { DirectoryWatcherCallback, FileWatcherCallback } from "typescript";
@@ -38,7 +45,7 @@ import type { PluginCreateInfo } from "./types.js";
 
 interface VirtualModulesTsPluginConfig {
   readonly debounceMs?: number;
-  readonly vmcConfigPath?: string;
+  readonly configPath?: string;
 }
 
 type LoadedVirtualResolver = import(
@@ -149,46 +156,38 @@ function init(modules: { typescript: typeof import("typescript") }): {
     ) {
       log("Ignoring invalid debounceMs; expected finite number");
     }
-    const vmcConfigPath =
-      typeof config.vmcConfigPath === "string" && config.vmcConfigPath.trim().length > 0
-        ? config.vmcConfigPath
+    const configPath =
+      typeof config.configPath === "string" && config.configPath.trim().length > 0
+        ? config.configPath
         : undefined;
-    if (config.vmcConfigPath !== undefined && vmcConfigPath === undefined) {
-      log("Ignoring invalid vmcConfigPath; expected non-empty string");
-    }
 
-    let resolver: LoadedVirtualResolver | undefined;
-    const loadedResolver = loadResolverFromVmcConfig({
+    const loadedConfig = loadTypedConfig({
       projectRoot,
       ts,
-      ...(vmcConfigPath ? { configPath: vmcConfigPath } : {}),
+      ...(configPath ? { configPath } : {}),
     });
-    log(`vmc: status=${loadedResolver.status}`);
-    if (loadedResolver.status === "error") {
-      log(`vmc error: ${loadedResolver.message}`);
-      return info.languageService;
+    log(`typed.config: status=${loadedConfig.status}`);
+    if (loadedConfig.status === "error") {
+      log(`config error: ${loadedConfig.message}`);
     }
 
-    if (loadedResolver.status === "loaded") {
-      for (const pluginLoadError of loadedResolver.pluginLoadErrors) {
-        log(`plugin load error: "${pluginLoadError.specifier}": ${pluginLoadError.message}`);
-      }
+    const typedConfig = loadedConfig.status === "loaded" ? loadedConfig.config : undefined;
 
-      resolver = loadedResolver.resolver as LoadedVirtualResolver | undefined;
-      if (!resolver) {
-        log(`${loadedResolver.path} has no resolver/plugins`);
-        return info.languageService;
-      }
-    }
+    const plugins = [
+      createRouterVirtualModulePlugin(
+        typedConfig?.router ? { prefix: typedConfig.router.prefix } : {},
+      ),
+      createHttpApiVirtualModulePlugin(
+        typedConfig?.api
+          ? { prefix: typedConfig.api.prefix, pathPrefix: typedConfig.api.pathPrefix }
+          : {},
+      ),
+    ];
+    const resolver: LoadedVirtualResolver = new PluginManager(plugins) as unknown as LoadedVirtualResolver;
 
-    if (!resolver || loadedResolver.status === "not-found") {
-      log("vmc.config.ts not found; virtual module resolution disabled");
-      return info.languageService;
-    }
+    log("Virtual module resolver initialized from typed.config.ts");
 
-    log("Virtual module resolver initialized");
-
-    const typeTargetSpecs = loadedResolver.typeTargetSpecs ?? [];
+    const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(plugins);
     log(`typeTargetSpecs: ${typeTargetSpecs.length} specs`);
 
     const projectConfigPath = (info.project as { configFilePath?: string }).configFilePath;

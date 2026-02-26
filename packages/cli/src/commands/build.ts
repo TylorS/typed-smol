@@ -4,7 +4,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { configFlag, modeFlag, baseFlag, logLevelFlag, entryFlag } from "../shared/flags.js";
 import { resolveServerEntry } from "../shared/serverEntry.js";
-import { buildInlineConfig } from "../shared/resolveConfig.js";
+import { loadProjectConfig, resolve, resolveBoolean } from "../shared/loadConfig.js";
+import { resolveViteInlineConfig } from "../shared/resolveViteConfig.js";
 import { runViteBuild } from "../shared/viteHelpers.js";
 
 const DEFAULT_OUT_DIR = "dist";
@@ -36,17 +37,38 @@ export const build = Command.make("build", {
   logLevel: logLevelFlag,
 }).pipe(
   Command.withDescription("Build for production"),
-  Command.withHandler((config) =>
+  Command.withHandler((flags) =>
     Effect.gen(function* () {
       const projectRoot = process.cwd();
-      const entry = yield* resolveServerEntry(config.entry, projectRoot);
-      const outDir = Option.getOrElse(config.outDir ?? Option.none(), () =>
+      const loaded = loadProjectConfig(projectRoot);
+      const tc = loaded?.config;
+
+      const entry = yield* resolveServerEntry(flags.entry, projectRoot);
+      const outDir = resolve(
+        flags.outDir,
+        tc?.build?.outDir,
         path.join(projectRoot, DEFAULT_OUT_DIR),
       );
       const clientOutDir = path.join(outDir, CLIENT_OUT);
       const serverOutDir = path.join(outDir, SERVER_OUT);
 
-      const baseConfig = buildInlineConfig(config, projectRoot);
+      const baseConfig = resolveViteInlineConfig({
+        projectRoot,
+        typedConfig: tc,
+        explicitConfigFile: Option.getOrUndefined(flags.config ?? Option.none()),
+        baseInlineConfig: {
+          root: projectRoot,
+          mode: Option.getOrUndefined(flags.mode ?? Option.none()),
+          base: Option.getOrUndefined(flags.base ?? Option.none()),
+          logLevel: Option.getOrUndefined(flags.logLevel ?? Option.none()),
+          build: {
+            target: resolve(flags.target, tc?.build?.target, undefined!),
+            sourcemap: resolveBoolean(flags.sourcemap, tc?.build?.sourcemap, false),
+            minify: resolveBoolean(flags.minify, tc?.build?.minify, true),
+            watch: flags.watch ? {} : undefined,
+          },
+        },
+      });
 
       const hasIndexHtml = yield* Effect.tryPromise(() =>
         fs.promises
