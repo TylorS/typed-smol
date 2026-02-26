@@ -1,3 +1,9 @@
+/// <reference types="../../vite-dev-server.d.ts" />
+
+/**
+ * SSR wiring for HttpRouter: compiles Matcher routes into Effect HTTP handlers.
+ * Optional Vite integration via transformIndexHtml for dev HMR injection.
+ */
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import { dual } from "effect/Function";
@@ -9,7 +15,7 @@ import { type HttpRouter, type Route, RouteContext } from "effect/unstable/http/
 import * as HttpServerError from "effect/unstable/http/HttpServerError";
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
-import { RefSubject } from "@typed/fx";
+import { Fx, RefSubject } from "@typed/fx";
 import {
   type CurrentRouteTree,
   type CompiledEntry,
@@ -24,30 +30,53 @@ import {
   type Router,
 } from "@typed/router";
 import { initialMemory } from "@typed/navigation";
-import { renderToHtmlString, type RenderEvent } from "@typed/template";
+import { renderToHtml, renderToHtmlString, type RenderEvent } from "@typed/template";
+import type { ViteDevServer } from "vite";
+import { Stream } from "effect";
 
 type ProvidedForSsr = Scope.Scope | Router;
+
+export interface SsrHttpOptions {
+  /**
+   * When provided (dev), rendered HTML is passed through transformIndexHtml
+   * for HMR client injection and other Vite transforms.
+   */
+  readonly viteDevServer?: ViteDevServer;
+}
 
 export const ssrForHttp: {
   <E, R>(
     input: Matcher<RenderEvent, E, R>,
+    options?: SsrHttpOptions,
   ): (router: HttpRouter) => Effect.Effect<void, never, Exclude<R, ProvidedForSsr>>;
   <E, R>(
     router: HttpRouter,
     input: Matcher<RenderEvent, E, R>,
+    options?: SsrHttpOptions,
   ): Effect.Effect<void, never, Exclude<R, ProvidedForSsr>>;
-} = dual(2, <E, R>(router: HttpRouter, input: Matcher<RenderEvent, E, R>) => {
-  return Effect.gen(function* () {
-    const matcher = Option.match(yield* Effect.serviceOption(CurrentRoute), {
-      onNone: () => input,
-      onSome: (parent: CurrentRouteTree) => input.prefix(parent.route),
-    });
-    const entries = compile(matcher.cases);
-    const currentServices = yield* Effect.services<R>();
+} = dual(
+  (args) => ServiceMap.isService(args[0]),
+  <E, R>(router: HttpRouter, input: Matcher<RenderEvent, E, R>, options?: SsrHttpOptions) => {
+    return Effect.gen(function* () {
+      const viteDevServer = yield* Effect.promise(() =>
+        import("typed:vite-dev-server").then((m) => m.default).catch(() => undefined),
+      );
 
-    yield* router.addAll(entries.map((e: CompiledEntry) => toRoute(e, currentServices)));
-  });
-});
+      const matcher = Option.match(yield* Effect.serviceOption(CurrentRoute), {
+        onNone: () => input,
+        onSome: (parent: CurrentRouteTree) => input.prefix(parent.route),
+      });
+      const entries = compile(matcher.cases);
+      const currentServices = yield* Effect.services<R>();
+
+      yield* router.addAll(
+        entries.map((e: CompiledEntry) =>
+          toRoute(e, currentServices, { ...options, viteDevServer }),
+        ),
+      );
+    });
+  },
+);
 
 export function handleHttpServerError(router: HttpRouter) {
   return router.addGlobalMiddleware(
@@ -74,6 +103,7 @@ function getStatus(error: HttpServerError.HttpServerError): number {
 function toRoute(
   entry: CompiledEntry,
   currentServices: ServiceMap.ServiceMap<never>,
+  options?: SsrHttpOptions,
 ): Route<any, any> {
   return {
     ["~effect/http/HttpRouter/Route"]: "~effect/http/HttpRouter/Route",
@@ -155,12 +185,34 @@ function toRoute(
 
       const withCatches = yield* catchManager.apply(entry.catches, withLayouts, preparedServices);
 
-      const html = yield* renderToHtmlString(withCatches).pipe(
-        Effect.provideServices(handlerServices),
-      );
-      return HttpServerResponse.text(html, {
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      if (
+        typeof import.meta !== "undefined" &&
+        typeof import.meta.env !== "undefined" &&
+        import.meta.env.DEV &&
+        options?.viteDevServer !== undefined
+      ) {
+        let html = yield* renderToHtmlString(withCatches).pipe(
+          Effect.provideServices(handlerServices),
+        );
+
+        if (options?.viteDevServer) {
+          html = yield* Effect.tryPromise(() =>
+            options.viteDevServer!.transformIndexHtml(request.url, html),
+          );
+        }
+
+        return HttpServerResponse.text(html, {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      } else {
+        return HttpServerResponse.stream(
+          renderToHtml(withCatches).pipe(
+            Fx.provideServices(handlerServices),
+            Fx.toStream,
+            Stream.encodeText,
+          ),
+        );
+      }
     }),
     uninterruptible: false,
     prefix: undefined,

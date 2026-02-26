@@ -22,7 +22,8 @@
     "@typed/vite-plugin": "workspace:*",
     "effect": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@typed/app": "workspace:*"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
@@ -36,8 +37,12 @@
     "oxfmt": ">=0.30.0"
   },
   "peerDependenciesMeta": {
-    "oxlint": { "optional": true },
-    "oxfmt": { "optional": true }
+    "oxlint": {
+      "optional": true
+    },
+    "oxfmt": {
+      "optional": true
+    }
   },
   "files": [
     "dist",

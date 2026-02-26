@@ -8,7 +8,7 @@ import { CurrentRoute } from "@typed/router/CurrentRoute";
 import * as Matcher from "@typed/router/Matcher";
 import * as Route from "@typed/router/Route";
 import { html, StaticHtmlRenderTemplate } from "@typed/template";
-import { handleHttpServerError, ssrForHttp } from "./HttpRouter.js";
+import { handleHttpServerError, ssrForHttp } from "./index.js";
 import { HttpClient, HttpRouter } from "effect/unstable/http";
 
 describe("typed/ui/HttpRouter", () => {

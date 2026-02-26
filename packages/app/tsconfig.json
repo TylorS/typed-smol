@@ -4,9 +4,9 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "types": ["node"]
+    "types": ["node", "vite/client"]
   },
-  "include": ["src"],
+  "include": ["src", "vite-dev-server.d.ts"],
   "exclude": ["**/*.test.ts"],
   "references": [{ "path": "../virtual-modules" }]
 }

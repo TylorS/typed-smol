@@ -8,6 +8,6 @@ import { lint } from "./lint.js";
 import { format } from "./format.js";
 
 export const typed = Command.make("typed").pipe(
-  Command.withDescription("Typed-smol CLI: Vite 7 + server-side capabilities"),
+  Command.withDescription("Typed: Your type-safe framework."),
   Command.withSubcommands([serve, build, preview, run, test, lint, format]),
 );

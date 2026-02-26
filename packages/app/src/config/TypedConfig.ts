@@ -60,6 +60,12 @@ export interface TypedConfig {
   /** Server entry file path. Default: "server.ts" */
   readonly entry?: string;
 
+  /**
+   * Frontend build directories where `*.html` files are located.
+   * Used for multi-page / SPA Vite config. Default: ["."]
+   */
+  readonly clients?: string | readonly string[];
+
   /** Router virtual module plugin options. */
   readonly router?: {
     readonly prefix?: string;

@@ -124,14 +124,12 @@ export type TypedApiHandler<
  */
 export function ApiHandler<
   TRoute extends ApiRoute,
-  Method extends HttpMethod,
   THeaders extends Schema.Top & { Type: Record<string, string> } = never,
   TBody extends Schema.Top = never,
   TSuccess extends Schema.Top = never,
   TError extends Schema.Top = never,
 >(
   _route: TRoute,
-  _method: Method,
   _schemas?: EndpointSchemas<THeaders, TBody, TSuccess, TError>,
 ): <R = never>(
   handler: ApiHandlerFn<

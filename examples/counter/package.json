@@ -7,9 +7,9 @@
   "author": "",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "dev": "typed serve",
+    "build": "typed build",
+    "preview": "typed preview"
   },
   "dependencies": {
     "@typed/app": "workspace:*",
@@ -18,6 +18,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@typed/cli": "workspace:*",
     "@typed/tsconfig": "workspace:*",
     "@typed/virtual-modules-ts-plugin": "workspace:*",
     "@typed/vite-plugin": "workspace:*",

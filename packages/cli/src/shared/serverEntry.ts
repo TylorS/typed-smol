@@ -30,21 +30,21 @@ const fileExistsSync = (p: string): boolean => {
 };
 
 /**
- * Resolves server entry path.
+ * Resolves server entry path. Returns none when no server entry exists (SPA mode).
  * - CLI entry (from Option) takes precedence
  * - Falls back to convention: server.ts, server.js, server.mts at projectRoot
  */
 export const resolveServerEntry = (
   cliEntry: Option.Option<string>,
   projectRoot: string,
-): Effect.Effect<string, ServerEntryNotFoundError> =>
+): Effect.Effect<Option.Option<string>, ServerEntryNotFoundError> =>
   Effect.gen(function* () {
     const fromCli = Option.getOrUndefined(cliEntry);
     if (fromCli) {
       const resolved = path.isAbsolute(fromCli)
         ? fromCli
         : path.resolve(projectRoot, fromCli);
-      if (fileExistsSync(resolved)) return resolved;
+      if (fileExistsSync(resolved)) return Option.some(resolved);
       return yield* Effect.fail(
         new ServerEntryNotFoundError(
           `Server entry not found: ${resolved}`,
@@ -54,18 +54,10 @@ export const resolveServerEntry = (
       );
     }
 
-    const attempted: string[] = [];
     for (const name of CONVENTION_ENTRIES) {
       const candidate = path.join(projectRoot, name);
-      attempted.push(candidate);
-      if (fileExistsSync(candidate)) return candidate;
+      if (fileExistsSync(candidate)) return Option.some(candidate);
     }
 
-    return yield* Effect.fail(
-      new ServerEntryNotFoundError(
-        `No server entry found. Tried: ${CONVENTION_ENTRIES.join(", ")}`,
-        projectRoot,
-        attempted,
-      ),
-    );
+    return Option.none() as Option.Option<string>;
   });

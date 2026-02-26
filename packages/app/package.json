@@ -22,9 +22,14 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@typed/id": "workspace:*",
     "@typed/router": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "@typed/fx": "workspace:*",
+    "@typed/navigation": "workspace:*",
+    "@typed/template": "workspace:*",
+    "@effect/platform-node": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
@@ -33,10 +38,12 @@
     "@vitest/coverage-v8": "^4.0.0",
     "effect": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "vite": "^7.3.1"
   },
   "peerDependencies": {
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": ">=5.0.0"
   },
   "files": [
     "dist",

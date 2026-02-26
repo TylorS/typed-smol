@@ -36,8 +36,8 @@ export const lint = Command.make("lint", {
   category: Flag.optional(Flag.string("category")).pipe(
     Flag.withDescription("Override a category level (e.g. correctness=error)"),
   ),
-  targets: Argument.repeated(
-    Argument.text("targets").pipe(
+  targets: Argument.variadic(
+    Argument.string("targets").pipe(
       Argument.withDescription("Files or directories to lint"),
     ),
   ),

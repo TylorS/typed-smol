@@ -6,6 +6,7 @@ import type { TypedConfig } from "@typed/app";
 import {
   createHttpApiVirtualModulePlugin,
   createRouterVirtualModulePlugin,
+  createTypedRuntimeVitePlugin,
   HttpApiVirtualModulePluginOptions,
   loadTypedConfig,
   RouterVirtualModulePluginOptions,
@@ -19,7 +20,7 @@ import {
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
 import { dirname, relative, resolve } from "node:path";
 import process from "node:process";
-import { visualizer } from "rollup-plugin-visualizer";
+import { PluginVisualizerOptions, visualizer } from "rollup-plugin-visualizer";
 import ts from "typescript";
 import type { Plugin } from "vite";
 import viteCompression from "vite-plugin-compression";
@@ -77,6 +78,11 @@ export interface TypedVitePluginOptions {
   readonly warnOnError?: boolean;
 
   /**
+   * Frontend build directories where `*.html` files are located. Passed to typed runtime plugin.
+   */
+  readonly clients?: string | readonly string[];
+
+  /**
    * Enable Brotli compression for build. Default true.
    * Set false to disable, or pass options to customize (algorithm, ext, threshold).
    */
@@ -118,6 +124,7 @@ function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
     analyze: config.analyze,
     warnOnError: config.warnOnError,
     compression: config.compression,
+    clients: config.clients,
   };
 }
 
@@ -129,10 +136,14 @@ function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
  * When called with explicit options, those take full precedence (config file is not loaded).
  */
 export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
+  let loadedConfig: TypedConfig | undefined;
   const resolvedOptions: TypedVitePluginOptions = (() => {
     if (options) return options;
     const result = loadTypedConfig({ projectRoot: process.cwd(), ts });
-    if (result.status === "loaded") return optionsFromTypedConfig(result.config);
+    if (result.status === "loaded") {
+      loadedConfig = result.config;
+      return optionsFromTypedConfig(result.config);
+    }
     return {};
   })();
 
@@ -162,7 +173,12 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
     }
   }
 
-  const plugins: Plugin[] = [];
+  const plugins: Plugin[] = [
+    createTypedRuntimeVitePlugin({
+      config: loadedConfig,
+      projectRoot: process.cwd(),
+    }),
+  ];
 
   if (resolvedOptions.tsconfigPaths !== false) {
     const basePathsOpts =
@@ -179,7 +195,7 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
             projects: [relative(cwd, resolvedTsconfig)],
           }
         : basePathsOpts;
-    plugins.push(tsconfigPaths(pathsOpts) as Plugin);
+    plugins.push(tsconfigPaths(pathsOpts));
   }
 
   plugins.push(
@@ -199,9 +215,8 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
       visualizer({
         filename: vizOpts.filename ?? "dist/stats.html",
         open: vizOpts.open ?? false,
-        template:
-          (vizOpts.template as "treemap" | "sunburst" | "flamegraph" | "network") ?? "treemap",
-      }) as Plugin,
+        template: (vizOpts.template ?? "treemap") as PluginVisualizerOptions["template"],
+      }),
     );
   }
 
@@ -220,7 +235,7 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
             ext: ".br",
             threshold: 1024,
           };
-    plugins.push(viteCompression(compressionOpts) as Plugin);
+    plugins.push(viteCompression(compressionOpts));
   }
 
   return plugins;

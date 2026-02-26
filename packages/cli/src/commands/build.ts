@@ -43,7 +43,7 @@ export const build = Command.make("build", {
       const loaded = loadProjectConfig(projectRoot);
       const tc = loaded?.config;
 
-      const entry = yield* resolveServerEntry(flags.entry, projectRoot);
+      const entry = yield* resolveServerEntry(flags.entry ?? Option.none(), projectRoot);
       const outDir = resolve(
         flags.outDir,
         tc?.build?.outDir,
@@ -88,15 +88,17 @@ export const build = Command.make("build", {
         });
       }
 
-      yield* runViteBuild({
-        ...baseConfig,
-        build: {
-          ...baseConfig.build,
-          ssr: entry,
-          outDir: serverOutDir,
-          emptyOutDir: !hasIndexHtml,
-        },
-      });
+      if (Option.isSome(entry)) {
+        yield* runViteBuild({
+          ...baseConfig,
+          build: {
+            ...baseConfig.build,
+            ssr: entry.value,
+            outDir: serverOutDir,
+            emptyOutDir: !hasIndexHtml,
+          },
+        });
+      }
     }),
   ),
 );

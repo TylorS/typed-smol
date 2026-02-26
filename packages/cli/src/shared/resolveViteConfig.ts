@@ -59,6 +59,7 @@ export function resolveViteInlineConfig(options: ResolveViteConfigOptions): Inli
         analyze: typedConfig.analyze,
         warnOnError: typedConfig.warnOnError,
         compression: typedConfig.compression,
+        clients: typedConfig.clients,
       }
     : undefined;
 
@@ -66,5 +67,20 @@ export function resolveViteInlineConfig(options: ResolveViteConfigOptions): Inli
     ...baseInlineConfig,
     configFile: false,
     plugins: [...typedVitePlugin(pluginOptions)],
+    resolve: {
+      ...baseInlineConfig.resolve,
+      conditions: ["browser", "import", "module", "default"],
+    },
+    optimizeDeps: {
+      ...baseInlineConfig.optimizeDeps,
+      include: [
+        ...(Array.isArray(baseInlineConfig?.optimizeDeps?.include)
+          ? baseInlineConfig.optimizeDeps.include
+          : typeof baseInlineConfig?.optimizeDeps?.include === "string"
+            ? [baseInlineConfig.optimizeDeps.include]
+            : []),
+        "effect",
+      ],
+    },
   };
 }

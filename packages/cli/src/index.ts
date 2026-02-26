@@ -3,4 +3,4 @@
  * Commands: typed serve | typed build | typed preview | typed run
  */
 export { typed } from "./commands/typed.js";
-export { serve, build, preview, run } from "./commands/index.js";
+export * from "./commands/index.js";

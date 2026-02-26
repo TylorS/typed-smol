@@ -1,5 +1,6 @@
 import { Effect, Option } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
+import * as path from "node:path";
 import {
   configFlag,
   modeFlag,
@@ -11,7 +12,13 @@ import { loadProjectConfig, resolve, resolveBoolean } from "../shared/loadConfig
 import { resolveViteInlineConfig } from "../shared/resolveViteConfig.js";
 import { createVitePreview } from "../shared/viteHelpers.js";
 
+const DEFAULT_OUT_DIR = "dist";
+const CLIENT_OUT = "client";
+
 export const preview = Command.make("preview", {
+  outDir: Flag.optional(Flag.string("outDir")).pipe(
+    Flag.withDescription("Output directory (default: dist)"),
+  ),
   host: Flag.optional(Flag.string("host")).pipe(
     Flag.withDescription("Specify hostname"),
   ),
@@ -39,6 +46,13 @@ export const preview = Command.make("preview", {
       const loaded = loadProjectConfig(projectRoot);
       const tc = loaded?.config;
 
+      const outDir = resolve(
+        flags.outDir,
+        tc?.build?.outDir,
+        path.join(projectRoot, DEFAULT_OUT_DIR),
+      );
+      const clientOutDir = path.join(outDir, CLIENT_OUT);
+
       const inlineConfig = resolveViteInlineConfig({
         projectRoot,
         typedConfig: tc,
@@ -48,6 +62,7 @@ export const preview = Command.make("preview", {
           mode: Option.getOrUndefined(flags.mode ?? Option.none()),
           base: Option.getOrUndefined(flags.base ?? Option.none()),
           logLevel: Option.getOrUndefined(flags.logLevel ?? Option.none()),
+          build: { outDir: clientOutDir },
           preview: {
             host: resolve(flags.host, tc?.preview?.host, undefined!),
             port: resolve(flags.port, tc?.preview?.port, undefined!),
