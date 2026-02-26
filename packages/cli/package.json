@@ -19,6 +19,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@typed/app": "workspace:*",
     "@typed/vite-plugin": "workspace:*",
     "effect": "catalog:",
     "vite": "catalog:",

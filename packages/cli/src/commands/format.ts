@@ -26,8 +26,8 @@ export const format = Command.make("format", {
     Flag.withDefault(false),
     Flag.withDescription("Use tabs instead of spaces"),
   ),
-  targets: Argument.repeated(
-    Argument.text("targets").pipe(
+  targets: Argument.variadic(
+    Argument.string("targets").pipe(
       Argument.withDescription("Files or directories to format"),
     ),
   ),

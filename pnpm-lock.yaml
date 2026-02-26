@@ -21,6 +21,9 @@ catalogs:
     typescript:
       specifier: 5.9.3
       version: 5.9.3
+    vite:
+      specifier: 7.3.1
+      version: 7.3.1
     vitest:
       specifier: 4.0.18
       version: 4.0.18
@@ -49,6 +52,37 @@ importers:
         version: 4.0.18(@types/node@25.3.0)(happy-dom@20.6.3)(yaml@2.8.2)
 
   examples/counter:
+    dependencies:
+      '@typed/app':
+        specifier: workspace:*
+        version: link:../../packages/app
+      '@typed/fx':
+        specifier: workspace:*
+        version: link:../../packages/fx
+      '@typed/template':
+        specifier: workspace:*
+        version: link:../../packages/template
+      effect:
+        specifier: 4.0.0-beta.11
+        version: 4.0.0-beta.11
+    devDependencies:
+      '@typed/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@typed/virtual-modules-ts-plugin':
+        specifier: workspace:*
+        version: link:../../packages/virtual-modules-ts-plugin
+      '@typed/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: ^7.3.1
+        version: 7.3.1(@types/node@25.3.0)(yaml@2.8.2)
+
+  examples/tea-counter:
     dependencies:
       '@typed/app':
         specifier: workspace:*
@@ -159,14 +193,23 @@ importers:
 
   packages/cli:
     dependencies:
+      '@typed/app':
+        specifier: workspace:*
+        version: link:../app
       '@typed/vite-plugin':
         specifier: workspace:*
         version: link:../vite-plugin
       effect:
         specifier: 4.0.0-beta.11
         version: 4.0.0-beta.11
+      oxfmt:
+        specifier: '>=0.30.0'
+        version: 0.33.0
+      oxlint:
+        specifier: '>=0.15.0'
+        version: 1.48.0
       vite:
-        specifier: ^7.3.1
+        specifier: 'catalog:'
         version: 7.3.1(@types/node@25.3.0)(yaml@2.8.2)
       vitest:
         specifier: 'catalog:'

@@ -36,8 +36,8 @@ export const lint = Command.make("lint", {
   category: Flag.optional(Flag.string("category")).pipe(
     Flag.withDescription("Override a category level (e.g. correctness=error)"),
   ),
-  targets: Argument.repeated(
-    Argument.text("targets").pipe(
+  targets: Argument.variadic(
+    Argument.string("targets").pipe(
       Argument.withDescription("Files or directories to lint"),
     ),
   ),
@@ -68,12 +68,12 @@ export const lint = Command.make("lint", {
           suspicious: "warn" as const,
         };
         for (const [cat, level] of Object.entries(categories)) {
-          args.push(`--${cat}-category`, level);
+          args.push(`--${cat}-category`, level as string);
         }
 
         if (lintConfig?.rules) {
           for (const [rule, level] of Object.entries(lintConfig.rules)) {
-            args.push("--rule", `${rule}=${level}`);
+            args.push("--rule", `${rule}=${level as string}`);
           }
         }
 

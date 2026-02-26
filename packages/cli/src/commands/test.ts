@@ -31,19 +31,15 @@ export const test = Command.make("test", {
     Flag.withDefault(false),
     Flag.withDescription("Enable coverage"),
   ),
-  reporter: Flag.optional(Flag.string("reporter")).pipe(
-    Flag.withDescription("Test reporter"),
-  ),
+  reporter: Flag.optional(Flag.string("reporter")).pipe(Flag.withDescription("Test reporter")),
   environment: Flag.optional(Flag.string("environment")).pipe(
     Flag.withDescription("Test environment (e.g. node, jsdom)"),
   ),
   config: configFlag,
   mode: modeFlag,
   logLevel: logLevelFlag,
-  filters: Argument.repeated(
-    Argument.text("filters").pipe(
-      Argument.withDescription("Test file filters"),
-    ),
+  filters: Argument.variadic(
+    Argument.string("filters").pipe(Argument.withDescription("Test file filters")),
   ),
 }).pipe(
   Command.withDescription("Run tests with vitest"),
@@ -51,10 +47,7 @@ export const test = Command.make("test", {
     Effect.gen(function* () {
       const { createVitest } = yield* Effect.tryPromise({
         try: () => import("vitest/node") as Promise<typeof import("vitest/node")>,
-        catch: () =>
-          new Error(
-            "vitest is not installed. Run: pnpm add -D vitest",
-          ),
+        catch: () => new Error("vitest is not installed. Run: pnpm add -D vitest"),
       });
 
       const projectRoot = process.cwd();
@@ -88,7 +81,8 @@ export const test = Command.make("test", {
           testOptions.globals = testConfig.globals;
         }
 
-        const env = Option.getOrUndefined(flags.environment ?? Option.none()) ?? testConfig?.environment;
+        const env =
+          Option.getOrUndefined(flags.environment ?? Option.none()) ?? testConfig?.environment;
         if (env) testOptions.environment = env;
 
         if (testConfig?.typecheck !== undefined) {
@@ -100,7 +94,10 @@ export const test = Command.make("test", {
           testOptions.typecheck = { enabled: true };
         }
 
-        if (resolveBoolean(flags.coverage, testConfig?.coverage !== undefined, false) && testConfig?.coverage) {
+        if (
+          resolveBoolean(flags.coverage, testConfig?.coverage !== undefined, false) &&
+          testConfig?.coverage
+        ) {
           testOptions.coverage = { ...testConfig.coverage };
         } else if (flags.coverage) {
           testOptions.coverage = { provider: "v8" as const };
@@ -114,16 +111,22 @@ export const test = Command.make("test", {
         }
       }
 
-      const vitest = await createVitest("test", {
-        watch: flags.watch,
-        ...testOptions,
-      } as any, viteOverrides);
+      const vitest = yield* Effect.promise(() =>
+        createVitest(
+          "test",
+          {
+            watch: flags.watch,
+            ...testOptions,
+          },
+          viteOverrides,
+        ),
+      );
 
-      const filters = flags.filters.length > 0 ? flags.filters : undefined;
-      await vitest.start(filters);
+      const filters = flags.filters.length > 0 ? flags.filters.slice(0) : [];
+      yield* Effect.promise(() => vitest.start(filters));
 
       if (!flags.watch) {
-        await vitest.close();
+        yield* Effect.promise(() => vitest.close());
       }
     }),
   ),
