@@ -87,11 +87,13 @@ export function validateOpenApiGenerationScope(
   const hasGen =
     generation.additionalProperties !== undefined &&
     (typeof generation.additionalProperties === "boolean" ||
-      (typeof generation.additionalProperties === "object" && generation.additionalProperties !== null));
+      (typeof generation.additionalProperties === "object" &&
+        generation.additionalProperties !== null));
   if (hasGen) {
     diagnostics.push({
       code: DIAG_SCOPE_GENERATION,
-      message: "OpenAPI generation options (e.g. additionalProperties) are allowed at API scope only.",
+      message:
+        "OpenAPI generation options (e.g. additionalProperties) are allowed at API scope only.",
       scope,
     });
   }
@@ -114,7 +116,8 @@ export function validateOpenApiExposureScope(
   if (hasExposure) {
     diagnostics.push({
       code: DIAG_SCOPE_EXPOSURE,
-      message: "OpenAPI exposure options (jsonPath, swaggerPath, scalar) are allowed at API scope only.",
+      message:
+        "OpenAPI exposure options (jsonPath, swaggerPath, scalar) are allowed at API scope only.",
       scope,
     });
   }
@@ -172,9 +175,10 @@ export function validateOpenApiExposureRouteConflicts(
 /**
  * Filters raw annotation keys to Effect-supported set; emits diagnostic for unsupported keys.
  */
-export function filterAnnotationKeys(
-  raw: Record<string, unknown>,
-): { annotations: OpenApiAnnotationsConfig; diagnostics: OpenApiConfigDiagnostic[] } {
+export function filterAnnotationKeys(raw: Record<string, unknown>): {
+  annotations: OpenApiAnnotationsConfig;
+  diagnostics: OpenApiConfigDiagnostic[];
+} {
   const annotations: OpenApiAnnotationsConfig = {};
   const diagnostics: OpenApiConfigDiagnostic[] = [];
   for (const [key, value] of Object.entries(raw)) {

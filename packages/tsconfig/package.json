@@ -1,6 +1,12 @@
 {
   "name": "@typed/tsconfig",
   "version": "1.0.0-beta.1",
+  "files": [
+    "base.json",
+    "dom.json",
+    "test.json",
+    "webworker.json"
+  ],
   "type": "module",
   "exports": {
     "./base": "./base.json",
@@ -11,12 +17,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "base.json",
-    "dom.json",
-    "test.json",
-    "webworker.json"
-  ],
   "dependencies": {
     "@typed/virtual-modules-ts-plugin": "workspace:*"
   }

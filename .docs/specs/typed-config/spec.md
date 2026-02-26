@@ -43,22 +43,22 @@ graph TD
 
 Canonical config type. All fields optional. Sections:
 
-| Section | Purpose | Consumers |
-|---------|---------|-----------|
-| `entry` | Server entry file path | CLI |
-| `router` | Router VM plugin prefix | Vite plugin, TS plugin |
-| `api` | HttpApi VM plugin prefix + pathPrefix | Vite plugin, TS plugin |
-| `tsconfig` | tsconfig.json path | Vite plugin, TS plugin |
-| `tsconfigPaths` | Path alias resolution | Vite plugin |
-| `server` | Dev server defaults | CLI `serve` |
-| `build` | Build defaults | CLI `build` |
-| `preview` | Preview server defaults | CLI `preview` |
-| `test` | Vitest defaults | CLI `test` |
-| `lint` | Oxlint defaults | CLI `lint` |
-| `format` | Oxfmt defaults | CLI `format` |
-| `analyze` | Bundle analyzer | Vite plugin |
-| `compression` | Build compression | Vite plugin |
-| `warnOnError` | VM error warnings | Vite plugin |
+| Section         | Purpose                               | Consumers              |
+| --------------- | ------------------------------------- | ---------------------- |
+| `entry`         | Server entry file path                | CLI                    |
+| `router`        | Router VM plugin prefix               | Vite plugin, TS plugin |
+| `api`           | HttpApi VM plugin prefix + pathPrefix | Vite plugin, TS plugin |
+| `tsconfig`      | tsconfig.json path                    | Vite plugin, TS plugin |
+| `tsconfigPaths` | Path alias resolution                 | Vite plugin            |
+| `server`        | Dev server defaults                   | CLI `serve`            |
+| `build`         | Build defaults                        | CLI `build`            |
+| `preview`       | Preview server defaults               | CLI `preview`          |
+| `test`          | Vitest defaults                       | CLI `test`             |
+| `lint`          | Oxlint defaults                       | CLI `lint`             |
+| `format`        | Oxfmt defaults                        | CLI `format`           |
+| `analyze`       | Bundle analyzer                       | Vite plugin            |
+| `compression`   | Build compression                     | Vite plugin            |
+| `warnOnError`   | VM error warnings                     | Vite plugin            |
 
 ### 2. `defineConfig()` Helper (`@typed/app`)
 
@@ -75,6 +75,7 @@ export function defineConfig(config: TypedConfig): TypedConfig {
 Synchronous config file loader. Extends `VmcConfigLoader` pattern.
 
 **Signature**:
+
 ```typescript
 interface LoadTypedConfigOptions {
   readonly projectRoot: string;
@@ -185,36 +186,36 @@ TS plugin calls `loadTypedConfig({ projectRoot, ts })` at initialization. Extrac
 
 ## Failure Modes and Mitigations
 
-| Failure | Impact | Mitigation |
-|---------|--------|------------|
-| `typed.config.ts` has syntax error | Config load fails | Return `{ status: "error", message }`. CLI prints actionable error. All tools fall back to built-in defaults. |
-| `typed.config.ts` imports unavailable module | `ts.transpileModule` succeeds but CJS eval throws | Caught by try/catch in loader. Same error status returned. |
-| `typed.config.ts` exports wrong shape | Invalid config | Loader validates top-level shape and returns error with details. |
-| `oxlint` not installed | `typed lint` fails | CLI checks for binary availability before spawning. Prints "install oxlint" message. |
-| `oxfmt` not installed | `typed format` fails | Same: check binary, print install instructions. |
-| `vitest` not installed | `typed test` fails | Import fails at runtime; CLI catches and prints install instructions. |
+| Failure                                      | Impact                                            | Mitigation                                                                                                    |
+| -------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `typed.config.ts` has syntax error           | Config load fails                                 | Return `{ status: "error", message }`. CLI prints actionable error. All tools fall back to built-in defaults. |
+| `typed.config.ts` imports unavailable module | `ts.transpileModule` succeeds but CJS eval throws | Caught by try/catch in loader. Same error status returned.                                                    |
+| `typed.config.ts` exports wrong shape        | Invalid config                                    | Loader validates top-level shape and returns error with details.                                              |
+| `oxlint` not installed                       | `typed lint` fails                                | CLI checks for binary availability before spawning. Prints "install oxlint" message.                          |
+| `oxfmt` not installed                        | `typed format` fails                              | Same: check binary, print install instructions.                                                               |
+| `vitest` not installed                       | `typed test` fails                                | Import fails at runtime; CLI catches and prints install instructions.                                         |
 
 ## Requirement Traceability
 
-| Requirement | Design Element |
-|-------------|---------------|
-| FR-1 | `TypedConfig` interface + `defineConfig()` in `@typed/app` |
-| FR-2 | `loadTypedConfig()` discovery logic |
-| FR-3 | `loadTypedConfig()` using `ts.transpileModule` + CJS eval |
-| FR-4 | CLI merge logic: flags > config > defaults |
-| FR-5 | CLI `vite.config.ts` existence check + `configFile: false` path |
-| FR-6 | `typedVitePlugin()` zero-arg auto-discovery |
-| FR-7 | TS plugin calls `loadTypedConfig()` exclusively |
-| FR-8 | `typed test` command using `createVitest` from `vitest/node` |
-| FR-9 | `typed lint` command spawning `oxlint` |
-| FR-10 | `typed format` command spawning `oxfmt` |
-| FR-11 | Explicit options override; absent config uses defaults; `vmc.config.ts` removed |
-| NFR-1 | Sync `loadTypedConfig()` using `ts.transpileModule` |
-| NFR-2 | No new deps for loading; `oxlint`/`oxfmt` as peer deps for their commands |
-| NFR-3 | `defineConfig()` with full inference |
-| NFR-4 | Empty `defineConfig({})` valid; no config file also valid |
-| NFR-5 | Single `TypedConfig` type consumed everywhere |
-| NFR-6 | CLI passes unknown flags to underlying tools |
+| Requirement | Design Element                                                                  |
+| ----------- | ------------------------------------------------------------------------------- |
+| FR-1        | `TypedConfig` interface + `defineConfig()` in `@typed/app`                      |
+| FR-2        | `loadTypedConfig()` discovery logic                                             |
+| FR-3        | `loadTypedConfig()` using `ts.transpileModule` + CJS eval                       |
+| FR-4        | CLI merge logic: flags > config > defaults                                      |
+| FR-5        | CLI `vite.config.ts` existence check + `configFile: false` path                 |
+| FR-6        | `typedVitePlugin()` zero-arg auto-discovery                                     |
+| FR-7        | TS plugin calls `loadTypedConfig()` exclusively                                 |
+| FR-8        | `typed test` command using `createVitest` from `vitest/node`                    |
+| FR-9        | `typed lint` command spawning `oxlint`                                          |
+| FR-10       | `typed format` command spawning `oxfmt`                                         |
+| FR-11       | Explicit options override; absent config uses defaults; `vmc.config.ts` removed |
+| NFR-1       | Sync `loadTypedConfig()` using `ts.transpileModule`                             |
+| NFR-2       | No new deps for loading; `oxlint`/`oxfmt` as peer deps for their commands       |
+| NFR-3       | `defineConfig()` with full inference                                            |
+| NFR-4       | Empty `defineConfig({})` valid; no config file also valid                       |
+| NFR-5       | Single `TypedConfig` type consumed everywhere                                   |
+| NFR-6       | CLI passes unknown flags to underlying tools                                    |
 
 ## References
 

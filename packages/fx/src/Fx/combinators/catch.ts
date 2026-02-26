@@ -352,10 +352,10 @@ export const catchTags: {
             ? R2
             : never;
         }[keyof Cases]
-    >((sink) =>
-      self.run(
-        makeSink(
-          (cause) => {
+    >(
+      (sink) =>
+        self.run(
+          makeSink((cause) => {
             const result = Cause.findFail(cause);
             if (Result.isFailure(result)) {
               return sink.onFailure(result.failure);
@@ -376,10 +376,9 @@ export const catchTags: {
               );
             }
             const tag = (error as { _tag: string })._tag;
-            const handler = (cases as Record<
-              string,
-              (e: unknown) => Fx<unknown, unknown, unknown>
-            >)[tag];
+            const handler = (
+              cases as Record<string, (e: unknown) => Fx<unknown, unknown, unknown>>
+            )[tag];
             if (handler !== undefined) {
               return handler(error).run(
                 sink as import("../../Sink/Sink.js").Sink<
@@ -401,21 +400,17 @@ export const catchTags: {
                   }[keyof Cases]
               >,
             );
-          },
-          sink.onSuccess,
-        ),
-      ) as import("effect/Effect").Effect<
-        unknown,
-        never,
-        | R
-        | {
-            [K in keyof Cases]: Cases[K] extends (
-              e: unknown,
-            ) => Fx<unknown, unknown, infer R2>
-              ? R2
-              : never;
-          }[keyof Cases]
-        | import("../../Sink/Sink.js").Context<typeof sink>
-      >,
+          }, sink.onSuccess),
+        ) as import("effect/Effect").Effect<
+          unknown,
+          never,
+          | R
+          | {
+              [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, unknown, infer R2>
+                ? R2
+                : never;
+            }[keyof Cases]
+          | import("../../Sink/Sink.js").Context<typeof sink>
+        >,
     ),
 );

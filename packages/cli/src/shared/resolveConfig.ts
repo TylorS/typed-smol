@@ -42,10 +42,7 @@ const opt = <A>(x: Option.Option<A> | undefined): A | undefined =>
 /**
  * Base InlineConfig from shared flags.
  */
-export const baseInlineConfig = (
-  flags: SharedFlags,
-  root?: string,
-): InlineConfig => ({
+export const baseInlineConfig = (flags: SharedFlags, root?: string): InlineConfig => ({
   root,
   configFile: opt(flags.config),
   mode: opt(flags.mode),
@@ -56,10 +53,7 @@ export const baseInlineConfig = (
 /**
  * InlineConfig for serve (dev server).
  */
-export const serveInlineConfig = (
-  flags: ServeFlags,
-  root?: string,
-): InlineConfig => ({
+export const serveInlineConfig = (flags: ServeFlags, root?: string): InlineConfig => ({
   ...baseInlineConfig(flags, root),
   server: {
     host: opt(flags.host),
@@ -74,10 +68,7 @@ export const serveInlineConfig = (
 /**
  * InlineConfig for build.
  */
-export const buildInlineConfig = (
-  flags: BuildFlags,
-  root?: string,
-): InlineConfig => ({
+export const buildInlineConfig = (flags: BuildFlags, root?: string): InlineConfig => ({
   ...baseInlineConfig(flags, root),
   build: {
     outDir: opt(flags.outDir),
@@ -91,10 +82,7 @@ export const buildInlineConfig = (
 /**
  * InlineConfig for preview.
  */
-export const previewInlineConfig = (
-  flags: PreviewFlags,
-  root?: string,
-): InlineConfig => ({
+export const previewInlineConfig = (flags: PreviewFlags, root?: string): InlineConfig => ({
   ...baseInlineConfig(flags, root),
   preview: {
     host: opt(flags.host),

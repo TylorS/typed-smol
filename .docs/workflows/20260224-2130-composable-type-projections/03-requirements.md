@@ -13,7 +13,7 @@ Revised from brainstorming per user feedback: projection should NOT be on TypeTa
   - `{ kind: "param", index: number }` — navigate to the nth parameter type
   - `{ kind: "typeArg", index: number }` — navigate to the nth type argument
   - `{ kind: "property", name: string }` — navigate to a named property's type
-  Projection steps chain left-to-right. No projection means check the node's type directly against the target.
+    Projection steps chain left-to-right. No projection means check the node's type directly against the target.
 
 - **FR-4**: When a projection step fails (e.g. `returnType` on a non-callable, `typeArg[3]` when only 2 args exist, `property("x")` when no such property), `isAssignableTo` SHALL return `false`.
 

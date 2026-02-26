@@ -13,15 +13,7 @@ import type { ValidationResult } from "./validation.js";
 import { validateNonEmptyString } from "./validation.js";
 
 /** Supported HTTP method literals for endpoint contract */
-const HTTP_METHODS = new Set<string>([
-  "GET",
-  "POST",
-  "PUT",
-  "PATCH",
-  "DELETE",
-  "HEAD",
-  "OPTIONS",
-]);
+const HTTP_METHODS = new Set<string>(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 
 /** Minimal endpoint contract shape (runtime check) */
 export interface EndpointContractInput {
@@ -64,7 +56,10 @@ export function validateEndpointContract(
     return { ok: false, reason: "Endpoint contract missing required field: route" };
   }
   if (!isObject(contract.route)) {
-    return { ok: false, reason: "Endpoint contract route must be an object (path + pathSchema + querySchema)" };
+    return {
+      ok: false,
+      reason: "Endpoint contract route must be an object (path + pathSchema + querySchema)",
+    };
   }
 
   const route = contract.route as Record<string, unknown>;

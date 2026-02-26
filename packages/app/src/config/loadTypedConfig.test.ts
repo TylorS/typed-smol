@@ -73,10 +73,7 @@ describe("loadTypedConfig", () => {
 
   // TS-3: returns error on syntax error
   it("returns error when config has syntax errors", () => {
-    writeFileSync(
-      join(FIXTURE_ROOT, "typed.config.ts"),
-      `export default {{{ broken`,
-    );
+    writeFileSync(join(FIXTURE_ROOT, "typed.config.ts"), `export default {{{ broken`);
 
     const result = loadTypedConfig({ projectRoot: FIXTURE_ROOT, ts });
     expect(result.status).toBe("error");
@@ -84,10 +81,7 @@ describe("loadTypedConfig", () => {
 
   // TS-3: returns error when config exports non-object
   it("returns error when config exports a non-object", () => {
-    writeFileSync(
-      join(FIXTURE_ROOT, "typed.config.ts"),
-      `export default "not an object";`,
-    );
+    writeFileSync(join(FIXTURE_ROOT, "typed.config.ts"), `export default "not an object";`);
 
     const result = loadTypedConfig({ projectRoot: FIXTURE_ROOT, ts });
     expect(result.status).toBe("error");
@@ -106,10 +100,7 @@ describe("loadTypedConfig", () => {
   it("loads config via explicit configPath", () => {
     const customDir = join(FIXTURE_ROOT, "custom");
     mkdirSync(customDir, { recursive: true });
-    writeFileSync(
-      join(customDir, "my-config.ts"),
-      `export default { entry: "custom.ts" };`,
-    );
+    writeFileSync(join(customDir, "my-config.ts"), `export default { entry: "custom.ts" };`);
 
     const result = loadTypedConfig({
       projectRoot: FIXTURE_ROOT,
@@ -123,20 +114,14 @@ describe("loadTypedConfig", () => {
 
   // TS-13: config loading is synchronous
   it("loading is synchronous (no Promise returned)", () => {
-    writeFileSync(
-      join(FIXTURE_ROOT, "typed.config.ts"),
-      `export default {};`,
-    );
+    writeFileSync(join(FIXTURE_ROOT, "typed.config.ts"), `export default {};`);
     const result = loadTypedConfig({ projectRoot: FIXTURE_ROOT, ts });
     expect(result).not.toBeInstanceOf(Promise);
     expect(result.status).toBe("loaded");
   });
 
   it("loads empty config successfully", () => {
-    writeFileSync(
-      join(FIXTURE_ROOT, "typed.config.ts"),
-      `export default {};`,
-    );
+    writeFileSync(join(FIXTURE_ROOT, "typed.config.ts"), `export default {};`);
 
     const result = loadTypedConfig({ projectRoot: FIXTURE_ROOT, ts });
     expect(result.status).toBe("loaded");

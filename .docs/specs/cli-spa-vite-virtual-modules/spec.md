@@ -9,12 +9,12 @@ typed-smol CLI (`typed serve`) today requires a server entry. This spec adds SPA
 
 ## Component Responsibilities and Interfaces
 
-| Component | Responsibility |
-| --------- | -------------- |
-| **packages/cli** | Make server entry optional; when absent, start Vite SPA dev server only |
-| **packages/app** | `TypedConfig.clients`; `createTypedRuntimeVitePlugin()` for `typed:config` + `typed:vite-dev-server`; `ssrForHttp` (moved from ui) with optional Vite integration |
-| **packages/vite-plugin** | Register `createTypedRuntimeVitePlugin()` from @typed/app; wire `clients` into Vite config |
-| **packages/ui** | Re-export `ssrForHttp` from @typed/app; keep `Link` |
+| Component                | Responsibility                                                                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **packages/cli**         | Make server entry optional; when absent, start Vite SPA dev server only                                                                                           |
+| **packages/app**         | `TypedConfig.clients`; `createTypedRuntimeVitePlugin()` for `typed:config` + `typed:vite-dev-server`; `ssrForHttp` (moved from ui) with optional Vite integration |
+| **packages/vite-plugin** | Register `createTypedRuntimeVitePlugin()` from @typed/app; wire `clients` into Vite config                                                                        |
+| **packages/ui**          | Re-export `ssrForHttp` from @typed/app; keep `Link`                                                                                                               |
 
 ## System Diagrams (Mermaid)
 
@@ -35,7 +35,7 @@ flowchart TD
     vmConfig[typed:config VM]
     vmDev[typed:vite-dev-server VM]
   end
-  
+
   serve --> resolveEntry
   resolveEntry -->|no entry| createVite
   resolveEntry -->|has entry| createVite
@@ -57,23 +57,23 @@ flowchart TD
 
 ## Failure Modes and Mitigations
 
-| Failure | Mitigation |
-| ------- | ---------- |
-| No index.html in clients dirs | Vite will fail at startup; document clients config in README |
+| Failure                                | Mitigation                                                            |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| No index.html in clients dirs          | Vite will fail at startup; document clients config in README          |
 | typed:config used before config loaded | Plugin loads at configResolved; always available when modules resolve |
-| typed:vite-dev-server in production | Export undefined; callers must guard |
+| typed:vite-dev-server in production    | Export undefined; callers must guard                                  |
 
 ## Requirement Traceability
 
-| requirement_id | design_element |
-| -------------- | -------------- |
-| FR-1 | CLI: resolveServerEntry returns Option; serve skips ssrLoadModule when none |
-| FR-2 | TypedConfig.clients; resolveViteInlineConfig / plugin |
-| FR-3 | createTypedRuntimeVitePlugin — typed:config |
-| FR-4 | createTypedRuntimeVitePlugin — typed:vite-dev-server |
-| FR-5 | ssrForHttp in app, optional transformIndexHtml integration |
-| FR-6 | Plugin in app; vite-plugin imports and registers |
-| FR-7 | ui re-exports ssrForHttp from app |
+| requirement_id | design_element                                                              |
+| -------------- | --------------------------------------------------------------------------- |
+| FR-1           | CLI: resolveServerEntry returns Option; serve skips ssrLoadModule when none |
+| FR-2           | TypedConfig.clients; resolveViteInlineConfig / plugin                       |
+| FR-3           | createTypedRuntimeVitePlugin — typed:config                                 |
+| FR-4           | createTypedRuntimeVitePlugin — typed:vite-dev-server                        |
+| FR-5           | ssrForHttp in app, optional transformIndexHtml integration                  |
+| FR-6           | Plugin in app; vite-plugin imports and registers                            |
+| FR-7           | ui re-exports ssrForHttp from app                                           |
 
 ## References Consulted
 

@@ -8,7 +8,8 @@ import { HtmlRenderTemplate } from "@typed/template";
 import * as Api from "api:api";
 import { Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
-import Routes from "router:routes";x
+import Routes from "router:routes";
+x;
 
 Api.serve({}, HttpRouter.use(ssrForHttp(Routes))).pipe(
   Layer.provide(HtmlRenderTemplate),

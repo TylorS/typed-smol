@@ -27,11 +27,11 @@ Virtual modules (e.g. `router:./routes`, `api:./endpoints`) can generate source 
 
 ## Candidate Approaches
 
-| Approach | Pros | Cons |
-|---------|------|------|
-| Walk importer chain to root real file | Plugins get real importer; eviction stays correct; minimal API change | Need cycle detection |
-| Pass virtual path as importer and teach plugins | No adapter changes | Breaks TypeInfoApi, baseDir, routing |
-| New "importer context" API for plugins | Explicit | Larger plugin contract change |
+| Approach                                        | Pros                                                                  | Cons                                 |
+| ----------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------ |
+| Walk importer chain to root real file           | Plugins get real importer; eviction stays correct; minimal API change | Need cycle detection                 |
+| Pass virtual path as importer and teach plugins | No adapter changes                                                    | Breaks TypeInfoApi, baseDir, routing |
+| New "importer context" API for plugins          | Explicit                                                              | Larger plugin contract change        |
 
 ## Recommendation
 

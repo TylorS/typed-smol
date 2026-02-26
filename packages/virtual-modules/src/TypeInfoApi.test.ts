@@ -392,7 +392,11 @@ export namespace Route {
 `,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js"; export const r = Route.Parse("/status");`,
@@ -433,7 +437,11 @@ export namespace Route {
 `,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js"; export const r = Route.Parse("/status"); export const n: number = 1;`,
@@ -474,7 +482,11 @@ export namespace Route {
 `,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js";
@@ -497,9 +509,9 @@ export function getRoute(): Route.Route<string, any> { return r; }`,
       if (!result.ok) return;
       const fnExport = result.snapshot.exports.find((e) => e.name === "getRoute");
       expect(fnExport).toBeDefined();
-      expect(
-        session.api.isAssignableTo(fnExport!.type, "Route", [{ kind: "returnType" }]),
-      ).toBe(true);
+      expect(session.api.isAssignableTo(fnExport!.type, "Route", [{ kind: "returnType" }])).toBe(
+        true,
+      );
     });
 
     it("returns true for sub-node passed directly", () => {
@@ -519,7 +531,11 @@ export namespace Route {
 `,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js";
@@ -563,7 +579,11 @@ export namespace Route {
 `,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js"; export const r = Route.Parse("/status");`,
@@ -584,9 +604,9 @@ export namespace Route {
       if (!result.ok) return;
       const rExport = result.snapshot.exports.find((e) => e.name === "r");
       expect(rExport).toBeDefined();
-      expect(
-        session.api.isAssignableTo(rExport!.type, "Route", [{ kind: "returnType" }]),
-      ).toBe(false);
+      expect(session.api.isAssignableTo(rExport!.type, "Route", [{ kind: "returnType" }])).toBe(
+        false,
+      );
     });
 
     it("returns false for unregistered node", () => {
@@ -606,7 +626,11 @@ export namespace Route {
 `,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js"; export const r = Route.Parse("/status");`,
@@ -764,7 +788,11 @@ export function fn(): Option.Option<string> {
 export namespace Route { export type Any = Route<any, any>; export const Parse = (p: string) => ({} as Route<any, any>); }`,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js";
@@ -805,7 +833,11 @@ export function getRoute(): Route.Route<string, any> { return Route.Parse("/") a
 export namespace Route { export type Any = Route<any, any>; export const Parse = (p: string) => ({} as Route<any, any>); }`,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js";
@@ -846,7 +878,11 @@ export function getRoute(): Route.Route<string, any> { return Route.Parse("/") a
 export namespace Route { export type Any = Route<any, any>; export const Parse = (p: string) => ({} as Route<any, any>); }`,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Route from "./route.js"; void Route; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Route from "./route.js"; void Route; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Route from "./route.js";
@@ -887,7 +923,11 @@ export function getRoute(): Route.Route<string, any> { return Route.Parse("/") a
 export namespace Effect { export type Any = Effect<any, any, any>; }`,
         "utf8",
       );
-      writeFileSync(bootstrap, `import * as Effect from "./effect.js"; void Effect; export {};`, "utf8");
+      writeFileSync(
+        bootstrap,
+        `import * as Effect from "./effect.js"; void Effect; export {};`,
+        "utf8",
+      );
       writeFileSync(
         main,
         `import * as Effect from "./effect.js";
@@ -914,7 +954,10 @@ export function fn(): Effect.Effect<string, never, never> {
       expect(
         session.api.isAssignableTo(fnExport!.type, "Effect", [
           { kind: "returnType" },
-          { kind: "predicate", fn: (n) => n.kind === "reference" && (n.typeArguments?.length ?? 0) >= 2 },
+          {
+            kind: "predicate",
+            fn: (n) => n.kind === "reference" && (n.typeArguments?.length ?? 0) >= 2,
+          },
         ]),
       ).toBe(true);
     });
@@ -1024,8 +1067,8 @@ export type B = Obj["b"];
     const checker = program.getTypeChecker();
     const sourceFile = program.getSourceFile(filePath);
     expect(sourceFile).toBeDefined();
-    const typeAlias = sourceFile!.statements.find(
-      (s): s is ts.TypeAliasDeclaration => ts.isTypeAliasDeclaration(s),
+    const typeAlias = sourceFile!.statements.find((s): s is ts.TypeAliasDeclaration =>
+      ts.isTypeAliasDeclaration(s),
     );
     expect(typeAlias).toBeDefined();
     const keyofTypeNode = typeAlias!.type;
@@ -1039,7 +1082,9 @@ export type B = Obj["b"];
     const op = serialized as { kind: "typeOperator"; operator: string; type: unknown };
     expect(op.operator).toBe("keyof");
     expect(op.type).toBeDefined();
-    expect(typeof op.type === "object" && op.type !== null && "kind" in (op.type as object)).toBe(true);
+    expect(typeof op.type === "object" && op.type !== null && "kind" in (op.type as object)).toBe(
+      true,
+    );
   });
 
   it("serializes enum object type as object (enum declaration)", () => {
@@ -1063,8 +1108,8 @@ export type B = Obj["b"];
     const program = makeProgram([filePath]);
     const checker = program.getTypeChecker();
     const sourceFile = program.getSourceFile(filePath);
-    const enumDecl = sourceFile!.statements.find(
-      (s): s is ts.EnumDeclaration => ts.isEnumDeclaration(s),
+    const enumDecl = sourceFile!.statements.find((s): s is ts.EnumDeclaration =>
+      ts.isEnumDeclaration(s),
     )!;
     const enumSymbol = checker.getSymbolAtLocation(enumDecl.name);
     const enumType = enumSymbol && checker.getDeclaredTypeOfSymbol(enumSymbol);
@@ -1102,12 +1147,18 @@ export const sVal: S = S.X;`,
     const sValExport = result.snapshot.exports.find((ex) => ex.name === "sVal");
     expect(e?.type.kind).toBe("object");
     expect(eVal!.type.kind).toBe("union");
-    const eValUnion = eVal!.type as { kind: "union"; elements: readonly { kind: string; text: string }[] };
+    const eValUnion = eVal!.type as {
+      kind: "union";
+      elements: readonly { kind: string; text: string }[];
+    };
     const eValTexts = new Set(eValUnion.elements.map((el) => el.text));
     expect(eValTexts).toContain("E.A");
     expect(eValTexts).toContain("E.B");
     expect(sValExport!.type.kind).toBe("union");
-    const sValUnion = sValExport!.type as { kind: "union"; elements: readonly { kind: string; text: string }[] };
+    const sValUnion = sValExport!.type as {
+      kind: "union";
+      elements: readonly { kind: string; text: string }[];
+    };
     const sValTexts = new Set(sValUnion.elements.map((el) => el.text));
     expect(sValTexts).toContain("S.X");
     expect(sValTexts).toContain("S.Y");

@@ -5,6 +5,7 @@
 The `typed serve` command currently **requires** a server entry file (`server.ts`/`server.js`/`server.mts`). If none is found, it fails with `ServerEntryNotFoundError`. This prevents users from running a pure client-side SPA with just an `index.html` and a frontend entry point.
 
 Additionally, there is no mechanism to:
+
 1. Configure where `index.html` lives relative to the project root.
 2. Expose the resolved `typed.config.ts` back to user code at runtime.
 3. Expose the Vite dev server instance for integration with Effect's `NodeHttpServer` (the vavite pattern).
@@ -28,12 +29,12 @@ Additionally, there is no mechanism to:
 
 ## Known Unknowns and Risks
 
-| Unknown | Risk | Mitigation |
-|---------|------|------------|
-| Can Vite dev server be exposed as a module? | Medium — it's a runtime object, not static | Use a Vite plugin that stores the server reference and serves it via virtual module |
-| `transformIndexHtml` availability in SSR context | Low — it's a standard ViteDevServer API | Only available in dev; production uses pre-built HTML |
-| Virtual module naming collisions | Low | Use `typed:` prefix consistently |
-| Config serialization for `typed:config` | Low | Config is a plain object; JSON-serializable |
+| Unknown                                          | Risk                                       | Mitigation                                                                          |
+| ------------------------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Can Vite dev server be exposed as a module?      | Medium — it's a runtime object, not static | Use a Vite plugin that stores the server reference and serves it via virtual module |
+| `transformIndexHtml` availability in SSR context | Low — it's a standard ViteDevServer API    | Only available in dev; production uses pre-built HTML                               |
+| Virtual module naming collisions                 | Low                                        | Use `typed:` prefix consistently                                                    |
+| Config serialization for `typed:config`          | Low                                        | Config is a plain object; JSON-serializable                                         |
 
 ## Candidate Approaches
 
@@ -69,19 +70,23 @@ New package for runtime Vite integration (virtual modules + SSR wrapper).
 ## Implementation Sketch (Refined)
 
 ### 1. `typed serve` SPA fallback (packages/cli)
+
 - Make `resolveServerEntry` return `Option<string>` instead of failing.
 - In `serve` handler: if no server entry, skip `ssrLoadModule` and just `server.listen()`.
 
 ### 2. `TypedConfig.clients` (packages/app)
+
 - Add `clients?: string | readonly string[]` — frontend build directories where `*.html` files are found.
 - Wire into Vite root/input for SPA; support multi-entry when multiple client dirs.
 
 ### 3. `typed:config` + `typed:vite-dev-server` Vite plugin (packages/app)
+
 - New plugin `createTypedRuntimeVitePlugin()` in @typed/app.
 - Resolves `typed:config` (serialized config) and `typed:vite-dev-server` (dev server reference in `configureServer`).
 - @typed/vite-plugin imports and registers this plugin.
 
 ### 4. ssrForHttp moved to @typed/app (packages/app, packages/ui)
+
 - Move `ssrForHttp` from @typed/ui → @typed/app.
 - Add `ssrForHttpWithVite` (or integrate transformIndexHtml into ssrForHttp) that uses `typed:vite-dev-server` + clients config + `transformIndexHtml`.
 - @typed/ui re-exports from @typed/app or deprecates in favor of @typed/app.

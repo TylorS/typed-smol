@@ -3,6 +3,7 @@
 ## What Changed
 
 ### packages/app
+
 - **TypedConfig.clients**: Added `clients?: string | readonly string[]` for frontend build directories where `*.html` files are found.
 - **createTypedRuntimeVitePlugin**: New Vite plugin exposing `typed:config` (resolved config) and `typed:vite-dev-server` (dev server reference). Lives in TypedRuntimeVitePlugin.ts.
 - **ssrForHttp** moved from @typed/ui to @typed/app with optional `SsrHttpOptions`:
@@ -11,22 +12,26 @@
 - New dependencies: @typed/fx, @typed/navigation, @typed/template, @effect/platform-node, vite (dev).
 
 ### packages/vite-plugin
+
 - **clients** option added to TypedVitePluginOptions; passed to runtime plugin.
 - **createTypedRuntimeVitePlugin** registered in typedVitePlugin().
 - Passes `loadedConfig` from loadTypedConfig to runtime plugin when available.
 
 ### packages/ui
+
 - **ssrForHttp** and **handleHttpServerError** now re-exported from @typed/app.
 - Removed packages/ui/src/HttpRouter.ts.
 - Added @typed/app dependency.
 
 ### packages/cli
+
 - **resolveServerEntry**: Returns `Effect<Option<string>>` instead of failing when no server entry exists (SPA mode).
 - **serve**: Only calls `ssrLoadModule` when `Option.isSome(entry)`; otherwise runs pure Vite SPA dev server.
 - **build**: Skips SSR build when `Option.isNone(entry)`; SPA-only build.
 - Added @typed/app dependency.
 
 ### packages/cli/shared/resolveViteConfig
+
 - Passes `clients` from TypedConfig to plugin options.
 
 ## Validation Performed

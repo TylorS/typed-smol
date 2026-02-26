@@ -57,13 +57,13 @@ function main(): number {
     if (parsed.errors.length > 0) {
       return 1;
     }
-  const projectRoot = sys.getCurrentDirectory();
-  const { resolver, typeTargetSpecs } = loadResolver(projectRoot);
-  return runBuild({
-    ts,
-    buildCommand: parsed,
-    resolver,
-    typeTargetSpecs,
+    const projectRoot = sys.getCurrentDirectory();
+    const { resolver, typeTargetSpecs } = loadResolver(projectRoot);
+    return runBuild({
+      ts,
+      buildCommand: parsed,
+      resolver,
+      typeTargetSpecs,
       reportDiagnostic,
       reportSolutionBuilderStatus: reportDiagnostic,
     });

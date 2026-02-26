@@ -1092,26 +1092,27 @@ function normalizeDependencies(
   return dependencies.map(toSingleLayer);
 }
 
-type NormalizeLayer<T extends AnyDependency> = 
-  T extends Layer.Layer<infer A, infer E, infer R> ? Layer.Layer<A, E, R> : T extends ServiceMap.ServiceMap<infer R> ? Layer.Layer<R> : never
-    
-type NormalizeLayers<T extends ReadonlyArray<AnyDependency>> ={
-  [K in keyof T]: NormalizeLayer<T[K]>
-}
+type NormalizeLayer<T extends AnyDependency> =
+  T extends Layer.Layer<infer A, infer E, infer R>
+    ? Layer.Layer<A, E, R>
+    : T extends ServiceMap.ServiceMap<infer R>
+      ? Layer.Layer<R>
+      : never;
 
-type ToLayer<T> = 
-  T extends ReadonlyArray<AnyLayer> ? Layer.Layer<
-    Layer.Success<T[number]>,
-    Layer.Error<T[number]>,
-    Layer.Services<T[number]>
-  > : never
+type NormalizeLayers<T extends ReadonlyArray<AnyDependency>> = {
+  [K in keyof T]: NormalizeLayer<T[K]>;
+};
 
-type NormalizeDeps<T extends AnyDependency | ReadonlyArray<AnyDependency>> =
-  T extends AnyDependency
+type ToLayer<T> =
+  T extends ReadonlyArray<AnyLayer>
+    ? Layer.Layer<Layer.Success<T[number]>, Layer.Error<T[number]>, Layer.Services<T[number]>>
+    : never;
+
+type NormalizeDeps<T extends AnyDependency | ReadonlyArray<AnyDependency>> = T extends AnyDependency
   ? NormalizeLayer<T>
   : T extends ReadonlyArray<AnyDependency>
-  ? ToLayer<NormalizeLayers<T>>
-  : never
+    ? ToLayer<NormalizeLayers<T>>
+    : never;
 
 /**
  * Normalize dependency input (ServiceMap | Layer | Array of either) into a single Layer.

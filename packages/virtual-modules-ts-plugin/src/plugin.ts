@@ -95,7 +95,9 @@ function createFallbackProgram(
       configPath,
     );
     if (parsed.errors.length > 0) {
-      log(`fallback program: tsconfig parse errors: ${parsed.errors.map((e) => e.messageText).join(", ")}`);
+      log(
+        `fallback program: tsconfig parse errors: ${parsed.errors.map((e) => e.messageText).join(", ")}`,
+      );
       return undefined;
     }
     let rootNames = parsed.fileNames;
@@ -128,8 +130,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
     const logger = (
       info.project as { projectService?: { logger?: { info?: (s: string) => void } } }
     )?.projectService?.logger;
-    const log = (msg: string) =>
-      logger?.info?.(`[@typed/virtual-modules-ts-plugin] ${msg}`);
+    const log = (msg: string) => logger?.info?.(`[@typed/virtual-modules-ts-plugin] ${msg}`);
 
     const project = info.project as {
       getCurrentDirectory?: () => string;
@@ -183,7 +184,9 @@ function init(modules: { typescript: typeof import("typescript") }): {
           : {},
       ),
     ];
-    const resolver: LoadedVirtualResolver = new PluginManager(plugins) as unknown as LoadedVirtualResolver;
+    const resolver: LoadedVirtualResolver = new PluginManager(
+      plugins,
+    ) as unknown as LoadedVirtualResolver;
 
     log("Virtual module resolver initialized from typed.config.ts");
 
@@ -224,7 +227,9 @@ function init(modules: { typescript: typeof import("typescript") }): {
         });
         log("pre-created TypeInfoApiSession OK");
       } catch (err) {
-        log(`pre-created TypeInfoApiSession failed: ${err instanceof Error ? err.message : String(err)}`);
+        log(
+          `pre-created TypeInfoApiSession failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }
 
@@ -285,7 +290,9 @@ function init(modules: { typescript: typeof import("typescript") }): {
           // If session creation from the real program fails, fall back to the
           // pre-created session (from the fallback program).
           if (preCreatedSession) {
-            log(`getSession: real program session failed, using pre-created session: ${err instanceof Error ? err.message : String(err)}`);
+            log(
+              `getSession: real program session failed, using pre-created session: ${err instanceof Error ? err.message : String(err)}`,
+            );
             session = preCreatedSession;
             return session;
           }
@@ -309,11 +316,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
             apiUsed = true;
             return getSession().api.directory(glob, opts);
           },
-          resolveExport: (
-            baseDir: string,
-            filePath: string,
-            exportName: string,
-          ) => {
+          resolveExport: (baseDir: string, filePath: string, exportName: string) => {
             apiUsed = true;
             return getSession().api.resolveExport(baseDir, filePath, exportName);
           },

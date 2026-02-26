@@ -15,6 +15,7 @@ The emitter used runtime guards (`"headers" in m && typeof m.headers !== "undefi
 ## Solution
 
 Use TypeInfo snapshot export names at emit time instead of runtime detection:
+
 1. Build `optionalExportsByPath: Map<path, Set<'headers'|'body'|'success'|'error'>>` from snapshot.exports
 2. Pass it into `emitHttpApiSource`
 3. Emit only properties we know exist: `headers: ${m}.headers` (no spread, no guard, no cast)

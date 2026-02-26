@@ -7,7 +7,5 @@
   },
   "include": ["src"],
   "exclude": ["**/*.test.ts", "**/*.integration.test.ts"],
-  "references": [
-    { "path": "../vite-plugin" }
-  ]
+  "references": [{ "path": "../vite-plugin" }]
 }

@@ -7,30 +7,30 @@
 
 ## Source Table
 
-| source | year | type | confidence | notes |
-| ------ | ---- | ---- | ---------- | ----- |
-| https://effect-ts.github.io/effect/platform/HttpApiBuilder.ts.html | 2026 | official API docs | high | Confirms `HttpApiBuilder.api`, `group`, middleware/security APIs, and handler validation contract (`Handlers.ValidateReturn`). |
-| https://effect-ts.github.io/effect/platform/HttpApiGroup.ts.html | 2026 | official API docs | high | Confirms group model (`make`, `add`, `prefix`, `middleware`) and group-level semantics. |
-| https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API | 2026 | official vendor docs | high | Reinforces compiler-host and module-resolution customization constraints relevant to virtual modules. |
-| https://learn.openapis.org/best-practices.html | 2026 | standards guidance | medium-high | Supports design-first and single-source-of-truth documentation practices for API contracts. |
-| `.docs/specs/virtual-modules/spec.md` | 2026 | internal canonical spec | high | Defines synchronous plugin contract, deterministic behavior, and TypeInfoApi query model. |
-| `.docs/specs/router-virtual-module-plugin/spec.md` | 2026 | internal canonical spec | high | Provides existing discovery/validation/composition/generation blueprint to adapt for `api:`. |
-| `.docs/adrs/20260220-2245-virtual-modules-sync-core-and-loaders.md` | 2026 | internal ADR | high | Locks sync core + loader behavior and non-crashing result model. |
-| `.docs/adrs/20260221-1745-router-virtual-module-discovery-and-composition-contract.md` | 2026 | internal ADR | high | Establishes proven convention-driven discovery and composition decision pattern. |
-| `packages/app/src/RouterVirtualModulePlugin.ts` + internal helpers | 2026 | code evidence | high | Shows exact plugin structure, diagnostic flow, and ordering assumptions to mirror. |
-| `packages/virtual-modules/src/TypeInfoApi.ts` | 2026 | code evidence | high | Confirms structural assignability via `typeTargets` -> `assignableTo`. |
+| source                                                                                 | year | type                    | confidence  | notes                                                                                                                          |
+| -------------------------------------------------------------------------------------- | ---- | ----------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| https://effect-ts.github.io/effect/platform/HttpApiBuilder.ts.html                     | 2026 | official API docs       | high        | Confirms `HttpApiBuilder.api`, `group`, middleware/security APIs, and handler validation contract (`Handlers.ValidateReturn`). |
+| https://effect-ts.github.io/effect/platform/HttpApiGroup.ts.html                       | 2026 | official API docs       | high        | Confirms group model (`make`, `add`, `prefix`, `middleware`) and group-level semantics.                                        |
+| https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API                    | 2026 | official vendor docs    | high        | Reinforces compiler-host and module-resolution customization constraints relevant to virtual modules.                          |
+| https://learn.openapis.org/best-practices.html                                         | 2026 | standards guidance      | medium-high | Supports design-first and single-source-of-truth documentation practices for API contracts.                                    |
+| `.docs/specs/virtual-modules/spec.md`                                                  | 2026 | internal canonical spec | high        | Defines synchronous plugin contract, deterministic behavior, and TypeInfoApi query model.                                      |
+| `.docs/specs/router-virtual-module-plugin/spec.md`                                     | 2026 | internal canonical spec | high        | Provides existing discovery/validation/composition/generation blueprint to adapt for `api:`.                                   |
+| `.docs/adrs/20260220-2245-virtual-modules-sync-core-and-loaders.md`                    | 2026 | internal ADR            | high        | Locks sync core + loader behavior and non-crashing result model.                                                               |
+| `.docs/adrs/20260221-1745-router-virtual-module-discovery-and-composition-contract.md` | 2026 | internal ADR            | high        | Establishes proven convention-driven discovery and composition decision pattern.                                               |
+| `packages/app/src/RouterVirtualModulePlugin.ts` + internal helpers                     | 2026 | code evidence           | high        | Shows exact plugin structure, diagnostic flow, and ordering assumptions to mirror.                                             |
+| `packages/virtual-modules/src/TypeInfoApi.ts`                                          | 2026 | code evidence           | high        | Confirms structural assignability via `typeTargets` -> `assignableTo`.                                                         |
 
 ## WebSearch Query Log
 
-| query | rationale | selected_sources |
-| ----- | --------- | ---------------- |
-| `effect unstable httpapi HttpApiBuilder group layer documentation` | Find primary HttpApi composition docs and signatures. | Effect docs pages for `HttpApiBuilder.ts` and `HttpApiGroup.ts`. |
-| `TypeScript resolveModuleNameLiterals compiler host documentation` | Validate host-level resolution constraints and compatibility expectations. | TS compiler API wiki + module resolver references. |
-| `file based API routing conventions research paper 2024 2025` | Seek recent external evidence on filesystem API conventions. | TanStack docs and ecosystem implementations (no strong peer-reviewed results returned). |
-| `OpenAPI filesystem conventions API grouping endpoints best practices` | Gather durable API organization guidance. | OpenAPI best-practices and tagging/grouping guidance. |
-| `static analysis file-based routing TypeScript research paper` | Check for formal research relevant to convention extraction. | One adjacent TypeScript routing paper; treated as low direct applicability. |
-| `API endpoint extraction from source code research paper` | Identify research on endpoint discovery/contract extraction. | Static-analysis endpoint extraction papers; useful background but low direct applicability to this plugin contract. |
-| `deterministic code generation incremental build systems research` | Validate determinism/incremental-build principles that map to virtual module generation. | Incremental-build research and build-system design papers. |
+| query                                                                  | rationale                                                                                | selected_sources                                                                                                    |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `effect unstable httpapi HttpApiBuilder group layer documentation`     | Find primary HttpApi composition docs and signatures.                                    | Effect docs pages for `HttpApiBuilder.ts` and `HttpApiGroup.ts`.                                                    |
+| `TypeScript resolveModuleNameLiterals compiler host documentation`     | Validate host-level resolution constraints and compatibility expectations.               | TS compiler API wiki + module resolver references.                                                                  |
+| `file based API routing conventions research paper 2024 2025`          | Seek recent external evidence on filesystem API conventions.                             | TanStack docs and ecosystem implementations (no strong peer-reviewed results returned).                             |
+| `OpenAPI filesystem conventions API grouping endpoints best practices` | Gather durable API organization guidance.                                                | OpenAPI best-practices and tagging/grouping guidance.                                                               |
+| `static analysis file-based routing TypeScript research paper`         | Check for formal research relevant to convention extraction.                             | One adjacent TypeScript routing paper; treated as low direct applicability.                                         |
+| `API endpoint extraction from source code research paper`              | Identify research on endpoint discovery/contract extraction.                             | Static-analysis endpoint extraction papers; useful background but low direct applicability to this plugin contract. |
+| `deterministic code generation incremental build systems research`     | Validate determinism/incremental-build principles that map to virtual module generation. | Incremental-build research and build-system design papers.                                                          |
 
 ## Key Findings
 

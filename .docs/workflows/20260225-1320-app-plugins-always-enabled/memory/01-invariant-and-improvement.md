@@ -26,6 +26,7 @@ Lack of an explicit invariant in code and AGENTS.md meant the pattern could drif
 ## Reusable Pattern
 
 **Invariant documentation**: When establishing a cross-package invariant (e.g., "X is always Y"), document it in:
+
 - A comment at the implementation site (where the invariant is enforced)
 - AGENTS.md Constraints in the owning package
 - Architecture section when it affects integration points

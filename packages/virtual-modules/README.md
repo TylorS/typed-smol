@@ -97,7 +97,9 @@ Plugins that need assignability declare `typeTargetSpecs` on the plugin; the hos
 // Validate handler return type is Effect (projection navigates to return type)
 const handlerExport = snapshot.exports.find((e) => e.name === "handler");
 if (handlerExport && !api.isAssignableTo(handlerExport.type, "Effect", [{ kind: "returnType" }])) {
-  return { errors: [{ code: "CONTRACT-001", message: "handler must return Effect", pluginName: name }] };
+  return {
+    errors: [{ code: "CONTRACT-001", message: "handler must return Effect", pluginName: name }],
+  };
 }
 ```
 

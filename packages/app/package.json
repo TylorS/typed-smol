@@ -1,6 +1,10 @@
 {
   "name": "@typed/app",
   "version": "1.0.0-beta.1",
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -22,14 +26,14 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@typed/id": "workspace:*",
-    "@typed/router": "workspace:*",
-    "@typed/virtual-modules": "workspace:*",
-    "effect": "catalog:",
+    "@effect/platform-node": "catalog:",
     "@typed/fx": "workspace:*",
+    "@typed/id": "workspace:*",
     "@typed/navigation": "workspace:*",
+    "@typed/router": "workspace:*",
     "@typed/template": "workspace:*",
-    "@effect/platform-node": "catalog:"
+    "@typed/virtual-modules": "workspace:*",
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
@@ -38,15 +42,11 @@
     "@vitest/coverage-v8": "^4.0.0",
     "effect": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": "catalog:",
     "vite": ">=5.0.0"
-  },
-  "files": [
-    "dist",
-    "src"
-  ]
+  }
 }

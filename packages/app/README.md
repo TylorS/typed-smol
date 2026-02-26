@@ -57,33 +57,33 @@ flowchart LR
 
 ### Router plugin
 
-| Pattern | Role | Behavior |
-| ------- | ---- | -------- |
-| `*.guard.ts` | Sibling | Guard for this route |
-| `*.dependencies.ts` | Sibling | Dependencies for this route |
-| `*.layout.ts` | Sibling | Layout wrapper |
-| `*.catch.ts` | Sibling | Error catch handler |
-| `_guard.ts` | Directory | Guard inherited by children |
-| `_dependencies.ts` | Directory | Dependencies inherited by children |
-| `_layout.ts` | Directory | Layout inherited by children |
-| `_catch.ts` | Directory | Catch inherited by children |
+| Pattern             | Role      | Behavior                           |
+| ------------------- | --------- | ---------------------------------- |
+| `*.guard.ts`        | Sibling   | Guard for this route               |
+| `*.dependencies.ts` | Sibling   | Dependencies for this route        |
+| `*.layout.ts`       | Sibling   | Layout wrapper                     |
+| `*.catch.ts`        | Sibling   | Error catch handler                |
+| `_guard.ts`         | Directory | Guard inherited by children        |
+| `_dependencies.ts`  | Directory | Dependencies inherited by children |
+| `_layout.ts`        | Directory | Layout inherited by children       |
+| `_catch.ts`         | Directory | Catch inherited by children        |
 
 Each route file must export `route` and exactly one of `handler`, `template`, or `default`.
 
 ### HttpApi plugin
 
-| Pattern | Role | Behavior |
-| ------- | ---- | -------- |
-| `_api.ts` | API root | Top-level API defaults (name, prefix, openapi) |
-| `_group.ts` | Group override | Group name, prefix, dependencies, middlewares |
-| `_prefix.ts` | Directory | Path prefix for all endpoints in that directory |
-| `*.prefix.ts` | Endpoint companion | Path prefix for that endpoint |
-| `(pathless)/` | Pathless dir | Organizational only, no path segment |
-| `*.name.ts` | Endpoint companion | Override endpoint name |
-| `*.dependencies.ts` | Endpoint companion | Endpoint dependencies |
-| `*.middlewares.ts` | Endpoint companion | Endpoint middlewares |
-| `_dependencies.ts` | Directory | Inherited dependencies |
-| `_middlewares.ts` | Directory | Inherited middlewares |
+| Pattern             | Role               | Behavior                                        |
+| ------------------- | ------------------ | ----------------------------------------------- |
+| `_api.ts`           | API root           | Top-level API defaults (name, prefix, openapi)  |
+| `_group.ts`         | Group override     | Group name, prefix, dependencies, middlewares   |
+| `_prefix.ts`        | Directory          | Path prefix for all endpoints in that directory |
+| `*.prefix.ts`       | Endpoint companion | Path prefix for that endpoint                   |
+| `(pathless)/`       | Pathless dir       | Organizational only, no path segment            |
+| `*.name.ts`         | Endpoint companion | Override endpoint name                          |
+| `*.dependencies.ts` | Endpoint companion | Endpoint dependencies                           |
+| `*.middlewares.ts`  | Endpoint companion | Endpoint middlewares                            |
+| `_dependencies.ts`  | Directory          | Inherited dependencies                          |
+| `_middlewares.ts`   | Directory          | Inherited middlewares                           |
 
 Each endpoint file must export `route`, `method`, and `handler`. See [router-virtual-module-plugin spec](../../.docs/specs/router-virtual-module-plugin/spec.md) and [httpapi-virtual-module-plugin spec](../../.docs/specs/httpapi-virtual-module-plugin/spec.md) for full details.
 
@@ -103,7 +103,7 @@ In `_api.ts` you can export `openapi.exposure` to define where OpenAPI docs are 
 ```ts
 export const openapi = {
   exposure: {
-    jsonPath: "/api/docs/spec" as const,   // OpenAPI JSON spec
+    jsonPath: "/api/docs/spec" as const, // OpenAPI JSON spec
     swaggerPath: "/api/docs/swagger" as const,
     scalar: { path: "/api/docs" as const },
   },
@@ -135,10 +135,7 @@ Configure plugins in `vmc.config.ts` (used by vmc, the TS plugin, and typedViteP
 import { createRouterVirtualModulePlugin, createHttpApiVirtualModulePlugin } from "@typed/app";
 
 export default {
-  plugins: [
-    createRouterVirtualModulePlugin(),
-    createHttpApiVirtualModulePlugin(),
-  ],
+  plugins: [createRouterVirtualModulePlugin(), createHttpApiVirtualModulePlugin()],
 };
 ```
 
@@ -156,11 +153,9 @@ import { defineApiHandler } from "@typed/app";
 import { Route } from "@typed/router";
 import * as Schema from "effect/Schema";
 
-const handler = defineApiHandler(
-  Route.Parse("/todos/:id"),
-  "GET",
-  { success: Schema.Struct({ id: Schema.String }) }
-)(({ path }) => Effect.succeed({ id: path.id }));
+const handler = defineApiHandler(Route.Parse("/todos/:id"), "GET", {
+  success: Schema.Struct({ id: Schema.String }),
+})(({ path }) => Effect.succeed({ id: path.id }));
 ```
 
 ## API overview
@@ -176,18 +171,18 @@ const handler = defineApiHandler(
 
 ### RouterVirtualModulePluginOptions
 
-| Property | Type | Default | Description |
-| -------- | ---- | ------- | ----------- |
-| `prefix` | `string` | `"router:"` | Virtual module ID prefix. |
-| `name` | `string` | `"router-virtual-module"` | Plugin name for diagnostics. |
+| Property | Type     | Default                   | Description                  |
+| -------- | -------- | ------------------------- | ---------------------------- |
+| `prefix` | `string` | `"router:"`               | Virtual module ID prefix.    |
+| `name`   | `string` | `"router-virtual-module"` | Plugin name for diagnostics. |
 
 ### HttpApiVirtualModulePluginOptions
 
-| Property | Type | Default | Description |
-| -------- | ---- | ------- | ----------- |
-| `prefix` | `string` | `"api:"` | Virtual module ID prefix. |
-| `name` | `string` | `"httpapi-virtual-module"` | Plugin name for diagnostics. |
-| `pathPrefix` | `` `/${string}` `` | — | HTTP path prefix (e.g. `"/api"`) when no convention defines one. |
+| Property     | Type               | Default                    | Description                                                      |
+| ------------ | ------------------ | -------------------------- | ---------------------------------------------------------------- |
+| `prefix`     | `string`           | `"api:"`                   | Virtual module ID prefix.                                        |
+| `name`       | `string`           | `"httpapi-virtual-module"` | Plugin name for diagnostics.                                     |
+| `pathPrefix` | `` `/${string}` `` | —                          | HTTP path prefix (e.g. `"/api"`) when no convention defines one. |
 
 ### createTypeInfoApiSessionForApp
 

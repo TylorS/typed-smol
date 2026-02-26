@@ -13,10 +13,10 @@ When running `typed build`, discover router modules (or directories) that declar
 
 Align with existing router companion patterns:
 
-| Convention | Location | Export | Meaning |
-| ---------- | -------- | ------ | ------- |
-| **Directory static paths** | `_staticPaths.ts` in a route directory | `export default` or `export const getStaticPaths` | Effect that yields an iterable of URLs (or path+query) for that directory subtree. |
-| **Route companion** | `*.staticPaths.ts` next to a route file (e.g. `blog.ts` → `blog.staticPaths.ts`) | `export default` or `export const getStaticPaths` | Effect that yields an iterable of URLs for that single route (e.g. all blog slugs). |
+| Convention                 | Location                                                                         | Export                                            | Meaning                                                                             |
+| -------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Directory static paths** | `_staticPaths.ts` in a route directory                                           | `export default` or `export const getStaticPaths` | Effect that yields an iterable of URLs (or path+query) for that directory subtree.  |
+| **Route companion**        | `*.staticPaths.ts` next to a route file (e.g. `blog.ts` → `blog.staticPaths.ts`) | `export default` or `export const getStaticPaths` | Effect that yields an iterable of URLs for that single route (e.g. all blog slugs). |
 
 - **Route module inline**: A route file may also export `getStaticPaths` directly (same type as above). Discovery then treats that file as both a route and a static-path source.
 - **Precedence**: For a given route leaf, static paths can come from (1) its own `*.staticPaths.ts` or in-file `getStaticPaths`, or (2) an ancestor `_staticPaths.ts`. Design should define merge/dedupe behavior (e.g. union of URL sets per route).
@@ -54,14 +54,14 @@ Align with existing router companion patterns:
 
 ## Open questions and risks
 
-| Topic | Question / risk | Options |
-| ----- | -----------------| ------- |
-| **Runtime for Effects** | How does the build provide the R (Layer) when running getStaticPaths? | Use server entry’s Layer; or a dedicated “static build” entry that only provides Scope + Router + minimal deps. |
-| **URL → file path** | How to map URL (and query) to output file? | Path-only: `/about` → `about/index.html`. Query: ignore, or encode in filename (e.g. `users_page_1.html`). |
-| **Parallelism** | Render URLs in parallel or sequentially? | Parallel with a concurrency limit to avoid OOM; order not required. |
-| **Incremental** | Re-render only when route or staticPaths change? | Phase 2; first version can do full static pass every build. |
-| **Base path** | Vite `base` (e.g. `/app/`) must be applied to URLs and to output paths. | Resolve from TypedConfig/Vite config during build. |
-| **Validation** | TypeInfo check for “Effect returning Iterable<string>” may need a new type target or heuristic. | Reuse Effect/Iterable type targets; or validate at runtime when we run the Effect. |
+| Topic                   | Question / risk                                                                                 | Options                                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Runtime for Effects** | How does the build provide the R (Layer) when running getStaticPaths?                           | Use server entry’s Layer; or a dedicated “static build” entry that only provides Scope + Router + minimal deps. |
+| **URL → file path**     | How to map URL (and query) to output file?                                                      | Path-only: `/about` → `about/index.html`. Query: ignore, or encode in filename (e.g. `users_page_1.html`).      |
+| **Parallelism**         | Render URLs in parallel or sequentially?                                                        | Parallel with a concurrency limit to avoid OOM; order not required.                                             |
+| **Incremental**         | Re-render only when route or staticPaths change?                                                | Phase 2; first version can do full static pass every build.                                                     |
+| **Base path**           | Vite `base` (e.g. `/app/`) must be applied to URLs and to output paths.                         | Resolve from TypedConfig/Vite config during build.                                                              |
+| **Validation**          | TypeInfo check for “Effect returning Iterable<string>” may need a new type target or heuristic. | Reuse Effect/Iterable type targets; or validate at runtime when we run the Effect.                              |
 
 ## Recommendation
 

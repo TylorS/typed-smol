@@ -63,7 +63,9 @@ import { createTypeInfoApiSession, PluginManager } from "@typed/virtual-modules"
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
 
 // Build program from your project (e.g. from tsconfig)
-const program = ts.createProgram(["./src/main.ts"], { /* ... */ });
+const program = ts.createProgram(["./src/main.ts"], {
+  /* ... */
+});
 
 const createSession = () => createTypeInfoApiSession({ ts, program });
 const manager = new PluginManager([
@@ -106,8 +108,12 @@ export default defineConfig({
   plugins: [
     typedVitePlugin({
       createTypeInfoApiSession: createSession, // required for router type-checking
-      routerVmOptions: { /* ... */ },
-      apiVmOptions: { /* ... */ }, // optional
+      routerVmOptions: {
+        /* ... */
+      },
+      apiVmOptions: {
+        /* ... */
+      }, // optional
     }),
   ],
 });
@@ -119,11 +125,11 @@ export default defineConfig({
 
 Returns a Vite plugin. Uses `enforce: "pre"` so virtual resolution runs before other resolvers.
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `resolver` | `VirtualModuleResolver` | Resolver (e.g. `PluginManager`) that handles virtual module resolution and loading. |
-| `createTypeInfoApiSession` | `CreateTypeInfoApiSession` | Optional. Session factory for TypeInfo API when plugins use `api.file()` / `api.directory()`. |
-| `warnOnError` | `boolean` | Log resolution/load errors to console (default `true`). Errors include plugin name and message. |
+| Option                     | Type                       | Description                                                                                     |
+| -------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
+| `resolver`                 | `VirtualModuleResolver`    | Resolver (e.g. `PluginManager`) that handles virtual module resolution and loading.             |
+| `createTypeInfoApiSession` | `CreateTypeInfoApiSession` | Optional. Session factory for TypeInfo API when plugins use `api.file()` / `api.directory()`.   |
+| `warnOnError`              | `boolean`                  | Log resolution/load errors to console (default `true`). Errors include plugin name and message. |
 
 ### Encoding helpers
 

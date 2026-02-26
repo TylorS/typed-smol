@@ -42,20 +42,20 @@ flowchart LR
 
 ## Failure Modes and Mitigations
 
-| Failure | Mitigation |
-|---------|------------|
+| Failure                        | Mitigation                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------- |
 | Circular virtual imports A→B→A | Cycle detection in resolveEffectiveImporter; break loop, return last current |
-| Encoded importer decode fails | Vite: if decode returns null, keep original importer (defensive) |
+| Encoded importer decode fails  | Vite: if decode returns null, keep original importer (defensive)             |
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1 | resolveEffectiveImporter, LS/CH adapter changes | Effective importer passed to getOrBuildRecord |
-| FR-2 | Vite resolveId decode branch | Decode when isVirtualId(importer) |
-| FR-3 | VirtualRecordStore.resolveEffectiveImporter | New method |
-| NFR-1 | visited Set in chain walk | Cycle detection |
-| NFR-2 | No plugin API change | Adapters only |
+| requirement_id | design_element                                  | notes                                         |
+| -------------- | ----------------------------------------------- | --------------------------------------------- |
+| FR-1           | resolveEffectiveImporter, LS/CH adapter changes | Effective importer passed to getOrBuildRecord |
+| FR-2           | Vite resolveId decode branch                    | Decode when isVirtualId(importer)             |
+| FR-3           | VirtualRecordStore.resolveEffectiveImporter     | New method                                    |
+| NFR-1          | visited Set in chain walk                       | Cycle detection                               |
+| NFR-2          | No plugin API change                            | Adapters only                                 |
 
 ## References Consulted
 

@@ -30,7 +30,9 @@ type HandlerError<H> = H extends (
 type LayoutError<L> = L extends (params: any) => Fx<any, infer E, any> ? E : never;
 
 /** RouteCatch(handler)((causeRef) => fallbackFx) — E required from handler */
-export function RouteCatch<H>(_handler: H): <A, E2 = never, R2 = never>(
+export function RouteCatch<H>(
+  _handler: H,
+): <A, E2 = never, R2 = never>(
   catchFn: (causeRef: RefSubject<Cause.Cause<NoInfer<HandlerError<H>>>>) => Fx<A, E2, R2>,
 ) => CatchHandler<HandlerError<H>, A, E2, R2>;
 
@@ -45,7 +47,9 @@ export function RouteCatch<H, D extends ReadonlyArray<AnyDependency>>(
 ) => CatchHandler<HandlerError<H> | DependencyError<D[number]>, A, E2, R2>;
 
 /** RouteCatch(layout)((causeRef) => fallbackFx) — E required from layout's Fx */
-export function RouteCatch<L extends (params: LayoutParams<any, any, any, any>) => Fx<any, any, any>>(
+export function RouteCatch<
+  L extends (params: LayoutParams<any, any, any, any>) => Fx<any, any, any>,
+>(
   _layout: L,
 ): <A, E2 = never, R2 = never>(
   catchFn: (causeRef: RefSubject<Cause.Cause<NoInfer<LayoutError<L>>>>) => Fx<A, E2, R2>,
@@ -55,7 +59,10 @@ export function RouteCatch<L extends (params: LayoutParams<any, any, any, any>) 
 export function RouteCatch<
   L extends (params: any) => Fx<any, any, any>,
   D extends ReadonlyArray<AnyDependency>,
->(_layout: L, _dependencies: D): <A, E2 = never, R2 = never>(
+>(
+  _layout: L,
+  _dependencies: D,
+): <A, E2 = never, R2 = never>(
   catchFn: (
     causeRef: RefSubject<Cause.Cause<NoInfer<LayoutError<L> | DependencyError<D[number]>>>>,
   ) => Fx<A, E2, R2>,
@@ -65,6 +72,5 @@ export function RouteCatch(
   _handlerOrLayout: ((...args: any[]) => any) | ((params: any) => Fx<any, any, any>),
   _dependencies?: ReadonlyArray<AnyDependency>,
 ) {
-  return (catchFn: CatchHandler<any, any, any, any>): CatchHandler<any, any, any, any> =>
-    catchFn;
+  return (catchFn: CatchHandler<any, any, any, any>): CatchHandler<any, any, any, any> => catchFn;
 }

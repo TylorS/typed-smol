@@ -4,13 +4,13 @@ Single reference for all throws and surprising behavior across the virtual-modul
 
 ## Summary: where errors come from
 
-| Source | Packages | How errors surface |
-|--------|----------|--------------------|
-| Throws | virtual-modules, virtual-modules-ts-plugin, virtual-modules-vscode | `throw new Error(...)` or `vscode.FileSystemError.*` |
-| Result types | virtual-modules | `api.file()` returns `{ ok: true, snapshot } | { ok: false, error }`; resolver returns `{ status: "resolved" | "unresolved" | "error" }` |
-| Diagnostics | virtual-modules (LS adapter) | TS diagnostics on importer file (e.g. `plugin-build-threw`, `re-entrant-resolution`) |
-| Console | virtual-modules-vite | `console.warn` when `warnOnError` is true |
-| Exit code | virtual-modules-compiler | Exit code 1 when TS diagnostics include errors |
+| Source       | Packages                                                           | How errors surface                                                                   |
+| ------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ------------ | ---------- |
+| Throws       | virtual-modules, virtual-modules-ts-plugin, virtual-modules-vscode | `throw new Error(...)` or `vscode.FileSystemError.*`                                 |
+| Result types | virtual-modules                                                    | `api.file()` returns `{ ok: true, snapshot }                                         | { ok: false, error }`; resolver returns `{ status: "resolved" | "unresolved" | "error" }` |
+| Diagnostics  | virtual-modules (LS adapter)                                       | TS diagnostics on importer file (e.g. `plugin-build-threw`, `re-entrant-resolution`) |
+| Console      | virtual-modules-vite                                               | `console.warn` when `warnOnError` is true                                            |
+| Exit code    | virtual-modules-compiler                                           | Exit code 1 when TS diagnostics include errors                                       |
 
 ---
 
@@ -20,13 +20,13 @@ Single reference for all throws and surprising behavior across the virtual-modul
 
 **Throws**
 
-| Location | Condition | Message / behavior | How to avoid or handle |
-|----------|-----------|--------------------|------------------------|
-| CompilerHostAdapter.ts:15 | `projectRoot` empty or not a string | `"projectRoot must be a non-empty string"` | Pass a non-empty string. |
-| LanguageServiceAdapter.ts:109 | Same | Same | Same. |
-| PluginManager | TypeInfoApi not configured (createTypeInfoApiSession not provided) | No longer throws. Returns safe defaults: `file()` → `{ ok: false, error: 'invalid-input' }`, `directory()` → `[]`, `resolveExport()` → `undefined`. | **Contract:** Hosts should always supply `createTypeInfoApiSession` when plugins use the API for correct behavior. Without it, plugins get empty results. |
-| TypeInfoApi | (was: `createFileSnapshot` file not in program) | **Removed.** `createFileSnapshot` now takes `ts.SourceFile`; the throw was eliminated. | N/A |
-| TypeInfoApi.ts:1016–1018 | `createTypeInfoApiSession`: type targets from specs resolve to zero | Use `createTypeTargetBootstrapContent` and add to `rootNames` | Set `failWhenNoTargetsResolved: false` or ensure program imports target modules. Use `createTypeTargetBootstrapContent(typeTargetSpecs)` and include in `rootNames` if targets not imported. |
+| Location                      | Condition                                                           | Message / behavior                                                                                                                                  | How to avoid or handle                                                                                                                                                                       |
+| ----------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CompilerHostAdapter.ts:15     | `projectRoot` empty or not a string                                 | `"projectRoot must be a non-empty string"`                                                                                                          | Pass a non-empty string.                                                                                                                                                                     |
+| LanguageServiceAdapter.ts:109 | Same                                                                | Same                                                                                                                                                | Same.                                                                                                                                                                                        |
+| PluginManager                 | TypeInfoApi not configured (createTypeInfoApiSession not provided)  | No longer throws. Returns safe defaults: `file()` → `{ ok: false, error: 'invalid-input' }`, `directory()` → `[]`, `resolveExport()` → `undefined`. | **Contract:** Hosts should always supply `createTypeInfoApiSession` when plugins use the API for correct behavior. Without it, plugins get empty results.                                    |
+| TypeInfoApi                   | (was: `createFileSnapshot` file not in program)                     | **Removed.** `createFileSnapshot` now takes `ts.SourceFile`; the throw was eliminated.                                                              | N/A                                                                                                                                                                                          |
+| TypeInfoApi.ts:1016–1018      | `createTypeInfoApiSession`: type targets from specs resolve to zero | Use `createTypeTargetBootstrapContent` and add to `rootNames`                                                                                       | Set `failWhenNoTargetsResolved: false` or ensure program imports target modules. Use `createTypeTargetBootstrapContent(typeTargetSpecs)` and include in `rootNames` if targets not imported. |
 
 **Gotchas**
 
@@ -51,11 +51,11 @@ Single reference for all throws and surprising behavior across the virtual-modul
 
 **Throws**
 
-| Location | Condition | Message / behavior | How to avoid or handle |
-|----------|-----------|--------------------|------------------------|
-| plugin.ts:266–268 | TypeInfo session requested but program not yet available, no fallback | `"TypeInfo session creation failed: Program not yet available. Retry when project is loaded."` | Happens on first open or before first compile. Retry when project is loaded. |
-| plugin.ts:284–293 | `createTypeInfoApiSession` throws (e.g. type targets fail), no fallback | Re-throws the same error | Ensure type targets resolve or use fallback program. |
-| Sample scripts (typecheck-with-plugin.mjs, verify-virtual-modules.mjs) | tsconfig read failure, missing vmc config, plugin load failure, no plugins | Scripts throw on config/load failure | Document as expected; use valid config and plugins. |
+| Location                                                               | Condition                                                                  | Message / behavior                                                                             | How to avoid or handle                                                       |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| plugin.ts:266–268                                                      | TypeInfo session requested but program not yet available, no fallback      | `"TypeInfo session creation failed: Program not yet available. Retry when project is loaded."` | Happens on first open or before first compile. Retry when project is loaded. |
+| plugin.ts:284–293                                                      | `createTypeInfoApiSession` throws (e.g. type targets fail), no fallback    | Re-throws the same error                                                                       | Ensure type targets resolve or use fallback program.                         |
+| Sample scripts (typecheck-with-plugin.mjs, verify-virtual-modules.mjs) | tsconfig read failure, missing vmc config, plugin load failure, no plugins | Scripts throw on config/load failure                                                           | Document as expected; use valid config and plugins.                          |
 
 **Gotchas**
 
@@ -68,11 +68,11 @@ Single reference for all throws and surprising behavior across the virtual-modul
 
 **Throws**
 
-| Location | Condition | Message / behavior | How to avoid or handle |
-|----------|-----------|--------------------|------------------------|
-| TypedVirtualFileSystemProvider.ts:43–65 | Invalid or unresolvable `typed-virtual://` URI | `vscode.FileSystemError.FileNotFound(uri)` | Used for parse fail, no project root, resolver returns nothing. Callers cannot distinguish without parsing the URI. |
-| TypedVirtualFileSystemProvider.ts:75–87 | `createDirectory`, `writeFile`, `delete`, `rename` | `vscode.FileSystemError.NoPermissions()` | Provider is read-only. |
-| extension.ts:466 | `writeVirtualPreviewAndGetPath` throws (e.g. disk error) during Go to Definition | Re-throws to VS Code | Write failures (permission, disk full) surface as definition failures. |
+| Location                                | Condition                                                                        | Message / behavior                         | How to avoid or handle                                                                                              |
+| --------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| TypedVirtualFileSystemProvider.ts:43–65 | Invalid or unresolvable `typed-virtual://` URI                                   | `vscode.FileSystemError.FileNotFound(uri)` | Used for parse fail, no project root, resolver returns nothing. Callers cannot distinguish without parsing the URI. |
+| TypedVirtualFileSystemProvider.ts:75–87 | `createDirectory`, `writeFile`, `delete`, `rename`                               | `vscode.FileSystemError.NoPermissions()`   | Provider is read-only.                                                                                              |
+| extension.ts:466                        | `writeVirtualPreviewAndGetPath` throws (e.g. disk error) during Go to Definition | Re-throws to VS Code                       | Write failures (permission, disk full) surface as definition failures.                                              |
 
 **Gotchas**
 

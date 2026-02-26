@@ -41,16 +41,12 @@ export const resolveServerEntry = (
   Effect.gen(function* () {
     const fromCli = Option.getOrUndefined(cliEntry);
     if (fromCli) {
-      const resolved = path.isAbsolute(fromCli)
-        ? fromCli
-        : path.resolve(projectRoot, fromCli);
+      const resolved = path.isAbsolute(fromCli) ? fromCli : path.resolve(projectRoot, fromCli);
       if (fileExistsSync(resolved)) return Option.some(resolved);
       return yield* Effect.fail(
-        new ServerEntryNotFoundError(
-          `Server entry not found: ${resolved}`,
-          projectRoot,
-          [resolved],
-        ),
+        new ServerEntryNotFoundError(`Server entry not found: ${resolved}`, projectRoot, [
+          resolved,
+        ]),
       );
     }
 

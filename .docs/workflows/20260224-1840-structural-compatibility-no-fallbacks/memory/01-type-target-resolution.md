@@ -3,6 +3,7 @@
 ## Root Cause: Namespace Imports Not Handled
 
 `resolveTypeTargetsFromSpecs` in TypeInfoApi.ts only processed:
+
 - Named imports: `import { X } from "module"`
 - Default imports: `import X from "module"` (binding.name branch)
 
@@ -21,6 +22,7 @@ Router tests use fixtures in temp dirs. `resolveTypeTargetsFromSpecs` scans prog
 ## Spec Module Path Variants
 
 ROUTER_TYPE_TARGET_SPECS includes alternate module paths so resolution works with common import styles:
+
 - Effect: "effect" and "effect/Effect"
 - Stream: "effect" and "effect/Stream"
 - Fx: "@typed/fx" and "@typed/fx/Fx"

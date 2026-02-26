@@ -25,11 +25,27 @@ export const ROUTER_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = [
  */
 export const HTTPAPI_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = [
   { id: "HttpApi", module: "effect/unstable/httpapi/HttpApi", exportName: "HttpApi" },
-  { id: "HttpApiGroup", module: "effect/unstable/httpapi/HttpApiGroup", exportName: "HttpApiGroup" },
-  { id: "HttpApiEndpoint", module: "effect/unstable/httpapi/HttpApiEndpoint", exportName: "HttpApiEndpoint" },
-  { id: "HttpApiBuilder", module: "effect/unstable/httpapi/HttpApiBuilder", exportName: "HttpApiBuilder" },
+  {
+    id: "HttpApiGroup",
+    module: "effect/unstable/httpapi/HttpApiGroup",
+    exportName: "HttpApiGroup",
+  },
+  {
+    id: "HttpApiEndpoint",
+    module: "effect/unstable/httpapi/HttpApiEndpoint",
+    exportName: "HttpApiEndpoint",
+  },
+  {
+    id: "HttpApiBuilder",
+    module: "effect/unstable/httpapi/HttpApiBuilder",
+    exportName: "HttpApiBuilder",
+  },
   { id: "Schema", module: "effect/Schema", exportName: "Top" },
   { id: "Effect", module: "effect/Effect", exportName: "Effect" },
   { id: "Route", module: "@typed/router", exportName: "Route" },
-  { id: "HttpServerResponse", module: "effect/unstable/http/HttpServerResponse", exportName: "HttpServerResponse" },
+  {
+    id: "HttpServerResponse",
+    module: "effect/unstable/http/HttpServerResponse",
+    exportName: "HttpServerResponse",
+  },
 ];

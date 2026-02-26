@@ -69,14 +69,12 @@ src/app.ts                        Your code
 
 The same resolution works in three places:
 
-
 | Tool                                                    | What it does                                                |
 | ------------------------------------------------------- | ----------------------------------------------------------- |
 | **Vite plugin** (`@typed/vite-plugin`)                  | Resolves virtual imports during `vite dev` and `vite build` |
 | **TS plugin** (`@typed/virtual-modules-ts-plugin`)      | Provides IntelliSense and type-checking in your editor      |
 | **vmc** (`@typed/virtual-modules-compiler`)             | Drop-in `tsc` replacement for CI type-checking              |
 | **VS Code extension** (`@typed/virtual-modules-vscode`) | Go-to-definition and source viewing for virtual modules     |
-
 
 All four share the same `vmc.config.ts` (or inline config), so virtual modules resolve identically everywhere.
 
@@ -145,8 +143,7 @@ import * as Route from "@typed/router";
 
 export const route = Route.Join(Route.Parse("users"), Route.Param("id"));
 
-export const handler = (params: { id: string }) =>
-  Effect.succeed(`User profile: ${params.id}`);
+export const handler = (params: { id: string }) => Effect.succeed(`User profile: ${params.id}`);
 ```
 
 ### 2. Import the virtual module
@@ -180,15 +177,12 @@ await render(App, document.body).pipe(
 
 **Required exports:**
 
-
 | Export                                     | Type                                   | Purpose                               |
 | ------------------------------------------ | -------------------------------------- | ------------------------------------- |
 | `route`                                    | `Route` from `@typed/router`           | The URL pattern this file handles     |
 | One of: `handler` / `template` / `default` | Value, Effect, Fx, Stream, or function | What to render when the route matches |
 
-
 **Companion files** (optional, applied automatically):
-
 
 | File                      | Purpose                                                  |
 | ------------------------- | -------------------------------------------------------- |
@@ -198,7 +192,6 @@ await render(App, document.body).pipe(
 | `_catch.ts`               | Error handler for routes in the directory                |
 | `myroute.guard.ts`        | Guard for a specific route file                          |
 | `myroute.dependencies.ts` | Dependencies for a specific route file                   |
-
 
 Companions compose from ancestor directories down to the leaf route, so a `_layout.ts` at the root wraps everything.
 
@@ -241,12 +234,9 @@ import * as Route from "@typed/router";
 
 export const route = Route.Parse("/users");
 export const method = "GET" as const;
-export const success = Schema.Array(
-  Schema.Struct({ id: Schema.String, name: Schema.String }),
-);
+export const success = Schema.Array(Schema.Struct({ id: Schema.String, name: Schema.String }));
 
-export const handler = () =>
-  Effect.succeed([{ id: "1", name: "Alice" }]);
+export const handler = () => Effect.succeed([{ id: "1", name: "Alice" }]);
 ```
 
 **src/api/users/create.ts** -- POST with request body and error schema
@@ -270,9 +260,7 @@ export const success = HttpApiSchema.status(201)(
   Schema.Struct({ id: Schema.String, name: Schema.String, email: Schema.String }),
 );
 
-export const error = HttpApiSchema.status(400)(
-  Schema.Struct({ message: Schema.String }),
-);
+export const error = HttpApiSchema.status(400)(Schema.Struct({ message: Schema.String }));
 
 export const handler = ({
   body,
@@ -282,8 +270,7 @@ export const handler = ({
   body: typeof body;
   success: typeof success;
   error: typeof error;
-}>) =>
-  Effect.succeed({ id: "2", name: body.name, email: body.email });
+}>) => Effect.succeed({ id: "2", name: body.name, email: body.email });
 ```
 
 **src/api/users/[id].ts** -- path params with typed handler
@@ -303,9 +290,7 @@ export const success = Schema.Struct({
   name: Schema.String,
 });
 
-export const error = HttpApiSchema.status(404)(
-  Schema.Struct({ message: Schema.String }),
-);
+export const error = HttpApiSchema.status(404)(Schema.Struct({ message: Schema.String }));
 
 export const handler = ({
   path,
@@ -314,8 +299,7 @@ export const handler = ({
   method: typeof method;
   success: typeof success;
   error: typeof error;
-}>) =>
-  Effect.succeed({ id: path.id, name: "Alice" });
+}>) => Effect.succeed({ id: path.id, name: "Alice" });
 ```
 
 `ApiHandlerParams` infers `path`, `query`, `headers`, and `body` types from the endpoint's route and schemas. Path params like `id` above are typed as `{ id: string }` -- no manual type annotations or casts needed.
@@ -368,7 +352,6 @@ export const serve = (config?, ...layers) => /* Layer that starts a Node HTTP se
 
 Every export is fully typed. `Client` gives you a typed HTTP client that mirrors the API's endpoints, `OpenApi` is the spec object you can serialize to JSON, and `Swagger`/`Scalar` are ready-made documentation layers.
 
-
 | Export         | What it is                                  |
 | -------------- | ------------------------------------------- |
 | `Api.Api`      | The `HttpApi` definition with all endpoints |
@@ -380,7 +363,6 @@ Every export is fully typed. `Client` gives you a typed HTTP client that mirrors
 | `Api.App`      | Layer composing the API with an HTTP server |
 | `Api.serve`    | One-liner to start a Node HTTP server       |
 
-
 ### 3. Serve it
 
 ```ts
@@ -388,10 +370,7 @@ import * as Api from "api:./api";
 import { Layer } from "effect";
 import { NodeRuntime } from "@effect/platform-node";
 
-Api.serve({ port: 3000 }).pipe(
-  Layer.launch,
-  NodeRuntime.runMain,
-);
+Api.serve({ port: 3000 }).pipe(Layer.launch, NodeRuntime.runMain);
 ```
 
 Or compose into a larger app with additional layers:
@@ -407,16 +386,13 @@ const app = Api.App({ disableListenLog: true });
 
 **Required exports:**
 
-
 | Export    | Type                                            | Purpose         |
 | --------- | ----------------------------------------------- | --------------- |
 | `route`   | `Route` from `@typed/router`                    | The URL pattern |
 | `method`  | `"GET"` / `"POST"` / `"PUT"` / `"DELETE"` / ... | HTTP method     |
 | `handler` | `(ctx) => Effect<Success, Error, R>`            | Request handler |
 
-
 **Optional exports:**
-
 
 | Export    | Type     | Purpose                                                |
 | --------- | -------- | ------------------------------------------------------ |
@@ -425,9 +401,7 @@ const app = Api.App({ disableListenLog: true });
 | `headers` | `Schema` | Request headers schema                                 |
 | `body`    | `Schema` | Request body schema                                    |
 
-
 **Directory conventions:**
-
 
 | File               | Purpose                                    |
 | ------------------ | ------------------------------------------ |
@@ -436,7 +410,6 @@ const app = Api.App({ disableListenLog: true });
 | `_dependencies.ts` | Shared dependencies for the directory      |
 | `_middlewares.ts`  | Shared middleware for the directory        |
 | `(dirname)/`       | Pathless group (no URL segment added)      |
-
 
 ## Templates and Reactive UI
 
@@ -482,9 +455,7 @@ const fxValue = Fx.mergeAll(Fx.at("A", 0), Fx.at("B", 250), Fx.at("C", 500));
 const streamValue = Stream.fromIterable(["one", "two", "three"]);
 
 const view = html`<div data-current=${fxValue}>
-  Effect: ${Effect.succeed("ready")}
-  Fx: ${fxValue}
-  Stream: ${streamValue}
+  Effect: ${Effect.succeed("ready")} Fx: ${fxValue} Stream: ${streamValue}
 </div>`;
 ```
 
@@ -563,7 +534,7 @@ const page = html`<main><h1>Typed SSR</h1></main>`;
 await renderToHtml(page).pipe(
   Fx.provide(HtmlRenderTemplate),
   Fx.observe((chunk) => Effect.sync(() => process.stdout.write(chunk))),
-  Effect.runPromise
+  Effect.runPromise,
 );
 ```
 
@@ -574,13 +545,12 @@ You can also define routes programmatically without the virtual module system:
 ```ts
 import * as Router from "@typed/router";
 
-const Home = Router.Slash;                                                     // "/"
-const UserById = Router.Join(Router.Parse("users"), Router.Param("id"));       // "/users/:id"
+const Home = Router.Slash; // "/"
+const UserById = Router.Join(Router.Parse("users"), Router.Param("id")); // "/users/:id"
 const TeamByNum = Router.Join(Router.Parse("teams"), Router.Number("teamId")); // "/teams/:teamId"
 
 const routes = Router.match(Home, html`<h1>Home</h1>`)
-  .match(UserById, (params) =>
-    RefSubject.map(params, ({ id }) => html`User ${id}`))
+  .match(UserById, (params) => RefSubject.map(params, ({ id }) => html`User ${id}`))
   .pipe(Router.redirectTo("/"));
 
 const App = html`<main>${Router.run(routes)}</main>`;
@@ -644,7 +614,6 @@ build(id, importer, api) {
 
 All packages are published under the `@typed` scope on npm. Install with the `beta` tag: `pnpm add @typed/<package>@beta`.
 
-
 | Package                                                                          | Description                                                                  |
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [@typed/app](packages/app/README.md)                                             | Router and HttpApi virtual module plugins, `defineApiHandler` helper         |
@@ -663,7 +632,6 @@ All packages are published under the `@typed` scope on npm. Install with the `be
 | [@typed/virtual-modules-ts-plugin](packages/virtual-modules-ts-plugin/README.md) | TypeScript Language Service plugin for editor IntelliSense                   |
 | [@typed/virtual-modules-vite](packages/virtual-modules-vite/README.md)           | Low-level Vite adapter for virtual module resolution                         |
 | [@typed/virtual-modules-vscode](packages/virtual-modules-vscode/README.md)       | VS Code extension for go-to-definition and source viewing of virtual modules |
-
 
 ## Architecture at a Glance
 
@@ -695,14 +663,12 @@ pnpm build
 
 ## Scripts
 
-
 | Command       | Description        |
 | ------------- | ------------------ |
 | `pnpm build`  | Build all packages |
 | `pnpm test`   | Run tests          |
 | `pnpm lint`   | Lint (oxlint)      |
 | `pnpm format` | Format (oxfmt)     |
-
 
 ## Requirements
 
@@ -712,7 +678,6 @@ pnpm build
 ## Releases
 
 Install with the `beta` tag: `pnpm add @typed/<package>@beta`
-
 
 | Package                          | Version      |
 | -------------------------------- | ------------ |
@@ -732,5 +697,3 @@ Install with the `beta` tag: `pnpm add @typed/<package>@beta`
 | @typed/virtual-modules-ts-plugin | 1.0.0-beta.1 |
 | @typed/virtual-modules-vite      | 1.0.0-beta.1 |
 | @typed/virtual-modules-vscode    | 1.0.0-beta.1 |
-
-

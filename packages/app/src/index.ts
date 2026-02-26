@@ -2,11 +2,14 @@ export * from "./config/index.js";
 export * from "./createTypeInfoApiSessionForApp.js";
 export * from "./httpapi/ApiHandler.js";
 export {
-  ApiHandler, emptyRecordString,
-  emptyRecordStringArray, type ApiHandlerContext,
+  ApiHandler,
+  emptyRecordString,
+  emptyRecordStringArray,
+  type ApiHandlerContext,
   type ApiHandlerFn,
   type ApiHandlerParams,
-  type ApiRoute, type TypedApiHandler
+  type ApiRoute,
+  type TypedApiHandler,
 } from "./httpapi/defineApiHandler.js";
 export * from "./HttpApiVirtualModulePlugin.js";
 export type * from "./internal/appConfigTypes.js";
@@ -20,4 +23,3 @@ export * from "./RouteLayout.js";
 export * from "./RouterVirtualModulePlugin.js";
 export * from "./ssr/index.js";
 export * from "./TypedRuntimeVitePlugin.js";
-

@@ -84,7 +84,9 @@ function validateOne(
   exportName: "prefix" | "default",
 ): { violation?: PrefixConventionViolation; result?: ExtractPrefixFromConventionResult } {
   if (!snapshot) {
-    return { violation: { code: "AVM-CONTRACT-007", message: `prefix convention file not found: ${path}` } };
+    return {
+      violation: { code: "AVM-CONTRACT-007", message: `prefix convention file not found: ${path}` },
+    };
   }
   const result = extractPrefixFromConvention(snapshot, api, exportName);
   if (!result.ok) {

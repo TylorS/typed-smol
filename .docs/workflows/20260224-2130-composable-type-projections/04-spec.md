@@ -17,7 +17,7 @@ export type TypeProjectionStep =
   | { readonly kind: "returnType" }
   | { readonly kind: "param"; readonly index: number }
   | { readonly kind: "typeArg"; readonly index: number }
-  | { readonly kind: "property"; readonly name: string }
+  | { readonly kind: "property"; readonly name: string };
 ```
 
 ### TypeInfoApi (extended interface in `types.ts`)
@@ -131,29 +131,29 @@ This works because sub-nodes (returnType, typeArguments[0]) were registered duri
 
 ## Failure Modes and Mitigations
 
-| Failure Mode | Cause | Mitigation |
-|---|---|---|
-| TypeNode not in WeakMap | Node constructed by plugin, not from API | Return `false`. Document in JSDoc. |
-| Projection step fails | Wrong step for type shape (e.g. returnType on non-function) | Return `false`. No throw. |
-| Target not resolved | Module not in program or bootstrap missing | Return `false`. Existing failWhenNoTargetsResolved handles session-level. |
-| Internal TS API error in projection | getTypeArguments etc. may throw on edge types | Wrap in try/catch, call onInternalError, return `false`. |
+| Failure Mode                        | Cause                                                       | Mitigation                                                                |
+| ----------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| TypeNode not in WeakMap             | Node constructed by plugin, not from API                    | Return `false`. Document in JSDoc.                                        |
+| Projection step fails               | Wrong step for type shape (e.g. returnType on non-function) | Return `false`. No throw.                                                 |
+| Target not resolved                 | Module not in program or bootstrap missing                  | Return `false`. Existing failWhenNoTargetsResolved handles session-level. |
+| Internal TS API error in projection | getTypeArguments etc. may throw on edge types               | Wrap in try/catch, call onInternalError, return `false`.                  |
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-|---|---|---|
-| FR-1 | `TypeInfoApi.isAssignableTo` method | Dynamic API on interface |
-| FR-2 | WeakMap in `serializeTypeNode` | Register all nodes recursively |
-| FR-3 | `TypeProjectionStep` type | 4 step kinds |
-| FR-4 | Step failure → false | In `applyProjection` implementation |
-| FR-5 | WeakMap miss → false | In `isAssignableTo` implementation |
-| FR-6 | Remove 4 fields from `ExportedTypeInfo` | Breaking change to interface |
-| FR-7 | TypeTargetSpec unchanged | No modification |
-| FR-8 | Exports from `types.ts` and `index.ts` | TypeProjectionStep + isAssignableTo |
-| FR-9 | Consumer migration | routeTypeNode.ts, buildRouteDescriptors.ts, HttpApiVirtualModulePlugin.ts |
-| NFR-1 | Synchronous implementation | Same as all TypeInfoApi |
-| NFR-2 | WeakMap GC semantics | No ownership, entries collected with nodes |
-| NFR-3 | Projection is O(steps) before checker call | Typically 0-3 steps |
+| requirement_id | design_element                             | notes                                                                     |
+| -------------- | ------------------------------------------ | ------------------------------------------------------------------------- |
+| FR-1           | `TypeInfoApi.isAssignableTo` method        | Dynamic API on interface                                                  |
+| FR-2           | WeakMap in `serializeTypeNode`             | Register all nodes recursively                                            |
+| FR-3           | `TypeProjectionStep` type                  | 4 step kinds                                                              |
+| FR-4           | Step failure → false                       | In `applyProjection` implementation                                       |
+| FR-5           | WeakMap miss → false                       | In `isAssignableTo` implementation                                        |
+| FR-6           | Remove 4 fields from `ExportedTypeInfo`    | Breaking change to interface                                              |
+| FR-7           | TypeTargetSpec unchanged                   | No modification                                                           |
+| FR-8           | Exports from `types.ts` and `index.ts`     | TypeProjectionStep + isAssignableTo                                       |
+| FR-9           | Consumer migration                         | routeTypeNode.ts, buildRouteDescriptors.ts, HttpApiVirtualModulePlugin.ts |
+| NFR-1          | Synchronous implementation                 | Same as all TypeInfoApi                                                   |
+| NFR-2          | WeakMap GC semantics                       | No ownership, entries collected with nodes                                |
+| NFR-3          | Projection is O(steps) before checker call | Typically 0-3 steps                                                       |
 
 ## References Consulted
 
@@ -177,31 +177,31 @@ No new ADR needed; this is an evolution of the existing type target system desig
 
 ### Critical Path Scenarios
 
-| ts_id | scenario | maps_to_fr_nfr | maps_to_ac | blocking |
-|---|---|---|---|---|
-| TS-1 | `isAssignableTo(node, "Fx")` returns true for Fx-typed export | FR-1, FR-2 | AC-1 | yes |
-| TS-2 | `isAssignableTo(node, "Option", [returnType, typeArg(0)])` returns true for Effect\<Option, E, R\> function | FR-1, FR-3 | AC-1 | yes |
-| TS-3 | Sub-node (e.g. `functionNode.returnType`) passed directly returns correct result | FR-2 | AC-2 | yes |
-| TS-4 | Projection on non-matching shape returns false | FR-4 | AC-3 | yes |
-| TS-5 | Plugin-constructed TypeNode returns false | FR-5 | AC-4 | no |
-| TS-6 | Router plugin test suite passes with migrated API | FR-9 | AC-6 | yes |
-| TS-7 | HttpApi plugin test suite passes with migrated API | FR-9 | AC-6 | yes |
+| ts_id | scenario                                                                                                    | maps_to_fr_nfr | maps_to_ac | blocking |
+| ----- | ----------------------------------------------------------------------------------------------------------- | -------------- | ---------- | -------- |
+| TS-1  | `isAssignableTo(node, "Fx")` returns true for Fx-typed export                                               | FR-1, FR-2     | AC-1       | yes      |
+| TS-2  | `isAssignableTo(node, "Option", [returnType, typeArg(0)])` returns true for Effect\<Option, E, R\> function | FR-1, FR-3     | AC-1       | yes      |
+| TS-3  | Sub-node (e.g. `functionNode.returnType`) passed directly returns correct result                            | FR-2           | AC-2       | yes      |
+| TS-4  | Projection on non-matching shape returns false                                                              | FR-4           | AC-3       | yes      |
+| TS-5  | Plugin-constructed TypeNode returns false                                                                   | FR-5           | AC-4       | no       |
+| TS-6  | Router plugin test suite passes with migrated API                                                           | FR-9           | AC-6       | yes      |
+| TS-7  | HttpApi plugin test suite passes with migrated API                                                          | FR-9           | AC-6       | yes      |
 
 ### Coverage Targets
 
-- critical_path_target: 100% of TS-* scenarios passing
+- critical_path_target: 100% of TS-\* scenarios passing
 - code_coverage_target: projection logic and WeakMap registration fully covered
 - validation_hooks: `pnpm test` in CI, `tsc -b` type check, `ReadLints` on modified files
 
 ### Dependency Readiness Matrix
 
-| dep | status | unblock_action |
-|---|---|---|
-| TypeScript checker API (getSignatures, getTypeArguments, getProperty) | ready | N/A — public APIs |
-| WeakMap (ES2015) | ready | N/A — baseline |
-| Existing test fixtures | ready | May need minor fixture extensions for projection |
+| dep                                                                   | status | unblock_action                                   |
+| --------------------------------------------------------------------- | ------ | ------------------------------------------------ |
+| TypeScript checker API (getSignatures, getTypeArguments, getProperty) | ready  | N/A — public APIs                                |
+| WeakMap (ES2015)                                                      | ready  | N/A — baseline                                   |
+| Existing test fixtures                                                | ready  | May need minor fixture extensions for projection |
 
 ### Acceptance Failure Policy
 
-- If a TS-* blocking scenario fails → fix before proceeding to finalization
+- If a TS-\* blocking scenario fails → fix before proceeding to finalization
 - If a dependency is incomplete → prioritize unblocking before new test authoring

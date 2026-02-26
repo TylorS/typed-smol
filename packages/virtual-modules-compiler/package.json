@@ -4,6 +4,10 @@
   "bin": {
     "vmc": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -26,9 +30,5 @@
     "@types/node": "^25.3.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  },
-  "files": [
-    "dist",
-    "src"
-  ]
+  }
 }

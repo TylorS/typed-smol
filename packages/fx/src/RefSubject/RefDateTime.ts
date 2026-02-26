@@ -183,10 +183,7 @@ export const subtractDuration: {
     ref: RefDateTime<E, R>,
     duration: Duration.Input,
   ): RefSubject.Computed<DateTime.DateTime, E, R>;
-} = dual(2, function subtractDuration<
-  E,
-  R,
->(ref: RefDateTime<E, R>, duration: Duration.Input) {
+} = dual(2, function subtractDuration<E, R>(ref: RefDateTime<E, R>, duration: Duration.Input) {
   return RefSubject.map(ref, (self) => DateTime.subtractDuration(self, duration));
 });
 

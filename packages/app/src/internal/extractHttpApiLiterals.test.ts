@@ -2,10 +2,7 @@
  * Unit tests for extractHttpApiLiterals.
  */
 import { describe, expect, it } from "vitest";
-import {
-  extractPrefixFromConvention,
-  getPathFromRouteType,
-} from "./extractHttpApiLiterals.js";
+import { extractPrefixFromConvention, getPathFromRouteType } from "./extractHttpApiLiterals.js";
 
 describe("getPathFromRouteType", () => {
   it("extracts from literal type", () => {
@@ -48,11 +45,7 @@ describe("extractPrefixFromConvention", () => {
     const api = {
       isAssignableTo: () => true,
     };
-    const result = extractPrefixFromConvention(
-      snapshot as never,
-      api as never,
-      "prefix",
-    );
+    const result = extractPrefixFromConvention(snapshot as never, api as never, "prefix");
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.path).toBe("");
   });
@@ -70,11 +63,7 @@ describe("extractPrefixFromConvention", () => {
     const api = {
       isAssignableTo: () => true,
     };
-    const result = extractPrefixFromConvention(
-      snapshot as never,
-      api as never,
-      "prefix",
-    );
+    const result = extractPrefixFromConvention(snapshot as never, api as never, "prefix");
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.path).toBe("/api");
   });
@@ -92,11 +81,7 @@ describe("extractPrefixFromConvention", () => {
     const api = {
       isAssignableTo: () => false,
     };
-    const result = extractPrefixFromConvention(
-      snapshot as never,
-      api as never,
-      "prefix",
-    );
+    const result = extractPrefixFromConvention(snapshot as never, api as never, "prefix");
     expect(result.ok).toBe(false);
   });
 });

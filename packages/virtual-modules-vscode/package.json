@@ -3,6 +3,10 @@
   "displayName": "Typed Virtual Modules",
   "version": "1.0.0-beta.1",
   "publisher": "typed",
+  "files": [
+    "dist",
+    "src"
+  ],
   "main": "./dist/extension.js",
   "publishConfig": {
     "access": "public"
@@ -83,9 +87,5 @@
   ],
   "engines": {
     "vscode": "^1.74.0"
-  },
-  "files": [
-    "dist",
-    "src"
-  ]
+  }
 }

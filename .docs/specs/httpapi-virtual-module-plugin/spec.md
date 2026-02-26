@@ -24,28 +24,28 @@ Out of scope:
 
 ### Directory semantics
 
-| pattern | meaning | creates named `HttpApiGroup` | contributes inherited defaults |
-| ------- | ------- | ---------------------------- | ------------------------------ |
-| `users/` | normal API directory | yes (`users` by default, override via `_group.ts`) | yes |
-| `(internal)/` | pathless organizational directory | no | yes |
-| nested directories | hierarchical grouping | yes unless parenthesized | yes |
+| pattern            | meaning                           | creates named `HttpApiGroup`                       | contributes inherited defaults |
+| ------------------ | --------------------------------- | -------------------------------------------------- | ------------------------------ |
+| `users/`           | normal API directory              | yes (`users` by default, override via `_group.ts`) | yes                            |
+| `(internal)/`      | pathless organizational directory | no                                                 | yes                            |
+| nested directories | hierarchical grouping             | yes unless parenthesized                           | yes                            |
 
 ### Supported file-role matrix
 
-| pattern | role | required exports | optional exports | behavior |
-| ------- | ---- | ---------------- | ---------------- | -------- |
-| `_api.ts` | API root override | none | `name`, `prefix`, `dependencies`, `middlewares`, `openapi` | controls top-level API defaults and metadata |
-| `_group.ts` | group override | none | `name`, `prefix`, `dependencies`, `middlewares`, `openapi` | controls current directory group defaults/metadata |
-| `<endpoint>.ts` | endpoint primary module | `route`, `method`, `handler` | `name`, `headers`, `body`, `error`, `success`, `dependencies`, `middlewares`, `prefix`, `openapi` | defines one endpoint contract and handler (direct or via typed helper) |
-| `<endpoint>.name.ts` | endpoint companion | `default` (string) | none | overrides endpoint name (otherwise filename slug) |
-| `<endpoint>.dependencies.ts` | endpoint companion | `default` | none | endpoint-level dependency additions/override |
-| `<endpoint>.middlewares.ts` | endpoint companion | `default` | none | endpoint-level middleware additions/override |
-| `<endpoint>.prefix.ts` | endpoint companion | `default` (string) | none | endpoint path prefix override |
-| `<endpoint>.openapi.ts` | endpoint companion | `default` | none | endpoint OpenAPI metadata override |
-| `_dependencies.ts` | directory companion | `default` | none | inherited dependencies (ancestor -> leaf composition) |
-| `_middlewares.ts` | directory companion | `default` | none | inherited middlewares (ancestor -> leaf composition) |
-| `_prefix.ts` | directory companion | `default` (string) | none | inherited prefix composition |
-| `_openapi.ts` | directory companion | `default` | none | inherited OpenAPI metadata defaults |
+| pattern                      | role                    | required exports             | optional exports                                                                                  | behavior                                                               |
+| ---------------------------- | ----------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `_api.ts`                    | API root override       | none                         | `name`, `prefix`, `dependencies`, `middlewares`, `openapi`                                        | controls top-level API defaults and metadata                           |
+| `_group.ts`                  | group override          | none                         | `name`, `prefix`, `dependencies`, `middlewares`, `openapi`                                        | controls current directory group defaults/metadata                     |
+| `<endpoint>.ts`              | endpoint primary module | `route`, `method`, `handler` | `name`, `headers`, `body`, `error`, `success`, `dependencies`, `middlewares`, `prefix`, `openapi` | defines one endpoint contract and handler (direct or via typed helper) |
+| `<endpoint>.name.ts`         | endpoint companion      | `default` (string)           | none                                                                                              | overrides endpoint name (otherwise filename slug)                      |
+| `<endpoint>.dependencies.ts` | endpoint companion      | `default`                    | none                                                                                              | endpoint-level dependency additions/override                           |
+| `<endpoint>.middlewares.ts`  | endpoint companion      | `default`                    | none                                                                                              | endpoint-level middleware additions/override                           |
+| `<endpoint>.prefix.ts`       | endpoint companion      | `default` (string)           | none                                                                                              | endpoint path prefix override                                          |
+| `<endpoint>.openapi.ts`      | endpoint companion      | `default`                    | none                                                                                              | endpoint OpenAPI metadata override                                     |
+| `_dependencies.ts`           | directory companion     | `default`                    | none                                                                                              | inherited dependencies (ancestor -> leaf composition)                  |
+| `_middlewares.ts`            | directory companion     | `default`                    | none                                                                                              | inherited middlewares (ancestor -> leaf composition)                   |
+| `_prefix.ts`                 | directory companion     | `default` (string)           | none                                                                                              | inherited prefix composition                                           |
+| `_openapi.ts`                | directory companion     | `default`                    | none                                                                                              | inherited OpenAPI metadata defaults                                    |
 
 ### Endpoint contract (primary file)
 
@@ -415,43 +415,43 @@ sequenceDiagram
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1 | Api Target Resolver | `api:` parsing and importer-relative path resolution. |
-| FR-2 | Candidate Discovery and Role Classifier | Script file discovery and deterministic filtering. |
-| FR-3 | Convention Resolver | Optional `_api.ts` root override handling. |
-| FR-4 | Directory-to-Group Planner | Default named group mapping + pathless parenthesized dirs. |
-| FR-5 | Convention Resolver / Group Planner | `_group.ts` overrides for group metadata and concerns. |
-| FR-6 | Endpoint Contract Validator | Required endpoint contract fields and checks. |
-| FR-7 | Endpoint Contract Validator | Optional headers/body/error/success schema exports. |
-| FR-8 | Convention Resolver | Endpoint name default + override behavior. |
-| FR-9 | Group Planner + Convention Resolver | Group-level `HttpApiGroup` capability mapping. |
-| FR-10 | Convention Resolver + Source Generator | Handler wiring conventions (`handle`, `handleRaw`). |
-| FR-11 | Convention Resolver | In-file > sibling > directory precedence and ancestor-to-leaf composition. |
-| FR-12 | Convention Resolver / Source Generator | Security/middleware helper compatibility surfaces. |
-| FR-13 | OpenAPI Config Mapper and Exposure Planner | Effect-backed annotation controls through conventions/options. |
-| FR-14 | Source Generator | Export assembled API and builder wiring artifacts. |
-| FR-15 | Type Target Resolver + Endpoint Validator | Structural assignability checks via `TypeInfoApi` targets. |
-| FR-16 | Diagnostic Catalog | Stable diagnostic IDs/messages for contract and convention failures. |
-| FR-17 | Candidate Discovery / Endpoint Validator | Watch descriptor registration for invalidation/rebuild. |
-| FR-18 | Api Virtual Module Plugin | Explicit unresolved/error outcomes without crashes. |
-| FR-19 | Api Virtual Module Plugin | Optional emitted-source type-check mode parity. |
-| FR-20 | Filesystem Tree AST Parser | Mandatory parse-to-AST boundary before rendering. |
-| FR-21 | Source Generator | Rendering consumes AST as canonical input. |
-| FR-22 | Vite Plugin Integration Surface | First-class `@typed/vite-plugin` integration and option wiring. |
-| FR-23 | Candidate Discovery + Convention Resolver + Diagnostic Catalog | Explicit supported file-role matrix and diagnostics for unsupported reserved companion names. |
-| FR-24 | Typed Handler Helper Surface + Endpoint Contract Validator | Curried helper contract with compile-time inference for handler context and schema compatibility. |
-| FR-25 | OpenAPI Config Mapper and Exposure Planner | Effect-backed OpenAPI option matrix for annotations/generation/exposure. |
-| NFR-1 | all components | End-to-end synchronous execution path. |
-| NFR-2 | Discovery + Resolver + Generator | Deterministic ordering and generated output stability. |
-| NFR-3 | Plugin + Diagnostic Catalog | Non-crashing structured error behavior. |
-| NFR-4 | Target Resolver + ordering | Cross-platform path normalization. |
-| NFR-5 | Plugin integration boundary | First-match manager compatibility. |
-| NFR-6 | Type Target Resolver + Validator | Auditable structural validation behavior/fallback policy. |
-| NFR-7 | Convention Resolver | Single-source convention routing and collision enforcement. |
-| NFR-8 | Source Generator | Unstable API isolation via generated adapter surface. |
-| NFR-9 | Conventions + diagnostics | Convenience without reducing type safety. |
-| NFR-10 | AST Parser + Source Generator | Explicit, testable separation between parse and render phases. |
+| requirement_id | design_element                                                 | notes                                                                                             |
+| -------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| FR-1           | Api Target Resolver                                            | `api:` parsing and importer-relative path resolution.                                             |
+| FR-2           | Candidate Discovery and Role Classifier                        | Script file discovery and deterministic filtering.                                                |
+| FR-3           | Convention Resolver                                            | Optional `_api.ts` root override handling.                                                        |
+| FR-4           | Directory-to-Group Planner                                     | Default named group mapping + pathless parenthesized dirs.                                        |
+| FR-5           | Convention Resolver / Group Planner                            | `_group.ts` overrides for group metadata and concerns.                                            |
+| FR-6           | Endpoint Contract Validator                                    | Required endpoint contract fields and checks.                                                     |
+| FR-7           | Endpoint Contract Validator                                    | Optional headers/body/error/success schema exports.                                               |
+| FR-8           | Convention Resolver                                            | Endpoint name default + override behavior.                                                        |
+| FR-9           | Group Planner + Convention Resolver                            | Group-level `HttpApiGroup` capability mapping.                                                    |
+| FR-10          | Convention Resolver + Source Generator                         | Handler wiring conventions (`handle`, `handleRaw`).                                               |
+| FR-11          | Convention Resolver                                            | In-file > sibling > directory precedence and ancestor-to-leaf composition.                        |
+| FR-12          | Convention Resolver / Source Generator                         | Security/middleware helper compatibility surfaces.                                                |
+| FR-13          | OpenAPI Config Mapper and Exposure Planner                     | Effect-backed annotation controls through conventions/options.                                    |
+| FR-14          | Source Generator                                               | Export assembled API and builder wiring artifacts.                                                |
+| FR-15          | Type Target Resolver + Endpoint Validator                      | Structural assignability checks via `TypeInfoApi` targets.                                        |
+| FR-16          | Diagnostic Catalog                                             | Stable diagnostic IDs/messages for contract and convention failures.                              |
+| FR-17          | Candidate Discovery / Endpoint Validator                       | Watch descriptor registration for invalidation/rebuild.                                           |
+| FR-18          | Api Virtual Module Plugin                                      | Explicit unresolved/error outcomes without crashes.                                               |
+| FR-19          | Api Virtual Module Plugin                                      | Optional emitted-source type-check mode parity.                                                   |
+| FR-20          | Filesystem Tree AST Parser                                     | Mandatory parse-to-AST boundary before rendering.                                                 |
+| FR-21          | Source Generator                                               | Rendering consumes AST as canonical input.                                                        |
+| FR-22          | Vite Plugin Integration Surface                                | First-class `@typed/vite-plugin` integration and option wiring.                                   |
+| FR-23          | Candidate Discovery + Convention Resolver + Diagnostic Catalog | Explicit supported file-role matrix and diagnostics for unsupported reserved companion names.     |
+| FR-24          | Typed Handler Helper Surface + Endpoint Contract Validator     | Curried helper contract with compile-time inference for handler context and schema compatibility. |
+| FR-25          | OpenAPI Config Mapper and Exposure Planner                     | Effect-backed OpenAPI option matrix for annotations/generation/exposure.                          |
+| NFR-1          | all components                                                 | End-to-end synchronous execution path.                                                            |
+| NFR-2          | Discovery + Resolver + Generator                               | Deterministic ordering and generated output stability.                                            |
+| NFR-3          | Plugin + Diagnostic Catalog                                    | Non-crashing structured error behavior.                                                           |
+| NFR-4          | Target Resolver + ordering                                     | Cross-platform path normalization.                                                                |
+| NFR-5          | Plugin integration boundary                                    | First-match manager compatibility.                                                                |
+| NFR-6          | Type Target Resolver + Validator                               | Auditable structural validation behavior/fallback policy.                                         |
+| NFR-7          | Convention Resolver                                            | Single-source convention routing and collision enforcement.                                       |
+| NFR-8          | Source Generator                                               | Unstable API isolation via generated adapter surface.                                             |
+| NFR-9          | Conventions + diagnostics                                      | Convenience without reducing type safety.                                                         |
+| NFR-10         | AST Parser + Source Generator                                  | Explicit, testable separation between parse and render phases.                                    |
 
 ## References Consulted
 

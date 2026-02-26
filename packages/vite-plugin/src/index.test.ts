@@ -80,7 +80,11 @@ describe("typedVitePlugin", () => {
   it("returns virtual-modules plugin with resolveId and load", () => {
     const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
     const virtualPlugin = plugins.find(
-      (p) => p && typeof p === "object" && "name" in p && (p as { name?: string }).name === "virtual-modules",
+      (p) =>
+        p &&
+        typeof p === "object" &&
+        "name" in p &&
+        (p as { name?: string }).name === "virtual-modules",
     );
     expect(virtualPlugin).toBeDefined();
   });
@@ -88,7 +92,11 @@ describe("typedVitePlugin", () => {
   it("auto-creates LS-backed session when createTypeInfoApiSession is not provided", () => {
     const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
     const virtualPlugin = plugins.find(
-      (p) => p && typeof p === "object" && "name" in p && (p as { name?: string }).name === "virtual-modules",
+      (p) =>
+        p &&
+        typeof p === "object" &&
+        "name" in p &&
+        (p as { name?: string }).name === "virtual-modules",
     );
     expect(virtualPlugin).toBeDefined();
     expect(virtualPlugin).toHaveProperty("resolveId");

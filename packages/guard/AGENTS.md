@@ -15,15 +15,15 @@ Guards sit between raw input and typed output. Unlike `Schema.decode`, which fai
 
 ## Capabilities
 
-| Area | APIs | Notes |
-|------|------|-------|
-| **Core** | `Guard`, `getGuard`, `AsGuard` | `Guard<I,O,E,R>` type; `getGuard` unwraps `AsGuard`. |
-| **Composition** | `pipe`, `map`, `mapEffect`, `filter`, `filterMap`, `tap` | Chain and transform guards; `pipe` runs second guard on first output. |
-| **Building** | `liftPredicate`, `any` | From predicates; `any(guards)` for tagged unions (`{ _tag, value }`). |
-| **Schema** | `fromSchemaDecode`, `fromSchemaEncode`, `decode`, `encode` | Integrate Effect Schema as guards; decode = encoded→type, encode = type→encoded. |
-| **Effect** | `provide`, `provideService`, `provideServiceEffect` | Provide env; guards can require services. |
-| **Recovery** | `catchAll`, `catchTag`, `catchCause` | Turn failures into successful matches (e.g. fallbacks). |
-| **Struct** | `addTag`, `bindTo`, `bind`, `let` | Build structured outputs; `bind` chains guards and merges. |
+| Area            | APIs                                                       | Notes                                                                            |
+| --------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Core**        | `Guard`, `getGuard`, `AsGuard`                             | `Guard<I,O,E,R>` type; `getGuard` unwraps `AsGuard`.                             |
+| **Composition** | `pipe`, `map`, `mapEffect`, `filter`, `filterMap`, `tap`   | Chain and transform guards; `pipe` runs second guard on first output.            |
+| **Building**    | `liftPredicate`, `any`                                     | From predicates; `any(guards)` for tagged unions (`{ _tag, value }`).            |
+| **Schema**      | `fromSchemaDecode`, `fromSchemaEncode`, `decode`, `encode` | Integrate Effect Schema as guards; decode = encoded→type, encode = type→encoded. |
+| **Effect**      | `provide`, `provideService`, `provideServiceEffect`        | Provide env; guards can require services.                                        |
+| **Recovery**    | `catchAll`, `catchTag`, `catchCause`                       | Turn failures into successful matches (e.g. fallbacks).                          |
+| **Struct**      | `addTag`, `bindTo`, `bind`, `let`                          | Build structured outputs; `bind` chains guards and merges.                       |
 
 ## Key exports / surfaces
 

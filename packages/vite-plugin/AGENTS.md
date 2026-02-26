@@ -6,14 +6,14 @@
 
 ## Capabilities
 
-| Area | What it provides |
-|------|------------------|
-| **Router VM** | `router:./path` imports → typed Matcher from convention-based route files |
-| **HttpApi VM** | `api:./path` imports → typed Api + Client + OpenAPI (always enabled) |
+| Area                 | What it provides                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Router VM**        | `router:./path` imports → typed Matcher from convention-based route files                                                      |
+| **HttpApi VM**       | `api:./path` imports → typed Api + Client + OpenAPI (always enabled)                                                           |
 | **TypeInfo session** | Structural type-checking of route and endpoint contracts (auto-created from tsconfig; override via `createTypeInfoApiSession`) |
-| **tsconfig paths** | Path alias resolution from `tsconfig.json` (enabled by default) |
-| **Analyzer** | Bundle treemap at `dist/stats.html` when `ANALYZE=1` |
-| **Compression** | Brotli `.br` for build output (enabled by default) |
+| **tsconfig paths**   | Path alias resolution from `tsconfig.json` (enabled by default)                                                                |
+| **Analyzer**         | Bundle treemap at `dist/stats.html` when `ANALYZE=1`                                                                           |
+| **Compression**      | Brotli `.br` for build output (enabled by default)                                                                             |
 
 ## Key exports / surfaces
 
