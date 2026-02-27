@@ -1,6 +1,6 @@
 ---
 name: refactor-surgeon
-model: claude-4.6-sonnet-medium-thinking
+model: default
 description: Refactoring / Structural Change
 ---
 

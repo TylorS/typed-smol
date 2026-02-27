@@ -10,6 +10,7 @@
   "dependencies": {
     "@effect/platform-node": "catalog:",
     "@typed/app": "workspace:*",
+    "@typed/cli": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
     "@typed/template": "workspace:*",
@@ -21,6 +22,7 @@
     "typescript": "^5.9.0"
   },
   "devDependencies": {
-    "esbuild": "^0.24.2"
+    "esbuild": "^0.24.2",
+    "vite": "catalog:"
   }
 }

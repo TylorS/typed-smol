@@ -86,6 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const provider = createVirtualModuleProvider({
     getResolver,
+    getProjectRoot,
     onDidChangeEmitter,
     onResolved: (moduleId, importer) => {
       const path = importer.startsWith("file:") ? vscode.Uri.parse(importer).fsPath : importer;

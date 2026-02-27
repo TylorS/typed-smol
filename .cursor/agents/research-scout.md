@@ -1,6 +1,6 @@
 ---
 name: research-scout
-model: composer-1.5
+model: default
 description: Research / Evidence Synthesis
 ---
 

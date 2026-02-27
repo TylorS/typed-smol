@@ -1,20 +1,20 @@
 /// <reference types="node" />
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import ts from "typescript";
-import { afterEach, describe, expect, it } from "vitest";
+import type { VirtualModuleBuildError } from "@typed/virtual-modules";
 import {
   createTypeInfoApiSession,
   PluginManager,
   resolveTypeTargetsFromSpecs,
 } from "@typed/virtual-modules";
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import ts from "typescript";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   createHttpApiVirtualModulePlugin,
+  HTTPAPI_TYPE_TARGET_SPECS,
   parseHttpApiVirtualModuleId,
   resolveHttpApiTargetDirectory,
-  HTTPAPI_TYPE_TARGET_SPECS,
 } from "./index.js";
 import {
   collectExposureRoutes,
@@ -285,6 +285,89 @@ describe("createHttpApiVirtualModulePlugin", () => {
     expect(plugin.shouldResolve("api:./apis", fixture.importer)).toBe(false);
   });
 
+  it("build emits serve with Vite dev server integration when import.meta.env.DEV", () => {
+    const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    expect(result).not.toHaveProperty("errors");
+    const sourceText =
+      typeof result === "string" ? result : (result as { sourceText?: string }).sourceText;
+    expect(sourceText).toMatchInlineSnapshot(`
+      "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import * as HttpApi from "effect/unstable/httpapi/HttpApi";
+      import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
+      import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";
+      import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";
+      import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
+      import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
+      import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
+      import * as HttpServer from "effect/unstable/http/HttpServer";
+      import * as HttpRouter from "effect/unstable/http/HttpRouter";
+      import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
+      import http from "node:http";
+      import { NodeHttpServer } from "@effect/platform-node";
+      import * as Status from "./apis/status.js";
+
+      export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined })))));
+      export const OpenApi = OpenApiModule.fromApi(Api);
+      export const Swagger = HttpApiSwagger.layer(Api);
+      export const Scalar = HttpApiScalar.layer(Api);
+      export const Client = HttpApiClient.make(Api);
+
+      export const App = <const Layers extends readonly LayerOrGroup[] = []>(
+        config?: AppConfig,
+        ...layersToMergeIntoRouter: Layers
+      ): Layer.Layer<
+        Layer.Success<ComputeLayers<Layers, typeof ApiLayer>>, 
+        Layer.Error<ComputeLayers<Layers, typeof ApiLayer>>, 
+        Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
+      > => {
+        const disableListenLog = config?.disableListenLog ?? false;
+        const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter) as ComputeLayers<
+          Layers,
+          typeof ApiLayer
+        >;
+        return HttpRouter.serve(appLayer, { disableListenLog })
+      };
+
+      export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
+        config?: RunConfig,
+        ...layersToMergeIntoRouter: Layers
+      ) =>
+        Layer.unwrap(
+          Effect.gen(function* () {
+            const host = yield* resolveConfig(config?.host, "0.0.0.0");
+            const port = yield* resolveConfig(config?.port, 3000);
+            const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
+            const appConfig: AppConfig = { disableListenLog };
+            const appLayer = App(appConfig, ...layersToMergeIntoRouter);
+            let serverLayer;
+            if (import.meta.env.DEV) {
+              const viteDevServer = yield* Effect.promise(() =>
+                import("typed:vite-dev-server").then((m) => m.default).catch(() => undefined),
+              );
+              if (viteDevServer?.httpServer) {
+                const server = viteDevServer.httpServer;
+                server.listen = function patchedListen(...args: unknown[]) {
+                  const cb = args.pop()
+                  if (typeof cb === "function") setImmediate(cb as () => void);
+                  return server;
+                };
+                serverLayer = NodeHttpServer.layer(() => server, { host, port });
+              } else {
+                serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+              }
+            } else {
+              serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            }
+            return appLayer.pipe(Layer.provide(serverLayer));
+          }),
+        );
+      "
+    `)
+  });
+
   it("build renders deterministic HttpApi assembly source when contracts are valid", () => {
     const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
     expect(result).not.toHaveProperty("errors");
@@ -343,7 +426,25 @@ describe("createHttpApiVirtualModulePlugin", () => {
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
             const appConfig: AppConfig = { disableListenLog };
             const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-            const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            let serverLayer;
+            if (import.meta.env.DEV) {
+              const viteDevServer = yield* Effect.promise(() =>
+                import("typed:vite-dev-server").then((m) => m.default).catch(() => undefined),
+              );
+              if (viteDevServer?.httpServer) {
+                const server = viteDevServer.httpServer;
+                server.listen = function patchedListen(...args: unknown[]) {
+                  const cb = args.pop()
+                  if (typeof cb === "function") setImmediate(cb as () => void);
+                  return server;
+                };
+                serverLayer = NodeHttpServer.layer(() => server, { host, port });
+              } else {
+                serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+              }
+            } else {
+              serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            }
             return appLayer.pipe(Layer.provide(serverLayer));
           }),
         );
@@ -474,7 +575,25 @@ describe("createHttpApiVirtualModulePlugin", () => {
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
             const appConfig: AppConfig = { disableListenLog };
             const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-            const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            let serverLayer;
+            if (import.meta.env.DEV) {
+              const viteDevServer = yield* Effect.promise(() =>
+                import("typed:vite-dev-server").then((m) => m.default).catch(() => undefined),
+              );
+              if (viteDevServer?.httpServer) {
+                const server = viteDevServer.httpServer;
+                server.listen = function patchedListen(...args: unknown[]) {
+                  const cb = args.pop()
+                  if (typeof cb === "function") setImmediate(cb as () => void);
+                  return server;
+                };
+                serverLayer = NodeHttpServer.layer(() => server, { host, port });
+              } else {
+                serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+              }
+            } else {
+              serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            }
             return appLayer.pipe(Layer.provide(serverLayer));
           }),
         );
@@ -616,7 +735,25 @@ describe("HttpApiVirtualModulePlugin integration", () => {
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
             const appConfig: AppConfig = { disableListenLog };
             const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-            const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            let serverLayer;
+            if (import.meta.env.DEV) {
+              const viteDevServer = yield* Effect.promise(() =>
+                import("typed:vite-dev-server").then((m) => m.default).catch(() => undefined),
+              );
+              if (viteDevServer?.httpServer) {
+                const server = viteDevServer.httpServer;
+                server.listen = function patchedListen(...args: unknown[]) {
+                  const cb = args.pop()
+                  if (typeof cb === "function") setImmediate(cb as () => void);
+                  return server;
+                };
+                serverLayer = NodeHttpServer.layer(() => server, { host, port });
+              } else {
+                serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+              }
+            } else {
+              serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            }
             return appLayer.pipe(Layer.provide(serverLayer));
           }),
         );

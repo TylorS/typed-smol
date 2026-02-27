@@ -1,6 +1,6 @@
 ---
 name: security-sentinel
-model: gpt-5.3-codex-xhigh
+model: default
 description: Security Review / Risk Hardening
 ---
 

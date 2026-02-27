@@ -611,7 +611,25 @@ export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
       const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
       const appConfig: AppConfig = { disableListenLog };
       const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-      const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+      let serverLayer;
+      if (import.meta.env.DEV) {
+        const viteDevServer = yield* Effect.promise(() =>
+          import("typed:vite-dev-server").then((m) => m.default).catch(() => undefined),
+        );
+        if (viteDevServer?.httpServer) {
+          const server = viteDevServer.httpServer;
+          server.listen = function patchedListen(...args: unknown[]) {
+            const cb = args.pop()
+            if (typeof cb === "function") setImmediate(cb as () => void);
+            return server;
+          };
+          serverLayer = NodeHttpServer.layer(() => server, { host, port });
+        } else {
+          serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+        }
+      } else {
+        serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+      }
       return appLayer.pipe(Layer.provide(serverLayer));
     }),
   );

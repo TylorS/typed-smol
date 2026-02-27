@@ -1,6 +1,6 @@
 ---
 name: swarm-orchestrator
-model: gpt-5.3-codex-xhigh
+model: default
 description: Multi-Agent Routing / Coordination
 ---
 

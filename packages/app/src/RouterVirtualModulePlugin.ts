@@ -45,6 +45,8 @@ const ROUTE_FILE_GLOBS: readonly string[] = [
 export interface RouterVirtualModulePluginOptions {
   readonly prefix?: string;
   readonly name?: string;
+  /** When true, treat unknown _dependencies.ts default export types as "array" instead of failing. Use for preview/IDE when type targets may not resolve (e.g. VS Code extension). */
+  readonly lenientDepsValidation?: boolean;
 }
 
 export type ParseRouterVirtualModuleIdResult =
@@ -161,6 +163,7 @@ export const createRouterVirtualModulePlugin = (
 ): VirtualModulePlugin => {
   const prefix = options.prefix ?? DEFAULT_PREFIX;
   const name = options.name ?? DEFAULT_PLUGIN_NAME;
+  const lenientDepsValidation = options.lenientDepsValidation ?? false;
 
   return {
     name,
@@ -202,7 +205,9 @@ export const createRouterVirtualModulePlugin = (
         catchExportByPath,
         catchFormByPath,
         depsFormByPath,
-      } = buildRouteDescriptors(snapshots, resolved.targetDirectory, api);
+      } = buildRouteDescriptors(snapshots, resolved.targetDirectory, api, {
+        lenientDepsValidation,
+      });
 
       const toDiagnostic = (v: RouteContractViolation) => ({
         code: v.code,

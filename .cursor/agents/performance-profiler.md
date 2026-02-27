@@ -1,6 +1,6 @@
 ---
 name: performance-profiler
-model: gpt-5.3-codex-high
+model: default
 description: Performance Analysis / Optimization
 ---
 

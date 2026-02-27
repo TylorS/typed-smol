@@ -1,6 +1,6 @@
 ---
 name: requirements-analyst
-model: grok-code-fast-1
+model: default
 description: Requirements Discovery / Constraint Mapping
 ---
 

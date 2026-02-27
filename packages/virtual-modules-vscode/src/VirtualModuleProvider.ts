@@ -10,6 +10,8 @@ export const EMPTY_AUTHORITY = "ts-nul-authority";
 
 export interface VirtualModuleProviderOptions {
   getResolver: (projectRoot: string) => ReturnType<typeof createResolver>;
+  /** Project root for a file (e.g. tsconfig dir); use for correct monorepo resolution. */
+  getProjectRoot: (filePath: string) => string | undefined;
   /** Emitter for onDidChange; extension owns it and fires when virtual module content may have changed. */
   onDidChangeEmitter?: vscode.EventEmitter<vscode.Uri>;
   /** Called when a virtual module is successfully resolved; use to register for refresh. */
@@ -63,7 +65,10 @@ export function createVirtualModuleProvider(
       }
 
       const { moduleId, importer } = parsed;
-      const projectRoot = getProjectRootFromFile(importer);
+      const importerPath = importer.startsWith("file:")
+        ? vscode.Uri.parse(importer).fsPath
+        : importer;
+      const projectRoot = options.getProjectRoot(importerPath);
       if (!projectRoot) return undefined;
 
       const resolver = getResolver(projectRoot);
@@ -72,21 +77,6 @@ export function createVirtualModuleProvider(
       return result?.sourceText;
     },
   };
-}
-
-function getProjectRootFromFile(filePathOrUri: string): string | undefined {
-  const normalized = filePathOrUri.startsWith("file:")
-    ? vscode.Uri.parse(filePathOrUri).fsPath
-    : filePathOrUri;
-  const { workspaceFolders } = vscode.workspace;
-  if (!workspaceFolders?.length) return undefined;
-  for (const folder of workspaceFolders) {
-    const root = folder.uri.fsPath;
-    if (normalized.startsWith(root + "/") || normalized === root) {
-      return root;
-    }
-  }
-  return workspaceFolders[0]?.uri.fsPath;
 }
 
 /**

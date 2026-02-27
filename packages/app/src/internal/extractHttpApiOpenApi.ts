@@ -10,10 +10,19 @@ import type {
 } from "@typed/virtual-modules";
 import type { OpenApiExposureConfig, OpenApiScalarExposureConfig } from "./httpapiOpenApiConfig.js";
 
+/** Strips surrounding double quotes from TypeScript literal text (e.g. '"/api"' -> '/api'). */
+function stripSurroundingQuotes(s: string): string {
+  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+    return s.slice(1, -1);
+  }
+  return s;
+}
+
 function getLiteralString(node: TypeNode | undefined): string | null {
   if (!node || node.kind !== "literal") return null;
   const text = (node as LiteralTypeNode).text;
-  return typeof text === "string" ? text : null;
+  const raw = typeof text === "string" ? text : null;
+  return raw ? stripSurroundingQuotes(raw) : null;
 }
 
 function getProperty(type: TypeNode, name: string): TypeNode | undefined {

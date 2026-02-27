@@ -1,6 +1,6 @@
 ---
 name: planning-architect
-model: gpt-5.3-codex-xhigh
+model: default
 description: Planning / Architecting
 ---
 

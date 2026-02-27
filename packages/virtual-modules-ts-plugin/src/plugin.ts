@@ -29,6 +29,7 @@ import {
   ensureTypeTargetBootstrapFile,
   getProgramWithTypeTargetBootstrap,
   getTypeTargetBootstrapPath,
+  loadResolverFromVmcConfig,
   PluginManager,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
@@ -174,7 +175,17 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
     const typedConfig = loadedConfig.status === "loaded" ? loadedConfig.config : undefined;
 
+    const vmcLoaded = loadResolverFromVmcConfig({ projectRoot, ts });
+    const vmcPlugins =
+      vmcLoaded.status === "loaded" && vmcLoaded.resolver
+        ? ((vmcLoaded.resolver as PluginManager).plugins ?? [])
+        : [];
+    if (vmcPlugins.length > 0) {
+      log(`vmc.config: merged ${vmcPlugins.length} plugin(s)`);
+    }
+
     const plugins = [
+      ...vmcPlugins,
       createRouterVirtualModulePlugin(
         typedConfig?.router ? { prefix: typedConfig.router.prefix } : {},
       ),
@@ -188,10 +199,15 @@ function init(modules: { typescript: typeof import("typescript") }): {
       plugins,
     ) as unknown as LoadedVirtualResolver;
 
-    log("Virtual module resolver initialized from typed.config.ts");
+    log("Virtual module resolver initialized");
 
     const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(plugins);
-    log(`typeTargetSpecs: ${typeTargetSpecs.length} specs`);
+    const vmcTypeTargetSpecs = vmcLoaded.status === "loaded" ? vmcLoaded.typeTargetSpecs : undefined;
+    const mergedTypeTargetSpecs =
+      vmcTypeTargetSpecs && vmcTypeTargetSpecs.length > 0
+        ? [...vmcTypeTargetSpecs, ...typeTargetSpecs]
+        : typeTargetSpecs;
+    log(`typeTargetSpecs: ${mergedTypeTargetSpecs.length} specs`);
 
     const projectConfigPath = (info.project as { configFilePath?: string }).configFilePath;
     const tsconfigPath =
@@ -204,7 +220,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
       projectRoot,
       log,
       tsconfigPath,
-      typeTargetSpecs,
+      mergedTypeTargetSpecs,
     );
 
     // Pre-validate that TypeInfoApiSession can be created from the fallback program.
@@ -216,13 +232,13 @@ function init(modules: { typescript: typeof import("typescript") }): {
           ts,
           cachedFallbackProgram,
           projectRoot,
-          typeTargetSpecs,
+          mergedTypeTargetSpecs,
         );
         preCreatedSession = createTypeInfoApiSession({
           ts,
           program: programWithBootstrap,
-          ...(typeTargetSpecs.length > 0
-            ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
+          ...(mergedTypeTargetSpecs.length > 0
+            ? { typeTargetSpecs: mergedTypeTargetSpecs, failWhenNoTargetsResolved: false }
             : {}),
         });
         log("pre-created TypeInfoApiSession OK");
@@ -240,7 +256,13 @@ function init(modules: { typescript: typeof import("typescript") }): {
       const fromProject = projectLike.getProgram?.();
       if (fromProject !== undefined) return fromProject;
       if (cachedFallbackProgram !== undefined) return cachedFallbackProgram;
-      const fallback = createFallbackProgram(ts, projectRoot, log, tsconfigPath, typeTargetSpecs);
+      const fallback = createFallbackProgram(
+        ts,
+        projectRoot,
+        log,
+        tsconfigPath,
+        mergedTypeTargetSpecs,
+      );
       if (fallback !== undefined) cachedFallbackProgram = fallback;
       return fallback;
     };
@@ -277,13 +299,13 @@ function init(modules: { typescript: typeof import("typescript") }): {
             ts,
             program,
             projectRoot,
-            typeTargetSpecs,
+            mergedTypeTargetSpecs,
           );
           session = createTypeInfoApiSession({
             ts,
             program: programWithBootstrap,
-            ...(typeTargetSpecs.length > 0
-              ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
+            ...(mergedTypeTargetSpecs.length > 0
+              ? { typeTargetSpecs: mergedTypeTargetSpecs, failWhenNoTargetsResolved: false }
               : {}),
           });
         } catch (err) {

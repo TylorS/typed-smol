@@ -1,6 +1,7 @@
 /**
- * Tests for defineApiHandler: runtime behavior and compile-time positive/negative typing.
+ * Tests for ApiHandler (defineApiHandler): runtime behavior and compile-time positive/negative typing.
  * Handler receives { path, query, headers, body }; schemas optional (headers, body, success, error).
+ * API: ApiHandler(route, schemas?)(handler)
  * @see .docs/specs/httpapi-virtual-module-plugin/testing-strategy.md (TS-15)
  */
 
@@ -8,7 +9,7 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vitest";
 import * as Route from "@typed/router/Route";
-import { defineApiHandler } from "./httpapi/defineApiHandler.js";
+import { ApiHandler } from "./index.js";
 
 describe("defineApiHandler", () => {
   const route = Route.Join(Route.Parse("users"), Route.Param("id"));
@@ -20,20 +21,14 @@ describe("defineApiHandler", () => {
   };
 
   it("returns handler in curried form and preserves identity", () => {
-    const handler = defineApiHandler(
-      route,
-      "GET",
-      schemas,
-    )((ctx) => Effect.succeed({ ok: true, id: ctx.path.id }));
+    const handler = ApiHandler(route, schemas)((ctx) =>
+      Effect.succeed({ ok: true, id: ctx.path.id }),
+    );
     expect(typeof handler).toBe("function");
   });
 
   it("handler context has typed path, query, headers, body", () => {
-    const handler = defineApiHandler(
-      route,
-      "GET",
-      schemas,
-    )((ctx) => {
+    const handler = ApiHandler(route, schemas)((ctx) => {
       const _path = ctx.path;
       const _query: Record<string, string | string[] | undefined> = ctx.query;
       const _body: { name: string } = ctx.body;
@@ -47,11 +42,9 @@ describe("defineApiHandler", () => {
   });
 
   it("handler return type is Effect<Success, Error>", () => {
-    const handler = defineApiHandler(
-      route,
-      "POST",
-      schemas,
-    )((ctx) => Effect.succeed({ ok: true, id: ctx.path.id }));
+    const handler = ApiHandler(route, schemas)((ctx) =>
+      Effect.succeed({ ok: true, id: ctx.path.id }),
+    );
     const run = Effect.runPromise(
       handler({
         path: { id: "1" },
@@ -66,15 +59,12 @@ describe("defineApiHandler", () => {
   });
 
   it("accepts Router.Route from Parse for simple path", () => {
-    const route = Route.Parse("status");
-    const handler = defineApiHandler(route, "GET")(() => Effect.succeed({ status: "ok" }));
+    const statusRoute = Route.Parse("status");
+    const handler = ApiHandler(statusRoute, {
+      success: Schema.Struct({ status: Schema.String }),
+    })(() => Effect.succeed({ status: "ok" }));
     const run = Effect.runPromise(
-      handler({
-        path: {},
-        query: {},
-        body: undefined,
-        headers: {},
-      }),
+      handler({ path: {}, query: {}, headers: {}, body: undefined }),
     );
     return run.then((v) => expect(v).toEqual({ status: "ok" }));
   });
@@ -90,22 +80,14 @@ describe("defineApiHandler compile-time negative tests", () => {
   };
 
   it("rejects handler returning wrong success shape (ts-expect-error)", () => {
-    defineApiHandler(
-      route,
-      "GET",
-      schemas,
-    )(
+    ApiHandler(route, schemas)(
       // @ts-expect-error invalid return type
       () => Effect.succeed(42),
     );
   });
 
   it("rejects handler using wrong path shape (ts-expect-error)", () => {
-    defineApiHandler(
-      route,
-      "GET",
-      schemas,
-    )((ctx) => {
+    ApiHandler(route, schemas)((ctx) => {
       // @ts-expect-error - ctx.path is { id: string }; number is not assignable to string
       const _wrong: { id: number } = ctx.path;
       return Effect.succeed({ ok: true });

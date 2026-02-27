@@ -204,15 +204,22 @@ function toRoute(
         return HttpServerResponse.text(html, {
           headers: { "content-type": "text/html; charset=utf-8" },
         });
-      } else {
-        return HttpServerResponse.stream(
-          renderToHtml(withCatches).pipe(
-            Fx.provideServices(handlerServices),
-            Fx.toStream,
-            Stream.encodeText,
-          ),
-        );
       }
+      if (!options?.viteDevServer) {
+        const html = yield* renderToHtmlString(withCatches).pipe(
+          Effect.provideServices(handlerServices),
+        );
+        return HttpServerResponse.text(html, {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      }
+      return HttpServerResponse.stream(
+        renderToHtml(withCatches).pipe(
+          Fx.provideServices(handlerServices),
+          Fx.toStream,
+          Stream.encodeText,
+        ),
+      );
     }),
     uninterruptible: false,
     prefix: undefined,

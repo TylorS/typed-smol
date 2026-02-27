@@ -104,7 +104,7 @@ describe("typed/ui/HttpRouter", () => {
     );
     const Live = HttpRouter.use(
       Effect.fn(function* (router) {
-        yield* ssrForHttp(router, matcher);
+        yield* ssrForHttp(matcher)(router);
         yield* handleHttpServerError(router);
       }),
     ).pipe(

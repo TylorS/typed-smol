@@ -2,6 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import * as ts from "typescript";
 import {
+  createRouterVirtualModulePlugin,
+  createHttpApiVirtualModulePlugin,
+  loadTypedConfig,
+} from "@typed/app";
+import {
   collectTypeTargetSpecsFromPlugins,
   createTypeInfoApiSession,
   createVirtualFileName,
@@ -116,12 +121,18 @@ function getProgramForProject(projectRoot: string): ts.Program | undefined {
       undefined,
       tsconfigPath,
     );
-    if (parsed.errors.length > 0) return undefined;
+    if (parsed.fileNames.length === 0) return undefined;
+
+    const baseHost = ts.createCompilerHost(parsed.options, true);
+    const host = {
+      ...baseHost,
+      getCurrentDirectory: () => configDir,
+    };
 
     const program = ts.createProgram(
       parsed.fileNames,
       parsed.options,
-      ts.createCompilerHost(parsed.options),
+      host,
     );
     programCache.set(projectRoot, program);
     return program;
@@ -153,20 +164,58 @@ export function createResolver(projectRoot: string): {
     ...(vmcConfigPath ? { configPath: vmcConfigPath } : {}),
   });
 
-  let typeTargetSpecs: readonly import("@typed/virtual-modules").TypeTargetSpec[] | undefined;
-  if (loadedResolver.status === "loaded") {
-    resolver = loadedResolver.resolver;
-    pluginSpecifiers = loadedResolver.pluginSpecifiers;
-    typeTargetSpecs = loadedResolver.typeTargetSpecs;
+  const typedConfigResult = loadTypedConfig({ projectRoot, ts });
+  const typedConfig =
+    typedConfigResult.status === "loaded" ? typedConfigResult.config : undefined;
+
+  const vmcPlugins =
+    loadedResolver.status === "loaded" && loadedResolver.resolver
+      ? ((loadedResolver.resolver as PluginManager).plugins ?? [])
+      : [];
+
+  const builtInPlugins = [
+    createRouterVirtualModulePlugin({
+      ...(typedConfig?.router ? { prefix: typedConfig.router.prefix } : {}),
+      lenientDepsValidation: true,
+    }),
+    createHttpApiVirtualModulePlugin(
+      typedConfig?.api
+        ? {
+            prefix: typedConfig.api.prefix,
+            pathPrefix: typedConfig.api.pathPrefix,
+          }
+        : {},
+    ),
+  ];
+
+  // Built-in plugins first so router:/api: resolve with our TypeInfo session; vmc custom plugins handle virtual: etc.
+  const plugins = [...builtInPlugins, ...vmcPlugins];
+  resolver = new PluginManager(plugins);
+  pluginSpecifiers =
+    loadedResolver.status === "loaded"
+      ? loadedResolver.pluginSpecifiers
+      : [];
+
+  let typeTargetSpecs = collectTypeTargetSpecsFromPlugins(plugins);
+  const vmcTypeTargetSpecs =
+    loadedResolver.status === "loaded" ? loadedResolver.typeTargetSpecs : undefined;
+  if (vmcTypeTargetSpecs && vmcTypeTargetSpecs.length > 0) {
+    typeTargetSpecs = [...vmcTypeTargetSpecs, ...typeTargetSpecs];
   }
 
-  // Backward-compatible fallback for legacy tsconfig plugin-specifier lists.
-  if (!resolver && legacyPluginSpecifiers.length > 0) {
-    const loadedPlugins = loadPluginsFromEntries(legacyPluginSpecifiers, projectRoot);
+  // Backward-compatible fallback for legacy tsconfig plugin-specifier lists when vmc has no resolver.
+  if (vmcPlugins.length === 0 && legacyPluginSpecifiers.length > 0) {
+    const loadedPlugins = loadPluginsFromEntries(
+      legacyPluginSpecifiers,
+      projectRoot,
+    );
     pluginSpecifiers = legacyPluginSpecifiers;
     if (loadedPlugins.plugins.length > 0) {
-      resolver = new PluginManager(loadedPlugins.plugins);
-      typeTargetSpecs ??= collectTypeTargetSpecsFromPlugins(loadedPlugins.plugins);
+      resolver = new PluginManager([...loadedPlugins.plugins, ...builtInPlugins]);
+      typeTargetSpecs = [
+        ...(collectTypeTargetSpecsFromPlugins(loadedPlugins.plugins) ?? []),
+        ...typeTargetSpecs,
+      ];
     }
   }
 

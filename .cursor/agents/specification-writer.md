@@ -1,6 +1,6 @@
 ---
 name: specification-writer
-model: gpt-5.3-codex-xhigh
+model: default
 description: Behavioral Spec / Contract Design
 ---
 

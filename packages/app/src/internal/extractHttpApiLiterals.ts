@@ -23,17 +23,26 @@ function getLiteralText(node: TypeNode | undefined): string | null {
   return (node as LiteralTypeNode).text || null;
 }
 
+/** Strips surrounding double quotes from TypeScript literal text (e.g. '"/api"' -> '/api'). */
+function stripSurroundingQuotes(s: string): string {
+  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+    return s.slice(1, -1);
+  }
+  return s;
+}
+
 /** Extracts path string from Route-like type (literal, object.path, or Route reference). */
 export function getPathFromRouteType(type: TypeNode): string | null {
   if (type.kind === "literal") {
-    const raw = (type as LiteralTypeNode).text;
+    const raw = stripSurroundingQuotes((type as LiteralTypeNode).text ?? "");
     return raw ? (raw.startsWith("/") ? raw : `/${raw}`) : null;
   }
   if (type.kind === "object") {
     const pathProp = (type as ObjectTypeNode).properties.find((p) => p.name === "path");
     if (!pathProp) return null;
     const raw = getLiteralText(pathProp.type);
-    return raw ? (raw.startsWith("/") ? raw : `/${raw}`) : null;
+    const cleaned = raw ? stripSurroundingQuotes(raw) : null;
+    return cleaned ? (cleaned.startsWith("/") ? cleaned : `/${cleaned}`) : null;
   }
   if (type.kind === "reference") {
     const typeArgs = (type as ReferenceTypeNode).typeArguments;

@@ -1,6 +1,6 @@
 ---
 name: test-strategist
-model: composer-1.5
+model: default
 description: Test Design / Validation Coverage
 ---
 

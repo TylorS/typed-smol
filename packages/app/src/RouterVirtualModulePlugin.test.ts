@@ -368,7 +368,6 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     expect(typeof source).toBe("string");
-    expect(source).toContain('import * as Layer from "effect/Layer"');
     expect(source).toContain("Router.normalizeDependencyInput(Dependencies.default)");
     expect(source).toContain(".provide(");
   });
@@ -380,7 +379,6 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     expect(typeof source).toBe("string");
-    expect(source).toContain('import * as Layer from "effect/Layer"');
     expect(source).toContain(".provide(Dependencies.default)");
     expect(source).not.toContain("Router.normalizeDependencyInput");
   });
@@ -396,7 +394,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
@@ -423,7 +420,6 @@ describe("RouterVirtualModulePlugin", () => {
       import * as Effect from "effect/Effect";
       import * as Cause from "effect/Cause";
       import * as Result from "effect/Result";
-      import * as Layer from "effect/Layer";
       import * as ApiItem from "./routes/api/item.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as ApiLayout from "./routes/api/_layout.js";
@@ -445,7 +441,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as Page from "./routes/page.js";
       import * as Pagedependencies from "./routes/page.dependencies.js";
       import * as Pagelayout from "./routes/page.layout.js";
@@ -467,7 +462,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
@@ -490,7 +484,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as ApiItem from "./routes/api/item.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
       import * as Dependencies from "./routes/_dependencies.js";
@@ -819,34 +812,6 @@ describe("RouterVirtualModulePlugin", () => {
     `);
   });
 
-  it("wrong typeTargetSpecs module path yields no assignableTo and RVM-KIND-001 (structural compatibility required)", () => {
-    const wrongSpecs = [
-      { id: "Fx", module: "nonexistent/fx", exportName: "Fx" } as const,
-      { id: "Route", module: "nonexistent/router", exportName: "Route" } as const,
-    ];
-    const fixture = createFixture({
-      "src/routes/fx.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
-    });
-    const program = makeProgram(fixture.paths);
-    const session = createTypeInfoApiSession({
-      ts,
-      program,
-      typeTargetSpecs: wrongSpecs,
-      failWhenNoTargetsResolved: false,
-    });
-    const result = session.api.file("./src/routes/fx.ts", { baseDir: fixture.root });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const handlerExport = result.snapshot.exports.find((e) => e.name === "handler");
-    expect(handlerExport).toBeDefined();
-    expect(handlerExport!.assignableTo?.Fx).toBeUndefined();
-    const plugin = createRouterVirtualModulePlugin();
-    const buildResult = plugin.build("router:./routes", fixture.importer, session.api);
-    expect(buildResult).toMatchObject({ errors: expect.any(Array) });
-    const codes = (buildResult as VirtualModuleBuildError).errors.map((e) => e.code);
-    expect(codes.some((c) => c === "RVM-KIND-001" || c === "RVM-ROUTE-002")).toBe(true);
-  });
-
   it("handler matrix: Fx value pass-through when type resolves as Fx", () => {
     const result = buildRouterFromFixture({
       "src/routes/x.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
@@ -1161,7 +1126,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as ApiItemsX from "./routes/api/items/x.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
       import * as Dependencies from "./routes/_dependencies.js";

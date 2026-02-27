@@ -187,6 +187,10 @@ export function siblingCompanionPath(leafFilePath: string, kind: ConcernKind): s
   return dir ? toPosixPath(join(dir, file)) : file;
 }
 
+export type BuildRouteDescriptorsOptions = {
+  readonly lenientDepsValidation?: boolean;
+};
+
 /**
  * Build route descriptors and validate guards, catches, and dependencies from type info snapshots.
  */
@@ -194,6 +198,7 @@ export function buildRouteDescriptors(
   snapshots: readonly TypeInfoFileSnapshot[],
   baseDir: string,
   api: TypeInfoApi,
+  options: BuildRouteDescriptorsOptions = {},
 ): {
   readonly descriptors: readonly RouteDescriptor[];
   readonly violations: readonly RouteContractViolation[];
@@ -202,6 +207,7 @@ export function buildRouteDescriptors(
   readonly catchFormByPath: CatchFormByPath;
   readonly depsFormByPath: DepsFormByPath;
 } {
+  const { lenientDepsValidation = false } = options;
   const descriptors: RouteDescriptor[] = [];
   const violations: RouteContractViolation[] = [];
   const existingPaths = new Set(snapshots.map((s) => toPosixPath(relative(baseDir, s.filePath))));
@@ -435,13 +441,18 @@ export function buildRouteDescriptors(
     }
     const kind = classifyDepsExport(defaultExport.type, api);
     if (kind === "unknown") {
-      depsViolations.push({
-        code: "RVM-DEPS-001",
-        message: `${relPath} default export type could not be determined. Must be Layer, ServiceMap, or Array.`,
-      });
-      continue;
+      if (lenientDepsValidation) {
+        depsFormByPath[relPath] = "array";
+      } else {
+        depsViolations.push({
+          code: "RVM-DEPS-001",
+          message: `${relPath} default export type could not be determined. Must be Layer, ServiceMap, or Array.`,
+        });
+        continue;
+      }
+    } else {
+      depsFormByPath[relPath] = kind;
     }
-    depsFormByPath[relPath] = kind;
   }
 
   const infileCompanionViolations: RouteContractViolation[] = [];

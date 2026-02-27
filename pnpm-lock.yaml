@@ -425,6 +425,9 @@ importers:
       '@typed/app':
         specifier: workspace:*
         version: link:../../app
+      '@typed/cli':
+        specifier: workspace:*
+        version: link:../../cli
       '@typed/fx':
         specifier: workspace:*
         version: link:../../fx
@@ -456,6 +459,9 @@ importers:
       esbuild:
         specifier: ^0.24.2
         version: 0.24.2
+      vite:
+        specifier: 'catalog:'
+        version: 7.3.1(@types/node@25.3.0)(yaml@2.8.2)
 
   packages/virtual-modules-vite:
     dependencies:
@@ -478,6 +484,9 @@ importers:
 
   packages/virtual-modules-vscode:
     dependencies:
+      '@typed/app':
+        specifier: workspace:*
+        version: link:../app
       '@typed/virtual-modules':
         specifier: workspace:*
         version: link:../virtual-modules

@@ -16,6 +16,7 @@
     "compile": "npm run build"
   },
   "dependencies": {
+    "@typed/app": "workspace:*",
     "@typed/virtual-modules": "workspace:*"
   },
   "devDependencies": {
