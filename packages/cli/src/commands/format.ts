@@ -16,20 +16,14 @@ export const format = Command.make("format", {
     Flag.withDefault(false),
     Flag.withDescription("Check formatting without writing"),
   ),
-  printWidth: Flag.optional(Flag.integer("print-width")).pipe(
-    Flag.withDescription("Line width"),
-  ),
-  tabWidth: Flag.optional(Flag.integer("tab-width")).pipe(
-    Flag.withDescription("Tab width"),
-  ),
+  printWidth: Flag.optional(Flag.integer("print-width")).pipe(Flag.withDescription("Line width")),
+  tabWidth: Flag.optional(Flag.integer("tab-width")).pipe(Flag.withDescription("Tab width")),
   useTabs: Flag.boolean("use-tabs").pipe(
     Flag.withDefault(false),
     Flag.withDescription("Use tabs instead of spaces"),
   ),
-  targets: Argument.repeated(
-    Argument.text("targets").pipe(
-      Argument.withDescription("Files or directories to format"),
-    ),
+  targets: Argument.variadic(
+    Argument.string("targets").pipe(Argument.withDescription("Files or directories to format")),
   ),
 }).pipe(
   Command.withDescription("Format with oxfmt"),
@@ -38,9 +32,7 @@ export const format = Command.make("format", {
       const projectRoot = process.cwd();
       const bin = findBinary("oxfmt", projectRoot);
       if (!bin) {
-        return yield* Effect.fail(
-          new Error("oxfmt is not installed. Run: pnpm add -D oxfmt"),
-        );
+        return yield* Effect.fail(new Error("oxfmt is not installed. Run: pnpm add -D oxfmt"));
       }
 
       const loaded = loadProjectConfig(projectRoot);

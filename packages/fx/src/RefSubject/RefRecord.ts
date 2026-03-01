@@ -3,6 +3,7 @@
  * @since 1.18.0
  */
 
+import { Result } from "effect";
 import type * as Effect from "effect/Effect";
 import { equals } from "effect/Equal";
 import { dual } from "effect/Function";
@@ -450,7 +451,11 @@ export const filterMapValues: {
   R,
   B,
 >(ref: RefRecord<K, V, E, R>, f: (value: V, key: K) => Option.Option<B>) {
-  return RefSubject.map(ref, (r) => Record.filterMap(r, f) as Record.ReadonlyRecord<K, B>);
+  return RefSubject.map(ref, (r) =>
+    Record.filterMap(r, (value, key) =>
+      f(value, key) ? Result.succeed(value) : Result.fail(value),
+    ),
+  );
 });
 
 /**
@@ -477,7 +482,9 @@ export const partition: {
   return RefSubject.map(
     ref,
     (r) =>
-      Record.partition(r, predicate) as [Record.ReadonlyRecord<K, V>, Record.ReadonlyRecord<K, V>],
+      Record.partition(r, (value, key) =>
+        predicate(value, key) ? Result.succeed(value) : Result.fail(value),
+      ) as [Record.ReadonlyRecord<K, V>, Record.ReadonlyRecord<K, V>],
   );
 });
 

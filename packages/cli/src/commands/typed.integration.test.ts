@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, it, expect } from "vitest";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
@@ -49,10 +50,7 @@ describe("typed CLI integration", () => {
       expect.fail("Expected build to fail");
     } catch (e: unknown) {
       const err = e as { stdout?: Buffer; stderr?: Buffer; status?: number };
-      const output = [
-        err.stdout?.toString?.() ?? "",
-        err.stderr?.toString?.() ?? "",
-      ].join("");
+      const output = [err.stdout?.toString?.() ?? "", err.stderr?.toString?.() ?? ""].join("");
       expect(output).toMatch(/Server entry not found|No server entry/i);
     }
   });

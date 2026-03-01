@@ -12,6 +12,7 @@ import type * as Order from "effect/Order";
 import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
 import * as RefSubject from "./RefSubject.js";
+import { Result } from "effect";
 
 /**
  * A RefChunk is a RefSubject specialized over a Chunk of values.
@@ -356,7 +357,7 @@ export const partition: {
     predicate: (a: A) => boolean,
   ): RefSubject.Computed<[Chunk.Chunk<A>, Chunk.Chunk<A>], E, R>;
 } = dual(2, function partition<A, E, R>(ref: RefChunk<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.map(ref, Chunk.partition(predicate));
+  return RefSubject.map(ref, Chunk.partition(Result.liftPredicate(predicate, Result.fail)));
 });
 
 /**

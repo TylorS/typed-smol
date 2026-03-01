@@ -5,11 +5,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { loadProjectConfig, resolveBoolean } from "../shared/loadConfig.js";
 
-const OXLINT_CONFIG_NAMES = [
-  ".oxlintrc.json",
-  "oxlint.config.ts",
-  "oxlint.config.js",
-] as const;
+const OXLINT_CONFIG_NAMES = [".oxlintrc.json", "oxlint.config.ts", "oxlint.config.js"] as const;
 
 function findOxlintConfig(projectRoot: string): string | undefined {
   for (const name of OXLINT_CONFIG_NAMES) {
@@ -26,20 +22,15 @@ function findBinary(name: string, projectRoot: string): string | undefined {
 }
 
 export const lint = Command.make("lint", {
-  fix: Flag.boolean("fix").pipe(
-    Flag.withDefault(false),
-    Flag.withDescription("Apply auto-fixes"),
-  ),
+  fix: Flag.boolean("fix").pipe(Flag.withDefault(false), Flag.withDescription("Apply auto-fixes")),
   rule: Flag.optional(Flag.string("rule")).pipe(
     Flag.withDescription("Override a rule level (e.g. no-unused-vars=error)"),
   ),
   category: Flag.optional(Flag.string("category")).pipe(
     Flag.withDescription("Override a category level (e.g. correctness=error)"),
   ),
-  targets: Argument.repeated(
-    Argument.text("targets").pipe(
-      Argument.withDescription("Files or directories to lint"),
-    ),
+  targets: Argument.variadic(
+    Argument.string("targets").pipe(Argument.withDescription("Files or directories to lint")),
   ),
 }).pipe(
   Command.withDescription("Lint with oxlint"),
@@ -48,9 +39,7 @@ export const lint = Command.make("lint", {
       const projectRoot = process.cwd();
       const bin = findBinary("oxlint", projectRoot);
       if (!bin) {
-        return yield* Effect.fail(
-          new Error("oxlint is not installed. Run: pnpm add -D oxlint"),
-        );
+        return yield* Effect.fail(new Error("oxlint is not installed. Run: pnpm add -D oxlint"));
       }
 
       const loaded = loadProjectConfig(projectRoot);
@@ -73,7 +62,7 @@ export const lint = Command.make("lint", {
 
         if (lintConfig?.rules) {
           for (const [rule, level] of Object.entries(lintConfig.rules)) {
-            args.push("--rule", `${rule}=${level}`);
+            args.push("--rule", `${rule}=${String(level)}`);
           }
         }
 

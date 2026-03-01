@@ -1240,12 +1240,10 @@ export const runUpdates: {
   <A, E, R, B, E2, R2, R3 = never, E3 = never, C = never>(
     ref: RefSubject<A, E, R>,
     f: (ref: GetSetDelete<A, E, R>) => Effect.Effect<B, E2, R2>,
-    options?:
-      | {
-          readonly onInterrupt: (value: A) => Effect.Effect<C, E3, R3>;
-          readonly value?: "initial" | "current";
-        }
-      | undefined,
+    options?: {
+      readonly onInterrupt: (value: A) => Effect.Effect<C, E3, R3>;
+      readonly value?: "initial" | "current";
+    },
   ): Effect.Effect<B, E | E2 | E3, R | R2 | R3>;
 } = dual(
   isRefSubjectDataFirst,

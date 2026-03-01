@@ -11,6 +11,7 @@ import * as Option from "effect/Option";
 import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
 import * as RefSubject from "./RefSubject.js";
+import { Result } from "effect";
 
 /**
  * A RefHashMap is a RefSubject specialized over a HashMap.
@@ -354,7 +355,15 @@ export const filterMapValues: {
   R,
   B,
 >(ref: RefHashMap<K, V, E, R>, f: (value: V, key: K) => Option.Option<B>) {
-  return RefSubject.map(ref, HashMap.filterMap(f));
+  return RefSubject.map(
+    ref,
+    HashMap.filterMap((value, key) =>
+      Option.match(f(value, key), {
+        onNone: () => Result.failVoid,
+        onSome: (b) => Result.succeed(b),
+      }),
+    ),
+  );
 });
 
 /**

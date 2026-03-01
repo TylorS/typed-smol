@@ -3,11 +3,12 @@
  * @since 1.18.0
  */
 
+import { Result } from "effect";
 import type * as Effect from "effect/Effect";
 import { equals } from "effect/Equal";
 import { dual } from "effect/Function";
 import * as Iterable from "effect/Iterable";
-import type * as Option from "effect/Option";
+import * as Option from "effect/Option";
 import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
 import * as RefSubject from "./RefSubject.js";
@@ -233,7 +234,15 @@ export const filterMap: {
   E,
   R,
 >(ref: RefIterable<A, E, R>, f: (a: A, index: number) => Option.Option<A>) {
-  return RefSubject.update(ref, Iterable.filterMap(f));
+  return RefSubject.update(
+    ref,
+    Iterable.filterMap((a, index) =>
+      Option.match(f(a, index), {
+        onNone: () => Result.failVoid,
+        onSome: (b) => Result.succeed(b),
+      }),
+    ),
+  );
 });
 
 /**

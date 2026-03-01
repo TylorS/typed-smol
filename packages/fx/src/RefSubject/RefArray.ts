@@ -14,6 +14,7 @@ import type * as Order from "effect/Order";
 import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
 import * as RefSubject from "./RefSubject.js";
+import { Filter, Result } from "effect";
 
 /**
  * A RefArray is a RefSubject that is specialized over an array of values.
@@ -310,7 +311,9 @@ export const partition: {
     predicate: (a: A) => boolean,
   ): RefSubject.Computed<never, E, readonly [ReadonlyArray<A>, ReadonlyArray<A>]>;
 } = dual(2, function partition<A, E, R>(ref: RefArray<A, E, R>, predicate: (a: A) => boolean) {
-  return RefSubject.map(ref, ReadonlyArray.partition(predicate));
+  return RefSubject.map(ref, (array) =>
+    ReadonlyArray.partition(array, Result.liftPredicate(predicate, Result.fail)),
+  );
 });
 
 /**

@@ -202,7 +202,7 @@ export const filterMap: {
     f: (o: O) => Option.Option<B>,
   ): Guard<I, B, E, R> => {
     const g = getGuard(guard);
-    return (i) => Effect.mapEager(g(i), Option.filterMap(f));
+    return (i) => Effect.mapEager(g(i), Option.flatMap(f));
   },
 );
 

@@ -1,6 +1,6 @@
 {
   "name": "@typed/virtual-modules-ts-plugin",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "type": "commonjs",
   "main": "dist/plugin.js",
   "exports": {

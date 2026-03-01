@@ -6,11 +6,12 @@
 import type * as Effect from "effect/Effect";
 import { equals } from "effect/Equal";
 import { dual } from "effect/Function";
-import type * as Option from "effect/Option";
+import * as Option from "effect/Option";
 import type * as Scope from "effect/Scope";
 import * as Trie from "effect/Trie";
 import type * as Fx from "../Fx/index.js";
 import * as RefSubject from "./RefSubject.js";
+import { Result } from "effect";
 
 /**
  * A RefTrie is a RefSubject specialized over a Trie.
@@ -122,13 +123,13 @@ export const clear = <V, E, R>(ref: RefTrie<V, E, R>): Effect.Effect<Trie.Trie<V
 export const map: {
   <V>(
     f: (value: V, key: string) => V,
-  ): <E, R>(ref: RefTrie<V, E, R>) => Effect.Effect<Trie.Trie<V>, E, R>;
+  ): <E, R>(ref: RefTrie<V, E, R>) => RefSubject.Computed<Trie.Trie<V>, E, R>;
   <V, E, R>(
     ref: RefTrie<V, E, R>,
     f: (value: V, key: string) => V,
-  ): Effect.Effect<Trie.Trie<V>, E, R>;
+  ): RefSubject.Computed<Trie.Trie<V>, E, R>;
 } = dual(2, function map<V, E, R>(ref: RefTrie<V, E, R>, f: (value: V, key: string) => V) {
-  return RefSubject.update(ref, Trie.map(f));
+  return RefSubject.map(ref, Trie.map(f));
 });
 
 /**
@@ -139,17 +140,17 @@ export const map: {
 export const filter: {
   <V>(
     predicate: (value: V, key: string) => boolean,
-  ): <E, R>(ref: RefTrie<V, E, R>) => Effect.Effect<Trie.Trie<V>, E, R>;
+  ): <E, R>(ref: RefTrie<V, E, R>) => RefSubject.Computed<Trie.Trie<V>, E, R>;
   <V, E, R>(
     ref: RefTrie<V, E, R>,
     predicate: (value: V, key: string) => boolean,
-  ): Effect.Effect<Trie.Trie<V>, E, R>;
+  ): RefSubject.Computed<Trie.Trie<V>, E, R>;
 } = dual(2, function filter<
   V,
   E,
   R,
 >(ref: RefTrie<V, E, R>, predicate: (value: V, key: string) => boolean) {
-  return RefSubject.update(ref, Trie.filter(predicate));
+  return RefSubject.map(ref, Trie.filter(predicate));
 });
 
 /**
@@ -160,17 +161,25 @@ export const filter: {
 export const filterMap: {
   <V>(
     f: (value: V, key: string) => Option.Option<V>,
-  ): <E, R>(ref: RefTrie<V, E, R>) => Effect.Effect<Trie.Trie<V>, E, R>;
+  ): <E, R>(ref: RefTrie<V, E, R>) => RefSubject.Computed<Trie.Trie<V>, E, R>;
   <V, E, R>(
     ref: RefTrie<V, E, R>,
     f: (value: V, key: string) => Option.Option<V>,
-  ): Effect.Effect<Trie.Trie<V>, E, R>;
+  ): RefSubject.Computed<Trie.Trie<V>, E, R>;
 } = dual(2, function filterMap<
   V,
   E,
   R,
 >(ref: RefTrie<V, E, R>, f: (value: V, key: string) => Option.Option<V>) {
-  return RefSubject.update(ref, Trie.filterMap(f));
+  return RefSubject.map(
+    ref,
+    Trie.filterMap((value, key) =>
+      Option.match(f(value, key), {
+        onNone: () => Result.failVoid,
+        onSome: (b) => Result.succeed(b),
+      }),
+    ),
+  );
 });
 
 // ========================================
