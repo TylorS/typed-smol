@@ -1,4 +1,4 @@
-import { Effect, Option } from "effect";
+import { Effect } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
