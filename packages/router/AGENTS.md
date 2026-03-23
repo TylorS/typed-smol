@@ -22,6 +22,11 @@ The router provides **typed routing** for client and server Effect apps: path an
 - `Route`, `Matcher`, `CurrentRoute`, `Router`, `BrowserRouter`, `ServerRouter`, `TestRouter`
 - Dependencies: `@typed/fx`, `@typed/guard`, `@typed/id`, `@typed/navigation`, `effect`, `find-my-way-ts`, `hkt-core`
 
+## Testing
+
+- **Node (default):** `pnpm --filter @typed/router run test` — `Matcher.test.ts`, `Route.test.ts`, `Path.test.ts` via [`vitest.config.ts`](vitest.config.ts).
+- **Browser (Chromium):** `pnpm --filter @typed/router run test:browser` — [`Matcher.browser.test.ts`](src/Matcher.browser.test.ts) via [`vitest.browser.config.ts`](vitest.browser.config.ts) and `@vitest/browser-playwright`. One-time (or CI) browser binaries: `pnpm exec playwright install chromium`.
+
 ## Constraints
 
 - Effect skill loading: `.cursor/rules/effect-skill-loading.mdc`
