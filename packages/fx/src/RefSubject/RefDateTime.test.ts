@@ -10,21 +10,21 @@ describe("RefDateTime", () => {
       const value = DateTime.nowUnsafe();
       const ref = yield* RefDateTime.make(value);
       const current = yield* ref;
-      expect(current.epochMillis).toBe(value.epochMillis);
+      expect(DateTime.toEpochMillis(current)).toBe(DateTime.toEpochMillis(value));
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("adds duration", () =>
     Effect.gen(function* () {
       const ref = yield* RefDateTime.make(DateTime.makeUnsafe(0));
       const result = yield* RefDateTime.addDuration(ref, Duration.seconds(5));
-      expect(result.epochMillis).toBe(5000);
+      expect(DateTime.toEpochMillis(result)).toBe(5000);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("subtracts duration", () =>
     Effect.gen(function* () {
       const ref = yield* RefDateTime.make(DateTime.makeUnsafe(10000));
       const result = yield* RefDateTime.subtractDuration(ref, Duration.seconds(3));
-      expect(result.epochMillis).toBe(7000);
+      expect(DateTime.toEpochMillis(result)).toBe(7000);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("gets epoch milliseconds", () =>

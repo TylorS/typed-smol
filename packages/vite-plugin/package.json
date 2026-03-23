@@ -19,14 +19,14 @@
     "@typed/app": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
     "@typed/virtual-modules-vite": "workspace:*",
-    "rollup-plugin-visualizer": "^5.12.0",
+    "rollup-plugin-visualizer": "^7.0.1",
     "vite-plugin-compression": "^0.5.1",
-    "vite-tsconfig-paths": "^6.1.0"
+    "vite-tsconfig-paths": "^6.1.1"
   },
   "devDependencies": {
-    "@types/node": "^25.3.0",
+    "@types/node": "^25.5.0",
     "typescript": "catalog:",
-    "vite": "^7.3.1",
+    "vite": "^8.0.2",
     "vitest": "catalog:"
   },
   "peerDependencies": {

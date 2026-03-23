@@ -100,7 +100,7 @@ export const modify: {
   E,
   R,
 >(ref: RefRecord<K, V, E, R>, key: K, f: (v: V) => V) {
-  return RefSubject.update(ref, (r) => Record.modify(r, key, f) ?? r);
+  return RefSubject.update(ref, (r) => Option.getOrElse(Record.modify(r, key, f), () => r));
 });
 
 /**
@@ -124,7 +124,7 @@ export const replace: {
   E,
   R,
 >(ref: RefRecord<K, V, E, R>, key: K, value: V) {
-  return RefSubject.update(ref, (r) => Record.replace(r, key, value) ?? r);
+  return RefSubject.update(ref, (r) => Option.getOrElse(Record.replace(r, key, value), () => r));
 });
 
 /**
@@ -592,7 +592,7 @@ export const findFirst: {
   E,
   R,
 >(ref: RefRecord<K, V, E, R>, predicate: (value: V, key: K) => boolean) {
-  return RefSubject.filterMap(ref, (r) => Option.fromNullishOr(Record.findFirst(r, predicate)));
+  return RefSubject.filterMap(ref, (r) => Record.findFirst(r, predicate));
 });
 
 /**
@@ -612,8 +612,8 @@ export const pop: {
   ): RefSubject.Filtered<[V, Record.ReadonlyRecord<K, V>], E, R>;
 } = dual(2, function pop<K extends string, V, E, R>(ref: RefRecord<K, V, E, R>, key: K) {
   return RefSubject.filterMap(ref, (r) => {
-    const result = Record.pop(r, key);
-    if (result === undefined) return Option.none();
-    return Option.some([result[0], result[1] as Record.ReadonlyRecord<K, V>]);
+    return Option.map(Record.pop(r, key), ([value, next]) =>
+      [value, next as Record.ReadonlyRecord<K, V>] as [V, Record.ReadonlyRecord<K, V>],
+    );
   });
 });

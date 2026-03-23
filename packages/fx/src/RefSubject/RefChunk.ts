@@ -8,6 +8,7 @@ import type * as Effect from "effect/Effect";
 import { equals } from "effect/Equal";
 import type { Equivalence } from "effect/Equivalence";
 import { dual } from "effect/Function";
+import * as Option from "effect/Option";
 import type * as Order from "effect/Order";
 import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
@@ -183,7 +184,9 @@ export const modifyAt: {
     f: (a: A) => A,
   ): Effect.Effect<Chunk.Chunk<A>, E, R>;
 } = dual(3, function modifyAt<A, E, R>(ref: RefChunk<A, E, R>, index: number, f: (a: A) => A) {
-  return RefSubject.update(ref, (chunk) => Chunk.modify(chunk, index, f) ?? chunk);
+  return RefSubject.update(ref, (chunk) =>
+    Option.getOrElse(Chunk.modify(chunk, index, f), () => chunk),
+  );
 });
 
 /**
@@ -195,7 +198,9 @@ export const replaceAt: {
   <A>(index: number, a: A): <E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
   <A, E, R>(ref: RefChunk<A, E, R>, index: number, a: A): Effect.Effect<Chunk.Chunk<A>, E, R>;
 } = dual(3, function replaceAt<A, E, R>(ref: RefChunk<A, E, R>, index: number, a: A) {
-  return RefSubject.update(ref, (chunk) => Chunk.replace(chunk, index, a) ?? chunk);
+  return RefSubject.update(ref, (chunk) =>
+    Option.getOrElse(Chunk.replace(chunk, index, a), () => chunk),
+  );
 });
 
 /**

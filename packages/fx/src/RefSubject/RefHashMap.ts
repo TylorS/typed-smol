@@ -470,5 +470,5 @@ export const findFirst: {
   E,
   R,
 >(ref: RefHashMap<K, V, E, R>, predicate: (value: V, key: K) => boolean) {
-  return RefSubject.filterMap(ref, flow(HashMap.findFirst(predicate), Option.fromUndefinedOr));
+  return RefSubject.filterMap(ref, (g) => HashMap.findFirst(g, predicate));
 });

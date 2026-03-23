@@ -7,7 +7,6 @@ import type * as Effect from "effect/Effect";
 import { equals } from "effect/Equal";
 import { dual } from "effect/Function";
 import * as Graph from "effect/Graph";
-import * as Option from "effect/Option";
 import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
 import * as RefSubject from "./RefSubject.js";
@@ -596,7 +595,7 @@ export const getEdge: {
   Err,
   R,
 >(ref: RefGraph<N, E, T, Err, R>, edgeIndex: Graph.EdgeIndex) {
-  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.getEdge(g, edgeIndex)));
+  return RefSubject.filterMap(ref, (g) => Graph.getEdge(g, edgeIndex));
 });
 
 /**
@@ -621,7 +620,7 @@ export const findNode: {
   Err,
   R,
 >(ref: RefGraph<N, E, T, Err, R>, predicate: (data: N) => boolean) {
-  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.findNode(g, predicate)));
+  return RefSubject.filterMap(ref, (g) => Graph.findNode(g, predicate));
 });
 
 /**
@@ -646,5 +645,5 @@ export const findEdge: {
   Err,
   R,
 >(ref: RefGraph<N, E, T, Err, R>, predicate: (edge: E) => boolean) {
-  return RefSubject.filterMap(ref, (g) => Option.fromUndefinedOr(Graph.findEdge(g, predicate)));
+  return RefSubject.filterMap(ref, (g) => Graph.findEdge(g, predicate));
 });

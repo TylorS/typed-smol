@@ -196,7 +196,7 @@ export const subtractDuration: {
  * @category computed
  */
 export const epochMillis = <E, R>(ref: RefDateTime<E, R>): RefSubject.Computed<number, E, R> =>
-  RefSubject.map(ref, (self) => self.epochMillis);
+  RefSubject.map(ref, (self) => DateTime.toEpochMillis(self));
 
 /**
  * Format the current state of a RefDateTime.

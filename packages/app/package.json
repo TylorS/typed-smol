@@ -29,8 +29,8 @@
   "devDependencies": {
     "@effect/platform-node": "catalog:",
     "@typed/fx": "workspace:*",
-    "@types/node": "^25.3.0",
-    "@vitest/coverage-v8": "^4.0.0",
+    "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.1",
     "effect": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

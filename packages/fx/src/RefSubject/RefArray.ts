@@ -211,7 +211,7 @@ export const insertAt: {
   <A, E, R>(ref: RefArray<A, E, R>, index: number, a: A): Effect.Effect<ReadonlyArray<A>, E, R>;
 } = dual(3, function insertAt<A, E, R>(ref: RefArray<A, E, R>, index: number, a: A) {
   return RefSubject.update(ref, (as) =>
-    Option.getOrElse(Option.fromUndefinedOr(ReadonlyArray.insertAt(as, index, a)), () => [
+    Option.getOrElse(ReadonlyArray.insertAt(as, index, a), () => [
       ...as,
       a,
     ]),
@@ -292,7 +292,9 @@ export const modifyAt: {
     f: (a: A) => A,
   ): Effect.Effect<ReadonlyArray<A>, E, R>;
 } = dual(3, function modifyAt<A, E, R>(ref: RefArray<A, E, R>, index: number, f: (a: A) => A) {
-  return RefSubject.update(ref, (values) => ReadonlyArray.modify(values, index, f) || values);
+  return RefSubject.update(ref, (values) =>
+    Option.getOrElse(ReadonlyArray.modify(values, index, f), () => values),
+  );
 });
 
 /**
@@ -373,7 +375,9 @@ export const replaceAt: {
   <A>(index: number, a: A): <E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
   <A, E, R>(ref: RefArray<A, E, R>, index: number, a: A): Effect.Effect<ReadonlyArray<A>, E, R>;
 } = dual(3, function replaceAt<A, E, R>(ref: RefArray<A, E, R>, index: number, a: A) {
-  return RefSubject.update(ref, (values) => ReadonlyArray.replace(values, index, a) || values);
+  return RefSubject.update(ref, (values) =>
+    Option.getOrElse(ReadonlyArray.replace(values, index, a), () => values),
+  );
 });
 
 /**

@@ -4,12 +4,12 @@ packages:
   - "packages/virtual-modules-ts-plugin/sample-project"
 
 catalog:
-  effect: 4.0.0-beta.21
-  "@effect/platform-node": 4.0.0-beta.21
-  oxlint: 1.48.0
-  oxfmt: 0.33.0
+  effect: 4.0.0-beta.38
+  "@effect/platform-node": 4.0.0-beta.38
+  oxlint: 1.56.0
+  oxfmt: 0.41.0
   typescript: 5.9.3
-  vite: 7.3.1
-  vitest: 4.0.18
-  "@vitest/browser-playwright": 4.0.18
-  happy-dom: "*"
+  vite: 8.0.2
+  vitest: 4.1.1
+  "@vitest/browser-playwright": 4.1.1
+  happy-dom: 20.8.7

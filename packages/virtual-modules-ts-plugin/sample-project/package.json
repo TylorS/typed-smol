@@ -18,9 +18,9 @@
     "@typed/virtual-modules": "workspace:*",
     "@typed/virtual-modules-ts-plugin": "workspace:*",
     "effect": "catalog:",
-    "typescript": "^5.9.0"
+    "typescript": "^6.0.2"
   },
   "devDependencies": {
-    "esbuild": "^0.24.2"
+    "esbuild": "^0.27.4"
   }
 }
