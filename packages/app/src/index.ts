@@ -9,6 +9,9 @@ export * from "./RouteCatch.js";
 export * from "./httpapi/ApiHandler.js";
 export {
   ApiHandler,
+  defineApiHandler,
+  emptyRecordString,
+  emptyRecordStringArray,
   type TypedApiHandler,
   type ApiHandlerContext,
   type ApiHandlerFn,

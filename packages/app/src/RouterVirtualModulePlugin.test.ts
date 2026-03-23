@@ -367,7 +367,6 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     expect(typeof source).toBe("string");
-    expect(source).toContain('import * as Layer from "effect/Layer"');
     expect(source).toContain("Router.normalizeDependencyInput(Dependencies.default)");
     expect(source).toContain(".provide(");
   });
@@ -379,7 +378,6 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     expect(typeof source).toBe("string");
-    expect(source).toContain('import * as Layer from "effect/Layer"');
     expect(source).toContain(".provide(Dependencies.default)");
     expect(source).not.toContain("Router.normalizeDependencyInput");
   });
@@ -395,7 +393,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
@@ -422,7 +419,6 @@ describe("RouterVirtualModulePlugin", () => {
       import * as Effect from "effect/Effect";
       import * as Cause from "effect/Cause";
       import * as Result from "effect/Result";
-      import * as Layer from "effect/Layer";
       import * as ApiItem from "./routes/api/item.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as ApiLayout from "./routes/api/_layout.js";
@@ -444,7 +440,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as Page from "./routes/page.js";
       import * as Pagedependencies from "./routes/page.dependencies.js";
       import * as Pagelayout from "./routes/page.layout.js";
@@ -466,7 +461,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as UsersProfile from "./routes/users/profile.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
@@ -489,7 +483,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as ApiItem from "./routes/api/item.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
       import * as Dependencies from "./routes/_dependencies.js";
@@ -838,7 +831,7 @@ describe("RouterVirtualModulePlugin", () => {
     if (!result.ok) return;
     const handlerExport = result.snapshot.exports.find((e) => e.name === "handler");
     expect(handlerExport).toBeDefined();
-    expect(handlerExport!.assignableTo?.Fx).toBeUndefined();
+    expect((handlerExport! as { assignableTo?: { Fx?: boolean } }).assignableTo?.Fx).toBeUndefined();
     const plugin = createRouterVirtualModulePlugin();
     const buildResult = plugin.build("router:./routes", fixture.importer, session.api);
     expect(buildResult).toMatchObject({ errors: expect.any(Array) });
@@ -1162,7 +1155,6 @@ describe("RouterVirtualModulePlugin", () => {
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Layer from "effect/Layer";
       import * as ApiItemsX from "./routes/api/items/x.js";
       import * as ApiDependencies from "./routes/api/_dependencies.js";
       import * as Dependencies from "./routes/_dependencies.js";

@@ -10,7 +10,7 @@ import type { Fx } from "../Fx.js";
  * @since 1.0.0
  * @category combinators
  */
-export const unwrap = <A, E, R, E2, R2>(
+export const unwrap = <A = never, E = never, R = never, E2 = never, R2 = never>(
   effect: Effect.Effect<Fx<A, E, R>, E2, R2>,
 ): Fx<A, E | E2, R | R2> =>
   make<A, E | E2, R | R2>((sink) =>

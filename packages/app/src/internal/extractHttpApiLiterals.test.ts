@@ -13,6 +13,11 @@ describe("getPathFromRouteType", () => {
     expect(getPathFromRouteType(type as never)).toBe("/api");
   });
 
+  it("strips surrounding quotes from literal text (TypeInfo may include them)", () => {
+    const type = { kind: "literal", text: '"/api"' };
+    expect(getPathFromRouteType(type as never)).toBe("/api");
+  });
+
   it("extracts from literal without leading slash", () => {
     const type = { kind: "literal", text: "api" };
     expect(getPathFromRouteType(type as never)).toBe("/api");

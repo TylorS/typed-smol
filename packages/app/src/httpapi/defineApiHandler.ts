@@ -158,3 +158,6 @@ export function ApiHandler<
 > {
   return (handler) => handler;
 }
+
+/** Alias for {@link ApiHandler} (historical / doc name `defineApiHandler`). */
+export { ApiHandler as defineApiHandler };

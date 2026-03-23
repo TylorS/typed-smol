@@ -3,7 +3,7 @@ import type * as Arr from "effect/Array";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
-import { interrupt, isSuccess } from "effect/Exit";
+import { interrupt } from "effect/Exit";
 import { dual, identity } from "effect/Function";
 import * as Result from "effect/Result";
 import * as Layer from "effect/Layer";
@@ -25,7 +25,7 @@ import { fromEffect, never } from "@typed/fx/Fx/constructors/fromEffect";
 import { succeed } from "@typed/fx/Fx/constructors/succeed";
 import type * as Fx from "@typed/fx/Fx/Fx";
 import { fromStream } from "@typed/fx/Fx/stream";
-import { isFx } from "@typed/fx/Fx/TypeId";
+import { FxTypeId, isFx } from "@typed/fx/Fx/TypeId";
 import { RefSubject } from "@typed/fx/RefSubject";
 import { CurrentPath, Navigation } from "@typed/navigation/Navigation";
 import type { MatchAst, RouteAst } from "./AST.js";
@@ -33,6 +33,7 @@ import * as AST from "./AST.js";
 import { CurrentRoute } from "./CurrentRoute.js";
 import { Join, make as makeRoute, type Route } from "./Route.js";
 import type { Router } from "./Router.js";
+import { Sink } from "@typed/fx";
 
 export type Layout<Params, A, E, R, B, E2, R2> = (
   params: LayoutParams<Params, A, E, R>,
@@ -149,7 +150,10 @@ type ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GE, GR> = ApplyCatch<
   C
 >;
 
-export interface Matcher<A, E = never, R = never> extends Pipeable {
+export interface Matcher<A, E = never, R = never>
+  extends
+    Fx.Fx<A, E | RouteNotFound | RouteDecodeError | RouteGuardError, R | Router | Scope.Scope>,
+    Pipeable {
   readonly cases: ReadonlyArray<MatchAst>;
 
   // Overload 1: match(route, handler) - function handler (must be first for inference)
@@ -431,6 +435,11 @@ function parseMatchArgs(args: [unknown, ...Array<unknown>]): ParsedMatch {
 }
 
 class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
+  readonly [FxTypeId]: Fx.Fx.Variance<A, E | RouteNotFound | RouteDecodeError | RouteGuardError, R | Scope.Scope | Router> = {
+    _A: identity,
+    _E: identity,
+    _R: identity,
+  };
   readonly cases: ReadonlyArray<MatchAst>;
   constructor(cases: ReadonlyArray<MatchAst>) {
     this.cases = cases;
@@ -660,118 +669,13 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
   pipe() {
     return pipeArguments(this, arguments);
   }
-}
 
-function normalizeHandler<Params, B, E2 = never, R2 = never>(
-  handler: MatchHandler<Params, B, E2, R2>,
-): (params: RefSubject.RefSubject<Params>) => Fx.Fx<B, E2, R2> {
-  if (isMatchHandlerFn(handler)) return (params) => toFx(handler(params));
-  return () => toFx(handler);
-}
-
-function toFx<A, E, R>(
-  value: Fx.Fx<A, E, R> | Stream.Stream<A, E, R> | Effect.Effect<A, E, R> | A,
-): Fx.Fx<A, E, R> {
-  if (isFx(value)) return value;
-  if (Stream.isStream(value)) return fromStream(value);
-  if (Effect.isEffect(value)) return fromEffect(value);
-  return succeed(value);
-}
-
-export const empty: Matcher<never> = new MatcherImpl([]);
-export const match = empty.match.bind(empty);
-
-/**
- * Merge multiple matchers into one. Each matcher's layouts and provide apply only to its own routes.
- * Use this so directory layouts (e.g. api/_layout) and directory dependencies apply only to routes under that directory.
- */
-export function merge<const Matchers extends ReadonlyArray<Matcher.Any>>(
-  ...matchers: Matchers
-): Matcher<
-  Matcher.MergeSuccess<Matchers>,
-  Matcher.MergeError<Matchers>,
-  Matcher.MergeServices<Matchers>
-> {
-  if (matchers.length === 0) {
-    return empty as unknown as Matcher<
-      Matcher.MergeSuccess<Matchers>,
-      Matcher.MergeError<Matchers>,
-      Matcher.MergeServices<Matchers>
-    >;
-  }
-  if (matchers.length === 1) {
-    return matchers[0] as unknown as Matcher<
-      Matcher.MergeSuccess<Matchers>,
-      Matcher.MergeError<Matchers>,
-      Matcher.MergeServices<Matchers>
-    >;
-  }
-  const first = matchers[0] as MatcherImpl<
-    Matcher.MergeSuccess<Matchers>,
-    Matcher.MergeError<Matchers>,
-    Matcher.MergeServices<Matchers>
-  >;
-  const rest = matchers.slice(1) as ReadonlyArray<
-    Matcher<
-      Matcher.MergeSuccess<Matchers>,
-      Matcher.MergeError<Matchers>,
-      Matcher.MergeServices<Matchers>
-    >
-  >;
-  return first.merge(...rest) as unknown as Matcher<
-    Matcher.MergeSuccess<Matchers>,
-    Matcher.MergeError<Matchers>,
-    Matcher.MergeServices<Matchers>
-  >;
-}
-
-export class RouteGuardError extends Schema.ErrorClass<RouteGuardError>(
-  "@typed/router/RouteGuardError",
-)({
-  _tag: Schema.tag("RouteGuardError"),
-  path: Schema.String,
-  causes: Schema.Array(Schema.Unknown),
-}) {}
-
-export class RouteNotFound extends Schema.ErrorClass<RouteNotFound>("@typed/router/RouteNotFound")({
-  _tag: Schema.tag("RouteNotFound"),
-  path: Schema.String,
-}) {}
-
-export class RouteDecodeError extends Schema.ErrorClass<RouteDecodeError>(
-  "@typed/router/RouteDecodeError",
-)({
-  _tag: Schema.tag("RouteDecodeError"),
-  path: Schema.String,
-  cause: Schema.String,
-}) {}
-
-/**
- * @internal
- */
-export type CompiledEntry = {
-  readonly route: Route.Any;
-  readonly guard: AnyGuard;
-  readonly handler: AnyMatchHandler;
-  readonly layers: ReadonlyArray<AnyLayer>;
-  readonly layouts: ReadonlyArray<AnyLayout>;
-  readonly catches: ReadonlyArray<AnyCatch>;
-  readonly decode: (input: unknown) => Effect.Effect<any, Schema.SchemaError, any>;
-};
-
-export function run<M extends Matcher.Any>(
-  matcher: M,
-): Fx.Fx<
-  Matcher.Success<M>,
-  Matcher.Error<M> | RouteNotFound | RouteDecodeError | RouteGuardError,
-  Matcher.Services<M> | Router | CurrentRoute | Scope.Scope
-> {
-  return unwrap(
-    Effect.gen(function* () {
+  run<RSink>(sink: Sink.Sink<A, E | RouteNotFound | RouteDecodeError | RouteGuardError, RSink>) {
+    return Effect.gen({ self: this }, function* () {
       const fiberId = yield* Effect.fiberId;
       const rootScope = yield* Effect.scope;
       const current = yield* CurrentRoute;
-      const prefixed = matcher.prefix(current.route);
+      const prefixed = this.prefix(current.route);
       const entries = compile(prefixed.cases);
       const router = findMyWay.make<ReadonlyArray<CompiledEntry>>({
         ignoreTrailingSlash: true,
@@ -798,11 +702,11 @@ export function run<M extends Matcher.Any>(
       let currentState: {
         entry: CompiledEntry;
         params: RefSubject.RefSubject<any>;
-        fx: Fx.Fx<Matcher.Success<M>, Matcher.Error<M>, Matcher.Services<M> | Scope.Scope | Router>;
+        fx: Fx.Fx<A, E, R | Scope.Scope | Router>;
         scope: Scope.Closeable;
       } | null = null;
 
-      return CurrentPath.pipe(
+      const stream = CurrentPath.pipe(
         mapEffect(
           Effect.fn(function* (path) {
             const result = router.find("GET", path);
@@ -905,9 +809,108 @@ export function run<M extends Matcher.Any>(
         skipRepeats,
         switchMap(identity),
       );
-    }),
-  );
+
+      return yield* stream.run(sink);
+    });
+  }
 }
+
+function normalizeHandler<Params, B, E2 = never, R2 = never>(
+  handler: MatchHandler<Params, B, E2, R2>,
+): (params: RefSubject.RefSubject<Params>) => Fx.Fx<B, E2, R2> {
+  if (isMatchHandlerFn(handler)) return (params) => toFx(handler(params));
+  return () => toFx(handler);
+}
+
+function toFx<A, E, R>(
+  value: Fx.Fx<A, E, R> | Stream.Stream<A, E, R> | Effect.Effect<A, E, R> | A,
+): Fx.Fx<A, E, R> {
+  if (isFx(value)) return value;
+  if (Stream.isStream(value)) return fromStream(value);
+  if (Effect.isEffect(value)) return fromEffect(value);
+  return succeed(value);
+}
+
+export const empty: Matcher<never> = new MatcherImpl([]);
+export const match = empty.match.bind(empty);
+
+/**
+ * Merge multiple matchers into one. Each matcher's layouts and provide apply only to its own routes.
+ * Use this so directory layouts (e.g. api/_layout) and directory dependencies apply only to routes under that directory.
+ */
+export function merge<const Matchers extends ReadonlyArray<Matcher.Any>>(
+  ...matchers: Matchers
+): Matcher<
+  Matcher.MergeSuccess<Matchers>,
+  Matcher.MergeError<Matchers>,
+  Matcher.MergeServices<Matchers>
+> {
+  if (matchers.length === 0) {
+    return empty as unknown as Matcher<
+      Matcher.MergeSuccess<Matchers>,
+      Matcher.MergeError<Matchers>,
+      Matcher.MergeServices<Matchers>
+    >;
+  }
+  if (matchers.length === 1) {
+    return matchers[0] as unknown as Matcher<
+      Matcher.MergeSuccess<Matchers>,
+      Matcher.MergeError<Matchers>,
+      Matcher.MergeServices<Matchers>
+    >;
+  }
+  const first = matchers[0] as MatcherImpl<
+    Matcher.MergeSuccess<Matchers>,
+    Matcher.MergeError<Matchers>,
+    Matcher.MergeServices<Matchers>
+  >;
+  const rest = matchers.slice(1) as ReadonlyArray<
+    Matcher<
+      Matcher.MergeSuccess<Matchers>,
+      Matcher.MergeError<Matchers>,
+      Matcher.MergeServices<Matchers>
+    >
+  >;
+  return first.merge(...rest) as unknown as Matcher<
+    Matcher.MergeSuccess<Matchers>,
+    Matcher.MergeError<Matchers>,
+    Matcher.MergeServices<Matchers>
+  >;
+}
+
+export class RouteGuardError extends Schema.ErrorClass<RouteGuardError>(
+  "@typed/router/RouteGuardError",
+)({
+  _tag: Schema.tag("RouteGuardError"),
+  path: Schema.String,
+  causes: Schema.Array(Schema.Unknown),
+}) {}
+
+export class RouteNotFound extends Schema.ErrorClass<RouteNotFound>("@typed/router/RouteNotFound")({
+  _tag: Schema.tag("RouteNotFound"),
+  path: Schema.String,
+}) {}
+
+export class RouteDecodeError extends Schema.ErrorClass<RouteDecodeError>(
+  "@typed/router/RouteDecodeError",
+)({
+  _tag: Schema.tag("RouteDecodeError"),
+  path: Schema.String,
+  cause: Schema.String,
+}) {}
+
+/**
+ * @internal
+ */
+export type CompiledEntry = {
+  readonly route: Route.Any;
+  readonly guard: AnyGuard;
+  readonly handler: AnyMatchHandler;
+  readonly layers: ReadonlyArray<AnyLayer>;
+  readonly layouts: ReadonlyArray<AnyLayout>;
+  readonly catches: ReadonlyArray<AnyCatch>;
+  readonly decode: (input: unknown) => Effect.Effect<any, Schema.SchemaError, any>;
+};
 
 type InputSucces<T> = [Matcher.Success<T> | Fx.Fx.Success<T>] extends [infer A] ? A : never;
 type InputError<T> = [Matcher.Error<T> | Fx.Fx.Error<T>] extends [infer E] ? E : never;
@@ -943,11 +946,10 @@ export const catchCause: {
     const eff = Effect.gen(function* () {
       const fiberId = yield* Effect.fiberId;
       const rootScope = yield* Effect.scope;
-      const fx = isFx(input) ? input : run(input);
       const manager = makeCatchManager(rootScope, fiberId);
       const result = yield* manager.apply(
         [f],
-        fx,
+        input,
         ServiceMap.empty() as ServiceMap.ServiceMap<any>,
       );
       return result as Fx.Fx<A | B, E2, R | R2 | Router | Scope.Scope>;
@@ -960,6 +962,11 @@ export const catch_: {
   <I extends Fx.Fx.Any | Matcher.Any, B, E2, R2>(
     f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
   ): (input: I) => Fx.Fx<InputSucces<I> | B, E2, InputServices<I> | R2 | Router | Scope.Scope>;
+
+  <I extends Fx.Fx.Any | Matcher.Any, B, E2, R2>(
+    input: I,
+    f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
+  ): Fx.Fx<InputSucces<I> | B, E2, InputServices<I> | R2 | Router | Scope.Scope>;
 } = dual(
   2,
   <I extends Fx.Fx.Any | Matcher.Any, B, E2, R2>(
@@ -1092,26 +1099,27 @@ function normalizeDependencies(
   return dependencies.map(toSingleLayer);
 }
 
-type NormalizeLayer<T extends AnyDependency> = 
-  T extends Layer.Layer<infer A, infer E, infer R> ? Layer.Layer<A, E, R> : T extends ServiceMap.ServiceMap<infer R> ? Layer.Layer<R> : never
-    
-type NormalizeLayers<T extends ReadonlyArray<AnyDependency>> ={
-  [K in keyof T]: NormalizeLayer<T[K]>
-}
+type NormalizeLayer<T extends AnyDependency> =
+  T extends Layer.Layer<infer A, infer E, infer R>
+    ? Layer.Layer<A, E, R>
+    : T extends ServiceMap.ServiceMap<infer R>
+      ? Layer.Layer<R>
+      : never;
 
-type ToLayer<T> = 
-  T extends ReadonlyArray<AnyLayer> ? Layer.Layer<
-    Layer.Success<T[number]>,
-    Layer.Error<T[number]>,
-    Layer.Services<T[number]>
-  > : never
+type NormalizeLayers<T extends ReadonlyArray<AnyDependency>> = {
+  [K in keyof T]: NormalizeLayer<T[K]>;
+};
 
-type NormalizeDeps<T extends AnyDependency | ReadonlyArray<AnyDependency>> =
-  T extends AnyDependency
+type ToLayer<T> =
+  T extends ReadonlyArray<AnyLayer>
+    ? Layer.Layer<Layer.Success<T[number]>, Layer.Error<T[number]>, Layer.Services<T[number]>>
+    : never;
+
+type NormalizeDeps<T extends AnyDependency | ReadonlyArray<AnyDependency>> = T extends AnyDependency
   ? NormalizeLayer<T>
   : T extends ReadonlyArray<AnyDependency>
-  ? ToLayer<NormalizeLayers<T>>
-  : never
+    ? ToLayer<NormalizeLayers<T>>
+    : never;
 
 /**
  * Normalize dependency input (ServiceMap | Layer | Array of either) into a single Layer.
@@ -1432,7 +1440,7 @@ export function makeCatchManager(rootScope: Scope.Scope, fiberId: number) {
             exit,
             mapEffect(
               Effect.fn(function* (e) {
-                if (isSuccess(e)) return succeed(e.value);
+                if (Exit.isSuccess(e)) return succeed(e.value);
                 yield* RefSubject.set(causes, e.cause);
                 return fallback;
               }),

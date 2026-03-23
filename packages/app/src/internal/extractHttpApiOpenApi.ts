@@ -10,10 +10,23 @@ import type {
 } from "@typed/virtual-modules";
 import type { OpenApiExposureConfig, OpenApiScalarExposureConfig } from "./httpapiOpenApiConfig.js";
 
+/** Match TypeInfo literal text with optional surrounding quotes (same as extractHttpApiLiterals). */
+function normalizeTypeInfoLiteralText(text: string): string {
+  const t = text.trim();
+  if (t.length < 2) return t;
+  const open = t[0];
+  const close = t[t.length - 1];
+  if ((open === '"' || open === "'") && close === open) {
+    return t.slice(1, -1);
+  }
+  return t;
+}
+
 function getLiteralString(node: TypeNode | undefined): string | null {
   if (!node || node.kind !== "literal") return null;
   const text = (node as LiteralTypeNode).text;
-  return typeof text === "string" ? text : null;
+  if (typeof text !== "string" || text === "") return null;
+  return normalizeTypeInfoLiteralText(text);
 }
 
 function getProperty(type: TypeNode, name: string): TypeNode | undefined {

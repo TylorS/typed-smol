@@ -20,7 +20,7 @@
  * Use the package name; path-style names (e.g. "../") often fail when the workspace
  * root is a monorepo parent.
  *
- * Plugin definitions are loaded from typed.config.ts.
+ * Loads typed.config.ts for router/api options and merges vmc.config.ts plugins (same as vmc CLI).
  */
 import {
   attachLanguageServiceAdapter,
@@ -29,6 +29,7 @@ import {
   ensureTypeTargetBootstrapFile,
   getProgramWithTypeTargetBootstrap,
   getTypeTargetBootstrapPath,
+  loadResolverFromVmcConfig,
   PluginManager,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
@@ -45,7 +46,10 @@ import type { PluginCreateInfo } from "./types.js";
 
 interface VirtualModulesTsPluginConfig {
   readonly debounceMs?: number;
+  /** Path to typed.config.ts (relative to project root or absolute). */
   readonly configPath?: string;
+  /** Path to vmc.config.ts (relative to project root or absolute); default file name when omitted. */
+  readonly vmcConfigPath?: string;
 }
 
 type LoadedVirtualResolver = import(
@@ -173,7 +177,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
     const typedConfig = loadedConfig.status === "loaded" ? loadedConfig.config : undefined;
 
-    const plugins = [
+    const builtInPlugins = [
       createRouterVirtualModulePlugin(
         typedConfig?.router ? { prefix: typedConfig.router.prefix } : {},
       ),
@@ -183,11 +187,37 @@ function init(modules: { typescript: typeof import("typescript") }): {
           : {},
       ),
     ];
-    const resolver: LoadedVirtualResolver = new PluginManager(plugins) as unknown as LoadedVirtualResolver;
 
-    log("Virtual module resolver initialized from typed.config.ts");
+    const vmcConfigPathOpt =
+      typeof config.vmcConfigPath === "string" && config.vmcConfigPath.trim().length > 0
+        ? config.vmcConfigPath.trim()
+        : undefined;
 
-    const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(plugins);
+    const vmcLoad = loadResolverFromVmcConfig({
+      projectRoot,
+      ts,
+      ...(vmcConfigPathOpt ? { configPath: vmcConfigPathOpt } : {}),
+    });
+
+    if (vmcLoad.status === "loaded" && vmcLoad.pluginLoadErrors.length > 0) {
+      for (const err of vmcLoad.pluginLoadErrors) {
+        log(`vmc plugin load error: ${err.specifier}: ${err.message}`);
+      }
+    }
+
+    const vmcPlugins =
+      vmcLoad.status === "loaded" && vmcLoad.resolver instanceof PluginManager
+        ? [...vmcLoad.resolver.plugins]
+        : [];
+
+    const mergedPlugins = [...vmcPlugins, ...builtInPlugins];
+    const resolver: LoadedVirtualResolver = new PluginManager(mergedPlugins) as unknown as LoadedVirtualResolver;
+
+    log(
+      `Virtual module resolver: vmc.config=${vmcLoad.status}, vmcPlugins=${vmcPlugins.length}, builtIns=${builtInPlugins.length}`,
+    );
+
+    const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(mergedPlugins);
     log(`typeTargetSpecs: ${typeTargetSpecs.length} specs`);
 
     const projectConfigPath = (info.project as { configFilePath?: string }).configFilePath;

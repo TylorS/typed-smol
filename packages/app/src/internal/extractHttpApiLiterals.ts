@@ -18,16 +18,31 @@ export interface ExtractedEndpointLiterals {
   readonly name: string;
 }
 
+/** TypeInfo literal text may include surrounding quotes (`"/api"`); strip one matching pair. */
+function normalizeLiteralText(text: string): string {
+  const t = text.trim();
+  if (t.length < 2) return t;
+  const open = t[0];
+  const close = t[t.length - 1];
+  if ((open === '"' || open === "'") && close === open) {
+    return t.slice(1, -1);
+  }
+  return t;
+}
+
 function getLiteralText(node: TypeNode | undefined): string | null {
   if (!node || node.kind !== "literal") return null;
-  return (node as LiteralTypeNode).text || null;
+  const raw = (node as LiteralTypeNode).text;
+  return raw != null && raw !== "" ? normalizeLiteralText(raw) : null;
 }
 
 /** Extracts path string from Route-like type (literal, object.path, or Route reference). */
 export function getPathFromRouteType(type: TypeNode): string | null {
   if (type.kind === "literal") {
     const raw = (type as LiteralTypeNode).text;
-    return raw ? (raw.startsWith("/") ? raw : `/${raw}`) : null;
+    if (!raw) return null;
+    const normalized = normalizeLiteralText(raw);
+    return normalized.startsWith("/") ? normalized : `/${normalized}`;
   }
   if (type.kind === "object") {
     const pathProp = (type as ObjectTypeNode).properties.find((p) => p.name === "path");
