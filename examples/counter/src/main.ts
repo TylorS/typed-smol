@@ -5,11 +5,9 @@ import { DomRenderTemplate, html, render } from "@typed/template";
 const Counter = Fx.gen(function* () {
   const count = yield* RefSubject.make(0);
 
-  return html`<div>
+  return html`<p>Count: ${count}</p>
     <button onclick=${RefSubject.increment(count)}>Increment</button>
-    <button onclick=${RefSubject.decrement(count)}>Decrement</button>
-    <p>Count: ${count}</p>
-  </div>`;
+  <button onclick=${RefSubject.decrement(count)}>Decrement</button>`;
 });
 
 await render(Counter, document.body).pipe(

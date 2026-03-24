@@ -95,12 +95,12 @@ export const fromComments = (
   if (fragment.childNodes[fragment.childNodes.length - 1] !== lastChild) {
     fragment.append(lastChild);
   }
-
+  
   const getChildNodes = () => {
     const nodes = getAllSiblingsBetween(firstChild, lastChild);
 
     if (fragment.childNodes.length !== nodes.length) {
-      fragment.replaceChildren(...nodes);
+      fragment.append(firstChild, ...nodes, lastChild);
     }
 
     return nodes;
