@@ -91,18 +91,16 @@ echo ""
 
 echo -e "${YELLOW}Step 6: Publishing (tag=beta)...${NC}"
 
-if [ -n "${NPM_TOKEN:-}" ]; then
-  echo -e "  Using NPM_TOKEN (no OTP needed)"
-  echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$ROOT/.npmrc.publish"
-  NPM_CONFIG_USERCONFIG_PATH="$ROOT/.npmrc.publish"
-  PNPM_CONFIG_USERCONFIG="$NPM_CONFIG_USERCONFIG_PATH"
-  trap 'rm -f "$NPM_CONFIG_USERCONFIG_PATH"' EXIT
-else
-  echo -e "  ${CYAN}No NPM_TOKEN set. Will prompt for OTP codes (from your authenticator app).${NC}"
-  echo -e "  ${CYAN}Tip: create a granular access token at https://www.npmjs.com/settings/tokens to skip OTP.${NC}"
-  NPM_AUTH_ARGS=""
-  read -rp "$(echo -e "${CYAN}Enter npm OTP code: ${NC}")" OTP
+if [ -z "${NPM_TOKEN:-}" ]; then
+  echo -e "  ${RED}No NPM_TOKEN set.${NC}"
+  echo -e "  ${YELLOW}Set NPM_TOKEN before running this script.${NC}"
+  exit 1
 fi
+
+echo -e "  Using NPM_TOKEN (no OTP needed)"
+echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$ROOT/.npmrc.publish"
+PNPM_CONFIG_USERCONFIG_PATH="$ROOT/.npmrc.publish"
+trap 'rm -f "$PNPM_CONFIG_USERCONFIG_PATH"' EXIT
 echo ""
 
 PUBLISHED=()
@@ -110,11 +108,7 @@ FAILED=()
 
 publish_one() {
   local dir="$1"
-  if [ -n "${NPM_TOKEN:-}" ]; then
-    (cd "$dir" && PNPM_CONFIG_USERCONFIG="$NPM_CONFIG_USERCONFIG_PATH" pnpm publish --tag beta --access public --no-git-checks 2>&1)
-  else
-    (cd "$dir" && pnpm publish --tag beta --access public --otp="$OTP" --no-git-checks 2>&1)
-  fi
+  (cd "$dir" && PNPM_CONFIG_USERCONFIG="$PNPM_CONFIG_USERCONFIG_PATH" pnpm publish --tag beta --access public --no-git-checks 2>&1)
 }
 
 for dir in "${TOPO_ORDER[@]}"; do
@@ -129,11 +123,7 @@ for dir in "${TOPO_ORDER[@]}"; do
       break
     }
 
-    if echo "$OUTPUT" | grep -q "EOTP\|one-time password"; then
-      echo -e "${YELLOW}OTP expired${NC}"
-      read -rp "$(echo -e "  ${CYAN}Enter new OTP code: ${NC}")" OTP
-      printf "  Publishing %-45s ... " "$name@$version"
-    elif echo "$OUTPUT" | grep -q "403.*previously published\|cannot publish over"; then
+    if echo "$OUTPUT" | grep -q "403.*previously published\|cannot publish over"; then
       echo -e "${YELLOW}SKIP (already published)${NC}"
       break
     else
