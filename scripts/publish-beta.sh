@@ -111,7 +111,7 @@ FAILED=()
 publish_one() {
   local dir="$1"
   if [ -n "${NPM_TOKEN:-}" ]; then
-    (cd "$dir" && NPM_CONFIG_USERCONFIG="$NPM_CONFIG_USERCONFIG_PATH" pnpm publish --tag beta --access public 2>&1)
+    (cd "$dir" && PNPM_CONFIG_USERCONFIG="$NPM_CONFIG_USERCONFIG_PATH" pnpm publish --tag beta --access public 2>&1)
   else
     (cd "$dir" && pnpm publish --tag beta --access public --otp="$OTP" 2>&1)
   fi
