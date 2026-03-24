@@ -4,7 +4,7 @@ import {
   callback,
   catchCause,
   failCause,
-  forkChild,
+  forkScoped,
   isEffect,
   matchCauseEffect,
   runForkWith,
@@ -84,7 +84,7 @@ export const drain = <A, E, R>(fx: Fx<A, E, R>): Effect<void, E, R> => observe(f
  * @category runners
  */
 export const drainLayer = <A, E, R>(fx: Fx<A, E, R>): Layer<never, E, Exclude<R, Scope>> =>
-  effectDiscard(forkChild(drain(fx)));
+  effectDiscard(forkScoped(drain(fx)));
 
 /**
  * Observes the values of an `Fx` stream using a callback function and returns a `Layer`.
@@ -110,5 +110,5 @@ export const observeLayer: {
   <A, E, R, E2 = never, R2 = never>(
     fx: Fx<A, E, R>,
     f: (value: A) => void | Effect<unknown, E2, R2>,
-  ): Layer<never, E | E2, Exclude<R | R2, Scope>> => effectDiscard(observe(fx, f)),
+  ): Layer<never, E | E2, Exclude<R | R2, Scope>> => effectDiscard(forkScoped(observe(fx, f))),
 );
