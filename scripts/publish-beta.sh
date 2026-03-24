@@ -94,8 +94,9 @@ echo -e "${YELLOW}Step 6: Publishing (tag=beta)...${NC}"
 if [ -n "${NPM_TOKEN:-}" ]; then
   echo -e "  Using NPM_TOKEN (no OTP needed)"
   echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$ROOT/.npmrc.publish"
-  NPM_AUTH_ARGS="--userconfig=$ROOT/.npmrc.publish"
-  trap 'rm -f "$ROOT/.npmrc.publish"' EXIT
+  NPM_CONFIG_USERCONFIG_PATH="$ROOT/.npmrc.publish"
+  PNPM_CONFIG_USERCONFIG="$NPM_CONFIG_USERCONFIG_PATH"
+  trap 'rm -f "$NPM_CONFIG_USERCONFIG_PATH"' EXIT
 else
   echo -e "  ${CYAN}No NPM_TOKEN set. Will prompt for OTP codes (from your authenticator app).${NC}"
   echo -e "  ${CYAN}Tip: create a granular access token at https://www.npmjs.com/settings/tokens to skip OTP.${NC}"
@@ -110,7 +111,7 @@ FAILED=()
 publish_one() {
   local dir="$1"
   if [ -n "${NPM_TOKEN:-}" ]; then
-    (cd "$dir" && pnpm publish --tag beta --access public $NPM_AUTH_ARGS 2>&1)
+    (cd "$dir" && NPM_CONFIG_USERCONFIG="$NPM_CONFIG_USERCONFIG_PATH" pnpm publish --tag beta --access public 2>&1)
   else
     (cd "$dir" && pnpm publish --tag beta --access public --otp="$OTP" 2>&1)
   fi
