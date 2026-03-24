@@ -156,7 +156,16 @@ const serializeFunctionSignature = (
     return {
       name: parameter.getName(),
       optional: toOptionalFlag(parameter, tsMod),
-      type: serializeTypeNode(parameterType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      type: serializeTypeNode(
+        parameterType,
+        checker,
+        tsMod,
+        depth + 1,
+        maxDepth,
+        visited,
+        onInternalError,
+        registry,
+      ),
     };
   });
 
@@ -198,7 +207,16 @@ const serializeObjectProperties = (
       name: property.getName(),
       optional: toOptionalFlag(property, tsMod),
       readonly: hasReadonlyModifier(declaration, tsMod),
-      type: serializeTypeNode(propertyType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      type: serializeTypeNode(
+        propertyType,
+        checker,
+        tsMod,
+        depth + 1,
+        maxDepth,
+        visited,
+        onInternalError,
+        registry,
+      ),
     };
   });
 
@@ -220,8 +238,26 @@ const serializeIndexSignature = (
   const first = infos[0];
   if (!first) return undefined;
   return {
-    keyType: serializeTypeNode(first.keyType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
-    valueType: serializeTypeNode(first.type, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+    keyType: serializeTypeNode(
+      first.keyType,
+      checker,
+      tsMod,
+      depth + 1,
+      maxDepth,
+      visited,
+      onInternalError,
+      registry,
+    ),
+    valueType: serializeTypeNode(
+      first.type,
+      checker,
+      tsMod,
+      depth + 1,
+      maxDepth,
+      visited,
+      onInternalError,
+      registry,
+    ),
     readonly: first.isReadonly ?? false,
   };
 };
@@ -291,7 +327,16 @@ const serializeTypeNode = (
       kind: "union",
       text,
       elements: type.types.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+        serializeTypeNode(
+          value,
+          checker,
+          tsMod,
+          depth + 1,
+          maxDepth,
+          visited,
+          onInternalError,
+          registry,
+        ),
       ),
     };
     return reg(union);
@@ -302,7 +347,16 @@ const serializeTypeNode = (
       kind: "intersection",
       text,
       elements: type.types.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+        serializeTypeNode(
+          value,
+          checker,
+          tsMod,
+          depth + 1,
+          maxDepth,
+          visited,
+          onInternalError,
+          registry,
+        ),
       ),
     };
     return reg(intersection);
@@ -325,10 +379,17 @@ const serializeTypeNode = (
           const init = decl.initializer;
           if (tsMod.isNumericLiteral?.(init)) {
             value = parseInt((init as { text: string }).text, 10);
-          } else if (tsMod.isStringLiteral?.(init) || tsMod.isNoSubstitutionTemplateLiteral?.(init)) {
+          } else if (
+            tsMod.isStringLiteral?.(init) ||
+            tsMod.isNoSubstitutionTemplateLiteral?.(init)
+          ) {
             value = (init as { text: string }).text;
           } else {
-            const cv = (checker as ts.TypeChecker & { getConstantValue?(n: ts.Node): string | number | undefined }).getConstantValue?.(init);
+            const cv = (
+              checker as ts.TypeChecker & {
+                getConstantValue?(n: ts.Node): string | number | undefined;
+              }
+            ).getConstantValue?.(init);
             if (cv !== undefined) value = cv;
           }
         }
@@ -356,23 +417,63 @@ const serializeTypeNode = (
     const trueType =
       ct.resolvedTrueType ??
       (ct.root?.node?.trueType
-        ? (checker as ts.TypeChecker & { getTypeFromTypeNode?(n: ts.TypeNode): ts.Type }).getTypeFromTypeNode?.(ct.root.node.trueType!)
+        ? (
+            checker as ts.TypeChecker & { getTypeFromTypeNode?(n: ts.TypeNode): ts.Type }
+          ).getTypeFromTypeNode?.(ct.root.node.trueType!)
         : undefined);
     const falseType =
       ct.resolvedFalseType ??
       (ct.root?.node?.falseType
-        ? (checker as ts.TypeChecker & { getTypeFromTypeNode?(n: ts.TypeNode): ts.Type }).getTypeFromTypeNode?.(ct.root.node.falseType!)
+        ? (
+            checker as ts.TypeChecker & { getTypeFromTypeNode?(n: ts.TypeNode): ts.Type }
+          ).getTypeFromTypeNode?.(ct.root.node.falseType!)
         : undefined);
     const conditional: ConditionalTypeNode = {
       kind: "conditional",
       text,
-      checkType: serializeTypeNode(ct.checkType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
-      extendsType: serializeTypeNode(ct.extendsType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      checkType: serializeTypeNode(
+        ct.checkType,
+        checker,
+        tsMod,
+        depth + 1,
+        maxDepth,
+        visited,
+        onInternalError,
+        registry,
+      ),
+      extendsType: serializeTypeNode(
+        ct.extendsType,
+        checker,
+        tsMod,
+        depth + 1,
+        maxDepth,
+        visited,
+        onInternalError,
+        registry,
+      ),
       trueType: trueType
-        ? serializeTypeNode(trueType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        ? serializeTypeNode(
+            trueType,
+            checker,
+            tsMod,
+            depth + 1,
+            maxDepth,
+            visited,
+            onInternalError,
+            registry,
+          )
         : UNKNOWN_NODE,
       falseType: falseType
-        ? serializeTypeNode(falseType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        ? serializeTypeNode(
+            falseType,
+            checker,
+            tsMod,
+            depth + 1,
+            maxDepth,
+            visited,
+            onInternalError,
+            registry,
+          )
         : UNKNOWN_NODE,
     };
     return reg(conditional);
@@ -383,8 +484,26 @@ const serializeTypeNode = (
     const indexed: IndexedAccessTypeNode = {
       kind: "indexedAccess",
       text,
-      objectType: serializeTypeNode(iat.objectType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
-      indexType: serializeTypeNode(iat.indexType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      objectType: serializeTypeNode(
+        iat.objectType,
+        checker,
+        tsMod,
+        depth + 1,
+        maxDepth,
+        visited,
+        onInternalError,
+        registry,
+      ),
+      indexType: serializeTypeNode(
+        iat.indexType,
+        checker,
+        tsMod,
+        depth + 1,
+        maxDepth,
+        visited,
+        onInternalError,
+        registry,
+      ),
     };
     return reg(indexed);
   }
@@ -397,7 +516,18 @@ const serializeTypeNode = (
       kind: "templateLiteral",
       text,
       texts,
-      types: types.map((t) => serializeTypeNode(t, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)),
+      types: types.map((t) =>
+        serializeTypeNode(
+          t,
+          checker,
+          tsMod,
+          depth + 1,
+          maxDepth,
+          visited,
+          onInternalError,
+          registry,
+        ),
+      ),
     };
     return reg(template);
   }
@@ -411,16 +541,36 @@ const serializeTypeNode = (
       mappedType?: ts.Type;
       modifierFlags?: number;
     };
-    const constraintType = mt.constraint ?? (mt as ts.Type & { typeParameter?: { constraint?: ts.Type } }).typeParameter?.constraint;
+    const constraintType =
+      mt.constraint ??
+      (mt as ts.Type & { typeParameter?: { constraint?: ts.Type } }).typeParameter?.constraint;
     const mappedType = mt.templateType ?? mt.mappedType;
     const mapped: MappedTypeNode = {
       kind: "mapped",
       text,
       constraintType: constraintType
-        ? serializeTypeNode(constraintType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        ? serializeTypeNode(
+            constraintType,
+            checker,
+            tsMod,
+            depth + 1,
+            maxDepth,
+            visited,
+            onInternalError,
+            registry,
+          )
         : UNKNOWN_NODE,
       mappedType: mappedType
-        ? serializeTypeNode(mappedType, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)
+        ? serializeTypeNode(
+            mappedType,
+            checker,
+            tsMod,
+            depth + 1,
+            maxDepth,
+            visited,
+            onInternalError,
+            registry,
+          )
         : UNKNOWN_NODE,
     };
     return reg(mapped);
@@ -432,7 +582,16 @@ const serializeTypeNode = (
       kind: "typeOperator",
       text,
       operator: "keyof",
-      type: serializeTypeNode(idxType.type, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+      type: serializeTypeNode(
+        idxType.type,
+        checker,
+        tsMod,
+        depth + 1,
+        maxDepth,
+        visited,
+        onInternalError,
+        registry,
+      ),
     };
     return reg(typeOperator);
   }
@@ -443,7 +602,16 @@ const serializeTypeNode = (
       kind: "tuple",
       text,
       elements: typeArguments.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+        serializeTypeNode(
+          value,
+          checker,
+          tsMod,
+          depth + 1,
+          maxDepth,
+          visited,
+          onInternalError,
+          registry,
+        ),
       ),
     };
     return reg(tuple);
@@ -456,7 +624,18 @@ const serializeTypeNode = (
       kind: "array",
       text,
       elements: element
-        ? [serializeTypeNode(element, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry)]
+        ? [
+            serializeTypeNode(
+              element,
+              checker,
+              tsMod,
+              depth + 1,
+              maxDepth,
+              visited,
+              onInternalError,
+              registry,
+            ),
+          ]
         : [UNKNOWN_NODE],
     };
     return reg(array);
@@ -468,7 +647,16 @@ const serializeTypeNode = (
       kind: "reference",
       text,
       typeArguments: referenceArguments.map((value) =>
-        serializeTypeNode(value, checker, tsMod, depth + 1, maxDepth, visited, onInternalError, registry),
+        serializeTypeNode(
+          value,
+          checker,
+          tsMod,
+          depth + 1,
+          maxDepth,
+          visited,
+          onInternalError,
+          registry,
+        ),
       ),
     };
     return reg(ref);
@@ -499,7 +687,16 @@ const serializeTypeNode = (
   if (callSignatures.length > 0) {
     if (callSignatures.length > 1) {
       const signatures: FunctionSignature[] = callSignatures.map((s) => {
-        const serialized = serializeFunctionSignature(s, checker, tsMod, depth, maxDepth, visited, onInternalError, registry);
+        const serialized = serializeFunctionSignature(
+          s,
+          checker,
+          tsMod,
+          depth,
+          maxDepth,
+          visited,
+          onInternalError,
+          registry,
+        );
         return { parameters: serialized.parameters, returnType: serialized.returnType };
       });
       const overload: OverloadSetTypeNode = { kind: "overloadSet", text, signatures };
@@ -524,11 +721,29 @@ const serializeTypeNode = (
     return reg(fn);
   }
 
-  const indexSig = serializeIndexSignature(type, checker, tsMod, depth, maxDepth, visited, onInternalError, registry);
+  const indexSig = serializeIndexSignature(
+    type,
+    checker,
+    tsMod,
+    depth,
+    maxDepth,
+    visited,
+    onInternalError,
+    registry,
+  );
   const object: ObjectTypeNode = {
     kind: "object",
     text,
-    properties: serializeObjectProperties(type, checker, tsMod, depth, maxDepth, visited, onInternalError, registry),
+    properties: serializeObjectProperties(
+      type,
+      checker,
+      tsMod,
+      depth,
+      maxDepth,
+      visited,
+      onInternalError,
+      registry,
+    ),
     ...(indexSig !== undefined && { indexSignature: indexSig }),
   };
   return reg(object);
@@ -560,9 +775,7 @@ export function serializeTypeForTest(
  * const program = ts.createProgram([...rootFiles, bootstrapPath], options, host);
  * ```
  */
-export function createTypeTargetBootstrapContent(
-  specs: readonly TypeTargetSpec[],
-): string {
+export function createTypeTargetBootstrapContent(specs: readonly TypeTargetSpec[]): string {
   const seen = new Set<string>();
   const lines: string[] = [
     "/**",
@@ -598,7 +811,8 @@ export function resolveTypeTargetsFromSpecs(
 
   const getTypeFromSymbol = (symbol: ts.Symbol): ts.Type | undefined => {
     const aliased = resolveAliasedSymbol(symbol, checker, tsMod);
-    const decls = aliased.declarations ?? (aliased.valueDeclaration ? [aliased.valueDeclaration] : []);
+    const decls =
+      aliased.declarations ?? (aliased.valueDeclaration ? [aliased.valueDeclaration] : []);
     const typeDecl = decls.find(
       (d) =>
         tsMod.isTypeAliasDeclaration(d) ||
@@ -629,9 +843,7 @@ export function resolveTypeTargetsFromSpecs(
     const aliased = resolveAliasedSymbol(symbol, checker, tsMod);
     const exports = getSymbolExports(aliased);
     if (!exports) return primaryType;
-    const memberSymbol = Array.from(exports.values()).find(
-      (s) => s.getName() === spec.typeMember,
-    );
+    const memberSymbol = Array.from(exports.values()).find((s) => s.getName() === spec.typeMember);
     if (!memberSymbol) return primaryType;
     const memberType = checker.getDeclaredTypeOfSymbol(memberSymbol);
     if (!memberType || (memberType.flags & tsMod.TypeFlags.Any) !== 0) return primaryType;
@@ -641,10 +853,9 @@ export function resolveTypeTargetsFromSpecs(
   const addFromModuleSymbol = (moduleSymbol: ts.Symbol | undefined, moduleSpec: string): void => {
     if (!moduleSymbol) return;
     const exportsByName = new Map(
-      checker.getExportsOfModule(moduleSymbol).map((moduleExport) => [
-        moduleExport.getName(),
-        moduleExport,
-      ]),
+      checker
+        .getExportsOfModule(moduleSymbol)
+        .map((moduleExport) => [moduleExport.getName(), moduleExport]),
     );
     for (const spec of specs) {
       if (spec.module !== moduleSpec || found.has(spec.id)) continue;
@@ -729,10 +940,7 @@ const getGenericBase = (
 ): (ts.Type & { symbol?: ts.Symbol }) | undefined => getTypeReferenceTarget(type, checker);
 
 /** Get the symbol representing the "root" type for comparison (handles GenericType and TypeReference). */
-const getComparisonSymbol = (
-  type: ts.Type,
-  checker: ts.TypeChecker,
-): ts.Symbol | undefined => {
+const getComparisonSymbol = (type: ts.Type, checker: ts.TypeChecker): ts.Symbol | undefined => {
   const base = getGenericBase(type, checker);
   if (base?.symbol) return base.symbol;
   return getTypeSymbol(type);
@@ -765,17 +973,11 @@ const isAssignableTo = (
 
   const tgtBase = getGenericBase(target, checker);
   const tgtSymbol = tgtBase?.symbol ?? getTypeSymbol(target);
-  const matchSymbol = (sym: ts.Symbol | undefined) =>
-    sym && tgtSymbol && sym === tgtSymbol;
+  const matchSymbol = (sym: ts.Symbol | undefined) => sym && tgtSymbol && sym === tgtSymbol;
 
   if (source.isUnion()) {
     const constituents = source.types;
-    if (
-      !constituents.every((t) =>
-        isAssignableTo(t, target, checker, tsMod, mode),
-      )
-    )
-      return false;
+    if (!constituents.every((t) => isAssignableTo(t, target, checker, tsMod, mode))) return false;
     return true;
   }
 
@@ -783,8 +985,7 @@ const isAssignableTo = (
   if (srcBase?.symbol && matchSymbol(srcBase.symbol)) return true;
 
   const tgtTarget = getTypeReferenceTarget(target, checker);
-  if (srcBase?.symbol && tgtTarget?.symbol && srcBase.symbol === tgtTarget.symbol)
-    return true;
+  if (srcBase?.symbol && tgtTarget?.symbol && srcBase.symbol === tgtTarget.symbol) return true;
 
   const srcSymbol = getComparisonSymbol(source, checker);
   if (matchSymbol(srcSymbol)) return true;
@@ -792,8 +993,7 @@ const isAssignableTo = (
   if ((source.flags & tsMod.TypeFlags.Object) !== 0) {
     const srcSym = (source as ts.Type & { symbol?: ts.Symbol }).symbol;
     const isClassOrInterface =
-      srcSym &&
-      (srcSym.flags & (tsMod.SymbolFlags.Class | tsMod.SymbolFlags.Interface)) !== 0;
+      srcSym && (srcSym.flags & (tsMod.SymbolFlags.Class | tsMod.SymbolFlags.Interface)) !== 0;
     if (isClassOrInterface) {
       const bases = getBaseTypesInternal(source as ts.InterfaceType, checker);
       const hasMatchingBase = (bases ?? []).some((b) => {
@@ -835,7 +1035,16 @@ const serializeExport = (
     declarationKind: declaration ? tsMod.SyntaxKind[declaration.kind] : undefined,
     declarationText: declaration ? declaration.getText() : undefined,
     docs: tsMod.displayPartsToString(symbol.getDocumentationComment(checker)) || undefined,
-    type: serializeTypeNode(exportedType, checker, tsMod, 0, maxDepth, new Set(), onInternalError, registry),
+    type: serializeTypeNode(
+      exportedType,
+      checker,
+      tsMod,
+      0,
+      maxDepth,
+      new Set(),
+      onInternalError,
+      registry,
+    ),
   };
 };
 
@@ -889,15 +1098,12 @@ const createFileSnapshot = (
 ): TypeInfoFileSnapshot => {
   const filePath = sourceFile.fileName;
   const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
-  const exports =
-    moduleSymbol
-      ? checker
-          .getExportsOfModule(moduleSymbol)
-          .map((value) =>
-            serializeExport(value, checker, tsMod, maxDepth, onInternalError, registry),
-          )
-          .sort(compareByName)
-      : [];
+  const exports = moduleSymbol
+    ? checker
+        .getExportsOfModule(moduleSymbol)
+        .map((value) => serializeExport(value, checker, tsMod, maxDepth, onInternalError, registry))
+        .sort(compareByName)
+    : [];
   const imports = includeImports ? collectImports(sourceFile, program, tsMod) : undefined;
 
   return {
@@ -964,8 +1170,7 @@ const applyProjection = (
         case "ensure": {
           const target = targetsByIdMap.get(step.targetId);
           if (!target) return undefined;
-          if (!isAssignableTo(current, target, checker, tsMod, assignabilityMode))
-            return undefined;
+          if (!isAssignableTo(current, target, checker, tsMod, assignabilityMode)) return undefined;
           break;
         }
         case "predicate": {
@@ -1019,8 +1224,7 @@ export const createTypeInfoApiSession = (
   const snapshotCache = new Map<string, TypeInfoFileSnapshot>();
   const directoryCache = new Map<string, TypeInfoFileSnapshot[]>();
   const maxDepth = options.maxTypeDepth ?? DEFAULT_MAX_DEPTH;
-  const assignabilityMode: AssignabilityMode =
-    options.assignabilityMode ?? "compatibility";
+  const assignabilityMode: AssignabilityMode = options.assignabilityMode ?? "compatibility";
   const typeNodeRegistry = new WeakMap<TypeNode, ts.Type>();
   const targetsByIdMap = new Map<string, ts.Type>(
     (effectiveTypeTargets ?? []).map((t) => [t.id, t.type]),
@@ -1103,8 +1307,7 @@ export const createTypeInfoApiSession = (
     baseDir: string,
     normalizedGlobs: readonly string[],
     recursive: boolean,
-  ): string =>
-    `${baseDir}\0${normalizedGlobs.join("\0")}\0${recursive ? "r" : "nr"}`;
+  ): string => `${baseDir}\0${normalizedGlobs.join("\0")}\0${recursive ? "r" : "nr"}`;
 
   const directory: TypeInfoApi["directory"] = (relativeGlobs, queryOptions) => {
     const baseDirResult = validatePathSegment(queryOptions.baseDir, "baseDir");

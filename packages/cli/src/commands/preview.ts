@@ -1,20 +1,12 @@
 import { Effect, Option } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
-import {
-  configFlag,
-  modeFlag,
-  baseFlag,
-  logLevelFlag,
-  entryFlag,
-} from "../shared/flags.js";
+import { configFlag, modeFlag, baseFlag, logLevelFlag, entryFlag } from "../shared/flags.js";
 import { loadProjectConfig, resolve, resolveBoolean } from "../shared/loadConfig.js";
 import { resolveViteInlineConfig } from "../shared/resolveViteConfig.js";
 import { createVitePreview } from "../shared/viteHelpers.js";
 
 export const preview = Command.make("preview", {
-  host: Flag.optional(Flag.string("host")).pipe(
-    Flag.withDescription("Specify hostname"),
-  ),
+  host: Flag.optional(Flag.string("host")).pipe(Flag.withDescription("Specify hostname")),
   port: Flag.optional(Flag.integer("port")).pipe(
     Flag.withDescription("Specify port (default: 4173)"),
   ),

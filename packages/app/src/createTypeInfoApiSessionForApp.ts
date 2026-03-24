@@ -1,8 +1,5 @@
 import type { CreateTypeInfoApiSessionOptions, TypeTargetSpec } from "@typed/virtual-modules";
-import {
-  createTypeInfoApiSession,
-  createTypeTargetBootstrapContent,
-} from "@typed/virtual-modules";
+import { createTypeInfoApiSession, createTypeTargetBootstrapContent } from "@typed/virtual-modules";
 import { HTTPAPI_TYPE_TARGET_SPECS, ROUTER_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
 /** Merged type target specs for router + HttpApi plugins. Dedupes by id. */
@@ -19,9 +16,8 @@ const APP_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = (() => {
 })();
 
 /** Bootstrap content for app type targets. Include in program rootNames when creating programs. */
-export const APP_TYPE_TARGET_BOOTSTRAP_CONTENT = createTypeTargetBootstrapContent(
-  APP_TYPE_TARGET_SPECS,
-);
+export const APP_TYPE_TARGET_BOOTSTRAP_CONTENT =
+  createTypeTargetBootstrapContent(APP_TYPE_TARGET_SPECS);
 
 /**
  * Creates a TypeInfo API session with type target specs for router and HttpApi

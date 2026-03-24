@@ -10,9 +10,7 @@ export type { InlineConfig, ViteDevServer };
 /**
  * Create Vite dev server.
  */
-export const createViteServer = (
-  config?: InlineConfig,
-): Effect.Effect<ViteDevServer, Error> =>
+export const createViteServer = (config?: InlineConfig): Effect.Effect<ViteDevServer, Error> =>
   Effect.tryPromise({
     try: () => createServer(config ?? {}),
     catch: (e) => (e instanceof Error ? e : new Error(String(e))),
@@ -32,9 +30,7 @@ export const runViteBuild = (
 /**
  * Create Vite preview server.
  */
-export const createVitePreview = (
-  config?: InlineConfig,
-): Effect.Effect<PreviewServer, Error> =>
+export const createVitePreview = (config?: InlineConfig): Effect.Effect<PreviewServer, Error> =>
   Effect.tryPromise({
     try: () => preview(config ?? {}),
     catch: (e) => (e instanceof Error ? e : new Error(String(e))),

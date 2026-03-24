@@ -31,8 +31,9 @@ export function getIndexInfosOfType(
   checker: ts.TypeChecker,
 ): readonly IndexInfo[] | undefined {
   try {
-    const fn = (checker as ts.TypeChecker & { getIndexInfosOfType?(t: ts.Type): readonly IndexInfo[] })
-      .getIndexInfosOfType;
+    const fn = (
+      checker as ts.TypeChecker & { getIndexInfosOfType?(t: ts.Type): readonly IndexInfo[] }
+    ).getIndexInfosOfType;
     return fn?.(type);
   } catch {
     return undefined;
@@ -95,9 +96,7 @@ export function getTypeSymbol(type: ts.Type): ts.Symbol | undefined {
  * Uses internal (symbol as Symbol).exports; may change in future TS versions.
  * Prefer checker.getExportsOfModule(moduleSymbol) for module symbols when applicable.
  */
-export function getSymbolExports(
-  symbol: ts.Symbol,
-): Map<unknown, ts.Symbol> | undefined {
+export function getSymbolExports(symbol: ts.Symbol): Map<unknown, ts.Symbol> | undefined {
   return (symbol as ts.Symbol & { exports?: Map<unknown, ts.Symbol> }).exports;
 }
 

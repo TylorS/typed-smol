@@ -39,10 +39,8 @@ export const HTTPAPI_ENDPOINT_COMPANION_SUFFIXES = [
   ".openapi",
 ] as const;
 
-export type HttpApiDirectoryCompanionKind =
-  (typeof HTTPAPI_DIRECTORY_COMPANION_FILES)[number];
-export type HttpApiEndpointCompanionKind =
-  (typeof HTTPAPI_ENDPOINT_COMPANION_SUFFIXES)[number];
+export type HttpApiDirectoryCompanionKind = (typeof HTTPAPI_DIRECTORY_COMPANION_FILES)[number];
+export type HttpApiEndpointCompanionKind = (typeof HTTPAPI_ENDPOINT_COMPANION_SUFFIXES)[number];
 
 /** Role of a discovered file relative to the API root. */
 export type HttpApiFileRole =
@@ -140,9 +138,7 @@ export function classifyHttpApiFileRole(relativePath: string): HttpApiFileRole {
     return { role: "group_override", path };
   }
   if (DIRECTORY_COMPANION_SET.has(fileName)) {
-    const kind = HTTPAPI_DIRECTORY_COMPANION_FILES.find(
-      (k) => k.toLowerCase() === lower,
-    )!;
+    const kind = HTTPAPI_DIRECTORY_COMPANION_FILES.find((k) => k.toLowerCase() === lower)!;
     return { role: "directory_companion", path, kind };
   }
   if (stem === "_api" || stem === "_group") {

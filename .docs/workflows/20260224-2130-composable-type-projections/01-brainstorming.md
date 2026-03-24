@@ -47,7 +47,7 @@ type TypeProjectionStep =
   | { readonly kind: "returnType" }
   | { readonly kind: "param"; readonly index: number }
   | { readonly kind: "typeArg"; readonly index: number }
-  | { readonly kind: "property"; readonly name: string }
+  | { readonly kind: "property"; readonly name: string };
 
 interface TypeTargetSpec {
   readonly id: string;
@@ -67,8 +67,17 @@ interface TypeTargetSpec {
 Split targets (what to resolve) from queries (what to check):
 
 ```ts
-interface TypeTargetSpec { id: string; module: string; exportName: string; typeMember?: string }
-interface TypeQuery { id: string; targetId: string; projection?: readonly TypeProjectionStep[] }
+interface TypeTargetSpec {
+  id: string;
+  module: string;
+  exportName: string;
+  typeMember?: string;
+}
+interface TypeQuery {
+  id: string;
+  targetId: string;
+  projection?: readonly TypeProjectionStep[];
+}
 ```
 
 Plugin declares both. TypeInfoApi resolves targets once, then applies each query.
@@ -99,12 +108,15 @@ interface TypeAccessor {
 **Approach A** — TypeProjectionStep on TypeTargetSpec. It gives composability with minimal API surface change. The projection DSL is small (4 step kinds), declarative, and covers the `Fx<*TARGET, *, *>` pattern directly as `projection: [{ kind: "typeArg", index: 0 }]`. Internal resolution deduplication handles the "same module resolved multiple times" concern.
 
 For the `Fx<*TARGET, *, *>` example:
+
 ```ts
 { id: "Fx.success:Option", module: "effect/Option", exportName: "Option", projection: [{ kind: "typeArg", index: 0 }] }
 ```
+
 Read as: "from the export type, extract typeArg[0], then check if it's assignable to Option".
 
 Combined with `{ id: "Fx", module: "@typed/fx/Fx", exportName: "Fx" }` (no projection), the plugin can check:
+
 - `assignableTo.Fx` — is this an Fx?
 - `assignableTo["Fx.success:Option"]` — is the first type arg assignable to Option?
 

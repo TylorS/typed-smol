@@ -1,33 +1,20 @@
 import { Effect, Option } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 import { pathToFileURL } from "node:url";
-import {
-  configFlag,
-  modeFlag,
-  baseFlag,
-  logLevelFlag,
-  entryFlag,
-} from "../shared/flags.js";
+import { configFlag, modeFlag, baseFlag, logLevelFlag, entryFlag } from "../shared/flags.js";
 import { resolveServerEntry } from "../shared/serverEntry.js";
 import { loadProjectConfig, resolve, resolveBoolean } from "../shared/loadConfig.js";
 import { resolveViteInlineConfig } from "../shared/resolveViteConfig.js";
 import { createViteServer } from "../shared/viteHelpers.js";
 
 export const serve = Command.make("serve", {
-  host: Flag.optional(Flag.string("host")).pipe(
-    Flag.withDescription("Specify hostname"),
-  ),
-  port: Flag.optional(Flag.integer("port")).pipe(
-    Flag.withDescription("Specify port"),
-  ),
+  host: Flag.optional(Flag.string("host")).pipe(Flag.withDescription("Specify hostname")),
+  port: Flag.optional(Flag.integer("port")).pipe(Flag.withDescription("Specify port")),
   open: Flag.boolean("open").pipe(
     Flag.withDefault(false),
     Flag.withDescription("Open browser on startup"),
   ),
-  cors: Flag.boolean("cors").pipe(
-    Flag.withDefault(false),
-    Flag.withDescription("Enable CORS"),
-  ),
+  cors: Flag.boolean("cors").pipe(Flag.withDefault(false), Flag.withDescription("Enable CORS")),
   strictPort: Flag.boolean("strictPort").pipe(
     Flag.withDefault(false),
     Flag.withDescription("Exit if port is in use"),

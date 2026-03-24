@@ -5,7 +5,7 @@
 
 import type * as Effect from "effect/Effect";
 import { equals } from "effect/Equal";
-import { dual, flow } from "effect/Function";
+import { dual } from "effect/Function";
 import * as HashMap from "effect/HashMap";
 import * as Option from "effect/Option";
 import type * as Scope from "effect/Scope";

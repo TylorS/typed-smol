@@ -11,7 +11,9 @@ import type {
   VirtualModuleResolver,
 } from "./types.js";
 
-function collectFromResolver(resolver: VirtualModuleResolver): readonly TypeTargetSpec[] | undefined {
+function collectFromResolver(
+  resolver: VirtualModuleResolver,
+): readonly TypeTargetSpec[] | undefined {
   const pm = resolver as { plugins?: readonly VirtualModulePlugin[] };
   if (!Array.isArray(pm.plugins) || pm.plugins.length === 0) return undefined;
   const merged = collectTypeTargetSpecsFromPlugins(pm.plugins);

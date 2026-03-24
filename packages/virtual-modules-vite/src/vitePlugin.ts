@@ -22,7 +22,8 @@ export interface VirtualModulesVitePluginOptions {
 /** Validate decoded id/importer before passing to resolver (defense in depth). */
 function validateDecodedPayload(id: string, importer: string): boolean {
   if (typeof id !== "string" || id.length === 0 || id.includes("\0")) return false;
-  if (typeof importer !== "string" || importer.length === 0 || importer.includes("\0")) return false;
+  if (typeof importer !== "string" || importer.length === 0 || importer.includes("\0"))
+    return false;
   if (id.length > 4096 || importer.length > 4096) return false;
   return true;
 }

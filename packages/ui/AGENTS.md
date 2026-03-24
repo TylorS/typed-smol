@@ -13,11 +13,11 @@ Bridges `@typed/router` + `@typed/template` with the browser and HTTP server:
 
 ## Capabilities
 
-| Area | APIs | Notes |
-|------|------|-------|
-| **Client navigation** | `Link(options)` | `<a>` with `href`, `content`, `replace`; same-origin clicks → `Navigation.navigate`; respects ctrl/meta/shift, `target`; custom `onclick` runs first, built-in handler if not prevented. |
-| **SSR wiring** | `ssrForHttp(router, matcher)` | Compiles Matcher cases to GET routes on HttpRouter; parses URL and params, provides Scope + Router, runs handler Fx, renders to HTML; supports curried form `ssrForHttp(matcher)(router)`. |
-| **Error handling** | `handleHttpServerError(router)` | Global middleware: `RouteNotFound` → 404, `RequestParseError` → 400, `InternalError`/`ResponseError` → 500. |
+| Area                  | APIs                            | Notes                                                                                                                                                                                      |
+| --------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Client navigation** | `Link(options)`                 | `<a>` with `href`, `content`, `replace`; same-origin clicks → `Navigation.navigate`; respects ctrl/meta/shift, `target`; custom `onclick` runs first, built-in handler if not prevented.   |
+| **SSR wiring**        | `ssrForHttp(router, matcher)`   | Compiles Matcher cases to GET routes on HttpRouter; parses URL and params, provides Scope + Router, runs handler Fx, renders to HTML; supports curried form `ssrForHttp(matcher)(router)`. |
+| **Error handling**    | `handleHttpServerError(router)` | Global middleware: `RouteNotFound` → 404, `RequestParseError` → 400, `InternalError`/`ResponseError` → 500.                                                                                |
 
 ## Mental model
 

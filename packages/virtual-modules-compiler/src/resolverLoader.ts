@@ -1,9 +1,5 @@
 import ts from "typescript";
-import type {
-  TypeTargetSpec,
-  VirtualModuleResolver,
-  VmcPluginEntry,
-} from "@typed/virtual-modules";
+import type { TypeTargetSpec, VirtualModuleResolver, VmcPluginEntry } from "@typed/virtual-modules";
 import { loadResolverFromVmcConfig, PluginManager } from "@typed/virtual-modules";
 
 export interface VmcConfig {

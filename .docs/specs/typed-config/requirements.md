@@ -42,6 +42,7 @@ CLI commands (`serve`, `build`, `preview`, `test`, `lint`, `format`) load `typed
 ### FR-5: CLI Integration — Optional `vite.config.ts`
 
 When no `vite.config.ts` exists in the project root, CLI commands construct a complete `InlineConfig` programmatically:
+
 - `configFile: false` (disables Vite auto-discovery)
 - `plugins: typedVitePlugin(opts)` (with opts derived from `typed.config.ts`)
 - `server`, `build`, `preview` sections from config + CLI flags
@@ -113,6 +114,7 @@ Config loading must be synchronous. The TS plugin runs in the TypeScript Languag
 ### NFR-2: Minimal New Dependencies
 
 Config loading reuses `ts.transpileModule()` + `vm.runInThisContext` (already used in `VmcConfigLoader`). New peer/optional dependencies only for the tools being wrapped:
+
 - `vitest` — already a workspace dependency
 - `oxlint` — new peer dependency for `typed lint`
 - `oxfmt` — new peer dependency for `typed format`
@@ -124,13 +126,16 @@ Config loading reuses `ts.transpileModule()` + `vm.runInThisContext` (already us
 ### NFR-4: Minimal Boilerplate
 
 A project with no special needs should work with an empty `typed.config.ts`:
+
 ```ts
 import { defineConfig } from "@typed/app";
 export default defineConfig({});
 ```
+
 Or with no `typed.config.ts` at all (all defaults apply).
 
 A greenfield TypeScript project needs only:
+
 - `typed.config.ts` (optional)
 - `server.ts`
 - `tsconfig.json`
@@ -147,26 +152,26 @@ No `vite.config.ts`, `vitest.config.ts`, `.oxlintrc.json`, or `.oxfmtrc.json` re
 
 ## Acceptance Criteria
 
-| ID | Criterion | Traces To |
-|----|-----------|-----------|
-| AC-1 | `defineConfig({})` compiles and returns a valid `TypedConfig` | FR-1, NFR-3, NFR-4 |
-| AC-2 | `loadTypedConfig({ projectRoot, ts })` discovers `typed.config.ts` and returns `{ status: "loaded", config }` | FR-2, FR-3, NFR-1 |
-| AC-3 | `loadTypedConfig` returns `{ status: "not-found" }` when no config file exists | FR-2, FR-11 |
-| AC-4 | CLI `serve` uses `typed.config.ts` `server.port` as default; `--port` flag overrides it | FR-4 |
-| AC-5 | CLI `build` constructs full `InlineConfig` when no `vite.config.ts` exists, with `configFile: false` | FR-5 |
-| AC-6 | CLI `build` preserves current behavior when `vite.config.ts` exists | FR-5, FR-11 |
-| AC-7 | `typedVitePlugin()` (zero-arg) reads `typed.config.ts` for `router`, `api`, `tsconfig` options | FR-6 |
-| AC-8 | `typedVitePlugin(explicitOpts)` ignores `typed.config.ts` for fields present in `explicitOpts` | FR-6, FR-11 |
-| AC-9 | TS plugin reads `typed.config.ts` for router/api prefix; no `vmc.config.ts` fallback | FR-7 |
-| AC-10 | Config loading is fully synchronous; no async/Promise in the load path | NFR-1 |
-| AC-11 | No new npm dependencies added for config loading itself | NFR-2 |
-| AC-12 | `typed test` runs vitest without `vitest.config.ts` using `typed.config.ts` `test` defaults | FR-8 |
-| AC-13 | `typed test` defers to `vitest.config.ts` when present | FR-8, FR-11 |
-| AC-14 | `typed test --coverage` overrides config-level coverage setting | FR-8, FR-4 |
-| AC-15 | `typed lint` runs oxlint with sane TS defaults when no oxlint config exists | FR-9 |
-| AC-16 | `typed lint --fix` applies auto-fixes | FR-9 |
-| AC-17 | `typed lint` defers to `.oxlintrc.json` when present | FR-9, FR-11 |
-| AC-18 | `typed format` formats files with oxfmt using config defaults | FR-10 |
-| AC-19 | `typed format --check` exits non-zero when files are not formatted | FR-10 |
-| AC-20 | `typed format` defers to `.oxfmtrc.json` when present | FR-10, FR-11 |
-| AC-21 | Unknown flags are passed through to the underlying tool | NFR-6 |
+| ID    | Criterion                                                                                                     | Traces To          |
+| ----- | ------------------------------------------------------------------------------------------------------------- | ------------------ |
+| AC-1  | `defineConfig({})` compiles and returns a valid `TypedConfig`                                                 | FR-1, NFR-3, NFR-4 |
+| AC-2  | `loadTypedConfig({ projectRoot, ts })` discovers `typed.config.ts` and returns `{ status: "loaded", config }` | FR-2, FR-3, NFR-1  |
+| AC-3  | `loadTypedConfig` returns `{ status: "not-found" }` when no config file exists                                | FR-2, FR-11        |
+| AC-4  | CLI `serve` uses `typed.config.ts` `server.port` as default; `--port` flag overrides it                       | FR-4               |
+| AC-5  | CLI `build` constructs full `InlineConfig` when no `vite.config.ts` exists, with `configFile: false`          | FR-5               |
+| AC-6  | CLI `build` preserves current behavior when `vite.config.ts` exists                                           | FR-5, FR-11        |
+| AC-7  | `typedVitePlugin()` (zero-arg) reads `typed.config.ts` for `router`, `api`, `tsconfig` options                | FR-6               |
+| AC-8  | `typedVitePlugin(explicitOpts)` ignores `typed.config.ts` for fields present in `explicitOpts`                | FR-6, FR-11        |
+| AC-9  | TS plugin reads `typed.config.ts` for router/api prefix; no `vmc.config.ts` fallback                          | FR-7               |
+| AC-10 | Config loading is fully synchronous; no async/Promise in the load path                                        | NFR-1              |
+| AC-11 | No new npm dependencies added for config loading itself                                                       | NFR-2              |
+| AC-12 | `typed test` runs vitest without `vitest.config.ts` using `typed.config.ts` `test` defaults                   | FR-8               |
+| AC-13 | `typed test` defers to `vitest.config.ts` when present                                                        | FR-8, FR-11        |
+| AC-14 | `typed test --coverage` overrides config-level coverage setting                                               | FR-8, FR-4         |
+| AC-15 | `typed lint` runs oxlint with sane TS defaults when no oxlint config exists                                   | FR-9               |
+| AC-16 | `typed lint --fix` applies auto-fixes                                                                         | FR-9               |
+| AC-17 | `typed lint` defers to `.oxlintrc.json` when present                                                          | FR-9, FR-11        |
+| AC-18 | `typed format` formats files with oxfmt using config defaults                                                 | FR-10              |
+| AC-19 | `typed format --check` exits non-zero when files are not formatted                                            | FR-10              |
+| AC-20 | `typed format` defers to `.oxfmtrc.json` when present                                                         | FR-10, FR-11       |
+| AC-21 | Unknown flags are passed through to the underlying tool                                                       | NFR-6              |

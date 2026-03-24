@@ -6,12 +6,12 @@ Vite 7 CLI with server-side capabilities for typed-smol apps. Mirrors `vite`/`vi
 
 ## Commands
 
-| Command       | Purpose                          |
-|---------------|----------------------------------|
-| `typed serve` | Dev server (Vite + SSR module)   |
-| `typed build` | Client + server multibuild       |
-| `typed preview` | Preview production build       |
-| `typed run`   | Run TS file with Vite transforms |
+| Command         | Purpose                          |
+| --------------- | -------------------------------- |
+| `typed serve`   | Dev server (Vite + SSR module)   |
+| `typed build`   | Client + server multibuild       |
+| `typed preview` | Preview production build         |
+| `typed run`     | Run TS file with Vite transforms |
 
 ## Key surfaces
 

@@ -58,7 +58,7 @@ export type ProvideMerge<A extends LayerAny, B extends LayerAny> = Layer.Layer<
   Layer.Success<A | B>,
   Layer.Error<A | B>,
   Exclude<Layer.Services<A>, Layer.Success<B>> | Layer.Services<B>
-  >;
+>;
 
 export type Provide<A extends LayerAny, B extends LayerAny> = Layer.Layer<
   Layer.Success<A | B>,

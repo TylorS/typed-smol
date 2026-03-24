@@ -12,16 +12,11 @@ export const configFlag = Flag.optional(
 );
 
 export const modeFlag = Flag.optional(
-  Flag.string("mode").pipe(
-    Flag.withAlias("m"),
-    Flag.withDescription("Set env mode"),
-  ),
+  Flag.string("mode").pipe(Flag.withAlias("m"), Flag.withDescription("Set env mode")),
 );
 
 export const baseFlag = Flag.optional(
-  Flag.string("base").pipe(
-    Flag.withDescription("Public base path (default: /)"),
-  ),
+  Flag.string("base").pipe(Flag.withDescription("Public base path (default: /)")),
 );
 
 export const logLevelFlag = Flag.optional(

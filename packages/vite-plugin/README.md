@@ -10,14 +10,14 @@
 
 ## Capabilities
 
-| Area | What you get |
-|------|--------------|
-| **Router VM** | `router:./path` → typed Matcher from route files |
-| **HttpApi VM** | `api:./path` → typed Api + Client + OpenAPI (when `apiVmOptions` set) |
-| **TypeInfo** | Structural type-checking of route/endpoint contracts (when `createTypeInfoApiSession` provided) |
-| **tsconfig paths** | Path alias resolution (default: on) |
-| **Analyzer** | `dist/stats.html` treemap when `ANALYZE=1` |
-| **Compression** | Brotli `.br` for build output (default: on) |
+| Area               | What you get                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| **Router VM**      | `router:./path` → typed Matcher from route files                                                |
+| **HttpApi VM**     | `api:./path` → typed Api + Client + OpenAPI (when `apiVmOptions` set)                           |
+| **TypeInfo**       | Structural type-checking of route/endpoint contracts (when `createTypeInfoApiSession` provided) |
+| **tsconfig paths** | Path alias resolution (default: on)                                                             |
+| **Analyzer**       | `dist/stats.html` treemap when `ANALYZE=1`                                                      |
+| **Compression**    | Brotli `.br` for build output (default: on)                                                     |
 
 ## Architecture
 
@@ -69,8 +69,7 @@ import { createTypeInfoApiSessionForApp } from "@typed/app";
 
 export default defineConfig({
   plugins: typedVitePlugin({
-    createTypeInfoApiSession: ({ ts, program }) =>
-      createTypeInfoApiSessionForApp({ ts, program }),
+    createTypeInfoApiSession: ({ ts, program }) => createTypeInfoApiSessionForApp({ ts, program }),
     routerVmOptions: {},
     apiVmOptions: {},
   }),
@@ -84,14 +83,13 @@ export default defineConfig({
 
 ## Options
 
-| Option | Type | Default | Description |
-| ------ | ---- | ------- | ----------- |
-| `routerVmOptions` | `RouterVirtualModulePluginOptions` | `{}` | Options for the router VM plugin. |
-| `apiVmOptions` | `HttpApiVirtualModulePluginOptions` | — | When set, enables the HttpApi VM plugin. |
-| `createTypeInfoApiSession` | `CreateTypeInfoApiSession` | — | Required for router VM type-checking in dev. |
-| `tsconfig` | `string` | — | Path to `tsconfig.json` (relative to cwd or absolute). When set, both the Language Service session and vite-tsconfig-paths use this tsconfig. Default: auto-discovered from project root. |
-| `tsconfigPaths` | `boolean \| object` | `true` | Enable tsconfig path resolution. |
-| `analyze` | `boolean \| object` | `process.env.ANALYZE === '1'` | Enable bundle analyzer (dist/stats.html). |
-| `warnOnError` | `boolean` | `true` | Log virtual module resolution errors. |
-| `compression` | `boolean \| object` | `true` | Brotli compression for build output. |
-
+| Option                     | Type                                | Default                       | Description                                                                                                                                                                               |
+| -------------------------- | ----------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `routerVmOptions`          | `RouterVirtualModulePluginOptions`  | `{}`                          | Options for the router VM plugin.                                                                                                                                                         |
+| `apiVmOptions`             | `HttpApiVirtualModulePluginOptions` | —                             | When set, enables the HttpApi VM plugin.                                                                                                                                                  |
+| `createTypeInfoApiSession` | `CreateTypeInfoApiSession`          | —                             | Required for router VM type-checking in dev.                                                                                                                                              |
+| `tsconfig`                 | `string`                            | —                             | Path to `tsconfig.json` (relative to cwd or absolute). When set, both the Language Service session and vite-tsconfig-paths use this tsconfig. Default: auto-discovered from project root. |
+| `tsconfigPaths`            | `boolean \| object`                 | `true`                        | Enable tsconfig path resolution.                                                                                                                                                          |
+| `analyze`                  | `boolean \| object`                 | `process.env.ANALYZE === '1'` | Enable bundle analyzer (dist/stats.html).                                                                                                                                                 |
+| `warnOnError`              | `boolean`                           | `true`                        | Log virtual module resolution errors.                                                                                                                                                     |
+| `compression`              | `boolean \| object`                 | `true`                        | Brotli compression for build output.                                                                                                                                                      |

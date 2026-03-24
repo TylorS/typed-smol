@@ -89,12 +89,12 @@
 
 ## Implementation order
 
-| Phase | Work | Deliverable |
-|-------|------|-------------|
-| **1** | §1.1 Remove getBaseTypes fallback; §1.2 ObjectFlags no numeric fallback; §1.6 Centralize + document remaining internal APIs | Fewer internal APIs; single documented surface |
-| **2** | §1.3 Guard getIndexInfosOfType; §1.4 getExportsOfModule where applicable + centralize getAliasedSymbol; §1.5 Centralize TypeReference.target/symbol | All internal use centralized and guarded |
-| **3** | §2 resolvedFilePath (implement + test or document); §4 docs | Clear contract; optional resolution fidelity |
-| **4** | §3 directory() cache + test; §5 error-handling docs (and optional callback) | Performance and observability |
+| Phase | Work                                                                                                                                                | Deliverable                                    |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| **1** | §1.1 Remove getBaseTypes fallback; §1.2 ObjectFlags no numeric fallback; §1.6 Centralize + document remaining internal APIs                         | Fewer internal APIs; single documented surface |
+| **2** | §1.3 Guard getIndexInfosOfType; §1.4 getExportsOfModule where applicable + centralize getAliasedSymbol; §1.5 Centralize TypeReference.target/symbol | All internal use centralized and guarded       |
+| **3** | §2 resolvedFilePath (implement + test or document); §4 docs                                                                                         | Clear contract; optional resolution fidelity   |
+| **4** | §3 directory() cache + test; §5 error-handling docs (and optional callback)                                                                         | Performance and observability                  |
 
 ---
 

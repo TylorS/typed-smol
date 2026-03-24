@@ -2,22 +2,22 @@
 
 ## Research Questions
 
-| RQ | Question | Status |
-|----|----------|--------|
-| 1  | Does the TS checker API support all four projection step kinds? | Confirmed |
-| 2  | What is the full consumer migration surface? | Mapped |
-| 3  | Does bootstrap deduplication work with projected specs sharing same module? | Confirmed |
+| RQ  | Question                                                                    | Status    |
+| --- | --------------------------------------------------------------------------- | --------- |
+| 1   | Does the TS checker API support all four projection step kinds?             | Confirmed |
+| 2   | What is the full consumer migration surface?                                | Mapped    |
+| 3   | Does bootstrap deduplication work with projected specs sharing same module? | Confirmed |
 
 ## RQ1: TypeScript Checker API Support
 
 Each projection step maps to existing TypeScript checker API methods already used in `TypeInfoApi.ts`:
 
-| Step Kind | TS API | Already Used? |
-|-----------|--------|---------------|
-| `returnType` | `checker.getSignaturesOfType(type, Call)` → `checker.getReturnTypeOfSignature(sig)` | Yes (L846-849) |
-| `param` | `sig.getParameters()[index]` → `checker.getTypeOfSymbolAtLocation(param, decl)` | Yes (L856-862) |
-| `typeArg` | `checker.getTypeArguments(type as TypeReference)[index]` | Yes (L803) |
-| `property` | `type.getProperty(name)` → `checker.getTypeOfSymbolAtLocation(prop, decl)` | No, but standard public API |
+| Step Kind    | TS API                                                                              | Already Used?               |
+| ------------ | ----------------------------------------------------------------------------------- | --------------------------- |
+| `returnType` | `checker.getSignaturesOfType(type, Call)` → `checker.getReturnTypeOfSignature(sig)` | Yes (L846-849)              |
+| `param`      | `sig.getParameters()[index]` → `checker.getTypeOfSymbolAtLocation(param, decl)`     | Yes (L856-862)              |
+| `typeArg`    | `checker.getTypeArguments(type as TypeReference)[index]`                            | Yes (L803)                  |
+| `property`   | `type.getProperty(name)` → `checker.getTypeOfSymbolAtLocation(prop, decl)`          | No, but standard public API |
 
 **Finding**: All four projection kinds use public or already-used checker APIs. No new internal API dependency.
 
@@ -27,28 +27,28 @@ Each projection step maps to existing TypeScript checker API methods already use
 
 ### Source files with hardcoded field references (code only, excluding tests and docs):
 
-| File | Field | Usage | Migration |
-|------|-------|-------|-----------|
-| `types.ts` | `returnTypeAssignableTo` | Interface declaration | Remove field |
-| `types.ts` | `firstParamAssignableTo` | Interface declaration | Remove field |
-| `types.ts` | `returnTypeEffectSuccessAssignableTo` | Interface declaration | Remove field |
-| `TypeInfoApi.ts` | All three | `serializeExport()` computes them (L841-878) | Replace with projection loop |
-| `TypeInfoApi.ts` | `getFirstTypeArgument` | Helper for effect success (L796-809) | Generalized into `applyProjection` |
-| `routeTypeNode.ts` | `firstParamAssignableTo` | `firstParamIsRefSubject`, `firstParamIsCause`, `typeNodeExpectsRefSubjectParam` | Change to `assignableTo["param.0:RefSubject"]` etc. |
-| `routeTypeNode.ts` | `returnTypeEffectSuccessAssignableTo` | `typeNodeIsEffectOptionReturn` | Change to `assignableTo["returnType.typeArg.0:Option"]` |
-| `routeTypeNode.ts` | `returnTypeAssignableTo` | `classifyCatchForm` | Change to `assignableTo["returnType:Fx"]` etc. |
-| `buildRouteDescriptors.ts` | `returnTypeAssignableTo` | `classifyEntrypointKind` (L118-119) | Use `assignableTo["returnType:Fx"]` etc. |
-| `buildRouteDescriptors.ts` | `firstParamAssignableTo` | `typeNodeExpectsRefSubjectParam` (L268) | Passed through helper |
-| `buildRouteDescriptors.ts` | `returnTypeEffectSuccessAssignableTo` | Guard validation (L334) | Passed through helper |
-| `HttpApiVirtualModulePlugin.ts` | `returnTypeAssignableTo` | Handler return type check (L207-208) | Use `assignableTo["returnType:Effect"]` |
-| `HttpApiVirtualModulePlugin.ts` | `returnTypeEffectSuccessAssignableTo` | Raw handler detection (L335) | Use `assignableTo["returnType.typeArg.0:HttpServerResponse"]` |
+| File                            | Field                                 | Usage                                                                           | Migration                                                     |
+| ------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `types.ts`                      | `returnTypeAssignableTo`              | Interface declaration                                                           | Remove field                                                  |
+| `types.ts`                      | `firstParamAssignableTo`              | Interface declaration                                                           | Remove field                                                  |
+| `types.ts`                      | `returnTypeEffectSuccessAssignableTo` | Interface declaration                                                           | Remove field                                                  |
+| `TypeInfoApi.ts`                | All three                             | `serializeExport()` computes them (L841-878)                                    | Replace with projection loop                                  |
+| `TypeInfoApi.ts`                | `getFirstTypeArgument`                | Helper for effect success (L796-809)                                            | Generalized into `applyProjection`                            |
+| `routeTypeNode.ts`              | `firstParamAssignableTo`              | `firstParamIsRefSubject`, `firstParamIsCause`, `typeNodeExpectsRefSubjectParam` | Change to `assignableTo["param.0:RefSubject"]` etc.           |
+| `routeTypeNode.ts`              | `returnTypeEffectSuccessAssignableTo` | `typeNodeIsEffectOptionReturn`                                                  | Change to `assignableTo["returnType.typeArg.0:Option"]`       |
+| `routeTypeNode.ts`              | `returnTypeAssignableTo`              | `classifyCatchForm`                                                             | Change to `assignableTo["returnType:Fx"]` etc.                |
+| `buildRouteDescriptors.ts`      | `returnTypeAssignableTo`              | `classifyEntrypointKind` (L118-119)                                             | Use `assignableTo["returnType:Fx"]` etc.                      |
+| `buildRouteDescriptors.ts`      | `firstParamAssignableTo`              | `typeNodeExpectsRefSubjectParam` (L268)                                         | Passed through helper                                         |
+| `buildRouteDescriptors.ts`      | `returnTypeEffectSuccessAssignableTo` | Guard validation (L334)                                                         | Passed through helper                                         |
+| `HttpApiVirtualModulePlugin.ts` | `returnTypeAssignableTo`              | Handler return type check (L207-208)                                            | Use `assignableTo["returnType:Effect"]`                       |
+| `HttpApiVirtualModulePlugin.ts` | `returnTypeEffectSuccessAssignableTo` | Raw handler detection (L335)                                                    | Use `assignableTo["returnType.typeArg.0:HttpServerResponse"]` |
 
 ### Test files (need snapshot updates):
 
-| File | Approximate refs |
-|------|-----------------|
-| `RouterVirtualModulePlugin.test.ts` | 10 |
-| `HttpApiVirtualModulePlugin.test.ts` | 7 |
+| File                                 | Approximate refs |
+| ------------------------------------ | ---------------- |
+| `RouterVirtualModulePlugin.test.ts`  | 10               |
+| `HttpApiVirtualModulePlugin.test.ts` | 7                |
 
 ### Migration Difficulty: **Low-Medium**
 

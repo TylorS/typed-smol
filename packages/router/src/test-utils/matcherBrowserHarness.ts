@@ -5,7 +5,10 @@ import { Scope } from "effect";
 /**
  * Build an absolute URL for the Vitest browser page origin (same pattern as in-memory tests using http://localhost/...).
  */
-export const absoluteUrl = (path: string, win: Window & typeof globalThis = globalThis.window): string => {
+export const absoluteUrl = (
+  path: string,
+  win: Window & typeof globalThis = globalThis.window,
+): string => {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return new URL(normalized, win.location.origin).href;
 };
@@ -16,5 +19,4 @@ export const absoluteUrl = (path: string, win: Window & typeof globalThis = glob
 export const runWithBrowserRouter = <A, E>(
   effect: Effect.Effect<A, E, Router | Scope.Scope>,
   win: Window & typeof globalThis = globalThis.window,
-): Promise<A> =>
-  effect.pipe(Effect.provide(BrowserRouter(win)), Effect.scoped, Effect.runPromise);
+): Promise<A> => effect.pipe(Effect.provide(BrowserRouter(win)), Effect.scoped, Effect.runPromise);

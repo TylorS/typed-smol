@@ -44,10 +44,7 @@ function resolveProjectRoot(projectRoot: string): string | LoadTypedConfigResult
   return resolved;
 }
 
-function findConfigPath(
-  projectRoot: string,
-  configPath?: string,
-): string | LoadTypedConfigResult {
+function findConfigPath(projectRoot: string, configPath?: string): string | LoadTypedConfigResult {
   if (configPath !== undefined) {
     const resolved = isAbsolute(configPath) ? configPath : resolve(projectRoot, configPath);
     if (!existsSync(resolved)) {
@@ -74,10 +71,7 @@ function tryRequireTs(): typeof import("typescript") | undefined {
   }
 }
 
-function transpileAndEval(
-  tsMod: typeof import("typescript"),
-  configPath: string,
-): unknown {
+function transpileAndEval(tsMod: typeof import("typescript"), configPath: string): unknown {
   const sourceText = readFileSync(configPath, "utf8");
   const transpiled = tsMod.transpileModule(sourceText, {
     fileName: configPath,

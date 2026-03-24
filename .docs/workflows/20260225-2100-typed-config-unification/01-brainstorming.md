@@ -32,13 +32,13 @@ Users must duplicate intent across files. CLI has no access to plugin-level opti
 
 ## Known Unknowns and Risks
 
-| # | Unknown | Risk | Mitigation |
-|---|---------|------|------------|
-| 1 | Config file loading mechanism | Bundling TS config at build time requires a TS loader (Vite, tsx, jiti) | Use Vite's `loadConfigFromFile` or `jiti` (already available in ecosystem) |
-| 2 | Where does the type live? | `@typed/app` is deepest common dependency, but config concerns (build, server) feel higher-level | Could create a new `@typed/config` package, or keep in `@typed/app` |
-| 3 | Overlap with `vmc.config.ts` | TS plugin uses `vmc.config.ts` with plugin paths; unifying may break existing TS plugin setup | Support both files with migration path |
-| 4 | Runtime config vs build-time config | `AppConfig` (disableListenLog, host, port) is runtime; build/server options are build-time | Clear sectioning in the config type; runtime section is just defaults |
-| 5 | How Vite plugin discovers the config | Zero-arg `typedVitePlugin()` needs to find and load `typed.config.ts` before Vite config is resolved | Use Vite plugin `config` hook or pre-resolve in plugin factory |
+| #   | Unknown                              | Risk                                                                                                 | Mitigation                                                                 |
+| --- | ------------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1   | Config file loading mechanism        | Bundling TS config at build time requires a TS loader (Vite, tsx, jiti)                              | Use Vite's `loadConfigFromFile` or `jiti` (already available in ecosystem) |
+| 2   | Where does the type live?            | `@typed/app` is deepest common dependency, but config concerns (build, server) feel higher-level     | Could create a new `@typed/config` package, or keep in `@typed/app`        |
+| 3   | Overlap with `vmc.config.ts`         | TS plugin uses `vmc.config.ts` with plugin paths; unifying may break existing TS plugin setup        | Support both files with migration path                                     |
+| 4   | Runtime config vs build-time config  | `AppConfig` (disableListenLog, host, port) is runtime; build/server options are build-time           | Clear sectioning in the config type; runtime section is just defaults      |
+| 5   | How Vite plugin discovers the config | Zero-arg `typedVitePlugin()` needs to find and load `typed.config.ts` before Vite config is resolved | Use Vite plugin `config` hook or pre-resolve in plugin factory             |
 
 ## Candidate Approaches
 

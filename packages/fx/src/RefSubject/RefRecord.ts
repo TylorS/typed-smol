@@ -612,8 +612,10 @@ export const pop: {
   ): RefSubject.Filtered<[V, Record.ReadonlyRecord<K, V>], E, R>;
 } = dual(2, function pop<K extends string, V, E, R>(ref: RefRecord<K, V, E, R>, key: K) {
   return RefSubject.filterMap(ref, (r) => {
-    return Option.map(Record.pop(r, key), ([value, next]) =>
-      [value, next as Record.ReadonlyRecord<K, V>] as [V, Record.ReadonlyRecord<K, V>],
+    return Option.map(
+      Record.pop(r, key),
+      ([value, next]) =>
+        [value, next as Record.ReadonlyRecord<K, V>] as [V, Record.ReadonlyRecord<K, V>],
     );
   });
 });

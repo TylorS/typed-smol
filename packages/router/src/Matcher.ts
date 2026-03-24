@@ -435,7 +435,11 @@ function parseMatchArgs(args: [unknown, ...Array<unknown>]): ParsedMatch {
 }
 
 class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
-  readonly [FxTypeId]: Fx.Fx.Variance<A, E | RouteNotFound | RouteDecodeError | RouteGuardError, R | Scope.Scope | Router> = {
+  readonly [FxTypeId]: Fx.Fx.Variance<
+    A,
+    E | RouteNotFound | RouteDecodeError | RouteGuardError,
+    R | Scope.Scope | Router
+  > = {
     _A: identity,
     _E: identity,
     _R: identity,

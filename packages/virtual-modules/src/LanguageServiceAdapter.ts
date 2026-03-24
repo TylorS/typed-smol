@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type * as ts from "typescript";
 import {
@@ -17,10 +16,7 @@ import {
   type MutableVirtualRecord,
   type ResolveRecordResult,
 } from "./internal/VirtualRecordStore.js";
-import {
-  VIRTUAL_MODULE_URI_SCHEME,
-  VIRTUAL_NODE_MODULES_RELATIVE,
-} from "./internal/path.js";
+import { VIRTUAL_MODULE_URI_SCHEME, VIRTUAL_NODE_MODULES_RELATIVE } from "./internal/path.js";
 import { Mutable } from "effect/Types";
 
 /** Prefix VSCode uses when sending non-file URIs to tsserver (query params are dropped). */

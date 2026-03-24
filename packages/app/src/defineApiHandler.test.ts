@@ -20,14 +20,20 @@ describe("defineApiHandler", () => {
   };
 
   it("returns handler in curried form and preserves identity", () => {
-    const handler = defineApiHandler(route, "GET", schemas)((ctx) =>
-      Effect.succeed({ ok: true, id: ctx.path.id }),
-    );
+    const handler = defineApiHandler(
+      route,
+      "GET",
+      schemas,
+    )((ctx) => Effect.succeed({ ok: true, id: ctx.path.id }));
     expect(typeof handler).toBe("function");
   });
 
   it("handler context has typed path, query, headers, body", () => {
-    const handler = defineApiHandler(route, "GET", schemas)((ctx) => {
+    const handler = defineApiHandler(
+      route,
+      "GET",
+      schemas,
+    )((ctx) => {
       const _path = ctx.path;
       const _query: Record<string, string | string[] | undefined> = ctx.query;
       const _body: { name: string } = ctx.body;
@@ -41,9 +47,11 @@ describe("defineApiHandler", () => {
   });
 
   it("handler return type is Effect<Success, Error>", () => {
-    const handler = defineApiHandler(route, "POST", schemas)((ctx) =>
-      Effect.succeed({ ok: true, id: ctx.path.id }),
-    );
+    const handler = defineApiHandler(
+      route,
+      "POST",
+      schemas,
+    )((ctx) => Effect.succeed({ ok: true, id: ctx.path.id }));
     const run = Effect.runPromise(
       handler({
         path: { id: "1" },
@@ -59,9 +67,7 @@ describe("defineApiHandler", () => {
 
   it("accepts Router.Route from Parse for simple path", () => {
     const route = Route.Parse("status");
-    const handler = defineApiHandler(route, "GET")(() =>
-      Effect.succeed({ status: "ok" }),
-    );
+    const handler = defineApiHandler(route, "GET")(() => Effect.succeed({ status: "ok" }));
     const run = Effect.runPromise(
       handler({
         path: {},
@@ -84,14 +90,22 @@ describe("defineApiHandler compile-time negative tests", () => {
   };
 
   it("rejects handler returning wrong success shape (ts-expect-error)", () => {
-    defineApiHandler(route, "GET", schemas)(
+    defineApiHandler(
+      route,
+      "GET",
+      schemas,
+    )(
       // @ts-expect-error invalid return type
       () => Effect.succeed(42),
     );
   });
 
   it("rejects handler using wrong path shape (ts-expect-error)", () => {
-    defineApiHandler(route, "GET", schemas)((ctx) => {
+    defineApiHandler(
+      route,
+      "GET",
+      schemas,
+    )((ctx) => {
       // @ts-expect-error - ctx.path is { id: string }; number is not assignable to string
       const _wrong: { id: number } = ctx.path;
       return Effect.succeed({ ok: true });

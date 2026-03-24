@@ -6,18 +6,18 @@
 
 ## Source Table
 
-| source | year | type | confidence | notes |
-| ------ | ---- | ---- | ---------- | ----- |
-| packages/virtual-modules/src/LanguageServiceAdapter.ts | 2026 | code | high | resolveModuleNames, parsePreviewUri, importerForVirtual logic |
-| packages/virtual-modules/src/CompilerHostAdapter.ts | 2026 | code | high | resolveModuleNames, resolveModuleNameLiterals |
-| packages/virtual-modules-vite/src/vitePlugin.ts | 2026 | code | high | resolveId, importer handling |
-| packages/virtual-modules/src/internal/VirtualRecordStore.ts | 2026 | code | high | recordsByVirtualFile, record.importer |
+| source                                                      | year | type | confidence | notes                                                         |
+| ----------------------------------------------------------- | ---- | ---- | ---------- | ------------------------------------------------------------- |
+| packages/virtual-modules/src/LanguageServiceAdapter.ts      | 2026 | code | high       | resolveModuleNames, parsePreviewUri, importerForVirtual logic |
+| packages/virtual-modules/src/CompilerHostAdapter.ts         | 2026 | code | high       | resolveModuleNames, resolveModuleNameLiterals                 |
+| packages/virtual-modules-vite/src/vitePlugin.ts             | 2026 | code | high       | resolveId, importer handling                                  |
+| packages/virtual-modules/src/internal/VirtualRecordStore.ts | 2026 | code | high       | recordsByVirtualFile, record.importer                         |
 
 ## WebSearch Query Log
 
-| query | rationale | selected_sources |
-| ----- | --------- | ---------------- |
-| (none) | Codebase exploration sufficient | — |
+| query  | rationale                       | selected_sources |
+| ------ | ------------------------------- | ---------------- |
+| (none) | Codebase exploration sufficient | —                |
 
 ## Key Findings
 

@@ -10,10 +10,7 @@ import type {
   VirtualModuleResolution,
   VirtualModuleResolver,
 } from "./types.js";
-import {
-  isVirtualModuleBuildError,
-  isVirtualModuleBuildSuccess,
-} from "./types.js";
+import { isVirtualModuleBuildError, isVirtualModuleBuildSuccess } from "./types.js";
 
 /**
  * TypeInfoApi used when createTypeInfoApiSession is not provided.

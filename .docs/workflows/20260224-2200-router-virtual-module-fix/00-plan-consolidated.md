@@ -1,4 +1,4 @@
-# Fix router:* virtual module (TS plugin + VSCode) with consolidated behavior
+# Fix router:\* virtual module (TS plugin + VSCode) with consolidated behavior
 
 ## Objective
 
@@ -79,13 +79,13 @@ Update compile.ts, build.ts, watch.ts to use the same path (`getTypeTargetBootst
 
 ## Summary of changes
 
-| Area | Location | Change |
-|------|----------|--------|
+| Area                     | Location                                                   | Change                                                                                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Shared bootstrap API** | New (or existing) module in `packages/virtual-modules/src` | Add `getTypeTargetBootstrapPath`, `ensureTypeTargetBootstrapFile`, `getProgramWithTypeTargetBootstrap`; export from index. Single path: `projectRoot/.typed/type-target-bootstrap.ts`. |
-| **VMC** | compile.ts, build.ts, watch.ts | Optionally switch to shared path and `ensureTypeTargetBootstrapFile` so all consumers use the same path and helper. |
-| **TS plugin** | plugin.ts | Replace local bootstrap/path and `getProgramWithBootstrap` with `getProgramWithTypeTargetBootstrap(ts, program, projectRoot, typeTargetSpecs)`. |
-| **VSCode resolver** | resolver.ts | Build base program from tsconfig, then `getProgramWithTypeTargetBootstrap(ts, baseProgram, projectRoot, typeTargetSpecs)` and use result for TypeInfo session. |
-| **PluginManager** | PluginManager.ts | On session creation throw with “program not available” message, treat as unresolved (continue to next plugin / return unresolved). Document contract. |
+| **VMC**                  | compile.ts, build.ts, watch.ts                             | Optionally switch to shared path and `ensureTypeTargetBootstrapFile` so all consumers use the same path and helper.                                                                    |
+| **TS plugin**            | plugin.ts                                                  | Replace local bootstrap/path and `getProgramWithBootstrap` with `getProgramWithTypeTargetBootstrap(ts, program, projectRoot, typeTargetSpecs)`.                                        |
+| **VSCode resolver**      | resolver.ts                                                | Build base program from tsconfig, then `getProgramWithTypeTargetBootstrap(ts, baseProgram, projectRoot, typeTargetSpecs)` and use result for TypeInfo session.                         |
+| **PluginManager**        | PluginManager.ts                                           | On session creation throw with “program not available” message, treat as unresolved (continue to next plugin / return unresolved). Document contract.                                  |
 
 ---
 

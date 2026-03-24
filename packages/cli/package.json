@@ -1,10 +1,14 @@
 {
   "name": "@typed/cli",
   "version": "1.0.0-beta.1",
-  "type": "module",
   "bin": {
     "typed": "./dist/bin.js"
   },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -43,9 +47,5 @@
     "oxfmt": {
       "optional": true
     }
-  },
-  "files": [
-    "dist",
-    "src"
-  ]
+  }
 }

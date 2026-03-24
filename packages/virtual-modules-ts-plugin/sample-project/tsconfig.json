@@ -1,15 +1,7 @@
 {
   "extends": "@typed/tsconfig/base",
-  "include": [
-    "entry.ts",
-    "router-demo.ts",
-    "server.ts",
-    "routes/**/*.ts",
-    "api/**/*.ts"
-  ],
-  "exclude": [
-    "routes/**/*.example.ts"
-  ],
+  "include": ["entry.ts", "router-demo.ts", "server.ts", "routes/**/*.ts", "api/**/*.ts"],
+  "exclude": ["routes/**/*.example.ts"],
   "compilerOptions": {
     "noEmit": true,
     "plugins": [

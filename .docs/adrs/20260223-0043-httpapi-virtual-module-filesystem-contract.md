@@ -59,15 +59,17 @@ Adopt a **filesystem-first HttpApi contract** with explicit precedence and struc
    - Expose explicit option wiring (`apiVmOptions`) and deterministic registration order.
 
 10. **Typed handler helper**
-   - Provide a curried helper (working name `defineApiHandler`) for authoring endpoint handlers from `(route, method, request)` with generator-style context inference.
-   - Require compile-time enforcement of inferred input/output/error shapes from route + `Schema.TaggedRequest`.
+
+- Provide a curried helper (working name `defineApiHandler`) for authoring endpoint handlers from `(route, method, request)` with generator-style context inference.
+- Require compile-time enforcement of inferred input/output/error shapes from route + `Schema.TaggedRequest`.
 
 11. **OpenAPI configuration contract**
-   - Support only Effect-backed OpenAPI controls from current source:
-     - annotations via `OpenApi.annotations` keys (`identifier`, `title`, `version`, `description`, `license`, `summary`, `deprecated`, `externalDocs`, `servers`, `format`, `override`, `exclude`, `transform`),
-     - spec generation via `OpenApi.fromApi(..., { additionalProperties })`,
-     - exposure via JSON (`HttpApiBuilder.layer openapiPath` equivalent), Swagger (`HttpApiSwagger.layer path` equivalent), and Scalar (`HttpApiScalar.layer/layerCdn` equivalents).
-   - Enforce scope and route-conflict diagnostics for invalid OpenAPI configurations.
+
+- Support only Effect-backed OpenAPI controls from current source:
+  - annotations via `OpenApi.annotations` keys (`identifier`, `title`, `version`, `description`, `license`, `summary`, `deprecated`, `externalDocs`, `servers`, `format`, `override`, `exclude`, `transform`),
+  - spec generation via `OpenApi.fromApi(..., { additionalProperties })`,
+  - exposure via JSON (`HttpApiBuilder.layer openapiPath` equivalent), Swagger (`HttpApiSwagger.layer path` equivalent), and Scalar (`HttpApiScalar.layer/layerCdn` equivalents).
+- Enforce scope and route-conflict diagnostics for invalid OpenAPI configurations.
 
 ## Consequences
 

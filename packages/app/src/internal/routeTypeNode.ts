@@ -64,10 +64,7 @@ export type DepsExportKind = "layer" | "servicemap" | "array";
 export type DepsExportClassification = DepsExportKind | "unknown";
 
 /** Classify dependency default export for optimal provide lift. Uses api; node.kind "array" or "tuple" for T[] / [T, ...]. */
-export function classifyDepsExport(
-  node: TypeNode,
-  api: TypeInfoApi,
-): DepsExportClassification {
+export function classifyDepsExport(node: TypeNode, api: TypeInfoApi): DepsExportClassification {
   if (api.isAssignableTo(node, "Layer")) return "layer";
   if (api.isAssignableTo(node, "ServiceMap")) return "servicemap";
   if (node.kind === "array" || node.kind === "tuple") return "array";

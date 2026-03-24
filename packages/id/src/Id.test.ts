@@ -10,7 +10,6 @@ import * as Uuid4 from "./Uuid4.js";
 import * as Uuid5 from "./Uuid5.js";
 import * as Uuid7 from "./Uuid7.js";
 import { Random } from "effect";
-import { TestClock } from "effect/testing";
 
 const run = <A, E>(effect: Effect.Effect<A, E, Ids>) =>
   Effect.runPromise(Effect.provide(effect, Ids.Test()));

@@ -1,9 +1,5 @@
 import { basename, dirname, join, relative } from "node:path";
-import type {
-  ExportedTypeInfo,
-  TypeInfoApi,
-  TypeInfoFileSnapshot,
-} from "@typed/virtual-modules";
+import type { ExportedTypeInfo, TypeInfoApi, TypeInfoFileSnapshot } from "@typed/virtual-modules";
 import { stripScriptExtension, toPosixPath } from "./path.js";
 import {
   type CatchForm,
@@ -113,17 +109,11 @@ function listEntrypointExports(snapshot: TypeInfoFileSnapshot): readonly Exporte
   );
 }
 
-function isRouteExportCompatible(
-  routeExport: ExportedTypeInfo,
-  api: TypeInfoApi,
-): boolean {
+function isRouteExportCompatible(routeExport: ExportedTypeInfo, api: TypeInfoApi): boolean {
   return typeNodeIsRouteCompatible(routeExport.type, api);
 }
 
-function classifyEntrypointKind(
-  entrypoint: ExportedTypeInfo,
-  api: TypeInfoApi,
-): RuntimeKind {
+function classifyEntrypointKind(entrypoint: ExportedTypeInfo, api: TypeInfoApi): RuntimeKind {
   const { type } = entrypoint;
   const nodeForKind = isCallableNode(type) ? (getCallableReturnType(type) ?? type) : type;
   return typeNodeToRuntimeKind(nodeForKind, api);
@@ -272,8 +262,7 @@ export function buildRouteDescriptors(
     }
     const entrypointIsFunction = isCallableNode(entrypoint.type);
     const entrypointExpectsRefSubject =
-      entrypointIsFunction &&
-      typeNodeExpectsRefSubjectParam(entrypoint.type, api);
+      entrypointIsFunction && typeNodeExpectsRefSubjectParam(entrypoint.type, api);
     const composedConcerns = resolveComposedConcernsForLeaf(relPath, existingPaths);
     const inFileConcerns: InFileConcerns = {};
     for (const name of ["layout", "dependencies", "catch", "guard"] as const) {

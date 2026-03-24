@@ -80,9 +80,8 @@ describe("validateEndpointContract", () => {
   });
 
   it("rejects invalid method", () => {
-    expect(
-      validateEndpointContract({ ...validContract, method: "INVALID" }),
-    ).toMatchInlineSnapshot(`
+    expect(validateEndpointContract({ ...validContract, method: "INVALID" }))
+      .toMatchInlineSnapshot(`
       {
         "ok": false,
         "reason": "Endpoint contract method must be one of: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
@@ -99,9 +98,7 @@ describe("validateEndpointContract", () => {
   });
 
   it("rejects route that is not an object", () => {
-    expect(
-      validateEndpointContract({ ...validContract, route: null }),
-    ).toMatchInlineSnapshot(`
+    expect(validateEndpointContract({ ...validContract, route: null })).toMatchInlineSnapshot(`
       {
         "ok": false,
         "reason": "Endpoint contract route must be an object (path + pathSchema + querySchema)",
@@ -148,9 +145,8 @@ describe("validateEndpointContract", () => {
   });
 
   it("rejects handler that is not a function", () => {
-    expect(
-      validateEndpointContract({ ...validContract, handler: "not a function" }),
-    ).toMatchInlineSnapshot(`
+    expect(validateEndpointContract({ ...validContract, handler: "not a function" }))
+      .toMatchInlineSnapshot(`
       {
         "ok": false,
         "reason": "Endpoint contract handler must be a function",

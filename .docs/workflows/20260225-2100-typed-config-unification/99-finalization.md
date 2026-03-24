@@ -3,6 +3,7 @@
 ## What Changed
 
 ### New Files
+
 - `packages/app/src/config/TypedConfig.ts` — canonical `TypedConfig` interface with all sections (entry, router, api, tsconfig, server, build, preview, test, lint, format, analyze, compression, warnOnError)
 - `packages/app/src/config/defineConfig.ts` — identity helper for type inference
 - `packages/app/src/config/loadTypedConfig.ts` — sync config loader using `ts.transpileModule` + CJS eval
@@ -17,6 +18,7 @@
 - `packages/virtual-modules-ts-plugin/sample-project/typed.config.ts` — replaces vmc.config.ts
 
 ### Modified Files
+
 - `packages/app/src/index.ts` — exports config module
 - `packages/vite-plugin/src/index.ts` — `typedVitePlugin()` zero-arg auto-discovers `typed.config.ts`
 - `packages/cli/src/commands/serve.ts` — config-aware with optional vite.config.ts

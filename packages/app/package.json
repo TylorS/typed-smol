@@ -1,6 +1,10 @@
 {
   "name": "@typed/app",
   "version": "1.0.0-beta.2",
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -37,9 +41,5 @@
   },
   "peerDependencies": {
     "typescript": "catalog:"
-  },
-  "files": [
-    "dist",
-    "src"
-  ]
+  }
 }

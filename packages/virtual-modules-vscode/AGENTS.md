@@ -6,15 +6,15 @@ VS Code extension that bridges **virtual module imports** (e.g. `router:./routes
 
 ## Capabilities
 
-| Capability | Mechanism |
-|------------|------------|
+| Capability           | Mechanism                                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Go to Definition** | `DefinitionProvider` on virtual specifiers; resolves via `@typed/virtual-modules` and opens content via `typed-virtual://` FileSystemProvider or preview on disk |
-| **Document links** | Clickable virtual imports that open the resolved module |
-| **Find references** | From a virtual module tab, find all files that import it |
-| **Tree view** | "Virtual Module Imports" sidebar—lists discovered virtual imports per workspace folder; click to open |
-| **Open from import** | Editor context menu: "Virtual Modules: Open virtual module from import" (cursor on specifier) |
-| **Diagnose** | `typed.virtualModules.diagnoseDefinition` writes resolver steps to Output channel for debugging |
-| **Live refresh** | Watches `onDidChangeTextDocument` / `onDidSaveTextDocument`; debounced refresh of cached virtual content |
+| **Document links**   | Clickable virtual imports that open the resolved module                                                                                                          |
+| **Find references**  | From a virtual module tab, find all files that import it                                                                                                         |
+| **Tree view**        | "Virtual Module Imports" sidebar—lists discovered virtual imports per workspace folder; click to open                                                            |
+| **Open from import** | Editor context menu: "Virtual Modules: Open virtual module from import" (cursor on specifier)                                                                    |
+| **Diagnose**         | `typed.virtualModules.diagnoseDefinition` writes resolver steps to Output channel for debugging                                                                  |
+| **Live refresh**     | Watches `onDidChangeTextDocument` / `onDidSaveTextDocument`; debounced refresh of cached virtual content                                                         |
 
 ## Architecture
 

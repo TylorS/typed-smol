@@ -9,10 +9,7 @@ import type {
   HttpApiEndpointCompanionKind,
   HttpApiFileRole,
 } from "./httpapiFileRoles.js";
-import {
-  compareHttpApiPathOrder,
-  sortHttpApiPaths,
-} from "./httpapiFileRoles.js";
+import { compareHttpApiPathOrder, sortHttpApiPaths } from "./httpapiFileRoles.js";
 
 /** Path segment is pathless when it matches (name) and does not create an HttpApiGroup. */
 const PATHLESS_DIRECTORY_PATTERN = /^\([^)]*\)$/;
@@ -68,10 +65,7 @@ export type HttpApiGroupNode = {
   readonly conventions: readonly (DirectoryConventionRef | RootOrGroupConventionRef)[];
 };
 
-export type HttpApiTreeNode =
-  | HttpApiEndpointNode
-  | HttpApiGroupNode
-  | HttpApiPathlessDirectoryNode;
+export type HttpApiTreeNode = HttpApiEndpointNode | HttpApiGroupNode | HttpApiPathlessDirectoryNode;
 
 /** Root of the descriptor tree. */
 export type HttpApiDescriptorTree = {
@@ -119,7 +113,10 @@ export function buildHttpApiDescriptorTree(
   }
 
   const apiRootConventions: (DirectoryConventionRef | RootOrGroupConventionRef)[] = [];
-  const directoryConventionsByDir = new Map<string, (DirectoryConventionRef | RootOrGroupConventionRef)[]>();
+  const directoryConventionsByDir = new Map<
+    string,
+    (DirectoryConventionRef | RootOrGroupConventionRef)[]
+  >();
   const endpointCompanionsByKey = new Map<string, EndpointCompanionRef[]>();
 
   for (const r of supported) {
@@ -193,7 +190,9 @@ export function buildHttpApiDescriptorTree(
       .map((r) => r as { role: "endpoint_primary"; path: string })
       .sort((a, b) => compareHttpApiPathOrder(a.path, b.path));
 
-    const childDirs = (childrenByParentDir.get(dirPath) ?? []).slice().sort(compareHttpApiPathOrder);
+    const childDirs = (childrenByParentDir.get(dirPath) ?? [])
+      .slice()
+      .sort(compareHttpApiPathOrder);
     const nodes: HttpApiTreeNode[] = [];
 
     for (const f of directFiles) {
@@ -280,4 +279,3 @@ function nodeSortKey(n: HttpApiTreeNode): string {
 function compareTreeNodes(a: HttpApiTreeNode, b: HttpApiTreeNode): number {
   return compareHttpApiPathOrder(nodeSortKey(a), nodeSortKey(b));
 }
-

@@ -8,14 +8,14 @@ VS Code extension that makes **virtual module imports** first-class in the edito
 
 **Capabilities:** Go to Definition, document links, find references, a sidebar tree of virtual imports, and diagnostic commands. Content refreshes automatically when source files change.
 
-| Feature | Description |
-|---------|-------------|
-| **Go to Definition** | Cmd/Ctrl+click a virtual import → opens generated content |
-| **Document links** | Virtual imports are clickable links |
-| **Find references** | From a virtual module tab, shows all import sites |
-| **Virtual Module Imports view** | Explorer sidebar listing discovered virtual imports |
-| **Open from import** | Right-click import → "Virtual Modules: Open virtual module from import" |
-| **Diagnose** | Output channel command for debugging go-to-definition |
+| Feature                         | Description                                                             |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| **Go to Definition**            | Cmd/Ctrl+click a virtual import → opens generated content               |
+| **Document links**              | Virtual imports are clickable links                                     |
+| **Find references**             | From a virtual module tab, shows all import sites                       |
+| **Virtual Module Imports view** | Explorer sidebar listing discovered virtual imports                     |
+| **Open from import**            | Right-click import → "Virtual Modules: Open virtual module from import" |
+| **Diagnose**                    | Output channel command for debugging go-to-definition                   |
 
 ## Installation
 
@@ -34,13 +34,13 @@ Then run from the workspace via **Run and Debug** (see [Running the extension](#
 
 ## Commands
 
-| Command | Title | Description |
-| ------- | ----- | ----------- |
-| `typed.virtualModules.open` | Virtual Modules: Open virtual module | Open a virtual module by ID |
-| `typed.virtualModules.openFromImport` | Virtual Modules: Open virtual module from import | Open from import at cursor (editor context menu) |
-| `typed.virtualModules.openFromTree` | Virtual Modules: Open virtual module from tree | Open from the Virtual Module Imports view |
-| `typed.virtualModules.refresh` | Refresh Virtual Modules | Refresh the tree view |
-| `typed.virtualModules.diagnoseDefinition` | Virtual Modules: Diagnose go-to-definition at cursor | Debug go-to-definition for the current import |
+| Command                                   | Title                                                | Description                                      |
+| ----------------------------------------- | ---------------------------------------------------- | ------------------------------------------------ |
+| `typed.virtualModules.open`               | Virtual Modules: Open virtual module                 | Open a virtual module by ID                      |
+| `typed.virtualModules.openFromImport`     | Virtual Modules: Open virtual module from import     | Open from import at cursor (editor context menu) |
+| `typed.virtualModules.openFromTree`       | Virtual Modules: Open virtual module from tree       | Open from the Virtual Module Imports view        |
+| `typed.virtualModules.refresh`            | Refresh Virtual Modules                              | Refresh the tree view                            |
+| `typed.virtualModules.diagnoseDefinition` | Virtual Modules: Diagnose go-to-definition at cursor | Debug go-to-definition for the current import    |
 
 ## Views
 

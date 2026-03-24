@@ -296,8 +296,13 @@ export const createHttpApiVirtualModulePlugin = (
         } satisfies VirtualModuleBuildError;
       }
 
-      const snapshotsByRelativePath = mapSnapshotsByRelativePath(snapshots, resolved.targetDirectory);
-      const relativePaths = [...snapshotsByRelativePath.keys()].sort((a, b) => a.localeCompare(b, "en"));
+      const snapshotsByRelativePath = mapSnapshotsByRelativePath(
+        snapshots,
+        resolved.targetDirectory,
+      );
+      const relativePaths = [...snapshotsByRelativePath.keys()].sort((a, b) =>
+        a.localeCompare(b, "en"),
+      );
       const roles = relativePaths.map((path) => classifyHttpApiFileRole(path));
       const tree = buildHttpApiDescriptorTree({ roles });
       const endpoints = collectEndpointNodes(tree.children);
@@ -314,17 +319,15 @@ export const createHttpApiVirtualModulePlugin = (
         } satisfies VirtualModuleBuildError;
       }
 
-      const contractViolations = validateEndpointContracts(
-        endpoints,
-        snapshotsByRelativePath,
-        api,
-      );
+      const contractViolations = validateEndpointContracts(endpoints, snapshotsByRelativePath, api);
       const { violations: prefixViolations, prefixByScope } = validatePrefixConventions(
         tree,
         snapshotsByRelativePath,
         api,
       );
-      let openapiExposure: import("./internal/httpapiOpenApiConfig.js").OpenApiExposureConfig | undefined;
+      let openapiExposure:
+        | import("./internal/httpapiOpenApiConfig.js").OpenApiExposureConfig
+        | undefined;
       const apiRootConvention = tree.conventions.find(
         (c): c is { path: string; kind: "api_root" } =>
           (c as { kind?: string }).kind === "api_root",
@@ -355,8 +358,14 @@ export const createHttpApiVirtualModulePlugin = (
         } satisfies VirtualModuleBuildError;
       }
 
-      const extractedLiteralsByPath = new Map<string, { path: string; method: string; name: string }>();
-      const optionalExportsByPath = new Map<string, ReadonlySet<"headers" | "body" | "success" | "error">>();
+      const extractedLiteralsByPath = new Map<
+        string,
+        { path: string; method: string; name: string }
+      >();
+      const optionalExportsByPath = new Map<
+        string,
+        ReadonlySet<"headers" | "body" | "success" | "error">
+      >();
       const handlerIsRawByPath = new Map<string, boolean>();
       const OPTIONAL_NAMES = ["headers", "body", "success", "error"] as const;
       for (const endpoint of endpoints) {

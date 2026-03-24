@@ -29,7 +29,9 @@ export function handlerExprFor(
     case "fx":
       return isFn ? ref : `constant(${ref})`;
     case "unknown":
-      throw new Error("RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)");
+      throw new Error(
+        "RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)",
+      );
   }
 }
 
@@ -45,7 +47,9 @@ export function liftToFx(expr: string, kind: RuntimeKind): string {
     case "fx":
       return expr;
     case "unknown":
-      throw new Error("RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)");
+      throw new Error(
+        "RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)",
+      );
   }
 }
 

@@ -540,17 +540,13 @@ export function emitHttpApiSource(input: {
   const swaggerPath = input.openapiExposure?.swaggerPath;
   const scalarConfig = input.openapiExposure?.scalar;
   const apiLayerOptions =
-    jsonPath && typeof jsonPath === "string"
-      ? `{ openapiPath: ${JSON.stringify(jsonPath)} }`
-      : "";
+    jsonPath && typeof jsonPath === "string" ? `{ openapiPath: ${JSON.stringify(jsonPath)} }` : "";
   const swaggerExpr =
     swaggerPath && typeof swaggerPath === "string"
       ? `HttpApiSwagger.layer(Api, { path: ${JSON.stringify(swaggerPath)} })`
       : "HttpApiSwagger.layer(Api)";
   const scalarExpr =
-    scalarConfig &&
-    typeof scalarConfig === "object" &&
-    scalarConfig.path
+    scalarConfig && typeof scalarConfig === "object" && scalarConfig.path
       ? `HttpApiScalar.layer(Api, { path: ${JSON.stringify(scalarConfig.path)} })`
       : "HttpApiScalar.layer(Api)";
   const baseApiLayer = apiLayerOptions

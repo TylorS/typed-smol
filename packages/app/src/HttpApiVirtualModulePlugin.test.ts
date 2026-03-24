@@ -91,10 +91,7 @@ const BOOTSTRAP_HTTPAPI_FILE = resolve(
   "typeTargetBootstrapHttpApi.ts",
 );
 
-function buildApiFromFixture(
-  spec: FixtureSpec,
-  pluginOptions?: { pathPrefix?: `/${string}` },
-) {
+function buildApiFromFixture(spec: FixtureSpec, pluginOptions?: { pathPrefix?: `/${string}` }) {
   const fixture = createApiFixture(spec);
   const plugin = createHttpApiVirtualModulePlugin(pluginOptions ?? {});
   const files =
@@ -111,9 +108,7 @@ function buildApiFromFixture(
 }
 
 /** Extract source text from build result (string or { sourceText, warnings }). */
-function getSourceText(
-  result: unknown,
-): string | undefined {
+function getSourceText(result: unknown): string | undefined {
   if (typeof result === "string") return result;
   if (result && typeof result === "object" && "sourceText" in result) {
     return (result as { sourceText?: string }).sourceText;
@@ -128,11 +123,46 @@ const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
   effect: join(NM, "effect", "dist", "index.d.ts"),
   "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
   "effect/Schema": join(NM, "effect", "dist", "Schema.d.ts"),
-  "effect/unstable/httpapi/HttpApi": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApi.d.ts"),
-  "effect/unstable/httpapi/HttpApiGroup": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApiGroup.d.ts"),
-  "effect/unstable/httpapi/HttpApiEndpoint": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApiEndpoint.d.ts"),
-  "effect/unstable/httpapi/HttpApiBuilder": join(NM, "effect", "dist", "unstable", "httpapi", "HttpApiBuilder.d.ts"),
-  "effect/unstable/http/HttpServerResponse": join(NM, "effect", "dist", "unstable", "http", "HttpServerResponse.d.ts"),
+  "effect/unstable/httpapi/HttpApi": join(
+    NM,
+    "effect",
+    "dist",
+    "unstable",
+    "httpapi",
+    "HttpApi.d.ts",
+  ),
+  "effect/unstable/httpapi/HttpApiGroup": join(
+    NM,
+    "effect",
+    "dist",
+    "unstable",
+    "httpapi",
+    "HttpApiGroup.d.ts",
+  ),
+  "effect/unstable/httpapi/HttpApiEndpoint": join(
+    NM,
+    "effect",
+    "dist",
+    "unstable",
+    "httpapi",
+    "HttpApiEndpoint.d.ts",
+  ),
+  "effect/unstable/httpapi/HttpApiBuilder": join(
+    NM,
+    "effect",
+    "dist",
+    "unstable",
+    "httpapi",
+    "HttpApiBuilder.d.ts",
+  ),
+  "effect/unstable/http/HttpServerResponse": join(
+    NM,
+    "effect",
+    "dist",
+    "unstable",
+    "http",
+    "HttpServerResponse.d.ts",
+  ),
 };
 
 function makeProgram(rootFiles: readonly string[], fixtureRoot?: string): ts.Program {
@@ -346,19 +376,19 @@ describe("createHttpApiVirtualModulePlugin", () => {
     `);
   });
 
-    it("build returns AVM-CONTRACT-003 when route lacks pathSchema or querySchema", () => {
-      const result = buildApiFromFixture({
-        "src/apis/status.ts": `
+  it("build returns AVM-CONTRACT-003 when route lacks pathSchema or querySchema", () => {
+    const result = buildApiFromFixture({
+      "src/apis/status.ts": `
         import * as Effect from "effect/Effect";
         import * as Schema from "effect/Schema";
         export const route = { path: "/status" };
         export const method = "GET";
         export const handler = () => Effect.succeed({});
       `,
-      });
-      expect(result).toHaveProperty("errors");
-      const err = (result as VirtualModuleBuildError).errors;
-      expect(err.some((e) => e.code === "AVM-CONTRACT-003")).toBe(true);
+    });
+    expect(result).toHaveProperty("errors");
+    const err = (result as VirtualModuleBuildError).errors;
+    expect(err.some((e) => e.code === "AVM-CONTRACT-003")).toBe(true);
   });
 
   it("build returns warnings for unsupported reserved files while still emitting source", () => {
@@ -387,7 +417,10 @@ describe("createHttpApiVirtualModulePlugin", () => {
       throw new Error("expected sourceText + warnings build result");
     }
 
-    const r = result as { sourceText: string; warnings?: Array<{ code: string; message?: string }> };
+    const r = result as {
+      sourceText: string;
+      warnings?: Array<{ code: string; message?: string }>;
+    };
     expect({ sourceText: r.sourceText, warnings: r.warnings }).toMatchInlineSnapshot(`
       {
         "sourceText": "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
@@ -720,7 +753,9 @@ export const handler = () => ({});
       expect(successExport).toBeDefined();
       expect(errorExport).toBeDefined();
       expect(api.isAssignableTo(routeExport!.type, "Route")).toBe(true);
-      expect(api.isAssignableTo(handlerExport!.type, "Effect", [{ kind: "returnType" }])).toBe(true);
+      expect(api.isAssignableTo(handlerExport!.type, "Effect", [{ kind: "returnType" }])).toBe(
+        true,
+      );
       expect(api.isAssignableTo(successExport!.type, "Schema")).toBe(true);
       expect(api.isAssignableTo(errorExport!.type, "Schema")).toBe(true);
       expect(api.isAssignableTo(handlerExport!.type, "Route")).toBe(false);
@@ -743,9 +778,9 @@ export const handler = () => ({});
     const plugin = createHttpApiVirtualModulePlugin();
     const result = plugin.build("api:./apis", fixture.importer, session.api);
     expect(result).toHaveProperty("errors");
-    expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-003")).toBe(
-      true,
-    );
+    expect(
+      (result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-003"),
+    ).toBe(true);
   });
 });
 
@@ -813,7 +848,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
         `,
       });
       expect(result).toHaveProperty("errors");
-      expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-003")).toBe(true);
+      expect(
+        (result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-003"),
+      ).toBe(true);
     });
 
     it("Route invalid (assignableTo absent): type targets unresolved; session throws when no bootstrap", () => {
@@ -896,8 +933,8 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("handle(\"status\"");
-      expect(sourceText).toContain("handleRaw(\"raw\"");
+      expect(sourceText).toContain('handle("status"');
+      expect(sourceText).toContain('handleRaw("raw"');
     });
   });
 
@@ -920,7 +957,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
         `,
       });
       expect(result).toHaveProperty("errors");
-      expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-005")).toBe(true);
+      expect(
+        (result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-005"),
+      ).toBe(true);
     });
 
     it("error present, Schema: passes", () => {
@@ -942,7 +981,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
         `,
       });
       expect(result).toHaveProperty("errors");
-      expect((result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-006")).toBe(true);
+      expect(
+        (result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-006"),
+      ).toBe(true);
     });
 
     it("Both success and error valid Schema: passes", () => {
@@ -959,7 +1000,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("HttpApiGroup.make(\"users\")");
+      expect(sourceText).toContain('HttpApiGroup.make("users")');
       expect(sourceText).toContain("list");
       expect(sourceText).toContain("items/get");
     });
@@ -972,9 +1013,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("handle(\"list\"");
-      expect(sourceText).toContain("handle(\"get\"");
-      expect(sourceText).toContain("handle(\"update\"");
+      expect(sourceText).toContain('handle("list"');
+      expect(sourceText).toContain('handle("get"');
+      expect(sourceText).toContain('handle("update"');
     });
   });
 
@@ -990,7 +1031,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("handlers.handle(\"status\", (ctx) => Status.handler({ path:");
+      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path:');
     });
 
     it("handleRaw for HttpServerResponse: handlers.handleRaw, handler receives ctx", () => {
@@ -1008,7 +1049,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("handlers.handleRaw(\"raw\", (ctx) => Raw.handler(ctx))");
+      expect(sourceText).toContain('handlers.handleRaw("raw", (ctx) => Raw.handler(ctx))');
     });
   });
 

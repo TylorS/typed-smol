@@ -106,7 +106,8 @@ const MODULE_FALLBACKS: Record<string, string> = {
 };
 
 function makeProgram(rootFiles: readonly string[], fixtureRoot?: string): ts.Program {
-  const projectRoot = fixtureRoot ?? (rootFiles.length > 0 ? dirname(dirname(rootFiles[0])) : APP_ROOT);
+  const projectRoot =
+    fixtureRoot ?? (rootFiles.length > 0 ? dirname(dirname(rootFiles[0])) : APP_ROOT);
   const options: ts.CompilerOptions = {
     strict: true,
     target: ts.ScriptTarget.ESNext,
@@ -831,14 +832,14 @@ describe("RouterVirtualModulePlugin", () => {
     if (!result.ok) return;
     const handlerExport = result.snapshot.exports.find((e) => e.name === "handler");
     expect(handlerExport).toBeDefined();
-    expect((handlerExport! as { assignableTo?: { Fx?: boolean } }).assignableTo?.Fx).toBeUndefined();
+    expect(
+      (handlerExport! as { assignableTo?: { Fx?: boolean } }).assignableTo?.Fx,
+    ).toBeUndefined();
     const plugin = createRouterVirtualModulePlugin();
     const buildResult = plugin.build("router:./routes", fixture.importer, session.api);
     expect(buildResult).toMatchObject({ errors: expect.any(Array) });
     const codes = (buildResult as VirtualModuleBuildError).errors.map((e) => e.code);
-    expect(
-      codes.some((c) => c === "RVM-KIND-001" || c === "RVM-ROUTE-002"),
-    ).toBe(true);
+    expect(codes.some((c) => c === "RVM-KIND-001" || c === "RVM-ROUTE-002")).toBe(true);
   });
 
   it("handler matrix: Fx value pass-through when type resolves as Fx", () => {

@@ -7,8 +7,5 @@
   },
   "include": ["src"],
   "exclude": ["**/*.test.ts"],
-  "references": [
-    { "path": "../virtual-modules" },
-    { "path": "../virtual-modules-vite" }
-  ]
+  "references": [{ "path": "../virtual-modules" }, { "path": "../virtual-modules-vite" }]
 }

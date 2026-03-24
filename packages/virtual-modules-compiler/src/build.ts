@@ -32,8 +32,14 @@ export interface BuildParams {
  * Run the compiler in build mode (tsc -b). Mirrors tsc --build.
  */
 export function runBuild(params: BuildParams): number {
-  const { ts, buildCommand, resolver, reportDiagnostic, reportSolutionBuilderStatus, typeTargetSpecs } =
-    params;
+  const {
+    ts,
+    buildCommand,
+    resolver,
+    reportDiagnostic,
+    reportSolutionBuilderStatus,
+    typeTargetSpecs,
+  } = params;
   const { projects, buildOptions } = buildCommand;
 
   const sys = ts.sys;

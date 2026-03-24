@@ -271,11 +271,11 @@ export const value: Foo = { n: 1 };
             file: () => ({ ok: false as const, error: "file-not-in-program" as const }),
             directory: () => [],
             resolveExport: () => {
-              throw new Error("not implemented")
+              throw new Error("not implemented");
             },
             isAssignableTo: () => {
-              throw new Error("not implemented")
-            }
+              throw new Error("not implemented");
+            },
           },
           { _host: host },
         ),
@@ -466,11 +466,7 @@ export const value: Foo = { n: 1 };
   it("resolves virtual module that imports another virtual module (virtual-to-virtual)", () => {
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");
-    writeFileSync(
-      entryFile,
-      `import { x } from "virtual:a"; export const out = x;`,
-      "utf8",
-    );
+    writeFileSync(entryFile, `import { x } from "virtual:a"; export const out = x;`, "utf8");
 
     const receivedImporters: string[] = [];
     const files = new Map<string, { version: number; content: string }>([
@@ -550,11 +546,7 @@ export const value: Foo = { n: 1 };
   it("resolves chain virtual:a -> virtual:b -> virtual:c with root importer", () => {
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");
-    writeFileSync(
-      entryFile,
-      `import { z } from "virtual:a"; export const out = z;`,
-      "utf8",
-    );
+    writeFileSync(entryFile, `import { z } from "virtual:a"; export const out = z;`, "utf8");
 
     const receivedImporters: string[] = [];
     const files = new Map<string, { version: number; content: string }>([

@@ -10,12 +10,12 @@ The router provides **typed routing** for client and server Effect apps: path an
 
 ## Capabilities
 
-| Area | APIs | Notes |
-|------|------|-------|
-| **Route definition** | `Route.Parse`, `Route.Join`, `Route.Param`, `Route.Number`, `Route.Int`, `Route.ParamWithSchema` | Parse paths like `/todos/:id?filter=`; path/query types from route string; Effect Schema for params. |
-| **Matcher** | `match`, `empty`, `prefix`, `provide`, `layout`, `catch`, `catchCause`, `catchTag` | Pattern match routes → Fx; each case yields handler; nest with `prefix`; guards from `@typed/guard`. |
-| **Runtime** | `BrowserRouter`, `ServerRouter`, `TestRouter` | Layers providing `Router` (`Navigation` + `CurrentRoute`); browser, in-memory, or test with deterministic IDs. |
-| **Integration** | `@typed/app` router VM plugin, `find-my-way-ts` | File-based routing: `import { Matcher } from "router:./routes"`; radix-tree matching. |
+| Area                 | APIs                                                                                             | Notes                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Route definition** | `Route.Parse`, `Route.Join`, `Route.Param`, `Route.Number`, `Route.Int`, `Route.ParamWithSchema` | Parse paths like `/todos/:id?filter=`; path/query types from route string; Effect Schema for params.           |
+| **Matcher**          | `match`, `empty`, `prefix`, `provide`, `layout`, `catch`, `catchCause`, `catchTag`               | Pattern match routes → Fx; each case yields handler; nest with `prefix`; guards from `@typed/guard`.           |
+| **Runtime**          | `BrowserRouter`, `ServerRouter`, `TestRouter`                                                    | Layers providing `Router` (`Navigation` + `CurrentRoute`); browser, in-memory, or test with deterministic IDs. |
+| **Integration**      | `@typed/app` router VM plugin, `find-my-way-ts`                                                  | File-based routing: `import { Matcher } from "router:./routes"`; radix-tree matching.                          |
 
 ## Key exports / surfaces
 

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildHttpApiDescriptorTree, isPathlessDirectorySegment } from "./internal/httpapiDescriptorTree.js";
+import {
+  buildHttpApiDescriptorTree,
+  isPathlessDirectorySegment,
+} from "./internal/httpapiDescriptorTree.js";
 import { classifyHttpApiFileRole } from "./internal/httpapiFileRoles.js";
 
 function rolesFromPaths(paths: string[]) {
@@ -42,11 +45,7 @@ describe("httpapiDescriptorTree", () => {
 
     it("builds one group with one endpoint", () => {
       const tree = buildHttpApiDescriptorTree({
-        roles: rolesFromPaths([
-          "_api.ts",
-          "users/_group.ts",
-          "users/list.ts",
-        ]),
+        roles: rolesFromPaths(["_api.ts", "users/_group.ts", "users/list.ts"]),
       });
       expect(tree.children).toHaveLength(1);
       const group = tree.children[0];
@@ -111,13 +110,11 @@ describe("httpapiDescriptorTree", () => {
 
     it("deterministic ordering of children", () => {
       const tree = buildHttpApiDescriptorTree({
-        roles: rolesFromPaths([
-          "z/z.ts",
-          "a/a.ts",
-          "users/list.ts",
-        ]),
+        roles: rolesFromPaths(["z/z.ts", "a/a.ts", "users/list.ts"]),
       });
-      const names = tree.children.map((c) => (c.type === "group" || c.type === "pathless_directory" ? c.dirPath : c.path));
+      const names = tree.children.map((c) =>
+        c.type === "group" || c.type === "pathless_directory" ? c.dirPath : c.path,
+      );
       expect(names).toEqual(["a", "users", "z"]);
     });
   });

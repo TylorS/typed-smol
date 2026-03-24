@@ -34,6 +34,7 @@
 
 - **LanguageServiceAdapter:** When rebuild fails, it adds a diagnostic and returns the old record.
 - **CompilerHostAdapter:** When rebuild fails, it returns the old record. If `reportDiagnostic` is passed to `attachCompilerHostAdapter`, a diagnostic is reported (vmc compile/build/watch pass it by default).
+
 ### 4. Unbounded adapter state
 
 - `recordsByKey` / `recordsByVirtualFile` (and related maps) grow with every distinct virtual module and are never evicted. Long-lived processes (e.g. editor LS) could accumulate many entries.

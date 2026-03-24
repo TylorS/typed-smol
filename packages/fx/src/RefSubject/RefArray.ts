@@ -14,7 +14,7 @@ import type * as Order from "effect/Order";
 import type * as Scope from "effect/Scope";
 import type * as Fx from "../Fx/index.js";
 import * as RefSubject from "./RefSubject.js";
-import { Filter, Result } from "effect";
+import { Result } from "effect";
 
 /**
  * A RefArray is a RefSubject that is specialized over an array of values.
@@ -211,10 +211,7 @@ export const insertAt: {
   <A, E, R>(ref: RefArray<A, E, R>, index: number, a: A): Effect.Effect<ReadonlyArray<A>, E, R>;
 } = dual(3, function insertAt<A, E, R>(ref: RefArray<A, E, R>, index: number, a: A) {
   return RefSubject.update(ref, (as) =>
-    Option.getOrElse(ReadonlyArray.insertAt(as, index, a), () => [
-      ...as,
-      a,
-    ]),
+    Option.getOrElse(ReadonlyArray.insertAt(as, index, a), () => [...as, a]),
   );
 });
 

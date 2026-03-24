@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { posix } from "node:path";
 import type { WatchDependencyDescriptor } from "../types.js";
 
 /** Base directory for virtual files under node_modules (enables go-to-definition to resolve correctly). */

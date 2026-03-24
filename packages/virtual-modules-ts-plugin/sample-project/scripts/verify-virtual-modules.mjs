@@ -20,15 +20,16 @@ const projectRoot = join(__dirname, "..");
 
 function getTsconfig(rootDir) {
   const configPath = join(rootDir, "tsconfig.json");
-  const content = readFileSync(configPath, "utf8");
   const configFile = ts.readConfigFile(configPath, (p) => readFileSync(p, "utf8"));
   if (configFile.error) {
-    throw new Error(`Failed to read tsconfig: ${configFile.error.messageText}`);
+    // oxlint-disable-next-line typescript/no-base-to-string
+    throw new Error(`Failed to read tsconfig: ${configFile.error.messageText.toString()}`);
   }
   const parsed = ts.parseJsonConfigFileContent(
     configFile.config,
     {
       readFile: (p) => readFileSync(p, "utf8"),
+      // oxlint-disable-next-line typescript/unbound-method
       readDirectory: ts.sys.readDirectory,
       fileExists: (p) => existsSync(p),
     },

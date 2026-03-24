@@ -68,7 +68,7 @@ describe("vmc CLI integration", () => {
     const configPath = join(dir, "vmc.config.ts");
     writeFileSync(configPath, "export default {};\n", "utf8");
 
-    const { exitCode, stdout, stderr } = runVmc(dir, ["init"]);
+    const { exitCode, stdout } = runVmc(dir, ["init"]);
     expect(exitCode).toBe(1);
     expect(stdout).toMatch(/already exists/);
     expect(stdout).toMatch(/--force/);
