@@ -1,9 +1,9 @@
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 
-export class DateTimes extends ServiceMap.Service<DateTimes>()("@typed/id/DateTimes", {
+export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes", {
   make: Effect.succeed({
     now: Effect.sync(() => Date.now()),
     date: Effect.sync(() => new Date()),

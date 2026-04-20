@@ -7,7 +7,7 @@ const Counter = Fx.gen(function* () {
 
   return html`<p>Count: ${count}</p>
     <button onclick=${RefSubject.increment(count)}>Increment</button>
-  <button onclick=${RefSubject.decrement(count)}>Decrement</button>`;
+    <button onclick=${RefSubject.decrement(count)}>Decrement</button>`;
 });
 
 await render(Counter, document.body).pipe(

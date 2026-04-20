@@ -1,7 +1,7 @@
 import type * as Effect from "effect/Effect";
 import type * as Option from "effect/Option";
 import type * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { RefSubject } from "@typed/fx";
 import type {
   BeforeNavigationEvent,
@@ -13,7 +13,7 @@ import type {
   Transition,
 } from "./model.js";
 
-export class Navigation extends ServiceMap.Service<
+export class Navigation extends Context.Service<
   Navigation,
   {
     readonly origin: string;

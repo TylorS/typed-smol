@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
 import type * as Scope from "effect/Scope";
-import type * as ServiceMap from "effect/ServiceMap";
+import type * as Context from "effect/Context";
 import { RefSubject } from "@typed/fx";
 import type {
   BeforeNavigationEvent,
@@ -41,14 +41,11 @@ export const makeNavigationCore = Effect.fn(function* (
 
   const beforeHandlers = yield* RefSubject.make(
     Effect.sync(
-      (): Set<readonly [BeforeNavigationHandler<any, any>, ServiceMap.ServiceMap<any>]> =>
-        new Set(),
+      (): Set<readonly [BeforeNavigationHandler<any, any>, Context.Context<any>]> => new Set(),
     ),
   );
   const handlers = yield* RefSubject.make(
-    Effect.sync(
-      (): Set<readonly [NavigationHandler<any, any>, ServiceMap.ServiceMap<any>]> => new Set(),
-    ),
+    Effect.sync((): Set<readonly [NavigationHandler<any, any>, Context.Context<any>]> => new Set()),
   );
 
   const runBeforeHandlers = (event: BeforeNavigationEvent) =>
@@ -57,11 +54,11 @@ export const makeNavigationCore = Effect.fn(function* (
       const matches: Array<Effect.Effect<unknown, RedirectError | CancelNavigation>> = [];
 
       for (const [handler, ctx] of handlers) {
-        const exit = yield* handler(event).pipe(Effect.provideServices(ctx), Effect.result);
+        const exit = yield* handler(event).pipe(Effect.provideContext(ctx), Effect.result);
         if (Result.isSuccess(exit)) {
           const match = exit.success;
           if (Option.isSome(match)) {
-            matches.push(Effect.provideServices(match.value, ctx));
+            matches.push(Effect.provideContext(match.value, ctx));
           }
         } else {
           return Option.some(exit.failure);
@@ -169,7 +166,7 @@ export const makeNavigationCore = Effect.fn(function* (
       const { entries, index } = yield* ref.get;
       const from = entries[index];
 
-      if (error._tag === "CancelNavigation") {
+      if (error._tag === "@typed/navigation/CancelNavigation") {
         yield* ref.set({ entries, index, transition: Option.none() });
         return from;
       } else {
@@ -266,7 +263,7 @@ export const makeNavigationCore = Effect.fn(function* (
   const onBeforeNavigation = <R = never, R2 = never>(
     handler: BeforeNavigationHandler<R, R2>,
   ): Effect.Effect<void, never, R | R2 | Scope.Scope> =>
-    Effect.servicesWith((ctx) => {
+    Effect.contextWith((ctx) => {
       const entry = [handler, ctx] as const;
 
       return Effect.flatMap(
@@ -285,7 +282,7 @@ export const makeNavigationCore = Effect.fn(function* (
   const onNavigation = <R = never, R2 = never>(
     handler: NavigationHandler<R, R2>,
   ): Effect.Effect<void, never, R | R2 | Scope.Scope> =>
-    Effect.servicesWith((ctx) => {
+    Effect.contextWith((ctx) => {
       const entry = [handler, ctx] as const;
 
       return Effect.flatMap(

@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { uuidStringify } from "./_uuid-stringify.js";
 import { DateTimes } from "./DateTimes.js";
 import { RandomValues } from "./RandomValues.js";
@@ -20,7 +20,7 @@ export type Uuid7Seed = {
   readonly randomBytes: Uint8Array & { length: 16 };
 };
 
-export class Uuid7State extends ServiceMap.Service<Uuid7State>()("@typed/id/Uuid7State", {
+export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7State", {
   make: Effect.gen(function* () {
     const { now } = yield* DateTimes;
     const getRandomValues = yield* RandomValues;
@@ -100,5 +100,5 @@ function uuid7FromSeed({ randomBytes, seq, timestamp }: Uuid7Seed): Uuid7 {
   result[14] = randomBytes[14];
   result[15] = randomBytes[15];
 
-  return Uuid7.makeUnsafe(uuidStringify(result));
+  return Uuid7.make(uuidStringify(result));
 }

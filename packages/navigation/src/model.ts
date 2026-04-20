@@ -47,22 +47,27 @@ export const NavigationEvent = Schema.Struct({
 });
 export type NavigationEvent = typeof NavigationEvent.Type;
 
-export class NavigationError extends Schema.ErrorClass(`@typed/navigation/NavigationError`)({
-  _tag: Schema.tag("NavigationError"),
-  error: Schema.Unknown,
-}) {}
+export class NavigationError extends Schema.TaggedErrorClass<NavigationError>()(
+  `@typed/navigation/NavigationError`,
+  {
+    error: Schema.Unknown,
+  },
+) {}
 
-export class RedirectError extends Schema.ErrorClass(`@typed/navigation/RedirectError`)({
-  _tag: Schema.tag("RedirectError"),
-  url: Schema.Union([Schema.URLFromString, Schema.String]),
-  options: Schema.optional(
-    Schema.Struct({
-      state: Schema.optional(Schema.Unknown),
-      info: Schema.optional(Schema.Unknown),
-    }),
-  ),
-}) {}
+export class RedirectError extends Schema.TaggedErrorClass<RedirectError>()(
+  `@typed/navigation/RedirectError`,
+  {
+    url: Schema.Union([Schema.URLFromString, Schema.String]),
+    options: Schema.optional(
+      Schema.Struct({
+        state: Schema.optional(Schema.Unknown),
+        info: Schema.optional(Schema.Unknown),
+      }),
+    ),
+  },
+) {}
 
-export class CancelNavigation extends Schema.ErrorClass(`@typed/navigation/CancelNavigation`)({
-  _tag: Schema.tag("CancelNavigation"),
-}) {}
+export class CancelNavigation extends Schema.TaggedErrorClass<CancelNavigation>()(
+  `@typed/navigation/CancelNavigation`,
+  {},
+) {}

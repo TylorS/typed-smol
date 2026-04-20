@@ -8,7 +8,7 @@ import {
   isEffect,
   matchCauseEffect,
   runForkWith,
-  servicesWith,
+  contextWith,
   sync,
   void as void_,
 } from "effect/Effect";
@@ -45,7 +45,7 @@ export const observe: {
     fx: Fx<A, E, R>,
     f: (value: A) => void | Effect<unknown, E2, R2>,
   ): Effect<unknown, E | E2, R | R2> =>
-    servicesWith((services) =>
+    contextWith((services) =>
       callback<void, E | E2, R | R2>((resume) => {
         const onFailure = (cause: Cause<E | E2>) => sync(() => resume(failCause(cause)));
         const onSuccess = (value: A) => {

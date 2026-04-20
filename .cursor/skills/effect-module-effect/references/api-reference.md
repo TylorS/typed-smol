@@ -361,17 +361,17 @@ export declare const partition: <A, B, E, R>(elements: Iterable<A>, f: (a: A, i:
 export declare const promise: <A>(evaluate: (signal: AbortSignal) => PromiseLike<A>): Effect<A>;
 export declare const provide: <const Layers extends [Layer.Any, ...Array<Layer.Any>]>(layers: Layers, options?: { readonly local?: boolean | undefined; } | undefined): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E | Layer.Error<Layers[number]>, Layer.Services<Layers[number]> | Exclude<R, Layer.Success<Layers[number]>>>; // overload 1
 export declare const provide: <ROut, E2, RIn>(layer: Layer.Layer<ROut, E2, RIn>, options?: { readonly local?: boolean | undefined; } | undefined): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E | E2, RIn | Exclude<R, ROut>>; // overload 2
-export declare const provide: <R2>(context: ServiceMap.ServiceMap<R2>): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, R2>>; // overload 3
+export declare const provide: <R2>(context: Context.Context<R2>): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, R2>>; // overload 3
 export declare const provide: <A, E, R, const Layers extends [Layer.Any, ...Array<Layer.Any>]>(self: Effect<A, E, R>, layers: Layers, options?: { readonly local?: boolean | undefined; } | undefined): Effect<A, E | Layer.Error<Layers[number]>, Layer.Services<Layers[number]> | Exclude<R, Layer.Success<Layers[number]>>>; // overload 4
 export declare const provide: <A, E, R, ROut, E2, RIn>(self: Effect<A, E, R>, layer: Layer.Layer<ROut, E2, RIn>, options?: { readonly local?: boolean | undefined; } | undefined): Effect<A, E | E2, RIn | Exclude<R, ROut>>; // overload 5
-export declare const provide: <A, E, R, R2>(self: Effect<A, E, R>, context: ServiceMap.ServiceMap<R2>): Effect<A, E, Exclude<R, R2>>; // overload 6
-export declare const provideService: <I, S>(service: ServiceMap.Service<I, S>): { (implementation: S): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, I>>; <A, E, R>(self: Effect<A, E, R>, implementation: S): Effect<A, E, Exclude<R, I>>; }; // overload 1
-export declare const provideService: <I, S>(service: ServiceMap.Service<I, S>, implementation: S): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, I>>; // overload 2
-export declare const provideService: <A, E, R, I, S>(self: Effect<A, E, R>, service: ServiceMap.Service<I, S>, implementation: S): Effect<A, E, Exclude<R, I>>; // overload 3
-export declare const provideServiceEffect: <I, S, E2, R2>(service: ServiceMap.Service<I, S>, acquire: Effect<S, E2, R2>): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E | E2, Exclude<R, I> | R2>; // overload 1
-export declare const provideServiceEffect: <A, E, R, I, S, E2, R2>(self: Effect<A, E, R>, service: ServiceMap.Service<I, S>, acquire: Effect<S, E2, R2>): Effect<A, E | E2, Exclude<R, I> | R2>; // overload 2
-export declare const provideServices: <XR>(context: ServiceMap.ServiceMap<XR>): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, XR>>; // overload 1
-export declare const provideServices: <A, E, R, XR>(self: Effect<A, E, R>, context: ServiceMap.ServiceMap<XR>): Effect<A, E, Exclude<R, XR>>; // overload 2
+export declare const provide: <A, E, R, R2>(self: Effect<A, E, R>, context: Context.Context<R2>): Effect<A, E, Exclude<R, R2>>; // overload 6
+export declare const provideService: <I, S>(service: Context.Service<I, S>): { (implementation: S): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, I>>; <A, E, R>(self: Effect<A, E, R>, implementation: S): Effect<A, E, Exclude<R, I>>; }; // overload 1
+export declare const provideService: <I, S>(service: Context.Service<I, S>, implementation: S): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, I>>; // overload 2
+export declare const provideService: <A, E, R, I, S>(self: Effect<A, E, R>, service: Context.Service<I, S>, implementation: S): Effect<A, E, Exclude<R, I>>; // overload 3
+export declare const provideServiceEffect: <I, S, E2, R2>(service: Context.Service<I, S>, acquire: Effect<S, E2, R2>): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E | E2, Exclude<R, I> | R2>; // overload 1
+export declare const provideServiceEffect: <A, E, R, I, S, E2, R2>(self: Effect<A, E, R>, service: Context.Service<I, S>, acquire: Effect<S, E2, R2>): Effect<A, E | E2, Exclude<R, I> | R2>; // overload 2
+export declare const provideContext: <XR>(context: Context.Context<XR>): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, XR>>; // overload 1
+export declare const provideContext: <A, E, R, XR>(self: Effect<A, E, R>, context: Context.Context<XR>): Effect<A, E, Exclude<R, XR>>; // overload 2
 export declare const race: <A2, E2, R2>(that: Effect<A2, E2, R2>, options?: { readonly onWinner?: (options: { readonly fiber: Fiber<any, any>; readonly index: number; readonly parentFiber: Fiber<any, any>; }) => void; }): <A, E, R>(self: Effect<A, E, R>) => Effect<A | A2, E | E2, R | R2>; // overload 1
 export declare const race: <A, E, R, A2, E2, R2>(self: Effect<A, E, R>, that: Effect<A2, E2, R2>, options?: { readonly onWinner?: (options: { readonly fiber: Fiber<any, any>; readonly index: number; readonly parentFiber: Fiber<any, any>; }) => void; }): Effect<A | A2, E | E2, R | R2>; // overload 2
 export declare const raceAll: <Eff extends Effect<any, any, any>>(all: Iterable<Eff>, options?: { readonly onWinner?: (options: { readonly fiber: Fiber<any, any>; readonly index: number; readonly parentFiber: Fiber<any, any>; }) => void; }): Effect<Success<Eff>, Error<Eff>, Services<Eff>>;
@@ -394,7 +394,7 @@ export declare const replicateEffect: <A, E, R>(self: Effect<A, E, R>, n: number
 export declare const replicateEffect: <A, E, R>(self: Effect<A, E, R>, n: number, options: { readonly concurrency?: Concurrency | undefined; readonly discard: true; }): Effect<void, E, R>; // overload 4
 export declare const request: <A extends Request.Any, EX = never, RX = never>(resolver: RequestResolver<A> | Effect<RequestResolver<A>, EX, RX>): (self: A) => Effect<Request.Success<A>, Request.Error<A> | EX, Request.Services<A> | RX>; // overload 1
 export declare const request: <A extends Request.Any, EX = never, RX = never>(self: A, resolver: RequestResolver<A> | Effect<RequestResolver<A>, EX, RX>): Effect<Request.Success<A>, Request.Error<A> | EX, Request.Services<A> | RX>; // overload 2
-export declare const requestUnsafe: <A extends Request.Any>(self: A, options: { readonly resolver: RequestResolver<A>; readonly onExit: (exit: Exit.Exit<Request.Success<A>, Request.Error<A>>) => void; readonly services: ServiceMap.ServiceMap<never>; }): () => void;
+export declare const requestUnsafe: <A extends Request.Any>(self: A, options: { readonly resolver: RequestResolver<A>; readonly onExit: (exit: Exit.Exit<Request.Success<A>, Request.Error<A>>) => void; readonly services: Context.Context<never>; }): () => void;
 export declare const result: <A, E, R>(self: Effect<A, E, R>): Effect<Result.Result<A, E>, never, R>;
 export declare const retry: <E, O extends Retry.Options<E>>(options: O): <A, R>(self: Effect<A, E, R>) => Retry.Return<R, E, A, O>; // overload 1
 export declare const retry: <B, E, Error, Env>(policy: Schedule<B, NoInfer<E>, Error, Env>): <A, R>(self: Effect<A, E, R>) => Effect<A, E | Error, R | Env>; // overload 2
@@ -405,17 +405,17 @@ export declare const retry: <A, E, R, B, Error, Env>(self: Effect<A, E, R>, buil
 export declare const retryOrElse: <A1, E, E1, R1, A2, E2, R2>(policy: Schedule<A1, NoInfer<E>, E1, R1>, orElse: (e: NoInfer<E>, out: A1) => Effect<A2, E2, R2>): <A, R>(self: Effect<A, E, R>) => Effect<A | A2, E1 | E2, R | R1 | R2>; // overload 1
 export declare const retryOrElse: <A, E, R, A1, E1, R1, A2, E2, R2>(self: Effect<A, E, R>, policy: Schedule<A1, NoInfer<E>, E1, R1>, orElse: (e: NoInfer<E>, out: A1) => Effect<A2, E2, R2>): Effect<A | A2, E1 | E2, R | R1 | R2>; // overload 2
 export declare const runCallback: <A, E>(effect: Effect<A, E, never>, options?: (RunOptions & { readonly onExit: (exit: Exit.Exit<A, E>) => void; }) | undefined): (interruptor?: number | undefined) => void;
-export declare const runCallbackWith: <R>(services: ServiceMap.ServiceMap<R>): <A, E>(effect: Effect<A, E, R>, options?: (RunOptions & { readonly onExit: (exit: Exit.Exit<A, E>) => void; }) | undefined) => (interruptor?: number | undefined) => void;
+export declare const runCallbackWith: <R>(services: Context.Context<R>): <A, E>(effect: Effect<A, E, R>, options?: (RunOptions & { readonly onExit: (exit: Exit.Exit<A, E>) => void; }) | undefined) => (interruptor?: number | undefined) => void;
 export declare const runFork: <A, E>(effect: Effect<A, E, never>, options?: RunOptions | undefined): Fiber<A, E>;
-export declare const runForkWith: <R>(services: ServiceMap.ServiceMap<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Fiber<A, E>;
+export declare const runForkWith: <R>(services: Context.Context<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Fiber<A, E>;
 export declare const runPromise: <A, E>(effect: Effect<A, E>, options?: RunOptions | undefined): Promise<A>;
 export declare const runPromiseExit: <A, E>(effect: Effect<A, E>, options?: RunOptions | undefined): Promise<Exit.Exit<A, E>>;
-export declare const runPromiseExitWith: <R>(services: ServiceMap.ServiceMap<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Promise<Exit.Exit<A, E>>;
-export declare const runPromiseWith: <R>(services: ServiceMap.ServiceMap<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Promise<A>;
+export declare const runPromiseExitWith: <R>(services: Context.Context<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Promise<Exit.Exit<A, E>>;
+export declare const runPromiseWith: <R>(services: Context.Context<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Promise<A>;
 export declare const runSync: <A, E>(effect: Effect<A, E>): A;
 export declare const runSyncExit: <A, E>(effect: Effect<A, E>): Exit.Exit<A, E>;
-export declare const runSyncExitWith: <R>(services: ServiceMap.ServiceMap<R>): <A, E>(effect: Effect<A, E, R>) => Exit.Exit<A, E>;
-export declare const runSyncWith: <R>(services: ServiceMap.ServiceMap<R>): <A, E>(effect: Effect<A, E, R>) => A;
+export declare const runSyncExitWith: <R>(services: Context.Context<R>): <A, E>(effect: Effect<A, E, R>) => Exit.Exit<A, E>;
+export declare const runSyncWith: <R>(services: Context.Context<R>): <A, E>(effect: Effect<A, E, R>) => A;
 export declare const sandbox: <A, E, R>(self: Effect<A, E, R>): Effect<A, Cause.Cause<E>, R>;
 export declare const satisfiesErrorType: <E>(): <A, E2 extends E, R>(effect: Effect<A, E2, R>) => Effect<A, E2, R>;
 export declare const satisfiesServicesType: <R>(): <A, E, R2 extends R>(effect: Effect<A, E, R2>) => Effect<A, E, R2>;
@@ -426,10 +426,10 @@ export declare const scheduleFrom: <Input, Output, Error, Env>(initial: Input, s
 export declare const scheduleFrom: <Input, E, R, Output, Error, Env>(self: Effect<Input, E, R>, initial: Input, schedule: Schedule<Output, Input, Error, Env>): Effect<Output, E, R | Env>; // overload 2
 export declare const scoped: <A, E, R>(self: Effect<A, E, R>): Effect<A, E, Exclude<R, Scope>>;
 export declare const scopedWith: <A, E, R>(f: (scope: Scope) => Effect<A, E, R>): Effect<A, E, R>;
-export declare const service: <I, S>(service: ServiceMap.Service<I, S>): Effect<S, never, I>;
-export declare const serviceOption: <I, S>(key: ServiceMap.Service<I, S>): Effect<Option<S>>;
-export declare const services: <R>(): Effect<ServiceMap.ServiceMap<R>, never, R>;
-export declare const servicesWith: <R, A, E, R2>(f: (services: ServiceMap.ServiceMap<R>) => Effect<A, E, R2>): Effect<A, E, R | R2>;
+export declare const service: <I, S>(service: Context.Service<I, S>): Effect<S, never, I>;
+export declare const serviceOption: <I, S>(key: Context.Service<I, S>): Effect<Option<S>>;
+export declare const services: <R>(): Effect<Context.Context<R>, never, R>;
+export declare const servicesWith: <R, A, E, R2>(f: (services: Context.Context<R>) => Effect<A, E, R2>): Effect<A, E, R | R2>;
 export declare const sleep: (duration: Duration.Input): Effect<void>;
 export declare const succeed: <A>(value: A): Effect<A>;
 export declare const succeedSome: <A>(value: A): Effect<Option<A>>;
@@ -484,10 +484,10 @@ export declare const uninterruptible: <A, E, R>(self: Effect<A, E, R>): Effect<A
 export declare const uninterruptibleMask: <A, E, R>(f: (restore: <AX, EX, RX>(effect: Effect<AX, EX, RX>) => Effect<AX, EX, RX>) => Effect<A, E, R>): Effect<A, E, R>;
 export declare const unwrapReason: <K extends TagsWithReason<E>, E>(errorTag: K): <A, R>(self: Effect<A, E, R>) => Effect<A, ExcludeTag<E, K> | ReasonOf<ExtractTag<E, K>>, R>; // overload 1
 export declare const unwrapReason: <A, E, R, K extends TagsWithReason<E>>(self: Effect<A, E, R>, errorTag: K): Effect<A, ExcludeTag<E, K> | ReasonOf<ExtractTag<E, K>>, R>; // overload 2
-export declare const updateService: <I, A>(service: ServiceMap.Service<I, A>, f: (value: A) => A): <XA, E, R>(self: Effect<XA, E, R>) => Effect<XA, E, R | I>; // overload 1
-export declare const updateService: <XA, E, R, I, A>(self: Effect<XA, E, R>, service: ServiceMap.Service<I, A>, f: (value: A) => A): Effect<XA, E, R | I>; // overload 2
-export declare const updateServices: <R2, R>(f: (services: ServiceMap.ServiceMap<R2>) => ServiceMap.ServiceMap<NoInfer<R>>): <A, E>(self: Effect<A, E, R>) => Effect<A, E, R2>; // overload 1
-export declare const updateServices: <A, E, R, R2>(self: Effect<A, E, R>, f: (services: ServiceMap.ServiceMap<R2>) => ServiceMap.ServiceMap<NoInfer<R>>): Effect<A, E, R2>; // overload 2
+export declare const updateService: <I, A>(service: Context.Service<I, A>, f: (value: A) => A): <XA, E, R>(self: Effect<XA, E, R>) => Effect<XA, E, R | I>; // overload 1
+export declare const updateService: <XA, E, R, I, A>(self: Effect<XA, E, R>, service: Context.Service<I, A>, f: (value: A) => A): Effect<XA, E, R | I>; // overload 2
+export declare const updateServices: <R2, R>(f: (services: Context.Context<R2>) => Context.Context<NoInfer<R>>): <A, E>(self: Effect<A, E, R>) => Effect<A, E, R2>; // overload 1
+export declare const updateServices: <A, E, R, R2>(self: Effect<A, E, R>, f: (services: Context.Context<R2>) => Context.Context<NoInfer<R>>): Effect<A, E, R2>; // overload 2
 export declare const useSpan: <A, E, R>(name: string, evaluate: (span: Span) => Effect<A, E, R>): Effect<A, E, R>; // overload 1
 export declare const useSpan: <A, E, R>(name: string, options: SpanOptionsNoTrace, evaluate: (span: Span) => Effect<A, E, R>): Effect<A, E, R>; // overload 2
 export declare const when: <E2 = never, R2 = never>(condition: Effect<boolean, E2, R2>): <A, E, R>(self: Effect<A, E, R>) => Effect<Option<A>, E | E2, R | R2>; // overload 1

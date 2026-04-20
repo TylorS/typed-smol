@@ -33,9 +33,9 @@ description: Guidance for `effect/ManagedRuntime` focused on APIs like make, Ser
 ## Starter example
 
 ```ts
-import { Console, Effect, Layer, ManagedRuntime, ServiceMap } from "effect";
+import { Console, Effect, Layer, ManagedRuntime, Context } from "effect";
 
-class Notifications extends ServiceMap.Service<
+class Notifications extends Context.Service<
   Notifications,
   {
     readonly notify: (message: string) => Effect.Effect<void>;

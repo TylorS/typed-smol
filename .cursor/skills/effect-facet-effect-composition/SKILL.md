@@ -27,7 +27,7 @@ description: Guidance for facet `effect/Effect#composition` focused on APIs like
 - `mapErrorEager`
 - `provideService`
 - `provideServiceEffect`
-- `provideServices`
+- `provideContext`
 - `zip`
 - `andThen`
 - `zipWith`

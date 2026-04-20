@@ -1,6 +1,6 @@
 import { map } from "effect/Effect";
 import type { Scope } from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import type { Fx } from "@typed/fx/Fx";
 import { unwrap } from "@typed/fx/Fx";
 import type { Renderable } from "./Renderable.ts";
@@ -41,7 +41,7 @@ import type { RenderEvent } from "./RenderEvent.ts";
  * @since 1.0.0
  * @category models
  */
-export class RenderTemplate extends ServiceMap.Service<
+export class RenderTemplate extends Context.Service<
   RenderTemplate,
   {
     <const Values extends ArrayLike<Renderable.Any>>(

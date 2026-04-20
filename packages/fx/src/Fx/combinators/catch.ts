@@ -384,7 +384,7 @@ export const catchTags: {
                 sink as import("../../Sink/Sink.js").Sink<
                   unknown,
                   unknown,
-                  import("../../Sink/Sink.js").Context<typeof sink>
+                  import("../../Sink/Sink.js").Services<typeof sink>
                 >,
               );
             }
@@ -410,7 +410,7 @@ export const catchTags: {
                 ? R2
                 : never;
             }[keyof Cases]
-          | import("../../Sink/Sink.js").Context<typeof sink>
+          | import("../../Sink/Sink.js").Services<typeof sink>
         >,
     ),
 );

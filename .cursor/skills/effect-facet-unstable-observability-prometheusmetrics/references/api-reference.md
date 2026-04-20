@@ -19,7 +19,7 @@ Prometheus metrics exporter for Effect's Metric system.
 
 ```ts
 export declare const format: (options?: FormatOptions | undefined): Effect.Effect<string>;
-export declare const formatUnsafe: (services: ServiceMap.ServiceMap<never>, options?: FormatOptions | undefined): string;
+export declare const formatUnsafe: (services: Context.Context<never>, options?: FormatOptions | undefined): string;
 export declare const layerHttp: (options?: HttpOptions | undefined): Layer.Layer<never, never, HttpRouter.HttpRouter>;
 ```
 

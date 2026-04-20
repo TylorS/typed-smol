@@ -20,9 +20,9 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import { Console, Effect, Layer, ManagedRuntime, ServiceMap } from "effect";
+import { Console, Effect, Layer, ManagedRuntime, Context } from "effect";
 
-class Notifications extends ServiceMap.Service<
+class Notifications extends Context.Service<
   Notifications,
   {
     readonly notify: (message: string) => Effect.Effect<void>;

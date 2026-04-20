@@ -25,7 +25,9 @@ const plural = <E, R>(
 ) => RefSubject.map(count, (c) => (c === 1 ? options.one : options.many));
 
 const clearCompleted = Fx.if(App.SomeAreCompleted, {
-  onTrue: html`<button class="clear-completed" onclick="${App.clearCompletedTodos}">Clear completed</button>`,
+  onTrue: html`<button class="clear-completed" onclick="${App.clearCompletedTodos}">
+    Clear completed
+  </button>`,
   onFalse: Fx.null,
 });
 
@@ -42,7 +44,12 @@ export const TodoApp = html`<section class="todoapp ${App.FilterState}">
     </form>
   </header>
   <section class="main">
-    <input class="toggle-all" type="checkbox" ?checked="${App.AllAreCompleted}" ?indeterminate="${App.SomeAreCompleted}" />
+    <input
+      class="toggle-all"
+      type="checkbox"
+      ?checked="${App.AllAreCompleted}"
+      ?indeterminate="${App.SomeAreCompleted}"
+    />
     <label for="toggle-all" onclick="${App.toggleAllCompleted}">Mark all as complete</label>
     <ul class="todo-list">
       ${many(App.Todos, (todo) => todo.id, TodoItem)}

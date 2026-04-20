@@ -10,7 +10,7 @@ import * as Option from "effect/Option";
 import type * as Predicate from "effect/Predicate";
 import * as Schema from "effect/Schema";
 import type { ParseOptions } from "effect/SchemaAST";
-import type * as ServiceMap from "effect/ServiceMap";
+import type * as Context from "effect/Context";
 
 /**
  * @since 1.0.0
@@ -376,7 +376,7 @@ export const catchTag: {
  */
 export const provide: {
   <R2>(
-    provided: ServiceMap.ServiceMap<R2>,
+    provided: Context.Context<R2>,
   ): <I, O, E, R>(guard: GuardInput<I, O, E, R>) => Guard<I, O, E, Exclude<R, R2>>;
   <R2, E2, R3>(
     provided: Layer.Layer<R2, E2, R3>,
@@ -384,7 +384,7 @@ export const provide: {
 
   <I, O, E, R, R2>(
     guard: GuardInput<I, O, E, R>,
-    provided: ServiceMap.ServiceMap<R2>,
+    provided: Context.Context<R2>,
   ): Guard<I, O, E, Exclude<R, R2>>;
   <I, O, E, R, R2, E2, R3>(
     guard: GuardInput<I, O, E, R>,
@@ -396,12 +396,7 @@ export const provide: {
   E,
   R,
   R2,
->(guard: GuardInput<I, O, E, R>, provided: ServiceMap.ServiceMap<R2>): Guard<
-  I,
-  O,
-  E,
-  Exclude<R, R2>
-> {
+>(guard: GuardInput<I, O, E, R>, provided: Context.Context<R2>): Guard<I, O, E, Exclude<R, R2>> {
   const g = getGuard(guard);
   return (i) => Effect.provide(g(i), provided);
 });
@@ -411,12 +406,12 @@ export const provide: {
  */
 export const provideService: {
   <Id, S>(
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: S,
   ): <I, O, E, R>(guard: GuardInput<I, O, E, R>) => Guard<I, O, E, Exclude<R, Id>>;
   <I, O, E, R, Id, S>(
     guard: GuardInput<I, O, E, R>,
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: S,
   ): Guard<I, O, E, Exclude<R, Id>>;
 } = dual(3, function provideService<
@@ -426,7 +421,7 @@ export const provideService: {
   R,
   Id,
   S,
->(guard: GuardInput<I, O, E, R>, tag: ServiceMap.Service<Id, S>, service: S): Guard<
+>(guard: GuardInput<I, O, E, R>, tag: Context.Service<Id, S>, service: S): Guard<
   I,
   O,
   E,
@@ -441,12 +436,12 @@ export const provideService: {
  */
 export const provideServiceEffect: {
   <Id, S, E2, R2>(
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: Effect.Effect<S, E2, R2>,
   ): <I, O, E, R>(guard: GuardInput<I, O, E, R>) => Guard<I, O, E | E2, Exclude<R, Id> | R2>;
   <I, O, E, R, Id, S, E2, R2>(
     guard: GuardInput<I, O, E, R>,
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: Effect.Effect<S, E2, R2>,
   ): Guard<I, O, E | E2, Exclude<R, Id> | R2>;
 } = dual(3, function provideServiceEffect<
@@ -458,7 +453,7 @@ export const provideServiceEffect: {
   S,
   E2,
   R2,
->(guard: GuardInput<I, O, E, R>, tag: ServiceMap.Service<Id, S>, service: Effect.Effect<S, E2, R2>): Guard<
+>(guard: GuardInput<I, O, E, R>, tag: Context.Service<Id, S>, service: Effect.Effect<S, E2, R2>): Guard<
   I,
   O,
   E | E2,

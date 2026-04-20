@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import type { Scope } from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { Fx, RefSubject } from "@typed/fx";
 import { HydrateContext } from "./HydrateContext.js";
 import { renderToString } from "./internal/encoding.js";
@@ -90,8 +90,8 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
   return Fx.gen(function* () {
     const behavior = yield* RefSubject.CurrentComputedBehavior;
     if (behavior === "multiple") {
-      const services = yield* Effect.services<never>();
-      const hydrateContext = ServiceMap.getOption(services, HydrateContext);
+      const services = yield* Effect.context<never>();
+      const hydrateContext = Context.getOption(services, HydrateContext);
       // If we're hydrating, attempt to provide the correct HydrateContext to rendering Fx
       if (Option.isSome(hydrateContext) && hydrateContext.value.hydrate) {
         return Fx.keyed(values, {
@@ -99,8 +99,8 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
           onValue: (ref, key) =>
             Fx.provide(
               render(ref, key),
-              Layer.succeedServices(
-                HydrateContext.serviceMap({ ...hydrateContext.value, manyKey: key.toString() }),
+              Layer.succeedContext(
+                HydrateContext.context({ ...hydrateContext.value, manyKey: key.toString() }),
               ),
             ),
         }).pipe(wrapInRenderEvent);

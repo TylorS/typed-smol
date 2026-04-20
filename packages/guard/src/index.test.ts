@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { describe, expect, it } from "vitest";
 import {
   addTag,
@@ -341,14 +341,10 @@ describe("@typed/guard", () => {
 
   describe("provideService", () => {
     it("provides a service so the guard no longer requires it", async () => {
-      const Foo = ServiceMap.Service<{ readonly n: number }>("Test/Foo");
-      const guardNeedsFoo: Guard<
-        number,
-        number,
-        never,
-        ServiceMap.Service.Identifier<typeof Foo>
-      > = (i) =>
-        Effect.flatMap(Effect.service(Foo), (foo) => Effect.succeed(Option.some(i + foo.n)));
+      const Foo = Context.Service<{ readonly n: number }>("Test/Foo");
+      const guardNeedsFoo: Guard<number, number, never, Context.Service.Identifier<typeof Foo>> = (
+        i,
+      ) => Effect.flatMap(Effect.service(Foo), (foo) => Effect.succeed(Option.some(i + foo.n)));
       const g = provideService(guardNeedsFoo, Foo, { n: 10 });
       const result = await run(g(1));
       expect(Option.isSome(result)).toBe(true);

@@ -28,7 +28,7 @@ export const ulid: Effect.Effect<Ulid, never, RandomValues | DateTimes> = Effect
       throw new Error("Cannot generate ULID due to timestamp overflow");
     }
 
-    return Ulid.makeUnsafe(encodeTime(now, TIME_LEN) + encodeRandom(seed));
+    return Ulid.make(encodeTime(now, TIME_LEN) + encodeRandom(seed));
   },
 );
 

@@ -17,13 +17,9 @@ import { escape } from "./internal/encoding.js";
 describe("Html", () => {
   it("static template", () =>
     Effect.gen(function* () {
-      expect(
-        yield* getStaticHtml(
-          html`
-            <div>Hello, world!</div>
-          `,
-        ),
-      ).toMatchInlineSnapshot(`"<div>Hello, world!</div>"`);
+      expect(yield* getStaticHtml(html` <div>Hello, world!</div> `)).toMatchInlineSnapshot(
+        `"<div>Hello, world!</div>"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("dynamic template for text", () =>
@@ -51,12 +47,14 @@ describe("Html", () => {
 
   it("streams render events in order", () =>
     Effect.gen(function* () {
+      const events = Fx.mergeAll(
+        Fx.succeed(HtmlRenderEvent("Typ", false)),
+        Fx.succeed(HtmlRenderEvent("ed", true)),
+      )
+
       expect(
         yield* getStaticHtml(
-          html`<div>Hello, ${Fx.mergeAll(
-            Fx.succeed(HtmlRenderEvent("Typ", false)),
-            Fx.succeed(HtmlRenderEvent("ed", true)),
-          )}!</div>`,
+          html`<div>Hello, ${events}!</div>`,
         ),
       ).toMatchInlineSnapshot(`"<div>Hello, Typed!</div>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
@@ -64,11 +62,7 @@ describe("Html", () => {
   it("renders template with static attribute", () =>
     Effect.gen(function* () {
       expect(
-        yield* getStaticHtml(
-          html`
-            <div data-foo="Hello, world!"></div>
-          `,
-        ),
+        yield* getStaticHtml(html` <div data-foo="Hello, world!"></div> `),
       ).toMatchInlineSnapshot(`"<div data-foo="Hello, world!"></div>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
 
@@ -137,13 +131,9 @@ describe("Html", () => {
 
   it("renders template with a class name", () =>
     Effect.gen(function* () {
-      expect(
-        yield* getStaticHtml(
-          html`
-            <div class="foo"></div>
-          `,
-        ),
-      ).toMatchInlineSnapshot(`"<div class="foo"></div>"`);
+      expect(yield* getStaticHtml(html` <div class="foo"></div> `)).toMatchInlineSnapshot(
+        `"<div class="foo"></div>"`,
+      );
       expect(yield* getStaticHtml(html`<div class=${"foo"}></div>`)).toMatchInlineSnapshot(
         `"<div class="foo"></div>"`,
       );
@@ -182,13 +172,9 @@ describe("Html", () => {
 
   it("renders comments", () =>
     Effect.gen(function* () {
-      expect(
-        yield* getStaticHtml(
-          html`
-            <!--Hello, world!-->
-          `,
-        ),
-      ).toMatchInlineSnapshot(`"<!--Hello, world!-->"`);
+      expect(yield* getStaticHtml(html` <!--Hello, world!--> `)).toMatchInlineSnapshot(
+        `"<!--Hello, world!-->"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders comments with holes", () =>
@@ -223,17 +209,21 @@ describe("Html", () => {
   it("supports text only elements", () =>
     Effect.gen(function* () {
       expect(
-        yield* getStaticHtml(html`<script>console.log("${"Hello, world!"}")</script>`),
-      ).toMatchInlineSnapshot(`"<script>console.log("Hello, world!")</script>"`);
+        yield* getStaticHtml(
+          html`<script>console.log("${"Hello, world!"}");</script>`,
+        ),
+      ).toMatchInlineSnapshot(`"<script>console.log("Hello, world!");</script>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("supports text only elements with multiple holes", () =>
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(
-          html`<script>console.log("${"Hello"}, ${Effect.succeed("world")}${Fx.succeed("!")}")</script>`,
+          html`<script>console.log("${"Hello"}, ${Effect.succeed("world")}${Fx.succeed("!")}");</script>`,
         ),
-      ).toMatchInlineSnapshot(`"<script>console.log("Hello, world!")</script>"`);
+      ).toMatchInlineSnapshot(`
+        "<script>console.log("Hello, world!");</script>"
+      `);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("supports spread attributes", () =>
@@ -277,27 +267,14 @@ describe("Html", () => {
   it("interpolates dom render events", () =>
     Effect.gen(function* () {
       expect(
-        yield* getStaticHtml(
-          html`<div>${html`
-            <p>Hello, world!</p>
-          `}</div>`,
-        ),
+        yield* getStaticHtml(html`<div>${html` <p>Hello, world!</p> `}</div>`),
       ).toMatchInlineSnapshot(`"<div><p>Hello, world!</p></div>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("interpolates array of render events", () =>
     Effect.gen(function* () {
       expect(
-        yield* getStaticHtml(
-          html`<div>${[
-            html`
-              <p>A</p>
-            `,
-            html`
-              <p>B</p>
-            `,
-          ]}</div>`,
-        ),
+        yield* getStaticHtml(html`<div>${[html` <p>A</p> `, html` <p>B</p> `]}</div>`),
       ).toMatchInlineSnapshot(`"<div><p>A</p><p>B</p></div>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
 
@@ -312,7 +289,11 @@ describe("Html", () => {
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(
-          html`<div class="container">${html`<header>${html`<h1>${"Title"}</h1>`}</header>`}${html`<main>${html`<p>${"Content"}</p>`}</main>`}</div>`,
+          html`<div class="container">
+            ${html`<header>${html`<h1>${"Title"}</h1>`}</header>`}${html`<main>
+              ${html`<p>${"Content"}</p>`}
+            </main>`}
+          </div>`,
         ),
       ).toMatchInlineSnapshot(
         `"<div class="container"><header><h1>Title</h1></header><main><p>Content</p></main></div>"`,
@@ -323,9 +304,15 @@ describe("Html", () => {
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(
-          html`<div id="test" class=${"dynamic"} ?hidden=${true} data-value=${Effect.succeed("effect")} ...${{
-            "aria-label": "accessible",
-          }}></div>`,
+          html`<div
+            id="test"
+            class=${"dynamic"}
+            ?hidden=${true}
+            data-value=${Effect.succeed("effect")}
+            ...${{
+              "aria-label": "accessible",
+            }}
+          ></div>`,
         ),
       ).toMatchInlineSnapshot(
         `"<div id="test" class="dynamic" hidden data-value="effect"  aria-label="accessible"></div>"`,
@@ -341,20 +328,10 @@ describe("Html", () => {
 
   it("renders void elements", () =>
     Effect.gen(function* () {
-      expect(
-        yield* getStaticHtml(
-          html`
-            <br />
-          `,
-        ),
-      ).toMatchInlineSnapshot(`"<br/>"`);
-      expect(
-        yield* getStaticHtml(
-          html`
-            <hr class="separator" />
-          `,
-        ),
-      ).toMatchInlineSnapshot(`"<hr class="separator"/>"`);
+      expect(yield* getStaticHtml(html` <br /> `)).toMatchInlineSnapshot(`"<br/>"`);
+      expect(yield* getStaticHtml(html` <hr class="separator" /> `)).toMatchInlineSnapshot(
+        `"<hr class="separator"/>"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders with special characters in attributes", () =>
@@ -375,17 +352,13 @@ describe("Html", () => {
 describe("Html Render Events", () => {
   it("renders html render events", () =>
     Effect.gen(function* () {
-      const events = yield* getHtmlRenderEvents(
-        html`<div>${html`
-          <p>Hello, world!</p>
-        `}</div>`,
-      );
+      const events = yield* getHtmlRenderEvents(html`<div>${html`<p>Hello, world!</p>`}</div>`);
 
       expect(events).toMatchInlineSnapshot(`
         [
           "<!--t_fqNjm/UcUg8=--><div>",
           "<!--n_0-->",
-          "<!--t_ay1Mjj9KxIY=--><p>Hello, world!</p><!--/t_ay1Mjj9KxIY=-->",
+          "<!--t_1XMifUHMTBw=--><p>Hello, world!</p><!--/t_1XMifUHMTBw=-->",
           "<!--/n_0-->",
           "</div><!--/t_fqNjm/UcUg8=-->",
         ]

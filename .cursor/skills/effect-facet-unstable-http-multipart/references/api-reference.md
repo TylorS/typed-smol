@@ -31,7 +31,7 @@ export declare const isField: (u: unknown): u is Field;
 export declare const isFile: (u: unknown): u is File;
 export declare const isPart: (u: unknown): u is Part;
 export declare const isPersistedFile: (u: unknown): u is PersistedFile;
-export declare const limitsServices: (options: { readonly maxParts?: number | undefined; readonly maxFieldSize?: FileSystem.SizeInput | undefined; readonly maxFileSize?: FileSystem.SizeInput | undefined; readonly maxTotalSize?: FileSystem.SizeInput | undefined; readonly fieldMimeTypes?: ReadonlyArray<string> | undefined; }): ServiceMap.ServiceMap<never>;
+export declare const limitsServices: (options: { readonly maxParts?: number | undefined; readonly maxFieldSize?: FileSystem.SizeInput | undefined; readonly maxFileSize?: FileSystem.SizeInput | undefined; readonly maxTotalSize?: FileSystem.SizeInput | undefined; readonly fieldMimeTypes?: ReadonlyArray<string> | undefined; }): Context.Context<never>;
 export declare const makeChannel: <IE>(headers: Record<string, string>): Channel.Channel<Arr.NonEmptyReadonlyArray<Part>, MultipartError | IE, void, Arr.NonEmptyReadonlyArray<Uint8Array>, IE, unknown>;
 export declare const makeConfig: (headers: Record<string, string>): Effect.Effect<MP.BaseConfig>;
 export declare const schemaJson: <A, I, RD, RE>(schema: Schema.Codec<A, I, RD, RE>, options?: ParseOptions | undefined): { (field: string): (persisted: Persisted) => Effect.Effect<A, Schema.SchemaError, RD>; (persisted: Persisted, field: string): Effect.Effect<A, Schema.SchemaError, RD>; };

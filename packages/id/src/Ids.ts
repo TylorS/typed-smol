@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import { dual } from "effect/Function";
 import * as Layer from "effect/Layer";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import type { Cuid } from "./Cuid.js";
 import { cuid, CuidState } from "./Cuid.js";
 import { DateTimes } from "./DateTimes.js";
@@ -19,9 +19,9 @@ import type { Uuid7 } from "./Uuid7.js";
 import { uuid7, Uuid7State } from "./Uuid7.js";
 import { TestClock } from "effect/testing";
 
-export class Ids extends ServiceMap.Service<Ids>()("@typed/id/Ids", {
+export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
   make: Effect.gen(function* () {
-    const services = yield* Effect.services<DateTimes | RandomValues | CuidState | Uuid7State>();
+    const services = yield* Effect.context<DateTimes | RandomValues | CuidState | Uuid7State>();
 
     const uuid5_: {
       (namespace: Uuid5Namespace): (name: string) => Effect.Effect<Uuid5>;

@@ -23,10 +23,10 @@ A `Layer<ROut, E, RIn>` describes how to build one or more services in your appl
 ## All Function Signatures
 
 ```ts
-export declare const buildWithMemoMap: (memoMap: MemoMap, scope: Scope.Scope): <RIn, E, ROut>(self: Layer<ROut, E, RIn>) => Effect<ServiceMap.ServiceMap<ROut>, E, RIn>; // overload 1
-export declare const buildWithMemoMap: <RIn, E, ROut>(self: Layer<ROut, E, RIn>, memoMap: MemoMap, scope: Scope.Scope): Effect<ServiceMap.ServiceMap<ROut>, E, RIn>; // overload 2
-export declare const flatMap: <A, A2, E2, R2>(f: (context: ServiceMap.ServiceMap<A>) => Layer<A2, E2, R2>): <E, R>(self: Layer<A, E, R>) => Layer<A2, E2 | E, R2 | R>; // overload 1
-export declare const flatMap: <A, E, R, A2, E2, R2>(self: Layer<A, E, R>, f: (context: ServiceMap.ServiceMap<A>) => Layer<A2, E2, R2>): Layer<A2, E | E2, R | R2>; // overload 2
+export declare const buildWithMemoMap: (memoMap: MemoMap, scope: Scope.Scope): <RIn, E, ROut>(self: Layer<ROut, E, RIn>) => Effect<Context.Context<ROut>, E, RIn>; // overload 1
+export declare const buildWithMemoMap: <RIn, E, ROut>(self: Layer<ROut, E, RIn>, memoMap: MemoMap, scope: Scope.Scope): Effect<Context.Context<ROut>, E, RIn>; // overload 2
+export declare const flatMap: <A, A2, E2, R2>(f: (context: Context.Context<A>) => Layer<A2, E2, R2>): <E, R>(self: Layer<A, E, R>) => Layer<A2, E2 | E, R2 | R>; // overload 1
+export declare const flatMap: <A, E, R, A2, E2, R2>(self: Layer<A, E, R>, f: (context: Context.Context<A>) => Layer<A2, E2, R2>): Layer<A2, E | E2, R | R2>; // overload 2
 export declare const makeMemoMapUnsafe: (): MemoMap;
 export declare const merge: <RIn, E, ROut>(that: Layer<ROut, E, RIn>): <RIn2, E2, ROut2>(self: Layer<ROut2, E2, RIn2>) => Layer<ROut | ROut2, E | E2, RIn | RIn2>; // overload 1
 export declare const merge: <const Layers extends [Any, ...Array<Any>]>(that: Layers): <A, E, R>(self: Layer<A, E, R>) => Layer<A | Success<Layers[number]>, E | Error<Layers[number]>, Services<Layers[number]> | R>; // overload 2

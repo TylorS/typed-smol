@@ -13,7 +13,7 @@ Establish "maximum type safety" as a non-negotiable constraint for all implement
 - No type casts in generated plugin output (`as any`, `as readonly any[]`, etc.)
 - Prefer type guards and proper narrowings over casts in implementation
 - Use overloads or discriminated unions when runtime shapes differ
-- When implementing `normalizeDependencyInput`: refactor existing `normalizeDependencies` to eliminate `dep as ServiceMap.ServiceMap<any>`—use or add `ServiceMap` type guard for narrowing
+- When implementing `normalizeDependencyInput`: refactor existing `normalizeDependencies` to eliminate `dep as Context.Context<any>`—use or add `Context` type guard for narrowing
 - Review existing casts in Matcher.ts; treat elimination as tech debt when touching those paths
 
 ### Source

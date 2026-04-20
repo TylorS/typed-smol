@@ -106,7 +106,7 @@
 | `effect-module-scopedcache`                               | primary | `effect/ScopedCache`                                | n/a                             |
 | `effect-module-scopedref`                                 | primary | `effect/ScopedRef`                                  | n/a                             |
 | `effect-module-semaphore`                                 | primary | `effect/Semaphore`                                  | n/a                             |
-| `effect-module-servicemap`                                | primary | `effect/ServiceMap`                                 | n/a                             |
+| `effect-module-Context`                                   | primary | `effect/Context`                                    | n/a                             |
 | `effect-module-sink`                                      | primary | `effect/Sink`                                       | n/a                             |
 | `effect-module-stdio`                                     | primary | `effect/Stdio`                                      | n/a                             |
 | `effect-module-stream`                                    | primary | `effect/Stream`                                     | n/a                             |

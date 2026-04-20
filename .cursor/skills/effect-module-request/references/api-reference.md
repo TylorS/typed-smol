@@ -34,7 +34,7 @@ export declare const fail: <A extends Any>(self: Entry<A>, error: Error<A>): Eff
 export declare const failCause: <A extends Any>(cause: Cause.Cause<Error<A>>): (self: Entry<A>) => Effect.Effect<void>; // overload 1
 export declare const failCause: <A extends Any>(self: Entry<A>, cause: Cause.Cause<Error<A>>): Effect.Effect<void>; // overload 2
 export declare const isRequest: (u: unknown): u is Request<unknown, unknown, unknown>;
-export declare const makeEntry: <R>(options: { readonly request: R; readonly services: ServiceMap.ServiceMap<[R] extends [Request<infer _A, infer _E, infer _R>] ? _R : never>; readonly uninterruptible: boolean; readonly completeUnsafe: (exit: Exit.Exit<[R] extends [Request<infer _A, infer _E, infer _R>] ? _A : never, [R] extends [Request<infer _A, infer _E, infer _R>] ? _E : never>) => void; }): Entry<R>;
+export declare const makeEntry: <R>(options: { readonly request: R; readonly services: Context.Context<[R] extends [Request<infer _A, infer _E, infer _R>] ? _R : never>; readonly uninterruptible: boolean; readonly completeUnsafe: (exit: Exit.Exit<[R] extends [Request<infer _A, infer _E, infer _R>] ? _A : never, [R] extends [Request<infer _A, infer _E, infer _R>] ? _E : never>) => void; }): Entry<R>;
 export declare const of: <R extends Request<any, any, any>>(): Constructor<R>;
 export declare const succeed: <A extends Any>(value: Success<A>): (self: Entry<A>) => Effect.Effect<void>; // overload 1
 export declare const succeed: <A extends Any>(self: Entry<A>, value: Success<A>): Effect.Effect<void>; // overload 2

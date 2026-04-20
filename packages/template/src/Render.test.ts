@@ -273,12 +273,8 @@ describe("Render", () => {
   it("interpolates array of render events", () =>
     Effect.gen(function* () {
       const renderEventExample = yield* renderHtmlElement`<div>${[
-        html`
-          <p>A</p>
-        `,
-        html`
-          <p>B</p>
-        `,
+        html` <p>A</p> `,
+        html` <p>B</p> `,
       ]}</div>`;
       assert.equal(renderEventExample.innerHTML, `<p>A</p><p>B</p>${TYPED_NODE_END(0)}`);
     }).pipe(Effect.scoped, Effect.runPromise));

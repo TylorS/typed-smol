@@ -1,4 +1,4 @@
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { getHydrationRoot, type HydrationNode } from "./internal/hydration.js";
 
 /**
@@ -19,7 +19,7 @@ export type HydrateContext = {
  * Used Internally to pass context down to components for hydration
  * @internal
  */
-export const HydrateContext = ServiceMap.Service<HydrateContext>("@typed/html/HydrateContext");
+export const HydrateContext = Context.Service<HydrateContext>("@typed/html/HydrateContext");
 
 /**
  * Creates a hydration context starting from a root element.
@@ -30,11 +30,11 @@ export const HydrateContext = ServiceMap.Service<HydrateContext>("@typed/html/Hy
  * @param rootElement - The root DOM element where hydration should begin.
  * @returns A `ServiceMap` containing the `HydrateContext`.
  */
-export const makeHydrateContext = (rootElement: HTMLElement): ServiceMap.ServiceMap<never> => {
+export const makeHydrateContext = (rootElement: HTMLElement): Context.Context<never> => {
   try {
     const where = getHydrationRoot(rootElement);
-    return HydrateContext.serviceMap({ where, hydrate: true });
+    return HydrateContext.context({ where, hydrate: true });
   } catch {
-    return ServiceMap.empty();
+    return Context.empty();
   }
 };

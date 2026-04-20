@@ -11,7 +11,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
 import type * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as Fx from "../Fx/index.js";
 import { FxTypeId } from "../Fx/TypeId.js";
 import * as Sink from "../Sink.js";
@@ -68,7 +68,7 @@ export namespace Push {
     Self
   > {
     readonly id: Id;
-    readonly service: ServiceMap.Service<Self, Push<A, E, never, B, E2, never>>;
+    readonly service: Context.Service<Self, Push<A, E, never, B, E2, never>>;
     readonly make: <R = never, R2 = never>(
       sink: Sink.Sink<A, E, R>,
       fx: Fx.Fx<B, E2, R2>,
@@ -201,13 +201,20 @@ export const mapInput: {
     f: (c: C) => Sink.Success<P>,
   ): (
     push: P,
-  ) => Push<Sink.Context<P>, Sink.Error<P>, C, Fx.Fx.Services<P>, Fx.Fx.Error<P>, Fx.Fx.Success<P>>;
+  ) => Push<
+    Sink.Services<P>,
+    Sink.Error<P>,
+    C,
+    Fx.Fx.Services<P>,
+    Fx.Fx.Error<P>,
+    Fx.Fx.Success<P>
+  >;
 
   <P extends Push.Any, C>(
     push: P,
     f: (c: C) => Sink.Sink.Success<P>,
   ): Push<
-    Sink.Sink.Context<P>,
+    Sink.Sink.Services<P>,
     Sink.Sink.Error<P>,
     C,
     Fx.Fx.Services<P>,
@@ -215,7 +222,7 @@ export const mapInput: {
     Fx.Fx.Success<P>
   >;
 } = dual(2, function mapInput<P extends Push.Any, C>(push: P, f: (c: C) => Sink.Success<P>): Push<
-  Sink.Context<P>,
+  Sink.Services<P>,
   Sink.Error<P>,
   C,
   Fx.Fx.Services<P>,
@@ -259,7 +266,14 @@ export const filterInput: {
     f: (a: A) => boolean,
   ): <P extends Push.Any>(
     push: P,
-  ) => Push<Sink.Context<P>, Sink.Error<P>, A, Fx.Fx.Services<P>, Fx.Fx.Error<P>, Fx.Fx.Success<P>>;
+  ) => Push<
+    Sink.Services<P>,
+    Sink.Error<P>,
+    A,
+    Fx.Fx.Services<P>,
+    Fx.Fx.Error<P>,
+    Fx.Fx.Success<P>
+  >;
   <A, E, R, B, E2, R2>(
     push: Push<A, E, R, B, E2, R2>,
     f: (a: A) => boolean,
@@ -308,7 +322,14 @@ export const filterMapInput: {
     f: (c: C) => Option.Option<A>,
   ): <P extends Push.Any>(
     push: P,
-  ) => Push<C, Sink.Error<P>, Sink.Context<P>, Fx.Fx.Success<P>, Fx.Fx.Error<P>, Fx.Fx.Services<P>>;
+  ) => Push<
+    C,
+    Sink.Error<P>,
+    Sink.Services<P>,
+    Fx.Fx.Success<P>,
+    Fx.Fx.Error<P>,
+    Fx.Fx.Services<P>
+  >;
   <A, E, R, B, E2, R2, C>(
     push: Push<A, E, R, B, E2, R2>,
     f: (c: C) => Option.Option<A>,
@@ -1015,7 +1036,7 @@ export const mapAccumEffect: {
 
 export function Service<Self, A, E = never, B = never, E2 = never>() {
   return <const Id extends string>(id: Id): Push.Class<Self, Id, A, E, B, E2> => {
-    const service = ServiceMap.Service<Self, Push<A, E, never, B, E2, never>>(id);
+    const service = Context.Service<Self, Push<A, E, never, B, E2, never>>(id);
 
     // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     return class PushService {
@@ -1028,17 +1049,17 @@ export function Service<Self, A, E = never, B = never, E2 = never>() {
       ): Layer.Layer<Self, never, Exclude<R | R2, Scope.Scope>> =>
         Layer.effect(
           service,
-          Effect.services<R | R2>().pipe(
+          Effect.context<R | R2>().pipe(
             Effect.map((services) =>
               make(
                 Sink.make(
-                  (cause) => Effect.provideServices(sink.onFailure(cause), services),
-                  (value) => Effect.provideServices(sink.onSuccess(value), services),
+                  (cause) => Effect.provideContext(sink.onFailure(cause), services),
+                  (value) => Effect.provideContext(sink.onSuccess(value), services),
                 ),
                 Fx.make(<RSink>(sink: Sink.Sink<B, E2, RSink>) =>
-                  Effect.services<RSink>().pipe(
+                  Effect.context<RSink>().pipe(
                     Effect.flatMap((services2) =>
-                      Effect.provideServices(fx.run(sink), ServiceMap.merge(services, services2)),
+                      Effect.provideContext(fx.run(sink), Context.merge(services, services2)),
                     ),
                   ),
                 ),

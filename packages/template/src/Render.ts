@@ -6,7 +6,7 @@ import { getOrUndefined, isNone, isOption, type Some } from "effect/Option";
 import { isFunction, isNullish, isObject } from "effect/Predicate";
 import { map as mapRecord } from "effect/Record";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { isStream } from "effect/Stream";
 import { Fx, Sink } from "@typed/fx";
 import { CouldNotFindCommentError, isHydrationError } from "./errors.js";
@@ -64,7 +64,7 @@ import { getAllSiblingsBetween, isText, persistent, type Rendered } from "./Wire
  * @since 1.0.0
  * @category services
  */
-export const CurrentRenderDocument = ServiceMap.Reference<Document>("RenderDocument", {
+export const CurrentRenderDocument = Context.Reference<Document>("RenderDocument", {
   defaultValue: () => document,
 });
 
@@ -88,7 +88,7 @@ export const CurrentRenderDocument = ServiceMap.Reference<Document>("RenderDocum
  * @since 1.0.0
  * @category services
  */
-export const CurrentRenderQueue = ServiceMap.Reference<RQ.RenderQueue>("RenderQueue", {
+export const CurrentRenderQueue = Context.Reference<RQ.RenderQueue>("RenderQueue", {
   defaultValue: () => new RQ.MixedRenderQueue(),
 });
 
@@ -111,7 +111,7 @@ export const CurrentRenderQueue = ServiceMap.Reference<RQ.RenderQueue>("RenderQu
  * @since 1.0.0
  * @category services
  */
-export const CurrentRenderPriority = ServiceMap.Reference<number>("CurrentRenderPriority", {
+export const CurrentRenderPriority = Context.Reference<number>("CurrentRenderPriority", {
   defaultValue: () => RQ.RenderPriority.Raf(10),
 });
 
@@ -349,7 +349,7 @@ export const render: {
 >(rendered: Fx.Fx<T, E, R>, rootElement: HTMLElement): Fx.Fx<ToRendered<T>, E, R> {
   return Fx.provide(
     Fx.mapEffect(rendered, (what) => attachRoot(rootElement, what)),
-    Layer.syncServices(() => makeHydrateContext(rootElement)),
+    Layer.syncContext(() => makeHydrateContext(rootElement)),
   );
 });
 
@@ -678,7 +678,7 @@ export type TemplateContext<R = never> = {
   readonly refCounter: IndexRefCounter;
   readonly scope: Scope.Closeable;
   readonly values: ArrayLike<Renderable<unknown, any, any>>;
-  readonly services: ServiceMap.ServiceMap<R | Scope.Scope>;
+  readonly services: Context.Context<R | Scope.Scope>;
   readonly onCause: (cause: Cause.Cause<any>) => Effect.Effect<unknown>;
 
   /**
@@ -704,15 +704,15 @@ const makeTemplateContext = Effect.fn(function* <
   ) => Effect.Effect<unknown, never, RSink>,
 ) {
   const renderQueue: RQ.RenderQueue = yield* CurrentRenderQueue;
-  const services: ServiceMap.ServiceMap<Renderable.Services<Values[number]> | RSink | Scope.Scope> =
-    yield* Effect.services<Renderable.Services<Values[number]> | RSink | Scope.Scope>();
+  const services: Context.Context<Renderable.Services<Values[number]> | RSink | Scope.Scope> =
+    yield* Effect.context<Renderable.Services<Values[number]> | RSink | Scope.Scope>();
   const refCounter: IndexRefCounter = yield* makeRefCounter;
-  const scope: Scope.Closeable = yield* Scope.fork(ServiceMap.get(services, Scope.Scope));
+  const scope: Scope.Closeable = yield* Scope.fork(Context.get(services, Scope.Scope));
   const eventSource: EventSource = makeEventSource();
-  const servicesWithScope = ServiceMap.add(services, Scope.Scope, scope);
-  const hydrateContext = ServiceMap.getOption(services, HydrateContext);
+  const servicesWithScope = Context.add(services, Scope.Scope, scope);
+  const hydrateContext = Context.getOption(services, HydrateContext);
   const ctx: TemplateContext<Renderable.Services<Values[number]> | RSink | Scope.Scope> = {
-    services: ServiceMap.add(services, Scope.Scope, scope),
+    services: Context.add(services, Scope.Scope, scope),
     document,
     renderQueue,
     disposables: new Set(),
@@ -720,7 +720,7 @@ const makeTemplateContext = Effect.fn(function* <
     refCounter,
     scope,
     values,
-    onCause: flow(onCause, Effect.provideServices(servicesWithScope)),
+    onCause: flow(onCause, Effect.provideContext(servicesWithScope)),
     expected: 0,
     dynamicIndex: values.length,
     hydrateContext: getOrUndefined(hydrateContext),

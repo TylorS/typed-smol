@@ -16,7 +16,7 @@ import { sum } from "effect/Number";
 import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as Stream from "effect/Stream";
 import { compact as fxCompact } from "../Fx/combinators/compact.js";
 import { continueWith } from "../Fx/combinators/continueWith.js";
@@ -291,7 +291,7 @@ export declare namespace RefSubject {
   export interface Service<Self, Id extends string, A, E> extends RefSubject<A, E, Self> {
     readonly id: Id;
 
-    readonly service: ServiceMap.Service<Self, RefSubject<A, E>>;
+    readonly service: Context.Service<Self, RefSubject<A, E>>;
 
     readonly make: <R = never>(
       value: A | Effect.Effect<A, E, R> | Fx<A, E, R>,
@@ -307,14 +307,12 @@ export declare namespace RefSubject {
     new (): RefSubject.Service<Self, Id, A, E>;
   }
 }
-export const CurrentComputedBehavior = ServiceMap.Reference("@typed/fx/CurrentComputedBehavior", {
+export const CurrentComputedBehavior = Context.Reference("@typed/fx/CurrentComputedBehavior", {
   defaultValue: (): "one" | "multiple" => "multiple",
 });
 
-const checkIsMultiple = (
-  ctx: ServiceMap.ServiceMap<any>,
-): ctx is ServiceMap.ServiceMap<"multiple"> =>
-  ServiceMap.getReferenceUnsafe(ctx, CurrentComputedBehavior) === "multiple";
+const checkIsMultiple = (ctx: Context.Context<any>): ctx is Context.Context<"multiple"> =>
+  Context.getReferenceUnsafe(ctx, CurrentComputedBehavior) === "multiple";
 
 class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
   extends Versioned.VersionedTransform<
@@ -352,7 +350,7 @@ class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
 
     this._computed = Subject.hold(
       unwrap(
-        Effect.map(Effect.services(), (ctx) => {
+        Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
             return fromYieldable(input).pipe(
               continueWith(() => input),
@@ -426,7 +424,7 @@ class FilteredImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
 
     this._computed = Subject.hold(
       unwrap(
-        Effect.map(Effect.services(), (ctx) => {
+        Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
             return fromYieldable(input).pipe(
               continueWith(() => input),
@@ -457,14 +455,14 @@ class FilteredImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
 class RefSubjectCore<A, E, R, R2> {
   readonly initial: Effect.Effect<A, E, R>;
   readonly subject: Subject.HoldSubjectImpl<A, E>;
-  readonly services: ServiceMap.ServiceMap<R2>;
+  readonly services: Context.Context<R2>;
   readonly scope: Scope.Closeable;
   readonly deferredRef: DeferredRef.DeferredRef<E, A>;
   readonly semaphore: Semaphore.Semaphore;
   constructor(
     initial: Effect.Effect<A, E, R>,
     subject: Subject.HoldSubjectImpl<A, E>,
-    services: ServiceMap.ServiceMap<R2>,
+    services: Context.Context<R2>,
     scope: Scope.Closeable,
     deferredRef: DeferredRef.DeferredRef<E, A>,
     semaphore: Semaphore.Semaphore,
@@ -766,8 +764,8 @@ function makeCore<A, E, R>(
   deferredRef?: DeferredRef.DeferredRef<E, A>,
 ) {
   return Effect.gen(function* () {
-    const services = yield* Effect.services<R | Scope.Scope>();
-    const scope = yield* Scope.fork(ServiceMap.get(services, Scope.Scope));
+    const services = yield* Effect.context<R | Scope.Scope>();
+    const scope = yield* Scope.fork(Context.get(services, Scope.Scope));
     const id = yield* Effect.withFiber((fiber) => Effect.succeed(fiber.id));
     const subject = new Subject.HoldSubjectImpl<A, E>();
     const core = new RefSubjectCore(
@@ -1335,7 +1333,7 @@ const Variance: Fx.Variance<any, any, any> = {
 
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): RefSubject.Class<Self, Id, A, E> => {
-    const service = ServiceMap.Service<Self, RefSubject<A, E>>(id);
+    const service = Context.Service<Self, RefSubject<A, E>>(id);
 
     // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     return class RefSubjectService {

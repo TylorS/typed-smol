@@ -71,7 +71,7 @@ export declare const setStatus: (status: number, statusText?: string | undefined
 export declare const setStatus: (self: HttpServerResponse, status: number, statusText?: string | undefined): HttpServerResponse; // overload 2
 export declare const stream: <E>(body: Stream.Stream<Uint8Array, E>, options?: Options | undefined): HttpServerResponse;
 export declare const text: (body: string, options?: Options.WithContentType): HttpServerResponse;
-export declare const toWeb: (response: HttpServerResponse, options?: { readonly withoutBody?: boolean | undefined; readonly services?: ServiceMap.ServiceMap<never> | undefined; }): Response;
+export declare const toWeb: (response: HttpServerResponse, options?: { readonly withoutBody?: boolean | undefined; readonly services?: Context.Context<never> | undefined; }): Response;
 export declare const uint8Array: (body: Uint8Array, options?: Options.WithContentType): HttpServerResponse;
 export declare const updateCookies: (f: (cookies: Cookies.Cookies) => Cookies.Cookies): (self: HttpServerResponse) => HttpServerResponse; // overload 1
 export declare const updateCookies: (self: HttpServerResponse, f: (cookies: Cookies.Cookies) => Cookies.Cookies): HttpServerResponse; // overload 2

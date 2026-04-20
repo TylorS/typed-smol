@@ -1,9 +1,9 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Random from "effect/Random";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 
-export class RandomValues extends ServiceMap.Service<RandomValues>()("@typed/id/RandomValues", {
+export class RandomValues extends Context.Service<RandomValues>()("@typed/id/RandomValues", {
   make: Effect.succeed(
     <A extends Uint8Array>(length: A["length"]): Effect.Effect<A> =>
       Effect.sync(() => crypto.getRandomValues(new Uint8Array(length)) as A),

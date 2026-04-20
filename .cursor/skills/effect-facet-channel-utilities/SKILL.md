@@ -21,7 +21,7 @@ description: Guidance for facet `effect/Channel#utilities` focused on APIs like 
 - `mapInputError`
 - `provideService`
 - `provideServiceEffect`
-- `provideServices`
+- `provideContext`
 - `onError`
 - `identity`
 - `tapError`

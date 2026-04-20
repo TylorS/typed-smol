@@ -41,7 +41,7 @@ export declare const schemaSearchParams: <A, I extends Readonly<Record<string, s
 export declare const searchParamsFromURL: (url: URL): ReadonlyRecord<string, string | Array<string>>;
 export declare const toURL: (self: HttpServerRequest): URL | undefined;
 export declare const toWeb: (self: HttpServerRequest, options?: { readonly signal?: AbortSignal | undefined; }): Effect.Effect<Request, RequestError>;
-export declare const toWebResult: (self: HttpServerRequest, options?: { readonly signal?: AbortSignal | undefined; readonly services?: ServiceMap.ServiceMap<never> | undefined; }): Result.Result<Request, RequestError>;
+export declare const toWebResult: (self: HttpServerRequest, options?: { readonly signal?: AbortSignal | undefined; readonly services?: Context.Context<never> | undefined; }): Result.Result<Request, RequestError>;
 export declare const upgradeChannel: <IE = never>(): Channel.Channel<Arr.NonEmptyReadonlyArray<Uint8Array>, HttpServerError | IE | Socket.SocketError, void, Arr.NonEmptyReadonlyArray<string | Uint8Array | Socket.CloseEvent>, IE, unknown, HttpServerRequest>;
 ```
 

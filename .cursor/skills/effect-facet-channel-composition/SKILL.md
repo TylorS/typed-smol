@@ -28,7 +28,7 @@ description: Guidance for facet `effect/Channel#composition` focused on APIs lik
 - `mapInputError`
 - `provideService`
 - `provideServiceEffect`
-- `provideServices`
+- `provideContext`
 - `bind`
 - `merge`
 - `bindTo`

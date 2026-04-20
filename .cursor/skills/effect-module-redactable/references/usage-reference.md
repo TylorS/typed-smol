@@ -19,13 +19,13 @@ Module-specific APIs and usage patterns for Effect programs.
 ## Starter Example
 
 ```ts
-import type { ServiceMap } from "effect";
+import type { Context } from "effect";
 import { Redactable } from "effect";
 
 class SensitiveData implements Redactable.Redactable {
   constructor(private secret: string) {}
 
-  [Redactable.symbolRedactable](context: ServiceMap.ServiceMap<never>) {
+  [Redactable.symbolRedactable](context: Context.Context<never>) {
     // In production, hide the actual secret
     return { secret: "[REDACTED]" };
   }

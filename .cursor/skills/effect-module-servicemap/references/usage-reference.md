@@ -1,10 +1,10 @@
-# Usage Reference: effect/ServiceMap
+# Usage Reference: effect/Context
 
-- Import path: `effect/ServiceMap`
+- Import path: `effect/Context`
 
 ## What It Is For
 
-This module provides a data structure called `ServiceMap` that can be used for dependency injection in effectful programs. It is essentially a table mapping `Service`s identifiers to their implementations, and can be used to manage dependencies in a type-safe way.
+This module provides a data structure called `Context` that can be used for dependency injection in effectful programs. It is essentially a table mapping `Service`s identifiers to their implementations, and can be used to manage dependencies in a type-safe way.
 
 ## How To Use
 
@@ -21,13 +21,13 @@ This module provides a data structure called `ServiceMap` that can be used for d
 ## Starter Example
 
 ```ts
-import { ServiceMap } from "effect";
+import { Context } from "effect";
 
 // Define an identifier for a database service
-const Database = ServiceMap.Service<{ query: (sql: string) => string }>("Database");
+const Database = Context.Service<{ query: (sql: string) => string }>("Database");
 
 // The key can be used to store and retrieve services
-const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` });
+const services = Context.make(Database, { query: (sql) => `Result: ${sql}` });
 ```
 
 ## Test Anchors
@@ -44,7 +44,7 @@ const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` })
 - `get` (184)
 - `make` (134)
 - `Service` (24)
-- `ServiceMap` (16)
+- `Context` (16)
 - `empty` (9)
 - `getOption` (7)
 - `merge` (6)

@@ -46,7 +46,7 @@ export const ksuid: Effect.Effect<Ksuid, never, DateTimes | RandomValues> = Effe
     bytes.set(payload, TIMESTAMP_BYTES);
 
     // Encode as base62
-    return Ksuid.makeUnsafe(base62Encode(bytes));
+    return Ksuid.make(base62Encode(bytes));
   },
 );
 

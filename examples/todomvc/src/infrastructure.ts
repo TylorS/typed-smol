@@ -8,7 +8,7 @@ import * as Domain from "./domain";
 
 const TODOS_STORAGE_KEY = `@typed/todomvc/todos`;
 
-class Todos extends ServiceMap.Service<Todos>()("TodosService", {
+class Todos extends Context.Service<Todos>()("TodosService", {
   make: Effect.gen(function* () {
     const kv = yield* KeyValueStore.KeyValueStore;
     return KeyValueStore.toSchemaStore(kv, Domain.TodoList);

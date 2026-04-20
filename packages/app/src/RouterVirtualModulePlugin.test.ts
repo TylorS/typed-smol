@@ -102,7 +102,7 @@ const MODULE_FALLBACKS: Record<string, string> = {
   "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
   "effect/Stream": join(NM, "effect", "dist", "Stream.d.ts"),
   "effect/Layer": join(NM, "effect", "dist", "Layer.d.ts"),
-  "effect/ServiceMap": join(NM, "effect", "dist", "ServiceMap.d.ts"),
+  "effect/Context": join(NM, "effect", "dist", "Context.d.ts"),
 };
 
 function makeProgram(rootFiles: readonly string[], fixtureRoot?: string): ts.Program {
@@ -209,7 +209,6 @@ describe("resolveTypeTargetsFromSpecs with ROUTER_TYPE_TARGET_SPECS", () => {
           "Option",
           "RefSubject",
           "Route",
-          "ServiceMap",
           "Stream",
         ]
       `);

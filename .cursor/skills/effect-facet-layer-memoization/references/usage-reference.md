@@ -22,9 +22,9 @@ MemoMap/fresh lifecycle behavior. A `Layer<ROut, E, RIn>` describes how to build
 ## Starter Example
 
 ```ts
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 
-class Database extends ServiceMap.Service<
+class Database extends Context.Service<
   Database,
   {
     readonly query: (sql: string) => Effect.Effect<string>;
@@ -41,7 +41,7 @@ const program = Effect.gen(function* () {
   });
   const services = yield* Layer.buildWithMemoMap(dbLayer, memoMap, scope);
 
-  return ServiceMap.get(services, Database);
+  return Context.get(services, Database);
 });
 ```
 

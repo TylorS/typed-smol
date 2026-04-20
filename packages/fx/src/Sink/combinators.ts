@@ -219,7 +219,7 @@ export function withEarlyExit<A, E, R, R2>(
     params: { signal: AbortSignal; scheduler: Scheduler },
   ) => Effect.Effect<unknown, never, R2>,
 ): Effect.Effect<void, never, R | R2> {
-  return Effect.servicesWith((services) =>
+  return Effect.contextWith((services) =>
     Effect.callback<unknown, never, R2>(function (this: Scheduler, resume, signal) {
       let exited = false;
       const earlyExit = Effect.sync<void>(() => {

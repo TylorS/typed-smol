@@ -51,4 +51,4 @@ Effect.runPromise(program).then(console.log); // 13
 - `provide` (26)
 - `provideService` (6)
 - `service` (4)
-- `provideServices` (1)
+- `provideContext` (1)

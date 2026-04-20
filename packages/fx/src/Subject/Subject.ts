@@ -8,7 +8,7 @@ import * as MutableRef from "effect/MutableRef";
 import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import type * as Fx from "../Fx/index.js";
 import { RingBuffer } from "../Fx/internal/ring-buffer.js";
 import { awaitScopeClose, withExtendedScope } from "../Fx/internal/scope.js";
@@ -37,7 +37,7 @@ export interface Subject<A, E = never, R = never>
 export declare namespace Subject {
   export interface Service<Self, Id extends string, A, E> extends Subject<A, E, Self> {
     readonly id: Id;
-    readonly service: ServiceMap.Service<Self, Subject<A, E>>;
+    readonly service: Context.Service<Self, Subject<A, E>>;
     readonly make: (replay?: number) => Layer.Layer<Self, never, Scope.Scope>;
   }
 
@@ -191,9 +191,8 @@ const DISCARD = { discard: true } as const;
  */
 export class SubjectImpl<A, E> implements Subject<A, E> {
   readonly [FxTypeId]: Fx.Fx.Variance<A, E, Scope.Scope> = VARIANCE;
-  protected sinks: Set<
-    readonly [Sink.Sink<A, E, any>, ServiceMap.ServiceMap<any>, Scope.Closeable]
-  > = new Set();
+  protected sinks: Set<readonly [Sink.Sink<A, E, any>, Context.Context<any>, Scope.Closeable]> =
+    new Set();
 
   constructor() {
     this.onFailure = this.onFailure.bind(this);
@@ -232,7 +231,7 @@ export class SubjectImpl<A, E> implements Subject<A, E> {
   ): Effect.Effect<B, never, R2 | Scope.Scope> {
     return withExtendedScope(
       (innerScope) =>
-        Effect.servicesWith((ctx) => {
+        Effect.contextWith((ctx) => {
           const entry = [sink, ctx, innerScope] as const;
           this.sinks.add(entry);
           const remove = Effect.sync(() => this.sinks.delete(entry));
@@ -272,7 +271,7 @@ export class SubjectImpl<A, E> implements Subject<A, E> {
 
 function runSinkEvent<A, E>(
   sink: Sink.Sink<A, E, any>,
-  ctx: ServiceMap.ServiceMap<any>,
+  ctx: Context.Context<any>,
   a: A,
 ): Effect.Effect<void, never, never> {
   return Effect.provide(Effect.catchCause(sink.onSuccess(a), sink.onFailure), ctx);
@@ -280,7 +279,7 @@ function runSinkEvent<A, E>(
 
 function runSinkCause<A, E>(
   sink: Sink.Sink<A, E, any>,
-  ctx: ServiceMap.ServiceMap<any>,
+  ctx: Context.Context<any>,
   scope: Scope.Closeable,
   cause: Cause.Cause<E>,
 ): Effect.Effect<void, never, never> {
@@ -398,7 +397,7 @@ export function make<A, E = never>(
 
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): Subject.Class<Self, Id, A, E> => {
-    const service = ServiceMap.Service<Self, Subject<A, E>>(id);
+    const service = Context.Service<Self, Subject<A, E>>(id);
 
     // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     return class SubjectService {

@@ -1,18 +1,18 @@
 ---
-name: effect-module-servicemap
-description: Guidance for `effect/ServiceMap` focused on APIs like get, make, and empty. Load after `effect-skill-router` when this module is the primary owner.
+name: effect-module-Context
+description: Guidance for `effect/Context` focused on APIs like get, make, and empty. Load after `effect-skill-router` when this module is the primary owner.
 ---
 
-# Effect Module ServiceMap
+# Effect Module Context
 
 ## Owned scope
 
-- Owns only `effect/ServiceMap`.
-- Source of truth: `packages/effect/src/ServiceMap.ts`.
+- Owns only `effect/Context`.
+- Source of truth: `packages/effect/src/Context.ts`.
 
 ## What it is for
 
-- This module provides a data structure called `ServiceMap` that can be used for dependency injection in effectful programs. It is essentially a table mapping `Service`s identifiers to their implementations, and can be used to manage dependencies in a type-safe way.
+- This module provides a data structure called `Context` that can be used for dependency injection in effectful programs. It is essentially a table mapping `Service`s identifiers to their implementations, and can be used to manage dependencies in a type-safe way.
 
 ## API quick reference
 
@@ -22,7 +22,7 @@ description: Guidance for `effect/ServiceMap` focused on APIs like get, make, an
 - `Service`
 - `getOption`
 - `getOrElse`
-- `ServiceMap`
+- `Context`
 - `ServiceClass`
 - `getOrUndefined`
 - `getUnsafe`
@@ -30,7 +30,7 @@ description: Guidance for `effect/ServiceMap` focused on APIs like get, make, an
 - `getReferenceUnsafe`
 - `isService`
 - `isReference`
-- `isServiceMap`
+- `isContext`
 - `add`
 - `Any`
 - `omit`
@@ -46,13 +46,13 @@ description: Guidance for `effect/ServiceMap` focused on APIs like get, make, an
 ## Starter example
 
 ```ts
-import { ServiceMap } from "effect";
+import { Context } from "effect";
 
 // Define an identifier for a database service
-const Database = ServiceMap.Service<{ query: (sql: string) => string }>("Database");
+const Database = Context.Service<{ query: (sql: string) => string }>("Database");
 
 // The key can be used to store and retrieve services
-const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` });
+const services = Context.make(Database, { query: (sql) => `Result: ${sql}` });
 ```
 
 ## Common pitfalls
@@ -70,7 +70,7 @@ const services = ServiceMap.make(Database, { query: (sql) => `Result: ${sql}` })
 
 ## Reference anchors
 
-- Module source: `packages/effect/src/ServiceMap.ts`
+- Module source: `packages/effect/src/Context.ts`
 - Representative tests: `packages/effect/test/Cache.test.ts`
 - Representative tests: `packages/effect/test/cluster/ClusterWorkflowEngine.test.ts`
 - Representative tests: `packages/effect/test/cluster/MessageStorage.test.ts`

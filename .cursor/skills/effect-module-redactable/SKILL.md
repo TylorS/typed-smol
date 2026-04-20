@@ -33,13 +33,13 @@ description: Guidance for `effect/Redactable` focused on APIs like getRedacted, 
 ## Starter example
 
 ```ts
-import type { ServiceMap } from "effect";
+import type { Context } from "effect";
 import { Redactable } from "effect";
 
 class SensitiveData implements Redactable.Redactable {
   constructor(private secret: string) {}
 
-  [Redactable.symbolRedactable](context: ServiceMap.ServiceMap<never>) {
+  [Redactable.symbolRedactable](context: Context.Context<never>) {
     // In production, hide the actual secret
     return { secret: "[REDACTED]" };
   }

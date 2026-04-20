@@ -9,7 +9,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Result from "effect/Result";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as Stream from "effect/Stream";
 import { Fx } from "@typed/fx";
 import type { RefSubject } from "@typed/fx/RefSubject";
@@ -235,8 +235,8 @@ describe("typed/router/Matcher (browser)", () => {
         yield* Navigation.navigate(absoluteUrl("/users/1"));
         const mounts = yield* Ref.make(0);
         const layouts = yield* Ref.make(0);
-        const sharedLayer = Layer.effectServices(
-          Ref.update(mounts, (n) => n + 1).pipe(Effect.as(ServiceMap.empty())),
+        const sharedLayer = Layer.effectContext(
+          Ref.update(mounts, (n) => n + 1).pipe(Effect.as(Context.empty())),
         );
         const users = Route.Join(Route.Parse("users"), Route.Param("id"));
         const about = Route.Parse("about");
@@ -466,8 +466,8 @@ describe("typed/router/Matcher (browser)", () => {
       runWithBrowserRouter(
         Effect.gen(function* () {
           yield* Navigation.navigate(absoluteUrl("/about"));
-          class SvcA extends ServiceMap.Service<SvcA, { readonly n: number }>()("SvcA") {}
-          class SvcB extends ServiceMap.Service<SvcB, { readonly s: string }>()("SvcB") {}
+          class SvcA extends Context.Service<SvcA, { readonly n: number }>()("SvcA") {}
+          class SvcB extends Context.Service<SvcB, { readonly s: string }>()("SvcB") {}
           const about = Route.Parse("about");
           const fx = Matcher.empty
             .match(about, () =>
@@ -490,10 +490,8 @@ describe("typed/router/Matcher (browser)", () => {
       runWithBrowserRouter(
         Effect.gen(function* () {
           yield* Navigation.navigate(absoluteUrl("/about"));
-          class RouteSvc extends ServiceMap.Service<RouteSvc, { readonly x: number }>()(
-            "RouteSvc",
-          ) {}
-          class MatcherSvc extends ServiceMap.Service<MatcherSvc, { readonly y: string }>()(
+          class RouteSvc extends Context.Service<RouteSvc, { readonly x: number }>()("RouteSvc") {}
+          class MatcherSvc extends Context.Service<MatcherSvc, { readonly y: string }>()(
             "MatcherSvc",
           ) {}
           const about = Route.Parse("about");
@@ -603,9 +601,7 @@ describe("typed/router/Matcher (browser)", () => {
     runWithBrowserRouter(
       Effect.gen(function* () {
         yield* Navigation.navigate(absoluteUrl("/about"));
-        class Counter extends ServiceMap.Service<Counter, { readonly value: number }>()(
-          "Counter",
-        ) {}
+        class Counter extends Context.Service<Counter, { readonly value: number }>()("Counter") {}
         const counterLayer = Layer.succeed(Counter, { value: 42 });
         const about = Route.Parse("about");
         const matcher = Matcher.empty.match(about, {
@@ -630,8 +626,8 @@ describe("typed/router/Matcher (browser)", () => {
         const finalized = yield* Ref.make(false);
         const about = Route.Parse("about");
         const other = Route.Parse("other");
-        const layerWithFinalizer = Layer.effectServices(
-          Effect.acquireRelease(Effect.succeed(ServiceMap.empty()), () => Ref.set(finalized, true)),
+        const layerWithFinalizer = Layer.effectContext(
+          Effect.acquireRelease(Effect.succeed(Context.empty()), () => Ref.set(finalized, true)),
         );
         const matcher = Matcher.empty
           .match(about, {
@@ -719,7 +715,7 @@ describe("typed/router/Matcher (browser)", () => {
     runWithBrowserRouter(
       Effect.gen(function* () {
         yield* Navigation.navigate(absoluteUrl("/svc"));
-        class Svc extends ServiceMap.Service<Svc, { readonly n: number }>()("Svc") {}
+        class Svc extends Context.Service<Svc, { readonly n: number }>()("Svc") {}
         const route = Route.Parse("svc");
         const matcher = Matcher.empty
           .match(route, () =>

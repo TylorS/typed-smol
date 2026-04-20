@@ -65,7 +65,7 @@ export const scanEffect: {
   ): Fx<S, E | E2, R | R2> =>
     make<S, E | E2, R | R2>(<RSink>(sink: Sink<S, E | E2, RSink>) =>
       Effect.gen(function* () {
-        const services = yield* Effect.services<R | R2 | RSink>();
+        const services = yield* Effect.context<R | R2 | RSink>();
         yield* sink.onSuccess(initial);
         yield* fx.run(
           sinkLoopEffect(sink, initial, (s, a) =>
@@ -73,7 +73,7 @@ export const scanEffect: {
               f(s, a),
               Effect.catchCause((cause) => sink.onFailure(cause).pipe(Effect.as(s))),
               Effect.map((next) => [next, next] as const),
-              Effect.provideServices(services),
+              Effect.provideContext(services),
             ),
           ),
         );

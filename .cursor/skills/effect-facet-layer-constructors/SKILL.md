@@ -22,7 +22,7 @@ description: Guidance for facet `effect/Layer#constructors` focused on APIs like
 - `fromBuild`
 - `makeMemoMap`
 - `fromBuildMemo`
-- `succeedServices`
+- `succeedContext`
 - `makeMemoMapUnsafe`
 - `build`
 - `buildWithMemoMap`
@@ -38,9 +38,9 @@ description: Guidance for facet `effect/Layer#constructors` focused on APIs like
 ## Starter example
 
 ```ts
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 
-class Database extends ServiceMap.Service<
+class Database extends Context.Service<
   Database,
   {
     readonly query: (sql: string) => Effect.Effect<string>;
@@ -57,7 +57,7 @@ const program = Effect.gen(function* () {
   });
   const services = yield* Layer.buildWithMemoMap(dbLayer, memoMap, scope);
 
-  return ServiceMap.get(services, Database);
+  return Context.get(services, Database);
 });
 ```
 

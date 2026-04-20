@@ -1,9 +1,9 @@
 import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
 import { Fx } from "./index.js";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 
-const Foo = ServiceMap.Service<{ readonly n: number }>("Test/Foo");
+const Foo = Context.Service<{ readonly n: number }>("Test/Foo");
 
 describe("Fx provideService", () => {
   it("provides a single service and Fx can use it", () =>

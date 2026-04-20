@@ -17,7 +17,6 @@ import {
   type ResolveRecordResult,
 } from "./internal/VirtualRecordStore.js";
 import { VIRTUAL_MODULE_URI_SCHEME, VIRTUAL_NODE_MODULES_RELATIVE } from "./internal/path.js";
-import { Mutable } from "effect/Types";
 
 /** Prefix VSCode uses when sending non-file URIs to tsserver (query params are dropped). */
 const IN_MEMORY_RESOURCE_PREFIX = "^";
@@ -590,8 +589,7 @@ export const attachLanguageServiceAdapter = (
           }
         }
       }
-      (host as Mutable<ts.LanguageServiceHost>).resolveModuleNameLiterals =
-        originalResolveModuleNameLiterals;
+      host.resolveModuleNameLiterals = originalResolveModuleNameLiterals;
       host.resolveModuleNames = originalResolveModuleNames;
       if (originalGetScriptSnapshot) {
         host.getScriptSnapshot = originalGetScriptSnapshot;

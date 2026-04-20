@@ -1,11 +1,11 @@
 import type * as Cause from "effect/Cause";
 import type { Effect } from "effect/Effect";
-import { flatMap, map, provide, services } from "effect/Effect";
+import { flatMap, map, provide, context } from "effect/Effect";
 import type { Layer } from "effect/Layer";
 import { effect } from "effect/Layer";
 import type { Ref } from "effect/Ref";
 import type { Scope } from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 
 /**
  * A Sink is a consumer of values. It consists of two effectful callbacks:
@@ -46,11 +46,11 @@ export declare namespace Sink {
    * @since 1.0.0
    * @category type-level
    */
-  export type Context<T> = T extends Sink<infer _A, infer _E, infer _R> ? _R : never;
+  export type Services<T> = T extends Sink<infer _A, infer _E, infer _R> ? _R : never;
 
   export interface Service<Self, Id extends string, A, E> extends Sink<A, E, Self> {
     readonly id: Id;
-    readonly service: ServiceMap.Service<Self, Sink<A, E>>;
+    readonly service: Context.Service<Self, Sink<A, E>>;
     readonly make: <R = never>(
       onFailure: (cause: Cause.Cause<E>) => Effect<unknown, never, R>,
       onSuccess: (value: A) => Effect<unknown, never, R>,
@@ -64,7 +64,7 @@ export declare namespace Sink {
 
 export type Success<T> = Sink.Success<T>;
 export type Error<T> = Sink.Error<T>;
-export type Context<T> = Sink.Context<T>;
+export type Services<T> = Sink.Services<T>;
 
 /**
  * Creates a Sink from success and failure callbacks.
@@ -124,7 +124,7 @@ export declare namespace Sink {
 
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): Sink.Class<Self, Id, A, E> => {
-    const service = ServiceMap.Service<Self, Sink<A, E>>(id);
+    const service = Context.Service<Self, Sink<A, E>>(id);
 
     // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     return class SinkService {
@@ -137,7 +137,7 @@ export function Service<Self, A, E = never>() {
       ): Layer<Self, never, Exclude<R | R2, Scope>> =>
         effect(
           service,
-          map(services<R | R2>(), (context) =>
+          map(context<R | R2>(), (context) =>
             make(
               (cause) => provide(onFailure(cause), context),
               (value) => provide(onSuccess(value), context),

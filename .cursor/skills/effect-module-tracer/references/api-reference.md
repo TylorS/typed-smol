@@ -17,7 +17,7 @@ Module-specific APIs and usage patterns for Effect programs.
 ## All Function Signatures
 
 ```ts
-export declare const externalSpan: (options: { readonly spanId: string; readonly traceId: string; readonly sampled?: boolean | undefined; readonly annotations?: ServiceMap.ServiceMap<never> | undefined; }): ExternalSpan;
+export declare const externalSpan: (options: { readonly spanId: string; readonly traceId: string; readonly sampled?: boolean | undefined; readonly annotations?: Context.Context<never> | undefined; }): ExternalSpan;
 export declare const make: (options: Tracer): Tracer;
 ```
 

@@ -4,10 +4,10 @@ import type { Layer } from "effect/Layer";
 import { effect } from "effect/Layer";
 import { type Pipeable, pipeArguments } from "effect/Pipeable";
 import type * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import type * as Types from "effect/Types";
 import type * as Sink from "../Sink/Sink.js";
-import { provideServices } from "./combinators/provide.js";
+import { provideContext } from "./combinators/provide.js";
 import { FxTypeId, isFx } from "./TypeId.js";
 
 /**
@@ -89,7 +89,7 @@ export declare namespace Fx {
 
   export interface Service<Self, Id extends string, A, E> extends Fx<A, E, Self> {
     readonly id: Id;
-    readonly service: ServiceMap.Service<Self, Fx<A, E>>;
+    readonly service: Context.Service<Self, Fx<A, E>>;
     readonly make: <R = never>(
       fx: Fx<A, E, R> | Effect.Effect<Fx<A, E, R>, E, R>,
     ) => Layer<Self, E, Exclude<R, Scope.Scope>>;
@@ -129,7 +129,7 @@ const VARIANCE: Fx.Variance<any, any, any> = {
 
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): Fx.Class<Self, Id, A, E> => {
-    const service = ServiceMap.Service<Self, Fx<A, E>>(id);
+    const service = Context.Service<Self, Fx<A, E>>(id);
 
     // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     return class FxService {
@@ -142,9 +142,9 @@ export function Service<Self, A, E = never>() {
         effect(
           service,
           Effect.gen(function* () {
-            const services = yield* Effect.services<R>();
+            const services = yield* Effect.context<R>();
             const result = isFx(fx) ? fx : yield* fx;
-            return provideServices(result, services);
+            return provideContext(result, services);
           }),
         );
 

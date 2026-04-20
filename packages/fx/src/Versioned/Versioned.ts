@@ -16,14 +16,14 @@ import { sum } from "effect/Number";
 import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
 import type * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { filterMap as fxFilterMap } from "../Fx/combinators/filterMap.js";
 import { filterMapEffect as fxFilterMapEffect } from "../Fx/combinators/filterMapEffect.js";
 import { map as fxMap } from "../Fx/combinators/map.js";
 import { mapEffect as fxMapEffect } from "../Fx/combinators/mapEffect.js";
 import {
   provide as fxProvide,
-  provideServices as fxProvideServices,
+  provideContext as fxprovideContext,
 } from "../Fx/combinators/provide.js";
 import { struct as fxStruct, tuple as fxTuple } from "../Fx/combinators/tuple.js";
 import { succeed as fxSucceed } from "../Fx/constructors/succeed.js";
@@ -92,7 +92,7 @@ export namespace Versioned {
     Self
   > {
     readonly id: Id;
-    readonly service: ServiceMap.Service<Self, Versioned<never, E1, A2, E2, never, A3, E3, never>>;
+    readonly service: Context.Service<Self, Versioned<never, E1, A2, E2, never, A3, E3, never>>;
     readonly make: <R1 = never, R2 = never, R3 = never>(
       version: Effect.Effect<number, E1, R1>,
       fx: Fx.Fx<A2, E2, R2>,
@@ -545,9 +545,7 @@ const VARIANCE = {
 
 export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3 = never>() {
   return <const Id extends string>(id: Id): Versioned.Class<Self, Id, E1, A2, E2, A3, E3> => {
-    const service = ServiceMap.Service<Self, Versioned<never, E1, A2, E2, never, A3, E3, never>>(
-      id,
-    );
+    const service = Context.Service<Self, Versioned<never, E1, A2, E2, never, A3, E3, never>>(id);
 
     // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     return class VersionedService {
@@ -561,11 +559,11 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
       ): Layer.Layer<Self, never, Exclude<R1 | R2 | R3, Scope.Scope>> =>
         Layer.effect(
           service,
-          Effect.services<R1 | R2 | R3>().pipe(
+          Effect.context<R1 | R2 | R3>().pipe(
             Effect.map((context) =>
               make(
                 Effect.provide(version, context),
-                fxProvideServices(fx, context),
+                fxprovideContext(fx, context),
                 Effect.provide(effect.asEffect(), context),
               ),
             ),

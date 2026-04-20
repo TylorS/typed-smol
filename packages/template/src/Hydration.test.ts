@@ -283,16 +283,10 @@ describe("Hydration", () => {
   it("interpolates array of render events", ({ expect }) =>
     Effect.gen(function* () {
       const renderEventExample = yield* hydrateHtmlElement`<div>${[
-        html`
-          <p>A</p>
-        `,
-        html`
-          <p>B</p>
-        `,
+        html`<p>A</p>`,
+        html`<p>B</p>`,
       ]}</div>`;
-      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(
-        `"<!--n_0--><!--t_bQ8ZflXybUE=--><p>A</p><!--/t_bQ8ZflXybUE=--><!--t_LkwTy1XybUE=--><p>B</p><!--/t_LkwTy1XybUE=--><!--/n_0-->"`,
-      );
+      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(`"<!--n_0--><!--t_KwZ/fMOUm3w=--><p>A</p><!--/t_KwZ/fMOUm3w=--><!--t_KwZ/fASZm3w=--><p>B</p><!--/t_KwZ/fASZm3w=--><!--/n_0-->"`);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("interpolates many comments", ({ expect }) =>

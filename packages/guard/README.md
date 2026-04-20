@@ -60,7 +60,7 @@ liftPredicate<A>(predicate: (a: A) => boolean): Guard<A, A>;
 
 ### Effect integration
 
-- **`provide(guard, provided)`** — Provides a `ServiceMap` or `Layer` to the guard’s environment.
+- **`provide(guard, provided)`** — Provides a `Context` or `Layer` to the guard’s environment.
 - **`provideService(guard, tag, service)`** — Provides a single service to the guard’s environment.
 - **`provideServiceEffect(guard, tag, effect)`** — Provides a service via an Effect to the guard’s environment.
 - **`catchAll(guard, f)`** — Recovers from any error by running `f` and treating its result as a successful match. Alias: **`catch`**.

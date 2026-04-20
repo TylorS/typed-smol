@@ -19,6 +19,6 @@ export const uuid4: Effect.Effect<Uuid4, never, RandomValues> = Effect.map(
     // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
     seed[6] = (seed[6] & 0x0f) | 0x40;
     seed[8] = (seed[8] & 0x3f) | 0x80;
-    return Uuid4.makeUnsafe(uuidStringify(seed));
+    return Uuid4.make(uuidStringify(seed));
   },
 );

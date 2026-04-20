@@ -33,9 +33,9 @@ Structured representation of how an Effect can fail.
 ## All Function Signatures
 
 ```ts
-export declare const annotate: (annotations: ServiceMap.ServiceMap<never>, options?: { readonly overwrite?: boolean | undefined; }): <E>(self: Cause<E>) => Cause<E>; // overload 1
-export declare const annotate: <E>(self: Cause<E>, annotations: ServiceMap.ServiceMap<never>, options?: { readonly overwrite?: boolean | undefined; }): Cause<E>; // overload 2
-export declare const annotations: <E>(self: Cause<E>): ServiceMap.ServiceMap<never>;
+export declare const annotate: (annotations: Context.Context<never>, options?: { readonly overwrite?: boolean | undefined; }): <E>(self: Cause<E>) => Cause<E>; // overload 1
+export declare const annotate: <E>(self: Cause<E>, annotations: Context.Context<never>, options?: { readonly overwrite?: boolean | undefined; }): Cause<E>; // overload 2
+export declare const annotations: <E>(self: Cause<E>): Context.Context<never>;
 export declare const combine: <E2>(that: Cause<E2>): <E>(self: Cause<E>) => Cause<E | E2>; // overload 1
 export declare const combine: <E, E2>(self: Cause<E>, that: Cause<E2>): Cause<E | E2>; // overload 2
 export declare const die: (defect: unknown): Cause<never>;
@@ -74,7 +74,7 @@ export declare const map: <E, E2>(f: (error: Types.NoInfer<E>) => E2): (self: Ca
 export declare const map: <E, E2>(self: Cause<E>, f: (error: Types.NoInfer<E>) => E2): Cause<E2>; // overload 2
 export declare const pretty: <E>(cause: Cause<E>): string;
 export declare const prettyErrors: <E>(self: Cause<E>): Array<Error>;
-export declare const reasonAnnotations: <E>(self: Reason<E>): ServiceMap.ServiceMap<never>;
+export declare const reasonAnnotations: <E>(self: Reason<E>): Context.Context<never>;
 export declare const squash: <E>(self: Cause<E>): unknown;
 ```
 

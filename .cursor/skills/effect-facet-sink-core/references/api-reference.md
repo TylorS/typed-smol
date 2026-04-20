@@ -20,7 +20,7 @@ Module-specific APIs and usage patterns for Effect programs.
 - `fromTransform`
 - `make`
 - `provideService`
-- `provideServices`
+- `provideContext`
 
 ## All Function Signatures
 
@@ -32,10 +32,10 @@ export declare const fromPubSub: <A>(pubsub: PubSub.PubSub<A>): Sink<void, A>;
 export declare const fromQueue: <A>(queue: Queue.Queue<A, Cause.Done>): Sink<void, A>;
 export declare const fromTransform: <In, A, E, R, L = never>(transform: (upstream: Pull.Pull<NonEmptyReadonlyArray<In>, never, void>, scope: Scope.Scope) => Effect.Effect<End<A, L>, E, R>): Sink<A, In, L, E, R>;
 export declare const make: <In>(): make.Constructor<In>;
-export declare const provideService: <I, S>(key: ServiceMap.Service<I, S>, value: Types.NoInfer<S>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, I>>; // overload 1
-export declare const provideService: <A, In, L, E, R, I, S>(self: Sink<A, In, L, E, R>, key: ServiceMap.Service<I, S>, value: Types.NoInfer<S>): Sink<A, In, L, E, Exclude<R, I>>; // overload 2
-export declare const provideServices: <Provided>(services: ServiceMap.ServiceMap<Provided>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, Provided>>; // overload 1
-export declare const provideServices: <A, In, L, E, R, Provided>(self: Sink<A, In, L, E, R>, services: ServiceMap.ServiceMap<Provided>): Sink<A, In, L, E, Exclude<R, Provided>>; // overload 2
+export declare const provideService: <I, S>(key: Context.Service<I, S>, value: Types.NoInfer<S>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, I>>; // overload 1
+export declare const provideService: <A, In, L, E, R, I, S>(self: Sink<A, In, L, E, R>, key: Context.Service<I, S>, value: Types.NoInfer<S>): Sink<A, In, L, E, Exclude<R, I>>; // overload 2
+export declare const provideContext: <Provided>(services: Context.Context<Provided>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, Provided>>; // overload 1
+export declare const provideContext: <A, In, L, E, R, Provided>(self: Sink<A, In, L, E, R>, services: Context.Context<Provided>): Sink<A, In, L, E, Exclude<R, Provided>>; // overload 2
 ```
 
 ## Other Exports (Non-Function)

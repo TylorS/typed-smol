@@ -12,12 +12,12 @@ import { type Pipeable, pipeArguments } from "effect/Pipeable";
 import * as Schema from "effect/Schema";
 import { makeFormatterDefault } from "effect/SchemaIssue";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as Stream from "effect/Stream";
 import type { ExcludeTag, ExtractTag, NoInfer, Tags } from "effect/Types";
 import { exit } from "@typed/fx/Fx";
 import { mapEffect } from "@typed/fx/Fx/combinators/mapEffect";
-import { provideServices } from "@typed/fx/Fx/combinators/provide";
+import { provideContext } from "@typed/fx/Fx/combinators/provide";
 import { skipRepeats } from "@typed/fx/Fx/combinators/skipRepeats";
 import { switchMap } from "@typed/fx/Fx/combinators/switchMap";
 import { unwrap } from "@typed/fx/Fx/combinators/unwrap";
@@ -58,7 +58,7 @@ export type AnyLayer =
   | Layer.Layer<never, any, never>
   | Layer.Layer<never, never, any>;
 
-export type AnyServiceMap = ServiceMap.ServiceMap<any> | ServiceMap.ServiceMap<never>;
+export type AnyServiceMap = Context.Context<any> | Context.Context<never>;
 export type AnyDependency = AnyLayer | AnyServiceMap;
 type AnyLayout = Layout<any, any, any, any, any, any, any>;
 type AnyCatch = CatchHandler<any, any, any, any>;
@@ -68,7 +68,7 @@ type AnyMatchHandler = (params: RefSubject.RefSubject<any>) => Fx.Fx<any, any, a
 export type DependencyProvided<D> =
   D extends Layer.Layer<infer Provided, any, any>
     ? Provided
-    : D extends ServiceMap.ServiceMap<infer Provided>
+    : D extends Context.Context<infer Provided>
       ? Provided
       : never;
 export type DependencyError<D> = D extends Layer.Layer<any, infer E, any> ? E : never;
@@ -278,13 +278,11 @@ export interface Matcher<A, E = never, R = never>
   >;
 
   readonly provideService: <Id, S>(
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: S,
   ) => Matcher<A, E, Exclude<R, Id>>;
 
-  readonly provideServices: <R2>(
-    services: ServiceMap.ServiceMap<R2>,
-  ) => Matcher<A, E, Exclude<R, R2>>;
+  readonly provideContext: <R2>(services: Context.Context<R2>) => Matcher<A, E, Exclude<R, R2>>;
 
   readonly catchCause: <B, E2, R2>(f: CatchHandler<E, B, E2, R2>) => Matcher<A | B, E2, R | R2>;
 
@@ -582,12 +580,12 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     >;
   }
 
-  provideService<Id, S>(tag: ServiceMap.Service<Id, S>, service: S): Matcher<A, E, Exclude<R, Id>> {
-    return this.provideServices(ServiceMap.make(tag, service));
+  provideService<Id, S>(tag: Context.Service<Id, S>, service: S): Matcher<A, E, Exclude<R, Id>> {
+    return this.provideContext(Context.make(tag, service));
   }
 
-  provideServices<R2>(services: ServiceMap.ServiceMap<R2>): Matcher<A, E, Exclude<R, R2>> {
-    return this.provide(Layer.succeedServices(services));
+  provideContext<R2>(services: Context.Context<R2>): Matcher<A, E, Exclude<R, R2>> {
+    return this.provide(Layer.succeedContext(services));
   }
 
   catchCause<B, E2, R2>(f: CatchHandler<E, B, E2, R2>): Matcher<A | B, E2, R | R2> {
@@ -739,7 +737,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
               const prepared = yield* layerManager.prepare(entry.layers);
               const guardExit = yield* entry
                 .guard(params)
-                .pipe(Effect.provideServices(prepared.services), Effect.exit);
+                .pipe(Effect.provideContext(prepared.services), Effect.exit);
 
               if (Exit.isFailure(guardExit)) {
                 guardCauses.push(guardExit.cause);
@@ -778,15 +776,13 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
             const scope = yield* Scope.fork(rootScope);
             const paramsRef = yield* RefSubject.make(matchedParams).pipe(Scope.provide(scope));
 
-            const preparedServices = matchedPrepared.services as ServiceMap.ServiceMap<any>;
-            const handlerServices = ServiceMap.merge(
+            const preparedServices = matchedPrepared.services as Context.Context<any>;
+            const handlerServices = Context.merge(
               preparedServices,
-              ServiceMap.make(Scope.Scope, scope),
+              Context.make(Scope.Scope, scope),
             );
 
-            const handlerFx = matchedEntry
-              .handler(paramsRef)
-              .pipe(provideServices(handlerServices));
+            const handlerFx = matchedEntry.handler(paramsRef).pipe(provideContext(handlerServices));
             const withLayouts = yield* layoutManager.apply(
               matchedEntry.layouts,
               matchedParams,
@@ -951,11 +947,7 @@ export const catchCause: {
       const fiberId = yield* Effect.fiberId;
       const rootScope = yield* Effect.scope;
       const manager = makeCatchManager(rootScope, fiberId);
-      const result = yield* manager.apply(
-        [f],
-        input,
-        ServiceMap.empty() as ServiceMap.ServiceMap<any>,
-      );
+      const result = yield* manager.apply([f], input, Context.empty() as Context.Context<any>);
       return result as Fx.Fx<A | B, E2, R | R2 | Router | Scope.Scope>;
     });
     return unwrap(eff);
@@ -1093,7 +1085,7 @@ function isServiceMap(dep: AnyDependency): dep is AnyServiceMap {
 }
 
 function toSingleLayer(dep: AnyDependency): AnyLayer {
-  if (isServiceMap(dep)) return Layer.succeedServices(dep);
+  if (isServiceMap(dep)) return Layer.succeedContext(dep);
   return dep;
 }
 
@@ -1106,7 +1098,7 @@ function normalizeDependencies(
 type NormalizeLayer<T extends AnyDependency> =
   T extends Layer.Layer<infer A, infer E, infer R>
     ? Layer.Layer<A, E, R>
-    : T extends ServiceMap.ServiceMap<infer R>
+    : T extends Context.Context<infer R>
       ? Layer.Layer<R>
       : never;
 
@@ -1253,18 +1245,18 @@ export function makeLayerManager(memoMap: Layer.MemoMap, rootScope: Scope.Scope,
           : ((cachedDesiredSet = new Set(desired)), (cachedOrder = desired), cachedDesiredSet);
       const removed = order.filter((layer) => !desiredSet.has(layer));
       const added: Array<AnyLayer> = [];
-      let services = ServiceMap.empty();
+      let services = Context.empty();
 
       for (const layer of desired) {
         const existing = states.get(layer);
         if (existing) {
-          services = ServiceMap.merge(services, existing.services);
+          services = Context.merge(services, existing.services);
           continue;
         }
 
         const scope = yield* Scope.fork(rootScope);
         const buildExit = yield* Layer.buildWithMemoMap(layer, memoMap, scope).pipe(
-          Effect.provideServices(services),
+          Effect.provideContext(services),
           Effect.exit,
         );
 
@@ -1282,7 +1274,7 @@ export function makeLayerManager(memoMap: Layer.MemoMap, rootScope: Scope.Scope,
         }
 
         const servicesForLayer = buildExit.value;
-        services = ServiceMap.merge(services, servicesForLayer);
+        services = Context.merge(services, servicesForLayer);
         states.set(layer, { scope, services: servicesForLayer });
         added.push(layer);
       }
@@ -1348,7 +1340,7 @@ export function makeLayoutManager(rootScope: Scope.Scope, fiberId: number) {
     layouts: ReadonlyArray<AnyLayout>,
     paramsValue: any,
     inner: Fx.Fx<any, any, any>,
-    services: ServiceMap.ServiceMap<any>,
+    services: Context.Context<any>,
   ) =>
     Effect.gen(function* () {
       let current = inner;
@@ -1362,7 +1354,7 @@ export function makeLayoutManager(rootScope: Scope.Scope, fiberId: number) {
             eq: (left, right) => left === right,
           }).pipe(Scope.provide(scope));
           const fx = layout({ params, content: content.pipe(switchMap(identity)) }).pipe(
-            provideServices(ServiceMap.merge(services, ServiceMap.make(Scope.Scope, scope))),
+            provideContext(Context.merge(services, Context.make(Scope.Scope, scope))),
           );
           states.set(layout, { params, content, fx, scope });
           current = fx;
@@ -1421,7 +1413,7 @@ export function makeCatchManager(rootScope: Scope.Scope, fiberId: number) {
   const apply = (
     catches: ReadonlyArray<AnyCatch>,
     inner: Fx.Fx<any, any, any>,
-    services: ServiceMap.ServiceMap<any>,
+    services: Context.Context<any>,
   ) =>
     Effect.gen(function* () {
       let current = inner;
@@ -1437,7 +1429,7 @@ export function makeCatchManager(rootScope: Scope.Scope, fiberId: number) {
             eq: (left, right) => left === right,
           }).pipe(Scope.provide(scope));
           const fallback = catcher(causes).pipe(
-            provideServices(ServiceMap.merge(services, ServiceMap.make(Scope.Scope, scope))),
+            provideContext(Context.merge(services, Context.make(Scope.Scope, scope))),
           );
           const fx = content.pipe(
             switchMap(identity),

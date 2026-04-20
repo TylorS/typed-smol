@@ -1,12 +1,12 @@
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { RefArray, RefSubject } from "@typed/fx";
 import * as Domain from "./domain";
 
 /* #region Services */
 
-export class CreateTodo extends ServiceMap.Service<
+export class CreateTodo extends Context.Service<
   CreateTodo,
   (text: string) => Effect.Effect<Domain.Todo>
 >()("CreateTodo") {

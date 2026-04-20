@@ -184,14 +184,14 @@ await render(App, document.body).pipe(
 
 **Companion files** (optional, applied automatically):
 
-| File                      | Purpose                                                  |
-| ------------------------- | -------------------------------------------------------- |
-| `_layout.ts`              | Layout wrapper for all routes in the directory           |
-| `_dependencies.ts`        | Shared dependencies (Layer/ServiceMap) for the directory |
-| `_guard.ts`               | Guard that controls access to routes in the directory    |
-| `_catch.ts`               | Error handler for routes in the directory                |
-| `myroute.guard.ts`        | Guard for a specific route file                          |
-| `myroute.dependencies.ts` | Dependencies for a specific route file                   |
+| File                      | Purpose                                               |
+| ------------------------- | ----------------------------------------------------- |
+| `_layout.ts`              | Layout wrapper for all routes in the directory        |
+| `_dependencies.ts`        | Shared dependencies (Layer/Context) for the directory |
+| `_guard.ts`               | Guard that controls access to routes in the directory |
+| `_catch.ts`               | Error handler for routes in the directory             |
+| `myroute.guard.ts`        | Guard for a specific route file                       |
+| `myroute.dependencies.ts` | Dependencies for a specific route file                |
 
 Companions compose from ancestor directories down to the leaf route, so a `_layout.ts` at the root wraps everything.
 

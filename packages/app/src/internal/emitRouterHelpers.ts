@@ -86,7 +86,7 @@ export function depsExprFor(kind: DepsExportKind, varName: string): string {
     case "layer":
       return ref;
     case "servicemap":
-      return `Layer.succeedServices(${ref})`;
+      return `Layer.succeedContext(${ref})`;
     case "array":
       return `Router.normalizeDependencyInput(${ref})`;
   }

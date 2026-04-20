@@ -22,7 +22,7 @@
     "@typed/virtual-modules-ts-plugin": "workspace:*",
     "@typed/vite-plugin": "workspace:*",
     "typescript": "catalog:",
-    "vite": "^8.0.2"
+    "vite": "catalog:"
   },
   "packageManager": "pnpm@10.17.1"
 }

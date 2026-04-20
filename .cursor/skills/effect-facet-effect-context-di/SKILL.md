@@ -25,7 +25,7 @@ description: Guidance for facet `effect/Effect#context-di` focused on APIs like 
 - `updateService`
 - `provideService`
 - `provideServiceEffect`
-- `provideServices`
+- `provideContext`
 - `updateServices`
 - `request`
 - `satisfiesServicesType`

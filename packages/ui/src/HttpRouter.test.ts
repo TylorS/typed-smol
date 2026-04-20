@@ -13,12 +13,7 @@ import { HttpClient, HttpRouter } from "effect/unstable/http";
 
 describe("typed/ui/HttpRouter", () => {
   it("renders simple html template", () => {
-    const matcher = Matcher.empty.match(
-      Route.Parse("home"),
-      html`
-        <div>Hello, world!</div>
-      `,
-    );
+    const matcher = Matcher.empty.match(Route.Parse("home"), html` <div>Hello, world!</div> `);
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
@@ -49,12 +44,7 @@ describe("typed/ui/HttpRouter", () => {
 
   it("renders html template with search params", () => {
     const route = Route.Parse("search");
-    const matcher = Matcher.empty.match(
-      route,
-      html`
-        <div>Search results</div>
-      `,
-    );
+    const matcher = Matcher.empty.match(route, html` <div>Search results</div> `);
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
@@ -70,18 +60,8 @@ describe("typed/ui/HttpRouter", () => {
     const home = Route.Parse("home");
     const about = Route.Parse("about");
     const matcher = Matcher.empty
-      .match(
-        home,
-        html`
-          <div>Home</div>
-        `,
-      )
-      .match(
-        about,
-        html`
-          <div>About</div>
-        `,
-      );
+      .match(home, html` <div>Home</div> `)
+      .match(about, html` <div>About</div> `);
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
@@ -96,12 +76,7 @@ describe("typed/ui/HttpRouter", () => {
   });
 
   it("returns 404 for unmatched routes", () => {
-    const matcher = Matcher.empty.match(
-      Route.Parse("home"),
-      html`
-        <div>Home</div>
-      `,
-    );
+    const matcher = Matcher.empty.match(Route.Parse("home"), html` <div>Home</div> `);
     const Live = HttpRouter.use(
       Effect.fn(function* (router) {
         yield* ssrForHttp(router, matcher);
@@ -135,12 +110,7 @@ describe("typed/ui/HttpRouter", () => {
   });
 
   it("sets correct content-type header", () => {
-    const matcher = Matcher.empty.match(
-      Route.Parse("home"),
-      html`
-        <div>Hello</div>
-      `,
-    );
+    const matcher = Matcher.empty.match(Route.Parse("home"), html` <div>Hello</div> `);
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,
@@ -157,12 +127,7 @@ describe("typed/ui/HttpRouter", () => {
     const users = Route.Join(Route.Parse("api"), Route.Parse("users"));
     const user = Route.Join(users, Route.Param("id"));
     const matcher = Matcher.empty
-      .match(
-        users,
-        html`
-          <div>Users list</div>
-        `,
-      )
+      .match(users, html` <div>Users list</div> `)
       .match(user, (params) => html`<div>User ${params.pipe(Fx.map((p) => p.id))}</div>`);
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
@@ -186,7 +151,11 @@ describe("typed/ui/HttpRouter", () => {
         const origin = yield* Navigation.origin;
         const base = yield* Navigation.base;
         const currentEntry = yield* Navigation.currentEntry;
-        return html`<div data-origin="${origin}" data-base="${base}" data-url="${currentEntry.url.href}"></div>`;
+        return html`<div
+          data-origin="${origin}"
+          data-base="${base}"
+          data-url="${currentEntry.url.href}"
+        ></div>`;
       }),
     );
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
@@ -244,22 +213,15 @@ describe("typed/ui/HttpRouter", () => {
   it("provides CurrentRoute with parent for nested routes", () => {
     const api = Route.Parse("api");
     const users = Route.Parse("users");
-    const matcher = Matcher.empty
-      .match(
-        Route.Slash,
-        html`
-          <div>API</div>
-        `,
-      )
-      .match(
-        users,
-        Fx.gen(function* () {
-          const currentRoute = yield* CurrentRoute;
-          const hasParent = currentRoute.parent !== undefined;
-          const parentPath = currentRoute.parent?.route.path ?? "none";
-          return html`<div data-has-parent="${hasParent}" data-parent-path="${parentPath}"></div>`;
-        }),
-      );
+    const matcher = Matcher.empty.match(Route.Slash, html` <div>API</div> `).match(
+      users,
+      Fx.gen(function* () {
+        const currentRoute = yield* CurrentRoute;
+        const hasParent = currentRoute.parent !== undefined;
+        const parentPath = currentRoute.parent?.route.path ?? "none";
+        return html`<div data-has-parent="${hasParent}" data-parent-path="${parentPath}"></div>`;
+      }),
+    );
     const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
       Layer.provide(StaticHtmlRenderTemplate),
       HttpRouter.serve,

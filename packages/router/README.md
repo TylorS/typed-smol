@@ -95,7 +95,7 @@ For file-based routing, see `@typed/app` and its virtual `router:./routes` impor
 | `matcher.prefix(route)`                | Nest this matcher under a parent route.                                                                      |
 | `matcher.provide(...layers)`           | Provide Effect layers to the matcher.                                                                        |
 | `matcher.provideService(tag, service)` | Provide a single service.                                                                                    |
-| `matcher.provideServices(services)`    | Provide a service map.                                                                                       |
+| `matcher.provideContext(services)`     | Provide a service map.                                                                                       |
 | `matcher.catchCause(f)`                | Handle failures by cause.                                                                                    |
 | `matcher.catch(f)`                     | Handle failures by error value.                                                                              |
 | `matcher.catchTag(tag, f)`             | Handle a specific error tag.                                                                                 |

@@ -24,7 +24,7 @@ description: Guidance for facet `effect/Sink#core` focused on APIs like make, fr
 - `fromEffectEnd`
 - `fromTransform`
 - `provideService`
-- `provideServices`
+- `provideContext`
 - Full API list: `references/api-reference.md`
 
 ## How to use it

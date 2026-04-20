@@ -3,7 +3,7 @@ import * as Exit from "effect/Exit";
 import { dual } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
 
@@ -44,27 +44,27 @@ export const provide: {
         }
 
         return yield* fx.run(sink).pipe(
-          Effect.provideServices(servicesExit.value),
+          Effect.provideContext(servicesExit.value),
           Effect.onExit((exit) => Scope.close(scope, exit)),
         );
       }),
     ),
 );
 
-export const provideServices: {
-  <R2>(services: ServiceMap.ServiceMap<R2>): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, Exclude<R, R2>>;
+export const provideContext: {
+  <R2>(services: Context.Context<R2>): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, Exclude<R, R2>>;
 
-  <A, E, R, R2>(fx: Fx<A, E, R>, services: ServiceMap.ServiceMap<R2>): Fx<A, E, Exclude<R, R2>>;
+  <A, E, R, R2>(fx: Fx<A, E, R>, services: Context.Context<R2>): Fx<A, E, Exclude<R, R2>>;
 } = dual(
   2,
-  <A, E, R, R2>(fx: Fx<A, E, R>, services: ServiceMap.ServiceMap<R2>): Fx<A, E, Exclude<R, R2>> =>
-    provide(fx, Layer.succeedServices(services)),
+  <A, E, R, R2>(fx: Fx<A, E, R>, services: Context.Context<R2>): Fx<A, E, Exclude<R, R2>> =>
+    provide(fx, Layer.succeedContext(services)),
 );
 
 /**
  * Provides a single service to an Fx.
  *
- * Equivalent to `provideServices(fx, ServiceMap.make(tag, service))`. The service
+ * Equivalent to `provideContext(fx, Context.make(tag, service))`. The service
  * is available for the entire Fx stream, scoped to the stream lifetime.
  *
  * @param tag - The service tag (identifier).
@@ -75,21 +75,21 @@ export const provideServices: {
  */
 export const provideService: {
   <Id, S>(
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: S,
   ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, Exclude<R, Id>>;
   <A, E, R, Id, S>(
     fx: Fx<A, E, R>,
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: S,
   ): Fx<A, E, Exclude<R, Id>>;
 } = dual(
   3,
   <A, E, R, Id, S>(
     fx: Fx<A, E, R>,
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     service: S,
-  ): Fx<A, E, Exclude<R, Id>> => provideServices(fx, ServiceMap.make(tag, service)),
+  ): Fx<A, E, Exclude<R, Id>> => provideContext(fx, Context.make(tag, service)),
 );
 
 /**
@@ -106,19 +106,19 @@ export const provideService: {
  */
 export const provideServiceEffect: {
   <Id, S, E2, R2>(
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     serviceEffect: Effect.Effect<S, E2, R2>,
   ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E | E2, Exclude<R, Id> | R2>;
   <A, E, R, Id, S, E2, R2>(
     fx: Fx<A, E, R>,
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     serviceEffect: Effect.Effect<S, E2, R2>,
   ): Fx<A, E | E2, Exclude<R, Id> | R2>;
 } = dual(
   3,
   <A, E, R, Id, S, E2, R2>(
     fx: Fx<A, E, R>,
-    tag: ServiceMap.Service<Id, S>,
+    tag: Context.Service<Id, S>,
     serviceEffect: Effect.Effect<S, E2, R2>,
   ): Fx<A, E | E2, Exclude<R, Id> | R2> => provide(fx, Layer.effect(tag, serviceEffect)),
 );

@@ -95,10 +95,10 @@ export declare const onExit: <A, E, X, E2, R2>(f: (exit: Exit.Exit<A, E>) => Eff
 export declare const onExit: <A, In, L, E, R, X, E2, R2>(self: Sink<A, In, L, E, R>, f: (exit: Exit.Exit<A, E>) => Effect.Effect<X, E2, R2>): Sink<A, In, L, E | E2, R | R2>; // overload 2
 export declare const orElse: <E, A2, In2, L2, E2, R2>(f: (error: Types.NoInfer<E>) => Sink<A2, In2, L2, E2, R2>): <A, In, L, R>(self: Sink<A, In, L, E, R>) => Sink<A2 | A, In & In2, L2 | L, E2 | E, R2 | R>; // overload 1
 export declare const orElse: <A, In, L, E, R, A2, In2, L2, E2, R2>(self: Sink<A, In, L, E, R>, f: (error: E) => Sink<A2, In2, L2, E2, R2>): Sink<A | A2, In & In2, L | L2, E | E2, R | R2>; // overload 2
-export declare const provideService: <I, S>(key: ServiceMap.Service<I, S>, value: Types.NoInfer<S>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, I>>; // overload 1
-export declare const provideService: <A, In, L, E, R, I, S>(self: Sink<A, In, L, E, R>, key: ServiceMap.Service<I, S>, value: Types.NoInfer<S>): Sink<A, In, L, E, Exclude<R, I>>; // overload 2
-export declare const provideServices: <Provided>(services: ServiceMap.ServiceMap<Provided>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, Provided>>; // overload 1
-export declare const provideServices: <A, In, L, E, R, Provided>(self: Sink<A, In, L, E, R>, services: ServiceMap.ServiceMap<Provided>): Sink<A, In, L, E, Exclude<R, Provided>>; // overload 2
+export declare const provideService: <I, S>(key: Context.Service<I, S>, value: Types.NoInfer<S>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, I>>; // overload 1
+export declare const provideService: <A, In, L, E, R, I, S>(self: Sink<A, In, L, E, R>, key: Context.Service<I, S>, value: Types.NoInfer<S>): Sink<A, In, L, E, Exclude<R, I>>; // overload 2
+export declare const provideContext: <Provided>(services: Context.Context<Provided>): <A, In, L, E, R>(self: Sink<A, In, L, E, R>) => Sink<A, In, L, E, Exclude<R, Provided>>; // overload 1
+export declare const provideContext: <A, In, L, E, R, Provided>(self: Sink<A, In, L, E, R>, services: Context.Context<Provided>): Sink<A, In, L, E, Exclude<R, Provided>>; // overload 2
 export declare const reduce: <S, In>(initial: LazyArg<S>, f: (s: S, input: In) => S): Sink<S, In>;
 export declare const reduceArray: <S, In>(initial: LazyArg<S>, f: (s: S, input: NonEmptyReadonlyArray<In>) => S): Sink<S, In>;
 export declare const reduceEffect: <S, In, E, R>(initial: LazyArg<S>, f: (s: S, input: In) => Effect.Effect<S, E, R>): Sink<S, In, never, E, R>;

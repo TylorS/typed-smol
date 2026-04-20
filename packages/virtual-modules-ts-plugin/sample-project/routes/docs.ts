@@ -3,9 +3,4 @@ import * as Route from "@typed/router";
 import { html } from "@typed/template";
 
 export const route = Route.Parse("docs");
-export const handler = RouteHandler(route)(
-  () =>
-    html`
-      <div>docs</div>
-    `,
-);
+export const handler = RouteHandler(route)(() => html`<div>docs</div>`);

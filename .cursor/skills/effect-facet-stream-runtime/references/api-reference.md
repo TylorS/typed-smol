@@ -83,8 +83,8 @@ export declare const runLast: <A, E, R>(self: Stream<A, E, R>): Effect.Effect<Op
 export declare const runSum: <E, R>(self: Stream<number, E, R>): Effect.Effect<number, E, R>;
 export declare const toAsyncIterable: <A, E>(self: Stream<A, E>): AsyncIterable<A>;
 export declare const toAsyncIterableEffect: <A, E, R>(self: Stream<A, E, R>): Effect.Effect<AsyncIterable<A>, never, R>;
-export declare const toAsyncIterableWith: <XR>(services: ServiceMap.ServiceMap<XR>): <A, E, R extends XR>(self: Stream<A, E, R>) => AsyncIterable<A>; // overload 1
-export declare const toAsyncIterableWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: ServiceMap.ServiceMap<XR>): AsyncIterable<A>; // overload 2
+export declare const toAsyncIterableWith: <XR>(services: Context.Context<XR>): <A, E, R extends XR>(self: Stream<A, E, R>) => AsyncIterable<A>; // overload 1
+export declare const toAsyncIterableWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: Context.Context<XR>): AsyncIterable<A>; // overload 2
 export declare const toChannel: <A, E, R>(stream: Stream<A, E, R>): Channel.Channel<Arr.NonEmptyReadonlyArray<A>, E, void, unknown, unknown, unknown, R>;
 export declare const toPubSub: (options: { readonly capacity: "unbounded"; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; } | { readonly capacity: number; readonly strategy?: "dropping" | "sliding" | "suspend" | undefined; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; }): <A, E, R>(self: Stream<A, E, R>) => Effect.Effect<PubSub.PubSub<A>, never, R | Scope.Scope>; // overload 1
 export declare const toPubSub: <A, E, R>(self: Stream<A, E, R>, options: { readonly capacity: "unbounded"; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; } | { readonly capacity: number; readonly strategy?: "dropping" | "sliding" | "suspend" | undefined; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; }): Effect.Effect<PubSub.PubSub<A>, never, R | Scope.Scope>; // overload 2
@@ -97,8 +97,8 @@ export declare const toReadableStream: <A>(options?: { readonly strategy?: Queui
 export declare const toReadableStream: <A, E>(self: Stream<A, E>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): ReadableStream<A>; // overload 2
 export declare const toReadableStreamEffect: <A>(options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): <E, R>(self: Stream<A, E, R>) => Effect.Effect<ReadableStream<A>, never, R>; // overload 1
 export declare const toReadableStreamEffect: <A, E, R>(self: Stream<A, E, R>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): Effect.Effect<ReadableStream<A>, never, R>; // overload 2
-export declare const toReadableStreamWith: <A, XR>(services: ServiceMap.ServiceMap<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): <E, R extends XR>(self: Stream<A, E, R>) => ReadableStream<A>; // overload 1
-export declare const toReadableStreamWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: ServiceMap.ServiceMap<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): ReadableStream<A>; // overload 2
+export declare const toReadableStreamWith: <A, XR>(services: Context.Context<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): <E, R extends XR>(self: Stream<A, E, R>) => ReadableStream<A>; // overload 1
+export declare const toReadableStreamWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: Context.Context<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): ReadableStream<A>; // overload 2
 ```
 
 ## Other Exports (Non-Function)

@@ -17,8 +17,8 @@ Module-specific APIs and usage patterns for Effect programs.
 ## All Function Signatures
 
 ```ts
-export declare const isUninterruptibleForClient: (context: ServiceMap.ServiceMap<never>): boolean;
-export declare const isUninterruptibleForServer: (context: ServiceMap.ServiceMap<never>): boolean;
+export declare const isUninterruptibleForClient: (context: Context.Context<never>): boolean;
+export declare const isUninterruptibleForServer: (context: Context.Context<never>): boolean;
 ```
 
 ## Other Exports (Non-Function)

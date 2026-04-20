@@ -753,9 +753,9 @@
       "primarySkill": "effect-module-semaphore"
     },
     {
-      "importPath": "effect/ServiceMap",
+      "importPath": "effect/Context",
       "moduleName": "ServiceMap",
-      "sourcePath": "packages/effect/src/ServiceMap.ts",
+      "sourcePath": "packages/effect/src/Context.ts",
       "kind": "stable-primary",
       "primarySkill": "effect-module-servicemap"
     },

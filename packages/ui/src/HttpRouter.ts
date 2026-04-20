@@ -4,7 +4,7 @@ import { dual } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { type HttpRouter, type Route, RouteContext } from "effect/unstable/http/HttpRouter";
 import * as HttpServerError from "effect/unstable/http/HttpServerError";
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
@@ -43,7 +43,7 @@ export const ssrForHttp: {
       onSome: (parent: CurrentRouteTree) => input.prefix(parent.route),
     });
     const entries = compile(matcher.cases);
-    const currentServices = yield* Effect.services<R>();
+    const currentServices = yield* Effect.context<R>();
 
     yield* router.addAll(entries.map((e: CompiledEntry) => toRoute(e, currentServices)));
   });
@@ -71,10 +71,7 @@ function getStatus(error: HttpServerError.HttpServerError): number {
   }
 }
 
-function toRoute(
-  entry: CompiledEntry,
-  currentServices: ServiceMap.ServiceMap<never>,
-): Route<any, any> {
+function toRoute(entry: CompiledEntry, currentServices: Context.Context<never>): Route<any, any> {
   return {
     ["~effect/http/HttpRouter/Route"]: "~effect/http/HttpRouter/Route",
     method: "GET",
@@ -123,7 +120,7 @@ function toRoute(
 
       const guardExit = yield* entry
         .guard(params)
-        .pipe(Effect.provideServices(prepared.services), Effect.exit);
+        .pipe(Effect.provideContext(prepared.services), Effect.exit);
 
       if (Exit.isFailure(guardExit) || Option.isNone(guardExit.value)) {
         yield* prepared.rollback;
@@ -138,10 +135,10 @@ function toRoute(
       const scope = yield* Scope.fork(rootScope);
       const paramsRef = yield* RefSubject.make(matchedParams).pipe(Scope.provide(scope));
 
-      const preparedServices = prepared.services as ServiceMap.ServiceMap<any>;
-      const handlerServices = ServiceMap.merge(
-        ServiceMap.merge(currentServices, preparedServices),
-        ServiceMap.make(Scope.Scope, scope),
+      const preparedServices = prepared.services as Context.Context<any>;
+      const handlerServices = Context.merge(
+        Context.merge(currentServices, preparedServices),
+        Context.make(Scope.Scope, scope),
       );
 
       const handlerFx = entry.handler(paramsRef);
@@ -156,7 +153,7 @@ function toRoute(
       const withCatches = yield* catchManager.apply(entry.catches, withLayouts, preparedServices);
 
       const html = yield* renderToHtmlString(withCatches).pipe(
-        Effect.provideServices(handlerServices),
+        Effect.provideContext(handlerServices),
       );
       return HttpServerResponse.text(html, {
         headers: { "content-type": "text/html; charset=utf-8" },

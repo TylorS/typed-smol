@@ -248,14 +248,14 @@ export declare const pipeThroughChannelOrFail: <R2, E, E2, A, A2>(channel: Chann
 export declare const pipeThroughChannelOrFail: <R, R2, E, E2, A, A2>(self: Stream<A, E, R>, channel: Channel.Channel<Arr.NonEmptyReadonlyArray<A2>, E2, unknown, Arr.NonEmptyReadonlyArray<A>, E, unknown, R2>): Stream<A2, E | E2, R | R2>; // overload 2
 export declare const prepend: <B>(values: Iterable<B>): <A, E, R>(self: Stream<A, E, R>) => Stream<B | A, E, R>; // overload 1
 export declare const prepend: <A, E, R, B>(self: Stream<A, E, R>, values: Iterable<B>): Stream<A | B, E, R>; // overload 2
-export declare const provide: <AL, EL = never, RL = never>(layer: Layer.Layer<AL, EL, RL> | ServiceMap.ServiceMap<AL>, options?: { readonly local?: boolean | undefined; } | undefined): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E | EL, Exclude<R, AL> | RL>; // overload 1
-export declare const provide: <A, E, R, AL, EL = never, RL = never>(self: Stream<A, E, R>, layer: Layer.Layer<AL, EL, RL> | ServiceMap.ServiceMap<AL>, options?: { readonly local?: boolean | undefined; } | undefined): Stream<A, E | EL, Exclude<R, AL> | RL>; // overload 2
-export declare const provideService: <I, S>(key: ServiceMap.Service<I, S>, service: NoInfer<S>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E, Exclude<R, I>>; // overload 1
-export declare const provideService: <A, E, R, I, S>(self: Stream<A, E, R>, key: ServiceMap.Service<I, S>, service: NoInfer<S>): Stream<A, E, Exclude<R, I>>; // overload 2
-export declare const provideServiceEffect: <I, S, ES, RS>(key: ServiceMap.Service<I, S>, service: Effect.Effect<NoInfer<S>, ES, RS>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E | ES, Exclude<R, I> | RS>; // overload 1
-export declare const provideServiceEffect: <A, E, R, I, S, ES, RS>(self: Stream<A, E, R>, key: ServiceMap.Service<I, S>, service: Effect.Effect<NoInfer<S>, ES, RS>): Stream<A, E | ES, Exclude<R, I> | RS>; // overload 2
-export declare const provideServices: <R2>(services: ServiceMap.ServiceMap<R2>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E, Exclude<R, R2>>; // overload 1
-export declare const provideServices: <A, E, R, R2>(self: Stream<A, E, R>, services: ServiceMap.ServiceMap<R2>): Stream<A, E, Exclude<R, R2>>; // overload 2
+export declare const provide: <AL, EL = never, RL = never>(layer: Layer.Layer<AL, EL, RL> | Context.Context<AL>, options?: { readonly local?: boolean | undefined; } | undefined): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E | EL, Exclude<R, AL> | RL>; // overload 1
+export declare const provide: <A, E, R, AL, EL = never, RL = never>(self: Stream<A, E, R>, layer: Layer.Layer<AL, EL, RL> | Context.Context<AL>, options?: { readonly local?: boolean | undefined; } | undefined): Stream<A, E | EL, Exclude<R, AL> | RL>; // overload 2
+export declare const provideService: <I, S>(key: Context.Service<I, S>, service: NoInfer<S>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E, Exclude<R, I>>; // overload 1
+export declare const provideService: <A, E, R, I, S>(self: Stream<A, E, R>, key: Context.Service<I, S>, service: NoInfer<S>): Stream<A, E, Exclude<R, I>>; // overload 2
+export declare const provideServiceEffect: <I, S, ES, RS>(key: Context.Service<I, S>, service: Effect.Effect<NoInfer<S>, ES, RS>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E | ES, Exclude<R, I> | RS>; // overload 1
+export declare const provideServiceEffect: <A, E, R, I, S, ES, RS>(self: Stream<A, E, R>, key: Context.Service<I, S>, service: Effect.Effect<NoInfer<S>, ES, RS>): Stream<A, E | ES, Exclude<R, I> | RS>; // overload 2
+export declare const provideContext: <R2>(services: Context.Context<R2>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E, Exclude<R, R2>>; // overload 1
+export declare const provideContext: <A, E, R, R2>(self: Stream<A, E, R>, services: Context.Context<R2>): Stream<A, E, Exclude<R, R2>>; // overload 2
 export declare const race: <AR, ER, RR>(right: Stream<AR, ER, RR>): <AL, EL, RL>(left: Stream<AL, EL, RL>) => Stream<AL | AR, EL | ER, RL | RR>; // overload 1
 export declare const race: <AL, EL, RL, AR, ER, RR>(left: Stream<AL, EL, RL>, right: Stream<AR, ER, RR>): Stream<AL | AR, EL | ER, RL | RR>; // overload 2
 export declare const raceAll: <S extends ReadonlyArray<Stream<any, any, any>>>(...streams: S): Stream<Success<S[number]>, Error<S[number]>, Services<S[number]>>;
@@ -349,8 +349,8 @@ export declare const timeout: (duration: Duration.Input): <A, E, R>(self: Stream
 export declare const timeout: <A, E, R>(self: Stream<A, E, R>, duration: Duration.Input): Stream<A, E, R>; // overload 2
 export declare const toAsyncIterable: <A, E>(self: Stream<A, E>): AsyncIterable<A>;
 export declare const toAsyncIterableEffect: <A, E, R>(self: Stream<A, E, R>): Effect.Effect<AsyncIterable<A>, never, R>;
-export declare const toAsyncIterableWith: <XR>(services: ServiceMap.ServiceMap<XR>): <A, E, R extends XR>(self: Stream<A, E, R>) => AsyncIterable<A>; // overload 1
-export declare const toAsyncIterableWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: ServiceMap.ServiceMap<XR>): AsyncIterable<A>; // overload 2
+export declare const toAsyncIterableWith: <XR>(services: Context.Context<XR>): <A, E, R extends XR>(self: Stream<A, E, R>) => AsyncIterable<A>; // overload 1
+export declare const toAsyncIterableWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: Context.Context<XR>): AsyncIterable<A>; // overload 2
 export declare const toChannel: <A, E, R>(stream: Stream<A, E, R>): Channel.Channel<Arr.NonEmptyReadonlyArray<A>, E, void, unknown, unknown, unknown, R>;
 export declare const toPubSub: (options: { readonly capacity: "unbounded"; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; } | { readonly capacity: number; readonly strategy?: "dropping" | "sliding" | "suspend" | undefined; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; }): <A, E, R>(self: Stream<A, E, R>) => Effect.Effect<PubSub.PubSub<A>, never, R | Scope.Scope>; // overload 1
 export declare const toPubSub: <A, E, R>(self: Stream<A, E, R>, options: { readonly capacity: "unbounded"; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; } | { readonly capacity: number; readonly strategy?: "dropping" | "sliding" | "suspend" | undefined; readonly replay?: number | undefined; readonly shutdownOnEnd?: boolean | undefined; }): Effect.Effect<PubSub.PubSub<A>, never, R | Scope.Scope>; // overload 2
@@ -363,18 +363,18 @@ export declare const toReadableStream: <A>(options?: { readonly strategy?: Queui
 export declare const toReadableStream: <A, E>(self: Stream<A, E>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): ReadableStream<A>; // overload 2
 export declare const toReadableStreamEffect: <A>(options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): <E, R>(self: Stream<A, E, R>) => Effect.Effect<ReadableStream<A>, never, R>; // overload 1
 export declare const toReadableStreamEffect: <A, E, R>(self: Stream<A, E, R>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): Effect.Effect<ReadableStream<A>, never, R>; // overload 2
-export declare const toReadableStreamWith: <A, XR>(services: ServiceMap.ServiceMap<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): <E, R extends XR>(self: Stream<A, E, R>) => ReadableStream<A>; // overload 1
-export declare const toReadableStreamWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: ServiceMap.ServiceMap<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): ReadableStream<A>; // overload 2
+export declare const toReadableStreamWith: <A, XR>(services: Context.Context<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): <E, R extends XR>(self: Stream<A, E, R>) => ReadableStream<A>; // overload 1
+export declare const toReadableStreamWith: <A, E, XR, R extends XR>(self: Stream<A, E, R>, services: Context.Context<XR>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): ReadableStream<A>; // overload 2
 export declare const transduce: <A2, A, E2, R2>(sink: Sink.Sink<A2, A, A, E2, R2>): <E, R>(self: Stream<A, E, R>) => Stream<A2, E2 | E, R2 | R>; // overload 1
 export declare const transduce: <A, E, R, A2, E2, R2>(self: Stream<A, E, R>, sink: Sink.Sink<A2, A, A, E2, R2>): Stream<A2, E2 | E, R2 | R>; // overload 2
 export declare const transformPull: <A, E, R, B, E2, R2, EX, RX>(self: Stream<A, E, R>, f: (pull: Pull.Pull<Arr.NonEmptyReadonlyArray<A>, E, void>, scope: Scope.Scope) => Effect.Effect<Pull.Pull<Arr.NonEmptyReadonlyArray<B>, E2, void, R2>, EX, RX>): Stream<B, EX | Pull.ExcludeDone<E2>, R | R2 | RX>;
 export declare const transformPullBracket: <A, E, R, B, E2, R2, EX, RX>(self: Stream<A, E, R>, f: (pull: Pull.Pull<Arr.NonEmptyReadonlyArray<A>, E, void, R>, scope: Scope.Scope, forkedScope: Scope.Scope) => Effect.Effect<Pull.Pull<Arr.NonEmptyReadonlyArray<B>, E2, void, R2>, EX, RX>): Stream<B, EX | Pull.ExcludeDone<E2>, R | R2 | RX>;
 export declare const unfold: <S, A, E, R>(s: S, f: (s: S) => Effect.Effect<readonly [A, S] | undefined, E, R>): Stream<A, E, R>;
 export declare const unwrap: <A, E2, R2, E, R>(effect: Effect.Effect<Stream<A, E2, R2>, E, R>): Stream<A, E | E2, R2 | Exclude<R, Scope.Scope>>;
-export declare const updateService: <I, S>(key: ServiceMap.Service<I, S>, f: (service: NoInfer<S>) => S): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E, R | I>; // overload 1
-export declare const updateService: <A, E, R, I, S>(self: Stream<A, E, R>, key: ServiceMap.Service<I, S>, f: (service: NoInfer<S>) => S): Stream<A, E, R | I>; // overload 2
-export declare const updateServices: <R, R2>(f: (services: ServiceMap.ServiceMap<R2>) => ServiceMap.ServiceMap<R>): <A, E>(self: Stream<A, E, R>) => Stream<A, E, R2>; // overload 1
-export declare const updateServices: <A, E, R, R2>(self: Stream<A, E, R>, f: (services: ServiceMap.ServiceMap<R2>) => ServiceMap.ServiceMap<R>): Stream<A, E, R2>; // overload 2
+export declare const updateService: <I, S>(key: Context.Service<I, S>, f: (service: NoInfer<S>) => S): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E, R | I>; // overload 1
+export declare const updateService: <A, E, R, I, S>(self: Stream<A, E, R>, key: Context.Service<I, S>, f: (service: NoInfer<S>) => S): Stream<A, E, R | I>; // overload 2
+export declare const updateServices: <R, R2>(f: (services: Context.Context<R2>) => Context.Context<R>): <A, E>(self: Stream<A, E, R>) => Stream<A, E, R2>; // overload 1
+export declare const updateServices: <A, E, R, R2>(self: Stream<A, E, R>, f: (services: Context.Context<R2>) => Context.Context<R>): Stream<A, E, R2>; // overload 2
 export declare const when: <EX = never, RX = never>(test: Effect.Effect<boolean, EX, RX>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E | EX, R | RX>; // overload 1
 export declare const when: <A, E, R, EX = never, RX = never>(self: Stream<A, E, R>, test: Effect.Effect<boolean, EX, RX>): Stream<A, E | EX, R | RX>; // overload 2
 export declare const withExecutionPlan: <Input, R2, Provides, PolicyE>(policy: ExecutionPlan.ExecutionPlan<{ provides: Provides; input: Input; error: PolicyE; requirements: R2; }>, options?: { readonly preventFallbackOnPartialStream?: boolean | undefined; }): <A, E extends Input, R>(self: Stream<A, E, R>) => Stream<A, E | PolicyE, R2 | Exclude<R, Provides>>; // overload 1

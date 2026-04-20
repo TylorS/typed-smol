@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { sha512 } from "./_sha.js";
 import { DateTimes } from "./DateTimes.js";
 import { RandomValues } from "./RandomValues.js";
@@ -28,7 +28,7 @@ export type CuidSeed = {
   readonly fingerprint: string;
 };
 
-export class CuidState extends ServiceMap.Service<CuidState>()("@typed/id/CuidState", {
+export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState", {
   make: (envData: string) =>
     Effect.gen(function* () {
       const { now } = yield* DateTimes;
@@ -119,6 +119,6 @@ function cuidFromSeed({ counter, fingerprint, random, timestamp }: CuidSeed): Ef
     // Construct the final CUID
     const id = `${firstLetter}${hashed.substring(0, DEFAULT_LENGTH - 1)}`;
 
-    return Cuid.makeUnsafe(id);
+    return Cuid.make(id);
   });
 }

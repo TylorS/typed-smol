@@ -15,7 +15,7 @@ export const ROUTER_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = [
   { id: "Cause", module: "effect/Cause", exportName: "Cause" },
   { id: "Option", module: "effect/Option", exportName: "Option" },
   { id: "Layer", module: "effect/Layer", exportName: "Layer" },
-  { id: "ServiceMap", module: "effect/ServiceMap", exportName: "ServiceMap" },
+  { id: "ServiceMap", module: "effect/Context", exportName: "ServiceMap" },
   { id: "Route", module: "@typed/router", exportName: "Route" },
 ];
 

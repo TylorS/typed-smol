@@ -128,7 +128,7 @@ Generated: 2026-02-20T20:42:30.404Z
 | `effect/ScopedCache`            | `packages/effect/src/ScopedCache.ts`                  | n/a                      | `effect-module-scopedcache`            |
 | `effect/ScopedRef`              | `packages/effect/src/ScopedRef.ts`                    | n/a                      | `effect-module-scopedref`              |
 | `effect/Semaphore`              | `packages/effect/src/Semaphore.ts`                    | n/a                      | `effect-module-semaphore`              |
-| `effect/ServiceMap`             | `packages/effect/src/ServiceMap.ts`                   | n/a                      | `effect-module-servicemap`             |
+| `effect/Context`                | `packages/effect/src/Context.ts`                      | n/a                      | `effect-module-Context`                |
 | `effect/Sink`                   | `packages/effect/src/Sink.ts`                         | n/a                      | `effect-module-sink`                   |
 | `effect/Stdio`                  | `packages/effect/src/Stdio.ts`                        | n/a                      | `effect-module-stdio`                  |
 | `effect/Stream`                 | `packages/effect/src/Stream.ts`                       | n/a                      | `effect-module-stream`                 |

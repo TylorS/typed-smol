@@ -4,7 +4,7 @@ import { none, type Option, some } from "effect/Option";
 import { isNullish, isObject } from "effect/Predicate";
 import { map as mapRecord } from "effect/Record";
 import type { Scope } from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { Fx, RefSubject } from "@typed/fx";
 import {
   addTemplateHash,
@@ -118,12 +118,9 @@ export function renderToHtmlString<E, R>(
  * If `true`, the HTML renderer will optimize for static output, potentially skipping
  * dynamic placeholder generation or other interactive features not needed for static HTML.
  */
-export const StaticRendering = ServiceMap.Reference<boolean>(
-  "@typed/template/Html/StaticRendering",
-  {
-    defaultValue: () => false,
-  },
-);
+export const StaticRendering = Context.Reference<boolean>("@typed/template/Html/StaticRendering", {
+  defaultValue: () => false,
+});
 
 type HtmlEntry = ReadonlyArray<HtmlChunk>;
 

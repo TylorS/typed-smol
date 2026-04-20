@@ -45,11 +45,11 @@ export declare const gauge: (name: string, options: { readonly description?: str
 export declare const histogram: (name: string, options: { readonly description?: string | undefined; readonly attributes?: Metric.Attributes | undefined; readonly boundaries: ReadonlyArray<number>; }): Histogram<number>;
 export declare const isMetric: (u: unknown): u is Metric<unknown, never>;
 export declare const linearBoundaries: (options: { readonly start: number; readonly width: number; readonly count: number; }): ReadonlyArray<number>;
-export declare const mapInput: <Input, Input2 extends Input>(f: (input: Input2, context: ServiceMap.ServiceMap<never>) => Input): <State>(self: Metric<Input, State>) => Metric<Input2, State>; // overload 1
-export declare const mapInput: <Input, State, Input2>(self: Metric<Input, State>, f: (input: Input2, context: ServiceMap.ServiceMap<never>) => Input): Metric<Input2, State>; // overload 2
+export declare const mapInput: <Input, Input2 extends Input>(f: (input: Input2, context: Context.Context<never>) => Input): <State>(self: Metric<Input, State>) => Metric<Input2, State>; // overload 1
+export declare const mapInput: <Input, State, Input2>(self: Metric<Input, State>, f: (input: Input2, context: Context.Context<never>) => Input): Metric<Input2, State>; // overload 2
 export declare const modify: <Input>(input: Input): <State>(self: Metric<Input, State>) => Effect<void>; // overload 1
 export declare const modify: <Input, State>(self: Metric<Input, State>, input: Input): Effect<void>; // overload 2
-export declare const snapshotUnsafe: (services: ServiceMap.ServiceMap<never>): ReadonlyArray<Metric.Snapshot>;
+export declare const snapshotUnsafe: (services: Context.Context<never>): ReadonlyArray<Metric.Snapshot>;
 export declare const summary: (name: string, options: { readonly description?: string | undefined; readonly attributes?: Metric.Attributes | undefined; readonly maxAge: Duration.Input; readonly maxSize: number; readonly quantiles: ReadonlyArray<number>; }): Summary<number>;
 export declare const summaryWithTimestamp: (name: string, options: { readonly description?: string | undefined; readonly attributes?: Metric.Attributes | undefined; readonly maxAge: Duration.Input; readonly maxSize: number; readonly quantiles: ReadonlyArray<number>; }): Summary<[value: number, timestamp: number]>;
 export declare const timer: (name: string, options?: { readonly description?: string | undefined; readonly attributes?: Metric.Attributes | undefined; readonly boundaries?: ReadonlyArray<number>; }): Histogram<Duration.Duration>;

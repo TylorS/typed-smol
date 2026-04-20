@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import { dual } from "effect/Function";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as SyncronizedRef from "effect/SynchronizedRef";
 import { make as makeSink } from "../../Sink/Sink.js";
 import { make } from "../constructors/make.js";
@@ -28,12 +28,12 @@ export const switchMap: FlatMapLike = dual(
   ): Fx<B, E | E2, R | R2 | Scope.Scope> =>
     make<B, E | E2, R | R2 | Scope.Scope>(
       Effect.fn(function* (sink) {
-        const ctx = yield* Effect.services<R2 | Scope.Scope>();
-        const scope = ServiceMap.get(ctx, Scope.Scope);
+        const ctx = yield* Effect.context<R2 | Scope.Scope>();
+        const scope = Context.get(ctx, Scope.Scope);
         const fiberRef = yield* SyncronizedRef.make<Fiber.Fiber<unknown, never> | null>(null);
 
         const next = (value: A) =>
-          Effect.forkIn(Effect.provideServices(f(value).run(sink), ctx), scope, {
+          Effect.forkIn(Effect.provideContext(f(value).run(sink), ctx), scope, {
             startImmediately: false,
             uninterruptible: false,
           });

@@ -8,7 +8,7 @@ import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
 import { MaxOpsBeforeYield } from "effect/Scheduler";
 import * as Scope from "effect/Scope";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as SynchronizedRef from "effect/SynchronizedRef";
 import type * as TestClock from "effect/testing/TestClock";
 import * as RefSubject from "../../RefSubject/RefSubject.js";
@@ -84,7 +84,7 @@ type StateContext<A, C> = {
   output: C;
 };
 
-const StateContext = ServiceMap.Service<StateContext<any, any>>("@services/StateContext");
+const StateContext = Context.Service<StateContext<any, any>>("@services/StateContext");
 
 const VARIANCE: Fx.Variance<any, any, any> = {
   _A: identity,
@@ -359,8 +359,8 @@ function withDebounceFork<A, E, R>(
 }
 
 function* adjustTime() {
-  const services = yield* Effect.services<never>();
-  const clock = ServiceMap.get(services, Clock.Clock) as Clock.Clock | TestClock.TestClock;
+  const services = yield* Effect.context<never>();
+  const clock = Context.get(services, Clock.Clock) as Clock.Clock | TestClock.TestClock;
   if ("adjust" in clock) {
     yield* clock.adjust(Duration.millis(1));
   } else {

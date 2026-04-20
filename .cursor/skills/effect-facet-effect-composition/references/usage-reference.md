@@ -54,4 +54,4 @@ Effect.runPromise(program).then(console.log); // 13
 - `provideService` (6)
 - `zip` (3)
 - `zipWith` (3)
-- `provideServices` (1)
+- `provideContext` (1)

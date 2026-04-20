@@ -38,10 +38,10 @@ description: Guidance for `effect/LayerMap` focused on APIs like make, Layers, a
 ## Starter example
 
 ```ts
-import { Effect, Layer, LayerMap, ServiceMap } from "effect"
+import { Effect, Layer, LayerMap, Context } from "effect"
 
 // Define a service key
-const DatabaseService = ServiceMap.Service<{
+const DatabaseService = Context.Service<{
   readonly query: (sql: string) => Effect.Effect<string>
 }>("Database")
 

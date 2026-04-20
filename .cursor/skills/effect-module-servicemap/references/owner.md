@@ -1,8 +1,8 @@
 # Ownership Reference
 
-- Import path: `effect/ServiceMap`
-- Source: `packages/effect/src/ServiceMap.ts`
-- Primary skill: `effect-module-servicemap`
+- Import path: `effect/Context`
+- Source: `packages/effect/src/Context.ts`
+- Primary skill: `effect-module-Context`
 
 ## Facet children
 

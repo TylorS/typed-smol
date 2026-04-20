@@ -135,7 +135,7 @@ export declare const raceAllFirst: <Eff extends Effect<any, any, any>>(all: Iter
 export declare const raceFirst: <A2, E2, R2>(that: Effect<A2, E2, R2>, options?: { readonly onWinner?: (options: { readonly fiber: Fiber<any, any>; readonly index: number; readonly parentFiber: Fiber<any, any>; }) => void; }): <A, E, R>(self: Effect<A, E, R>) => Effect<A | A2, E | E2, R | R2>; // overload 1
 export declare const raceFirst: <A, E, R, A2, E2, R2>(self: Effect<A, E, R>, that: Effect<A2, E2, R2>, options?: { readonly onWinner?: (options: { readonly fiber: Fiber<any, any>; readonly index: number; readonly parentFiber: Fiber<any, any>; }) => void; }): Effect<A | A2, E | E2, R | R2>; // overload 2
 export declare const runFork: <A, E>(effect: Effect<A, E, never>, options?: RunOptions | undefined): Fiber<A, E>;
-export declare const runForkWith: <R>(services: ServiceMap.ServiceMap<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Fiber<A, E>;
+export declare const runForkWith: <R>(services: Context.Context<R>): <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Fiber<A, E>;
 export declare const uninterruptible: <A, E, R>(self: Effect<A, E, R>): Effect<A, E, R>;
 export declare const uninterruptibleMask: <A, E, R>(f: (restore: <AX, EX, RX>(effect: Effect<AX, EX, RX>) => Effect<AX, EX, RX>) => Effect<A, E, R>): Effect<A, E, R>;
 export declare const withConcurrency: (concurrency: number | "unbounded"): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, R>; // overload 1
