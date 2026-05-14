@@ -53,28 +53,22 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
     };
   }),
 }) {
-  static readonly cuid: Effect.Effect<Cuid, never, Ids> = Effect.flatMap(
-    Ids.asEffect(),
-    ({ cuid }) => cuid,
-  );
+  static readonly cuid: Effect.Effect<Cuid, never, Ids> = Effect.flatMap(Ids, ({ cuid }) => cuid);
 
   static readonly ksuid: Effect.Effect<Ksuid, never, Ids> = Effect.flatMap(
-    Ids.asEffect(),
+    Ids,
     ({ ksuid }) => ksuid,
   );
 
   static readonly nanoId: Effect.Effect<NanoId, never, Ids> = Effect.flatMap(
-    Ids.asEffect(),
+    Ids,
     ({ nanoId }) => nanoId,
   );
 
-  static readonly ulid: Effect.Effect<Ulid, never, Ids> = Effect.flatMap(
-    Ids.asEffect(),
-    ({ ulid }) => ulid,
-  );
+  static readonly ulid: Effect.Effect<Ulid, never, Ids> = Effect.flatMap(Ids, ({ ulid }) => ulid);
 
   static readonly uuid4: Effect.Effect<Uuid4, never, Ids> = Effect.flatMap(
-    Ids.asEffect(),
+    Ids,
     ({ uuid4 }) => uuid4,
   );
 
@@ -87,17 +81,17 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
     readonly x500: (name: string) => Effect.Effect<Uuid5, never, Ids>;
   } = Object.assign(
     dual(2, (name: string, namespace: Uuid5Namespace) =>
-      Effect.flatMap(Ids.asEffect(), ({ uuid5 }) => uuid5(name, namespace)),
+      Effect.flatMap(Ids, ({ uuid5 }) => uuid5(name, namespace)),
     ),
     {
-      dns: (name: string) => Effect.flatMap(Ids.asEffect(), ({ uuid5 }) => uuid5.dns(name)),
-      url: (name: string) => Effect.flatMap(Ids.asEffect(), ({ uuid5 }) => uuid5.url(name)),
-      oid: (name: string) => Effect.flatMap(Ids.asEffect(), ({ uuid5 }) => uuid5.oid(name)),
-      x500: (name: string) => Effect.flatMap(Ids.asEffect(), ({ uuid5 }) => uuid5.x500(name)),
+      dns: (name: string) => Effect.flatMap(Ids, ({ uuid5 }) => uuid5.dns(name)),
+      url: (name: string) => Effect.flatMap(Ids, ({ uuid5 }) => uuid5.url(name)),
+      oid: (name: string) => Effect.flatMap(Ids, ({ uuid5 }) => uuid5.oid(name)),
+      x500: (name: string) => Effect.flatMap(Ids, ({ uuid5 }) => uuid5.x500(name)),
     },
   );
   static readonly uuid7: Effect.Effect<Uuid7, never, Ids> = Effect.flatMap(
-    Ids.asEffect(),
+    Ids,
     ({ uuid7 }) => uuid7,
   );
 

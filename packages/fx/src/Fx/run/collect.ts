@@ -21,7 +21,7 @@ export const collectAll = <A, E = never, R = never>(
 
     return fx.pipe(
       observe((value) => Effect.sync(() => values.push(value))),
-      (_) => Effect.map(_.asEffect(), () => values),
+      Effect.map(() => values),
     );
   });
 

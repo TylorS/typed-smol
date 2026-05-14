@@ -8,7 +8,6 @@ export * from "./fromEffect.js";
 export * from "./fromFailures.js";
 export * from "./fromIterable.js";
 export * from "./fromSchedule.js";
-export * from "./fromYieldable.js";
 export * from "./interrupt.js";
 export * from "./make.js";
 export * from "./periodic.js";

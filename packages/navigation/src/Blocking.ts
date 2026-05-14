@@ -104,15 +104,18 @@ export const useBlockNavigation = <R = never>(
 function blockedToBlocking(navigation: Navigation["Service"], state: Blocked): Blocking {
   return {
     ...state.event,
-    cancel: Effect.flatMap(Deferred.fail(state.deferred, new CancelNavigation({})), () =>
-      navigation.currentEntry.asEffect(),
+    cancel: Effect.flatMap(
+      Deferred.failSync(state.deferred, () => new CancelNavigation({})),
+      () => navigation.currentEntry,
     ),
-    confirm: Effect.flatMap(Deferred.succeed(state.deferred, undefined), () =>
-      navigation.currentEntry.asEffect(),
+    confirm: Effect.flatMap(
+      Deferred.succeed(state.deferred, undefined),
+      () => navigation.currentEntry,
     ),
     redirect: (url, options) =>
-      Effect.flatMap(Deferred.fail(state.deferred, new RedirectError({ url, options })), () =>
-        navigation.currentEntry.asEffect(),
+      Effect.flatMap(
+        Deferred.fail(state.deferred, new RedirectError({ url, options })),
+        () => navigation.currentEntry,
       ),
   };
 }

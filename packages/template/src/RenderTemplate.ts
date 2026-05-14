@@ -107,5 +107,5 @@ export function html<const Values extends ReadonlyArray<Renderable.Any> = readon
   Renderable.Error<Values[number]>,
   Renderable.Services<Values[number]> | Scope | RenderTemplate
 > {
-  return unwrap(map(RenderTemplate.asEffect(), (render) => render(template, values)));
+  return unwrap(map(RenderTemplate, (render) => render(template, values)));
 }

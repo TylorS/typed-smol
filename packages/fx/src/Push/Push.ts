@@ -1077,13 +1077,13 @@ export function Service<Self, A, E = never, B = never, E2 = never>() {
       static readonly run = <R3>(
         sink: Sink.Sink<B, E2, R3>,
       ): Effect.Effect<unknown, never, R3 | Self> =>
-        Effect.flatMap(service.asEffect(), (push) => push.run(sink));
+        Effect.flatMap(service, (push) => push.run(sink));
 
       // Sink methods
       static readonly onSuccess = (value: A): Effect.Effect<unknown, never, Self> =>
-        Effect.flatMap(service.asEffect(), (push) => push.onSuccess(value));
+        Effect.flatMap(service, (push) => push.onSuccess(value));
       static readonly onFailure = (cause: Cause.Cause<E>): Effect.Effect<unknown, never, Self> =>
-        Effect.flatMap(service.asEffect(), (push) => push.onFailure(cause));
+        Effect.flatMap(service, (push) => push.onFailure(cause));
 
       constructor() {
         return PushService as unknown as Push.Class<Self, Id, A, E, B, E2>;

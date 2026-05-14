@@ -404,6 +404,11 @@ export function Service<Self, A, E = never>() {
       static readonly id = id;
       static readonly service = service;
 
+      static {
+        Object.assign(this, service);
+        Object.assign(this.prototype, Object.getPrototypeOf(service));
+      }
+
       static readonly make = (replay?: number): Layer.Layer<Self, never, Scope.Scope> =>
         Layer.effect(service, make<A, E>(replay));
 
@@ -414,23 +419,20 @@ export function Service<Self, A, E = never>() {
 
       // Fx
       static readonly run = <RSink>(sink: Sink.Sink<A, E, RSink>) =>
-        Effect.flatMap(service.asEffect(), (subject) => subject.run(sink));
+        Effect.flatMap(service, (subject) => subject.run(sink));
 
       // Sink
       static readonly onSuccess = (value: A) =>
-        Effect.flatMap(service.asEffect(), (subject) => subject.onSuccess(value));
+        Effect.flatMap(service, (subject) => subject.onSuccess(value));
       static readonly onFailure = (cause: Cause.Cause<E>) =>
-        Effect.flatMap(service.asEffect(), (subject) => subject.onFailure(cause));
+        Effect.flatMap(service, (subject) => subject.onFailure(cause));
 
       // Subject
       static readonly subscriberCount = Effect.flatMap(
-        service.asEffect(),
+        service,
         (subject) => subject.subscriberCount,
       );
-      static readonly interrupt = Effect.flatMap(
-        service.asEffect(),
-        (subject) => subject.interrupt,
-      );
+      static readonly interrupt = Effect.flatMap(service, (subject) => subject.interrupt);
 
       constructor() {
         return SubjectService;

@@ -1,7 +1,8 @@
+import { Effectable } from "effect";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 
-export class MulticastEffect<A, E, R> extends Effect.YieldableClass<A, E, R> {
+export class MulticastEffect<A, E, R> extends Effectable.Class<A, E, R> {
   private _fiber: Fiber.Fiber<A, E> | null = null;
 
   readonly effect: Effect.Effect<A, E, R>;
@@ -9,10 +10,8 @@ export class MulticastEffect<A, E, R> extends Effect.YieldableClass<A, E, R> {
   constructor(effect: Effect.Effect<A, E, R>) {
     super();
     this.effect = effect;
-  }
 
-  asEffect() {
-    return Effect.suspend(() => {
+    this.override = Effect.suspend(() => {
       if (this._fiber) {
         return Fiber.join(this._fiber);
       } else {
@@ -26,8 +25,10 @@ export class MulticastEffect<A, E, R> extends Effect.YieldableClass<A, E, R> {
           ),
         );
       }
-    });
+    })
   }
+
+  readonly override: Effect.Effect<A, E, R>;
 
   interrupt() {
     return Effect.withFiber((fiber) => {

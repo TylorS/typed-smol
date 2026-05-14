@@ -131,6 +131,11 @@ export function Service<Self, A, E = never>() {
       static readonly id = id;
       static readonly service = service;
 
+      static {
+        Object.assign(this, service);
+        Object.assign(this.prototype, Object.getPrototypeOf(service));
+      }
+
       static readonly make = <R = never, R2 = never>(
         onFailure: (cause: Cause.Cause<E>) => Effect<unknown, never, R>,
         onSuccess: (value: A) => Effect<unknown, never, R2>,
@@ -145,11 +150,10 @@ export function Service<Self, A, E = never>() {
           ),
         );
 
-      static readonly onSuccess = (value: A) =>
-        flatMap(service.asEffect(), (sink) => sink.onSuccess(value));
+      static readonly onSuccess = (value: A) => flatMap(service, (sink) => sink.onSuccess(value));
 
       static readonly onFailure = (cause: Cause.Cause<E>) =>
-        flatMap(service.asEffect(), (sink) => sink.onFailure(cause));
+        flatMap(service, (sink) => sink.onFailure(cause));
 
       constructor() {
         return SinkService;

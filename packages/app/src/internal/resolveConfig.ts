@@ -10,6 +10,6 @@ export function resolveConfig<T>(
   def: T,
 ): Effect.Effect<T, Config.ConfigError> {
   if (value === undefined) return Effect.succeed(def);
-  if (Config.isConfig(value)) return value.asEffect();
+  if (Config.isConfig(value)) return value;
   return Effect.succeed(value);
 }

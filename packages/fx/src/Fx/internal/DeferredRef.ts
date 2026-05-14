@@ -1,3 +1,4 @@
+import { Effectable } from "effect";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import type * as Equivalence from "effect/Equivalence";
@@ -14,7 +15,7 @@ import * as Option from "effect/Option";
  *
  * @internal
  */
-export class DeferredRef<E, A> extends Effect.YieldableClass<A, E, never> {
+export class DeferredRef<E, A> extends Effectable.Class<A, E, never> {
   public version!: number;
   public deferred!: Deferred.Deferred<A, E>;
 
@@ -32,10 +33,8 @@ export class DeferredRef<E, A> extends Effect.YieldableClass<A, E, never> {
     this.eq = eq;
     this.current = current;
     this.reset();
-  }
 
-  asEffect() {
-    return Effect.suspend(() => {
+    this.override = Effect.suspend(() => {
       const current = MutableRef.get(this.current);
       if (Option.isNone(current)) {
         return Deferred.await(this.deferred);
@@ -44,6 +43,8 @@ export class DeferredRef<E, A> extends Effect.YieldableClass<A, E, never> {
       }
     });
   }
+
+  readonly override: Effect.Effect<A, E, never>;
 
   done(exit: Exit.Exit<A, E>): boolean {
     const current = MutableRef.get(this.current);

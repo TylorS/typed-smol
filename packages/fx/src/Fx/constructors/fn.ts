@@ -5,11 +5,6 @@ import { unwrap } from "../combinators/unwrap.js";
 import type { Fx } from "../Fx.js";
 import { isFx } from "../TypeId.js";
 
-/** Extract error type from Yieldable (Effect v4 has no Yieldable.Error) */
-type _YieldableError<Y> = Y extends Effect.Yieldable<any, any, infer E, any> ? E : never;
-/** Extract services type from Yieldable (Effect v4 has no Yieldable.Services) */
-type _YieldableServices<Y> = Y extends Effect.Yieldable<any, any, any, infer R> ? R : never;
-
 /**
  * @since 1.0.0
  * @category function
@@ -20,22 +15,18 @@ export namespace fn {
    * @category models
    */
   export type Gen = {
-    <
-      Eff extends Effect.Yieldable<any, any, any, any>,
-      ReturnFx extends Fx.Any,
-      Args extends Array<any>,
-    >(
+    <Eff extends Effect.Effect<any, any, any>, ReturnFx extends Fx.Any, Args extends Array<any>>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, ReturnFx>,
     ): (
       ...args: Args
     ) => Fx<
       Fx.Success<ReturnFx>,
-      Fx.Error<ReturnFx> | _YieldableError<Eff>,
-      Fx.Services<ReturnFx> | _YieldableServices<Eff>
+      Fx.Error<ReturnFx> | Effect.Error<Eff>,
+      Fx.Services<ReturnFx> | Effect.Services<Eff>
     >;
     <
       Self,
-      Eff extends Effect.Yieldable<any, any, any, any>,
+      Eff extends Effect.Effect<any, any, any>,
       ReturnFx extends Fx.Any,
       Args extends Array<any>,
     >(
@@ -45,29 +36,24 @@ export namespace fn {
       ...args: Args
     ) => Fx<
       Fx.Success<ReturnFx>,
-      Fx.Error<ReturnFx> | _YieldableError<Eff>,
-      Fx.Services<ReturnFx> | _YieldableServices<Eff>
+      Fx.Error<ReturnFx> | Effect.Error<Eff>,
+      Fx.Services<ReturnFx> | Effect.Services<Eff>
     >;
 
-    <
-      Eff extends Effect.Yieldable<any, any, any, any>,
-      ReturnFx extends Fx.Any,
-      Args extends Array<any>,
-      A,
-    >(
+    <Eff extends Effect.Effect<any, any, any>, ReturnFx extends Fx.Any, Args extends Array<any>, A>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, ReturnFx>,
       a: (
         _: Fx<
           Fx.Success<ReturnFx>,
-          Fx.Error<ReturnFx> | _YieldableError<Eff>,
-          Fx.Services<ReturnFx> | _YieldableServices<Eff>
+          Fx.Error<ReturnFx> | Effect.Error<Eff>,
+          Fx.Services<ReturnFx> | Effect.Services<Eff>
         >,
         ...args: Args
       ) => A,
     ): (...args: Args) => A;
     <
       Self,
-      Eff extends Effect.Yieldable<any, any, any, any>,
+      Eff extends Effect.Effect<any, any, any>,
       ReturnFx extends Fx.Any,
       Args extends Array<any>,
       A,
@@ -76,15 +62,15 @@ export namespace fn {
       a: (
         _: Fx<
           Fx.Success<ReturnFx>,
-          Fx.Error<ReturnFx> | _YieldableError<Eff>,
-          Fx.Services<ReturnFx> | _YieldableServices<Eff>
+          Fx.Error<ReturnFx> | Effect.Error<Eff>,
+          Fx.Services<ReturnFx> | Effect.Services<Eff>
         >,
         ...args: Args
       ) => A,
     ): (this: Self, ...args: Args) => A;
 
     <
-      Eff extends Effect.Yieldable<any, any, any, any>,
+      Eff extends Effect.Effect<any, any, any>,
       ReturnFx extends Fx.Any,
       Args extends Array<any>,
       A,
@@ -94,8 +80,8 @@ export namespace fn {
       a: (
         _: Fx<
           Fx.Success<ReturnFx>,
-          Fx.Error<ReturnFx> | _YieldableError<Eff>,
-          Fx.Services<ReturnFx> | _YieldableServices<Eff>
+          Fx.Error<ReturnFx> | Effect.Error<Eff>,
+          Fx.Services<ReturnFx> | Effect.Services<Eff>
         >,
         ...args: Args
       ) => A,
@@ -103,7 +89,7 @@ export namespace fn {
     ): (...args: Args) => B;
     <
       Self,
-      Eff extends Effect.Yieldable<any, any, any, any>,
+      Eff extends Effect.Effect<any, any, any>,
       ReturnFx extends Fx.Any,
       Args extends Array<any>,
       A,
@@ -113,8 +99,8 @@ export namespace fn {
       a: (
         _: Fx<
           Fx.Success<ReturnFx>,
-          Fx.Error<ReturnFx> | _YieldableError<Eff>,
-          Fx.Services<ReturnFx> | _YieldableServices<Eff>
+          Fx.Error<ReturnFx> | Effect.Error<Eff>,
+          Fx.Services<ReturnFx> | Effect.Services<Eff>
         >,
         ...args: Args
       ) => A,
@@ -122,7 +108,7 @@ export namespace fn {
     ): (this: Self, ...args: Args) => B;
 
     <
-      Eff extends Effect.Yieldable<any, any, any, any>,
+      Eff extends Effect.Effect<any, any, any>,
       ReturnFx extends Fx.Any,
       Args extends Array<any>,
       A,
@@ -133,8 +119,8 @@ export namespace fn {
       a: (
         _: Fx<
           Fx.Success<ReturnFx>,
-          Fx.Error<ReturnFx> | _YieldableError<Eff>,
-          Fx.Services<ReturnFx> | _YieldableServices<Eff>
+          Fx.Error<ReturnFx> | Effect.Error<Eff>,
+          Fx.Services<ReturnFx> | Effect.Services<Eff>
         >,
         ...args: Args
       ) => A,
@@ -143,7 +129,7 @@ export namespace fn {
     ): (...args: Args) => C;
     <
       Self,
-      Eff extends Effect.Yieldable<any, any, any, any>,
+      Eff extends Effect.Effect<any, any, any>,
       ReturnFx extends Fx.Any,
       Args extends Array<any>,
       A,
@@ -154,8 +140,8 @@ export namespace fn {
       a: (
         _: Fx<
           Fx.Success<ReturnFx>,
-          Fx.Error<ReturnFx> | _YieldableError<Eff>,
-          Fx.Services<ReturnFx> | _YieldableServices<Eff>
+          Fx.Error<ReturnFx> | Effect.Error<Eff>,
+          Fx.Services<ReturnFx> | Effect.Services<Eff>
         >,
         ...args: Args
       ) => A,

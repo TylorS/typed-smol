@@ -12,7 +12,7 @@ export class RandomValues extends Context.Service<RandomValues>()("@typed/id/Ran
   static override readonly call = <A extends Uint8Array>(
     length: A["length"],
   ): Effect.Effect<A, never, RandomValues> =>
-    RandomValues.asEffect().pipe(Effect.flatMap((randomValues) => randomValues(length)));
+    RandomValues.pipe(Effect.flatMap((randomValues) => randomValues(length)));
 
   static readonly Default = Layer.effect(RandomValues, RandomValues.make);
 

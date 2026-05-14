@@ -4,8 +4,8 @@ packages:
   - "packages/*"
 
 catalog:
-  effect: 4.0.0-beta.58
-  "@effect/platform-node": 4.0.0-beta.58
+  effect: 4.0.0-beta.66
+  "@effect/platform-node": 4.0.0-beta.66
   oxlint: 1.64.0
   oxfmt: 0.49.0
   typescript: 6.0.3

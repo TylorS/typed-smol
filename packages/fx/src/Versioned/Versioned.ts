@@ -46,9 +46,7 @@ import * as Subject from "../Subject/Subject.js";
  * @category models
  */
 export interface Versioned<out R1, out E1, out A2, out E2, out R2, out A3, out E3, out R3>
-  extends
-    Fx.Fx<A2, E2, R2>,
-    Effect.Yieldable<Versioned<R1, E1, A2, E2, R2, A3, E3, R3>, A3, E3, R3> {
+  extends Fx.Fx<A2, E2, R2>, Effect.Effect<A3, E3, R3> {
   readonly version: Effect.Effect<number, E1, R1>;
   readonly interrupt: Effect.Effect<void, never, R1>;
 }
@@ -96,7 +94,7 @@ export namespace Versioned {
     readonly make: <R1 = never, R2 = never, R3 = never>(
       version: Effect.Effect<number, E1, R1>,
       fx: Fx.Fx<A2, E2, R2>,
-      effect: Effect.Yieldable<any, A3, E3, R3>,
+      effect: Effect.Effect<A3, E3, R3>,
     ) => Layer.Layer<Self, never, Exclude<R1 | R2 | R3, Scope.Scope>>;
   }
 
@@ -126,9 +124,9 @@ export namespace Versioned {
 export function make<R1, E1, A2, E2, R2, A3, E3, R3>(
   version: Effect.Effect<number, E1, R1>,
   fx: Fx.Fx<A2, E2, R2>,
-  effect: Effect.Yieldable<any, A3, E3, R3>,
+  effect: Effect.Effect<A3, E3, R3>,
 ): Versioned<R1, E1, A2, E2, R2, A3, E3, R3> {
-  return new VersionedImpl(version, fx, effect.asEffect());
+  return new VersionedImpl(version, fx, effect);
 }
 
 class VersionedImpl<R1, E1, A2, E2, R2, A3, E3, R3>
@@ -155,7 +153,7 @@ class VersionedImpl<R1, E1, A2, E2, R2, A3, E3, R3>
   }
 
   toEffect(): Effect.Effect<A3, E3, R3> {
-    return this.effect.asEffect();
+    return this.effect;
   }
 
   interrupt = Effect.suspend(() => this.effect.interrupt());
@@ -222,7 +220,7 @@ export class VersionedTransform<R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4
   }
 
   toEffect(): Effect.Effect<D, E0 | E4, R0 | R4> {
-    const transformed = this._transformEffect(this.input.asEffect());
+    const transformed = this._transformEffect(this.input);
     const update = (v: number) =>
       Effect.tapCause(
         Effect.tap(transformed, (value) =>
@@ -248,7 +246,7 @@ export class VersionedTransform<R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4
       }),
     );
 
-    return multicastEffect.asEffect();
+    return multicastEffect;
   }
 
   interrupt: Effect.Effect<void, never, never> = Effect.suspend(() => {
@@ -431,7 +429,7 @@ export function tuple<
     Effect.map(Effect.all(versioneds.map((v) => v.version)), (versions) => versions.reduce(sum, 0)),
     fxTuple(...versioneds),
     Effect.all(
-      versioneds.map((v) => v.asEffect()),
+      versioneds.map((v) => v),
       { concurrency: "unbounded" },
     ),
   ) as any;
@@ -462,7 +460,7 @@ export function struct<
     ),
     fxStruct(versioneds),
     Effect.all(
-      mapRecord(versioneds, (v) => v.asEffect()),
+      mapRecord(versioneds, (v) => v),
       { concurrency: "unbounded" },
     ) as any,
   );
@@ -480,7 +478,7 @@ export const provide = <R0, E0, A, E, R, B, E2, R2, R3 = never, S = never>(
   return make(
     Effect.provide(versioned.version, layer),
     fxProvide(versioned, layer),
-    Effect.provide(versioned.asEffect(), layer),
+    Effect.provide(versioned, layer),
   );
 };
 
@@ -555,7 +553,7 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
       static readonly make = <R1 = never, R2 = never, R3 = never>(
         version: Effect.Effect<number, E1, R1>,
         fx: Fx.Fx<A2, E2, R2>,
-        effect: Effect.Yieldable<any, A3, E3, R3>,
+        effect: Effect.Effect<A3, E3, R3>,
       ): Layer.Layer<Self, never, Exclude<R1 | R2 | R3, Scope.Scope>> =>
         Layer.effect(
           service,
@@ -564,7 +562,7 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
               make(
                 Effect.provide(version, context),
                 fxprovideContext(fx, context),
-                Effect.provide(effect.asEffect(), context),
+                Effect.provide(effect, context),
               ),
             ),
           ),
@@ -575,17 +573,17 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
         return pipeArguments(this, arguments);
       };
 
-      static readonly version = Effect.flatMap(service.asEffect(), (v) => v.version);
-      static readonly interrupt = Effect.flatMap(service.asEffect(), (v) => v.interrupt);
+      static readonly version = Effect.flatMap(service, (v) => v.version);
+      static readonly interrupt = Effect.flatMap(service, (v) => v.interrupt);
 
       static readonly run = <RSink>(sink: Sink.Sink<A2, E2, RSink>) =>
-        Effect.flatMap(service.asEffect(), (v) => v.run(sink));
+        Effect.flatMap(service, (v) => v.run(sink));
 
       static readonly [Symbol.iterator] = function* () {
         const v = yield* service;
         return yield* v;
       };
-      static readonly asEffect = () => Effect.flatMap(service.asEffect(), (v) => v.asEffect());
+      static readonly asEffect = () => Effect.flatMap(service, (v) => v);
 
       constructor() {
         return VersionedService;

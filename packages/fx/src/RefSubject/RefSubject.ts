@@ -27,7 +27,6 @@ import type { Bounds } from "../Fx/combinators/slice.js";
 import { slice as fxSlice } from "../Fx/combinators/slice.js";
 import { unwrap } from "../Fx/combinators/unwrap.js";
 import { fromEffect as fxFromEffect } from "../Fx/constructors/fromEffect.js";
-import { fromYieldable } from "../Fx/constructors/fromYieldable.js";
 import type { Error as FxError, Fx } from "../Fx/index.js";
 import * as DeferredRef from "../Fx/internal/DeferredRef.js";
 import { getExitEquivalence } from "../Fx/internal/equivalence.js";
@@ -352,14 +351,14 @@ class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
       unwrap(
         Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
-            return fromYieldable(input).pipe(
+            return fxFromEffect(input).pipe(
               continueWith(() => input),
               skipRepeats,
               fxMapEffect(f),
             );
           }
 
-          return fxFromEffect(Effect.flatMap(input.asEffect(), f));
+          return fxFromEffect(Effect.flatMap(input, f));
         }),
       ),
     );
@@ -416,7 +415,7 @@ class FilteredImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
     super(
       input,
       (fx) => fxFilterMapEffect(fx, f) as any,
-      (effect) => Effect.flatMap(Effect.flatMap(effect, f), (option) => option.asEffect()),
+      (effect) => Effect.flatMap(Effect.flatMap(effect, f), Effect.fromOption),
     );
 
     this.input = input;
@@ -426,14 +425,14 @@ class FilteredImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
       unwrap(
         Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
-            return fromYieldable(input).pipe(
+            return fxFromEffect(input).pipe(
               continueWith(() => input),
               skipRepeats,
               fxFilterMapEffect(f),
             );
           }
 
-          return fxCompact(fxFromEffect(Effect.flatMap(input.asEffect(), f)));
+          return fxCompact(fxFromEffect(Effect.flatMap(input, f)));
         }),
       ),
     );
@@ -785,7 +784,7 @@ function makeCore<A, E, R>(
 function makeDeferredCore<A, E = never, R = never>(options?: RefSubjectOptions<A>) {
   return Effect.gen(function* () {
     const deferredRef = yield* DeferredRef.make<E, A>(getExitEquivalence(options?.eq ?? equals));
-    return yield* makeCore<A, E, R>(deferredRef.asEffect(), options, deferredRef);
+    return yield* makeCore<A, E, R>(deferredRef, options, deferredRef);
   });
 }
 
@@ -797,7 +796,7 @@ function getOrInitializeCore<A, E, R, R2>(
     if (core._fiber === undefined && Option.isNone(MutableRef.get(core.deferredRef.current))) {
       return initializeCoreAndTap(core, lockInitialize);
     } else {
-      return core.deferredRef.asEffect();
+      return core.deferredRef;
     }
   });
 }
@@ -824,7 +823,7 @@ function initializeCoreAndTap<A, E, R, R2>(
   lock: boolean,
 ): Effect.Effect<A, E, Exclude<R, R2>> {
   return Effect.flatMapEager(initializeCoreEffect(core, lock), () =>
-    tapEventCore(core, core.deferredRef.asEffect()),
+    tapEventCore(core, core.deferredRef),
   );
 }
 
@@ -1339,6 +1338,11 @@ export function Service<Self, A, E = never>() {
     return class RefSubjectService {
       /// Service
 
+      static {
+        Object.assign(this, service);
+        Object.setPrototypeOf(this, Object.getPrototypeOf(service));
+      }
+
       static readonly id = id;
       static readonly service = service;
 
@@ -1360,33 +1364,30 @@ export function Service<Self, A, E = never>() {
       // Fx
       static readonly [FxTypeId]: Fx.Variance<A, E, Self> = Variance;
       static readonly run = <RSink>(sink: Sink.Sink<A, E, RSink>) =>
-        Effect.flatMap(service.asEffect(), (ref) => ref.run(sink));
+        Effect.flatMap(service, (ref) => ref.run(sink));
 
       // Sink
       static readonly onSuccess = (value: A) =>
-        Effect.flatMap(service.asEffect(), (ref) => ref.onSuccess(value));
+        Effect.flatMap(service, (ref) => ref.onSuccess(value));
       static readonly onFailure = (cause: Cause.Cause<E>) =>
-        Effect.flatMap(service.asEffect(), (ref) => ref.onFailure(cause));
+        Effect.flatMap(service, (ref) => ref.onFailure(cause));
 
       /// Computed
       static readonly [ComputedTypeId]: ComputedTypeId = ComputedTypeId;
-      static readonly version = Effect.flatMap(service.asEffect(), (ref) => ref.version);
+      static readonly version = Effect.flatMap(service, (ref) => ref.version);
 
       // Subject
-      static readonly subscriberCount = Effect.flatMap(
-        service.asEffect(),
-        (ref) => ref.subscriberCount,
-      );
-      static readonly interrupt = Effect.flatMap(service.asEffect(), (ref) => ref.interrupt);
+      static readonly subscriberCount = Effect.flatMap(service, (ref) => ref.subscriberCount);
+      static readonly interrupt = Effect.flatMap(service, (ref) => ref.interrupt);
 
       // RefSubject
       static readonly [RefSubjectTypeId]: RefSubjectTypeId = RefSubjectTypeId;
       static readonly updates = <B, E2, R2>(
         f: (ref: GetSetDelete<A, E, never>) => Effect.Effect<B, E2, R2>,
-      ) => Effect.flatMap(service.asEffect(), (ref) => ref.updates(f));
+      ) => Effect.flatMap(service, (ref) => ref.updates(f));
 
       // Yieldable
-      static readonly asEffect = () => Effect.flatMap(service.asEffect(), Effect.fromYieldable);
+      static override = service;
       static readonly [Symbol.iterator] = function* () {
         const ref = yield* service;
         return yield* ref;
@@ -1876,7 +1877,7 @@ class RefSubjectSimpleTransform<A, E, R, R2, R3>
   }
 
   toEffect(): Effect.Effect<A, E, R | R3> {
-    return this.transformEffect(this.ref.asEffect());
+    return this.transformEffect(this.ref);
   }
 
   updates<E2, R2, C>(
@@ -1939,7 +1940,7 @@ class RefSubjectTransform<A, B, E, R>
   }
 
   toEffect(): Effect.Effect<B, E, R> {
-    return Effect.map(this.ref.asEffect(), this.toB);
+    return Effect.map(this.ref, this.toB);
   }
 
   updates<E2, R2, C>(
@@ -2342,7 +2343,7 @@ class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>
     );
 
     this.getSetDelete = {
-      get: this.versioned.asEffect(),
+      get: this.versioned,
       set: (a) =>
         Effect.all(
           refs.map((r, i) => set(r, a[i])),
@@ -2379,7 +2380,7 @@ class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>
     Effect.Error<Refs[number]>,
     Effect.Services<Refs[number]>
   > {
-    return this.versioned.asEffect();
+    return this.versioned;
   }
 
   updates<E2, R2, C>(
@@ -2496,7 +2497,7 @@ class RefSubjectStruct<const Refs extends Readonly<Record<string, RefSubject.Any
     );
 
     this.getSetDelete = {
-      get: this.versioned.asEffect(),
+      get: this.versioned,
       set: (a) =>
         Effect.all(
           Object.keys(refs).map((k) => set(refs[k] as any, a[k])),
@@ -2523,7 +2524,7 @@ class RefSubjectStruct<const Refs extends Readonly<Record<string, RefSubject.Any
   }
 
   toEffect() {
-    return this.versioned.asEffect();
+    return this.versioned;
   }
 
   updates<E2, R2, C>(
@@ -2597,7 +2598,7 @@ class ComputedFromService<R, A, E, R2>
   }
 
   toEffect(): Effect.Effect<A, E, R | R2> {
-    return Effect.flatMap(this.effect, (c) => c.asEffect());
+    return Effect.flatMap(this.effect, (c) => c);
   }
 }
 
@@ -2631,7 +2632,7 @@ class FilteredFromService<R, A, E, R2>
   }
 
   toEffect(): Effect.Effect<A, E | Cause.NoSuchElementError, R | R2> {
-    return Effect.flatMap(this.effect, (c) => c.asEffect());
+    return Effect.flatMap(this.effect, (c) => c);
   }
 
   asComputed(): Computed<Option.Option<A>, E, R | R2> {

@@ -9,8 +9,8 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
     date: Effect.sync(() => new Date()),
   }),
 }) {
-  static readonly now = Effect.flatMap(DateTimes.asEffect(), ({ now }) => now);
-  static readonly date = Effect.flatMap(DateTimes.asEffect(), ({ date }) => date);
+  static readonly now = Effect.flatMap(DateTimes, ({ now }) => now);
+  static readonly date = Effect.flatMap(DateTimes, ({ date }) => date);
 
   static readonly Default = Layer.effect(DateTimes, DateTimes.make);
 

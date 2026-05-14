@@ -154,7 +154,7 @@ export function Service<Self, A, E = never>() {
       };
 
       static readonly run = <RSink>(sink: Sink.Sink<A, E, RSink>) =>
-        Effect.flatMap(service.asEffect(), (fx) => fx.run(sink));
+        Effect.flatMap(service, (fx) => fx.run(sink));
 
       constructor() {
         return FxService;

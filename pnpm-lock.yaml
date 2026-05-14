@@ -7,14 +7,14 @@ settings:
 catalogs:
   default:
     '@effect/platform-node':
-      specifier: 4.0.0-beta.58
-      version: 4.0.0-beta.58
+      specifier: 4.0.0-beta.66
+      version: 4.0.0-beta.66
     '@vitest/browser-playwright':
       specifier: 4.1.6
       version: 4.1.6
     effect:
-      specifier: 4.0.0-beta.58
-      version: 4.0.0-beta.58
+      specifier: 4.0.0-beta.66
+      version: 4.0.0-beta.66
     happy-dom:
       specifier: 20.9.0
       version: 20.9.0
@@ -67,7 +67,7 @@ importers:
         version: link:../../packages/template
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
     devDependencies:
       '@typed/tsconfig':
         specifier: workspace:*
@@ -101,7 +101,7 @@ importers:
         version: link:../../packages/ui
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
       todomvc-app-css:
         specifier: ^2.4.3
         version: 2.4.3
@@ -129,11 +129,11 @@ importers:
         version: link:../virtual-modules
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
     devDependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.0.0-beta.58(effect@4.0.0-beta.58)(ioredis@5.9.3)
+        version: 4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.9.3)
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx
@@ -154,7 +154,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
     devDependencies:
       typescript:
         specifier: 'catalog:'
@@ -173,7 +173,7 @@ importers:
         version: link:../vite-plugin
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
       oxfmt:
         specifier: '>=0.30.0'
         version: 0.33.0
@@ -189,7 +189,7 @@ importers:
     devDependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.0.0-beta.58(effect@4.0.0-beta.58)(ioredis@5.9.3)
+        version: 4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.9.3)
       '@types/node':
         specifier: ^25.7.0
         version: 25.7.0
@@ -201,7 +201,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
     devDependencies:
       typescript:
         specifier: 'catalog:'
@@ -214,7 +214,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
     devDependencies:
       typescript:
         specifier: 'catalog:'
@@ -227,7 +227,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
     devDependencies:
       typescript:
         specifier: 'catalog:'
@@ -246,7 +246,7 @@ importers:
         version: link:../id
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
     devDependencies:
       typescript:
         specifier: 'catalog:'
@@ -271,7 +271,7 @@ importers:
         version: link:../navigation
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
       find-my-way-ts:
         specifier: 0.1.6
         version: 0.1.6
@@ -299,7 +299,7 @@ importers:
         version: link:../fx
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
       html5parser:
         specifier: 2.0.2
         version: 2.0.2
@@ -324,7 +324,7 @@ importers:
     dependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.0.0-beta.58(effect@4.0.0-beta.58)(ioredis@5.9.3)
+        version: 4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.9.3)
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx
@@ -342,7 +342,7 @@ importers:
         version: link:../template
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
       happy-dom:
         specifier: 'catalog:'
         version: 20.9.0
@@ -415,7 +415,7 @@ importers:
     dependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.0.0-beta.58(effect@4.0.0-beta.58)(ioredis@5.9.3)
+        version: 4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.9.3)
       '@typed/app':
         specifier: workspace:*
         version: link:../../app
@@ -442,7 +442,7 @@ importers:
         version: link:..
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.58
+        version: 4.0.0-beta.66
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -555,11 +555,11 @@ packages:
     peerDependencies:
       effect: ^4.0.0-beta.66
 
-  '@effect/platform-node@4.0.0-beta.58':
-    resolution: {integrity: sha512-lDgj/RXQTbZQAWg/Mkpy04sB6wlWyuC9SGxdqjgKj2tBZFihrSjf90CfRhlbsy2BMk2WNNgZsebEHSqSWgUifQ==}
+  '@effect/platform-node@4.0.0-beta.66':
+    resolution: {integrity: sha512-s/0RgaQFuszzdorRnX1PwEQNnSOi+JgMJo3zEe9O2NR3sosMhTr0Uk+1AF6bUOI9uJ2CPT3KpTIIU7q5/TpOkg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.58
+      effect: ^4.0.0-beta.66
       ioredis: ^5.7.0
 
   '@emnapi/core@1.10.0':
@@ -1982,8 +1982,8 @@ packages:
     resolution: {integrity: sha512-pYxfDYpued//QpnLIm4Avk7rsNtAtQkUES2cwAYSvD/wd2pKD71gN2Ebj3e7klzXwjocvE8c5vx/1fxwpqmSxA==}
     engines: {node: '>=4'}
 
-  effect@4.0.0-beta.58:
-    resolution: {integrity: sha512-ySTFJ4iY54t78lPCAWDQQSdIexhHIxHPXGlk0/hW4vTBTPdfNK7axKzOgfNSxeHMyNcxP43Q7X0SNK0ql206gg==}
+  effect@4.0.0-beta.66:
+    resolution: {integrity: sha512-4arEr62cziFa8BBVDUwJCJJmaVepXf/kRg7KtC0h8+bufngscrHbwWFhr9c+HonwOF+31U3iD3xUJmw9KzX7Dw==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -2899,19 +2899,19 @@ snapshots:
 
   '@blazediff/core@1.9.1': {}
 
-  '@effect/platform-node-shared@4.0.0-beta.66(effect@4.0.0-beta.58)':
+  '@effect/platform-node-shared@4.0.0-beta.66(effect@4.0.0-beta.66)':
     dependencies:
       '@types/ws': 8.18.1
-      effect: 4.0.0-beta.58
+      effect: 4.0.0-beta.66
       ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.0.0-beta.58(effect@4.0.0-beta.58)(ioredis@5.9.3)':
+  '@effect/platform-node@4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.9.3)':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-beta.66(effect@4.0.0-beta.58)
-      effect: 4.0.0-beta.58
+      '@effect/platform-node-shared': 4.0.0-beta.66(effect@4.0.0-beta.66)
+      effect: 4.0.0-beta.66
       ioredis: 5.9.3
       mime: 4.1.0
       undici: 8.2.0
@@ -3900,7 +3900,7 @@ snapshots:
 
   drange@1.1.1: {}
 
-  effect@4.0.0-beta.58:
+  effect@4.0.0-beta.66:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.8.0

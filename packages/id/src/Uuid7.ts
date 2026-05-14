@@ -55,7 +55,7 @@ export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7St
     });
   }),
 }) {
-  static readonly next = Effect.flatten(Uuid7State.asEffect());
+  static readonly next = Effect.flatten(Uuid7State);
 
   static readonly Default = Layer.effect(Uuid7State, Uuid7State.make).pipe(
     Layer.provideMerge([DateTimes.Default, RandomValues.Default]),

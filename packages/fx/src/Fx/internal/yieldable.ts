@@ -4,6 +4,7 @@ import { pipeArguments } from "effect/Pipeable";
 import type { Sink } from "../../Sink/Sink.js";
 import type * as Fx from "../Fx.js";
 import { FxTypeId } from "../TypeId.js";
+import { Effectable } from "effect";
 
 const VARIANCE = {
   _A: identity,
@@ -12,7 +13,7 @@ const VARIANCE = {
 };
 
 export abstract class YieldableFx<A, E, R, B, E2, R2>
-  extends Effect.YieldableClass<B, E2, R2>
+  extends Effectable.Class<B, E2, R2>
   implements Fx.Fx<A, E, R>
 {
   readonly [FxTypeId] = VARIANCE;
@@ -25,7 +26,7 @@ export abstract class YieldableFx<A, E, R, B, E2, R2>
 
   // Memoize the effect
   protected _effect: Effect.Effect<B, E2, R2> | null = null;
-  asEffect(): Effect.Effect<B, E2, R2> {
+  get override(): Effect.Effect<B, E2, R2> {
     return (this._effect ??= this.toEffect());
   }
 }
