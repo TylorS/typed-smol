@@ -1,4 +1,4 @@
-import { DateTime, Effect, Layer, ServiceMap } from "effect";
+import { DateTime, Effect, Layer, Context } from "effect";
 import * as Option from "effect/Option";
 import { Fx } from "@typed/fx";
 import * as Router from "@typed/router";
@@ -50,7 +50,7 @@ const CreateTodo = Layer.sync(
   () => (text: string) =>
     Effect.sync(
       (): Domain.Todo => ({
-        id: Domain.TodoId.makeUnsafe(crypto.randomUUID()),
+        id: Domain.TodoId.make(crypto.randomUUID()),
         text,
         completed: false,
         timestamp: DateTime.makeUnsafe(new Date()),
