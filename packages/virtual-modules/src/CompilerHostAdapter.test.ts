@@ -110,6 +110,40 @@ export const value: Foo = { n: 1 };
     adapter.dispose();
   });
 
+  it("sets virtual source file versions for builder programs", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    writeFileSync(entry, `import type { Foo } from "virtual:foo";`, "utf8");
+
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => `export interface Foo { n: number }`,
+      },
+    ]);
+    const compilerOptions: ts.CompilerOptions = {
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    const adapter = attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+    });
+
+    const program = ts.createProgram([entry], compilerOptions, host);
+    const virtualFile = program.getSourceFiles().find((sf) => sf.fileName.includes("__virtual_"));
+    expect((virtualFile as { readonly version?: string } | undefined)?.version).toBe("1");
+
+    adapter.dispose();
+  });
+
   it("resolves virtual module that imports another virtual module (virtual-to-virtual)", () => {
     const dir = createTempDir();
     const entry = join(dir, "entry.ts");

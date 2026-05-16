@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "test": "pnpm --filter @typed/virtual-modules build && pnpm run build && vitest run --passWithNoTests"
   },
   "dependencies": {
     "@typed/virtual-modules": "workspace:*",

@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   createArtifactPaths,
   createVirtualLogicalIdentity,
@@ -9,7 +9,9 @@ import {
 } from "./ArtifactIdentity.js";
 import {
   createGeneratedSourceHash,
+  createSourceInputFingerprint,
   getNonReusableFingerprintReasons,
+  hashVirtualArtifactContent,
   hashVirtualArtifactJson,
 } from "./ArtifactFingerprint.js";
 import {
@@ -24,7 +26,13 @@ import {
   type VirtualArtifactManifest,
   type VirtualArtifactMessage,
 } from "./ArtifactManifest.js";
-import { createVirtualKey, VIRTUAL_NODE_MODULES_RELATIVE } from "./path.js";
+import {
+  createVirtualKey,
+  createWatchDescriptorKey,
+  pathIsUnderBase,
+  toPosixPath,
+  VIRTUAL_NODE_MODULES_RELATIVE,
+} from "./path.js";
 
 export interface ArtifactStoreFingerprints {
   readonly sourceInputFingerprints?: readonly VirtualArtifactFingerprint[];
@@ -139,6 +147,8 @@ const EMPTY_FINGERPRINTS: Required<ArtifactStoreFingerprints> = {
   ],
 };
 
+const TYPE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".d.ts"] as const;
+
 let atomicWriteCounter = 0;
 
 interface LockOptions {
@@ -194,7 +204,10 @@ const resolveArtifact = (
   return validateManifestHit(
     identity,
     paths,
-    mergeFingerprints(defaults, params.fingerprints),
+    withDependencyFingerprints(
+      mergeFingerprints(defaults, params.fingerprints),
+      manifestResult.manifest.dependencyDescriptors,
+    ),
     manifestResult.manifest,
   );
 };
@@ -210,7 +223,10 @@ const materializeArtifact = (
   const logicalIdentity = resolveIdentity(options, params);
   const paths = createArtifactPaths(projectRoot, logicalIdentity);
   const now = new Date().toISOString();
-  const fingerprints = fingerprintsFromMaterialize(defaults, params);
+  const fingerprints = withDependencyFingerprints(
+    fingerprintsFromMaterialize(defaults, params),
+    params.dependencyDescriptors ?? [],
+  );
   const manifest = createManifest(
     options.pluginName,
     logicalIdentity,
@@ -329,6 +345,127 @@ const flattenFingerprints = (
   ...fingerprints.pluginFingerprints,
   ...fingerprints.compilerFingerprints,
 ];
+
+const withDependencyFingerprints = (
+  fingerprints: Required<ArtifactStoreFingerprints>,
+  descriptors: readonly VirtualArtifactDependencyDescriptor[],
+): Required<ArtifactStoreFingerprints> => ({
+  ...fingerprints,
+  sourceInputFingerprints: [
+    ...fingerprints.sourceInputFingerprints,
+    ...createDependencyFingerprints(descriptors),
+  ],
+});
+
+const createDependencyFingerprints = (
+  descriptors: readonly VirtualArtifactDependencyDescriptor[],
+): readonly VirtualArtifactFingerprint[] =>
+  descriptors.flatMap((descriptor) =>
+    descriptor.type === "file"
+      ? [createSourceInputFingerprint(descriptor.path)]
+      : [createGlobDependencyFingerprint(descriptor)],
+  );
+
+const createGlobDependencyFingerprint = (
+  descriptor: Extract<VirtualArtifactDependencyDescriptor, { readonly type: "glob" }>,
+): VirtualArtifactFingerprint => {
+  const files = listGlobDependencyFiles(descriptor);
+  if (!files.ok) {
+    return {
+      kind: "glob",
+      name: createWatchDescriptorKey(descriptor),
+      unavailableReason: files.reason,
+    };
+  }
+
+  try {
+    return {
+      kind: "glob",
+      name: createWatchDescriptorKey(descriptor),
+      hash: hashVirtualArtifactJson({
+        descriptor,
+        files: files.paths.map((filePath) => ({
+          path: toPosixPath(relative(descriptor.baseDir, filePath)),
+          hash: hashVirtualArtifactContent(readFileSync(filePath)),
+        })),
+      }),
+    };
+  } catch {
+    return {
+      kind: "glob",
+      name: createWatchDescriptorKey(descriptor),
+      unavailableReason: `Unable to read glob dependency: ${createWatchDescriptorKey(descriptor)}`,
+    };
+  }
+};
+
+const listGlobDependencyFiles = (
+  descriptor: Extract<VirtualArtifactDependencyDescriptor, { readonly type: "glob" }>,
+):
+  | { readonly ok: true; readonly paths: readonly string[] }
+  | { readonly ok: false; readonly reason: string } => {
+  try {
+    const baseDir = resolve(descriptor.baseDir);
+    const patterns = expandRecursiveGlobs(descriptor).map(globToRegExp);
+    const files = listFiles(baseDir, descriptor.recursive)
+      .filter((filePath) => pathIsUnderBase(baseDir, filePath))
+      .filter((filePath) => {
+        const relativePath = toPosixPath(relative(baseDir, filePath));
+        return patterns.some((pattern) => pattern.test(relativePath));
+      })
+      .sort();
+    return { ok: true, paths: files };
+  } catch {
+    return {
+      ok: false,
+      reason: `Unable to list glob dependency: ${createWatchDescriptorKey(descriptor)}`,
+    };
+  }
+};
+
+const expandRecursiveGlobs = (
+  descriptor: Extract<VirtualArtifactDependencyDescriptor, { readonly type: "glob" }>,
+): readonly string[] =>
+  descriptor.recursive && descriptor.relativeGlobs.every((glob) => !glob.includes("**"))
+    ? [...descriptor.relativeGlobs, ...descriptor.relativeGlobs.map((glob) => `**/${glob}`)]
+    : descriptor.relativeGlobs;
+
+const listFiles = (baseDir: string, recursive: boolean): readonly string[] => {
+  const entries = readdirSync(baseDir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const entryPath = join(baseDir, entry.name);
+    if (entry.isFile()) return isTypeInfoSourceFile(entryPath) ? [entryPath] : [];
+    return recursive && entry.isDirectory() ? listFiles(entryPath, true) : [];
+  });
+};
+
+const isTypeInfoSourceFile = (filePath: string): boolean =>
+  TYPE_EXTENSIONS.some((extension) => filePath.endsWith(extension));
+
+const globToRegExp = (glob: string): RegExp => {
+  let pattern = "^";
+  for (let index = 0; index < glob.length; index++) {
+    const char = glob[index];
+    const next = glob[index + 1];
+    const afterNext = glob[index + 2];
+    if (char === "*" && next === "*" && afterNext === "/") {
+      pattern += "(?:.*/)?";
+      index += 2;
+    } else if (char === "*" && next === "*") {
+      pattern += ".*";
+      index += 1;
+    } else if (char === "*") {
+      pattern += "[^/]*";
+    } else if (char === "?") {
+      pattern += "[^/]";
+    } else {
+      pattern += escapeRegExp(char ?? "");
+    }
+  }
+  return new RegExp(`${pattern}$`);
+};
+
+const escapeRegExp = (value: string): string => value.replace(/[\\^$+?.()|[\]{}]/g, "\\$&");
 
 const getMissingFingerprintHashReasons = (
   fingerprints: readonly VirtualArtifactFingerprint[],

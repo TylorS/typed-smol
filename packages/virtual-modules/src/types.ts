@@ -468,6 +468,7 @@ export interface NodeModulePluginLoadSuccess {
   readonly status: "loaded";
   readonly plugin: VirtualModulePlugin;
   readonly resolvedPath: string;
+  readonly dependencyPaths: readonly string[];
 }
 
 export interface NodeModulePluginLoadError {
@@ -555,5 +556,6 @@ export interface CompilerHostAdapterOptions {
 }
 
 export interface VirtualModuleAdapterHandle {
+  invalidateAll?(): void;
   dispose(): void;
 }

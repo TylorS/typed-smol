@@ -1,0 +1,13 @@
+# Workflow Memories
+
+- `vmc` CLI integration tests execute `dist/cli.js`; keep `@typed/virtual-modules` and `@typed/virtual-modules-compiler` built before Vitest so CLI assertions do not pass against stale output.
+- `loadResolverFromVmcConfig()` must preserve loaded plugin module metadata (`specifier`, `pluginName`, `resolvedPath`) so compiler artifact fingerprints can invalidate when module code changes without changing `build.toString()`.
+- `vmc --watch` cannot dispose the compiler-host adapter at the end of each `createProgram` call. TypeInfo watch dependencies need the adapter/store alive between rebuilds to mark virtual records stale.
+- TypeScript builder programs require adapter-created virtual `SourceFile`s to carry a stable `.version`; use the virtual record version string.
+- Artifact manifest validation must include dependency descriptors from TypeInfo `api.file()` / `api.directory()`; otherwise out-of-root inputs can reuse stale generated source.
+- Loaded plugin fingerprints must include CommonJS helper modules discovered from the plugin module graph, not just the entry file.
+- Long-lived watch adapters must mark process-local virtual records stale on each rebuild so hot records still re-enter manifest/fingerprint validation.
+- Recursive glob dependency fingerprints must mirror `TypeInfoApi.directory()` semantics: recursive globs without `**` include both the direct pattern and `**/<pattern>`.
+- Watch resolver reload should use a stable resolver proxy so the adapter keeps invalidation state while delegating to freshly loaded plugins after helper/module changes.
+- TypeInfo directory dependency fingerprints should hash only TS-family file extensions (`.ts`, `.tsx`, `.mts`, `.cts`, `.d.ts`), matching `TypeInfoApi.directory()`.
+- `vmc --watch` needs explicit watchers for non-project inputs: the vmc config, config helper modules, loaded plugin entry files, and plugin helper modules. Helper-only changes should trigger `updateRootFileNames()` through the watch handle.

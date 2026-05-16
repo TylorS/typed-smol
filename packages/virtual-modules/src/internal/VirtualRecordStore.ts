@@ -210,6 +210,15 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     }
   };
 
+  const markAllStale = (): void => {
+    for (const record of recordsByKey.values()) {
+      if (!record.stale) {
+        record.stale = true;
+        onMarkStale?.(record);
+      }
+    }
+  };
+
   const storeRecord = (
     record: MutableVirtualRecord,
     previous?: MutableVirtualRecord,
@@ -382,6 +391,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     evictStaleImporters,
     registerWatchers,
     markStale,
+    markAllStale,
     flushPendingStale,
     resolveRecord,
     getOrBuildRecord,

@@ -201,14 +201,32 @@ export const attachCompilerHostAdapter = (
 
   const getSourceTextForRecord = (record: MutableVirtualRecord): string => {
     const fresh = rebuildIfStale(record);
-    if (!hasArtifactStore && record.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
+    if (!hasArtifactStore && fresh.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
       return rewriteSourceForPreviewLocation(
         fresh.sourceText,
         fresh.importer,
-        record.virtualFileName,
+        fresh.virtualFileName,
       );
     }
     return fresh.sourceText;
+  };
+
+  const createSourceFileForRecord = (
+    record: MutableVirtualRecord,
+    fileName: string,
+    languageVersionOrOptions: ts.ScriptTarget | ts.CreateSourceFileOptions,
+  ): ts.SourceFile => {
+    const fresh = rebuildIfStale(record);
+    const sourceText = getSourceTextForRecord(fresh);
+    const sourceFile = options.ts.createSourceFile(
+      fileName,
+      sourceText,
+      languageVersionOrOptions as ts.ScriptTarget,
+      true,
+      options.ts.ScriptKind.TS,
+    );
+    (sourceFile as { version?: string }).version = String(fresh.version);
+    return sourceFile;
   };
 
   host.getSourceFile = (
@@ -227,14 +245,7 @@ export const attachCompilerHostAdapter = (
       );
     }
 
-    const sourceText = getSourceTextForRecord(record);
-    return options.ts.createSourceFile(
-      fileName,
-      sourceText,
-      languageVersionOrOptions as ts.ScriptTarget,
-      true,
-      options.ts.ScriptKind.TS,
-    );
+    return createSourceFileForRecord(record, fileName, languageVersionOrOptions);
   };
 
   if (originalGetSourceFileByPath) {
@@ -256,14 +267,7 @@ export const attachCompilerHostAdapter = (
         );
       }
 
-      const sourceText = getSourceTextForRecord(record);
-      return options.ts.createSourceFile(
-        fileName,
-        sourceText,
-        languageVersionOrOptions as ts.ScriptTarget,
-        true,
-        options.ts.ScriptKind.TS,
-      );
+      return createSourceFileForRecord(record, fileName, languageVersionOrOptions);
     };
   }
 
@@ -296,6 +300,9 @@ export const attachCompilerHostAdapter = (
   }
 
   return {
+    invalidateAll(): void {
+      store.markAllStale();
+    },
     dispose(): void {
       (
         host as { resolveModuleNameLiterals?: (...args: readonly unknown[]) => readonly unknown[] }

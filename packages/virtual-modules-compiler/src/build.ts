@@ -1,18 +1,29 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type * as ts from "typescript";
-import type { TypeTargetSpec, VirtualModuleResolver } from "@typed/virtual-modules";
+import type {
+  LoadedVmcPluginModule,
+  TypeTargetSpec,
+  VirtualModuleResolver,
+} from "@typed/virtual-modules";
 import {
   attachCompilerHostAdapter,
   createTypeInfoApiSessionFactory,
   ensureTypeTargetBootstrapFile,
 } from "@typed/virtual-modules";
+import { createVmcArtifactStoreFactory } from "./artifactStore.js";
 
 function inferProjectRoot(
   sys: ts.System,
+  opts: ts.CompilerOptions | undefined,
   rootNames: readonly string[] | undefined,
   fallback: string,
 ): string {
+  const configFilePath = (opts as { readonly configFilePath?: unknown } | undefined)
+    ?.configFilePath;
+  if (typeof configFilePath === "string" && configFilePath.length > 0) {
+    return dirname(configFilePath);
+  }
   if (rootNames && rootNames.length > 0) {
     return dirname(rootNames[0]);
   }
@@ -23,6 +34,9 @@ export interface BuildParams {
   readonly ts: typeof import("typescript");
   readonly buildCommand: ts.ParsedBuildCommand;
   readonly resolver: VirtualModuleResolver;
+  readonly vmcConfigPath?: string;
+  readonly vmcConfigDependencyPaths?: readonly string[];
+  readonly pluginModules?: readonly LoadedVmcPluginModule[];
   readonly reportDiagnostic: ts.DiagnosticReporter;
   readonly reportSolutionBuilderStatus?: ts.DiagnosticReporter;
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
@@ -36,6 +50,9 @@ export function runBuild(params: BuildParams): number {
     ts,
     buildCommand,
     resolver,
+    vmcConfigPath,
+    vmcConfigDependencyPaths,
+    pluginModules,
     reportDiagnostic,
     reportSolutionBuilderStatus,
     typeTargetSpecs,
@@ -71,7 +88,7 @@ export function runBuild(params: BuildParams): number {
     if (!host) {
       host = ts.createCompilerHost(opts ?? {});
     }
-    const root = inferProjectRoot(sys, rootNames, projectRoot);
+    const root = inferProjectRoot(sys, opts, rootNames, projectRoot);
     let effectiveRootNames = rootNames ?? [];
     if (typeTargetSpecs && typeTargetSpecs.length > 0) {
       const bootstrapPath = ensureTypeTargetBootstrapFile(root, typeTargetSpecs, {
@@ -88,12 +105,24 @@ export function runBuild(params: BuildParams): number {
       program: preliminaryProgram,
       ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
     });
+    const artifactStoreFactory = createVmcArtifactStoreFactory({
+      ts,
+      commandLine: toParsedCommandLine(effectiveRootNames, opts ?? {}, refs),
+      resolver,
+      vmcConfigPath,
+      vmcConfigDependencyPaths,
+      pluginModules,
+      projectRoot: root,
+      rootNames: effectiveRootNames,
+      ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
+    });
     const adapter = attachCompilerHostAdapter({
       ts,
       compilerHost: host,
       resolver,
       projectRoot: root,
       createTypeInfoApiSession,
+      artifactStoreFactory,
       reportDiagnostic,
     });
     try {
@@ -120,6 +149,19 @@ export function runBuild(params: BuildParams): number {
   const builder = ts.createSolutionBuilder(host, projects, buildOptions);
   const exitCode = builder.build();
   return exitCode === ts.ExitStatus.Success ? 0 : 1;
+}
+
+function toParsedCommandLine(
+  rootNames: readonly string[],
+  options: ts.CompilerOptions,
+  refs: readonly ts.ProjectReference[] | undefined,
+): ts.ParsedCommandLine {
+  return {
+    fileNames: [...rootNames],
+    options,
+    projectReferences: refs,
+    errors: [],
+  };
 }
 
 function createDiagnostic(

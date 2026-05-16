@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
+import type { Module } from "node:module";
 import { runInThisContext } from "node:vm";
 import { pathIsUnderBase, resolvePathUnderBase } from "./internal/path.js";
 import { sanitizeErrorMessage } from "./internal/sanitize.js";
@@ -31,7 +32,12 @@ export interface LoadVmcConfigOptions {
 
 export type LoadVmcConfigResult =
   | { readonly status: "not-found" }
-  | { readonly status: "loaded"; readonly path: string; readonly config: VmcConfig }
+  | {
+      readonly status: "loaded";
+      readonly path: string;
+      readonly config: VmcConfig;
+      readonly dependencyPaths: readonly string[];
+    }
   | { readonly status: "error"; readonly path?: string; readonly message: string };
 
 const toMessage = (error: unknown): string => {
@@ -169,7 +175,11 @@ function resolveConfigPath(
   return { status: "not-found" };
 }
 
-function loadTsConfigModule(tsMod: typeof import("typescript"), configPath: string): unknown {
+function loadTsConfigModule(
+  tsMod: typeof import("typescript"),
+  projectRoot: string,
+  configPath: string,
+): { readonly moduleExport: unknown; readonly dependencyPaths: readonly string[] } {
   // vmc config is executable project code.
   const sourceText = readFileSync(configPath, "utf8");
   const transpiled = tsMod.transpileModule(sourceText, {
@@ -184,6 +194,8 @@ function loadTsConfigModule(tsMod: typeof import("typescript"), configPath: stri
   }).outputText;
 
   const localRequire = createRequire(configPath);
+  evictCachedModulesUnderBase(localRequire, projectRoot);
+  const cacheBeforeLoad = new Set(Object.keys(localRequire.cache));
   const module = { exports: {} as unknown };
   const evaluate = runInThisContext(
     `(function (exports, require, module, __filename, __dirname) {${transpiled}\n})`,
@@ -197,7 +209,10 @@ function loadTsConfigModule(tsMod: typeof import("typescript"), configPath: stri
   ) => void;
 
   evaluate(module.exports, localRequire, module, configPath, dirname(configPath));
-  return module.exports;
+  return {
+    moduleExport: module.exports,
+    dependencyPaths: collectLoadedDependencyPaths(localRequire, projectRoot, cacheBeforeLoad),
+  };
 }
 
 function normalizeConfigModule(
@@ -248,30 +263,34 @@ export function loadVmcConfig(options: LoadVmcConfigOptions): LoadVmcConfigResul
     const resolvedPath = resolvedPathOrStatus;
     attemptedPath = resolvedPath;
 
-    const loadedModule = resolvedPath.endsWith(".ts")
+    const loadedModuleResult = resolvedPath.endsWith(".ts")
       ? (() => {
           if (!options.ts) {
             return {
               __vmcConfigLoaderError: "TypeScript module is required to load vmc.config.ts",
             };
           }
-          return loadTsConfigModule(options.ts, resolvedPath);
+          return loadTsConfigModule(options.ts, projectRoot, resolvedPath);
         })()
-      : createRequire(resolvedPath)(resolvedPath);
+      : loadCjsConfigModule(projectRoot, resolvedPath);
 
     if (
-      loadedModule &&
-      typeof loadedModule === "object" &&
-      "__vmcConfigLoaderError" in loadedModule
+      loadedModuleResult &&
+      typeof loadedModuleResult === "object" &&
+      "__vmcConfigLoaderError" in loadedModuleResult
     ) {
       return {
         status: "error",
         path: resolvedPath,
-        message: (loadedModule as { __vmcConfigLoaderError: string }).__vmcConfigLoaderError,
+        message: (loadedModuleResult as { __vmcConfigLoaderError: string }).__vmcConfigLoaderError,
       };
     }
 
-    const normalized = normalizeConfigModule(loadedModule);
+    const loadedModule = loadedModuleResult as {
+      readonly moduleExport: unknown;
+      readonly dependencyPaths: readonly string[];
+    };
+    const normalized = normalizeConfigModule(loadedModule.moduleExport);
     if (!normalized.ok) {
       return {
         status: "error",
@@ -284,6 +303,7 @@ export function loadVmcConfig(options: LoadVmcConfigOptions): LoadVmcConfigResul
       status: "loaded",
       path: resolvedPath,
       config: normalized.config,
+      dependencyPaths: loadedModule.dependencyPaths,
     };
   } catch (error) {
     return {
@@ -293,5 +313,75 @@ export function loadVmcConfig(options: LoadVmcConfigOptions): LoadVmcConfigResul
         `Failed to load vmc config${attemptedPath ? ` "${attemptedPath}"` : ""}: ${toMessage(error)}`,
       ),
     };
+  }
+}
+
+function loadCjsConfigModule(
+  projectRoot: string,
+  configPath: string,
+): { readonly moduleExport: unknown; readonly dependencyPaths: readonly string[] } {
+  const localRequire = createRequire(configPath);
+  evictCachedModulesUnderBase(localRequire, projectRoot);
+  const cacheBeforeLoad = new Set(Object.keys(localRequire.cache));
+  return {
+    moduleExport: localRequire(configPath),
+    dependencyPaths: collectLoadedDependencyPaths(localRequire, projectRoot, cacheBeforeLoad),
+  };
+}
+
+function evictCachedModulesUnderBase(require: NodeJS.Require, baseDir: string): void {
+  for (const cachedPath of Object.keys(require.cache)) {
+    if (isCachePathUnderBase(cachedPath, baseDir)) {
+      delete require.cache[cachedPath];
+    }
+  }
+}
+
+function collectLoadedDependencyPaths(
+  require: NodeJS.Require,
+  baseDir: string,
+  cacheBeforeLoad: ReadonlySet<string>,
+): readonly string[] {
+  const dependencyPaths = new Set<string>();
+
+  for (const loadedPath of Object.keys(require.cache)) {
+    if (!cacheBeforeLoad.has(loadedPath)) {
+      addDependencyPath(loadedPath, baseDir, dependencyPaths);
+      collectModuleGraphPaths(require.cache[loadedPath], baseDir, dependencyPaths);
+    }
+  }
+
+  return [...dependencyPaths].sort();
+}
+
+function collectModuleGraphPaths(
+  module: Module | undefined,
+  baseDir: string,
+  dependencyPaths: Set<string>,
+): void {
+  if (!module) return;
+  for (const child of module.children) {
+    if (dependencyPaths.has(child.filename)) continue;
+    if (addDependencyPath(child.filename, baseDir, dependencyPaths)) {
+      collectModuleGraphPaths(child, baseDir, dependencyPaths);
+    }
+  }
+}
+
+function addDependencyPath(
+  filePath: string,
+  baseDir: string,
+  dependencyPaths: Set<string>,
+): boolean {
+  if (!isCachePathUnderBase(filePath, baseDir)) return false;
+  dependencyPaths.add(filePath);
+  return true;
+}
+
+function isCachePathUnderBase(filePath: string, baseDir: string): boolean {
+  try {
+    return pathIsUnderBase(baseDir, filePath);
+  } catch {
+    return false;
   }
 }

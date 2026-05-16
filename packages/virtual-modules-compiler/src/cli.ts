@@ -30,7 +30,7 @@ const reportDiagnostic: ts.DiagnosticReporter = (diagnostic) => {
   }
 };
 
-function main(): number {
+function main(): number | undefined {
   if (args[0] === "init") {
     const force = args.includes("--force");
     const result = runInit({
@@ -58,11 +58,15 @@ function main(): number {
       return 1;
     }
     const projectRoot = sys.getCurrentDirectory();
-    const { resolver, typeTargetSpecs } = loadResolver(projectRoot);
+    const { resolver, vmcConfigPath, vmcConfigDependencyPaths, pluginModules, typeTargetSpecs } =
+      loadResolver(projectRoot);
     return runBuild({
       ts,
       buildCommand: parsed,
       resolver,
+      vmcConfigPath,
+      vmcConfigDependencyPaths,
+      pluginModules,
       typeTargetSpecs,
       reportDiagnostic,
       reportSolutionBuilderStatus: reportDiagnostic,
@@ -82,13 +86,18 @@ function main(): number {
   }
 
   const projectRoot = sys.getCurrentDirectory();
-  const { resolver, typeTargetSpecs } = loadResolver(projectRoot);
+  const { resolver, vmcConfigPath, vmcConfigDependencyPaths, pluginModules, typeTargetSpecs } =
+    loadResolver(projectRoot);
 
   if (watchIndex >= 0) {
     runWatch({
       ts,
       commandLine,
       resolver,
+      vmcConfigPath,
+      vmcConfigDependencyPaths,
+      pluginModules,
+      reloadResolver: () => loadResolver(projectRoot),
       typeTargetSpecs,
       reportDiagnostic,
       reportWatchStatus: (diag, newLine, _opts, _errorCount) => {
@@ -102,16 +111,22 @@ function main(): number {
         );
       },
     });
-    return 0;
+    return undefined;
   }
 
   return compile({
     ts,
     commandLine,
     resolver,
+    vmcConfigPath,
+    vmcConfigDependencyPaths,
+    pluginModules,
     reportDiagnostic,
     typeTargetSpecs,
   });
 }
 
-process.exit(main());
+const exitCode = main();
+if (typeof exitCode === "number") {
+  process.exit(exitCode);
+}

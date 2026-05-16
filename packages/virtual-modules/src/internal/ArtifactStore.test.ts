@@ -58,8 +58,10 @@ describe("ArtifactStore", () => {
       },
     });
 
-  const materialize = (sourceText = "export const route = '/a';\n") =>
-    createStore().materialize({
+  const materialize = (sourceText = "export const route = '/a';\n") => {
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(join(projectRoot, "src/routes.ts"), "export const routeSource = true;\n", "utf8");
+    return createStore().materialize({
       id: "virtual:routes",
       importer: join(projectRoot, "src/root.ts"),
       sourceText,
@@ -67,6 +69,7 @@ describe("ArtifactStore", () => {
       diagnostics: [{ severity: "info", message: "built routes", source: "typed/app" }],
       warnings: [{ severity: "warning", message: "route metadata is sparse" }],
     });
+  };
 
   it("resolves a missing artifact as a clear cache miss", () => {
     const result = createStore().resolve({
@@ -109,6 +112,70 @@ describe("ArtifactStore", () => {
       diagnostics: [{ severity: "info", message: "built routes", source: "typed/app" }],
       warnings: [{ severity: "warning", message: "route metadata is sparse" }],
     });
+  });
+
+  it("invalidates recursive glob dependencies when a nested file changes", () => {
+    const nestedDir = join(projectRoot, "inputs", "nested");
+    mkdirSync(nestedDir, { recursive: true });
+    writeFileSync(join(nestedDir, "shape.ts"), "export type Shape = number;\n", "utf8");
+    const written = createStore().materialize({
+      id: "virtual:routes",
+      importer: join(projectRoot, "src/root.ts"),
+      sourceText: "export interface Foo { n: number }\n",
+      dependencyDescriptors: [
+        {
+          type: "glob",
+          baseDir: join(projectRoot, "inputs"),
+          relativeGlobs: ["*.ts"],
+          recursive: true,
+        },
+      ],
+    });
+
+    expect(
+      createStore().resolve({
+        id: "virtual:routes",
+        importer: join(projectRoot, "src/root.ts"),
+      }).status,
+    ).toBe("hit");
+
+    writeFileSync(join(nestedDir, "shape.ts"), "export type Shape = string;\n", "utf8");
+    const result = createStore().resolve({
+      id: "virtual:routes",
+      importer: join(projectRoot, "src/root.ts"),
+    });
+
+    expect(result.status).toBe("invalid");
+    expect(result.reason).toBe("fingerprint-mismatch");
+    expect(result.logicalIdentity).toBe(written.logicalIdentity);
+  });
+
+  it("does not fingerprint files ignored by TypeInfo recursive directory queries", () => {
+    const inputDir = join(projectRoot, "inputs");
+    mkdirSync(inputDir, { recursive: true });
+    writeFileSync(join(inputDir, "shape.ts"), "export type Shape = number;\n", "utf8");
+    writeFileSync(join(inputDir, "ignored.json"), '{ "shape": "number" }\n', "utf8");
+    createStore().materialize({
+      id: "virtual:routes",
+      importer: join(projectRoot, "src/root.ts"),
+      sourceText: "export interface Foo { n: number }\n",
+      dependencyDescriptors: [
+        {
+          type: "glob",
+          baseDir: inputDir,
+          relativeGlobs: ["*"],
+          recursive: true,
+        },
+      ],
+    });
+
+    writeFileSync(join(inputDir, "ignored.json"), '{ "shape": "string" }\n', "utf8");
+    const result = createStore().resolve({
+      id: "virtual:routes",
+      importer: join(projectRoot, "src/root.ts"),
+    });
+
+    expect(result.status).toBe("hit");
   });
 
   it("treats corrupt manifests as invalid without throwing", () => {
