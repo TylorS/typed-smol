@@ -16,6 +16,7 @@ import {
   resolveRouterTargetDirectory,
   ROUTER_TYPE_TARGET_SPECS,
 } from "./index.js";
+import { typeCheckGeneratedSource } from "./test-utils/generatedSourceHarness.js";
 const tempDirs: string[] = [];
 
 const createTempDir = (): string => {
@@ -313,6 +314,35 @@ describe("RouterVirtualModulePlugin", () => {
 
     const plugin = createRouterVirtualModulePlugin();
     expect(plugin.shouldResolve("router:./routes", importer)).toBe(false);
+  });
+
+  it("type-checks a generated Router virtual module source fixture", () => {
+    const fixture = createFixture({
+      "src/routes/home.ts": route("/", "export const handler = 1;"),
+    });
+    const plugin = createRouterVirtualModulePlugin();
+    const files =
+      existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
+        ? [...fixture.paths, BOOTSTRAP_FILE]
+        : fixture.paths;
+    const program = makeProgram(files, files.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root);
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+    });
+    const source = plugin.build("router:./routes", fixture.importer, session.api);
+
+    expect(typeof source).toBe("string");
+    if (typeof source !== "string") return;
+    const result = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/router.generated.ts",
+      sourceText: source,
+      rootFiles: fixture.paths,
+      moduleFallbacks: MODULE_FALLBACKS,
+    });
+    expect(result.diagnostics).toEqual([]);
   });
 
   it("build returns deterministic scaffold source", () => {

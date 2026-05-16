@@ -64,12 +64,19 @@ Status: approved.
 
 ### Task 1: Generated Source Type-Check Harness
 
+Status: completed.
+
+Detailed execution notes:
+- Keep the helper behavior-only: write generated source into an existing fixture root, add it to the program root files, and return flattened diagnostics.
+- Use one fixture root for both plugin build and generated-source type-checking so relative generated imports resolve to the files that produced the source.
+- Add the first Router smoke as a red test for the missing helper before creating `packages/app/src/test-utils/generatedSourceHarness.ts`.
+
 **Files:**
 - Create: `packages/app/src/test-utils/generatedSourceHarness.ts`
 - Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 
-- [ ] **Step 1: Write the failing harness smoke test**
+- [x] **Step 1: Write the failing harness smoke test**
 
 Add a minimal test in `RouterVirtualModulePlugin.test.ts` that calls a new helper:
 
@@ -94,7 +101,7 @@ it("type-checks a generated Router virtual module source fixture", () => {
 });
 ```
 
-- [ ] **Step 2: Run the failing test**
+- [x] **Step 2: Run the failing test**
 
 Run:
 
@@ -104,7 +111,7 @@ pnpm --filter @typed/app test -- src/RouterVirtualModulePlugin.test.ts -t "type-
 
 Expected: fail because `typeCheckGeneratedSource` does not exist.
 
-- [ ] **Step 3: Implement the helper**
+- [x] **Step 3: Implement the helper**
 
 Create `packages/app/src/test-utils/generatedSourceHarness.ts` with:
 
@@ -180,11 +187,11 @@ export function typeCheckGeneratedSource(
 }
 ```
 
-- [ ] **Step 4: Run the harness smoke test**
+- [x] **Step 4: Run the harness smoke test**
 
 Run the same command. Expected: pass, or fail with real generated-source diagnostics that become Task 2 input.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/app/src/test-utils/generatedSourceHarness.ts packages/app/src/RouterVirtualModulePlugin.test.ts
