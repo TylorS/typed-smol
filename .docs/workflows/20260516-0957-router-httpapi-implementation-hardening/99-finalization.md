@@ -15,6 +15,7 @@
 - `pnpm --filter @typed/app test` passed: 9 test files, 210 tests, no type errors.
 - `pnpm build` passed across workspace packages and examples.
 - `pnpm test` passed across workspace packages, including `@typed/app`: 9 test files, 210 tests, no type errors.
+- PR opened: https://github.com/TylorS/typed-smol/pull/3
 
 ## Scenario Evidence
 

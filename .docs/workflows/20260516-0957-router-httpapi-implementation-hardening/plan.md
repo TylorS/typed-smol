@@ -529,7 +529,7 @@ git add .docs/workflows/20260516-0957-router-httpapi-implementation-hardening/99
 git commit -m "docs(app): finalize router httpapi hardening workflow" -m "- record verification evidence and remaining deferrals"
 ```
 
-- [ ] **Step 5: Push and create PR**
+- [x] **Step 5: Push and create PR**
 
 Use the GitHub finalization flow after checking `git status --short --branch`.
 

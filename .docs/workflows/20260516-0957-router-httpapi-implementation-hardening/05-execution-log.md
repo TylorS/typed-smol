@@ -135,6 +135,7 @@ Task 1 added a reusable generated-source TypeScript compiler harness for virtual
   - workspace: `pnpm build` passed
   - workspace: `pnpm test` passed
 - commit: `docs(app): finalize router httpapi hardening workflow`
+- pull_request: https://github.com/TylorS/typed-smol/pull/3
 - deviations_or_replans:
   - broader workspace verification was run because durable workflow/spec docs changed outside `packages/app`
   - root build emitted existing Vite/lightningcss warnings, but exited successfully
