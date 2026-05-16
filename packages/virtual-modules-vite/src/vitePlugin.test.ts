@@ -1,10 +1,41 @@
-import { describe, expect, it } from "vitest";
-import { PluginManager } from "@typed/virtual-modules";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  createPluginConfigFingerprint,
+  createSourceInputFingerprint,
+  createVirtualArtifactStore,
+  PluginManager,
+  type ArtifactStoreFingerprints,
+} from "@typed/virtual-modules";
 import { encodeVirtualId } from "./encodeVirtualId.js";
 import { virtualModulesVitePlugin } from "./vitePlugin.js";
 
 type ResolveId = (specifier: string, importer: string | undefined) => string | null;
 type Load = (specifier: string) => string | { code: string } | null;
+
+const tempDirs: string[] = [];
+
+const createTempDir = (): string => {
+  const dir = mkdtempSync(join(tmpdir(), "virtual-modules-vite-"));
+  tempDirs.push(dir);
+  return dir;
+};
+
+const createCacheFingerprints = (): ArtifactStoreFingerprints => ({
+  pluginFingerprints: [createPluginConfigFingerprint("vite-test-plugin", { version: 1 })],
+  compilerFingerprints: [createPluginConfigFingerprint("vite-test-compiler", { version: 1 })],
+});
+
+afterEach(() => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
 
 describe("virtualModulesVitePlugin", () => {
   it("returns a plugin with name and enforce pre", () => {
@@ -58,6 +89,185 @@ describe("virtualModulesVitePlugin", () => {
     const result = load(resolvedId);
     const code = typeof result === "string" ? result : result?.code;
     expect(code).toBe("export const x = 1;");
+  });
+
+  it("load returns persisted artifact hits without running plugin build", () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { value } from "virtual:cached";', "utf8");
+    const fingerprints = createCacheFingerprints();
+    const artifactStore = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "cached",
+      fingerprints,
+    });
+    artifactStore.materialize({
+      id: "virtual:cached",
+      importer,
+      sourceText: 'export const value = "from-artifact";',
+      sourceInputFingerprints: [createSourceInputFingerprint(importer)],
+    });
+    let buildCount = 0;
+    const manager = new PluginManager([
+      {
+        name: "cached",
+        shouldResolve: (id) => id === "virtual:cached",
+        build: () => {
+          buildCount += 1;
+          throw new Error("artifact hit should not rebuild");
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({
+      resolver: manager,
+      projectRoot,
+      artifactStore: { fingerprints },
+    });
+    const resolveId = plugin.resolveId! as ResolveId;
+    const load = plugin.load! as Load;
+
+    const resolvedId = resolveId("virtual:cached", importer) as string;
+    expect(resolvedId).toBe(encodeVirtualId("virtual:cached", importer));
+    const result = load(resolvedId);
+    const code = typeof result === "string" ? result : result?.code;
+
+    expect(code).toBe('export const value = "from-artifact";');
+    expect(buildCount).toBe(0);
+  });
+
+  it("load rebuilds missing artifacts and persists the generated source", () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { value } from "virtual:fresh";', "utf8");
+    const fingerprints = createCacheFingerprints();
+    let buildCount = 0;
+    const manager = new PluginManager([
+      {
+        name: "fresh",
+        shouldResolve: (id) => id === "virtual:fresh",
+        build: () => {
+          buildCount += 1;
+          return 'export const value = "from-build";';
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({
+      resolver: manager,
+      projectRoot,
+      artifactStore: { fingerprints },
+    });
+    const load = plugin.load! as Load;
+    const resolvedId = encodeVirtualId("virtual:fresh", importer);
+
+    const first = load(resolvedId);
+    const firstCode = typeof first === "string" ? first : first?.code;
+    const store = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "fresh",
+      fingerprints,
+    });
+    const artifact = store.resolve({
+      id: "virtual:fresh",
+      importer,
+      fingerprints: {
+        sourceInputFingerprints: [createSourceInputFingerprint(importer)],
+      },
+    });
+
+    expect(firstCode).toBe('export const value = "from-build";');
+    expect(buildCount).toBe(1);
+    expect(artifact.status).toBe("hit");
+    expect(artifact.status === "hit" ? artifact.sourceText : "").toBe(
+      'export const value = "from-build";',
+    );
+  });
+
+  it("load rebuilds invalid artifacts before returning source", () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { value } from "virtual:stale";', "utf8");
+    const fingerprints = createCacheFingerprints();
+    const store = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "stale",
+      fingerprints,
+    });
+    const materialized = store.materialize({
+      id: "virtual:stale",
+      importer,
+      sourceText: 'export const value = "old";',
+      sourceInputFingerprints: [createSourceInputFingerprint(importer)],
+    });
+    writeFileSync(materialized.paths.sourcePath, 'export const value = "tampered";', "utf8");
+    let buildCount = 0;
+    const manager = new PluginManager([
+      {
+        name: "stale",
+        shouldResolve: (id) => id === "virtual:stale",
+        build: () => {
+          buildCount += 1;
+          return 'export const value = "rebuilt";';
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({
+      resolver: manager,
+      projectRoot,
+      artifactStore: { fingerprints },
+    });
+    const load = plugin.load! as Load;
+
+    const result = load(encodeVirtualId("virtual:stale", importer));
+    const code = typeof result === "string" ? result : result?.code;
+    const artifact = store.resolve({
+      id: "virtual:stale",
+      importer,
+      fingerprints: {
+        sourceInputFingerprints: [createSourceInputFingerprint(importer)],
+      },
+    });
+
+    expect(code).toBe('export const value = "rebuilt";');
+    expect(buildCount).toBe(1);
+    expect(artifact.status === "hit" ? artifact.sourceText : "").toBe(
+      'export const value = "rebuilt";',
+    );
+  });
+
+  it("load fails closed without explicit Vite plugin fingerprints", () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { value } from "virtual:dynamic";', "utf8");
+    let buildCount = 0;
+    const manager = new PluginManager([
+      {
+        name: "dynamic",
+        shouldResolve: (id) => id === "virtual:dynamic",
+        build: () => {
+          buildCount += 1;
+          return `export const value = ${buildCount};`;
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({
+      resolver: manager,
+      projectRoot,
+    });
+    const load = plugin.load! as Load;
+    const resolvedId = encodeVirtualId("virtual:dynamic", importer);
+
+    const first = load(resolvedId);
+    const second = load(resolvedId);
+    const firstCode = typeof first === "string" ? first : first?.code;
+    const secondCode = typeof second === "string" ? second : second?.code;
+
+    expect(firstCode).toBe("export const value = 1;");
+    expect(secondCode).toBe("export const value = 2;");
+    expect(buildCount).toBe(2);
   });
 
   it("resolveId with encoded virtual id as importer resolves virtual-to-virtual import", () => {

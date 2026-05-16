@@ -231,6 +231,29 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - Watch mode installs extra file watchers for loaded vmc config, config helper modules, plugin entry files, and plugin helper modules; helper-only changes invalidate virtual records, reload config/plugins, and trigger a watch rebuild without touching project TS roots.
 - memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
 
+### T8 — Vite Integration
+
+- task_id: T8
+- requirement_ids: FR-2, FR-6, FR-9, FR-11, FR-12, FR-13, NFR-1, NFR-5, NFR-6, NFR-8, AC-8, AC-11, AC-13, AC-14
+- validation_evidence:
+  - Routing: implementation delegated to worker `019e2f20-3a7d-7db0-8e56-ade4a368f681` for the Vite package files and execution log; parent review handled final correctness adjustments and local validation.
+  - Red: `pnpm --filter @typed/virtual-modules-vite test` failed after adding artifact-store tests, with `Test Files 2 failed | 1 passed (3)` and `Tests 3 failed | 9 passed (12)`. Failures proved `resolveId()` still ran plugin `build()` instead of using `resolvePluginName()`, `load()` did not materialize missing artifacts, and the Vite dev-server path did not write `node_modules/.typed/virtual/index.json`.
+  - Green: `pnpm --filter @typed/virtual-modules-vite test`; passed with `Test Files 3 passed (3)`, `Tests 14 passed (14)`.
+  - `pnpm --filter @typed/virtual-modules-vite build`; exit 0.
+  - `pnpm exec oxfmt --check packages/virtual-modules-vite/src/vitePlugin.ts packages/virtual-modules-vite/src/vitePlugin.test.ts packages/virtual-modules-vite/src/vitePlugin.integration.test.ts`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules-vite/src/vitePlugin.ts packages/virtual-modules-vite/src/vitePlugin.test.ts packages/virtual-modules-vite/src/vitePlugin.integration.test.ts`; 0 warnings, 0 errors.
+  - `git diff --check`; exit 0.
+- deviations_or_replans:
+  - Added explicit invalid-artifact source-hash mismatch coverage in addition to the planned missing-artifact rebuild and cache-hit tests.
+  - Kept Vite `resolveId()` returning `encodeVirtualId(id, effectiveImporter)`; artifact paths remain behind `load()`.
+  - TypeInfo-backed Vite cache reuse fails closed by default because Vite does not expose a trustworthy compiler fingerprint through `createTypeInfoApiSession`; callers can supply explicit `artifactStore.fingerprints.compilerFingerprints` when they own that data.
+- context_updates:
+  - `virtualModulesVitePlugin()` now accepts optional `projectRoot` and `artifactStore` controls, derives `projectRoot` from `configResolved.root`, and defaults artifact materialization under `node_modules/.typed/virtual`.
+  - `resolveId()` uses `resolver.resolvePluginName()` when available to avoid pre-load plugin builds while preserving the existing fallback for resolvers without that method.
+  - `load()` checks the shared artifact store before plugin build, rebuilds/materializes missing or invalid artifacts, and returns persisted artifact source on valid fingerprint hits.
+  - Vite artifact fingerprints include the effective real importer source file per request and supplied/static artifact-store fingerprints when provided; plugin and TypeInfo compiler fingerprints fail closed when Vite cannot safely derive them.
+- memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
+
 ## Deferred Work
 
 - Adapter migration starts only after T1 through T5 are committed and passing.

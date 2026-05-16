@@ -11,3 +11,4 @@
 - Watch resolver reload should use a stable resolver proxy so the adapter keeps invalidation state while delegating to freshly loaded plugins after helper/module changes.
 - TypeInfo directory dependency fingerprints should hash only TS-family file extensions (`.ts`, `.tsx`, `.mts`, `.cts`, `.d.ts`), matching `TypeInfoApi.directory()`.
 - `vmc --watch` needs explicit watchers for non-project inputs: the vmc config, config helper modules, loaded plugin entry files, and plugin helper modules. Helper-only changes should trigger `updateRootFileNames()` through the watch handle.
+- Vite cannot safely infer plugin/config fingerprints from preloaded plugin function source. Default Vite artifact reads should fail closed and rebuild unless a host passes explicit `artifactStore.fingerprints.pluginFingerprints`.

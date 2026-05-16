@@ -1,9 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  parseVirtualArtifactIndex,
   createTypeInfoApiSession,
   PluginManager,
   type VirtualModulePlugin,
@@ -116,6 +117,15 @@ describe("virtualModulesVitePlugin integration", () => {
       expect(virtualRes.ok).toBe(true);
       const virtualText = await virtualRes.text();
       expect(virtualText).toContain("from-virtual");
+      const indexPath = join(projectRoot, "node_modules", ".typed", "virtual", "index.json");
+      expect(existsSync(indexPath)).toBe(true);
+      const index = parseVirtualArtifactIndex(JSON.parse(readFileSync(indexPath, "utf8")));
+      expect(index.ok).toBe(true);
+      const artifactEntry = index.ok ? Object.values(index.index.artifacts)[0] : undefined;
+      expect(artifactEntry?.generatedSourcePath).toContain(
+        join(projectRoot, "node_modules", ".typed", "virtual"),
+      );
+      expect(readFileSync(artifactEntry!.generatedSourcePath, "utf8")).toContain("from-virtual");
       await server.waitForRequestsIdle();
     } finally {
       await server.close();

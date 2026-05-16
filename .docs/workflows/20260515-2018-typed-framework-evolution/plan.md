@@ -158,10 +158,15 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 - Modify: `packages/virtual-modules-vite/src/vitePlugin.test.ts`
 - Modify: `packages/virtual-modules-vite/src/vitePlugin.integration.test.ts`
 
-- [ ] Add failing Vite tests proving `resolveId`/`load` use artifact-store output for unchanged fingerprints.
-- [ ] Run `pnpm --filter @typed/virtual-modules-vite test`; expected targeted failure.
-- [ ] Add `projectRoot`/artifact-store setup to the Vite plugin without changing user-facing virtual ids.
-- [ ] Run the package test command again; expected pass.
+- [ ] Add failing Vite unit tests proving `load()` reads a persisted artifact hit without re-running plugin `build()` when fingerprints match.
+- [ ] Add failing Vite integration coverage proving dev-server virtual module content is materialized under `node_modules/.typed/virtual` while `resolveId()` still returns the existing encoded Vite id.
+- [ ] Run `pnpm --filter @typed/virtual-modules-vite test`; expected targeted failure before artifact-store wiring.
+- [ ] Add `projectRoot`/artifact-store setup to the Vite plugin without changing user-facing virtual ids or Vite's encoded virtual id transport.
+- [ ] Use the same core artifact-store correctness model as vmc for source roots, TypeInfo dependency descriptors, plugin/config/compiler inputs where the Vite surface has enough information; fail closed or rebuild when fingerprints are unavailable.
+- [ ] Preserve nested virtual importer decoding and TypeInfo API behavior.
+- [ ] Run `pnpm --filter @typed/virtual-modules-vite test`; expected pass.
+- [ ] Run `pnpm --filter @typed/virtual-modules-vite build`; expected pass.
+- [ ] Run targeted formatting/lint checks for changed Vite files.
 - [ ] Commit with `feat: use virtual artifact store in vite`.
 
 ### T9: Cross-Surface Reuse Fixture
