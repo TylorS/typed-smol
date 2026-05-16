@@ -115,6 +115,7 @@ export const attachLanguageServiceAdapter = (
   let inResolution = false;
   let inResolveRecord = false;
   let pendingRetry = false;
+  const hasArtifactStore = options.artifactStoreFactory !== undefined;
 
   const originalGetScriptFileNames = host.getScriptFileNames?.bind(host);
   const originalResolveModuleNameLiterals = host.resolveModuleNameLiterals?.bind(host);
@@ -134,8 +135,26 @@ export const attachLanguageServiceAdapter = (
   const addDiagnosticForFile = (filePath: string, message: string): void => {
     const diagnostic = toTsDiagnostic(options.ts, message);
     const diagnostics = diagnosticsByFile.get(filePath) ?? [];
+    if (
+      diagnostics.some(
+        (existing) => existing.code === diagnostic.code && existing.messageText === message,
+      )
+    ) {
+      return;
+    }
     diagnostics.push(diagnostic);
     diagnosticsByFile.set(filePath, diagnostics);
+  };
+
+  const addResolutionDiagnostic = (
+    containingFile: string,
+    importerForVirtual: string,
+    message: string,
+  ): void => {
+    addDiagnosticForFile(containingFile, message);
+    if (importerForVirtual !== containingFile) {
+      addDiagnosticForFile(importerForVirtual, message);
+    }
   };
 
   const clearDiagnosticsForFile = (filePath: string): void => {
@@ -146,13 +165,18 @@ export const attachLanguageServiceAdapter = (
     projectRoot: options.projectRoot,
     resolver: options.resolver,
     createTypeInfoApiSession: options.createTypeInfoApiSession,
+    artifactStoreFactory: options.artifactStoreFactory,
     debounceMs: options.debounceMs,
     watchHost,
     shouldEvictRecord: (record) => {
       const currentFiles = new Set(originalGetScriptFileNames ? originalGetScriptFileNames() : []);
       return !currentFiles.has(record.importer);
     },
+    shouldReuseRecord: options.shouldReuseRecord,
     onFlushStale: () => {
+      epoch += 1;
+    },
+    onMarkStale: () => {
       epoch += 1;
     },
     onBeforeResolve: () => {
@@ -166,7 +190,7 @@ export const attachLanguageServiceAdapter = (
     },
     onEvictRecord: (record) => {
       clearDiagnosticsForFile(record.importer);
-      if (record.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
+      if (!hasArtifactStore && record.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
         try {
           unlinkSync(record.virtualFileName);
         } catch {
@@ -197,26 +221,31 @@ export const attachLanguageServiceAdapter = (
   };
 
   const rebuildRecordIfNeeded = (record: MutableVirtualRecord): MutableVirtualRecord => {
-    if (!record.stale) {
-      return record;
+    const currentRecord = store.validateRecordForReuse(record);
+    if (!currentRecord.stale) {
+      return currentRecord;
     }
 
-    const rebuilt = store.resolveRecord(record.id, record.importer, record);
+    const rebuilt = store.resolveRecord(currentRecord.id, currentRecord.importer, currentRecord);
     if (rebuilt.status === "resolved") {
-      clearDiagnosticsForFile(record.importer);
+      clearDiagnosticsForFile(currentRecord.importer);
       return rebuilt.record;
     }
 
     if (rebuilt.status === "error") {
-      const diagnostic = toTsDiagnostic(
-        options.ts,
+      addDiagnosticForFile(
+        currentRecord.importer,
         `Virtual module rebuild failed: ${rebuilt.diagnostic.message}`,
       );
-      const diagnostics = diagnosticsByFile.get(record.importer) ?? [];
-      diagnostics.push(diagnostic);
-      diagnosticsByFile.set(record.importer, diagnostics);
     }
-    return record;
+    return currentRecord;
+  };
+
+  const refreshKnownRecordsBeforeDiagnostics = (): void => {
+    const records = Array.from(store.recordsByKey.values());
+    for (const record of records) {
+      rebuildRecordIfNeeded(record);
+    }
   };
 
   const fallbackResolveModule = (
@@ -286,10 +315,10 @@ export const attachLanguageServiceAdapter = (
           }
         }
       } else {
-        const virtualRecord = recordsByVirtualFile.get(containingFile);
-        if (virtualRecord) {
-          effectiveContainingFile = virtualRecord.virtualFileName;
-          importerForVirtual = store.resolveEffectiveImporter(containingFile);
+        const effectiveImporter = store.resolveEffectiveImporter(containingFile);
+        if (effectiveImporter !== containingFile) {
+          effectiveContainingFile = containingFile;
+          importerForVirtual = effectiveImporter;
         }
       }
 
@@ -317,7 +346,7 @@ export const attachLanguageServiceAdapter = (
 
         if (resolved.status === "error") {
           hadVirtualError = true;
-          addDiagnosticForFile(containingFile, resolved.diagnostic.message);
+          addResolutionDiagnostic(containingFile, importerForVirtual, resolved.diagnostic.message);
           if (resolved.diagnostic.code === "re-entrant-resolution") {
             return undefined;
           }
@@ -382,10 +411,10 @@ export const attachLanguageServiceAdapter = (
           }
         }
       } else {
-        const virtualRecord = recordsByVirtualFile.get(containingFile);
-        if (virtualRecord) {
-          effectiveContainingFile = virtualRecord.virtualFileName;
-          importerForVirtual = store.resolveEffectiveImporter(containingFile);
+        const effectiveImporter = store.resolveEffectiveImporter(containingFile);
+        if (effectiveImporter !== containingFile) {
+          effectiveContainingFile = containingFile;
+          importerForVirtual = effectiveImporter;
         }
       }
 
@@ -420,7 +449,7 @@ export const attachLanguageServiceAdapter = (
 
         if (resolved.status === "error") {
           hadVirtualError = true;
-          addDiagnosticForFile(containingFile, resolved.diagnostic.message);
+          addResolutionDiagnostic(containingFile, importerForVirtual, resolved.diagnostic.message);
           if (resolved.diagnostic.code === "re-entrant-resolution") {
             return fallback[index];
           }
@@ -468,7 +497,7 @@ export const attachLanguageServiceAdapter = (
 
     let sourceToServe = freshRecord.sourceText;
     const isNodeModulesPath = fileName.includes(VIRTUAL_NODE_MODULES_RELATIVE);
-    if (isNodeModulesPath) {
+    if (!hasArtifactStore && isNodeModulesPath) {
       sourceToServe = rewriteSourceForPreviewLocation(
         freshRecord.sourceText,
         freshRecord.importer,
@@ -508,7 +537,7 @@ export const attachLanguageServiceAdapter = (
         }
       }
       if (!record) return originalGetScriptVersion(fileName);
-      return String(record.version);
+      return String(rebuildRecordIfNeeded(record).version);
     };
   }
 
@@ -556,6 +585,7 @@ export const attachLanguageServiceAdapter = (
   };
 
   options.languageService.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] => {
+    refreshKnownRecordsBeforeDiagnostics();
     const diagnostics = originalGetSemanticDiagnostics(fileName);
     const adapterDiagnostics = diagnosticsByFile.get(fileName);
     if (!adapterDiagnostics || adapterDiagnostics.length === 0) {
@@ -567,6 +597,7 @@ export const attachLanguageServiceAdapter = (
   options.languageService.getSyntacticDiagnostics = (
     fileName: string,
   ): ts.DiagnosticWithLocation[] => {
+    refreshKnownRecordsBeforeDiagnostics();
     const diagnostics = originalGetSyntacticDiagnostics(fileName);
     const adapterDiagnostics = diagnosticsByFile.get(fileName);
     if (!adapterDiagnostics || adapterDiagnostics.length === 0) {
@@ -580,12 +611,14 @@ export const attachLanguageServiceAdapter = (
 
   return {
     dispose(): void {
-      for (const [virtualPath] of recordsByVirtualFile) {
-        if (virtualPath.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
-          try {
-            unlinkSync(virtualPath);
-          } catch {
-            /* ignore */
+      if (!hasArtifactStore) {
+        for (const [virtualPath] of recordsByVirtualFile) {
+          if (virtualPath.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
+            try {
+              unlinkSync(virtualPath);
+            } catch {
+              /* ignore */
+            }
           }
         }
       }

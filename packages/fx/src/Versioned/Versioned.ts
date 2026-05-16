@@ -550,6 +550,11 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
       static readonly id = id;
       static readonly service = service;
 
+      static {
+        Object.assign(this, service);
+        Object.assign(this.prototype, Object.getPrototypeOf(service));
+      }
+
       static readonly make = <R1 = never, R2 = never, R3 = never>(
         version: Effect.Effect<number, E1, R1>,
         fx: Fx.Fx<A2, E2, R2>,
@@ -579,12 +584,12 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
       static readonly run = <RSink>(sink: Sink.Sink<A2, E2, RSink>) =>
         Effect.flatMap(service, (v) => v.run(sink));
 
+      static readonly override = service;
       static readonly [Symbol.iterator] = function* () {
         const v = yield* service;
         return yield* v;
       };
-      static readonly asEffect = () => Effect.flatMap(service, (v) => v);
-
+    
       constructor() {
         return VersionedService;
       }

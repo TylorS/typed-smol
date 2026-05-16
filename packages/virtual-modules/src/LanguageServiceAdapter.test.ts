@@ -1,13 +1,19 @@
 /// <reference types="node" />
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { attachLanguageServiceAdapter } from "./LanguageServiceAdapter.js";
 import { PluginManager } from "./PluginManager.js";
 import { createTypeInfoApiSession } from "./TypeInfoApi.js";
 import type { LanguageServiceWatchHost } from "./types.js";
+import type { VirtualLogicalIdentity } from "./internal/ArtifactIdentity.js";
+import type {
+  MaterializeVirtualArtifactParams,
+  ResolveVirtualArtifactParams,
+  VirtualArtifactStore,
+} from "./internal/ArtifactStore.js";
 
 const tempDirs: string[] = [];
 
@@ -20,6 +26,43 @@ const createTempDir = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "typed-vm-ls-"));
   tempDirs.push(dir);
   return dir;
+};
+
+const createFakeArtifactStore = (
+  sourcePath: string,
+  onMaterialize?: (params: MaterializeVirtualArtifactParams) => void,
+  onClean?: () => void,
+): VirtualArtifactStore => {
+  const logicalIdentity = "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
+  const paths = {
+    logicalIdentity,
+    sourcePath,
+    manifestPath: sourcePath.replace(/\.ts$/, ".manifest.json"),
+  };
+  return {
+    indexPath: join(sourcePath, "..", "index.json"),
+    resolve: (_params: ResolveVirtualArtifactParams) => ({
+      status: "miss",
+      reason: "manifest-missing",
+      logicalIdentity,
+      paths,
+      diagnostics: [],
+      warnings: [],
+    }),
+    readManifest: () => ({ status: "missing", reason: "manifest-missing" }),
+    materialize: (params) => {
+      onMaterialize?.(params);
+      mkdirSync(dirname(sourcePath), { recursive: true });
+      writeFileSync(sourcePath, params.sourceText, "utf8");
+      return { logicalIdentity, paths, manifest: {} as never };
+    },
+    readProjectIndex: () => ({ status: "missing", reason: "index-missing" }),
+    clean: () => {
+      onClean?.();
+      return { removed: false, rootPath: join(sourcePath, "..") };
+    },
+    __unsafeReleaseLockForTesting: () => {},
+  };
 };
 
 afterEach(() => {
@@ -99,6 +142,427 @@ export const value: Foo = { n: 1 };
     ).toBe(true);
 
     adapter.dispose();
+  });
+
+  it("keeps logical ids and effective real importers when artifact paths back virtual records", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    const artifactA = join(dir, "node_modules/.typed/virtual/virtual-a/artifact-a.ts");
+    const artifactB = join(dir, "node_modules/.typed/virtual/virtual-b/artifact-b.ts");
+    writeFileSync(entryFile, `import { x } from "virtual:a"; export const out = x;`, "utf8");
+
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+    const buildCalls: string[] = [];
+    const materializeCalls: string[] = [];
+    let cleanCalls = 0;
+
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+    const languageService = ts.createLanguageService(host);
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: (id, importer) => {
+          buildCalls.push(`${id}:${importer}`);
+          return `import { x } from "virtual:b"; export { x };`;
+        },
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: (id, importer) => {
+          buildCalls.push(`${id}:${importer}`);
+          return `export const x = 1;`;
+        },
+      },
+    ]);
+
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: ({ pluginName }) =>
+        createFakeArtifactStore(
+          pluginName === "virtual-a" ? artifactA : artifactB,
+          (params) => {
+            materializeCalls.push(`${params.id}:${params.importer}:${params.sourceText}`);
+          },
+          () => {
+            cleanCalls += 1;
+            throw new Error("normal typecheck should not clean artifacts");
+          },
+        ),
+    });
+
+    const diagnostics = languageService.getSemanticDiagnostics(entryFile);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(buildCalls).toEqual([`virtual:a:${entryFile}`, `virtual:b:${entryFile}`]);
+    expect(materializeCalls).toEqual([
+      expect.stringContaining(`virtual:a:${entryFile}`),
+      expect.stringContaining(`virtual:b:${entryFile}`),
+    ]);
+    const scriptFileNames = host.getScriptFileNames();
+    expect(scriptFileNames).toEqual(expect.arrayContaining([artifactA, artifactB]));
+    expect(scriptFileNames.some((fileName) => fileName.includes("__virtual_"))).toBe(false);
+    expect(languageService.getProgram()?.getSourceFile(artifactA)).toBeDefined();
+    expect(languageService.getProgram()?.getSourceFile(artifactB)).toBeDefined();
+    expect(cleanCalls).toBe(0);
+  });
+
+  it("uses artifact cache hits without rebuilding or rematerializing", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    const artifact = join(dir, "node_modules/.typed/virtual/virtual/hit.ts");
+    const logicalIdentity =
+      "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
+    const paths = {
+      logicalIdentity,
+      sourcePath: artifact,
+      manifestPath: artifact.replace(/\.ts$/, ".manifest.json"),
+    };
+    writeFileSync(
+      entryFile,
+      `import type { Foo } from "virtual:foo"; export const value: Foo = { n: 1 };`,
+      "utf8",
+    );
+
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+    let buildCount = 0;
+    let materializeCount = 0;
+    const languageService = ts.createLanguageService(host);
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => {
+          buildCount += 1;
+          throw new Error("cache hit should not rebuild");
+        },
+      },
+    ]);
+
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: () => ({
+        ...createFakeArtifactStore(artifact),
+        resolve: () => ({
+          status: "hit",
+          logicalIdentity,
+          paths,
+          manifest: {
+            dependencyDescriptors: [],
+            diagnostics: [],
+            warnings: [],
+          } as never,
+          sourceText: "export interface Foo { n: number }",
+          diagnostics: [],
+          warnings: [],
+        }),
+        materialize: () => {
+          materializeCount += 1;
+          throw new Error("cache hit should not materialize");
+        },
+      }),
+    });
+
+    const diagnostics = languageService.getSemanticDiagnostics(entryFile);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(buildCount).toBe(0);
+    expect(materializeCount).toBe(0);
+    expect(languageService.getProgram()?.getSourceFile(artifact)?.text).toBe(
+      "export interface Foo { n: number }",
+    );
+  });
+
+  it("surfaces artifact-store materialization failures through semantic diagnostics", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    writeFileSync(
+      entryFile,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = {};`,
+      "utf8",
+    );
+
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+    const languageService = ts.createLanguageService(host);
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => `export interface Foo {}`,
+      },
+    ]);
+
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: () => ({
+        ...createFakeArtifactStore(join(dir, "node_modules/.typed/virtual/virtual/broken.ts")),
+        materialize: () => {
+          throw new Error("disk cache is read-only");
+        },
+      }),
+    });
+
+    const messages = languageService.getSemanticDiagnostics(entryFile).map(getDiagnosticMessage);
+
+    expect(messages).toContain("Virtual artifact materialization failed: disk cache is read-only");
+  });
+
+  it("rebuilds recoverable artifact cache invalid states instead of surfacing cache diagnostics", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    const artifact = join(dir, "node_modules/.typed/virtual/virtual/corrupt.ts");
+    const materializeCalls: MaterializeVirtualArtifactParams[] = [];
+    writeFileSync(
+      entryFile,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = {};`,
+      "utf8",
+    );
+
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+    const languageService = ts.createLanguageService(host);
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => `export interface Foo {}`,
+      },
+    ]);
+
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: () => ({
+        ...createFakeArtifactStore(artifact, (params) => {
+          materializeCalls.push(params);
+        }),
+        resolve: () => {
+          const logicalIdentity =
+            "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
+          return {
+            status: "invalid",
+            reason: "manifest-corrupt",
+            logicalIdentity,
+            paths: {
+              logicalIdentity,
+              sourcePath: artifact,
+              manifestPath: artifact.replace(/\.ts$/, ".manifest.json"),
+            },
+            diagnostics: [
+              {
+                severity: "error",
+                message: "artifact manifest could not be parsed",
+                code: "manifest-corrupt",
+                source: "virtual",
+              },
+            ],
+            warnings: [],
+          };
+        },
+      }),
+    });
+
+    const diagnostics = languageService.getSemanticDiagnostics(entryFile);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(materializeCalls).toHaveLength(1);
+  });
+
+  it("surfaces nested artifact-store failures on the real importer diagnostics", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    const artifactA = join(dir, "node_modules/.typed/virtual/virtual-a/artifact-a.ts");
+    const artifactB = join(dir, "node_modules/.typed/virtual/virtual-b/artifact-b.ts");
+    writeFileSync(entryFile, `import { x } from "virtual:a"; export const out = x;`, "utf8");
+
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+    const languageService = ts.createLanguageService(host);
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: () => `import { x } from "virtual:b"; export { x };`,
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: () => `export const x = 1;`,
+      },
+    ]);
+
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: ({ pluginName }) => ({
+        ...createFakeArtifactStore(pluginName === "virtual-a" ? artifactA : artifactB),
+        materialize: (params) => {
+          if (params.id === "virtual:b") {
+            throw new Error("nested artifact write failed");
+          }
+          mkdirSync(dirname(artifactA), { recursive: true });
+          writeFileSync(artifactA, params.sourceText, "utf8");
+          const logicalIdentity =
+            "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
+          return {
+            logicalIdentity,
+            paths: {
+              logicalIdentity,
+              sourcePath: artifactA,
+              manifestPath: artifactA.replace(/\.ts$/, ".manifest.json"),
+            },
+            manifest: {} as never,
+          };
+        },
+      }),
+    });
+
+    const messages = languageService.getSemanticDiagnostics(entryFile).map(getDiagnosticMessage);
+
+    expect(messages).toContain(
+      "Virtual artifact materialization failed: nested artifact write failed",
+    );
   });
 
   it("keeps record stale and adds diagnostic when rebuild fails, then clears on success", () => {

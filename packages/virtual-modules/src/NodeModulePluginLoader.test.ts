@@ -56,6 +56,33 @@ describe("NodeModulePluginLoader", () => {
     expect(result.resolvedPath.endsWith("plugin.mjs")).toBe(true);
   });
 
+  it("records CommonJS helper modules loaded by a plugin", () => {
+    const dir = createTempDir();
+    writeFileSync(join(dir, "helper.cjs"), `module.exports = { kind: "number" };\n`, "utf8");
+    writeFileSync(
+      join(dir, "plugin.cjs"),
+      `const helper = require("./helper.cjs");
+
+module.exports = {
+  name: "with-helper",
+  shouldResolve: () => true,
+  build: () => "export const kind = " + JSON.stringify(helper.kind),
+};
+`,
+      "utf8",
+    );
+
+    const loader = new NodeModulePluginLoader();
+    const result = loader.load({
+      specifier: "./plugin.cjs",
+      baseDir: dir,
+    });
+
+    expect(result.status).toBe("loaded");
+    if (result.status !== "loaded") return;
+    expect(result.dependencyPaths.some((path) => path.endsWith("helper.cjs"))).toBe(true);
+  });
+
   it("loads a synchronous ESM module with default export", () => {
     const dir = createTempDir();
     const filePath = join(dir, "plugin.mjs");

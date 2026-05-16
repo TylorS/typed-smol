@@ -14,14 +14,14 @@ class Todos extends Context.Service<Todos>()("TodosService", {
     return KeyValueStore.toSchemaStore(kv, Domain.TodoList);
   }),
 }) {
-  static readonly get = Todos.asEffect().pipe(
+  static readonly get = Todos.pipe(
     Effect.flatMap((service) => service.get(TODOS_STORAGE_KEY)),
     Effect.map(Option.getOrElse(() => [])),
     Effect.catchCause(() => Effect.succeed([])),
   );
 
   static readonly set = (todos: Domain.TodoList) =>
-    Effect.flatMap(Todos.asEffect(), (service) => service.set(TODOS_STORAGE_KEY, todos)).pipe(
+    Effect.flatMap(Todos, (service) => service.set(TODOS_STORAGE_KEY, todos)).pipe(
       Effect.catchCause((cause) =>
         Effect.logError("Failed to write todos to key value store", cause),
       ),

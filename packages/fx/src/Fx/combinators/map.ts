@@ -20,3 +20,19 @@ export const map: {
   <A, E, R, B>(self: Fx<A, E, R>, f: (a: A) => B): Fx<B, E, R> =>
     make<B, E, R>((sink) => self.run(sinkCore.map(sink, f))),
 );
+
+/**
+ * Replaces all emitted values from the Fx with the provided value `b`.
+ *
+ * @param b - The value to emit instead.
+ * @returns An Fx that emits `b` for every element.
+ * @since 1.0.0
+ * @category combinators
+ */
+export const as: {
+  <B>(b: B): <A, E, R>(self: Fx<A, E, R>) => Fx<B, E, R>;
+  <A, E, R, B>(self: Fx<A, E, R>, b: B): Fx<B, E, R>;
+} = dual(
+  2,
+  <A, E, R, B>(self: Fx<A, E, R>, b: B): Fx<B, E, R> => map(self, () => b)
+);

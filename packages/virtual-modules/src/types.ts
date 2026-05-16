@@ -1,4 +1,5 @@
 import type * as ts from "typescript";
+import type { VirtualArtifactStore } from "./internal/ArtifactStore.js";
 
 /**
  * Type-safe AST for serialized types. Discriminated union by `kind`.
@@ -441,8 +442,19 @@ export interface ResolveVirtualModuleOptions {
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
 }
 
+export interface VirtualModulePluginNameResolved {
+  readonly status: "resolved";
+  readonly pluginName: string;
+}
+
+export type VirtualModulePluginNameResolution =
+  | VirtualModulePluginNameResolved
+  | VirtualModuleUnresolved
+  | VirtualModuleError;
+
 export interface VirtualModuleResolver {
   resolveModule(options: ResolveVirtualModuleOptions): VirtualModuleResolution;
+  resolvePluginName?(options: ResolveVirtualModuleOptions): VirtualModulePluginNameResolution;
 }
 
 export interface NodeModulePluginRequest {
@@ -456,6 +468,7 @@ export interface NodeModulePluginLoadSuccess {
   readonly status: "loaded";
   readonly plugin: VirtualModulePlugin;
   readonly resolvedPath: string;
+  readonly dependencyPaths: readonly string[];
 }
 
 export interface NodeModulePluginLoadError {
@@ -510,9 +523,21 @@ export interface LanguageServiceAdapterOptions {
   readonly projectRoot: string;
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
   readonly watchHost?: LanguageServiceWatchHost;
+  readonly artifactStoreFactory?: VirtualArtifactStoreFactory;
+  readonly shouldReuseRecord?: (record: VirtualModuleRecord) => boolean;
   /** Coalesce rapid watch events (ms). When set, markStale is deferred until after the delay. */
   readonly debounceMs?: number;
 }
+
+export interface VirtualArtifactStoreFactoryContext {
+  readonly pluginName: string;
+  readonly virtualKey: string;
+  readonly projectRoot: string;
+}
+
+export type VirtualArtifactStoreFactory = (
+  context: VirtualArtifactStoreFactoryContext,
+) => VirtualArtifactStore;
 
 export interface CompilerHostAdapterOptions {
   readonly ts: typeof import("typescript");
@@ -521,6 +546,8 @@ export interface CompilerHostAdapterOptions {
   readonly projectRoot: string;
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
   readonly watchHost?: LanguageServiceWatchHost;
+  readonly artifactStoreFactory?: VirtualArtifactStoreFactory;
+  readonly shouldReuseRecord?: (record: VirtualModuleRecord) => boolean;
   /** Coalesce rapid watch events (ms). When set, markStale is deferred until after the delay. */
   readonly debounceMs?: number;
   /**
@@ -531,5 +558,6 @@ export interface CompilerHostAdapterOptions {
 }
 
 export interface VirtualModuleAdapterHandle {
+  invalidateAll?(): void;
   dispose(): void;
 }

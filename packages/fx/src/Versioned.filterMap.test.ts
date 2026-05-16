@@ -14,7 +14,7 @@ describe("Versioned filterMap / filterMapEffect", () => {
           onFx: evenOption,
           onEffect: evenOption,
         });
-        expect(yield* filtered.asEffect()).toEqual(Option.some(8));
+        expect(yield* filtered).toEqual(Option.some(8));
         expect(yield* Fx.collectAll(filtered)).toEqual([8]);
       }).pipe(Effect.runPromise));
 
@@ -25,19 +25,19 @@ describe("Versioned filterMap / filterMapEffect", () => {
           onFx: evenOption,
           onEffect: evenOption,
         });
-        expect(yield* filtered.asEffect()).toEqual(Option.none());
+        expect(yield* filtered).toEqual(Option.none());
         expect(yield* Fx.collectAll(filtered)).toEqual([]);
       }).pipe(Effect.runPromise));
 
     it("supports curried form", () =>
       Effect.gen(function* () {
-        const filterEven = Versioned.filterMap({
-          onFx: evenOption,
-          onEffect: evenOption,
-        });
-        const v = Versioned.of(10);
-        const filtered = filterEven(v);
-        expect(yield* filtered.asEffect()).toEqual(Option.some(10));
+        const filtered = Versioned.of(10).pipe(
+          Versioned.filterMap({
+            onFx: evenOption,
+            onEffect: evenOption,
+          })
+        );
+        expect(yield* filtered).toEqual(Option.some(10));
         expect(yield* Fx.collectAll(filtered)).toEqual([10]);
       }).pipe(Effect.runPromise));
 
@@ -48,7 +48,7 @@ describe("Versioned filterMap / filterMapEffect", () => {
           onFx: (n) => (n > 0 ? Option.some(String(n)) : Option.none()),
           onEffect: (n) => (n > 0 ? Option.some(n + 1) : Option.none()),
         });
-        expect(yield* filtered.asEffect()).toEqual(Option.some(4));
+        expect(yield* filtered).toEqual(Option.some(4));
         expect(yield* Fx.collectAll(filtered)).toEqual(["3"]);
       }).pipe(Effect.runPromise));
   });
@@ -61,7 +61,7 @@ describe("Versioned filterMap / filterMapEffect", () => {
           onFx: (n) => Effect.succeed(evenOption(n)),
           onEffect: (n) => Effect.succeed(evenOption(n)),
         });
-        expect(yield* filtered.asEffect()).toEqual(Option.some(4));
+        expect(yield* filtered).toEqual(Option.some(4));
         expect(yield* Fx.collectAll(filtered)).toEqual([4]);
       }).pipe(Effect.runPromise));
 
@@ -72,7 +72,7 @@ describe("Versioned filterMap / filterMapEffect", () => {
           onFx: (n) => Effect.succeed(evenOption(n)),
           onEffect: (n) => Effect.succeed(evenOption(n)),
         });
-        expect(yield* filtered.asEffect()).toEqual(Option.none());
+        expect(yield* filtered).toEqual(Option.none());
         expect(yield* Fx.collectAll(filtered)).toEqual([]);
       }).pipe(Effect.runPromise));
 
@@ -84,7 +84,7 @@ describe("Versioned filterMap / filterMapEffect", () => {
         });
         const v = Versioned.of(6);
         const filtered = filterEven(v);
-        expect(yield* filtered.asEffect()).toEqual(Option.some(6));
+        expect(yield* filtered).toEqual(Option.some(6));
         expect(yield* Fx.collectAll(filtered)).toEqual([6]);
       }).pipe(Effect.runPromise));
   });

@@ -7,6 +7,7 @@ import type {
   VirtualModuleBuildResult,
   VirtualModuleDiagnostic,
   VirtualModulePlugin,
+  VirtualModulePluginNameResolution,
   VirtualModuleResolution,
   VirtualModuleResolver,
 } from "./types.js";
@@ -67,20 +68,37 @@ export class PluginManager implements VirtualModuleResolver {
     }
   }
 
-  resolveModule(options: ResolveVirtualModuleOptions): VirtualModuleResolution {
-    const idResult = validateNonEmptyString(options.id, "options.id");
-    if (!idResult.ok) {
-      return {
-        status: "error",
-        diagnostic: createDiagnostic("invalid-options", "", idResult.reason),
-      };
+  resolvePluginName(options: ResolveVirtualModuleOptions): VirtualModulePluginNameResolution {
+    const validation = validateResolveOptions(options);
+    if (validation) {
+      return validation;
     }
-    const importerResult = validateNonEmptyString(options.importer, "options.importer");
-    if (!importerResult.ok) {
-      return {
-        status: "error",
-        diagnostic: createDiagnostic("invalid-options", "", importerResult.reason),
-      };
+
+    for (const plugin of this.#plugins) {
+      const nameResult = validateNonEmptyString(plugin.name, "Plugin name");
+      if (!nameResult.ok) {
+        return {
+          status: "error",
+          diagnostic: createDiagnostic("invalid-options", "", nameResult.reason),
+        };
+      }
+
+      const shouldResolve = this.#safeShouldResolve(plugin, options.id, options.importer);
+      if (shouldResolve.status === "error") {
+        return shouldResolve;
+      }
+      if (shouldResolve.value) {
+        return { status: "resolved", pluginName: plugin.name };
+      }
+    }
+
+    return { status: "unresolved" };
+  }
+
+  resolveModule(options: ResolveVirtualModuleOptions): VirtualModuleResolution {
+    const validation = validateResolveOptions(options);
+    if (validation) {
+      return validation;
     }
 
     const createSession = options.createTypeInfoApiSession;
@@ -213,3 +231,25 @@ export class PluginManager implements VirtualModuleResolver {
     }
   }
 }
+
+const validateResolveOptions = (
+  options: ResolveVirtualModuleOptions,
+): Extract<VirtualModuleResolution, { status: "error" }> | undefined => {
+  const idResult = validateNonEmptyString(options.id, "options.id");
+  if (!idResult.ok) {
+    return {
+      status: "error",
+      diagnostic: createDiagnostic("invalid-options", "", idResult.reason),
+    };
+  }
+
+  const importerResult = validateNonEmptyString(options.importer, "options.importer");
+  if (!importerResult.ok) {
+    return {
+      status: "error",
+      diagnostic: createDiagnostic("invalid-options", "", importerResult.reason),
+    };
+  }
+
+  return undefined;
+};

@@ -1,19 +1,23 @@
 import * as Effect from "effect/Effect";
-import type * as Scope from "effect/Scope";
 import type { Fx } from "../Fx.js";
 import { unwrapScoped } from "./unwrapScoped.js";
+import { Scope } from "effect";
 
 /**
- * Creates a scoped Fx using a generator function.
+ * Creates an Fx using a generator function (Effect.gen style).
  *
- * Similar to `gen`, but also handles resource management via Scope.
+ * This allows writing Fx code in a synchronous-looking style, using `yield*` to composition.
+ * Note: The generator yields Effects, and the result is an Fx.
  *
  * @param f - The generator function.
  * @returns An `Fx` representing the result of the generator.
  * @since 1.0.0
  * @category combinators
  */
-export const genScoped = <Yield extends Effect.Effect<any, any, any>, A, E, R>(
-  f: () => Generator<Yield, Fx<A, E, R>, any>,
-): Fx<A, E | Effect.Error<Yield>, Exclude<R | Effect.Services<Yield>, Scope.Scope>> =>
-  unwrapScoped(Effect.gen(f)) as any;
+export const genScoped = <Yield extends Effect.Effect<any, any, any>, Return extends Fx.Any>(
+  f: () => Generator<Yield, Return, any>,
+): Fx<
+  Fx.Success<Return>,
+  Fx.Error<Return> | Effect.Error<Yield>,
+  Exclude<Fx.Services<Return> | Effect.Services<Yield>, Scope.Scope>
+> => unwrapScoped(Effect.gen(f)) ;

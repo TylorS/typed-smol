@@ -1,8 +1,8 @@
-import { Effectable } from "effect";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
+import { EffectableWithOverride } from "./effectableWithOverride.js";
 
-export class MulticastEffect<A, E, R> extends Effectable.Class<A, E, R> {
+export class MulticastEffect<A, E, R> extends EffectableWithOverride<A, E, R> {
   private _fiber: Fiber.Fiber<A, E> | null = null;
 
   readonly effect: Effect.Effect<A, E, R>;
@@ -25,7 +25,7 @@ export class MulticastEffect<A, E, R> extends Effectable.Class<A, E, R> {
           ),
         );
       }
-    })
+    });
   }
 
   readonly override: Effect.Effect<A, E, R>;

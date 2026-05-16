@@ -1,5 +1,10 @@
 import ts from "typescript";
-import type { TypeTargetSpec, VirtualModuleResolver, VmcPluginEntry } from "@typed/virtual-modules";
+import type {
+  LoadedVmcPluginModule,
+  TypeTargetSpec,
+  VirtualModuleResolver,
+  VmcPluginEntry,
+} from "@typed/virtual-modules";
 import { loadResolverFromVmcConfig, PluginManager } from "@typed/virtual-modules";
 
 export interface VmcConfig {
@@ -9,6 +14,9 @@ export interface VmcConfig {
 
 export interface LoadResolverResult {
   readonly resolver: VirtualModuleResolver;
+  readonly vmcConfigPath?: string;
+  readonly vmcConfigDependencyPaths?: readonly string[];
+  readonly pluginModules?: readonly LoadedVmcPluginModule[];
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
 
@@ -35,6 +43,11 @@ export function loadResolver(projectRoot: string): LoadResolverResult {
 
   return {
     resolver: loaded.resolver ?? new PluginManager(),
+    vmcConfigPath: loaded.path,
+    ...(loaded.configDependencyPaths.length
+      ? { vmcConfigDependencyPaths: loaded.configDependencyPaths }
+      : {}),
+    ...(loaded.pluginModules.length ? { pluginModules: loaded.pluginModules } : {}),
     ...(loaded.typeTargetSpecs ? { typeTargetSpecs: loaded.typeTargetSpecs } : {}),
   };
 }

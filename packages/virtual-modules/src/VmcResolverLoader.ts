@@ -23,7 +23,15 @@ function collectFromResolver(
 export interface LoadPluginsFromEntriesResult {
   readonly plugins: readonly VirtualModulePlugin[];
   readonly pluginSpecifiers: readonly string[];
+  readonly pluginModules: readonly LoadedVmcPluginModule[];
   readonly errors: readonly NodeModulePluginLoadError[];
+}
+
+export interface LoadedVmcPluginModule {
+  readonly specifier: string;
+  readonly pluginName: string;
+  readonly resolvedPath: string;
+  readonly dependencyPaths: readonly string[];
 }
 
 export function loadPluginsFromEntries(
@@ -33,6 +41,7 @@ export function loadPluginsFromEntries(
   const loader = new NodeModulePluginLoader();
   const plugins: VirtualModulePlugin[] = [];
   const pluginSpecifiers: string[] = [];
+  const pluginModules: LoadedVmcPluginModule[] = [];
   const errors: NodeModulePluginLoadError[] = [];
 
   for (const entry of entries) {
@@ -41,6 +50,12 @@ export function loadPluginsFromEntries(
       const loaded = loader.load({ specifier: entry, baseDir });
       if (loaded.status === "loaded") {
         plugins.push(loaded.plugin);
+        pluginModules.push({
+          specifier: entry,
+          pluginName: loaded.plugin.name,
+          resolvedPath: loaded.resolvedPath,
+          dependencyPaths: loaded.dependencyPaths,
+        });
       } else {
         errors.push(loaded);
       }
@@ -53,6 +68,7 @@ export function loadPluginsFromEntries(
   return {
     plugins,
     pluginSpecifiers,
+    pluginModules,
     errors,
   };
 }
@@ -63,8 +79,10 @@ export type LoadResolverFromVmcConfigResult =
   | {
       readonly status: "loaded";
       readonly path: string;
+      readonly configDependencyPaths: readonly string[];
       readonly resolver?: VirtualModuleResolver;
       readonly pluginSpecifiers: readonly string[];
+      readonly pluginModules: readonly LoadedVmcPluginModule[];
       readonly pluginLoadErrors: readonly NodeModulePluginLoadError[];
       /** Type target specs from config for structural assignability in TypeInfo API. */
       readonly typeTargetSpecs?: readonly TypeTargetSpec[];
@@ -96,8 +114,10 @@ export function loadResolverFromVmcConfig(
     return {
       status: "loaded",
       path: loadedVmcConfig.path,
+      configDependencyPaths: loadedVmcConfig.dependencyPaths,
       resolver,
       pluginSpecifiers,
+      pluginModules: [],
       pluginLoadErrors: [],
       ...(typeTargetSpecs ? { typeTargetSpecs } : {}),
     };
@@ -110,8 +130,10 @@ export function loadResolverFromVmcConfig(
   return {
     status: "loaded",
     path: loadedVmcConfig.path,
+    configDependencyPaths: loadedVmcConfig.dependencyPaths,
     ...(resolver ? { resolver } : {}),
     pluginSpecifiers: loadedPlugins.pluginSpecifiers,
+    pluginModules: loadedPlugins.pluginModules,
     pluginLoadErrors: loadedPlugins.errors,
     ...(typeTargetSpecs ? { typeTargetSpecs } : {}),
   };

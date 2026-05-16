@@ -136,6 +136,9 @@ export default {
     if (result.status !== "loaded") return;
 
     expect(result.pluginSpecifiers).toEqual(["./file-plugin.cjs"]);
+    expect(result.pluginModules).toHaveLength(1);
+    expect(result.pluginModules[0]?.resolvedPath.endsWith("file-plugin.cjs")).toBe(true);
+    expect(result.pluginModules[0]?.pluginName).toBe("file-plugin");
     expect(result.pluginLoadErrors).toHaveLength(0);
     expect(result.resolver).toBeDefined();
 

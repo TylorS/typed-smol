@@ -23,14 +23,31 @@
  * Loads typed.config.ts for router/api options and merges vmc.config.ts plugins (same as vmc CLI).
  */
 import {
+  type ArtifactStoreFingerprints,
   attachLanguageServiceAdapter,
   collectTypeTargetSpecsFromPlugins,
+  createParsedTsconfigFingerprint,
+  createPluginConfigFingerprint,
+  createPluginModuleFingerprint,
+  createPluginPackageFingerprint,
+  createSourceInputFingerprint,
   createTypeInfoApiSession,
+  createTypeScriptFingerprint,
+  createVirtualArtifactStore,
   ensureTypeTargetBootstrapFile,
   getProgramWithTypeTargetBootstrap,
   getTypeTargetBootstrapPath,
+  hashVirtualArtifactContent,
+  hashVirtualArtifactJson,
+  type LoadedVmcPluginModule,
   loadResolverFromVmcConfig,
   PluginManager,
+  type VirtualArtifactFingerprint,
+  type VirtualArtifactStoreFactory,
+  type VirtualModuleRecord,
+  type VirtualModulePlugin,
+  type VirtualModuleResolver,
+  VIRTUAL_NODE_MODULES_RELATIVE,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
 import {
@@ -39,8 +56,8 @@ import {
   createHttpApiVirtualModulePlugin,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/app";
-import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import ts, { DirectoryWatcherCallback, FileWatcherCallback } from "typescript";
 import type { PluginCreateInfo } from "./types.js";
 
@@ -56,6 +73,12 @@ type LoadedVirtualResolver = import(
   "@typed/virtual-modules",
   { with: { "resolution-mode": "import" } }
 ).VirtualModuleResolver;
+
+type LoadTypedConfigResult = ReturnType<typeof loadTypedConfig>;
+type VmcLoadResult = ReturnType<typeof loadResolverFromVmcConfig>;
+
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | readonly JsonValue[] | { readonly [key: string]: JsonValue };
 
 function findTsconfig(fromDir: string): string | undefined {
   let dir = resolve(fromDir);
@@ -122,6 +145,535 @@ function createFallbackProgram(
     log(`fallback program: exception: ${err instanceof Error ? err.message : String(err)}`);
     return undefined;
   }
+}
+
+function createTsPluginArtifactStoreFactory(options: {
+  readonly ts: typeof import("typescript");
+  readonly projectRoot: string;
+  readonly languageServiceHost: import("typescript").LanguageServiceHost;
+  readonly configPath?: string;
+  readonly vmcConfigPath?: string;
+  readonly tsconfigPath?: string;
+  readonly typeTargetSpecs: ReadonlyArray<
+    import("@typed/virtual-modules", { with: { "resolution-mode": "import" } }).TypeTargetSpec
+  >;
+  readonly loadedConfig: LoadTypedConfigResult;
+  readonly typedConfig: unknown;
+  readonly vmcLoad: VmcLoadResult;
+  readonly resolver: VirtualModuleResolver;
+  readonly mergedPlugins: readonly VirtualModulePlugin[];
+}): {
+  readonly artifactStoreFactory: VirtualArtifactStoreFactory;
+  readonly shouldReuseRecord: (record: VirtualModuleRecord) => boolean;
+} {
+  const tokenByVirtualKey = new Map<string, string>();
+  const loadedTypedConfigToken = createTypedConfigComparisonToken(
+    options.projectRoot,
+    options.loadedConfig,
+  );
+  const loadedVmcConfigToken = createVmcConfigComparisonToken(options.projectRoot, options.vmcLoad);
+  const createFingerprints = (): ArtifactStoreFingerprints =>
+    createTsPluginArtifactFingerprints({
+      ...options,
+      loadedTypedConfigToken,
+      loadedVmcConfigToken,
+    });
+  const createArtifactStoreContext = () => {
+    const fingerprints = createFingerprints();
+    return {
+      fingerprints,
+      resolverInputDriftReason: getResolverInputDriftReason(fingerprints),
+      token: hashVirtualArtifactJson(fingerprints),
+    };
+  };
+  return {
+    artifactStoreFactory: ({ pluginName, virtualKey, projectRoot }) => {
+      const context = createArtifactStoreContext();
+      if (context.resolverInputDriftReason) {
+        throw new Error(context.resolverInputDriftReason);
+      }
+      tokenByVirtualKey.set(virtualKey, context.token);
+      return createVirtualArtifactStore({
+        projectRoot,
+        pluginName,
+        virtualKey,
+        fingerprints: context.fingerprints,
+      });
+    },
+    shouldReuseRecord: (record) => {
+      const context = createArtifactStoreContext();
+      return (
+        !context.resolverInputDriftReason && tokenByVirtualKey.get(record.key) === context.token
+      );
+    },
+  };
+}
+
+function getResolverInputDriftReason(fingerprints: ArtifactStoreFingerprints): string | undefined {
+  const driftFingerprint = (fingerprints.pluginFingerprints ?? []).find(
+    (fingerprint) =>
+      fingerprint.unavailableReason !== undefined &&
+      (fingerprint.name === "typed.config.ts:current-state" ||
+        fingerprint.name === "vmc.config.ts:current-state"),
+  );
+  return driftFingerprint?.unavailableReason
+    ? `TS plugin resolver inputs changed after startup: ${driftFingerprint.unavailableReason}. Restart TypeScript or recreate the language service before materializing virtual artifacts.`
+    : undefined;
+}
+
+function createTsPluginArtifactFingerprints(options: {
+  readonly ts: typeof import("typescript");
+  readonly projectRoot: string;
+  readonly languageServiceHost: import("typescript").LanguageServiceHost;
+  readonly configPath?: string;
+  readonly vmcConfigPath?: string;
+  readonly tsconfigPath?: string;
+  readonly typeTargetSpecs: ReadonlyArray<
+    import("@typed/virtual-modules", { with: { "resolution-mode": "import" } }).TypeTargetSpec
+  >;
+  readonly loadedConfig: LoadTypedConfigResult;
+  readonly typedConfig: unknown;
+  readonly vmcLoad: VmcLoadResult;
+  readonly resolver: VirtualModuleResolver;
+  readonly mergedPlugins: readonly VirtualModulePlugin[];
+  readonly loadedTypedConfigToken: string;
+  readonly loadedVmcConfigToken: string;
+}): ArtifactStoreFingerprints {
+  const parsedTsconfig = parseTsconfigForFingerprint(options);
+  const currentTypedConfig = loadTypedConfig({
+    projectRoot: options.projectRoot,
+    ts: options.ts,
+    ...(options.configPath ? { configPath: options.configPath } : {}),
+  });
+  const currentVmcLoad = loadResolverFromVmcConfig({
+    projectRoot: options.projectRoot,
+    ts: options.ts,
+    ...(options.vmcConfigPath
+      ? { configPath: options.vmcConfigPath }
+      : options.vmcLoad.status === "loaded"
+        ? { configPath: options.vmcLoad.path }
+        : {}),
+  });
+  return {
+    sourceInputFingerprints: createSourceRootFingerprints(options, parsedTsconfig.fileNames),
+    pluginFingerprints: [
+      ...createTypedConfigFingerprints(
+        options.projectRoot,
+        currentTypedConfig,
+        options.loadedTypedConfigToken,
+      ),
+      ...createVmcConfigFingerprints(
+        options.projectRoot,
+        currentVmcLoad,
+        options.loadedVmcConfigToken,
+      ),
+      ...createVmcConfigDependencyFingerprints(currentVmcLoad),
+      ...createPluginModuleFingerprints(options.projectRoot, currentVmcLoad),
+      createPluginConfigFingerprint("ts-plugin-resolver", createResolverSnapshot(options)),
+    ],
+    compilerFingerprints: [
+      createTypeScriptFingerprint(options.ts.version),
+      parsedTsconfig.fingerprint,
+    ],
+  };
+}
+
+function parseTsconfigForFingerprint(options: {
+  readonly ts: typeof import("typescript");
+  readonly projectRoot: string;
+  readonly tsconfigPath?: string;
+}): {
+  readonly fileNames: readonly string[];
+  readonly fingerprint: VirtualArtifactFingerprint;
+} {
+  if (!options.tsconfigPath) {
+    return {
+      fileNames: [],
+      fingerprint: createUnavailableFingerprint(
+        "tsconfig",
+        "parsed-tsconfig",
+        "Parsed tsconfig is unavailable: no tsconfig path was available from the TS project",
+      ),
+    };
+  }
+
+  const configFile = options.ts.readConfigFile(options.tsconfigPath, options.ts.sys.readFile);
+  if (configFile.error) {
+    return {
+      fileNames: [],
+      fingerprint: createUnavailableFingerprint(
+        "tsconfig",
+        "parsed-tsconfig",
+        `Parsed tsconfig is unavailable: ${String(configFile.error.messageText)}`,
+      ),
+    };
+  }
+
+  const parsed = options.ts.parseJsonConfigFileContent(
+    configFile.config,
+    options.ts.sys,
+    dirname(options.tsconfigPath),
+    undefined,
+    options.tsconfigPath,
+  );
+  if (parsed.errors.length > 0) {
+    return {
+      fileNames: [],
+      fingerprint: createUnavailableFingerprint(
+        "tsconfig",
+        "parsed-tsconfig",
+        `Parsed tsconfig is unavailable: ${parsed.errors.map((e) => String(e.messageText)).join(", ")}`,
+      ),
+    };
+  }
+
+  return {
+    fileNames: parsed.fileNames,
+    fingerprint: createParsedTsconfigFingerprint({
+      fileNames: parsed.fileNames.map((file) => relative(options.projectRoot, file)).sort(),
+      options: toJsonValue(parsed.options),
+      projectReferences: toJsonValue(parsed.projectReferences ?? []),
+      watchOptions: toJsonValue(parsed.watchOptions ?? {}),
+      raw: toJsonValue(parsed.raw ?? {}),
+    }),
+  };
+}
+
+function createSourceRootFingerprints(
+  options: {
+    readonly projectRoot: string;
+    readonly languageServiceHost: import("typescript").LanguageServiceHost;
+    readonly typeTargetSpecs: ReadonlyArray<
+      import("@typed/virtual-modules", { with: { "resolution-mode": "import" } }).TypeTargetSpec
+    >;
+  },
+  parsedFileNames: readonly string[],
+): readonly VirtualArtifactFingerprint[] {
+  const hostFileNames = options.languageServiceHost.getScriptFileNames?.() ?? [];
+  const bootstrapPath =
+    options.typeTargetSpecs.length > 0 ? [getTypeTargetBootstrapPath(options.projectRoot)] : [];
+  const sourceRoots = [...new Set([...hostFileNames, ...parsedFileNames, ...bootstrapPath])]
+    .filter((sourceRoot) => !isGeneratedVirtualArtifactPath(sourceRoot))
+    .sort();
+  return sourceRoots.length > 0
+    ? sourceRoots.map((sourceRoot) =>
+        createLanguageServiceSourceInputFingerprint(options.languageServiceHost, sourceRoot),
+      )
+    : [
+        createUnavailableFingerprint(
+          "source",
+          "source-roots",
+          "Source input fingerprints are unavailable: TS project reported no root files",
+        ),
+      ];
+}
+
+function isGeneratedVirtualArtifactPath(filePath: string): boolean {
+  return filePath.includes(VIRTUAL_NODE_MODULES_RELATIVE);
+}
+
+function createLanguageServiceSourceInputFingerprint(
+  languageServiceHost: import("typescript").LanguageServiceHost,
+  sourcePath: string,
+): VirtualArtifactFingerprint {
+  const snapshot = languageServiceHost.getScriptSnapshot?.(sourcePath);
+  if (!snapshot) return createSourceInputFingerprint(sourcePath);
+
+  return {
+    kind: "file",
+    name: sourcePath,
+    hash: hashVirtualArtifactContent(snapshot.getText(0, snapshot.getLength())),
+  };
+}
+
+function createTypedConfigFingerprints(
+  projectRoot: string,
+  currentConfig: LoadTypedConfigResult,
+  loadedConfigToken: string,
+): readonly VirtualArtifactFingerprint[] {
+  const currentFingerprint = createTypedConfigStateFingerprint(
+    projectRoot,
+    currentConfig,
+    "current",
+  );
+  const changedFingerprint =
+    loadedConfigToken !== createTypedConfigComparisonToken(projectRoot, currentConfig)
+      ? [
+          createUnavailableFingerprint(
+            "config",
+            "typed.config.ts:current-state",
+            "typed.config.ts changed after the TS plugin resolver was created",
+          ),
+        ]
+      : [];
+
+  if (currentConfig.status === "loaded") {
+    return [
+      currentFingerprint,
+      createUnavailableFingerprint(
+        "config",
+        "typed.config.ts:dependencies",
+        "typed.config.ts dependency module fingerprints are unavailable in the TS plugin",
+      ),
+      ...changedFingerprint,
+    ];
+  }
+  return [currentFingerprint, ...changedFingerprint];
+}
+
+function createTypedConfigComparisonToken(
+  projectRoot: string,
+  config: LoadTypedConfigResult,
+): string {
+  return hashVirtualArtifactJson(createTypedConfigStateFingerprint(projectRoot, config, "compare"));
+}
+
+function createTypedConfigStateFingerprint(
+  projectRoot: string,
+  config: LoadTypedConfigResult,
+  label: "compare" | "current" | "loaded",
+): VirtualArtifactFingerprint {
+  if (config.status === "loaded") {
+    return createConfigFileFingerprint(
+      `typed.config.ts:${label}`,
+      config.path,
+      `Unable to read typed.config.ts: ${config.path}`,
+    );
+  }
+  return createPluginConfigFingerprint(`typed.config.ts:${label}`, {
+    status: config.status,
+    path:
+      config.status === "error" && config.path
+        ? relative(projectRoot, config.path)
+        : "typed.config.ts",
+    message: config.status === "error" ? config.message : undefined,
+  });
+}
+
+function createVmcConfigFingerprints(
+  projectRoot: string,
+  vmcLoad: VmcLoadResult,
+  loadedConfigToken: string,
+): readonly VirtualArtifactFingerprint[] {
+  const currentFingerprint = createVmcConfigStateFingerprint(projectRoot, vmcLoad, "current");
+  const changedFingerprint =
+    loadedConfigToken !== createVmcConfigComparisonToken(projectRoot, vmcLoad)
+      ? [
+          createUnavailableFingerprint(
+            "config",
+            "vmc.config.ts:current-state",
+            "vmc.config.ts or loaded VMC plugin modules changed after the TS plugin resolver was created",
+          ),
+        ]
+      : [];
+  return [currentFingerprint, ...changedFingerprint];
+}
+
+function createVmcConfigComparisonToken(projectRoot: string, vmcLoad: VmcLoadResult): string {
+  return hashVirtualArtifactJson([
+    createVmcConfigStateFingerprint(projectRoot, vmcLoad, "compare"),
+    ...createVmcConfigDependencyFingerprints(vmcLoad),
+    ...createPluginModuleFingerprints(projectRoot, vmcLoad),
+    createPluginConfigFingerprint("vmc.config.ts:load-snapshot", createVmcLoadSnapshot(vmcLoad)),
+  ]);
+}
+
+function createVmcConfigStateFingerprint(
+  projectRoot: string,
+  vmcLoad: VmcLoadResult,
+  label: "compare" | "current" | "loaded",
+): VirtualArtifactFingerprint {
+  if (vmcLoad.status === "loaded") {
+    return createConfigFileFingerprint(
+      `vmc.config.ts:${label}`,
+      vmcLoad.path,
+      `Unable to read vmc.config.ts: ${vmcLoad.path}`,
+    );
+  }
+  return createPluginConfigFingerprint(`vmc.config.ts:${label}`, {
+    status: vmcLoad.status,
+    path:
+      vmcLoad.status === "error" && vmcLoad.path
+        ? relative(projectRoot, vmcLoad.path)
+        : "vmc.config.ts",
+    message: vmcLoad.status === "error" ? vmcLoad.message : undefined,
+  });
+}
+
+function createConfigFileFingerprint(
+  name: string,
+  filePath: string,
+  unavailableReason: string,
+): VirtualArtifactFingerprint {
+  try {
+    return {
+      kind: "config",
+      name,
+      hash: hashVirtualArtifactContent(readFileSync(filePath)),
+    };
+  } catch {
+    return createUnavailableFingerprint("config", name, unavailableReason);
+  }
+}
+
+function createVmcConfigDependencyFingerprints(
+  vmcLoad: VmcLoadResult,
+): readonly VirtualArtifactFingerprint[] {
+  return vmcLoad.status === "loaded"
+    ? vmcLoad.configDependencyPaths.map((dependencyPath) =>
+        createPluginModuleFingerprint(`vmc.config:${dependencyPath}`, dependencyPath),
+      )
+    : [];
+}
+
+function createPluginModuleFingerprints(
+  projectRoot: string,
+  vmcLoad: VmcLoadResult,
+): readonly VirtualArtifactFingerprint[] {
+  return vmcLoad.status === "loaded"
+    ? vmcLoad.pluginModules.flatMap((pluginModule) => [
+        createPluginModuleFingerprint(pluginModule.pluginName, pluginModule.resolvedPath),
+        ...pluginModule.dependencyPaths.map((dependencyPath) =>
+          createPluginModuleFingerprint(
+            `${pluginModule.pluginName}:${dependencyPath}`,
+            dependencyPath,
+          ),
+        ),
+        ...createPluginPackageFingerprints(projectRoot, pluginModule),
+      ])
+    : [];
+}
+
+function createPluginPackageFingerprints(
+  projectRoot: string,
+  pluginModule: LoadedVmcPluginModule,
+): readonly VirtualArtifactFingerprint[] {
+  const packageJsonPath = findPackageJson(projectRoot, dirname(pluginModule.resolvedPath));
+  if (!packageJsonPath) return [];
+
+  const metadata = readPackageMetadata(packageJsonPath);
+  if (!metadata?.version) return [];
+
+  return [createPluginPackageFingerprint(metadata.name, metadata.version)];
+}
+
+function findPackageJson(projectRoot: string, startDir: string): string | undefined {
+  let current = startDir;
+  while (current.startsWith(projectRoot)) {
+    const candidate = join(current, "package.json");
+    if (existsSync(candidate)) return candidate;
+
+    const parent = dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+  return undefined;
+}
+
+function readPackageMetadata(
+  packageJsonPath: string,
+): { readonly name: string; readonly version?: string } | undefined {
+  try {
+    const metadata = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+      readonly name?: unknown;
+      readonly version?: unknown;
+    };
+    return typeof metadata.name === "string" && metadata.name.length > 0
+      ? {
+          name: metadata.name,
+          ...(typeof metadata.version === "string" ? { version: metadata.version } : {}),
+        }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function createResolverSnapshot(options: {
+  readonly typedConfig: unknown;
+  readonly vmcLoad: VmcLoadResult;
+  readonly resolver: VirtualModuleResolver;
+  readonly mergedPlugins: readonly VirtualModulePlugin[];
+  readonly typeTargetSpecs: ReadonlyArray<
+    import("@typed/virtual-modules", { with: { "resolution-mode": "import" } }).TypeTargetSpec
+  >;
+}): JsonValue {
+  return {
+    typedConfig: createTypedConfigSnapshot(options.typedConfig),
+    vmcConfig: createVmcLoadSnapshot(options.vmcLoad),
+    plugins: options.mergedPlugins.map((plugin) => ({
+      name: plugin.name,
+      shouldResolve: plugin.shouldResolve.toString(),
+      build: plugin.build.toString(),
+      typeTargetSpecs: toJsonValue(plugin.typeTargetSpecs ?? []),
+    })),
+    hasResolveModule: typeof options.resolver.resolveModule === "function",
+    hasResolvePluginName: typeof options.resolver.resolvePluginName === "function",
+    typeTargetSpecs: toJsonValue(options.typeTargetSpecs),
+  };
+}
+
+function createTypedConfigSnapshot(typedConfig: unknown): JsonValue {
+  const config = typedConfig as
+    | {
+        readonly router?: { readonly prefix?: unknown };
+        readonly api?: { readonly prefix?: unknown; readonly pathPrefix?: unknown };
+      }
+    | undefined;
+  return {
+    router: { prefix: toJsonValue(config?.router?.prefix) },
+    api: {
+      prefix: toJsonValue(config?.api?.prefix),
+      pathPrefix: toJsonValue(config?.api?.pathPrefix),
+    },
+  };
+}
+
+function createVmcLoadSnapshot(vmcLoad: VmcLoadResult): JsonValue {
+  if (vmcLoad.status !== "loaded") {
+    return {
+      status: vmcLoad.status,
+      path: vmcLoad.status === "error" ? (vmcLoad.path ?? null) : null,
+      message: vmcLoad.status === "error" ? vmcLoad.message : null,
+    };
+  }
+  return {
+    status: vmcLoad.status,
+    path: vmcLoad.path,
+    pluginSpecifiers: vmcLoad.pluginSpecifiers,
+    pluginModules: vmcLoad.pluginModules.map((pluginModule) => ({
+      specifier: pluginModule.specifier,
+      pluginName: pluginModule.pluginName,
+      resolvedPath: pluginModule.resolvedPath,
+      dependencyPaths: pluginModule.dependencyPaths,
+    })),
+    pluginLoadErrors: vmcLoad.pluginLoadErrors.map((error) => ({
+      specifier: error.specifier,
+      code: error.code,
+      message: error.message,
+    })),
+  };
+}
+
+function createUnavailableFingerprint(
+  kind: VirtualArtifactFingerprint["kind"],
+  name: string,
+  unavailableReason: string,
+): VirtualArtifactFingerprint {
+  return { kind, name, unavailableReason };
+}
+
+function toJsonValue(value: unknown): JsonValue {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : String(value);
+  if (Array.isArray(value)) return value.map(toJsonValue);
+  if (typeof value !== "object") return String(value);
+
+  const entries = Object.entries(value)
+    .filter(([, item]) => typeof item !== "function" && typeof item !== "symbol")
+    .sort(([left], [right]) => left.localeCompare(right));
+  return Object.fromEntries(entries.map(([key, item]) => [key, toJsonValue(item)]));
 }
 
 function init(modules: { typescript: typeof import("typescript") }): {
@@ -236,6 +788,20 @@ function init(modules: { typescript: typeof import("typescript") }): {
       tsconfigPath,
       typeTargetSpecs,
     );
+    const artifactStore = createTsPluginArtifactStoreFactory({
+      ts,
+      projectRoot,
+      languageServiceHost: info.project as import("typescript").LanguageServiceHost,
+      ...(configPath ? { configPath } : {}),
+      ...(vmcConfigPathOpt ? { vmcConfigPath: vmcConfigPathOpt } : {}),
+      tsconfigPath,
+      typeTargetSpecs,
+      loadedConfig,
+      typedConfig,
+      vmcLoad,
+      resolver,
+      mergedPlugins,
+    });
 
     // Pre-validate that TypeInfoApiSession can be created from the fallback program.
     // This catches issues early (missing type targets, checker errors) and caches the result.
@@ -405,6 +971,8 @@ function init(modules: { typescript: typeof import("typescript") }): {
       resolver,
       projectRoot,
       createTypeInfoApiSession: createTypeInfoApiSessionFactory,
+      artifactStoreFactory: artifactStore.artifactStoreFactory,
+      shouldReuseRecord: artifactStore.shouldReuseRecord,
       watchHost,
       debounceMs,
     });

@@ -11,7 +11,7 @@ export class CreateTodo extends Context.Service<
   (text: string) => Effect.Effect<Domain.Todo>
 >()("CreateTodo") {
   static override readonly call = (text: string) =>
-    Effect.flatMap(CreateTodo.asEffect(), (createTodo) => createTodo(text));
+    Effect.flatMap(CreateTodo, (createTodo) => createTodo(text));
 }
 
 /* #endregion */
@@ -58,7 +58,7 @@ export const createTodo: Effect.Effect<
   Option.Option<Domain.Todo>,
   never,
   CreateTodo | TodoList | TodoText
-> = Effect.flatMap(TodoText.asEffect(), (text: string) =>
+> = Effect.flatMap(TodoText, (text: string) =>
   text.trim() === ""
     ? Effect.succeed(Option.none<Domain.Todo>())
     : CreateTodo.call(text).pipe(

@@ -1,0 +1,32 @@
+# Workflow Memories
+
+- `vmc` CLI integration tests execute `dist/cli.js`; keep `@typed/virtual-modules` and `@typed/virtual-modules-compiler` built before Vitest so CLI assertions do not pass against stale output.
+- `loadResolverFromVmcConfig()` must preserve loaded plugin module metadata (`specifier`, `pluginName`, `resolvedPath`) so compiler artifact fingerprints can invalidate when module code changes without changing `build.toString()`.
+- `vmc --watch` cannot dispose the compiler-host adapter at the end of each `createProgram` call. TypeInfo watch dependencies need the adapter/store alive between rebuilds to mark virtual records stale.
+- TypeScript builder programs require adapter-created virtual `SourceFile`s to carry a stable `.version`; use the virtual record version string.
+- Artifact manifest validation must include dependency descriptors from TypeInfo `api.file()` / `api.directory()`; otherwise out-of-root inputs can reuse stale generated source.
+- Loaded plugin fingerprints must include CommonJS helper modules discovered from the plugin module graph, not just the entry file.
+- Long-lived watch adapters must mark process-local virtual records stale on each rebuild so hot records still re-enter manifest/fingerprint validation.
+- Recursive glob dependency fingerprints must mirror `TypeInfoApi.directory()` semantics: recursive globs without `**` include both the direct pattern and `**/<pattern>`.
+- Watch resolver reload should use a stable resolver proxy so the adapter keeps invalidation state while delegating to freshly loaded plugins after helper/module changes.
+- TypeInfo directory dependency fingerprints should hash only TS-family file extensions (`.ts`, `.tsx`, `.mts`, `.cts`, `.d.ts`), matching `TypeInfoApi.directory()`.
+- `vmc --watch` needs explicit watchers for non-project inputs: the vmc config, config helper modules, loaded plugin entry files, and plugin helper modules. Helper-only changes should trigger `updateRootFileNames()` through the watch handle.
+- Vite cannot safely infer plugin/config fingerprints from preloaded plugin function source. Default Vite artifact reads should fail closed and rebuild unless a host passes explicit `artifactStore.fingerprints.pluginFingerprints`.
+- Cross-surface vmc/Vite reuse fixtures should use the vmc manifest's `effectiveImporter` as the request identity. TypeScript/vmc may realpath temp paths (for example `/var` to `/private/var`), and cache identity/fingerprints must match that canonical importer.
+- TS plugin artifact-store tests should assert shared generated paths under `node_modules/.typed/virtual`; only no-store direct adapter coverage should continue asserting the legacy `__virtual_` fallback path.
+- TS plugin cache reuse is only meaningful when the TS project exposes enough stable compiler inputs, especially a `configFilePath`/parsed tsconfig. Missing compiler inputs should be represented as unavailable fingerprints so artifact hits fail closed.
+- TS plugin source input fingerprints must hash language-service snapshots when available; editor state can diverge from saved disk files.
+- Until `loadTypedConfig()` exposes dependency module paths, loaded `typed.config.ts` should be marked non-reusable for TS plugin artifacts so built-in router/API config helpers cannot produce stale cache hits.
+- TS plugin tests import `@typed/virtual-modules` through package exports, so `@typed/virtual-modules` must be built before the TS plugin test/build path; otherwise tests can silently exercise stale adapter code from `dist`.
+- Generated virtual artifact paths under `node_modules/.typed/virtual` are cache outputs, not source inputs. Filter them out of TS plugin source-root fingerprints to avoid recursive adapter validation.
+- Long-lived TS language-service sessions can keep virtual records alive without re-running module resolution. Validate/rebuild known records before diagnostics so source snapshot, config, and plugin changes cannot bypass artifact-store fingerprint checks.
+- When TS plugin resolver inputs drift from the startup resolver, fail closed before artifact-store materialization. Do not write a manifest with current fingerprints if source text came from stale resolver/plugin objects.
+- Adapter rebuild failures can be reported on every diagnostics request; dedupe adapter diagnostics by code/message so persistent failures do not grow unbounded.
+- VS Code disk previews should use the core `materializeVirtualFile()`/`rewriteSourceForPreviewLocation()` path; the old regex rewrite missed side-effect imports, dynamic imports, template imports, and import types.
+- VS Code preview wrappers should preserve absolute virtual paths already under `node_modules/.typed/virtual`; basename-only reconstruction would flatten artifact-store subdirectories.
+- VS Code extension builds/tests import `@typed/virtual-modules` from package exports, so build `@typed/virtual-modules` first before esbuild/Vitest or new core exports can appear missing from stale `dist`.
+- `@typed/virtual-modules-vscode` now has a focused Vitest harness for `virtualPreviewDisk.ts`; use `pnpm --filter @typed/virtual-modules-vscode test` for wrapper path regressions.
+- Artifact cleanup is an explicit core artifact-store API, not a normal invalidation side effect. `VirtualArtifactStore.clean()` removes the whole `node_modules/.typed/virtual` tree and reports whether that root existed.
+- Because cleanup deletes the virtual artifact root, it must synchronize with materialization through `node_modules/.typed/virtual.cleanup.lock`, a sibling lock outside the deleted tree.
+- T13 final verification should run compiler tests before Vite tests, then root `pnpm build`; the root wrapper adds `tsc -b tsconfig.build.json` and TS plugin sample plugin builds beyond `pnpm -r build`.
+- Failed plugin-build diagnostic-only manifests remain deferred to a later diagnostic-artifact design because there is no generated source to materialize.

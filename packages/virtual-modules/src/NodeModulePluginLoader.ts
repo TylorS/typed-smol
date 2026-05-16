@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
+import type { Module } from "node:module";
 import { runInThisContext } from "node:vm";
 import type {
   NodeModulePluginLoadError,
@@ -99,6 +100,7 @@ export class NodeModulePluginLoader {
         status: "loaded",
         plugin: input,
         resolvedPath: "<preloaded>",
+        dependencyPaths: [],
       };
     }
 
@@ -136,6 +138,8 @@ export class NodeModulePluginLoader {
       );
     }
 
+    evictCachedModuleGraph(require, resolvedPath, request.baseDir);
+    const cacheBeforeLoad = new Set(Object.keys(require.cache));
     let mod: unknown;
     try {
       mod = require(resolvedPath) as unknown;
@@ -178,6 +182,12 @@ export class NodeModulePluginLoader {
       status: "loaded",
       plugin: normalizedPlugin,
       resolvedPath,
+      dependencyPaths: collectDependencyPaths(
+        require,
+        resolvedPath,
+        request.baseDir,
+        cacheBeforeLoad,
+      ),
     };
   }
 
@@ -264,5 +274,86 @@ export class NodeModulePluginLoader {
     }
 
     return undefined;
+  }
+}
+
+function collectDependencyPaths(
+  require: NodeJS.Require,
+  resolvedPath: string,
+  baseDir: string,
+  cacheBeforeLoad: ReadonlySet<string>,
+): readonly string[] {
+  const dependencyPaths = new Set<string>();
+  collectModuleGraphPaths(require.cache[resolvedPath], baseDir, dependencyPaths);
+
+  for (const loadedPath of Object.keys(require.cache)) {
+    if (!cacheBeforeLoad.has(loadedPath)) {
+      addDependencyPath(loadedPath, baseDir, dependencyPaths);
+    }
+  }
+
+  dependencyPaths.delete(resolvedPath);
+  return [...dependencyPaths].sort();
+}
+
+function evictCachedModuleGraph(
+  require: NodeJS.Require,
+  resolvedPath: string,
+  baseDir: string,
+): void {
+  const visited = new Set<string>();
+  const visit = (filePath: string): void => {
+    if (visited.has(filePath)) return;
+    visited.add(filePath);
+
+    const cached = require.cache[filePath];
+    if (!cached) return;
+    for (const child of cached.children) {
+      if (isCachePathUnderBase(child.filename, baseDir)) {
+        visit(child.filename);
+      }
+    }
+    delete require.cache[filePath];
+  };
+
+  if (isCachePathUnderBase(resolvedPath, baseDir)) {
+    visit(resolvedPath);
+  }
+}
+
+function collectModuleGraphPaths(
+  module: Module | undefined,
+  baseDir: string,
+  dependencyPaths: Set<string>,
+): void {
+  if (!module) return;
+
+  for (const child of module.children) {
+    if (dependencyPaths.has(child.filename)) continue;
+    if (addDependencyPath(child.filename, baseDir, dependencyPaths)) {
+      collectModuleGraphPaths(child, baseDir, dependencyPaths);
+    }
+  }
+}
+
+function addDependencyPath(
+  filePath: string,
+  baseDir: string,
+  dependencyPaths: Set<string>,
+): boolean {
+  try {
+    if (!pathIsUnderBase(baseDir, filePath)) return false;
+  } catch {
+    return false;
+  }
+  dependencyPaths.add(filePath);
+  return true;
+}
+
+function isCachePathUnderBase(filePath: string, baseDir: string): boolean {
+  try {
+    return pathIsUnderBase(baseDir, filePath);
+  } catch {
+    return false;
   }
 }

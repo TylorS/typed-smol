@@ -1,10 +1,10 @@
-import { Effectable } from "effect";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import type * as Equivalence from "effect/Equivalence";
 import * as Exit from "effect/Exit";
 import * as MutableRef from "effect/MutableRef";
 import * as Option from "effect/Option";
+import { EffectableWithOverride } from "./effectableWithOverride.js";
 
 /**
  * This is the core piece of state for {@link RefSubject}. It presents an Yieldable/Effect interface
@@ -15,7 +15,7 @@ import * as Option from "effect/Option";
  *
  * @internal
  */
-export class DeferredRef<E, A> extends Effectable.Class<A, E, never> {
+export class DeferredRef<E, A> extends EffectableWithOverride<A, E, never> {
   public version!: number;
   public deferred!: Deferred.Deferred<A, E>;
 
