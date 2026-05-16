@@ -11,7 +11,7 @@
     "format": "typed format"
   },
   "devDependencies": {
-    "@typed/cli": "^1.0.0-beta.1",
+    "@typed/cli": "^1.0.0-beta.4",
     "typescript": "6.0.3"
   }
 }

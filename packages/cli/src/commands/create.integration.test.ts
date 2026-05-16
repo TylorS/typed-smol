@@ -54,6 +54,7 @@ describe("typed create", () => {
 
     expect(rootPackage).not.toContain("catalog:");
     expect(rootPackage).not.toContain('"@typed/cli": "workspace:*"');
+    expect(rootPackage).toContain('"@typed/cli": "^1.0.0-beta.4"');
     expect(appPackage).not.toContain("catalog:");
     expect(appPackage).not.toContain('"@typed/app": "workspace:*"');
     expect(appPackage).toContain('"@demo-app/shared": "workspace:*"');
