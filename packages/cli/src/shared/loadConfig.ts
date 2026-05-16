@@ -5,6 +5,7 @@
 import { loadTypedConfig } from "@typed/app";
 import type { TypedConfig } from "@typed/app";
 import { Option } from "effect";
+import ts from "typescript";
 
 export type { TypedConfig };
 
@@ -18,7 +19,7 @@ export interface LoadedConfig {
  * Logs a warning on error and falls back to empty config.
  */
 export function loadProjectConfig(projectRoot: string): LoadedConfig | undefined {
-  const result = loadTypedConfig({ projectRoot });
+  const result = loadTypedConfig({ projectRoot, ts });
   if (result.status === "loaded") {
     return { config: result.config, path: result.path };
   }

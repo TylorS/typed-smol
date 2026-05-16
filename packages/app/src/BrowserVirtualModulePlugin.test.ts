@@ -44,7 +44,7 @@ describe("BrowserVirtualModulePlugin", () => {
     const source = buildBrowser("typed:browser?routes=*") as string;
 
     expect(source).toContain('import { Effect } from "effect";');
-    expect(source).toContain('import * as Routes0 from "router:*";');
+    expect(source).toContain('import * as Routes0 from "router:./routes";');
     expect(source).toContain("export const BrowserRuntime =");
     expect(source).toContain("export function hydrate");
     expect(source).toContain("export function run");

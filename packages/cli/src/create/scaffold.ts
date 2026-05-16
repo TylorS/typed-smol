@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export interface ScaffoldTypedWorkspaceOptions {
@@ -17,7 +17,7 @@ export function scaffoldTypedWorkspace(options: ScaffoldTypedWorkspaceOptions): 
 }
 
 function shouldCopyTemplatePath(path: string): boolean {
-  return !path.includes("node_modules") && !path.endsWith("pnpm-lock.yaml");
+  return basename(path) !== "node_modules" && !path.endsWith("pnpm-lock.yaml");
 }
 
 function replacePlaceholders(root: string, name: string): void {

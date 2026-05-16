@@ -4,11 +4,12 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
-    "build": "vite build --app"
+    "build": "cd ../.. && typed build --entry packages/app/src/entry.server.ts"
   },
   "dependencies": {
     "@__APP_NAME__/shared": "workspace:*",
     "@typed/app": "^1.0.0-beta.4",
+    "@typed/fx": "^2.0.0-beta.4",
     "@typed/router": "^1.0.0-beta.4",
     "@typed/template": "^1.0.0-beta.4",
     "@typed/ui": "^1.0.0-beta.4",

@@ -6,6 +6,7 @@ import { configFlag, modeFlag, baseFlag, logLevelFlag, entryFlag } from "../shar
 import { resolveServerEntry } from "../shared/serverEntry.js";
 import { loadProjectConfig, resolve, resolveBoolean } from "../shared/loadConfig.js";
 import { resolveViteInlineConfig } from "../shared/resolveViteConfig.js";
+import { inferClientHtmlEntries, type ClientHtmlEntry } from "../shared/serverEntryClientInputs.js";
 import { runViteBuild } from "../shared/viteHelpers.js";
 
 const DEFAULT_OUT_DIR = "dist";
@@ -76,8 +77,23 @@ export const build = Command.make("build", {
           .then(() => true)
           .catch(() => false),
       );
+      const clientHtml = inferClientHtmlEntries(entry);
 
-      if (hasIndexHtml) {
+      if (clientHtml.entries.length > 0) {
+        yield* runViteBuild({
+          ...baseConfig,
+          root: clientHtml.root,
+          build: {
+            ...baseConfig.build,
+            rollupOptions: {
+              ...baseConfig.build?.rollupOptions,
+              input: toRollupInput(clientHtml.entries),
+            },
+            outDir: clientOutDir,
+            emptyOutDir: true,
+          },
+        });
+      } else if (hasIndexHtml) {
         yield* runViteBuild({
           ...baseConfig,
           build: {
@@ -100,3 +116,7 @@ export const build = Command.make("build", {
     }),
   ),
 );
+
+function toRollupInput(entries: readonly ClientHtmlEntry[]): Record<string, string> {
+  return Object.fromEntries(entries.map((entry) => [entry.name, entry.html]));
+}

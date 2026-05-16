@@ -27,12 +27,12 @@
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
+    "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
-    "@typed/fx": "workspace:*",
     "@types/node": "^25.7.0",
     "@vitest/coverage-v8": "^4.1.6",
     "effect": "catalog:",

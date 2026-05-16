@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, extname, resolve } from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
 import {
   createPluginConfigFingerprint,
@@ -85,11 +86,13 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       projectRoot ??= resolve(config.root);
     },
 
-    resolveId(id: string, importer: string | undefined): string | null {
+    resolveId(id: string, importer: string | undefined): string | null | Promise<string | null> {
       if (!importer) {
         return null;
       }
       const effectiveImporter = decodeEffectiveImporter(importer);
+      const relativeVirtualImport = resolveRelativeVirtualImport(id, importer, effectiveImporter);
+      if (relativeVirtualImport) return relativeVirtualImport;
       const resolveOptions = {
         id,
         importer: effectiveImporter,
@@ -113,6 +116,11 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       }
       if (result.status === "error" && warnOnError) {
         warnDiagnostic(result.diagnostic, warnOnError);
+      }
+      if (isVirtualId(importer)) {
+        return this.resolve(id, effectiveImporter, { skipSelf: true }).then(
+          (resolved) => resolved?.id ?? null,
+        );
       }
       return null;
     },
@@ -322,6 +330,30 @@ const resolveOptionalProjectRoot = (projectRoot: string | undefined): string | u
   typeof projectRoot === "string" && projectRoot.trim().length > 0
     ? resolve(projectRoot)
     : undefined;
+
+const resolveRelativeVirtualImport = (
+  id: string,
+  importer: string,
+  effectiveImporter: string,
+): string | undefined => {
+  if (!isVirtualId(importer) || !isRelativeImport(id)) return undefined;
+  return firstExistingPath(resolve(dirname(effectiveImporter), id));
+};
+
+const isRelativeImport = (id: string): boolean => id.startsWith("./") || id.startsWith("../");
+
+const firstExistingPath = (candidate: string): string | undefined => {
+  const paths = extname(candidate)
+    ? [candidate, ...sourceAlternatives(candidate)]
+    : [`${candidate}.ts`, `${candidate}.tsx`, candidate];
+  return paths.find((path) => existsSync(path));
+};
+
+const sourceAlternatives = (candidate: string): readonly string[] => {
+  if (candidate.endsWith(".js")) return [candidate.slice(0, -3) + ".ts"];
+  if (candidate.endsWith(".jsx")) return [candidate.slice(0, -4) + ".tsx"];
+  return [];
+};
 
 const warnDiagnostic = (
   diagnostic: VirtualModuleDiagnostic,

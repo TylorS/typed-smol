@@ -7,6 +7,7 @@ describe("encodeVirtualId / decodeVirtualId", () => {
     const importer = "/Users/app/src/main.ts";
     const encoded = encodeVirtualId(id, importer);
     expect(isVirtualId(encoded)).toBe(true);
+    expect(encoded.endsWith(".ts")).toBe(true);
     const decoded = decodeVirtualId(encoded);
     expect(decoded).toEqual({ id, importer });
   });

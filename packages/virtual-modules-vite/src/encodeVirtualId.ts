@@ -1,4 +1,5 @@
 const PREFIX = "\0virtual:";
+const TYPESCRIPT_SUFFIX = ".ts";
 
 function toBase64Url(s: string): string {
   return Buffer.from(s, "utf8").toString("base64url");
@@ -13,7 +14,7 @@ function fromBase64Url(s: string): string {
  * Uses base64url so path characters (e.g. `:`, `\`) don't break parsing.
  */
 export function encodeVirtualId(id: string, importer: string): string {
-  return `${PREFIX}${toBase64Url(id)}:${toBase64Url(importer)}`;
+  return `${PREFIX}${toBase64Url(id)}:${toBase64Url(importer)}${TYPESCRIPT_SUFFIX}`;
 }
 
 /**
@@ -23,7 +24,10 @@ export function decodeVirtualId(resolvedId: string): { id: string; importer: str
   if (!resolvedId.startsWith(PREFIX)) {
     return null;
   }
-  const rest = resolvedId.slice(PREFIX.length);
+  const rawRest = resolvedId.slice(PREFIX.length);
+  const rest = rawRest.endsWith(TYPESCRIPT_SUFFIX)
+    ? rawRest.slice(0, -TYPESCRIPT_SUFFIX.length)
+    : rawRest;
   const colonIndex = rest.indexOf(":");
   if (colonIndex === -1) {
     return null;

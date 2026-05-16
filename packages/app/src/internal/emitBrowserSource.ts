@@ -17,8 +17,12 @@ export function emitBrowserSource(input: EmitBrowserSourceInput): string {
 
 function emitRouteImports(routes: readonly string[]): readonly string[] {
   return routes.map((target, index) => {
-    return `import * as Routes${index} from "router:${target}";`;
+    return `import * as Routes${index} from "router:${toRouterTarget(target)}";`;
   });
+}
+
+function toRouterTarget(target: string): string {
+  return target === "*" ? "./routes" : target;
 }
 
 function emitCompanionImports(companions: readonly BrowserCompanionImport[]): readonly string[] {

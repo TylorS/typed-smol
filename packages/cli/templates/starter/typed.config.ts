@@ -1,7 +1,7 @@
-import { defineConfig } from "@typed/app";
+import type { TypedConfig } from "@typed/app";
 
-export default defineConfig({
+export default {
   entry: "packages/app/src/entry.server.ts",
   router: { prefix: "router:" },
   api: { prefix: "api:", pathPrefix: "/api" },
-});
+} satisfies TypedConfig;

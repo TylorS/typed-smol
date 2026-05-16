@@ -55,11 +55,22 @@ describe("typed create", () => {
 
     expect(rootPackage).not.toContain("catalog:");
     expect(rootPackage).not.toContain('"@typed/cli": "workspace:*"');
+    expect(rootPackage).toContain('"@typed/app": "^1.0.0-beta.4"');
     expect(rootPackage).toContain('"@typed/cli": "^1.0.0-beta.4"');
+    expect(rootPackage).toContain('"@typed/fx": "^2.0.0-beta.4"');
+    expect(rootPackage).toContain('"@typed/router": "^1.0.0-beta.4"');
+    expect(rootPackage).toContain('"@typed/ui": "^1.0.0-beta.4"');
+    expect(rootPackage).toContain('"@typed/vite-plugin": "^1.0.0-beta.4"');
+    expect(rootPackage).toContain('"effect": "4.0.0-beta.66"');
+    expect(rootPackage).toContain('"vite": "8.0.12"');
     expect(appPackage).not.toContain("catalog:");
     expect(appPackage).not.toContain('"@typed/app": "workspace:*"');
     expect(appPackage).toContain('"@demo-app/shared": "workspace:*"');
+    expect(appPackage).toContain('"@typed/fx": "^2.0.0-beta.4"');
     expect(appPackage).toContain('"@typed/router": "^1.0.0-beta.4"');
+    expect(appPackage).toContain(
+      '"build": "cd ../.. && typed build --entry packages/app/src/entry.server.ts"',
+    );
   });
 
   it("does not copy generated install artifacts", () => {

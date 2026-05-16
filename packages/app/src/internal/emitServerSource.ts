@@ -76,7 +76,7 @@ function emitConstants(
     `const routeModules = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
     `const pageEntries = [${pages.map(pageEntrySource).join(", ")}];`,
     `const apiLayers = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}.ApiLayer`).join(", ")}];`,
-    "const routeLayers = routeModules.map((routeModule: any) =>",
+    "const routeLayers = routeModules.map((routeModule) =>",
     "  HttpRouter.use(ssrForHttp(routeModule.default ?? routeModule.router ?? routeModule)),",
     ");",
   ].join("\n");
@@ -101,17 +101,17 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     : "[]";
   return [
     `const companionPages = ${companionPages};`,
-    `const companionLayers: readonly any[] = ${companionLayers};`,
-    "const dev = (import.meta as any).env?.DEV === true;",
+    `const companionLayers = ${companionLayers};`,
+    "const dev = import.meta.env?.DEV === true;",
     "const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: process.cwd(), dev });",
-    "const appLayers = [...apiLayers, ...routeLayers, ...companionLayers, staticAssetsLayer] as unknown as [any, ...any[]];",
+    "const appLayers = [...apiLayers, ...routeLayers, ...companionLayers, staticAssetsLayer];",
     "export const AppLayer = Layer.mergeAll(...appLayers);",
     "export const ServerLayer = HttpRouter.serve(AppLayer).pipe(",
-    "  Layer.provide(TypedHttpServer.layer({ projectRoot: process.cwd(), dev }) as any),",
+    "  Layer.provide(TypedHttpServer.layer({ projectRoot: process.cwd(), dev })),",
     ");",
     "export const handler = TypedHttpServer.toNodeHandler(AppLayer);",
     "export default handler;",
-    "export function run(options: { readonly run?: (layer: typeof ServerLayer) => unknown } = {}) {",
+    "export function run(options = {}) {",
     "  return options.run ? options.run(ServerLayer) : Layer.launch(ServerLayer);",
     "}",
   ].join("\n");

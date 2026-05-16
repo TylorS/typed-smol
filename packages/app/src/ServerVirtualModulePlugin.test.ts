@@ -118,7 +118,7 @@ describe("ServerVirtualModulePlugin", () => {
     const source = buildServer("typed:server?api=./api&routes=./routes", fixture.importer) as string;
     const result = typeCheckGeneratedSource({
       rootDir: fixture.root,
-      generatedPath: "src/generated.server.ts",
+      generatedPath: "src/generated.server.js",
       sourceText: source,
       rootFiles: [
         fixture.importer,
