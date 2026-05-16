@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { join } from "node:path";
 import { createSecureContext } from "node:tls";
 import { afterEach, describe, expect, it } from "vitest";
@@ -136,5 +137,32 @@ describe("TypedHttpServer", () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it("creates a node:http-compatible handler from an Effect HTTP app layer", async () => {
+    const root = tempRoot();
+    const assetRoot = join(root, "dist/client");
+    mkdirSync(assetRoot, { recursive: true });
+    writeFileSync(join(assetRoot, "asset.txt"), "from node handler", "utf8");
+    const appLayer = TypedHttpServer.staticAssets({
+      projectRoot: root,
+      dev: false,
+    });
+    const nodeHandler = TypedHttpServer.toNodeHandler(appLayer);
+    const server = createServer(nodeHandler);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("expected tcp server address");
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${address.port}/asset.txt`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("from node handler");
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+      await nodeHandler.dispose();
+    }
   });
 });

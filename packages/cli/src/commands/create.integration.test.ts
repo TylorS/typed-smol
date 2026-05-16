@@ -41,7 +41,8 @@ describe("typed create", () => {
     expect(serverEntry).toContain('typed:server?routes=./routes&api=./api&html=./index.html&client=./entry.browser.ts');
     expect(serverEntry).toContain('typed:env');
     expect(serverEntry).toContain('typed:config');
-    expect(serverEntry).toContain("Effect.runPromise");
+    expect(serverEntry).toContain("export default handler");
+    expect(serverEntry).toContain("export { run }");
     expect(browserEntry).toContain('typed:browser?routes=*');
     expect(browserEntry).toContain("Effect.runPromise");
   });

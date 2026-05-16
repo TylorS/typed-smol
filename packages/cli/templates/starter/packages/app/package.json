@@ -10,6 +10,8 @@
     "@__APP_NAME__/shared": "workspace:*",
     "@typed/app": "^1.0.0-beta.4",
     "@typed/router": "^1.0.0-beta.4",
+    "@typed/template": "^1.0.0-beta.4",
+    "@typed/ui": "^1.0.0-beta.4",
     "@typed/vite-plugin": "^1.0.0-beta.4",
     "effect": "4.0.0-beta.66",
     "vite": "8.0.12"

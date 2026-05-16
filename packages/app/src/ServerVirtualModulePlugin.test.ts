@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createServerVirtualModulePlugin } from "./index.js";
+import { typeCheckGeneratedSource } from "./test-utils/generatedSourceHarness.js";
 
 const tempDirs: string[] = [];
 
@@ -44,13 +45,20 @@ describe("ServerVirtualModulePlugin", () => {
     const source = buildServer("typed:server?api=./api&routes=./routes1&routes=./routes2") as string;
 
     expect(source).toContain('import { Effect } from "effect";');
+    expect(source).toContain('import * as Layer from "effect/Layer";');
+    expect(source).toContain('import * as HttpRouter from "effect/unstable/http/HttpRouter";');
+    expect(source).toContain('import { TypedHttpServer } from "@typed/app";');
+    expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(source).toContain('import * as Api0 from "api:./api";');
     expect(source).toContain('import * as Routes0 from "router:./routes1";');
     expect(source).toContain('import * as Routes1 from "router:./routes2";');
+    expect(source).toContain("export const AppLayer =");
     expect(source).toContain("export const ServerLayer =");
     expect(source).toContain("export const handler =");
+    expect(source).toContain("export default handler");
     expect(source).toContain("export function run");
-    expect(source).toContain("Effect.succeed(handler)");
+    expect(source).toContain("Layer.launch(ServerLayer)");
+    expect(source).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
     expect(source).not.toContain("export async function run");
   });
 
@@ -98,6 +106,33 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain("ServerDependenciesCompanion.layers");
     expect(source).toContain("ServerHtmlCompanion.pages");
     expect(source).not.toContain("_server");
+  });
+
+  it("type-checks generated server entry source", () => {
+    const fixture = createFixture({
+      "src/api.ts": 'import * as Layer from "effect/Layer";\nexport const ApiLayer = Layer.empty;\n',
+      "src/routes.ts": "const routes: any = {};\nexport default routes;\n",
+      "src/typed-ui.d.ts":
+        'declare module "@typed/ui" { export const ssrForHttp: (input: any) => (router: any) => any; }\n',
+    });
+    const source = buildServer("typed:server?api=./api&routes=./routes", fixture.importer) as string;
+    const result = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/generated.server.ts",
+      sourceText: source,
+      rootFiles: [
+        fixture.importer,
+        join(fixture.root, "src/api.ts"),
+        join(fixture.root, "src/routes.ts"),
+        join(fixture.root, "src/typed-ui.d.ts"),
+      ],
+      moduleFallbacks: {
+        "api:./api": join(fixture.root, "src/api.ts"),
+        "router:./routes": join(fixture.root, "src/routes.ts"),
+      },
+    });
+
+    expect(result.diagnostics).toEqual([]);
   });
 
   it("returns parser diagnostics with the server plugin name", () => {
