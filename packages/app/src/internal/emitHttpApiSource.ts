@@ -452,7 +452,7 @@ export function emitHttpApiSource(input: {
   const varNameByPath = makeUniqueVarNames(proposedNames);
 
   const importLines: string[] = [
-    `import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";`,
+    `import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";`,
     `import * as Effect from "effect/Effect";`,
     ...(endpointSpecs.some((ep) => endpointHasSchemaTypedHandler(input.optionalExportsByPath, ep))
       ? [`import type * as Schema from "effect/Schema";`]
@@ -468,8 +468,6 @@ export function emitHttpApiSource(input: {
     `import * as HttpServer from "effect/unstable/http/HttpServer";`,
     `import * as HttpRouter from "effect/unstable/http/HttpRouter";`,
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
-    `import http from "node:http";`,
-    `import { NodeHttpServer } from "@effect/platform-node";`,
   ];
 
   for (const path of endpointPaths) {
@@ -646,7 +644,12 @@ export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
       const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
       const appConfig: AppConfig = { disableListenLog };
       const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-      const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+      const serverLayer = TypedHttpServer.layer({
+        host,
+        port,
+        projectRoot: process.cwd(),
+        dev: (import.meta as any).env?.DEV === true,
+      }) as any;
       return appLayer.pipe(Layer.provide(serverLayer));
     }),
   );

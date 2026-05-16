@@ -315,7 +315,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       typeof result === "string" ? result : (result as { sourceText?: string }).sourceText;
     expect(sourceText).toBeDefined();
     expect(sourceText).toMatchInlineSnapshot(`
-      "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
+      "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
       import * as Effect from "effect/Effect";
       import type * as Schema from "effect/Schema";
       import * as Layer from "effect/Layer";
@@ -329,8 +329,6 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
-      import http from "node:http";
-      import { NodeHttpServer } from "@effect/platform-node";
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
@@ -367,12 +365,24 @@ describe("createHttpApiVirtualModulePlugin", () => {
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
             const appConfig: AppConfig = { disableListenLog };
             const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-            const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            const serverLayer = TypedHttpServer.layer({
+              host,
+              port,
+              projectRoot: process.cwd(),
+              dev: (import.meta as any).env?.DEV === true,
+            }) as any;
             return appLayer.pipe(Layer.provide(serverLayer));
           }),
         );
       "
     `);
+  });
+
+  it("delegates generated server wiring to TypedHttpServer", () => {
+    const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
+
+    expect(sourceText).toContain("TypedHttpServer.layer");
+    expect(sourceText).not.toContain("NodeHttpServer.layer(http.createServer");
   });
 
   it("type-checks generated HttpApi source", () => {
@@ -536,7 +546,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
     if (resolved.status !== "resolved") return;
     expect(resolved.pluginName).toBe("httpapi-virtual-module");
     expect(resolved.sourceText).toMatchInlineSnapshot(`
-      "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
+      "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
       import * as Effect from "effect/Effect";
       import type * as Schema from "effect/Schema";
       import * as Layer from "effect/Layer";
@@ -550,8 +560,6 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
-      import http from "node:http";
-      import { NodeHttpServer } from "@effect/platform-node";
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
@@ -588,7 +596,12 @@ describe("HttpApiVirtualModulePlugin integration", () => {
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
             const appConfig: AppConfig = { disableListenLog };
             const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-            const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
+            const serverLayer = TypedHttpServer.layer({
+              host,
+              port,
+              projectRoot: process.cwd(),
+              dev: (import.meta as any).env?.DEV === true,
+            }) as any;
             return appLayer.pipe(Layer.provide(serverLayer));
           }),
         );
