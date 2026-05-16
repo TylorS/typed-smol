@@ -80,7 +80,7 @@ export const handler = defineApiHandler(route, method, { headers?, body?, succes
 
 ### OpenAPI configuration surface (Effect-backed)
 
-The plugin only supports OpenAPI options that are present in the current Effect APIs in this repo (`effect@4.0.0-beta.4`), mapped as follows.
+The plugin only supports OpenAPI options that type-check against the installed `packages/app` Effect declarations. For the current hardening tranche, the source of truth is `packages/app/node_modules/effect/dist/unstable/httpapi/*.d.ts` (`effect@4.0.0-beta.66`).
 
 #### 1) Annotation controls (`OpenApi.annotations`)
 
@@ -102,20 +102,13 @@ Supported keys:
 
 Scope behavior:
 
-- API scope (`_api.ts` / root in-file) maps to `HttpApi.annotate(...)`.
-- Group scope (`_group.ts` / group in-file) maps to `HttpApiGroup.annotate(...)`.
-- Endpoint scope (`<endpoint>.ts` / endpoint companions) maps to `HttpApiEndpoint.annotate(...)`.
+- API scope (`_api.ts` / root in-file) maps to `.annotateMerge(OpenApi.annotations(...))`.
+- Group scope (`_group.ts` / group in-file) maps to installed group annotation APIs where supported.
+- Endpoint scope (`<endpoint>.ts` / endpoint companions) maps to installed endpoint annotation APIs where supported.
 
 #### 2) Spec generation controls (`OpenApi.fromApi`)
 
-Supported keys:
-
-- `additionalProperties?: boolean | JsonSchema.JsonSchema`
-
-Scope behavior:
-
-- Supported at API/root scope only.
-- Group/endpoint usage is a typed diagnostic.
+The installed `OpenApi.fromApi(Api)` declaration does not currently expose the older durable-spec `additionalProperties` option. The plugin must not emit guessed `OpenApi.fromApi(Api, ...)` calls. `additionalProperties` remains deferred until the installed Effect API supports it or a later approved design maps it elsewhere.
 
 #### 3) Spec exposure controls (router routes)
 
@@ -140,7 +133,7 @@ Validation behavior:
 1. in-file endpoint exports (`<endpoint>.ts`) have highest precedence.
 2. sibling endpoint companions (`<endpoint>.*.ts`) are next.
 3. directory companions (`_*.ts`) are lowest and compose ancestor -> leaf.
-4. unsupported reserved companion names are diagnostics (not ignored silently).
+4. files that look reserved but do not match a supported convention are non-participating inputs; supported convention collisions or misplaced supported companions remain diagnostics.
 
 ### Concrete example
 
@@ -285,15 +278,14 @@ src/apis/
 
 - Normalizes OpenAPI config from in-file/sibling/directory layers into explicit scopes:
   - annotations,
-  - generation options,
-  - exposure options.
+  - exposure options,
+  - deferred/unsupported generation options.
 - Enforces scope rules:
   - annotations allowed at API/group/endpoint,
-  - generation (`additionalProperties`) allowed at API scope only,
-  - exposure routes allowed at API scope only.
+  - exposure routes allowed at API scope only,
+  - stale generation options such as `additionalProperties` are not emitted against unsupported installed declarations.
 - Maps normalized config to Effect-backed runtime surfaces:
   - `OpenApi.annotations`,
-  - `OpenApi.fromApi(..., { additionalProperties })`,
   - `HttpApiBuilder.layer({ openapiPath })`,
   - `HttpApiSwagger.layer({ path })`,
   - `HttpApiScalar.layer/layerCdn(...)`.
@@ -400,16 +392,16 @@ sequenceDiagram
   - Mitigation: deterministic merge rules + collision diagnostics where overrides conflict.
 - Unsupported OpenAPI annotation key or invalid annotation shape:
   - Mitigation: strict OpenAPI key whitelist and type validation mapped to Effect `OpenApi.annotations`.
-- OpenAPI generation option used at invalid scope (for example endpoint-level `additionalProperties`):
-  - Mitigation: scope-aware diagnostics with allowed-scope hint in error text.
+- OpenAPI generation option unsupported by installed declarations (for example stale `additionalProperties`):
+  - Mitigation: explicit deferral or structured diagnostic; never emit guessed `OpenApi.fromApi` options.
 - OpenAPI exposure route conflicts (`jsonPath`/`swaggerPath`/`scalar.path` overlap):
   - Mitigation: deterministic route-conflict diagnostics and no-source emission on collision.
 - AST parse inconsistency (same input snapshot yielding divergent tree):
   - Mitigation: canonical AST node ordering + snapshot-based parser tests.
 - Vite integration option mismatch or plugin-order drift:
   - Mitigation: explicit `typedVitePlugin` option contract and integration tests asserting registration order and resolvability.
-- Unsupported reserved companion names:
-  - Mitigation: explicit diagnostics for unknown reserved filename patterns (no silent ignore).
+- Reserved-looking non-convention files:
+  - Mitigation: classify unknown reserved-looking files as non-participating; keep diagnostics for supported convention collisions and misplaced supported companions.
 - Handler helper loses type precision (`any` leakage) or allows incompatible shapes:
   - Mitigation: compile-time helper contract tests (positive + negative) for context inference and return/error compatibility.
 
@@ -439,9 +431,9 @@ sequenceDiagram
 | FR-20          | Filesystem Tree AST Parser                                     | Mandatory parse-to-AST boundary before rendering.                                                 |
 | FR-21          | Source Generator                                               | Rendering consumes AST as canonical input.                                                        |
 | FR-22          | Vite Plugin Integration Surface                                | First-class `@typed/vite-plugin` integration and option wiring.                                   |
-| FR-23          | Candidate Discovery + Convention Resolver + Diagnostic Catalog | Explicit supported file-role matrix and diagnostics for unsupported reserved companion names.     |
+| FR-23          | Candidate Discovery + Convention Resolver + Diagnostic Catalog | Explicit supported file-role matrix, non-participation for unrelated files, and diagnostics for supported convention misuse. |
 | FR-24          | Typed Handler Helper Surface + Endpoint Contract Validator     | Curried helper contract with compile-time inference for handler context and schema compatibility. |
-| FR-25          | OpenAPI Config Mapper and Exposure Planner                     | Effect-backed OpenAPI option matrix for annotations/generation/exposure.                          |
+| FR-25          | OpenAPI Config Mapper and Exposure Planner                     | Effect-backed OpenAPI option matrix for annotations/exposure with unsupported generation options deferred. |
 | NFR-1          | all components                                                 | End-to-end synchronous execution path.                                                            |
 | NFR-2          | Discovery + Resolver + Generator                               | Deterministic ordering and generated output stability.                                            |
 | NFR-3          | Plugin + Diagnostic Catalog                                    | Non-crashing structured error behavior.                                                           |
@@ -468,10 +460,10 @@ sequenceDiagram
 - code:
   - `packages/vite-plugin/src/index.ts`
   - `packages/app/src/RouterVirtualModulePlugin.ts`
-  - `node_modules/.pnpm/effect@4.0.0-beta.4/node_modules/effect/src/unstable/httpapi/OpenApi.ts`
-  - `node_modules/.pnpm/effect@4.0.0-beta.4/node_modules/effect/src/unstable/httpapi/HttpApiBuilder.ts`
-  - `node_modules/.pnpm/effect@4.0.0-beta.4/node_modules/effect/src/unstable/httpapi/HttpApiSwagger.ts`
-  - `node_modules/.pnpm/effect@4.0.0-beta.4/node_modules/effect/src/unstable/httpapi/HttpApiScalar.ts`
+  - `packages/app/node_modules/effect/dist/unstable/httpapi/OpenApi.d.ts`
+  - `packages/app/node_modules/effect/dist/unstable/httpapi/HttpApiBuilder.d.ts`
+  - `packages/app/node_modules/effect/dist/unstable/httpapi/HttpApiSwagger.d.ts`
+  - `packages/app/node_modules/effect/dist/unstable/httpapi/HttpApiScalar.d.ts`
 
 ## ADR Links
 

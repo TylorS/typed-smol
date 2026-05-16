@@ -37,9 +37,9 @@
 | TS-11 | Optional generated type-check mode returns deterministic warnings/errors without crash                                                          | FR-19, NFR-3                           | AC-13       | yes      |
 | TS-12 | Same snapshots always parse to the same filesystem tree AST and renderer consumes AST-only input                                                | FR-20, FR-21, NFR-2, NFR-10            | AC-14       | yes      |
 | TS-13 | `typedVitePlugin` registers router + api VM plugins with deterministic order and resolves `api:` import                                         | FR-22, NFR-1, NFR-5                    | AC-15       | yes      |
-| TS-14 | Supported file-role matrix is enforced and unsupported reserved companion names emit diagnostics                                                | FR-23, NFR-2, NFR-7                    | AC-16       | yes      |
+| TS-14 | Supported file-role matrix is enforced, unrelated reserved-looking files are non-participating, and supported convention misuse emits diagnostics | FR-23, NFR-2, NFR-7                    | AC-16       | yes      |
 | TS-15 | Typed handler helper infers context (`params/path/query/body/headers`) and rejects shape mismatches at compile time                             | FR-24, NFR-6, NFR-9                    | AC-17       | yes      |
-| TS-16 | OpenAPI options map to Effect-supported matrix (annotations/additionalProperties/json/swagger/scalar) with scope and route-conflict diagnostics | FR-13, FR-25, NFR-2, NFR-9             | AC-18       | yes      |
+| TS-16 | OpenAPI options map to the installed Effect-supported matrix (annotations/json/swagger/scalar) with generated-source type-check proof and no guessed stale generation options | FR-13, FR-25, NFR-2, NFR-9             | AC-18       | yes      |
 
 ## Coverage Targets
 
@@ -58,13 +58,13 @@
 | ------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------ |
 | `@typed/virtual-modules` plugin manager + TypeInfoApi                    | ready   | none                                                                           |
 | `@typed/app` router plugin helpers (for precedence/path parity patterns) | ready   | none                                                                           |
-| `effect/unstable/httpapi` type availability in compilation context       | partial | add explicit fixture imports and target resolution checks for required symbols |
+| `effect/unstable/httpapi` type availability in compilation context       | ready   | generated-source fixtures compile against installed `packages/app` declarations |
 | `resolveHttpApiTypeTargets` helper implementation                        | missing | implement helper + tests before execution stage                                |
 | `typedVitePlugin` api VM option surface + registration wiring            | missing | add `apiVmOptions` contract and integration tests in `packages/vite-plugin`    |
 | typed handler helper runtime/type surface (`defineApiHandler`)           | missing | implement helper API and add compile-time positive/negative typing tests       |
-| OpenAPI config mapper + exposure planner (Effect-backed option matrix)   | missing | implement key/scope validation + route-conflict checks + fixture coverage      |
-| fixture package for `api:` virtual module generation                     | missing | scaffold fixture under examples or sample project and wire to CI               |
-| OpenAPI metadata control fixture + assertions                            | missing | add dedicated fixture conventions and snapshot assertions                      |
+| OpenAPI config mapper + exposure planner (Effect-backed option matrix)   | partial | API-scope annotations and json/swagger/scalar exposure are covered; stale generation options remain deferred |
+| fixture package for `api:` virtual module generation                     | partial | `packages/app` generated-source harness is the first proof path; broader sample-project CI remains deferred |
+| OpenAPI metadata control fixture + assertions                            | partial | API-scope annotation/exposure fixtures exist with generated-source type-checking; group/endpoint annotation expansion remains future work |
 
 ## Acceptance Failure Policy
 

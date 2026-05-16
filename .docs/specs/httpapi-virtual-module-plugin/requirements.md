@@ -31,13 +31,14 @@
 - FR-20: The plugin pipeline shall parse discovered filesystem artifacts into an explicit tree-based AST (directory/group/endpoint/convention nodes) before source emission.
 - FR-21: TypeScript source generation shall consume the AST as its canonical input; direct file-to-string rendering without AST normalization shall be out of contract.
 - FR-22: `@typed/vite-plugin` integration shall expose and register the HttpApi virtual-module plugin as a first-class companion to the router VM plugin, including explicit option wiring (`apiVmOptions`) and deterministic plugin registration order.
-- FR-23: The plugin shall implement an explicit supported file-role matrix for API roots, groups, endpoints, and companions (with deterministic semantics for each role) and emit diagnostics for unsupported reserved companion names.
+- FR-23: The plugin shall implement an explicit supported file-role matrix for API roots, groups, endpoints, and companions, with deterministic semantics for each supported role. Files that merely look reserved but do not match a supported convention shall be non-participating inputs; diagnostics are reserved for supported convention collisions, misplaced supported companions, and invalid participating files.
 - FR-24: The system shall provide a strongly typed handler-construction helper (curried form) so endpoint handlers can be authored as `helper(route, method, request)(function* (ctx) { ... })` with compile-time inference for `params`, `path`, `query`, `body`, headers, success shape, and error shape.
-- FR-25: OpenAPI generation and exposure controls shall map to Effect-supported surfaces:
-  - spec generation option `additionalProperties` from `OpenApi.fromApi`,
+- FR-25: OpenAPI annotation and exposure controls shall map to installed Effect-supported surfaces:
+  - API annotations via `OpenApi.annotations(...)` and `.annotateMerge(...)`,
   - JSON spec route exposure equivalent to `HttpApiBuilder.layer({ openapiPath })`,
   - Swagger UI exposure equivalent to `HttpApiSwagger.layer({ path })`,
   - Scalar UI exposure equivalent to `HttpApiScalar.layer({ path, scalar })` and `HttpApiScalar.layerCdn({ path, scalar, version })`.
+  Stale generation options such as `additionalProperties` shall be deferred or diagnosed; they shall not be emitted as unsupported `OpenApi.fromApi(Api, ...)` options.
 
 ## Non-Functional Requirements
 
@@ -69,9 +70,9 @@
 - AC-13: (maps to FR-19 / NFR-3) Optional generated type-check mode reports deterministic diagnostics/warnings for emitted source without breaking default sync resolution.
 - AC-14: (maps to FR-20, FR-21 / NFR-2, NFR-10) Discovery output is normalized into a deterministic tree AST and source emission is derived exclusively from that AST.
 - AC-15: (maps to FR-22 / NFR-1, NFR-5) `typedVitePlugin` can register both router and HttpApi VM plugins with explicit options and deterministic ordering, and `api:` modules resolve in Vite integration tests.
-- AC-16: (maps to FR-23 / NFR-2, NFR-7) Supported root/group/endpoint/companion filenames are interpreted with deterministic behavior, and unsupported reserved names are rejected with typed diagnostics.
+- AC-16: (maps to FR-23 / NFR-2, NFR-7) Supported root/group/endpoint/companion filenames are interpreted with deterministic behavior, unrelated reserved-looking filenames are ignored as non-participating files, and supported convention misuse is rejected with typed diagnostics.
 - AC-17: (maps to FR-24 / NFR-6, NFR-9) Handler helper usage infers typed handler context from route + method + `Schema.TaggedRequest`, and compile-time tests fail when handler input/output/error shapes do not match the declared contract.
-- AC-18: (maps to FR-13, FR-25 / NFR-2, NFR-9) OpenAPI configuration supports the full Effect-backed option matrix for annotations, schema generation (`additionalProperties`), and exposure modes (json/swagger/scalar) with deterministic behavior and typed diagnostics for invalid combinations.
+- AC-18: (maps to FR-13, FR-25 / NFR-2, NFR-9) OpenAPI configuration supports the installed Effect-backed option matrix for annotations and exposure modes (json/swagger/scalar) with deterministic behavior, type-checking generated source, and typed diagnostics or documented deferrals for unsupported stale generation options such as `additionalProperties`.
 
 ## Prioritization
 

@@ -108,6 +108,22 @@ Task 1 added a reusable generated-source TypeScript compiler harness for virtual
   - API annotations emit `OpenApiModule.annotations(...)` via `.annotateMerge(...)`
 - memory_updates: see `memories.md`
 
+### Task 7
+
+- task_id: T7
+- requirement_ids: FR-3, FR-4, FR-5, FR-8, FR-10, FR-11
+- ts_scenarios: docs sync for TS-14 and TS-16
+- validation_evidence:
+  - docs review: durable HttpApi spec, requirements, and testing strategy no longer cite stale `effect@4.0.0-beta.4` source paths
+  - docs review: `additionalProperties` is documented as deferred/unsupported for installed `OpenApi.fromApi(Api)` declarations
+  - docs review: reserved-looking non-convention files are documented as non-participating, with diagnostics retained for supported convention misuse
+- commit: `docs(app): sync httpapi hardening specs`
+- deviations_or_replans:
+  - no code changes in this task; it reconciles durable specs with the implementation and tests already committed in Tasks 3 through 6
+- context_updates:
+  - testing strategy now treats generated-source type-check fixtures as the current blocking proof path for OpenAPI hardening
+- memory_updates: see `memories.md` and `memory/httpapi-spec-sync.md`
+
 ## Deferred Work
 
 - HttpApi generated-source harness coverage starts in Task 3 after Router generated-source proof is committed.

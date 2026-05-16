@@ -457,23 +457,23 @@ git commit -m "fix(app): harden httpapi openapi generation" -m "- emit installed
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/testing-strategy.md`
 - Create/modify: `.docs/workflows/20260516-0957-router-httpapi-implementation-hardening/memory/*.md`
 
-- [ ] **Step 1: Update stale Effect version/source-of-truth language**
+- [x] **Step 1: Update stale Effect version/source-of-truth language**
 
 Replace stale `effect@4.0.0-beta.4` source references with local installed declaration source-of-truth language from the accepted ADR.
 
-- [ ] **Step 2: Defer unsupported `additionalProperties`**
+- [x] **Step 2: Defer unsupported `additionalProperties`**
 
 Remove it from must-have generated behavior or mark as deferred pending installed Effect support.
 
-- [ ] **Step 3: Update reserved-looking file behavior**
+- [x] **Step 3: Update reserved-looking file behavior**
 
 Document non-participation unless colliding with supported conventions.
 
-- [ ] **Step 4: Update testing strategy**
+- [x] **Step 4: Update testing strategy**
 
 Add generated-source type-check fixtures as blocking critical-path tests.
 
-- [ ] **Step 5: Capture memory candidates**
+- [x] **Step 5: Capture memory candidates**
 
 Record:
 
@@ -481,7 +481,7 @@ Record:
 - generated-source type-check fixtures are stronger than snapshots;
 - reserved-looking non-conventions are non-participating files.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .docs/specs/httpapi-virtual-module-plugin .docs/workflows/20260516-0957-router-httpapi-implementation-hardening/memory

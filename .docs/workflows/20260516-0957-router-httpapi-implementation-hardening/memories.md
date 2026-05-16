@@ -24,3 +24,9 @@
 
 - Installed Effect Scalar CDN support is `HttpApiScalar.layerCdn(Api, { path, scalar, version })`; inline uses `HttpApiScalar.layer(Api, { path, scalar })`.
 - Installed OpenAPI annotations are applied with `.annotateMerge(OpenApiModule.annotations({ ... }))`; `OpenApi.fromApi(Api)` does not accept stale generation options in the installed declarations.
+
+## T7 Durable Spec Sync
+
+- Durable HttpApi docs should cite `packages/app/node_modules/effect/dist/unstable/httpapi/*.d.ts` as the local source of truth for emitted Effect APIs, not stale pnpm source paths from older betas.
+- Generated-source type-check fixtures are blocking implementation proof for Router and HttpApi hardening; snapshots are useful but insufficient for installed dependency compatibility.
+- Unknown reserved-looking files such as `_unknown.ts` are non-participating inputs. Keep fail-clear diagnostics for files that collide with supported conventions or invalid participating roles.
