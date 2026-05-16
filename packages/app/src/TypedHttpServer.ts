@@ -1,3 +1,9 @@
+import { NodeHttpServer } from "@effect/platform-node";
+import * as Layer from "effect/Layer";
+import * as HttpStaticServer from "effect/unstable/http/HttpStaticServer";
+import { createServer } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
+import { readFileSync } from "node:fs";
 import { inferStaticAssetRoot } from "./internal/staticAssets.js";
 import {
   resolveTypedHttpServerSsl,
@@ -24,13 +30,13 @@ export interface TypedHttpServerLayerOptions {
   readonly ssl?: TypedHttpServerSslInput;
 }
 
-export interface TypedHttpServerLayer {
-  readonly _tag: "TypedHttpServerLayer";
-  readonly host: string | undefined;
-  readonly port: number | undefined;
-  readonly mode: TypedHttpServerMode;
-  readonly staticAssetRoot: string;
-  readonly ssl: TypedHttpServerSsl;
+export interface TypedHttpServerStaticAssetsOptions {
+  readonly projectRoot: string;
+  readonly dev: boolean;
+  readonly buildOutDir?: string;
+  readonly prefix?: string;
+  readonly spa?: boolean;
+  readonly cacheControl?: string;
 }
 
 export function resolveTypedHttpServerMode(
@@ -43,17 +49,30 @@ export function resolveTypedHttpServerMode(
 export { inferStaticAssetRoot, resolveTypedHttpServerSsl };
 
 export const TypedHttpServer = {
-  layer(options: TypedHttpServerLayerOptions): TypedHttpServerLayer {
-    return {
-      _tag: "TypedHttpServerLayer",
-      host: options.host,
-      port: options.port,
-      mode: resolveTypedHttpServerMode(options),
-      staticAssetRoot: inferStaticAssetRoot({
+  layer(options: TypedHttpServerLayerOptions) {
+    const ssl = resolveTypedHttpServerSsl({ projectRoot: options.projectRoot, ssl: options.ssl });
+    const listenOptions = { host: options.host, port: options.port };
+    if (ssl.kind === "disabled") return NodeHttpServer.layer(createServer, listenOptions);
+    return NodeHttpServer.layer(
+      () =>
+        createHttpsServer({
+          key: readFileSync(ssl.key),
+          cert: readFileSync(ssl.cert),
+        }) as any,
+      listenOptions,
+    );
+  },
+
+  staticAssets(options: TypedHttpServerStaticAssetsOptions) {
+    if (options.dev) return Layer.empty;
+    return HttpStaticServer.layer({
+      root: inferStaticAssetRoot({
         projectRoot: options.projectRoot,
         buildOutDir: options.buildOutDir,
       }),
-      ssl: resolveTypedHttpServerSsl({ projectRoot: options.projectRoot, ssl: options.ssl }),
-    };
+      prefix: options.prefix,
+      spa: options.spa ?? true,
+      cacheControl: options.cacheControl,
+    });
   },
 } as const;

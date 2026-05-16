@@ -642,13 +642,18 @@ export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
       const host = yield* resolveConfig(config?.host, "0.0.0.0");
       const port = yield* resolveConfig(config?.port, 3000);
       const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
+      const dev = (import.meta as any).env?.DEV === true;
       const appConfig: AppConfig = { disableListenLog };
-      const appLayer = App(appConfig, ...layersToMergeIntoRouter);
+      const staticAssetsLayer = TypedHttpServer.staticAssets({
+        projectRoot: process.cwd(),
+        dev,
+      });
+      const appLayer = App(appConfig, staticAssetsLayer as any, ...layersToMergeIntoRouter);
       const serverLayer = TypedHttpServer.layer({
         host,
         port,
         projectRoot: process.cwd(),
-        dev: (import.meta as any).env?.DEV === true,
+        dev,
       }) as any;
       return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
         Layer.Success<typeof appLayer>,

@@ -1,5 +1,7 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { createSecureContext } from "node:tls";
 
 export type TypedHttpServerSslInput =
   | boolean
@@ -35,21 +37,48 @@ function ensureGeneratedCerts(projectRoot: string): TypedHttpServerSsl {
   const key = join(certDir, "key.pem");
   const cert = join(certDir, "cert.pem");
   mkdirSync(certDir, { recursive: true });
-  if (!existsSync(key)) writeFileSync(key, DEV_KEY, "utf8");
-  if (!existsSync(cert)) writeFileSync(cert, DEV_CERT, "utf8");
+  if (!certPairIsValid(key, cert)) generateSelfSignedCert({ key, cert });
   return { kind: "generated", key, cert };
 }
 
-const DEV_KEY = [
-  "-----BEGIN PRIVATE KEY-----",
-  "typed-dev-placeholder-key",
-  "-----END PRIVATE KEY-----",
-  "",
-].join("\n");
+function certPairIsValid(key: string, cert: string): boolean {
+  if (!existsSync(key) || !existsSync(cert)) return false;
+  try {
+    createSecureContext({ key: readFileSync(key), cert: readFileSync(cert) });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-const DEV_CERT = [
-  "-----BEGIN CERTIFICATE-----",
-  "typed-dev-placeholder-cert",
-  "-----END CERTIFICATE-----",
-  "",
-].join("\n");
+function generateSelfSignedCert(paths: { readonly key: string; readonly cert: string }): void {
+  rmSync(paths.key, { force: true });
+  rmSync(paths.cert, { force: true });
+  const result = spawnSync(
+    "openssl",
+    [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-sha256",
+      "-nodes",
+      "-keyout",
+      paths.key,
+      "-out",
+      paths.cert,
+      "-days",
+      "365",
+      "-subj",
+      "/CN=localhost",
+      "-addext",
+      "subjectAltName=DNS:localhost,IP:127.0.0.1",
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0 || !certPairIsValid(paths.key, paths.cert)) {
+    throw new Error(
+      `Failed to generate development SSL certificate with openssl: ${result.stderr || result.stdout}`,
+    );
+  }
+}

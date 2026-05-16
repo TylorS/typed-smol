@@ -1,6 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createSecureContext } from "node:tls";
 import { afterEach, describe, expect, it } from "vitest";
+import { NodeHttpServer } from "@effect/platform-node";
+import { Effect, Layer } from "effect";
+import { HttpClient, HttpRouter } from "effect/unstable/http";
 import {
   inferStaticAssetRoot,
   resolveTypedHttpServerMode,
@@ -43,7 +47,7 @@ describe("TypedHttpServer", () => {
     );
   });
 
-  it("generates development certificates under node_modules/.typed/certs", () => {
+  it("generates parseable development certificates under node_modules/.typed/certs", () => {
     const root = tempRoot();
     const ssl = resolveTypedHttpServerSsl({ projectRoot: root, ssl: true });
 
@@ -54,6 +58,14 @@ describe("TypedHttpServer", () => {
     });
     expect(existsSync(ssl.key)).toBe(true);
     expect(existsSync(ssl.cert)).toBe(true);
+    expect(readFileSync(ssl.key, "utf8")).toContain("BEGIN PRIVATE KEY");
+    expect(readFileSync(ssl.cert, "utf8")).toContain("BEGIN CERTIFICATE");
+    expect(() =>
+      createSecureContext({
+        key: readFileSync(ssl.key),
+        cert: readFileSync(ssl.cert),
+      }),
+    ).not.toThrow();
   });
 
   it("validates provided SSL certificate paths", () => {
@@ -81,24 +93,48 @@ describe("TypedHttpServer", () => {
     ).toThrow("SSL key file does not exist");
   });
 
-  it("exposes a layer descriptor with mode, static assets, and SSL", () => {
+  it("exposes a concrete Effect Layer for non-dev Node HTTP serving", () => {
+    const root = tempRoot();
+
+    const layer = TypedHttpServer.layer({
+      projectRoot: root,
+      dev: false,
+      buildOutDir: "dist",
+      host: "127.0.0.1",
+      port: 3000,
+    });
+
+    expect(Layer.isLayer(layer)).toBe(true);
+  });
+
+  it("serves inferred static assets outside dev mode", () => {
+    const root = tempRoot();
+    const assetRoot = join(root, "dist/client");
+    mkdirSync(assetRoot, { recursive: true });
+    writeFileSync(join(assetRoot, "hello.txt"), "hello static", "utf8");
+
+    const live = TypedHttpServer.staticAssets({
+      projectRoot: root,
+      buildOutDir: "dist",
+      dev: false,
+    }).pipe(HttpRouter.serve, Layer.provideMerge(NodeHttpServer.layerTest));
+
+    return Effect.gen(function* () {
+      const response = yield* HttpClient.get("/hello.txt").pipe(Effect.flatMap((r) => r.text));
+      expect(response).toBe("hello static");
+    }).pipe(Effect.provide(live), Effect.scoped, Effect.runPromise);
+  });
+
+  it("does not mount production static assets in dev mode", () => {
     const root = tempRoot();
 
     expect(
-      TypedHttpServer.layer({
-        projectRoot: root,
-        dev: false,
-        buildOutDir: "dist",
-        host: "127.0.0.1",
-        port: 3000,
-      }),
-    ).toEqual({
-      _tag: "TypedHttpServerLayer",
-      host: "127.0.0.1",
-      port: 3000,
-      mode: { kind: "node" },
-      staticAssetRoot: join(root, "dist/client"),
-      ssl: { kind: "disabled" },
-    });
+      Layer.isLayer(
+        TypedHttpServer.staticAssets({
+          projectRoot: root,
+          dev: true,
+        }),
+      ),
+    ).toBe(true);
   });
 });

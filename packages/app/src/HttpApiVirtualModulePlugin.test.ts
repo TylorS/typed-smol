@@ -363,13 +363,18 @@ describe("createHttpApiVirtualModulePlugin", () => {
             const host = yield* resolveConfig(config?.host, "0.0.0.0");
             const port = yield* resolveConfig(config?.port, 3000);
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
+            const dev = (import.meta as any).env?.DEV === true;
             const appConfig: AppConfig = { disableListenLog };
-            const appLayer = App(appConfig, ...layersToMergeIntoRouter);
+            const staticAssetsLayer = TypedHttpServer.staticAssets({
+              projectRoot: process.cwd(),
+              dev,
+            });
+            const appLayer = App(appConfig, staticAssetsLayer as any, ...layersToMergeIntoRouter);
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
               projectRoot: process.cwd(),
-              dev: (import.meta as any).env?.DEV === true,
+              dev,
             }) as any;
             return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
               Layer.Success<typeof appLayer>,
@@ -386,6 +391,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
     const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
 
     expect(sourceText).toContain("TypedHttpServer.layer");
+    expect(sourceText).toContain("TypedHttpServer.staticAssets");
     expect(sourceText).toContain("Layer.Error<typeof appLayer>,\n        never");
     expect(sourceText).not.toContain("NodeHttpServer.layer(http.createServer");
   });
@@ -599,13 +605,18 @@ describe("HttpApiVirtualModulePlugin integration", () => {
             const host = yield* resolveConfig(config?.host, "0.0.0.0");
             const port = yield* resolveConfig(config?.port, 3000);
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
+            const dev = (import.meta as any).env?.DEV === true;
             const appConfig: AppConfig = { disableListenLog };
-            const appLayer = App(appConfig, ...layersToMergeIntoRouter);
+            const staticAssetsLayer = TypedHttpServer.staticAssets({
+              projectRoot: process.cwd(),
+              dev,
+            });
+            const appLayer = App(appConfig, staticAssetsLayer as any, ...layersToMergeIntoRouter);
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
               projectRoot: process.cwd(),
-              dev: (import.meta as any).env?.DEV === true,
+              dev,
             }) as any;
             return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
               Layer.Success<typeof appLayer>,
