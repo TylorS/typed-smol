@@ -95,6 +95,7 @@ export function emitRouterMatchSource(
 ): string {
   const importerDir = dirname(toPosixPath(importer));
   const needsFnErrorImports = Object.values(catchFormByPath).some((f) => f.form === "fn-error");
+  const needsCatchWrapperImports = Object.values(catchFormByPath).some((f) => f.form !== "native");
   const depPaths = collectOrderedCompanionPaths(descriptors, "dependencies");
   const layoutPaths = collectOrderedCompanionPaths(descriptors, "layout");
   const guardPaths = collectOrderedCompanionPaths(descriptors, "guard");
@@ -115,14 +116,13 @@ export function emitRouterMatchSource(
   const importLines: string[] = [
     `import * as Router from "@typed/router";`,
     `import * as Fx from "@typed/fx/Fx";`,
-    `import { constant } from "effect/Function";`,
-    ...(needsFnErrorImports
-      ? [
-          `import * as Effect from "effect/Effect";`,
-          `import * as Cause from "effect/Cause";`,
-          `import * as Result from "effect/Result";`,
-        ]
+    ...(needsCatchWrapperImports
+      ? [`import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";`]
       : []),
+    `import { constant } from "effect/Function";`,
+    ...(needsFnErrorImports ? [`import * as Effect from "effect/Effect";`] : []),
+    ...(needsCatchWrapperImports ? [`import * as Cause from "effect/Cause";`] : []),
+    ...(needsFnErrorImports ? [`import * as Result from "effect/Result";`] : []),
   ];
 
   for (const d of descriptors) {

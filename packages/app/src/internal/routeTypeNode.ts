@@ -83,11 +83,81 @@ export function typeNodeExpectsRefSubjectParam(node: TypeNode, api: TypeInfoApi)
  * True iff the function's return type is Effect and Effect's success type (first type arg) is assignable to Option.
  */
 export function typeNodeIsEffectOptionReturn(node: TypeNode, api: TypeInfoApi): boolean {
-  return api.isAssignableTo(node, "Option", [
-    { kind: "returnType" },
-    { kind: "ensure", targetId: "Effect" },
-    { kind: "typeArg", index: 0 },
-  ]);
+  if (
+    api.isAssignableTo(node, "Option", [
+      { kind: "returnType" },
+      { kind: "ensure", targetId: "Effect" },
+      { kind: "typeArg", index: 0 },
+    ])
+  ) {
+    return true;
+  }
+
+  const returnType = getCallableReturnType(node);
+  if (!returnType || !api.isAssignableTo(returnType, "Effect")) return false;
+  const successType = findEffectSuccessType(returnType, api);
+  return successType ? typeNodeContainsAssignableOption(successType, api) : false;
+}
+
+function typeNodeContainsAssignableOption(node: TypeNode, api: TypeInfoApi): boolean {
+  if (api.isAssignableTo(node, "Option") || typeNodeLooksLikeOption(node)) return true;
+  for (const child of typeNodeChildren(node)) {
+    if (typeNodeContainsAssignableOption(child, api)) return true;
+  }
+  return false;
+}
+
+function typeNodeLooksLikeOption(node: TypeNode): boolean {
+  if (node.kind === "reference") return /^(Option|Some|None)(<|$)/.test(node.text);
+  if (node.kind !== "union") return false;
+  return node.elements.every((element) => typeNodeLooksLikeOption(element));
+}
+
+function findEffectSuccessType(node: TypeNode, api: TypeInfoApi): TypeNode | undefined {
+  if (node.kind === "reference" && api.isAssignableTo(node, "Effect")) {
+    return node.typeArguments?.[0];
+  }
+  for (const child of typeNodeChildren(node)) {
+    const successType = findEffectSuccessType(child, api);
+    if (successType) return successType;
+  }
+  return undefined;
+}
+
+function typeNodeChildren(node: TypeNode): readonly TypeNode[] {
+  switch (node.kind) {
+    case "array":
+    case "intersection":
+    case "tuple":
+    case "union":
+      return node.elements;
+    case "conditional":
+      return [node.checkType, node.extendsType, node.trueType, node.falseType];
+    case "constructor":
+    case "function":
+      return [...node.parameters.map((parameter) => parameter.type), node.returnType];
+    case "indexSignature":
+      return [node.keyType, node.valueType];
+    case "indexedAccess":
+      return [node.objectType, node.indexType];
+    case "mapped":
+      return [node.constraintType, node.mappedType];
+    case "object":
+      return node.properties.map((property) => property.type);
+    case "overloadSet":
+      return node.signatures.flatMap((signature) => [
+        ...signature.parameters.map((parameter) => parameter.type),
+        signature.returnType,
+      ]);
+    case "reference":
+      return node.typeArguments ?? [];
+    case "templateLiteral":
+      return node.types;
+    case "typeOperator":
+      return [node.type];
+    default:
+      return [];
+  }
 }
 
 /**

@@ -83,18 +83,19 @@ function resolveModuleName(
   input: GeneratedSourceTypeCheckInput,
   options: ts.CompilerOptions,
   moduleResolutionHost: ts.ModuleResolutionHost,
-): ts.ResolvedModule | undefined {
+): ts.ResolvedModuleFull | undefined {
   const resolved = ts.resolveModuleName(moduleName, containingFile, options, moduleResolutionHost);
   if (resolved.resolvedModule) return resolved.resolvedModule;
 
   const fallback = input.moduleFallbacks?.[moduleName];
   if (!fallback || !moduleResolutionHost.fileExists(fallback)) return undefined;
 
-  return {
+  const resolvedModule: ts.ResolvedModuleFull = {
     resolvedFileName: fallback,
     extension: extensionForPath(fallback),
     isExternalLibraryImport: false,
   };
+  return resolvedModule;
 }
 
 function extensionForPath(path: string): ts.Extension {

@@ -71,6 +71,13 @@ const validGuardExport =
  */
 function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[]) {
   const fixture = createFixture(spec);
+  return buildRouterFromExistingFixture(fixture, programFiles);
+}
+
+function buildRouterFromExistingFixture(
+  fixture: ReturnType<typeof createFixture>,
+  programFiles?: string[],
+) {
   const plugin = createRouterVirtualModulePlugin();
   const files = programFiles ?? fixture.paths;
   const programFilesWithBootstrap =
@@ -89,6 +96,25 @@ function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[]) {
   return plugin.build("router:./routes", fixture.importer, session.api);
 }
 
+function expectRouterGeneratedSourceToTypeCheck(
+  fixture: ReturnType<typeof createFixture>,
+  generatedPath = "src/router.generated.ts",
+) {
+  const source = buildRouterFromExistingFixture(fixture);
+  if (typeof source !== "string") {
+    throw new Error(JSON.stringify(source, null, 2));
+  }
+
+  const result = typeCheckGeneratedSource({
+    rootDir: fixture.root,
+    generatedPath,
+    sourceText: source,
+    rootFiles: fixture.paths,
+    moduleFallbacks: MODULE_FALLBACKS,
+  });
+  expect(result.diagnostics).toEqual([]);
+}
+
 const APP_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const NM = join(APP_ROOT, "node_modules");
 /** Bootstrap file in the real project to ensure type target resolution finds canonical targets. */
@@ -99,6 +125,14 @@ const MODULE_FALLBACKS: Record<string, string> = {
   "@typed/fx": join(NM, "@typed", "fx", "src", "index.ts"),
   "@typed/fx/Fx": join(NM, "@typed", "fx", "src", "Fx", "index.ts"),
   "@typed/fx/RefSubject": join(NM, "@typed", "fx", "src", "RefSubject", "index.ts"),
+  "@typed/fx/RefSubject/RefSubject": join(
+    NM,
+    "@typed",
+    "fx",
+    "src",
+    "RefSubject",
+    "RefSubject.ts",
+  ),
   effect: join(NM, "effect", "dist", "index.d.ts"),
   "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
   "effect/Stream": join(NM, "effect", "dist", "Stream.d.ts"),
@@ -320,29 +354,36 @@ describe("RouterVirtualModulePlugin", () => {
     const fixture = createFixture({
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
-    const plugin = createRouterVirtualModulePlugin();
-    const files =
-      existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
-        ? [...fixture.paths, BOOTSTRAP_FILE]
-        : fixture.paths;
-    const program = makeProgram(files, files.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root);
-    const session = createTypeInfoApiSession({
-      ts,
-      program,
-      typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
-    });
-    const source = plugin.build("router:./routes", fixture.importer, session.api);
+    expectRouterGeneratedSourceToTypeCheck(fixture);
+  });
 
-    expect(typeof source).toBe("string");
-    if (typeof source !== "string") return;
-    const result = typeCheckGeneratedSource({
-      rootDir: fixture.root,
-      generatedPath: "src/router.generated.ts",
-      sourceText: source,
-      rootFiles: fixture.paths,
-      moduleFallbacks: MODULE_FALLBACKS,
+  it("type-checks generated Router source for all handler kinds", () => {
+    const fixture = createFixture({
+      "src/routes/plain.ts": route("/plain", "export const handler = 1;"),
+      "src/routes/effect.ts": `import * as Effect from "effect/Effect"; ${routeExportForPath("/effect")} export const handler: Effect.Effect<number> = Effect.succeed(1);`,
+      "src/routes/fx.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/fx")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
+      "src/routes/stream.ts": `import * as Stream from "effect/Stream"; ${routeExportForPath("/stream")} export const handler = Stream.succeed(1);`,
     });
-    expect(result.diagnostics).toEqual([]);
+
+    expectRouterGeneratedSourceToTypeCheck(fixture, "src/router-handler-kinds.generated.ts");
+  });
+
+  it("type-checks generated Router source for nested concerns", () => {
+    const fixture = createFixture({
+      "src/routes/_dependencies.ts":
+        'import * as Layer from "effect/Layer"; export default Layer.empty;',
+      "src/routes/api/_layout.ts":
+        'import * as Fx from "@typed/fx/Fx"; export const layout = ({ content }: { content: Fx.Fx<unknown, unknown, unknown> }) => content;',
+      "src/routes/api/item.ts": route("/api/item", "export const handler = 1;"),
+      "src/routes/api/item.catch.ts": "export const catchFn = (_error: unknown) => null;",
+      "src/routes/api/item.dependencies.ts":
+        'import * as Layer from "effect/Layer"; export const dependencies = Layer.empty;',
+      "src/routes/api/item.guard.ts": validGuardExport,
+      "src/routes/api/item.layout.ts":
+        'import * as Fx from "@typed/fx/Fx"; export const layout = ({ content }: { content: Fx.Fx<unknown, unknown, unknown> }) => content;',
+    });
+
+    expectRouterGeneratedSourceToTypeCheck(fixture, "src/router-concerns.generated.ts");
   });
 
   it("build returns deterministic scaffold source", () => {
@@ -445,6 +486,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
+      import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";
       import { constant } from "effect/Function";
       import * as Effect from "effect/Effect";
       import * as Cause from "effect/Cause";
@@ -454,7 +496,7 @@ describe("RouterVirtualModulePlugin", () => {
       import * as ApiLayout from "./routes/api/_layout.js";
       import * as ApiItemcatch from "./routes/api/item.catch.js";
 
-      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), catch: (causeRef) => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => Fx.succeed(ApiItemcatch.catchFn(e)) })) }).layout(ApiLayout.layout).provide(Dependencies.default);
+      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), catch: (causeRef: RefSubject<Cause.Cause<unknown>>) => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => Fx.succeed(ApiItemcatch.catchFn(e)) })) }).layout(ApiLayout.layout).provide(Dependencies.default);
       export default router;
       "
     `);
@@ -621,8 +663,7 @@ describe("RouterVirtualModulePlugin", () => {
       expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-GUARD-001");
       return;
     }
-    expect(result).toContain("guard:");
-    expect(result).toContain("UsersGuard.guard");
+    expect(result).toContain("Router.match(Users.route, Usersguard.guard");
     expect(result).not.toContain("??");
   });
 
@@ -638,8 +679,7 @@ describe("RouterVirtualModulePlugin", () => {
       expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-GUARD-001");
       return;
     }
-    expect(result).toContain("guard:");
-    expect(result).toContain("UsersGuard.default");
+    expect(result).toContain("Router.match(Users.route, Usersguard.default");
     expect(result).not.toContain("??");
   });
 

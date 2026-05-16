@@ -200,12 +200,19 @@ git commit -m "test(app): add generated source typecheck harness" -m "- add reus
 
 ### Task 2: Router Generated-Source Hardening
 
+Status: completed.
+
+Detailed execution notes:
+- Reuse the Task 1 generated-source harness through focused Router test helpers.
+- First hardening fixtures cover handler-kind emission and participating concern composition.
+- Preserve existing snapshot assertions; add type-check proof alongside them rather than replacing snapshots.
+
 **Files:**
 - Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
 - Modify if needed: `packages/app/src/internal/routerDescriptorTree.ts`
 - Modify if needed: `packages/app/src/internal/buildRouteDescriptors.ts`
 
-- [ ] **Step 1: Add generated-source Router fixtures**
+- [x] **Step 1: Add generated-source Router fixtures**
 
 Add tests for:
 
@@ -213,7 +220,7 @@ Add tests for:
 - nested directory and sibling `layout`, `dependencies`, `catch`, `guard`;
 - invalid participating concern metadata returns `VirtualModuleBuildError`.
 
-- [ ] **Step 2: Run tests and capture failures**
+- [x] **Step 2: Run tests and capture failures**
 
 Run:
 
@@ -223,11 +230,11 @@ pnpm --filter @typed/app test -- src/RouterVirtualModulePlugin.test.ts
 
 Expected: new tests reveal any generated-source or diagnostic gaps.
 
-- [ ] **Step 3: Patch smallest Router boundary**
+- [x] **Step 3: Patch smallest Router boundary**
 
 If failures are renderer invariant throws, move validation into `buildRouteDescriptors` or return structured diagnostics before `emitRouterMatchSource`.
 
-- [ ] **Step 4: Verify Router**
+- [x] **Step 4: Verify Router**
 
 Run:
 
@@ -237,7 +244,7 @@ pnpm --filter @typed/app test -- src/RouterVirtualModulePlugin.test.ts
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/app/src/RouterVirtualModulePlugin.test.ts packages/app/src/internal/routerDescriptorTree.ts packages/app/src/internal/buildRouteDescriptors.ts

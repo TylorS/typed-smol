@@ -60,6 +60,7 @@ export function liftToFx(expr: string, kind: RuntimeKind): string {
 export function catchExprFor(catchForm: CatchForm, varName: string, exportName: string): string {
   const ref = `${varName}.${exportName}`;
   const { form, returnKind } = catchForm;
+  const causeRef = `(causeRef: RefSubject<Cause.Cause<unknown>>)`;
 
   if (form === "native") {
     return ref;
@@ -67,16 +68,16 @@ export function catchExprFor(catchForm: CatchForm, varName: string, exportName: 
 
   if (form === "value") {
     const lifted = liftToFx(ref, returnKind);
-    return `(_causeRef) => ${lifted}`;
+    return `(_causeRef: RefSubject<Cause.Cause<unknown>>) => ${lifted}`;
   }
 
   if (form === "fn-cause") {
     const lifted = liftToFx(`${ref}(cause)`, returnKind);
-    return `(causeRef) => Fx.flatMap(causeRef, (cause) => ${lifted})`;
+    return `${causeRef} => Fx.flatMap(causeRef, (cause) => ${lifted})`;
   }
 
   // form === "fn-error": (e) => A | Effect | Stream | Fx — use Cause.findFail + Result.match
-  return `(causeRef) => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => ${liftToFx(`${ref}(e)`, returnKind)} }))`;
+  return `${causeRef} => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => ${liftToFx(`${ref}(e)`, returnKind)} }))`;
 }
 
 /** Targeted lift for .provide() based on dependency export kind (layer, servicemap, array). */
