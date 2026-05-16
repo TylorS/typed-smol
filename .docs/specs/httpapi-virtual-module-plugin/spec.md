@@ -102,13 +102,21 @@ Supported keys:
 
 Scope behavior:
 
-- API scope (`_api.ts` / root in-file) maps to `.annotateMerge(OpenApi.annotations(...))`.
-- Group scope (`_group.ts` / group in-file) maps to installed group annotation APIs where supported.
-- Endpoint scope (`<endpoint>.ts` / endpoint companions) maps to installed endpoint annotation APIs where supported.
+- API scope (`_api.ts`) maps to `.annotateMerge(OpenApi.annotations(...))`.
+- Group scope (`_group.ts`) maps to `.annotateMerge(OpenApi.annotations(...))` on the generated `HttpApiGroup`.
+- Endpoint scope maps to `.annotateMerge(OpenApi.annotations(...))` on the generated `HttpApiEndpoint`.
+- Endpoint annotations may come from the endpoint primary module's named `openapi` export, sibling `<endpoint>.openapi.ts` default export, or inherited `_openapi.ts` default exports.
 
 #### 2) Spec generation controls (`OpenApi.fromApi`)
 
-The installed `OpenApi.fromApi(Api)` declaration does not currently expose the older durable-spec `additionalProperties` option. The plugin must not emit guessed `OpenApi.fromApi(Api, ...)` calls. `additionalProperties` remains deferred until the installed Effect API supports it or a later approved design maps it elsewhere.
+The installed `OpenApi.fromApi(Api)` declaration does not currently expose an options parameter. The plugin must not emit guessed `OpenApi.fromApi(Api, ...)` calls.
+
+Supported generation control:
+
+- `_api.ts` may export `openapi.generation.additionalProperties: true | false`.
+- The binary setting is emitted as an API-scope `OpenApi.annotations({ transform })` that visits object schemas in the generated OpenAPI document and sets missing `additionalProperties` values.
+- Object-shaped `additionalProperties` schema rewriting is unsupported in this tranche and returns `AVM-OPENAPI-005`.
+- `generation` outside `_api.ts` returns `AVM-OPENAPI-001`.
 
 #### 3) Spec exposure controls (router routes)
 
@@ -127,6 +135,7 @@ Validation behavior:
 
 - Invalid path shapes or invalid scope placement are typed diagnostics.
 - Conflicting exposure routes (same path with different modes) are deterministic diagnostics.
+- `exposure` outside `_api.ts` returns `AVM-OPENAPI-002`.
 
 ### Precedence and composition rules
 
@@ -134,6 +143,8 @@ Validation behavior:
 2. sibling endpoint companions (`<endpoint>.*.ts`) are next.
 3. directory companions (`_*.ts`) are lowest and compose ancestor -> leaf.
 4. files that look reserved but do not match a supported convention are non-participating inputs; supported convention collisions or misplaced supported companions remain diagnostics.
+
+For endpoint OpenAPI annotations specifically, inherited `_openapi.ts` defaults are merged root-to-leaf, then sibling `<endpoint>.openapi.ts`, then the endpoint primary module's `openapi.annotations`. Later layers override earlier keys.
 
 ### Concrete example
 

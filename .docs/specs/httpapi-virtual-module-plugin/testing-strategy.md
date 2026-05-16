@@ -39,7 +39,7 @@
 | TS-13 | `typedVitePlugin` registers router + api VM plugins with deterministic order and resolves `api:` import                                         | FR-22, NFR-1, NFR-5                    | AC-15       | yes      |
 | TS-14 | Supported file-role matrix is enforced, unrelated reserved-looking files are non-participating, and supported convention misuse emits diagnostics | FR-23, NFR-2, NFR-7                    | AC-16       | yes      |
 | TS-15 | Typed handler helper infers context (`params/path/query/body/headers`) and rejects shape mismatches at compile time                             | FR-24, NFR-6, NFR-9                    | AC-17       | yes      |
-| TS-16 | OpenAPI options map to the installed Effect-supported matrix (annotations/json/swagger/scalar) with generated-source type-check proof and no guessed stale generation options | FR-13, FR-25, NFR-2, NFR-9             | AC-18       | yes      |
+| TS-16 | OpenAPI options map to the installed Effect-supported matrix: `_api.ts` binary generation/exposure/annotations, `_group.ts` annotations, endpoint annotations, inherited `_openapi.ts`, and generated-source type-check proof with no guessed stale generation options | FR-13, FR-25, NFR-2, NFR-9             | AC-18       | yes      |
 
 ## Coverage Targets
 
@@ -62,9 +62,9 @@
 | `resolveHttpApiTypeTargets` helper implementation                        | missing | implement helper + tests before execution stage                                |
 | `typedVitePlugin` api VM option surface + registration wiring            | missing | add `apiVmOptions` contract and integration tests in `packages/vite-plugin`    |
 | typed handler helper runtime/type surface (`defineApiHandler`)           | missing | implement helper API and add compile-time positive/negative typing tests       |
-| OpenAPI config mapper + exposure planner (Effect-backed option matrix)   | partial | API-scope annotations and json/swagger/scalar exposure are covered; stale generation options remain deferred |
+| OpenAPI config mapper + exposure planner (Effect-backed option matrix)   | ready   | API-scope annotations, binary `additionalProperties`, json/swagger/scalar exposure, group annotations, endpoint annotations, and invalid scope diagnostics are covered |
 | fixture package for `api:` virtual module generation                     | partial | `packages/app` generated-source harness is the first proof path; broader sample-project CI remains deferred |
-| OpenAPI metadata control fixture + assertions                            | partial | API-scope annotation/exposure fixtures exist with generated-source type-checking; group/endpoint annotation expansion remains future work |
+| OpenAPI metadata control fixture + assertions                            | ready   | Generated-source tests cover root generation/exposure/annotations, group annotations, endpoint direct/companion/inherited annotations, precedence, and invalid scope diagnostics |
 
 ## Acceptance Failure Policy
 

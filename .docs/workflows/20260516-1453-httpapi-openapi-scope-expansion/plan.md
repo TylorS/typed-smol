@@ -766,7 +766,7 @@ git commit -m "fix(app): diagnose invalid httpapi openapi scopes" -m "- reject g
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/testing-strategy.md`
 - Create: `.docs/workflows/20260516-1453-httpapi-openapi-scope-expansion/99-finalization.md`
 
-- [ ] **Step 1: Update durable specs**
+- [x] **Step 1: Update durable specs**
 
 Update docs to state:
 
@@ -777,7 +777,7 @@ Update docs to state:
 - `additionalProperties` is binary only.
 - generated-source type-check fixtures are the blocking proof.
 
-- [ ] **Step 2: Run final verification**
+- [x] **Step 2: Run final verification**
 
 Run:
 
@@ -790,7 +790,13 @@ pnpm test
 
 Expected: all pass.
 
-- [ ] **Step 3: Write finalization artifact**
+Actual: `@typed/app` build/test and root `pnpm build` passed. Root `pnpm test`
+was run twice and failed before this package's tests completed because
+`@typed/id`'s fixed-time ULID prefix test fails under recursive workspace
+execution. `pnpm --filter @typed/id test` passed in isolation, so this is
+tracked as an unrelated verification blocker and not edited in this workflow.
+
+- [x] **Step 3: Write finalization artifact**
 
 Create `99-finalization.md` with:
 
@@ -799,7 +805,7 @@ Create `99-finalization.md` with:
 - test counts;
 - known deferrals.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add .docs/specs/httpapi-virtual-module-plugin .docs/workflows/20260516-1453-httpapi-openapi-scope-expansion

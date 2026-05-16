@@ -15,7 +15,7 @@
   - sibling companion files are next,
   - directory-level companions are lowest and compose ancestor-to-leaf.
 - FR-12: The plugin shall support security/middleware helper conventions compatible with `HttpApiBuilder` integrations (including `securityDecode` / cookie helper usage paths where configured).
-- FR-13: The plugin shall support OpenAPI annotation controls that map directly to Effect `OpenApi.annotations` options: `identifier`, `title`, `version`, `description`, `license`, `summary`, `deprecated`, `externalDocs`, `servers`, `format`, `override`, `exclude`, and `transform`.
+- FR-13: The plugin shall support OpenAPI annotation controls that map directly to Effect `OpenApi.annotations` options: `identifier`, `title`, `version`, `description`, `license`, `summary`, `deprecated`, `externalDocs`, `servers`, `format`, `override`, `exclude`, and `transform`. `_api.ts`, `_group.ts`, endpoint primary modules, `<endpoint>.openapi.ts`, and `_openapi.ts` shall all participate in the scoped annotation model.
 - FR-14: The plugin shall generate deterministic source that exports:
   - assembled API definition value(s), and
   - typed builder wiring helpers/layers for handler registration.
@@ -35,10 +35,12 @@
 - FR-24: The system shall provide a strongly typed handler-construction helper (curried form) so endpoint handlers can be authored as `helper(route, method, request)(function* (ctx) { ... })` with compile-time inference for `params`, `path`, `query`, `body`, headers, success shape, and error shape.
 - FR-25: OpenAPI annotation and exposure controls shall map to installed Effect-supported surfaces:
   - API annotations via `OpenApi.annotations(...)` and `.annotateMerge(...)`,
+  - group annotations via `OpenApi.annotations(...)` and `.annotateMerge(...)` on generated `HttpApiGroup` expressions,
+  - endpoint annotations via `OpenApi.annotations(...)` and `.annotateMerge(...)` on generated `HttpApiEndpoint` expressions,
   - JSON spec route exposure equivalent to `HttpApiBuilder.layer({ openapiPath })`,
   - Swagger UI exposure equivalent to `HttpApiSwagger.layer({ path })`,
   - Scalar UI exposure equivalent to `HttpApiScalar.layer({ path, scalar })` and `HttpApiScalar.layerCdn({ path, scalar, version })`.
-  Stale generation options such as `additionalProperties` shall be deferred or diagnosed; they shall not be emitted as unsupported `OpenApi.fromApi(Api, ...)` options.
+  `_api.ts` `openapi.generation.additionalProperties` shall support only binary `true | false` and emit an installed-compatible OpenAPI transform annotation; object-shaped values shall be diagnosed. Generation options shall not be emitted as unsupported `OpenApi.fromApi(Api, ...)` options.
 
 ## Non-Functional Requirements
 
@@ -72,7 +74,7 @@
 - AC-15: (maps to FR-22 / NFR-1, NFR-5) `typedVitePlugin` can register both router and HttpApi VM plugins with explicit options and deterministic ordering, and `api:` modules resolve in Vite integration tests.
 - AC-16: (maps to FR-23 / NFR-2, NFR-7) Supported root/group/endpoint/companion filenames are interpreted with deterministic behavior, unrelated reserved-looking filenames are ignored as non-participating files, and supported convention misuse is rejected with typed diagnostics.
 - AC-17: (maps to FR-24 / NFR-6, NFR-9) Handler helper usage infers typed handler context from route + method + `Schema.TaggedRequest`, and compile-time tests fail when handler input/output/error shapes do not match the declared contract.
-- AC-18: (maps to FR-13, FR-25 / NFR-2, NFR-9) OpenAPI configuration supports the installed Effect-backed option matrix for annotations and exposure modes (json/swagger/scalar) with deterministic behavior, type-checking generated source, and typed diagnostics or documented deferrals for unsupported stale generation options such as `additionalProperties`.
+- AC-18: (maps to FR-13, FR-25 / NFR-2, NFR-9) OpenAPI configuration supports the installed Effect-backed option matrix for root generation/exposure/annotations, group annotations, and endpoint annotations with deterministic behavior, type-checking generated source, and typed diagnostics for invalid scopes or unsupported object-shaped `additionalProperties`.
 
 ## Prioritization
 
