@@ -1129,6 +1129,58 @@ export const openapi = {
         "src/api-openapi-annotations.generated.ts",
       );
     });
+
+    it("_api.ts openapi.generation.additionalProperties false emits strict OpenAPI transform", () => {
+      const apiWithGeneration = `
+export const openapi = {
+  generation: {
+    additionalProperties: false as const,
+  },
+};
+`;
+      const fixture = createApiFixture({
+        "src/apis/_api.ts": apiWithGeneration,
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const result = buildApiFromExistingFixture(fixture);
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      if (!sourceText) return;
+      expect(sourceText).toContain("const applyOpenApiAdditionalProperties");
+      expect(sourceText).toContain("additionalProperties: false");
+      expect(sourceText).toContain("OpenApiModule.annotations");
+      expect(sourceText).toContain(".annotateMerge(");
+      expect(sourceText).not.toContain("OpenApiModule.fromApi(Api,");
+      expectHttpApiGeneratedSourceToTypeCheck(
+        fixture,
+        sourceText,
+        "src/api-openapi-generation.generated.ts",
+      );
+    });
+
+    it("_api.ts openapi.generation.additionalProperties true emits allow OpenAPI transform", () => {
+      const fixture = createApiFixture({
+        "src/apis/_api.ts": `
+export const openapi = {
+  generation: {
+    additionalProperties: true as const,
+  },
+};
+`,
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const result = buildApiFromExistingFixture(fixture);
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("additionalProperties: true");
+      expectHttpApiGeneratedSourceToTypeCheck(
+        fixture,
+        sourceText!,
+        "src/api-openapi-generation-allow.generated.ts",
+      );
+    });
   });
 });
 

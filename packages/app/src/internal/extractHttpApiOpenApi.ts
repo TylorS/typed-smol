@@ -11,11 +11,13 @@ import type {
 import type {
   OpenApiAnnotationsConfig,
   OpenApiExposureConfig,
+  OpenApiGenerationConfig,
   OpenApiScalarExposureConfig,
 } from "./httpapiOpenApiConfig.js";
 
 export type ExtractedOpenApiConfig = {
   readonly annotations?: OpenApiAnnotationsConfig;
+  readonly generation?: OpenApiGenerationConfig;
   readonly exposure?: OpenApiExposureConfig;
 };
 
@@ -102,14 +104,26 @@ export function extractOpenApiConfig(snapshot: TypeInfoFileSnapshot): ExtractedO
 
   const openapiType = openapiExport.type;
   const annotations = getObjectValue(getProperty(openapiType, "annotations"));
+  const generation = getGenerationConfig(getProperty(openapiType, "generation"));
   const exposureObj = getProperty(openapiType, "exposure");
   const exposure = exposureObj ? extractExposureConfig(exposureObj) : undefined;
 
-  if (!annotations && !exposure) return null;
+  if (!annotations && !generation && !exposure) return null;
   return {
     ...(annotations && { annotations }),
+    ...(generation && { generation }),
     ...(exposure && { exposure }),
   };
+}
+
+function getGenerationConfig(node: TypeNode | undefined): OpenApiGenerationConfig | undefined {
+  if (!node) return undefined;
+  const value = getProperty(node, "additionalProperties");
+  if (!value) return undefined;
+  if (value.text === "true") return { additionalProperties: true };
+  if (value.text === "false") return { additionalProperties: false };
+  if (value.kind === "object") return { additionalProperties: getObjectValue(value) ?? {} };
+  return undefined;
 }
 
 function extractExposureConfig(exposureObj: TypeNode): OpenApiExposureConfig | undefined {

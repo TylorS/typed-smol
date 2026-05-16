@@ -49,7 +49,7 @@
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add tests under the existing `"3g. Path prefix and OpenAPI exposure"` describe block:
 
@@ -107,7 +107,7 @@ export const openapi = {
 });
 ```
 
-- [ ] **Step 2: Verify red**
+- [x] **Step 2: Verify red**
 
 Run:
 
@@ -117,7 +117,7 @@ pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts -t "addi
 
 Expected: fails because extraction does not read `generation`, the emitter has no transform helper, or generated source lacks the asserted text.
 
-- [ ] **Step 3: Implement extraction and normalization**
+- [x] **Step 3: Implement extraction and normalization**
 
 Update `ExtractedOpenApiConfig`:
 
@@ -163,7 +163,7 @@ Update `normalizeOpenApiConfig` so object-shaped `additionalProperties` produces
 }
 ```
 
-- [ ] **Step 4: Implement the OpenAPI plan boundary**
+- [x] **Step 4: Implement the OpenAPI plan boundary**
 
 Create `httpapiOpenApiPlan.ts`:
 
@@ -216,7 +216,7 @@ export function buildHttpApiOpenApiPlan(input: {
 
 Then replace direct `_api.ts` OpenAPI extraction in `HttpApiVirtualModulePlugin.ts` with `buildHttpApiOpenApiPlan(...)`.
 
-- [ ] **Step 5: Emit transform annotation**
+- [x] **Step 5: Emit transform annotation**
 
 In `emitHttpApiSource.ts`, change input to accept `openapiPlan?: HttpApiOpenApiPlan`.
 
@@ -285,7 +285,7 @@ const applyOpenApiAdditionalProperties = (spec: Record<string, any>): Record<str
 
 Place `${openApiHelpers}` before `export const Api = ...`.
 
-- [ ] **Step 6: Verify green and commit**
+- [x] **Step 6: Verify green and commit**
 
 Run:
 
@@ -809,4 +809,3 @@ git commit -m "docs(app): finalize httpapi openapi scope expansion" -m "- docume
 - Spec coverage: covers root generation/exposure/annotations, group annotations, endpoint annotations, invalid scope diagnostics, and durable docs.
 - Placeholder scan: no placeholder tasks; every task includes concrete files, tests, commands, and commit messages.
 - Type consistency: plan consistently uses `HttpApiOpenApiPlan`, `OpenApiGenerationConfig`, `additionalProperties: boolean`, and installed Effect-compatible annotation emission.
-

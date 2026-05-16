@@ -15,8 +15,7 @@ import { classifyHttpApiFileRole } from "./internal/httpapiFileRoles.js";
 import { emitHttpApiSource } from "./internal/emitHttpApiSource.js";
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
 import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
-import { extractOpenApiConfig } from "./internal/extractHttpApiOpenApi.js";
-import { normalizeOpenApiConfig } from "./internal/httpapiOpenApiConfig.js";
+import { buildHttpApiOpenApiPlan } from "./internal/httpapiOpenApiPlan.js";
 import {
   getCallableReturnType,
   isCallableNode,
@@ -325,34 +324,12 @@ export const createHttpApiVirtualModulePlugin = (
         snapshotsByRelativePath,
         api,
       );
-      let openapiExposure:
-        | import("./internal/httpapiOpenApiConfig.js").OpenApiExposureConfig
-        | undefined;
-      let openapiAnnotations:
-        | import("./internal/httpapiOpenApiConfig.js").OpenApiAnnotationsConfig
-        | undefined;
-      const apiRootConvention = tree.conventions.find(
-        (c): c is { path: string; kind: "api_root" } =>
-          (c as { kind?: string }).kind === "api_root",
-      );
-      const apiRootPath = apiRootConvention?.path;
-      if (apiRootPath) {
-        const apiRootSnapshot = snapshotsByRelativePath.get(apiRootPath);
-        if (apiRootSnapshot) {
-          const extracted = extractOpenApiConfig(apiRootSnapshot);
-          if (extracted) {
-            const { config, diagnostics } = normalizeOpenApiConfig("api", {
-              annotations: extracted.annotations,
-              exposure: extracted.exposure,
-            });
-            if (diagnostics.length === 0) {
-              openapiExposure = config.exposure;
-              openapiAnnotations = config.annotations;
-            }
-          }
-        }
-      }
-      const allViolations = [...contractViolations, ...prefixViolations];
+      const openapiPlan = buildHttpApiOpenApiPlan({ tree, snapshotsByRelativePath });
+      const allViolations = [
+        ...contractViolations,
+        ...prefixViolations,
+        ...openapiPlan.diagnostics,
+      ];
       if (allViolations.length > 0) {
         return {
           errors: allViolations.map((violation) => ({
@@ -405,8 +382,7 @@ export const createHttpApiVirtualModulePlugin = (
         handlerIsRawByPath,
         prefixByScope,
         pathPrefix: options.pathPrefix,
-        openapiExposure,
-        openapiAnnotations,
+        openapiPlan,
       });
       if (tree.diagnostics.length > 0) {
         return {

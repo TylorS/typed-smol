@@ -24,7 +24,12 @@ import type {
 import { compareHttpApiPathOrder } from "./httpapiFileRoles.js";
 import { stripScriptExtension, toPosixPath } from "./path.js";
 import { makeUniqueVarNames, pathToIdentifier } from "./routeIdentifiers.js";
-import type { OpenApiAnnotationsConfig, OpenApiExposureConfig } from "./httpapiOpenApiConfig.js";
+import type { HttpApiOpenApiPlan } from "./httpapiOpenApiPlan.js";
+import type {
+  OpenApiAnnotationsConfig,
+  OpenApiExposureConfig,
+  OpenApiGenerationConfig,
+} from "./httpapiOpenApiConfig.js";
 import type { PrefixByScope } from "./validatePrefixConventions.js";
 
 const ROOT_GROUP_KEY = "__root__";
@@ -431,8 +436,7 @@ export function emitHttpApiSource(input: {
   readonly handlerIsRawByPath?: ReadonlyMap<string, boolean>;
   readonly prefixByScope?: PrefixByScope;
   readonly pathPrefix?: `/${string}`;
-  readonly openapiExposure?: OpenApiExposureConfig;
-  readonly openapiAnnotations?: OpenApiAnnotationsConfig;
+  readonly openapiPlan?: HttpApiOpenApiPlan;
 }): string {
   const directoryConventions = indexDirectoryConventions(input.tree);
   const endpointSpecs = buildEndpointRenderSpecs(input.tree, directoryConventions);
@@ -521,7 +525,8 @@ export function emitHttpApiSource(input: {
   const apiChain = groupExprs.map((g) => `.add(${g})`).join("");
   const apiExpr = renderAnnotatedApiExpression(
     `HttpApi.make(${JSON.stringify(apiId)})${apiChain}`,
-    input.openapiAnnotations,
+    input.openapiPlan?.api.annotations,
+    input.openapiPlan?.api.generation,
   );
 
   const groupLayerBlocks: string[] = [];
@@ -556,9 +561,9 @@ export function emitHttpApiSource(input: {
     );
   }
 
-  const jsonPath = input.openapiExposure?.jsonPath;
-  const swaggerPath = input.openapiExposure?.swaggerPath;
-  const scalarConfig = input.openapiExposure?.scalar;
+  const jsonPath = input.openapiPlan?.api.exposure.jsonPath;
+  const swaggerPath = input.openapiPlan?.api.exposure.swaggerPath;
+  const scalarConfig = input.openapiPlan?.api.exposure.scalar;
   const apiLayerOptions =
     jsonPath && typeof jsonPath === "string" ? `{ openapiPath: ${JSON.stringify(jsonPath)} }` : "";
   const swaggerExpr =
@@ -592,7 +597,10 @@ export function emitHttpApiSource(input: {
     ? `{ disableListenLog, middleware: ApiMiddlewares.middleware ?? ApiMiddlewares.default }`
     : `{ disableListenLog }`;
 
-  return `${importLines.join("\n")}
+  const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
+  const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
+
+  return `${importLines.join("\n")}${openApiHelperBlock}
 
 export const Api = ${apiExpr};
 export const ApiLayer = ${mergedApiLayer};
@@ -656,9 +664,42 @@ function emitHandlerCall(input: HandlerCallInput): string {
 function renderAnnotatedApiExpression(
   apiExpression: string,
   annotations: OpenApiAnnotationsConfig | undefined,
+  generation: OpenApiGenerationConfig | undefined,
 ): string {
-  if (!annotations || Object.keys(annotations).length === 0) return apiExpression;
-  return `${apiExpression}.annotateMerge(OpenApiModule.annotations(${renderObjectLiteral(annotations)}))`;
+  const merged = {
+    ...(annotations ?? {}),
+    ...renderGenerationAnnotations(generation),
+  };
+  if (Object.keys(merged).length === 0) return apiExpression;
+  return `${apiExpression}.annotateMerge(OpenApiModule.annotations(${renderObjectLiteral(merged)}))`;
+}
+
+function renderGenerationAnnotations(
+  generation: OpenApiGenerationConfig | undefined,
+): Record<string, unknown> {
+  if (generation?.additionalProperties === undefined) return {};
+  return { transform: "applyOpenApiAdditionalProperties" };
+}
+
+function renderOpenApiHelpers(generation: OpenApiGenerationConfig | undefined): string {
+  if (generation?.additionalProperties === undefined) return "";
+  return `const openApiAdditionalPropertiesConfig = { additionalProperties: ${String(generation.additionalProperties)} } as const;
+
+const applyOpenApiAdditionalProperties = (spec: Record<string, any>): Record<string, any> => {
+  const visit = (value: unknown): unknown => {
+    if (!value || typeof value !== "object") return value;
+    if (Array.isArray(value)) return value.map(visit);
+    const record = value as Record<string, unknown>;
+    const next: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(record)) next[key] = visit(entry);
+    if (next.type === "object" && next.additionalProperties === undefined) {
+      next.additionalProperties = openApiAdditionalPropertiesConfig.additionalProperties;
+    }
+    return next;
+  };
+  return visit(spec) as Record<string, any>;
+};
+`;
 }
 
 function renderScalarLayer(apiName: string, scalar: OpenApiExposureConfig["scalar"]): string {
@@ -679,6 +720,7 @@ function renderObjectLiteral(value: Readonly<Record<string, unknown>>): string {
 }
 
 function renderValue(value: unknown): string {
+  if (value === "applyOpenApiAdditionalProperties") return value;
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (value && typeof value === "object") {

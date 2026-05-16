@@ -74,6 +74,7 @@ const DIAG_SCOPE_GENERATION = "AVM-OPENAPI-001";
 const DIAG_SCOPE_EXPOSURE = "AVM-OPENAPI-002";
 const DIAG_ROUTE_CONFLICT = "AVM-OPENAPI-003";
 const DIAG_INVALID_ANNOTATION_KEY = "AVM-OPENAPI-004";
+const DIAG_UNSUPPORTED_ADDITIONAL_PROPERTIES = "AVM-OPENAPI-005";
 
 /**
  * Validates that generation options (e.g. additionalProperties) are only at API scope.
@@ -83,12 +84,23 @@ export function validateOpenApiGenerationScope(
   generation: OpenApiGenerationConfig,
 ): OpenApiConfigDiagnostic[] {
   const diagnostics: OpenApiConfigDiagnostic[] = [];
-  if (scope === "api") return diagnostics;
   const hasGen =
     generation.additionalProperties !== undefined &&
     (typeof generation.additionalProperties === "boolean" ||
       (typeof generation.additionalProperties === "object" &&
         generation.additionalProperties !== null));
+  if (
+    typeof generation.additionalProperties === "object" &&
+    generation.additionalProperties !== null
+  ) {
+    diagnostics.push({
+      code: DIAG_UNSUPPORTED_ADDITIONAL_PROPERTIES,
+      message:
+        "OpenAPI generation.additionalProperties only supports boolean true|false in this tranche.",
+      scope,
+    });
+  }
+  if (scope === "api") return diagnostics;
   if (hasGen) {
     diagnostics.push({
       code: DIAG_SCOPE_GENERATION,
