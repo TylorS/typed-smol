@@ -1,6 +1,6 @@
 # Typed Framework Starter Implementation Plan
 
-Status: draft pending human approval.
+Status: completed and published to PR #3 on 2026-05-16.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` when the human explicitly authorizes subagents, otherwise execute task-by-task in this session with `superpowers:executing-plans`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
