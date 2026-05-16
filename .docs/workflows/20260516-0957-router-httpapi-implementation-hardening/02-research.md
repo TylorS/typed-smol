@@ -60,15 +60,15 @@ The current HttpApi descriptor tree records API root, group override, directory 
 - endpoint/group/API annotations via `OpenApi.annotations`;
 - endpoint/group dependencies and middlewares beyond root `_middlewares.ts`;
 - Scalar CDN mode or Scalar `config`;
-- hard diagnostics for unsupported reserved convention files.
+- non-participation semantics for reserved-looking files that are not supported conventions.
 
 Implication: requirements should not only say "type-check generated source"; they should require a convention-to-rendering parity matrix so every parsed convention is either emitted, diagnosed, or explicitly deferred.
 
-### Warning-Only Unsupported Roles Conflict With Production Hardening
+### Reserved-Looking Non-Convention Files Need Explicit Non-Participation Semantics
 
-`httpapiDescriptorTree` collects unsupported reserved roles as diagnostics, but `HttpApiVirtualModulePlugin.build` currently returns `sourceText` plus warnings when the tree has diagnostics. The durable requirements include diagnostics for unsupported/misplaced convention files and explicit non-crashing errors. For production hardening, unsupported reserved names should likely be build errors unless the human chooses migration leniency.
+`httpapiDescriptorTree` currently collects unsupported reserved-looking roles as diagnostics, and `HttpApiVirtualModulePlugin.build` can return `sourceText` plus warnings when the tree has diagnostics. The approved requirements now narrow this: only supported conventions participate. Files that merely look reserved but do not match a supported convention are ordinary unrelated files and should not produce warnings or errors.
 
-Implication: Phase 2 must ask for approval on "hard error" vs "warning with source" behavior for unsupported reserved HttpApi roles.
+Requirements resolution: the human chose non-participation semantics. Files that merely look reserved but do not match a supported convention are ordinary unrelated files and should not block generation unless they collide with or shadow a supported convention.
 
 ### Router Is Closer But Still Needs Fail-Closed Audit
 
@@ -90,7 +90,7 @@ These prove the package currently compiles and the existing tests pass, but they
 ## Open Risks and Unknowns
 
 - Whether the durable HttpApi OpenAPI generation requirement around `additionalProperties` should be removed, deferred, or remapped to the installed package API.
-- Whether unsupported reserved HttpApi roles should be hard errors immediately or warnings for one compatibility release.
+- Whether a reserved-looking file collides with or shadows a supported convention needs exact specification.
 - Whether generated-source type-check fixtures should live inside `packages/app` tests, a sample project, or a reusable virtual-module compiler harness.
 - Whether Router directory companion ordering in existing tests is the intended semantic contract or a historical implementation artifact.
 - Whether the current generated `App` / `serve` layer types are correct for all planned user extension layers, not only current snapshots.
@@ -99,7 +99,7 @@ These prove the package currently compiles and the existing tests pass, but they
 
 - Requirements must prioritize generated-source type-check fixtures for Router and HttpApi.
 - Requirements must include a convention-rendering parity matrix for HttpApi.
-- Requirements must explicitly decide hard-error vs warning behavior for unsupported reserved roles.
+- Requirements must explicitly define non-participation behavior for reserved-looking non-convention files.
 - Requirements must reconcile durable OpenAPI generation controls with the installed Effect declarations.
 - Specification should isolate Effect unstable HttpApi calls behind a small emitter helper boundary so future API drift is localized.
 - Planning should split Router and HttpApi tasks, with HttpApi generated-source compatibility first.
@@ -119,4 +119,4 @@ These prove the package currently compiles and the existing tests pass, but they
 
 - procedural: For future `@typed/app` HttpApi work, treat installed `packages/app/node_modules/effect/dist/unstable/httpapi/*.d.ts` as the source of truth over older durable docs or online docs.
 - heuristic: Generated-source correctness should be proven by type-checking emitted fixture modules, not only by snapshotting emitted strings.
-- mistake: Do not let unsupported reserved HttpApi convention files remain warnings by default if the plugin is claiming production-ready fail-clear behavior.
+- heuristic: Reserved-looking files that are not supported conventions should be treated as ordinary non-participating files, not diagnostics, unless they collide with a supported convention.

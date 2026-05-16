@@ -1,6 +1,6 @@
 # Scope — Router and HttpApi Implementation Hardening
 
-Status: draft, not approved.
+Status: approved.
 
 ## In Scope
 
@@ -19,7 +19,7 @@ Status: draft, not approved.
 - Verify and harden generated Effect HttpApi assembly for API, group, endpoint, client, layer, app, serve, Swagger, Scalar, and OpenAPI exports.
 - Verify and harden endpoint contract validation, raw-vs-normal handler selection, optional schema exports, path prefixes, group/pathless-directory mapping, and deterministic naming.
 - Verify and harden convention precedence: in-file > sibling companion > directory companion, ancestor-to-leaf where composition applies.
-- Decide whether unsupported reserved roles and invalid OpenAPI config should be hard build errors in this tranche, and implement the approved behavior.
+- Implement approved non-participation behavior for reserved-looking non-convention files, while keeping invalid participating contracts fail-clear.
 - Add or update tests that prove emitted source type-checks and remains deterministic for high-risk HttpApi scenarios.
 
 ### Generated-Source Proof

@@ -1,6 +1,6 @@
 # Intent — Router and HttpApi Implementation Hardening
 
-Status: draft, not approved.
+Status: approved.
 
 ## Problem
 
@@ -16,7 +16,7 @@ The intended end state is:
 
 - Router generated source preserves matcher semantics for route ordering, companion precedence, guard/dependency/layout/catch composition, entrypoint normalization, and deterministic imports.
 - HttpApi generated source preserves Effect HttpApi semantics for API/group/endpoint assembly, handler wiring, raw-vs-normal handlers, prefixes, OpenAPI exposure, client/layer exports, and deterministic imports.
-- Invalid plugin inputs, unsupported conventions, missing TypeInfo targets, and stale API assumptions produce structured diagnostics rather than host crashes or silent warnings.
+- Invalid participating plugin inputs, missing TypeInfo targets, and stale API assumptions produce structured diagnostics rather than host crashes or silent warnings.
 - Tests prove the hardened implementation behavior, with emphasis on generated-source fixtures, type-checking, and deterministic output rather than coverage-only assertions.
 - The work stays aligned with the existing durable Router and HttpApi specs unless research finds those specs are stale and need explicit updates.
 
@@ -37,7 +37,7 @@ Typed should feel like a framework where virtual modules are a dependable compil
 
 - Which generated-source scenarios currently diverge from the durable Router and HttpApi specs.
 - Whether current HttpApi generation still matches the installed Effect unstable HttpApi APIs exactly.
-- Whether unsupported HttpApi reserved-role diagnostics should be hard errors in this tranche instead of warnings.
+- How to distinguish supported HttpApi conventions from ordinary non-participating files that only look reserved.
 - Whether the Router renderer has remaining host-crashing internal invariant paths that should become build diagnostics.
 - Which fixture/type-check harness gives the best proof without overbuilding a full sample app.
 

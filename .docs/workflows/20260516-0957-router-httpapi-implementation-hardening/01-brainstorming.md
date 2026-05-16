@@ -21,7 +21,7 @@ The Router and HttpApi virtual-module plugins in `@typed/app` need implementatio
 ## Known Unknowns and Risks
 
 - The current HttpApi emitter may not fully use the existing descriptor tree/convention metadata despite the durable spec requiring AST-normalized emission.
-- Unsupported HttpApi reserved-role diagnostics currently appear warning-capable; research must decide whether this should become fail-closed.
+- Unsupported HttpApi reserved-looking files currently appear warning-capable; research must decide whether they should participate, diagnose, or be ignored.
 - OpenAPI config normalization can discard diagnostics in the current build path if not surfaced.
 - Router renderer contains internal invariant `throw` paths; research must determine which are unreachable after validation and which should become structured diagnostics.
 - Generated-source type-checking may need a stronger fixture harness to prove Effect HttpApi API compatibility.
