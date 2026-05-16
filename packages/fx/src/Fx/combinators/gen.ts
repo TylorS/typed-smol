@@ -19,4 +19,4 @@ export const gen = <Yield extends Effect.Effect<any, any, any>, Return extends F
   Fx.Success<Return>,
   Fx.Error<Return> | Effect.Error<Yield>,
   Fx.Services<Return> | Effect.Services<Yield>
-> => unwrap(Effect.gen(f)) as any;
+> => unwrap(Effect.gen(f)) ;

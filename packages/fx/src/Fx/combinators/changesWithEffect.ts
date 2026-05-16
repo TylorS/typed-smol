@@ -35,7 +35,7 @@ export const changesWithEffect: {
     f: (prev: A, next: A) => Effect.Effect<boolean, E2, R2>,
   ): Fx<A, E | E2, R | R2> =>
     make<A, E | E2, R | R2>((sink) =>
-      sinkCore.withStateSemaphore(sink, Option.none<A>() as Option.Option<A>, (s) =>
+      sinkCore.withStateSemaphore(sink, Option.none<A>(), (s) =>
         fx.run(
           makeSink(s.onFailure, (a2) =>
             Effect.matchCauseEffect(

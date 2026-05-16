@@ -26,7 +26,7 @@ describe("RefSubject", () => {
           return Effect.sync(() => clearTimeout(id));
         }),
       );
-      const fiber = yield* Effect.forkChild(ref.asEffect());
+      const fiber = yield* Effect.forkChild(ref);
       expect(yield* Fiber.join(fiber)).toEqual(1);
     }).pipe(Effect.scoped, Effect.runPromise));
 

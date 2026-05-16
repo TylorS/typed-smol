@@ -1387,7 +1387,7 @@ export function Service<Self, A, E = never>() {
       ) => Effect.flatMap(service, (ref) => ref.updates(f));
 
       // Yieldable
-      static override = service;
+      static readonly override = service;
       static readonly [Symbol.iterator] = function* () {
         const ref = yield* service;
         return yield* ref;
