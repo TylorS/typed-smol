@@ -18,3 +18,8 @@
 
 - Endpoint OpenAPI precedence is implemented as inherited `_openapi.ts` defaults first, then sibling `<endpoint>.openapi.ts`, then in-file endpoint `openapi`. Later layers override earlier annotation keys.
 - Companion and inherited endpoint OpenAPI files use default exports; endpoint primary modules use named `openapi`.
+
+## Task 5
+
+- Invalid OpenAPI scope diagnostics were already wired during earlier task implementation: `_group.ts` and endpoint configs call `normalizeOpenApiConfig`, object-shaped root `additionalProperties` emits `AVM-OPENAPI-005`, and `HttpApiVirtualModulePlugin` returns `openapiPlan.diagnostics` as build errors.
+- The focused `AVM-OPENAPI` test run passed immediately after adding plugin-level tests, so no production changes were needed for Task 5.

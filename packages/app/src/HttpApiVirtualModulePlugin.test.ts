@@ -1210,6 +1210,48 @@ export const openapi = {
       );
     });
 
+    it("returns AVM-OPENAPI-001 when generation appears outside _api.ts", () => {
+      const result = buildApiFromFixture({
+        "src/apis/users/_group.ts": `
+export const openapi = {
+  generation: { additionalProperties: false as const },
+};
+`,
+        "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,
+      });
+      expect(result).toHaveProperty("errors");
+      const err = result as VirtualModuleBuildError;
+      expect(err.errors.some((e) => e.code === "AVM-OPENAPI-001")).toBe(true);
+    });
+
+    it("returns AVM-OPENAPI-002 when exposure appears outside _api.ts", () => {
+      const result = buildApiFromFixture({
+        "src/apis/users/list.ts": `
+${VALID_ENDPOINT_SOURCE}
+export const openapi = {
+  exposure: { jsonPath: "/bad.json" as const },
+};
+`,
+      });
+      expect(result).toHaveProperty("errors");
+      const err = result as VirtualModuleBuildError;
+      expect(err.errors.some((e) => e.code === "AVM-OPENAPI-002")).toBe(true);
+    });
+
+    it("returns AVM-OPENAPI-005 for object-shaped additionalProperties", () => {
+      const result = buildApiFromFixture({
+        "src/apis/_api.ts": `
+export const openapi = {
+  generation: { additionalProperties: { type: "string" as const } },
+};
+`,
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      expect(result).toHaveProperty("errors");
+      const err = result as VirtualModuleBuildError;
+      expect(err.errors.some((e) => e.code === "AVM-OPENAPI-005")).toBe(true);
+    });
+
     it("_group.ts openapi.annotations annotates generated HttpApiGroup", () => {
       const fixture = createApiFixture({
         "src/apis/users/_group.ts": `

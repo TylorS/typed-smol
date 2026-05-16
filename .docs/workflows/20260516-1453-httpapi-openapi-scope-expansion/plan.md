@@ -673,7 +673,7 @@ git commit -m "fix(app): emit httpapi endpoint openapi annotations" -m "- suppor
 - Modify: `packages/app/src/internal/httpapiOpenApiPlan.ts`
 - Modify: `packages/app/src/internal/httpapiOpenApiConfig.ts`
 
-- [ ] **Step 1: Write failing diagnostics tests**
+- [x] **Step 1: Write failing diagnostics tests**
 
 Add:
 
@@ -721,7 +721,7 @@ export const openapi = {
 });
 ```
 
-- [ ] **Step 2: Verify red**
+- [x] **Step 2: Verify red**
 
 Run:
 
@@ -729,17 +729,19 @@ Run:
 pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts -t "AVM-OPENAPI"
 ```
 
-Expected: fails because some diagnostics are swallowed or not collected for group/endpoint scopes.
+Actual: passed immediately because Tasks 1, 3, and 4 already collected diagnostics from
+root, group, and endpoint OpenAPI scopes and returned them through the plugin build
+error path.
 
-- [ ] **Step 3: Collect diagnostics from all OpenAPI scopes**
+- [x] **Step 3: Collect diagnostics from all OpenAPI scopes**
 
 Update plan construction so every extracted group/endpoint/inherited config calls `normalizeOpenApiConfig` with the correct scope and appends diagnostics, even when annotations are still usable.
 
-- [ ] **Step 4: Return diagnostics from plugin build**
+- [x] **Step 4: Return diagnostics from plugin build**
 
 In `HttpApiVirtualModulePlugin.ts`, include `...openapiPlan.diagnostics` in `allViolations` before emission.
 
-- [ ] **Step 5: Verify green and commit**
+- [x] **Step 5: Verify green and commit**
 
 Run:
 
