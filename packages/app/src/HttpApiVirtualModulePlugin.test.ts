@@ -144,7 +144,9 @@ const NM = join(APP_ROOT, "node_modules");
 const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
   "@typed/router": join(NM, "@typed", "router", "src", "index.ts"),
   effect: join(NM, "effect", "dist", "index.d.ts"),
+  "effect/Context": join(NM, "effect", "dist", "Context.d.ts"),
   "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
+  "effect/Layer": join(NM, "effect", "dist", "Layer.d.ts"),
   "effect/Schema": join(NM, "effect", "dist", "Schema.d.ts"),
   "effect/unstable/httpapi/HttpApi": join(
     NM,
@@ -347,10 +349,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
         Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
       > => {
         const disableListenLog = config?.disableListenLog ?? false;
-        const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter) as ComputeLayers<
-          Layers,
-          typeof ApiLayer
-        >;
+        const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
         return HttpRouter.serve(appLayer, { disableListenLog })
       };
 
@@ -369,18 +368,14 @@ describe("createHttpApiVirtualModulePlugin", () => {
               projectRoot: process.cwd(),
               dev,
             });
-            const appLayer = App(appConfig, staticAssetsLayer as any, ...layersToMergeIntoRouter);
+            const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
               projectRoot: process.cwd(),
               dev,
-            }) as any;
-            return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
-              Layer.Success<typeof appLayer>,
-              Layer.Error<typeof appLayer>,
-              never
-            >;
+            });
+            return appLayer.pipe(Layer.provide(serverLayer));
           }),
         );
       "
@@ -392,12 +387,54 @@ describe("createHttpApiVirtualModulePlugin", () => {
 
     expect(sourceText).toContain("TypedHttpServer.layer");
     expect(sourceText).toContain("TypedHttpServer.staticAssets");
-    expect(sourceText).toContain("Layer.Error<typeof appLayer>,\n        never");
+    expect(sourceText).not.toContain("staticAssetsLayer as any");
+    expect(sourceText).not.toContain("}) as any");
+    expect(sourceText).not.toContain("Layer.Error<typeof appLayer>,\n        never");
     expect(sourceText).not.toContain("NodeHttpServer.layer(http.createServer");
   });
 
   it("type-checks generated HttpApi source", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const result = buildApiFromExistingFixture(fixture);
+    const sourceText = getSourceText(result);
+
+    expect(sourceText).toBeDefined();
+    if (!sourceText) return;
+    const typeCheck = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/api.generated.ts",
+      sourceText,
+      rootFiles: fixture.paths,
+      moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
+    });
+    expect(typeCheck.diagnostics).toEqual([]);
+  });
+
+  it("infers serve dependency services from provided layers", () => {
+    const fixture = createApiFixture({
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      "src/serve-inference.ts": `
+        import * as Context from "effect/Context";
+        import * as Effect from "effect/Effect";
+        import * as Layer from "effect/Layer";
+        import { serve } from "./api.generated";
+
+        const RequiredConfig = Context.Service<{ readonly value: string }>("RequiredConfig");
+        const RuntimeDependency = Context.Service<{ readonly value: string }>("RuntimeDependency");
+        const runtimeLayer = Layer.effect(RuntimeDependency)(
+          Effect.gen(function* () {
+            const config = yield* RequiredConfig;
+            return { value: config.value };
+          }),
+        );
+        const server = serve(undefined, runtimeLayer);
+
+        type Assert<T extends true> = T;
+        type Services = Layer.Services<typeof server>;
+        type Expected = Context.Service.Identifier<typeof RequiredConfig>;
+        type _RequiresConfig = Assert<Expected extends Services ? true : false>;
+      `,
+    });
     const result = buildApiFromExistingFixture(fixture);
     const sourceText = getSourceText(result);
 
@@ -589,10 +626,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
         Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
       > => {
         const disableListenLog = config?.disableListenLog ?? false;
-        const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter) as ComputeLayers<
-          Layers,
-          typeof ApiLayer
-        >;
+        const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
         return HttpRouter.serve(appLayer, { disableListenLog })
       };
 
@@ -611,18 +645,14 @@ describe("HttpApiVirtualModulePlugin integration", () => {
               projectRoot: process.cwd(),
               dev,
             });
-            const appLayer = App(appConfig, staticAssetsLayer as any, ...layersToMergeIntoRouter);
+            const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
               projectRoot: process.cwd(),
               dev,
-            }) as any;
-            return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
-              Layer.Success<typeof appLayer>,
-              Layer.Error<typeof appLayer>,
-              never
-            >;
+            });
+            return appLayer.pipe(Layer.provide(serverLayer));
           }),
         );
       "

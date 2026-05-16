@@ -626,10 +626,7 @@ export const App = <const Layers extends readonly LayerOrGroup[] = []>(
   Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
 > => {
   const disableListenLog = config?.disableListenLog ?? false;
-  const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter) as ComputeLayers<
-    Layers,
-    typeof ApiLayer
-  >;
+  const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
   return HttpRouter.serve(appLayer, ${serveOptions})
 };
 
@@ -648,18 +645,14 @@ export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
         projectRoot: process.cwd(),
         dev,
       });
-      const appLayer = App(appConfig, staticAssetsLayer as any, ...layersToMergeIntoRouter);
+      const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
       const serverLayer = TypedHttpServer.layer({
         host,
         port,
         projectRoot: process.cwd(),
         dev,
-      }) as any;
-      return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
-        Layer.Success<typeof appLayer>,
-        Layer.Error<typeof appLayer>,
-        never
-      >;
+      });
+      return appLayer.pipe(Layer.provide(serverLayer));
     }),
   );
 `;
