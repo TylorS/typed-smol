@@ -524,6 +524,7 @@ export interface LanguageServiceAdapterOptions {
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
   readonly watchHost?: LanguageServiceWatchHost;
   readonly artifactStoreFactory?: VirtualArtifactStoreFactory;
+  readonly shouldReuseRecord?: (record: VirtualModuleRecord) => boolean;
   /** Coalesce rapid watch events (ms). When set, markStale is deferred until after the delay. */
   readonly debounceMs?: number;
 }
@@ -546,6 +547,7 @@ export interface CompilerHostAdapterOptions {
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
   readonly watchHost?: LanguageServiceWatchHost;
   readonly artifactStoreFactory?: VirtualArtifactStoreFactory;
+  readonly shouldReuseRecord?: (record: VirtualModuleRecord) => boolean;
   /** Coalesce rapid watch events (ms). When set, markStale is deferred until after the delay. */
   readonly debounceMs?: number;
   /**

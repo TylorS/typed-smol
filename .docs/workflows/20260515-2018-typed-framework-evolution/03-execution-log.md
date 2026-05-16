@@ -277,6 +277,38 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - Cross-surface reuse is proven by running `vmc --noEmit`, reading the persisted artifact manifest, passing the manifest's plugin/compiler fingerprints into `virtualModulesVitePlugin({ artifactStore })`, and loading `encodeVirtualId("virtual:foo", manifest.effectiveImporter)` through Vite's `/@id/` path while the Vite plugin `build()` throws if called.
 - memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
 
+### T10 — TypeScript Plugin Integration
+
+- task_id: T10
+- requirement_ids: FR-6, FR-9, FR-11, FR-12, FR-13, NFR-1, NFR-5, NFR-6, NFR-8, AC-8, AC-9, AC-11, AC-13, AC-14
+- validation_evidence:
+  - Red: `pnpm --filter @typed/virtual-modules-ts-plugin test` failed after adding TS plugin artifact-store tests, with `Test Files 1 failed | 1 passed (2)` and `Tests 2 failed | 7 passed (9)`. Failures proved `create()` did not write `node_modules/.typed/virtual/index.json`, and a second plugin instance re-ran the throwing `build()` path instead of reusing the persisted artifact.
+  - Reviewer red: `pnpm --filter @typed/virtual-modules-ts-plugin test` failed with `Tests 1 failed | 10 passed (11)` while proving same-language-service source snapshot changes; the stale in-memory virtual record was not re-entering artifact-store validation.
+  - Reviewer red: static review found that resolver-input drift could rebuild stale startup resolver output under current fingerprints, and that repeated rebuild failures could accumulate adapter diagnostics.
+  - Green: `pnpm --filter @typed/virtual-modules-ts-plugin test`; passed with `Test Files 2 passed (2)`, `Tests 12 passed (12)`.
+  - Green: `pnpm --filter @typed/virtual-modules test`; passed with `Test Files 13 passed (13)`, `Tests 135 passed (135)`.
+  - `pnpm --filter @typed/virtual-modules-ts-plugin build`; exit 0.
+  - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/VirtualRecordStore.ts packages/virtual-modules/src/LanguageServiceAdapter.ts packages/virtual-modules/src/CompilerHostAdapter.ts packages/virtual-modules/src/types.ts packages/virtual-modules-ts-plugin/src/plugin.ts packages/virtual-modules-ts-plugin/src/plugin.test.ts packages/virtual-modules-ts-plugin/package.json`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules/src/internal/VirtualRecordStore.ts packages/virtual-modules/src/LanguageServiceAdapter.ts packages/virtual-modules/src/CompilerHostAdapter.ts packages/virtual-modules/src/types.ts packages/virtual-modules-ts-plugin/src/plugin.ts packages/virtual-modules-ts-plugin/src/plugin.test.ts`; 0 warnings, 0 errors.
+  - `git diff --check`; exit 0.
+- commit: deferred by user request
+- deviations_or_replans:
+  - Updated existing TS plugin assertions from the legacy `__virtual_` source-file name to the shared `node_modules/.typed/virtual` artifact path. The direct `attachLanguageServiceAdapter` no-store test still asserts the old fallback behavior.
+  - Did not modify `sample-project.integration.test.ts`; the built-plugin unit tests cover the TS plugin artifact path without adding sample fixture flake risk.
+  - Reviewer feedback moved the TS plugin artifact fingerprints from create-time capture to per-store recomputation, and source-root fingerprints now hash language-service snapshots when available instead of assuming saved disk content is the editor source of truth.
+  - Loaded `typed.config.ts` is marked non-reusable for helper-module tracking in this slice because the current typed config loader does not expose dependency module paths.
+  - Reviewer feedback added same-language-service stale-record validation: adapter records now expose a reuse guard, virtual reads validate records before serving them, and diagnostics refresh known virtual records before returning results.
+  - Reviewer feedback added fail-closed resolver drift handling: if `typed.config.ts`, `vmc.config.ts`, VMC config helpers, or loaded VMC plugin modules drift from the startup resolver state, the artifact store refuses materialization instead of writing stale resolver output under current fingerprints.
+  - Rebuild diagnostics are deduped by code/message so persistent fail-closed states do not grow unbounded across repeated diagnostics requests.
+  - Generated virtual artifact paths are filtered out of source-root fingerprinting because they are cache outputs; including them recursively re-entered adapter validation.
+  - The TS plugin `pretest` now builds `@typed/virtual-modules` first so integration tests cannot pass against stale core adapter output in `dist`.
+- context_updates:
+  - The TS plugin now passes an `artifactStoreFactory` into `attachLanguageServiceAdapter`.
+  - TS plugin artifact fingerprints include LS host script roots, parsed tsconfig roots, type-target bootstrap roots when present, typed config loaded/not-found/error state, loaded `vmc.config.ts` and helper dependencies, loaded vmc plugin modules and helper dependencies, available plugin package versions, merged resolver/plugin snapshot including built-in router/api typed-config prefixes, TypeScript version, and parsed tsconfig snapshot.
+  - VMC config comparison tokens include config helper dependencies, loaded plugin entry/helper modules, plugin package versions, and the vmc load snapshot. Current VMC fingerprints are recomputed for each store access and marked non-reusable if they drift from the resolver created at plugin startup.
+  - Plugin-facing `build(id, importer, api)` still receives the logical virtual id and effective real importer; the generated source path is only used by the adapter/artifact store.
+- memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
+
 ## Deferred Work
 
 - Adapter migration starts only after T1 through T5 are committed and passing.

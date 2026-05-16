@@ -1,5 +1,13 @@
 /// <reference types="node" />
-import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
@@ -8,8 +16,12 @@ import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   attachLanguageServiceAdapter,
+  hashVirtualArtifactContent,
   NodeModulePluginLoader,
+  parseVirtualArtifactIndex,
+  parseVirtualArtifactManifest,
   PluginManager,
+  type VirtualArtifactManifest,
 } from "@typed/virtual-modules";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -173,9 +185,317 @@ describe("virtual-modules-ts-plugin", () => {
 
       const program = wrapped.getProgram();
       expect(program).toBeDefined();
-      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
+      expect(program!.getSourceFiles().some(isSharedVirtualArtifactSource)).toBe(true);
     },
   );
+
+  it("materializes create() virtual modules through the shared artifact store", () => {
+    const dir = createTempDirInWorkspace();
+    const pluginPath = join(dir, "test-plugin.mjs");
+    writeFileSync(
+      pluginPath,
+      `export default {
+  name: "artifact-store-test",
+  shouldResolve: (id) => id === "virtual:artifact-store",
+  build: (id, importer) => {
+    if (id !== "virtual:artifact-store") throw new Error("unexpected id");
+    if (!importer.endsWith("entry.ts")) throw new Error("unexpected importer: " + importer);
+    return "export interface ArtifactStoreValue { n: number }";
+  }
+};
+`,
+      "utf8",
+    );
+    writeFileSync(join(dir, "vmc.config.ts"), `export default { plugins: ["./test-plugin.mjs"] };`);
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+        },
+        files: ["entry.ts"],
+      }),
+      "utf8",
+    );
+
+    const entryPath = join(dir, "entry.ts");
+    writeFileSync(
+      entryPath,
+      'import type { ArtifactStoreValue } from "virtual:artifact-store";\nexport const value: ArtifactStoreValue = { n: 1 };\n',
+      "utf8",
+    );
+
+    const wrapped = createPluginLanguageService(dir, entryPath);
+    expect(wrapped.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+
+    const indexPath = join(dir, "node_modules", ".typed", "virtual", "index.json");
+    expect(existsSync(indexPath)).toBe(true);
+    const parsed = parseVirtualArtifactIndex(JSON.parse(readFileSync(indexPath, "utf8")));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const entries = Object.values(parsed.index.artifacts);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.generatedSourcePath).toContain(join("node_modules", ".typed", "virtual"));
+    expect(entries[0]?.generatedSourcePath.startsWith(join(dir, "node_modules"))).toBe(true);
+    expect(existsSync(entries[0]!.generatedSourcePath)).toBe(true);
+  });
+
+  it("reuses persisted artifacts across create() calls when fingerprints match", () => {
+    const dir = createTempDirInWorkspace();
+    writeFileSync(
+      join(dir, "test-plugin.mjs"),
+      `globalThis.__typedTsPluginBuildCount = globalThis.__typedTsPluginBuildCount ?? 0;
+export default {
+  name: "artifact-reuse-test",
+  shouldResolve: (id) => id === "virtual:reuse",
+  build: () => {
+    globalThis.__typedTsPluginBuildCount++;
+    if (globalThis.__typedTsPluginThrowOnBuild) throw new Error("build should not run");
+    return "export interface ReusedValue { n: number }";
+  }
+};
+`,
+      "utf8",
+    );
+    writeFileSync(join(dir, "vmc.config.ts"), `export default { plugins: ["./test-plugin.mjs"] };`);
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+        },
+        files: ["entry.ts"],
+      }),
+      "utf8",
+    );
+    const entryPath = join(dir, "entry.ts");
+    writeFileSync(
+      entryPath,
+      'import type { ReusedValue } from "virtual:reuse";\nexport const value: ReusedValue = { n: 1 };\n',
+      "utf8",
+    );
+
+    const globalState = globalThis as {
+      __typedTsPluginBuildCount?: number;
+      __typedTsPluginThrowOnBuild?: boolean;
+    };
+    try {
+      globalState.__typedTsPluginBuildCount = 0;
+      globalState.__typedTsPluginThrowOnBuild = false;
+      const first = createPluginLanguageService(dir, entryPath);
+      expect(first.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
+
+      globalState.__typedTsPluginThrowOnBuild = true;
+      const second = createPluginLanguageService(dir, entryPath);
+      expect(second.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
+    } finally {
+      delete globalState.__typedTsPluginBuildCount;
+      delete globalState.__typedTsPluginThrowOnBuild;
+    }
+  });
+
+  it("fingerprints source roots from language-service snapshots", () => {
+    const dir = createTempDirInWorkspace();
+    writeFileSync(
+      join(dir, "test-plugin.mjs"),
+      `export default {
+  name: "snapshot-source-test",
+  shouldResolve: (id) => id === "virtual:snapshot-source",
+  build: () => "export interface SnapshotSourceValue { n: number }"
+};
+`,
+      "utf8",
+    );
+    writeFileSync(join(dir, "vmc.config.ts"), `export default { plugins: ["./test-plugin.mjs"] };`);
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+        },
+        files: ["entry.ts"],
+      }),
+      "utf8",
+    );
+    const entryPath = join(dir, "entry.ts");
+    const diskSource =
+      'import type { SnapshotSourceValue } from "virtual:snapshot-source";\nexport const value: SnapshotSourceValue = { n: 1 };\n// disk\n';
+    const snapshotSource =
+      'import type { SnapshotSourceValue } from "virtual:snapshot-source";\nexport const value: SnapshotSourceValue = { n: 1 };\n// unsaved\n';
+    writeFileSync(entryPath, diskSource, "utf8");
+
+    const wrapped = createPluginLanguageService(dir, entryPath, {
+      scriptTextByPath: new Map([[entryPath, snapshotSource]]),
+    });
+    expect(wrapped.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+
+    const manifest = readSingleArtifactManifest(dir);
+    expect(manifest.sourceInputFingerprints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "file",
+          name: entryPath,
+          hash: hashVirtualArtifactContent(snapshotSource),
+        }),
+      ]),
+    );
+  });
+
+  it("does not reuse stale artifacts after source snapshots change", () => {
+    const dir = createTempDirInWorkspace();
+    writeFileSync(
+      join(dir, "test-plugin.mjs"),
+      `globalThis.__typedTsPluginBuildCount = globalThis.__typedTsPluginBuildCount ?? 0;
+export default {
+  name: "snapshot-change-test",
+  shouldResolve: (id) => id === "virtual:snapshot-change",
+  build: () => {
+    globalThis.__typedTsPluginBuildCount++;
+    return "export interface SnapshotChangeValue { n: number }";
+  }
+};
+`,
+      "utf8",
+    );
+    writeFileSync(join(dir, "vmc.config.ts"), `export default { plugins: ["./test-plugin.mjs"] };`);
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+        },
+        files: ["entry.ts"],
+      }),
+      "utf8",
+    );
+    const entryPath = join(dir, "entry.ts");
+    writeFileSync(
+      entryPath,
+      'import type { SnapshotChangeValue } from "virtual:snapshot-change";\nexport const value: SnapshotChangeValue = { n: 1 };\n',
+      "utf8",
+    );
+    const firstSource =
+      'import type { SnapshotChangeValue } from "virtual:snapshot-change";\nexport const value: SnapshotChangeValue = { n: 1 };\n// first\n';
+    const secondSource =
+      'import type { SnapshotChangeValue } from "virtual:snapshot-change";\nexport const value: SnapshotChangeValue = { n: 1 };\n// second\n';
+
+    const globalState = globalThis as { __typedTsPluginBuildCount?: number };
+    try {
+      globalState.__typedTsPluginBuildCount = 0;
+      const scriptTextByPath = new Map([[entryPath, firstSource]]);
+      const scriptVersionByPath = new Map([[entryPath, "1"]]);
+      const service = createPluginLanguageService(dir, entryPath, {
+        scriptTextByPath,
+        scriptVersionByPath,
+      });
+      expect(service.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
+      const virtualPath = readSingleArtifactManifest(dir).generatedSourcePath;
+
+      scriptTextByPath.set(entryPath, secondSource);
+      scriptVersionByPath.set(entryPath, "2");
+      service.cleanupSemanticCache();
+      expect(service.getSemanticDiagnostics(virtualPath)).toHaveLength(0);
+      expect(service.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(2);
+    } finally {
+      delete globalState.__typedTsPluginBuildCount;
+    }
+  });
+
+  it("fails closed after vmc plugin modules change in the same create() session", () => {
+    const dir = createTempDirInWorkspace();
+    const pluginPath = join(dir, "test-plugin.mjs");
+    const pluginSource = (
+      valueType: "number" | "string",
+    ) => `globalThis.__typedTsPluginBuildCount = globalThis.__typedTsPluginBuildCount ?? 0;
+export default {
+  name: "plugin-drift-test",
+  shouldResolve: (id) => id === "virtual:plugin-drift",
+  build: () => {
+    globalThis.__typedTsPluginBuildCount++;
+    return "export interface PluginDriftValue { value: ${valueType} }";
+  }
+};
+`;
+    writeFileSync(pluginPath, pluginSource("number"), "utf8");
+    writeFileSync(join(dir, "vmc.config.ts"), `export default { plugins: ["./test-plugin.mjs"] };`);
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+        },
+        files: ["entry.ts"],
+      }),
+      "utf8",
+    );
+    const entryPath = join(dir, "entry.ts");
+    writeFileSync(
+      entryPath,
+      'import type { PluginDriftValue } from "virtual:plugin-drift";\nexport const value: PluginDriftValue = { value: 1 };\n',
+      "utf8",
+    );
+
+    const globalState = globalThis as { __typedTsPluginBuildCount?: number };
+    try {
+      globalState.__typedTsPluginBuildCount = 0;
+      const service = createPluginLanguageService(dir, entryPath);
+      expect(service.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
+      const firstManifest = readSingleArtifactManifest(dir);
+
+      writeFileSync(pluginPath, pluginSource("string"), "utf8");
+      const firstDiagnostics = service.getSemanticDiagnostics(entryPath);
+      expect(getDiagnosticMessages(firstDiagnostics).join("\n")).toContain(
+        "TS plugin resolver inputs changed after startup",
+      );
+      const firstDriftMessages = getDiagnosticMessages(firstDiagnostics).filter((message) =>
+        message.includes("TS plugin resolver inputs changed after startup"),
+      );
+      expect(firstDriftMessages.length).toBeGreaterThan(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
+      expect(readSingleArtifactManifest(dir).generatedSourceHash).toBe(
+        firstManifest.generatedSourceHash,
+      );
+
+      const repeatedDiagnostics = service.getSemanticDiagnostics(entryPath);
+      const repeatedDriftMessages = getDiagnosticMessages(repeatedDiagnostics).filter((message) =>
+        message.includes("TS plugin resolver inputs changed after startup"),
+      );
+      expect(repeatedDriftMessages).toHaveLength(firstDriftMessages.length);
+    } finally {
+      delete globalState.__typedTsPluginBuildCount;
+    }
+  });
 
   it("loads plugins from vmc.config.ts when tsconfig plugin list is omitted", () => {
     const dir = createTempDirInWorkspace();
@@ -246,7 +566,7 @@ export default { plugins: [plugin] };
     expect(diagnostics).toHaveLength(0);
     const program = wrapped.getProgram();
     expect(program).toBeDefined();
-    expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
+    expect(program!.getSourceFiles().some(isSharedVirtualArtifactSource)).toBe(true);
   });
 
   it(
@@ -352,7 +672,7 @@ export default { plugins: [plugin] };
 
       const program = wrapped.getProgram();
       expect(program).toBeDefined();
-      expect(program!.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_"))).toBe(true);
+      expect(program!.getSourceFiles().some(isSharedVirtualArtifactSource)).toBe(true);
     },
   );
 
@@ -417,3 +737,85 @@ export default { plugins: [plugin] };
     }
   });
 });
+
+interface CreatePluginLanguageServiceOptions {
+  readonly scriptTextByPath?: ReadonlyMap<string, string>;
+  readonly scriptVersionByPath?: ReadonlyMap<string, string>;
+}
+
+function createPluginLanguageService(
+  dir: string,
+  entryPath: string,
+  options: CreatePluginLanguageServiceOptions = {},
+): ts.LanguageService {
+  const compilerOptions: ts.CompilerOptions = {
+    strict: true,
+    noEmit: true,
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    skipLibCheck: true,
+  };
+
+  const host: ts.LanguageServiceHost & { configFilePath?: string } = {
+    getCompilationSettings: () => compilerOptions,
+    getScriptFileNames: () => [entryPath],
+    getScriptVersion: (fileName: string) => options.scriptVersionByPath?.get(fileName) ?? "1",
+    getProjectVersion: () =>
+      options.scriptVersionByPath ? [...options.scriptVersionByPath.values()].join(":") : "1",
+    getScriptSnapshot: (fileName: string) => {
+      const content = options.scriptTextByPath?.get(fileName) ?? ts.sys.readFile(fileName);
+      return content != null ? ts.ScriptSnapshot.fromString(content) : undefined;
+    },
+    getCurrentDirectory: () => dir,
+    getDefaultLibFileName: (opts) => ts.getDefaultLibFilePath(opts),
+    fileExists: (fileName) => ts.sys.fileExists(fileName),
+    readFile: (fileName) => ts.sys.readFile(fileName),
+    readDirectory: (...args) => ts.sys.readDirectory(...args),
+  };
+  host.configFilePath = join(dir, "tsconfig.json");
+
+  const languageService = ts.createLanguageService(host);
+  const pluginDistPath = join(__dirname, "..", "dist", "plugin.js");
+  const init = require(pluginDistPath) as (modules: {
+    typescript: typeof import("typescript");
+  }) => {
+    create: (info: {
+      languageService: ts.LanguageService;
+      project: ts.LanguageServiceHost;
+      config?: unknown;
+    }) => ts.LanguageService;
+  };
+  return init({ typescript: ts }).create({
+    languageService,
+    project: host,
+    config: {},
+  });
+}
+
+function isSharedVirtualArtifactSource(sourceFile: ts.SourceFile): boolean {
+  return sourceFile.fileName.includes(join("node_modules", ".typed", "virtual"));
+}
+
+function readSingleArtifactManifest(projectRoot: string): VirtualArtifactManifest {
+  const indexPath = join(projectRoot, "node_modules", ".typed", "virtual", "index.json");
+  const index = parseVirtualArtifactIndex(JSON.parse(readFileSync(indexPath, "utf8")));
+  expect(index.ok, index.ok ? "" : index.reason).toBe(true);
+  if (!index.ok) throw new Error(index.reason);
+  const artifacts = Object.values(index.index.artifacts);
+  expect(artifacts).toHaveLength(1);
+  const manifest = parseVirtualArtifactManifest(
+    JSON.parse(readFileSync(artifacts[0]!.manifestPath, "utf8")),
+  );
+  expect(manifest.ok, manifest.ok ? "" : manifest.reason).toBe(true);
+  if (!manifest.ok) throw new Error(manifest.reason);
+  return manifest.manifest;
+}
+
+function getDiagnosticMessages(diagnostics: readonly ts.Diagnostic[]): readonly string[] {
+  return diagnostics.map((diagnostic) =>
+    typeof diagnostic.messageText === "string"
+      ? diagnostic.messageText
+      : ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+  );
+}

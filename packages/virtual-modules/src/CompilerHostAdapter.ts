@@ -60,6 +60,7 @@ export const attachCompilerHostAdapter = (
     debounceMs: options.debounceMs,
     watchHost,
     shouldEvictRecord: (record) => !originalFileExists(record.importer),
+    shouldReuseRecord: options.shouldReuseRecord,
     onMarkStale: (record) => {
       invalidatedPaths.add(record.importer);
       invalidatedPaths.add(record.virtualFileName);

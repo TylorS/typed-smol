@@ -56,6 +56,8 @@ export interface VirtualRecordStoreOptions {
   };
   /** Used by evictStaleImporters: records for which this returns true are evicted. */
   readonly shouldEvictRecord: (record: MutableVirtualRecord) => boolean;
+  /** Used before returning a non-stale cached record. Return false to rebuild it. */
+  readonly shouldReuseRecord?: (record: MutableVirtualRecord) => boolean;
   /** Called when flushPendingStale runs (after debounce). LS uses for epoch++. */
   readonly onFlushStale?: () => void;
   /** Called when a record is marked stale (immediate or after flush). CH uses for invalidatedPaths. */
@@ -93,6 +95,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     debounceMs,
     watchHost,
     shouldEvictRecord,
+    shouldReuseRecord,
     onFlushStale,
     onMarkStale,
     onBeforeResolve,
@@ -163,6 +166,21 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     }
   };
 
+  const markRecordStale = (record: MutableVirtualRecord): void => {
+    if (record.stale) {
+      return;
+    }
+    record.stale = true;
+    onMarkStale?.(record);
+  };
+
+  const validateRecordForReuse = (record: MutableVirtualRecord): MutableVirtualRecord => {
+    if (!record.stale && shouldReuseRecord && !shouldReuseRecord(record)) {
+      markRecordStale(record);
+    }
+    return record;
+  };
+
   const flushPendingStale = (): void => {
     if (pendingStaleKeys.size === 0) {
       return;
@@ -176,8 +194,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
       for (const key of keys) {
         const record = recordsByKey.get(key);
         if (record) {
-          record.stale = true;
-          onMarkStale?.(record);
+          markRecordStale(record);
         }
       }
     }
@@ -204,18 +221,14 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     for (const key of keys) {
       const record = recordsByKey.get(key);
       if (record) {
-        record.stale = true;
-        onMarkStale?.(record);
+        markRecordStale(record);
       }
     }
   };
 
   const markAllStale = (): void => {
     for (const record of recordsByKey.values()) {
-      if (!record.stale) {
-        record.stale = true;
-        onMarkStale?.(record);
-      }
+      markRecordStale(record);
     }
   };
 
@@ -323,7 +336,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
 
     const key = createVirtualKey(id, importer);
     const existing = recordsByKey.get(key);
-    if (existing && !existing.stale) {
+    if (existing && !validateRecordForReuse(existing).stale) {
       return {
         status: "resolved",
         record: existing,
@@ -393,6 +406,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     markStale,
     markAllStale,
     flushPendingStale,
+    validateRecordForReuse,
     resolveRecord,
     getOrBuildRecord,
     resolveEffectiveImporter,
@@ -470,11 +484,23 @@ const materializeRecordSource = (
 ):
   | { readonly status: "resolved"; readonly virtualFileName: string; readonly sourceText: string }
   | ResolveRecordResultError => {
-  const artifactStore = options.artifactStoreFactory?.({
-    pluginName: resolution.pluginName,
-    virtualKey,
-    projectRoot: options.projectRoot,
-  });
+  let artifactStore: ReturnType<VirtualArtifactStoreFactory> | undefined;
+  try {
+    artifactStore = options.artifactStoreFactory?.({
+      pluginName: resolution.pluginName,
+      virtualKey,
+      projectRoot: options.projectRoot,
+    });
+  } catch (error) {
+    return {
+      status: "error",
+      diagnostic: {
+        code: "artifact-store-unavailable",
+        pluginName: resolution.pluginName,
+        message: `Virtual artifact store was unavailable during materialization: ${toErrorMessage(error)}`,
+      },
+    };
+  }
   if (!artifactStore) {
     return {
       status: "resolved",

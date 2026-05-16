@@ -135,6 +135,13 @@ export const attachLanguageServiceAdapter = (
   const addDiagnosticForFile = (filePath: string, message: string): void => {
     const diagnostic = toTsDiagnostic(options.ts, message);
     const diagnostics = diagnosticsByFile.get(filePath) ?? [];
+    if (
+      diagnostics.some(
+        (existing) => existing.code === diagnostic.code && existing.messageText === message,
+      )
+    ) {
+      return;
+    }
     diagnostics.push(diagnostic);
     diagnosticsByFile.set(filePath, diagnostics);
   };
@@ -165,7 +172,11 @@ export const attachLanguageServiceAdapter = (
       const currentFiles = new Set(originalGetScriptFileNames ? originalGetScriptFileNames() : []);
       return !currentFiles.has(record.importer);
     },
+    shouldReuseRecord: options.shouldReuseRecord,
     onFlushStale: () => {
+      epoch += 1;
+    },
+    onMarkStale: () => {
       epoch += 1;
     },
     onBeforeResolve: () => {
@@ -210,26 +221,31 @@ export const attachLanguageServiceAdapter = (
   };
 
   const rebuildRecordIfNeeded = (record: MutableVirtualRecord): MutableVirtualRecord => {
-    if (!record.stale) {
-      return record;
+    const currentRecord = store.validateRecordForReuse(record);
+    if (!currentRecord.stale) {
+      return currentRecord;
     }
 
-    const rebuilt = store.resolveRecord(record.id, record.importer, record);
+    const rebuilt = store.resolveRecord(currentRecord.id, currentRecord.importer, currentRecord);
     if (rebuilt.status === "resolved") {
-      clearDiagnosticsForFile(record.importer);
+      clearDiagnosticsForFile(currentRecord.importer);
       return rebuilt.record;
     }
 
     if (rebuilt.status === "error") {
-      const diagnostic = toTsDiagnostic(
-        options.ts,
+      addDiagnosticForFile(
+        currentRecord.importer,
         `Virtual module rebuild failed: ${rebuilt.diagnostic.message}`,
       );
-      const diagnostics = diagnosticsByFile.get(record.importer) ?? [];
-      diagnostics.push(diagnostic);
-      diagnosticsByFile.set(record.importer, diagnostics);
     }
-    return record;
+    return currentRecord;
+  };
+
+  const refreshKnownRecordsBeforeDiagnostics = (): void => {
+    const records = Array.from(store.recordsByKey.values());
+    for (const record of records) {
+      rebuildRecordIfNeeded(record);
+    }
   };
 
   const fallbackResolveModule = (
@@ -521,7 +537,7 @@ export const attachLanguageServiceAdapter = (
         }
       }
       if (!record) return originalGetScriptVersion(fileName);
-      return String(record.version);
+      return String(rebuildRecordIfNeeded(record).version);
     };
   }
 
@@ -569,6 +585,7 @@ export const attachLanguageServiceAdapter = (
   };
 
   options.languageService.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] => {
+    refreshKnownRecordsBeforeDiagnostics();
     const diagnostics = originalGetSemanticDiagnostics(fileName);
     const adapterDiagnostics = diagnosticsByFile.get(fileName);
     if (!adapterDiagnostics || adapterDiagnostics.length === 0) {
@@ -580,6 +597,7 @@ export const attachLanguageServiceAdapter = (
   options.languageService.getSyntacticDiagnostics = (
     fileName: string,
   ): ts.DiagnosticWithLocation[] => {
+    refreshKnownRecordsBeforeDiagnostics();
     const diagnostics = originalGetSyntacticDiagnostics(fileName);
     const adapterDiagnostics = diagnosticsByFile.get(fileName);
     if (!adapterDiagnostics || adapterDiagnostics.length === 0) {
