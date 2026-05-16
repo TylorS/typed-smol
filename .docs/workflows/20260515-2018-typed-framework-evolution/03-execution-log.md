@@ -70,6 +70,34 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
 - context_updates: none
 - memory_updates: deferred until implementation patterns stabilize
 
+### T4 — Artifact Store Core
+
+- task_id: T4
+- requirement_ids: FR-3, FR-4, FR-5, FR-6, FR-10, FR-11, NFR-1, NFR-2, NFR-3, NFR-4, NFR-8, AC-2, AC-3, AC-4, AC-5, AC-10, AC-11
+- validation_evidence:
+  - Red: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; failed with `TypeError: createVirtualArtifactStore is not a function`, `Test Files 1 failed | 11 passed (12)`, `Tests 10 failed | 103 passed (113)`.
+  - Green: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; passed with `Test Files 12 passed (12)`, `Tests 113 passed (113)`.
+  - `pnpm exec oxlint packages/virtual-modules/src/internal/ArtifactStore.ts packages/virtual-modules/src/internal/ArtifactStore.test.ts packages/virtual-modules/src/index.ts`; 0 warnings, 0 errors.
+  - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/ArtifactStore.ts packages/virtual-modules/src/internal/ArtifactStore.test.ts packages/virtual-modules/src/index.ts`; all matched files use correct format.
+  - `pnpm --filter @typed/virtual-modules build`; exit 0.
+  - `pnpm --filter @typed/virtual-modules exec tsc -p tsconfig.json --noEmit`; exit 0.
+  - Spec/code review first pass requested per-artifact write serialization, serialized project-index updates, unsafe-empty-fingerprint blocking, and missing-file read-race handling.
+  - Lock/Fingerprint Red: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; failed because held artifact/index locks were ignored and omitted fingerprints produced a cache hit, `Test Files 1 failed | 11 passed (12)`, `Tests 3 failed | 113 passed (116)`.
+  - Lock/Fingerprint Green: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; passed with `Test Files 12 passed (12)`, `Tests 116 passed (116)`.
+  - Code review second pass requested hashless-fingerprint blocking and stale lock recovery.
+  - Hash/Stale Lock Red: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; failed because hashless fingerprints returned `fingerprint-mismatch` and stale lock directories timed out, `Test Files 1 failed | 11 passed (12)`, `Tests 2 failed | 116 passed (118)`.
+  - Hash/Stale Lock Green: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; passed with `Test Files 12 passed (12)`, `Tests 118 passed (118)`.
+  - Code review third pass requested explicit-empty fingerprint blocking and owner-token lock release.
+  - Empty/Owner Red: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; failed because explicit empty current fingerprints produced a hit and stale-lock replacement release had no owner check, `Test Files 1 failed | 11 passed (12)`, `Tests 2 failed | 118 passed (120)`.
+  - Empty/Owner Green: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; passed with `Test Files 12 passed (12)`, `Tests 120 passed (120)`.
+- commit: pending
+- deviations_or_replans:
+  - Added `ArtifactStoreFingerprints` export so T6/T8 adapters can pass shared current fingerprint groups without reaching into internal types.
+- context_updates:
+  - Per-artifact manifest remains the authority; project index read failures are surfaced through `readProjectIndex()` but do not block valid artifact reuse.
+  - Normal read paths return miss/invalid states for missing/corrupt/stale artifacts instead of throwing.
+- memory_updates: deferred until implementation patterns stabilize
+
 ## Deferred Work
 
 - Adapter migration starts only after T1 through T5 are committed and passing.

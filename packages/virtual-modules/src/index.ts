@@ -52,6 +52,18 @@ export {
   type VirtualArtifactMessage,
 } from "./internal/ArtifactManifest.js";
 export {
+  createVirtualArtifactStore,
+  type ArtifactStoreFingerprints,
+  type CreateVirtualArtifactStoreOptions,
+  type MaterializedVirtualArtifact,
+  type MaterializeVirtualArtifactParams,
+  type ReadVirtualArtifactIndexResult,
+  type ReadVirtualArtifactManifestResult,
+  type ResolveVirtualArtifactParams,
+  type ResolveVirtualArtifactResult,
+  type VirtualArtifactStore,
+} from "./internal/ArtifactStore.js";
+export {
   createVirtualFileName,
   createVirtualKey,
   VIRTUAL_MODULE_URI_SCHEME,
