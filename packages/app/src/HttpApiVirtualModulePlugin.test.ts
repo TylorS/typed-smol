@@ -1235,6 +1235,79 @@ export const openapi = {
         "src/api-openapi-group-annotations.generated.ts",
       );
     });
+
+    it("endpoint openapi.annotations annotates generated HttpApiEndpoint", () => {
+      const endpoint = `
+${VALID_ENDPOINT_SOURCE}
+export const openapi = {
+  annotations: {
+    summary: "Status summary" as const,
+    description: "Status description" as const,
+  },
+};
+`;
+      const fixture = createApiFixture({ "src/apis/status.ts": endpoint });
+      const result = buildApiFromExistingFixture(fixture);
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toContain('summary: "Status summary"');
+      expect(sourceText).toContain('description: "Status description"');
+      expect(sourceText).toContain("HttpApiEndpoint.get");
+      expect(sourceText).toContain(".annotateMerge(OpenApiModule.annotations");
+      expectHttpApiGeneratedSourceToTypeCheck(
+        fixture,
+        sourceText!,
+        "src/api-openapi-endpoint-direct.generated.ts",
+      );
+    });
+
+    it("endpoint OpenAPI annotations use in-file over companion over nearest inherited defaults", () => {
+      const fixture = createApiFixture({
+        "src/apis/_openapi.ts": `
+export default {
+  annotations: {
+    summary: "Root default" as const,
+    description: "Root default description" as const,
+  },
+};
+`,
+        "src/apis/users/_openapi.ts": `
+export default {
+  annotations: {
+    summary: "Users default" as const,
+    deprecated: true as const,
+  },
+};
+`,
+        "src/apis/users/list.openapi.ts": `
+export default {
+  annotations: {
+    summary: "Companion summary" as const,
+  },
+};
+`,
+        "src/apis/users/list.ts": `
+${VALID_ENDPOINT_SOURCE}
+export const openapi = {
+  annotations: {
+    description: "In-file description" as const,
+  },
+};
+`,
+      });
+      const result = buildApiFromExistingFixture(fixture);
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toContain('summary: "Companion summary"');
+      expect(sourceText).toContain('description: "In-file description"');
+      expect(sourceText).toContain("deprecated: true");
+      expect(sourceText).not.toContain("Root default description");
+      expectHttpApiGeneratedSourceToTypeCheck(
+        fixture,
+        sourceText!,
+        "src/api-openapi-endpoint-precedence.generated.ts",
+      );
+    });
   });
 });
 

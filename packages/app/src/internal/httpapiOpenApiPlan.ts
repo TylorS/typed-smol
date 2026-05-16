@@ -1,6 +1,15 @@
 import type { TypeInfoFileSnapshot } from "@typed/virtual-modules";
-import { extractOpenApiConfig } from "./extractHttpApiOpenApi.js";
-import type { HttpApiDescriptorTree, HttpApiTreeNode } from "./httpapiDescriptorTree.js";
+import {
+  extractDefaultOpenApiConfig,
+  extractOpenApiConfig,
+  type ExtractedOpenApiConfig,
+} from "./extractHttpApiOpenApi.js";
+import type {
+  DirectoryConventionRef,
+  HttpApiDescriptorTree,
+  HttpApiEndpointNode,
+  HttpApiTreeNode,
+} from "./httpapiDescriptorTree.js";
 import {
   normalizeOpenApiConfig,
   type OpenApiAnnotationsConfig,
@@ -38,11 +47,16 @@ export function buildHttpApiOpenApiPlan(input: {
   collectGroupAnnotations(input.tree.children, input.snapshotsByRelativePath, diagnostics).forEach(
     (annotations, path) => groupAnnotationsByPath.set(path, annotations),
   );
+  const endpointAnnotationsByPath = collectEndpointAnnotations(
+    input.tree,
+    input.snapshotsByRelativePath,
+    diagnostics,
+  );
 
   return {
     api: normalized.config,
     groupAnnotationsByPath,
-    endpointAnnotationsByPath: new Map(),
+    endpointAnnotationsByPath,
     diagnostics,
   };
 }
@@ -81,4 +95,110 @@ function collectGroupAnnotations(
     visit(node);
   }
   return annotationsByPath;
+}
+
+function collectEndpointAnnotations(
+  tree: HttpApiDescriptorTree,
+  snapshotsByRelativePath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+  diagnostics: OpenApiConfigDiagnostic[],
+): Map<string, OpenApiAnnotationsConfig> {
+  const annotationsByPath = new Map<string, OpenApiAnnotationsConfig>();
+  const rootOpenApiPaths = tree.conventions
+    .filter(isOpenApiDirectoryConvention)
+    .map((convention) => convention.path);
+
+  const visit = (nodes: readonly HttpApiTreeNode[], inheritedOpenApiPaths: readonly string[]) => {
+    for (const node of nodes) {
+      if (node.type === "endpoint") {
+        const annotations = resolveEndpointAnnotations(
+          node,
+          inheritedOpenApiPaths,
+          snapshotsByRelativePath,
+          diagnostics,
+        );
+        if (Object.keys(annotations).length > 0) {
+          annotationsByPath.set(node.path, annotations);
+        }
+        continue;
+      }
+
+      const ownOpenApiPaths = node.conventions
+        .filter(isOpenApiDirectoryConvention)
+        .map((convention) => convention.path);
+      visit(node.children, [...inheritedOpenApiPaths, ...ownOpenApiPaths]);
+    }
+  };
+
+  visit(tree.children, rootOpenApiPaths);
+  return annotationsByPath;
+}
+
+function resolveEndpointAnnotations(
+  endpoint: HttpApiEndpointNode,
+  inheritedOpenApiPaths: readonly string[],
+  snapshotsByRelativePath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+  diagnostics: OpenApiConfigDiagnostic[],
+): OpenApiAnnotationsConfig {
+  const inherited = inheritedOpenApiPaths.map((path) =>
+    normalizeOpenApiAnnotations(
+      extractDefaultOpenApiConfigFromPath(path, snapshotsByRelativePath),
+      "endpoint",
+      diagnostics,
+    ),
+  );
+  const companion = endpoint.companions.find((candidate) => candidate.kind === ".openapi");
+  const companionAnnotations = normalizeOpenApiAnnotations(
+    companion ? extractDefaultOpenApiConfigFromPath(companion.path, snapshotsByRelativePath) : null,
+    "endpoint",
+    diagnostics,
+  );
+  const inFileAnnotations = normalizeOpenApiAnnotations(
+    extractOpenApiConfigFromPath(endpoint.path, snapshotsByRelativePath),
+    "endpoint",
+    diagnostics,
+  );
+
+  return mergeAnnotations(...inherited, companionAnnotations, inFileAnnotations);
+}
+
+function normalizeOpenApiAnnotations(
+  extracted: ExtractedOpenApiConfig | null,
+  scope: "endpoint" | "group",
+  diagnostics: OpenApiConfigDiagnostic[],
+): OpenApiAnnotationsConfig {
+  const normalized = normalizeOpenApiConfig(scope, {
+    annotations: extracted?.annotations,
+    generation: extracted?.generation,
+    exposure: extracted?.exposure,
+  });
+  diagnostics.push(...normalized.diagnostics);
+  return normalized.config.annotations;
+}
+
+function extractOpenApiConfigFromPath(
+  path: string,
+  snapshotsByRelativePath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+): ExtractedOpenApiConfig | null {
+  const snapshot = snapshotsByRelativePath.get(path);
+  return snapshot ? extractOpenApiConfig(snapshot) : null;
+}
+
+function extractDefaultOpenApiConfigFromPath(
+  path: string,
+  snapshotsByRelativePath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+): ExtractedOpenApiConfig | null {
+  const snapshot = snapshotsByRelativePath.get(path);
+  return snapshot ? extractDefaultOpenApiConfig(snapshot) : null;
+}
+
+function isOpenApiDirectoryConvention(
+  convention: DirectoryConventionRef | { readonly path: string; readonly kind: string },
+): convention is DirectoryConventionRef {
+  return convention.kind === "_openapi.ts";
+}
+
+function mergeAnnotations(
+  ...configs: readonly OpenApiAnnotationsConfig[]
+): OpenApiAnnotationsConfig {
+  return Object.assign({}, ...configs);
 }

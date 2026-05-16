@@ -13,3 +13,8 @@
 ## Task 3
 
 - Group OpenAPI annotations are keyed by descriptor-tree group `dirPath`, not group display name. This keeps annotation lookup stable when `_group.ts` eventually overrides names.
+
+## Task 4
+
+- Endpoint OpenAPI precedence is implemented as inherited `_openapi.ts` defaults first, then sibling `<endpoint>.openapi.ts`, then in-file endpoint `openapi`. Later layers override earlier annotation keys.
+- Companion and inherited endpoint OpenAPI files use default exports; endpoint primary modules use named `openapi`.

@@ -99,10 +99,23 @@ export function extractOpenApiExposureConfig(
 }
 
 export function extractOpenApiConfig(snapshot: TypeInfoFileSnapshot): ExtractedOpenApiConfig | null {
-  const openapiExport = snapshot.exports.find((e) => e.name === "openapi");
-  if (!openapiExport) return null;
+  return extractOpenApiConfigFromExport(snapshot, "openapi");
+}
 
-  const openapiType = openapiExport.type;
+export function extractDefaultOpenApiConfig(
+  snapshot: TypeInfoFileSnapshot,
+): ExtractedOpenApiConfig | null {
+  return extractOpenApiConfigFromExport(snapshot, "default");
+}
+
+function extractOpenApiConfigFromExport(
+  snapshot: TypeInfoFileSnapshot,
+  exportName: "default" | "openapi",
+): ExtractedOpenApiConfig | null {
+  const exported = snapshot.exports.find((e) => e.name === exportName);
+  if (!exported) return null;
+
+  const openapiType = exported.type;
   const annotations = getObjectValue(getProperty(openapiType, "annotations"));
   const generation = getGenerationConfig(getProperty(openapiType, "generation"));
   const exposureObj = getProperty(openapiType, "exposure");

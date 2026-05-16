@@ -496,7 +496,7 @@ git commit -m "fix(app): emit httpapi group openapi annotations" -m "- plan _gro
 - Modify: `packages/app/src/internal/httpapiOpenApiPlan.ts`
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
 
-- [ ] **Step 1: Write failing endpoint direct annotation test**
+- [x] **Step 1: Write failing endpoint direct annotation test**
 
 Add:
 
@@ -527,7 +527,7 @@ export const openapi = {
 });
 ```
 
-- [ ] **Step 2: Write failing inherited/companion precedence test**
+- [x] **Step 2: Write failing inherited/companion precedence test**
 
 Add:
 
@@ -581,7 +581,7 @@ export const openapi = {
 });
 ```
 
-- [ ] **Step 3: Verify red**
+- [x] **Step 3: Verify red**
 
 Run:
 
@@ -591,7 +591,7 @@ pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts -t "endp
 
 Expected: fails because endpoint annotation plan/emission does not exist.
 
-- [ ] **Step 4: Support default-exported OpenAPI config**
+- [x] **Step 4: Support default-exported OpenAPI config**
 
 In `extractHttpApiOpenApi.ts`, add:
 
@@ -609,7 +609,7 @@ Refactor `extractOpenApiConfig` to call:
 return extractOpenApiConfigFromExport(snapshot, "openapi");
 ```
 
-- [ ] **Step 5: Plan endpoint annotations**
+- [x] **Step 5: Plan endpoint annotations**
 
 In `httpapiOpenApiPlan.ts`, for each endpoint:
 
@@ -627,7 +627,7 @@ const mergeAnnotations = (...configs: readonly OpenApiAnnotationsConfig[]): Open
   Object.assign({}, ...configs);
 ```
 
-- [ ] **Step 6: Emit endpoint annotations**
+- [x] **Step 6: Emit endpoint annotations**
 
 In the endpoint expression construction:
 
@@ -649,7 +649,7 @@ function renderAnnotatedEndpointExpression(
 }
 ```
 
-- [ ] **Step 7: Verify green and commit**
+- [x] **Step 7: Verify green and commit**
 
 Run:
 
