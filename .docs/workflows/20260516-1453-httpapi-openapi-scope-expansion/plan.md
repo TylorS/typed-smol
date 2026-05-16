@@ -392,7 +392,7 @@ git commit -m "fix(app): route httpapi openapi exposure through plan" -m "- comp
 - Modify: `packages/app/src/internal/httpapiOpenApiPlan.ts`
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
 
-- [ ] **Step 1: Write failing group annotation test**
+- [x] **Step 1: Write failing group annotation test**
 
 Add:
 
@@ -424,7 +424,7 @@ export const openapi = {
 });
 ```
 
-- [ ] **Step 2: Verify red**
+- [x] **Step 2: Verify red**
 
 Run:
 
@@ -434,7 +434,7 @@ pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts -t "_gro
 
 Expected: fails because group annotations are not planned or emitted.
 
-- [ ] **Step 3: Plan group annotations**
+- [x] **Step 3: Plan group annotations**
 
 In `httpapiOpenApiPlan.ts`, walk descriptor tree group nodes. For each `group_override` convention, extract `openapi.annotations`, normalize with `scope: "group"`, and store by group directory path.
 
@@ -446,7 +446,7 @@ groupAnnotationsByPath.set(groupDirPath, normalized.config.annotations);
 
 Diagnostics from generation/exposure in `_group.ts` are accumulated.
 
-- [ ] **Step 4: Emit group annotations**
+- [x] **Step 4: Emit group annotations**
 
 In `emitHttpApiSource.ts`, when building each group expression:
 
@@ -471,7 +471,7 @@ function renderAnnotatedGroupExpression(
 }
 ```
 
-- [ ] **Step 5: Verify green and commit**
+- [x] **Step 5: Verify green and commit**
 
 Run:
 

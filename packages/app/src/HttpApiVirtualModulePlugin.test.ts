@@ -1209,6 +1209,32 @@ export const openapi = {
         "src/api-openapi-generation-exposure.generated.ts",
       );
     });
+
+    it("_group.ts openapi.annotations annotates generated HttpApiGroup", () => {
+      const fixture = createApiFixture({
+        "src/apis/users/_group.ts": `
+export const openapi = {
+  annotations: {
+    title: "Users" as const,
+    description: "User management" as const,
+  },
+};
+`,
+        "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const result = buildApiFromExistingFixture(fixture);
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toContain('HttpApiGroup.make("users")');
+      expect(sourceText).toContain('title: "Users"');
+      expect(sourceText).toContain('description: "User management"');
+      expect(sourceText).toContain(".annotateMerge(OpenApiModule.annotations");
+      expectHttpApiGeneratedSourceToTypeCheck(
+        fixture,
+        sourceText!,
+        "src/api-openapi-group-annotations.generated.ts",
+      );
+    });
   });
 });
 

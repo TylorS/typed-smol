@@ -519,7 +519,13 @@ export function emitHttpApiSource(input: {
       input.pathPrefix,
     );
     const suffix = effectivePrefix ? `.prefix(${JSON.stringify(effectivePrefix)})` : "";
-    groupExprs.push(`HttpApiGroup.make(${JSON.stringify(groupName)})${groupChain}${suffix}`);
+    const groupAnnotations = input.openapiPlan?.groupAnnotationsByPath.get(groupSpec.dirPath);
+    groupExprs.push(
+      renderAnnotatedGroupExpression(
+        `HttpApiGroup.make(${JSON.stringify(groupName)})${groupChain}${suffix}`,
+        groupAnnotations,
+      ),
+    );
   }
 
   const apiChain = groupExprs.map((g) => `.add(${g})`).join("");
@@ -672,6 +678,14 @@ function renderAnnotatedApiExpression(
   };
   if (Object.keys(merged).length === 0) return apiExpression;
   return `${apiExpression}.annotateMerge(OpenApiModule.annotations(${renderObjectLiteral(merged)}))`;
+}
+
+function renderAnnotatedGroupExpression(
+  groupExpression: string,
+  annotations: OpenApiAnnotationsConfig | undefined,
+): string {
+  if (!annotations || Object.keys(annotations).length === 0) return groupExpression;
+  return `${groupExpression}.annotateMerge(OpenApiModule.annotations(${renderObjectLiteral(annotations)}))`;
 }
 
 function renderGenerationAnnotations(

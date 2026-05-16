@@ -9,3 +9,7 @@
 ## Task 2
 
 - Root OpenAPI exposure now flows through the same OpenAPI plan as generation and API annotations. This was pulled forward during Task 1 so existing exposure tests stayed green after direct `_api.ts` extraction was removed.
+
+## Task 3
+
+- Group OpenAPI annotations are keyed by descriptor-tree group `dirPath`, not group display name. This keeps annotation lookup stable when `_group.ts` eventually overrides names.
