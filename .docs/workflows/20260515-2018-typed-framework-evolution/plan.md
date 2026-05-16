@@ -227,22 +227,22 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 - [x] Implement explicit clean/prune API.
 - [x] Add CLI wiring only if the API alone is insufficient for AC-12.
 - [x] Run targeted tests again; expected pass.
-- [ ] Commit with `feat: add explicit virtual artifact cleanup`.
+- [x] Commit with `feat: add explicit virtual artifact cleanup`.
 
 ### T13: Full Integration Verification
 
 **Files:**
 - No planned source files unless failures reveal missing integration.
 
-- [ ] Run `pnpm --filter @typed/virtual-modules test`.
-- [ ] Run `pnpm --filter @typed/virtual-modules-vite test`.
-- [ ] Run `pnpm --filter @typed/virtual-modules-compiler test`.
-- [ ] Run `pnpm --filter @typed/virtual-modules-ts-plugin test`.
-- [ ] Run `pnpm --filter @typed/virtual-modules-vscode build`.
-- [ ] Run `pnpm -r run test`.
-- [ ] Run `pnpm -r build`.
-- [ ] Record exact pass/fail evidence in the workflow execution log.
-- [ ] Commit only if a targeted integration fix was needed.
+- [x] Run `pnpm --filter @typed/virtual-modules test`.
+- [x] Run `pnpm --filter @typed/virtual-modules-vite test`.
+- [x] Run `pnpm --filter @typed/virtual-modules-compiler test`.
+- [x] Run `pnpm --filter @typed/virtual-modules-ts-plugin test`.
+- [x] Run `pnpm --filter @typed/virtual-modules-vscode build`.
+- [x] Run `pnpm -r run test`.
+- [x] Run `pnpm -r build`.
+- [x] Record exact pass/fail evidence in the workflow execution log.
+- [x] Commit only if a targeted integration fix was needed.
 
 ### T14: Docs and Memory Closeout
 
@@ -252,11 +252,11 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 - Modify or create: `.docs/workflows/20260515-2018-typed-framework-evolution/memory/*`
 - Modify if warranted: `.docs/_meta/memory/*`
 
-- [ ] Update durable spec/testing strategy to match implementation details.
-- [ ] Capture short-term workflow memory for manifest schema, fingerprinting, adapter integration, and test commands.
-- [ ] Promote only stable reusable lessons to `.docs/_meta/memory/`.
-- [ ] Run `git diff --check`.
-- [ ] Commit with `docs: finalize virtual artifact store implementation notes`.
+- [x] Update durable spec/testing strategy to match implementation details.
+- [x] Capture short-term workflow memory for manifest schema, fingerprinting, adapter integration, and test commands.
+- [x] Promote only stable reusable lessons to `.docs/_meta/memory/`.
+- [x] Run `git diff --check`.
+- [x] Commit with `docs: finalize virtual artifact store implementation notes`.
 
 ## Out of Scope For This Tranche
 

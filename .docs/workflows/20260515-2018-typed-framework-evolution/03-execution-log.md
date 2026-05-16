@@ -354,7 +354,7 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - `git diff --check`; exit 0.
   - Spec re-review: approved; API-only cleanup satisfies AC-12, and adapter build/typecheck non-pruning coverage closes the previous gap.
   - Code quality re-review: approved; cleanup/materialization race is closed by the sibling cleanup lock. The `VirtualArtifactStore` interface expansion is accepted for this beta surface because T12 intentionally adds the explicit cleanup API.
-- commit: pending
+- commit: `9c1fc0f`
 - deviations_or_replans:
   - Kept T12 scoped to the core `VirtualArtifactStore.clean()` API and did not add `vmc` CLI wiring. The approved acceptance criteria allow an API path, and this avoids expanding the CLI surface before the framework command shape settles.
   - Normal invalid resolve flows now have regression coverage proving artifact source, manifest, and project index files are left intact. Cleanup only happens through explicit `clean()`.
@@ -365,6 +365,52 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - Cleanup serialization uses sibling lock directory `node_modules/.typed/virtual.cleanup.lock`.
   - `CleanVirtualArtifactsResult` is exported from `@typed/virtual-modules` for callers that need typed cleanup results.
 - memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
+
+### T13 — Full Integration Verification
+
+- task_id: T13
+- requirement_ids: FR-1..FR-14, NFR-1..NFR-9, AC-1..AC-15
+- validation_evidence:
+  - Routing: release-finalizer subagent requested to review the T13 command plan and ordering/stale-dist risks while local gates ran.
+  - `pnpm --filter @typed/virtual-modules test`; passed with `Test Files 13 passed (13)`, `Tests 140 passed (140)`.
+  - `pnpm --filter @typed/virtual-modules-compiler test`; passed with `Test Files 1 passed (1)`, `Tests 16 passed (16)` after rebuilding `@typed/virtual-modules` and `@typed/virtual-modules-compiler`.
+  - `pnpm --filter @typed/virtual-modules-vite test`; passed with `Test Files 3 passed (3)`, `Tests 15 passed (15)`. This was rerun after the compiler test per release-finalizer feedback because the Vite integration can otherwise use an existing `vmc` CLI build.
+  - `pnpm --filter @typed/virtual-modules-ts-plugin test`; passed with `Test Files 2 passed (2)`, `Tests 12 passed (12)` after rebuilding `@typed/virtual-modules`, `@typed/virtual-modules-ts-plugin`, and `@typed/virtual-modules-compiler`.
+  - `pnpm --filter @typed/virtual-modules-vscode build`; exit 0 after prebuilding `@typed/virtual-modules`; esbuild reported `dist/extension.js 9.6mb` as a size warning only.
+  - `pnpm -r run test`; exit 0 across 20 workspace projects. Notable slow path: `packages/app` passed with `Test Files 9 passed (9)`, `Tests 205 passed (205)`, and `Type Errors no errors`.
+  - `pnpm -r build`; exit 0 across 20 workspace projects. Existing Vite/example warnings were non-fatal: `vite-tsconfig-paths` native-resolution notice, browser externalization notice for `node:assert` through Effect test schema code, `input::input-placeholder` Lightning CSS warning in TodoMVC CSS, and the VS Code bundle size warning.
+  - `pnpm build`; exit 0. This stricter root wrapper also ran `tsc -b tsconfig.build.json` and `pnpm --filter @typed/virtual-modules-ts-plugin run build:plugins`, which rebuilt the sample router and httpapi plugins.
+- commit: none
+- deviations_or_replans:
+  - No targeted integration fix was needed, so T13 did not create a source commit.
+  - Package-specific verification was run sequentially because several scripts rebuild `dist` as part of `pretest` or `test`, and sequential execution avoids stale/interleaved build outputs.
+  - Release-finalizer feedback added a second `@typed/virtual-modules-vite` test after `@typed/virtual-modules-compiler test`, plus the root `pnpm build` wrapper, because these provide stronger stale-output coverage than the original T13 order.
+- context_updates:
+  - Full integration verification passed after T12's cleanup API and sibling cleanup lock changes.
+- memory_updates: none
+
+### T14 — Docs and Memory Closeout
+
+- task_id: T14
+- requirement_ids: FR-1..FR-14, NFR-1..NFR-9, AC-1..AC-15
+- validation_evidence:
+  - Docs archivist reviewed artifact-store spec, testing strategy, execution log, workflow memories, `_meta` memory, and implementation surfaces without editing files.
+  - Updated `.docs/specs/virtual-module-artifact-store/spec.md` with implemented API surfaces, cleanup lock semantics, explicit cleanup flow, adapter integration caveats, and the deferred failed-build diagnostic-artifact boundary.
+  - Updated `.docs/specs/virtual-module-artifact-store/testing-strategy.md` with explicit cleanup scenario TS-12, final verification command order, completed dependency readiness, and the root `pnpm build` gate.
+  - Added `.docs/workflows/20260515-2018-typed-framework-evolution/memory/virtual-artifact-store-closeout.md` for short-term workflow memory.
+  - Promoted stable validation-order memory into `.docs/_meta/memory/virtual-modules-shared-resolver-bootstrap.md`.
+  - Added `.docs/_meta/memory/virtual-artifact-store-fail-closed-cache.md` for reusable fail-closed cache validity rules.
+  - `git diff --check`; exit 0.
+- commit: pending
+- deviations_or_replans:
+  - Tightened wording so VS Code is documented as sharing core materialization helpers, not as having full artifact-store fingerprint/cache integration yet.
+  - Kept failed plugin-build diagnostic-only manifests explicitly deferred because no generated source exists to materialize in that failure path.
+- context_updates:
+  - The artifact-store tranche is documented as locally verified through T13 and ready to precede higher-level framework plugin work.
+- memory_updates:
+  - `.docs/workflows/20260515-2018-typed-framework-evolution/memory/virtual-artifact-store-closeout.md`
+  - `.docs/_meta/memory/virtual-modules-shared-resolver-bootstrap.md`
+  - `.docs/_meta/memory/virtual-artifact-store-fail-closed-cache.md`
 
 ## Deferred Work
 

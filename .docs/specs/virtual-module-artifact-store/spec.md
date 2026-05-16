@@ -41,6 +41,14 @@ node_modules/.typed/virtual
 
 The artifact root contains generated source files, per-artifact manifests, and a project-level index. Normal dev/build/typecheck flows do not prune this directory automatically.
 
+Cleanup is serialized by a sibling lock outside the deleted tree:
+
+```text
+node_modules/.typed/virtual.cleanup.lock
+```
+
+Both artifact materialization and explicit cleanup acquire this lock. This prevents cleanup from deleting active writer locks or partially written generated artifacts.
+
 ### Per-Artifact Manifest
 
 Each generated artifact has a manifest written atomically alongside the generated source. The manifest is the cache-validity authority for that artifact.
@@ -98,16 +106,33 @@ The store exposes synchronous operations compatible with the existing virtual mo
 - surface diagnostics/warnings from build or manifest validation
 - explicitly clean/prune generated artifacts
 
+The public `@typed/virtual-modules` surface includes:
+
+- `createVirtualArtifactStore(options)`
+- `VirtualArtifactStore.clean(): CleanVirtualArtifactsResult`
+- `materializeVirtualFile(...)`
+- `rewriteSourceForPreviewLocation(...)`
+
+`clean()` removes `node_modules/.typed/virtual` and returns whether that root existed. It is intentionally explicit; invalidation, rebuild, build, and typecheck paths must not call it.
+
 Adapters may keep process-local hot caches, but those caches are accelerators over the manifest contract, not the correctness boundary.
 
 ### Adapter Integration
 
-Vite, vmc, the TypeScript plugin, and VS Code all consume the artifact store.
+Vite, vmc, and the TypeScript plugin consume the artifact store. VS Code consumes the shared core materialization path and remains a future artifact-store fingerprint/cache integration target.
 
 - Vite resolves and loads virtual modules through the artifact store instead of recomputing incompatible in-memory source for the same identity.
 - vmc uses the artifact store through the compiler-host adapter and keeps watch-mode adapter lifetime compatible with persistent invalidation.
 - The TypeScript plugin uses the artifact store through the language-service adapter.
 - VS Code uses the same core materialization path and no longer owns separate normal-case disk preview logic.
+
+Implementation notes:
+
+- vmc and the TypeScript plugin rebuild package `dist` outputs before tests that execute compiled entrypoints.
+- TypeScript plugin source fingerprints include language-service snapshots when available so editor state does not silently reuse disk-only hashes.
+- If resolver/config inputs drift from the startup resolver state, the TypeScript plugin fails closed instead of writing stale resolver output under current fingerprints.
+- Diagnostics and warnings in manifests describe successful materializations. Failed plugin-build diagnostic-only manifests remain deferred to a separate diagnostic-artifact design because there is no generated source to materialize.
+- VS Code currently shares the normal materialization/rewrite helper path. Full VS Code artifact-store fingerprint integration remains future work because the extension does not yet own the same compiler/config fingerprint contract as vmc and the TypeScript plugin.
 
 ## System Diagrams (Mermaid)
 
@@ -122,7 +147,8 @@ flowchart TD
   Vite["Vite adapter"] --> Store
   Vmc["vmc compiler host"] --> Store
   TsPlugin["TS language-service plugin"] --> Store
-  VSCode["VS Code extension"] --> Store
+  VSCode["VS Code extension"] --> Materializer["Shared materialization helpers"]
+  Materializer --> Source
 
   Manifest --> Fingerprints["Source + config + plugin + compiler fingerprints"]
   Fingerprints --> CacheDecision{"fingerprints match?"}
@@ -165,9 +191,17 @@ sequenceDiagram
 5. The store computes current source/config/plugin/compiler fingerprints.
 6. If fingerprints match and generated source exists with the recorded hash, the store returns a cache hit.
 7. If fingerprints do not match, source is missing, or the manifest is invalid, the store runs the plugin build.
-8. The store writes generated source and manifest using atomic replacement.
-9. The store updates the project-level index.
-10. The adapter surfaces returned source and diagnostics through its normal host mechanism.
+8. The store acquires the cleanup lock, artifact lock, and project-index lock before writing.
+9. The store writes generated source and manifest using atomic replacement.
+10. The store updates the project-level index.
+11. The adapter surfaces returned source and diagnostics through its normal host mechanism.
+
+Explicit cleanup flow:
+
+1. A caller invokes `VirtualArtifactStore.clean()`.
+2. The store acquires `node_modules/.typed/virtual.cleanup.lock`.
+3. The store removes `node_modules/.typed/virtual`.
+4. The store returns `{ removed, rootPath }`.
 
 ## Failure Modes and Mitigations
 
@@ -179,6 +213,7 @@ sequenceDiagram
 | Generated source hash mismatch | Possible partial write or external edit | Treat as invalid; rebuild with atomic write. |
 | Plugin fingerprint unavailable | Unsafe cache reuse | Mark entry non-reusable unless explicitly allowed by a future compatibility rule. |
 | Concurrent writers | Last write wins could overwrite another valid artifact | Atomic writes and manifest validation ensure readers only observe complete valid entries. |
+| Cleanup races active materialization | Generated source, manifests, or writer locks could be deleted mid-write | Serialize `clean()` and `materialize()` through `node_modules/.typed/virtual.cleanup.lock`, which is outside the deleted artifact root. |
 | Watch event missed | Stale cache risk | Fingerprint validation on read remains authoritative. |
 | Regex import rewrite misses syntax | Broken generated source | Replace regex-only behavior with robust module-specifier handling or explicitly documented unsupported syntax. |
 

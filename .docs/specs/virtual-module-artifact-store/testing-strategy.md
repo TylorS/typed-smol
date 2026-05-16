@@ -3,7 +3,7 @@
 ## Test Type Taxonomy
 
 - unit: artifact identity construction, fingerprint hashing, manifest validation, atomic write helpers, project-index updates, and clean/prune behavior.
-- integration: Vite, vmc, TypeScript plugin adapter, and VS Code materialization paths consuming the shared artifact store.
+- integration: Vite, vmc, TypeScript plugin adapter, and VS Code materialization paths consuming shared core helpers.
 - e2e: fixture project exercising dev/build/typecheck/editor-like surfaces across process restarts. Browser interaction is not required for the first tranche unless a Vite dev-server fixture needs module loading proof.
 
 ## Critical Path Scenarios
@@ -21,6 +21,7 @@
 | TS-9 | Virtual-to-virtual imports resolve correctly through logical identity and artifact store lookup. | FR-12 | AC-13 | yes |
 | TS-10 | Plugin failures, corrupt manifests, stale artifacts, and missing generated source fail clearly in vmc and at least one dev/editor surface. | FR-13, NFR-8 | AC-14 | yes |
 | TS-11 | Generated-source module specifier handling supports static imports, re-exports, side-effect imports, and dynamic imports, or unsupported syntax is explicitly documented. | NFR-7, NFR-9 | AC-15 | yes |
+| TS-12 | Explicit cleanup removes generated artifacts and project index, normal resolve/build/typecheck flows do not prune, and cleanup is serialized against materialization. | FR-14, NFR-4, NFR-9 | AC-12 | yes |
 
 ## Coverage Targets
 
@@ -32,18 +33,39 @@
   - vmc fixture compile/typecheck test
   - TS plugin fixture test or harness equivalent
   - VS Code materialization unit/integration test around shared core helpers
+  - root `pnpm build` wrapper for workspace build, project references, and TS plugin sample plugin builds
+
+## Final Verification Commands
+
+Run package-specific gates in dependency order so compiled `dist` outputs cannot mask stale dependencies:
+
+```sh
+pnpm --filter @typed/virtual-modules build
+pnpm --filter @typed/virtual-modules test
+pnpm --filter @typed/virtual-modules-compiler test
+pnpm --filter @typed/virtual-modules-vite test
+pnpm --filter @typed/virtual-modules-ts-plugin test
+pnpm --filter @typed/virtual-modules-vscode build
+pnpm -r run test
+pnpm -r build
+pnpm build
+```
+
+`pnpm build` is stricter than `pnpm -r build` in this repository because the root wrapper also runs `tsc -b tsconfig.build.json` and `@typed/virtual-modules-ts-plugin` sample plugin builds.
 
 ## Dependency Readiness Matrix
 
 | dep | status | unblock_action |
 | --- | ------ | -------------- |
-| `@typed/virtual-modules` artifact-store implementation | incomplete | Build after spec approval. |
-| Vite fixture project | partial | Reuse existing virtual-modules Vite tests and add cache-hit assertions. |
-| vmc watch/compile fixture | partial | Validate adapter lifetime and add artifact-store assertions. |
-| TS plugin fixture | partial | Extend sample-project integration tests. |
-| VS Code extension tests | partial | Extract shared materialization logic into core and test without requiring full VS Code host where possible. |
-| Multi-process/concurrency harness | missing | Add deterministic concurrent writer test using temporary project root. |
+| `@typed/virtual-modules` artifact-store implementation | complete | Covered by artifact identity, manifest, fingerprint, artifact-store, adapter, and materialization tests. |
+| Vite fixture project | complete | Vite tests prove artifact-store integration and vmc/Vite cache reuse. |
+| vmc watch/compile fixture | complete | Compiler tests cover vmc artifact store integration, restart reuse, diagnostics, and watch invalidation. |
+| TS plugin fixture | complete | TS plugin tests cover shared artifact reuse, source/config/plugin/compiler fingerprints, stale-record validation, and fail-closed resolver drift. |
+| VS Code extension tests | complete for shared materialization | VS Code wrapper tests cover absolute artifact paths and legacy basename fallback through core materialization helpers. Full VS Code artifact-store fingerprint integration remains future work. |
+| Multi-process/concurrency harness | complete for deterministic local semantics | Artifact-store tests cover artifact/index locks, stale lock recovery, atomic last-writer behavior, and cleanup/materialization serialization. |
 
 ## Acceptance Failure Policy
 
 If any blocking TS-* scenario fails during execution, stop higher-level framework plugin work and loop back to the artifact-store implementation or spec. If a dependency is incomplete, prioritize the unblock action before claiming the tranche is complete.
+
+As of T13 in `.docs/workflows/20260515-2018-typed-framework-evolution/03-execution-log.md`, all blocking artifact-store scenarios have passing local package-level and workspace-level verification. Future higher-level framework plugin work should keep these gates green before changing core compiler interfaces.

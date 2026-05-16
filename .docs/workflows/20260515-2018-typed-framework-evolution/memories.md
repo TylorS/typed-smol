@@ -28,3 +28,5 @@
 - `@typed/virtual-modules-vscode` now has a focused Vitest harness for `virtualPreviewDisk.ts`; use `pnpm --filter @typed/virtual-modules-vscode test` for wrapper path regressions.
 - Artifact cleanup is an explicit core artifact-store API, not a normal invalidation side effect. `VirtualArtifactStore.clean()` removes the whole `node_modules/.typed/virtual` tree and reports whether that root existed.
 - Because cleanup deletes the virtual artifact root, it must synchronize with materialization through `node_modules/.typed/virtual.cleanup.lock`, a sibling lock outside the deleted tree.
+- T13 final verification should run compiler tests before Vite tests, then root `pnpm build`; the root wrapper adds `tsc -b tsconfig.build.json` and TS plugin sample plugin builds beyond `pnpm -r build`.
+- Failed plugin-build diagnostic-only manifests remain deferred to a later diagnostic-artifact design because there is no generated source to materialize.
