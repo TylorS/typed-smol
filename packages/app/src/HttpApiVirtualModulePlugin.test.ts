@@ -23,6 +23,7 @@ import {
   validateOpenApiExposureScope,
   validateOpenApiGenerationScope,
 } from "./internal/httpapiOpenApiConfig.js";
+import { typeCheckGeneratedSource } from "./test-utils/generatedSourceHarness.js";
 
 const tempDirs: string[] = [];
 
@@ -93,6 +94,13 @@ const BOOTSTRAP_HTTPAPI_FILE = resolve(
 
 function buildApiFromFixture(spec: FixtureSpec, pluginOptions?: { pathPrefix?: `/${string}` }) {
   const fixture = createApiFixture(spec);
+  return buildApiFromExistingFixture(fixture, pluginOptions);
+}
+
+function buildApiFromExistingFixture(
+  fixture: ReturnType<typeof createApiFixture>,
+  pluginOptions?: { pathPrefix?: `/${string}` },
+) {
   const plugin = createHttpApiVirtualModulePlugin(pluginOptions ?? {});
   const files =
     existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
@@ -294,6 +302,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
     expect(sourceText).toMatchInlineSnapshot(`
       "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
       import * as Effect from "effect/Effect";
+      import type * as Schema from "effect/Schema";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
       import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
@@ -310,7 +319,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined })))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Effect.mapError(Effect.map(Status.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined }), (value) => value as Schema.Schema.Type<typeof Status.success>), (error) => error as Schema.Schema.Type<typeof Status.error>)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -349,6 +358,23 @@ describe("createHttpApiVirtualModulePlugin", () => {
         );
       "
     `);
+  });
+
+  it("type-checks generated HttpApi source", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const result = buildApiFromExistingFixture(fixture);
+    const sourceText = getSourceText(result);
+
+    expect(sourceText).toBeDefined();
+    if (!sourceText) return;
+    const typeCheck = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/api.generated.ts",
+      sourceText,
+      rootFiles: fixture.paths,
+      moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
+    });
+    expect(typeCheck.diagnostics).toEqual([]);
   });
 
   it("build returns AVM-LEAF-001 when directory has no endpoint primary modules", () => {
@@ -425,6 +451,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       {
         "sourceText": "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
       import * as Effect from "effect/Effect";
+      import type * as Schema from "effect/Schema";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
       import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
@@ -441,7 +468,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as UsersList from "./apis/users/list.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("users").add(HttpApiEndpoint.get("list", UsersList.route.path, { params: UsersList.route.pathSchema, query: UsersList.route.querySchema, success: UsersList.success, error: UsersList.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", (ctx) => UsersList.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined })))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", (ctx) => Effect.mapError(Effect.map(UsersList.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined }), (value) => value as Schema.Schema.Type<typeof UsersList.success>), (error) => error as Schema.Schema.Type<typeof UsersList.error>)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -567,6 +594,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
     expect(resolved.sourceText).toMatchInlineSnapshot(`
       "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
       import * as Effect from "effect/Effect";
+      import type * as Schema from "effect/Schema";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
       import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
@@ -583,7 +611,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined })))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Effect.mapError(Effect.map(Status.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined }), (value) => value as Schema.Schema.Type<typeof Status.success>), (error) => error as Schema.Schema.Type<typeof Status.error>)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -1031,7 +1059,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path:');
+      expect(sourceText).toContain(
+        'handlers.handle("status", (ctx) => Effect.mapError(Effect.map(Status.handler({ path:',
+      );
     });
 
     it("handleRaw for HttpServerResponse: handlers.handleRaw, handler receives ctx", () => {

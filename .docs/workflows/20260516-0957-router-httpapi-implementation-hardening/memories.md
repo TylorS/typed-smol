@@ -10,3 +10,8 @@
 - Router guard validation should not rely only on a single TypeInfo projection chain. For `Effect<Option<*>>` guards, first verify the return type is assignable to `Effect`, then inspect the serialized success type for an assignable `Option` node.
 - Router generated catch wrappers need explicit `RefSubject<Cause.Cause<unknown>>` parameter annotations under strict type-checking. Snapshot-only tests missed the implicit `any`.
 - Layout fixtures used for generated-source proof must satisfy the real Router layout contract by returning an `Fx`, not an identity value.
+
+## T3/T4 HttpApi Generated Source
+
+- The generated-source harness needs Node types enabled because HttpApi emitted source imports `node:http`.
+- Installed `HttpApiBuilder.handle` checks endpoint handlers against schema-decoded success/error channel types. Generated non-raw handlers should adapt user handler success/error channels to `Schema.Schema.Type<typeof Module.success/error>` when those exports exist.

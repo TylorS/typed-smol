@@ -102,6 +102,13 @@ type ApiRenderSpec = {
   readonly directoryCompanions: DirectoryCompanionPaths;
 };
 
+type HandlerCallInput = {
+  readonly moduleName: string;
+  readonly optionalExports: ReadonlySet<OptionalExport>;
+  readonly headersArg: string;
+  readonly bodyArg: string;
+};
+
 type DirectoryConventionIndexEntry = {
   readonly apiRootPaths: string[];
   readonly groupOverridePaths: string[];
@@ -442,6 +449,9 @@ export function emitHttpApiSource(input: {
   const importLines: string[] = [
     `import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";`,
     `import * as Effect from "effect/Effect";`,
+    ...(endpointSpecs.some((ep) => endpointHasSchemaTypedHandler(input.optionalExportsByPath, ep))
+      ? [`import type * as Schema from "effect/Schema";`]
+      : []),
     `import * as Layer from "effect/Layer";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
     `import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";`,
@@ -528,7 +538,13 @@ export function emitHttpApiSource(input: {
         const optPresent = input.optionalExportsByPath.get(e.path) ?? new Set<OptionalExport>();
         const headersArg = optPresent.has("headers") ? "ctx.headers" : "emptyRecordString";
         const bodyArg = optPresent.has("body") ? "ctx.payload" : "undefined";
-        return `.handle(${JSON.stringify(name)}, (ctx) => ${varName}.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: ${headersArg}, body: ${bodyArg} }))`;
+        const handlerCall = emitHandlerCall({
+          moduleName: varName,
+          optionalExports: optPresent,
+          headersArg,
+          bodyArg,
+        });
+        return `.handle(${JSON.stringify(name)}, (ctx) => ${handlerCall})`;
       })
       .join("\n      ");
     groupLayerBlocks.push(
@@ -616,4 +632,22 @@ export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
     }),
   );
 `;
+}
+
+function endpointHasSchemaTypedHandler(
+  optionalExportsByPath: ReadonlyMap<string, ReadonlySet<OptionalExport>>,
+  endpoint: EndpointRenderSpec,
+): boolean {
+  const optionalExports = optionalExportsByPath.get(endpoint.path);
+  return Boolean(optionalExports?.has("success") || optionalExports?.has("error"));
+}
+
+function emitHandlerCall(input: HandlerCallInput): string {
+  const baseCall = `${input.moduleName}.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: ${input.headersArg}, body: ${input.bodyArg} })`;
+  const successTyped = input.optionalExports.has("success")
+    ? `Effect.map(${baseCall}, (value) => value as Schema.Schema.Type<typeof ${input.moduleName}.success>)`
+    : baseCall;
+  return input.optionalExports.has("error")
+    ? `Effect.mapError(${successTyped}, (error) => error as Schema.Schema.Type<typeof ${input.moduleName}.error>)`
+    : successTyped;
 }
