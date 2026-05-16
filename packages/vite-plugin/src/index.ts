@@ -4,8 +4,13 @@
  */
 import type { TypedConfig } from "@typed/app";
 import {
+  createBrowserVirtualModulePlugin,
+  createConfigVirtualModulePlugin,
+  createEnvVirtualModulePlugin,
+  createHtmlVirtualModulePlugin,
   createHttpApiVirtualModulePlugin,
   createRouterVirtualModulePlugin,
+  createServerVirtualModulePlugin,
   HttpApiVirtualModulePluginOptions,
   loadTypedConfig,
   RouterVirtualModulePluginOptions,
@@ -24,6 +29,7 @@ import ts from "typescript";
 import type { Plugin } from "vite";
 import viteCompression from "vite-plugin-compression";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { createTypedVavitePlugin } from "./vaviteIntegration.js";
 
 /** Options for vite-plugin-compression when compression is enabled. */
 export type TypedViteCompressionOptions =
@@ -81,6 +87,13 @@ export interface TypedVitePluginOptions {
    * Set false to disable, or pass options to customize (algorithm, ext, threshold).
    */
   readonly compression?: TypedViteCompressionOptions;
+
+  /**
+   * Server entry used to enable vavite runnable-handler integration.
+   * When options are loaded from typed.config.ts this is sourced from config.entry.
+   * Set false to force-disable vavite integration.
+   */
+  readonly serverEntry?: string | false;
 }
 
 /** Optional dependency injection for createTypedViteResolver (e.g. for tests). */
@@ -103,6 +116,11 @@ export function createTypedViteResolver(
   const plugins: import("@typed/virtual-modules").VirtualModulePlugin[] = [
     createRouterVirtualModulePlugin(options.routerVmOptions ?? {}),
     httpApiFactory(options.apiVmOptions ?? {}),
+    createEnvVirtualModulePlugin(),
+    createConfigVirtualModulePlugin(),
+    createHtmlVirtualModulePlugin(),
+    createServerVirtualModulePlugin(),
+    createBrowserVirtualModulePlugin(),
   ];
   return new PluginManager(plugins);
 }
@@ -118,6 +136,7 @@ function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
     analyze: config.analyze,
     warnOnError: config.warnOnError,
     compression: config.compression,
+    serverEntry: config.entry,
   };
 }
 
@@ -189,6 +208,10 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
       warnOnError: resolvedOptions.warnOnError ?? true,
     }),
   );
+
+  if (resolvedOptions.serverEntry) {
+    plugins.push(...createTypedVavitePlugin({ serverEntry: resolvedOptions.serverEntry }));
+  }
 
   if (analyze) {
     const vizOpts =

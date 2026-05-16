@@ -22,13 +22,19 @@ function fakeHttpApiPlugin(opts: HttpApiVirtualModulePluginOptions): VirtualModu
 }
 
 describe("createTypedViteResolver", () => {
-  it("always registers router and HttpApi VM plugins", () => {
+  it("always registers all app VM plugins", () => {
     const resolver = createTypedViteResolver({});
     expect(resolver).toBeInstanceOf(PluginManager);
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(2);
-    expect(manager.plugins[0].name).toBe("router-virtual-module");
-    expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
+    expect(manager.plugins.map((plugin) => plugin.name)).toEqual([
+      "router-virtual-module",
+      "httpapi-virtual-module",
+      "typed-env-virtual-module",
+      "typed-config-virtual-module",
+      "typed-html-virtual-module",
+      "typed-server-virtual-module",
+      "typed-browser-virtual-module",
+    ]);
   });
 
   it("uses DI override for HttpApi plugin when provided", () => {
@@ -37,7 +43,7 @@ describe("createTypedViteResolver", () => {
       { createHttpApiVirtualModulePlugin: fakeHttpApiPlugin },
     );
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(2);
+    expect(manager.plugins).toHaveLength(7);
     expect(manager.plugins[0].name).toBe("router-virtual-module");
     expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
     const apiPlugin = manager.plugins[1] as VirtualModulePlugin & {
@@ -64,7 +70,7 @@ describe("createTypedViteResolver", () => {
       routerVmOptions: { prefix: "routes:", name: "custom-router" },
     });
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(2);
+    expect(manager.plugins).toHaveLength(7);
     expect(manager.plugins[0].name).toBe("custom-router");
     expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
   });
@@ -101,5 +107,21 @@ describe("typedVitePlugin", () => {
     expect(virtualPlugin).toBeDefined();
     expect(virtualPlugin).toHaveProperty("resolveId");
     expect(virtualPlugin).toHaveProperty("load");
+  });
+
+  it("does not add vavite when no server entry is configured", () => {
+    const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
+
+    expect(plugins.some((plugin) => (plugin as { name?: string }).name === "vavite")).toBe(false);
+  });
+
+  it("adds vavite when serverEntry is configured", () => {
+    const plugins = typedVitePlugin({
+      tsconfigPaths: false,
+      compression: false,
+      serverEntry: "/src/entry.server.ts",
+    });
+
+    expect(plugins.some((plugin) => (plugin as { name?: string }).name === "vavite")).toBe(true);
   });
 });
