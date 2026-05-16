@@ -106,12 +106,12 @@ Status: draft pending human approval.
 | mpa_behavior | repeated `page` parameters declare multiple HTML/client pairings; each `page` value uses `name:html:client` and creates a separate SSR fallback entry |
 | client_behavior | `client` identifies the browser entry paired with the default `html`; when `page` is used, `client` is disallowed to avoid ambiguous pairing |
 | order_rule | repeated query parameters are processed in source order; generated imports use stable deterministic names |
-| companion_file | optional `_server.ts` next to the importer |
-| companion_exports | `layers`, `middleware`, `html`, `client`, `pages`, `onError`, `serverOptions` |
-| companion_pages_shape | `pages` is an ordered readonly array of `{ name, html, client }` entries |
-| companion_rule | companion exports are optional; invalid shapes fail clearly |
+| companion_files | optional named companion modules next to the importer, not inside route/API directories |
+| companion_names | `.layout.ts`, `.dependencies.ts`, `.middleware.ts`, `.html.ts`, `.server.ts`, `.config.ts`, `.errors.ts` |
+| companion_behavior | companion files layer environment-specific dependencies, layouts, middleware, HTML/page configuration, server options, config, and error handling over the explicit virtual module query |
+| companion_rule | companion files are optional, deterministic, and entry-scoped; invalid shapes fail clearly |
 | diagnostics | `TVM-SERVER-001` no api/routes/html/pages, `TVM-SERVER-002` invalid target, `TVM-SERVER-003` unsupported option, `TVM-SERVER-004` invalid companion export, `TVM-SERVER-005` ambiguous html/client/page pairing |
-| tests | multi-api/multi-route source, default html/client pairing, repeated page pairings, query order, companion page merge, ambiguous pairing diagnostic |
+| tests | multi-api/multi-route source, default html/client pairing, repeated page pairings, query order, named companion imports, ambiguous pairing diagnostic |
 
 ### New `typed:browser` Contract
 
@@ -126,11 +126,12 @@ Status: draft pending human approval.
 | routes_behavior | `routes=*` resolves by convention from the importing entry; explicit `routes=./dir` imports that router VM target |
 | mode_behavior | `hydrate` hydrates SSR markup; `mount` performs CSR mount; `mpa` prepares per-entry bootstrap without changing router ownership |
 | mpa_behavior | a browser entry may be paired with exactly one HTML page by `typed:server`; multiple pages use multiple browser entries |
-| companion_file | optional `_browser.ts` next to the importer |
-| companion_exports | `layers`, `mount`, `hydrate`, `onNavigation`, `onError` |
-| companion_rule | companion exports are optional; invalid shapes fail clearly |
+| companion_files | optional named companion modules next to the importer, not inside route directories |
+| companion_names | `.layout.ts`, `.dependencies.ts`, `.browser.ts`, `.navigation.ts`, `.config.ts`, `.errors.ts` |
+| companion_behavior | companion files layer browser-specific layout, dependencies, runtime config, navigation hooks, and error handling over the explicit virtual module query |
+| companion_rule | companion files are optional, deterministic, and entry-scoped; invalid shapes fail clearly |
 | diagnostics | `TVM-BROWSER-001` no routes, `TVM-BROWSER-002` invalid mode, `TVM-BROWSER-003` unsupported option, `TVM-BROWSER-004` invalid companion export |
-| tests | wildcard route convention, explicit routes, mode defaults, companion merge, invalid mode diagnostic |
+| tests | wildcard route convention, explicit routes, mode defaults, named companion imports, invalid mode diagnostic |
 
 ## File Structure
 
@@ -143,8 +144,8 @@ Status: draft pending human approval.
 | `packages/app/src/internal/emitHtmlSource.ts` | emit `typed:html` source for dev transform and production artifact references |
 | `packages/app/src/internal/emitServerSource.ts` | emit `typed:server` `run`, `handler`, and `ServerLayer` helper source |
 | `packages/app/src/internal/emitBrowserSource.ts` | emit `typed:browser` `run`, `hydrate`, and `BrowserRuntime` helper source |
-| `packages/app/src/internal/serverCompanions.ts` | discover and validate `_server.ts` companion exports |
-| `packages/app/src/internal/browserCompanions.ts` | discover and validate `_browser.ts` companion exports |
+| `packages/app/src/internal/serverCompanions.ts` | discover and validate entry-adjacent server companion modules |
+| `packages/app/src/internal/browserCompanions.ts` | discover and validate entry-adjacent browser companion modules |
 | `packages/app/src/EnvVirtualModulePlugin.ts` | `typed:env` plugin |
 | `packages/app/src/ConfigVirtualModulePlugin.ts` | `typed:config` plugin |
 | `packages/app/src/HtmlVirtualModulePlugin.ts` | `typed:html` plugin |
@@ -167,8 +168,8 @@ Status: draft pending human approval.
 | SG-2 | `typed:env` virtual module | SG-1 | medium | FR-7, FR-8, AC-4, AC-18 | generated env source and invalid key diagnostics pass |
 | SG-3 | `typed:config` virtual module | SG-1 | medium | FR-9, FR-10, AC-4, AC-18 | generated config source uses shared computed config loader |
 | SG-4 | `typed:html` virtual module | SG-1 | high | FR-18, FR-19, AC-10, AC-18 | dev transform, non-dev built HTML references, and outlet insertion fallbacks pass |
-| SG-5 | `typed:server` virtual module | SG-1, SG-2, SG-3, SG-4 | high | FR-11-FR-14, AC-6, AC-7, AC-18 | multi-api/multi-route source, MPA page pairings, and `_server.ts` companion tests pass |
-| SG-6 | `typed:browser` virtual module | SG-1, SG-2, SG-3 | high | FR-15-FR-17, AC-8, AC-9, AC-18 | wildcard/explicit routes, MPA browser entry behavior, and `_browser.ts` companion tests pass |
+| SG-5 | `typed:server` virtual module | SG-1, SG-2, SG-3, SG-4 | high | FR-11-FR-14, AC-6, AC-7, AC-18 | multi-api/multi-route source, MPA page pairings, and entry-adjacent companion tests pass |
+| SG-6 | `typed:browser` virtual module | SG-1, SG-2, SG-3 | high | FR-15-FR-17, AC-8, AC-9, AC-18 | wildcard/explicit routes, MPA browser entry behavior, and entry-adjacent companion tests pass |
 | SG-7 | `TypedHttpServer.layer(...)` | SG-4, SG-5 | high | FR-23-FR-31, AC-12-AC-16 | mode split, static serving, and SSL tests pass |
 | SG-8 | vavite integration in `@typed/vite-plugin` | SG-2-SG-7 | high | FR-20-FR-22, NFR-2, AC-11 | discovered server entry adds vavite runnable handler and preserves VM order |
 | SG-9 | generated `api:` server helper delegation | SG-7 | high | FR-32, NFR-4, AC-17 | generated API source no longer hard-codes `NodeHttpServer.layer(http.createServer, ...)` |
@@ -286,7 +287,7 @@ Status: draft pending human approval.
 - [ ] Write failing tests for repeated `page=name:html:client` pairings for MPA.
 - [ ] Write failing tests that combining repeated `page` with top-level `html` or `client` returns `TVM-SERVER-005`.
 - [ ] Write failing tests for optional `base` and `name` options.
-- [ ] Write failing tests for deterministic `_server.ts` companion discovery and invalid companion diagnostics.
+- [ ] Write failing tests for deterministic entry-adjacent server companion discovery and invalid companion diagnostics.
 - [ ] Run: `pnpm --filter @typed/app test -- ServerVirtualModulePlugin`
   - Expected before implementation: FAIL with missing plugin.
 - [ ] Implement generated source using explicit `api:`, `router:`, and `typed:html` imports.
@@ -308,7 +309,7 @@ Status: draft pending human approval.
 - [ ] Write failing tests for explicit repeated `routes=./dir` options.
 - [ ] Write failing tests for `root`, `base`, `mode`, and `name` defaults/options.
 - [ ] Write failing tests that `mode=mpa` emits a browser entry suitable for one server page pairing.
-- [ ] Write failing tests for deterministic `_browser.ts` companion discovery and invalid companion diagnostics.
+- [ ] Write failing tests for deterministic entry-adjacent browser companion discovery and invalid companion diagnostics.
 - [ ] Run: `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin`
   - Expected before implementation: FAIL with missing plugin.
 - [ ] Implement generated source using explicit `router:` imports.

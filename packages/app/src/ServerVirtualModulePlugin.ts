@@ -25,7 +25,7 @@ export function createServerVirtualModulePlugin(
       if (!parsed.ok) return buildError(parsed.code, parsed.reason, name);
       if (parsed.kind !== "server") return buildError("TVM-ID-001", "expected typed:server", name);
       const companion = resolveServerCompanion(importer);
-      return emitServerSource({ parsed, id, companionImportPath: companion.importPath });
+      return emitServerSource({ parsed, id, companions: companion.imports });
     },
   };
 }

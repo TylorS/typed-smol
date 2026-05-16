@@ -27,7 +27,7 @@ export function createBrowserVirtualModulePlugin(
         return buildError("TVM-ID-001", "expected typed:browser", name);
       }
       const companion = resolveBrowserCompanion(importer);
-      return emitBrowserSource({ parsed, companionImportPath: companion.importPath });
+      return emitBrowserSource({ parsed, companions: companion.imports });
     },
   };
 }

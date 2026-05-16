@@ -83,12 +83,18 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('client: "./admin.ts"');
   });
 
-  it("imports an adjacent _server.ts companion when present", () => {
-    const fixture = createFixture({ "src/_server.ts": "export const pages = [];" });
+  it("imports entry-adjacent named server companions when present", () => {
+    const fixture = createFixture({
+      "src/.dependencies.ts": "export const layers = [];",
+      "src/.html.ts": "export const pages = [];",
+    });
     const source = buildServer("typed:server?routes=./routes", fixture.importer) as string;
 
-    expect(source).toContain('import * as ServerCompanion from "./_server";');
-    expect(source).toContain("ServerCompanion.pages");
+    expect(source).toContain('import * as ServerDependenciesCompanion from "./.dependencies";');
+    expect(source).toContain('import * as ServerHtmlCompanion from "./.html";');
+    expect(source).toContain("ServerDependenciesCompanion.layers");
+    expect(source).toContain("ServerHtmlCompanion.pages");
+    expect(source).not.toContain("_server");
   });
 
   it("returns parser diagnostics with the server plugin name", () => {

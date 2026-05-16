@@ -1,9 +1,10 @@
 import type { TypedServerPage, TypedVirtualModuleId } from "./frameworkVirtualModuleId.js";
+import type { ServerCompanionImport } from "./serverCompanions.js";
 
 export interface EmitServerSourceInput {
   readonly parsed: Extract<TypedVirtualModuleId, { readonly kind: "server" }>;
   readonly id: string;
-  readonly companionImportPath?: "./_server";
+  readonly companions?: readonly ServerCompanionImport[];
 }
 
 type OrderedImport =
@@ -16,9 +17,9 @@ export function emitServerSource(input: EmitServerSourceInput): string {
   return [
     ...emitImports(imports),
     ...emitHtmlImports(pages),
-    ...emitCompanionImport(input.companionImportPath),
+    ...emitCompanionImports(input.companions ?? []),
     emitConstants(imports, pages),
-    emitExports(input.companionImportPath),
+    emitExports(input.companions ?? []),
   ].join("\n");
 }
 
@@ -55,8 +56,10 @@ function emitHtmlImports(pages: readonly TypedServerPage[]): readonly string[] {
   });
 }
 
-function emitCompanionImport(importPath: "./_server" | undefined): readonly string[] {
-  return importPath ? [`import * as ServerCompanion from ${JSON.stringify(importPath)};`] : [];
+function emitCompanionImports(companions: readonly ServerCompanionImport[]): readonly string[] {
+  return companions.map((companion) => {
+    return `import * as ${companion.binding} from ${JSON.stringify(companion.importPath)};`;
+  });
 }
 
 function emitConstants(
@@ -80,12 +83,18 @@ function pageEntrySource(page: TypedServerPage, index: number): string {
   ].join("");
 }
 
-function emitExports(companionImportPath: "./_server" | undefined): string {
-  const companionPages = companionImportPath ? "ServerCompanion.pages ?? []" : "[]";
+function emitExports(companions: readonly ServerCompanionImport[]): string {
+  const pagesCompanion = companions.find((companion) => companion.name === "html");
+  const dependenciesCompanion = companions.find((companion) => companion.name === "dependencies");
+  const companionPages = pagesCompanion ? `${pagesCompanion.binding}.pages ?? []` : "[]";
+  const companionLayers = dependenciesCompanion
+    ? `${dependenciesCompanion.binding}.layers ?? []`
+    : "[]";
   return [
     `const companionPages = ${companionPages};`,
-    "export const ServerLayer = { apiModules, routeModules, pageEntries, companionPages };",
-    "export const handler = { apiModules, routeModules, pageEntries, companionPages };",
+    `const companionLayers = ${companionLayers};`,
+    "export const ServerLayer = { apiModules, routeModules, pageEntries, companionPages, companionLayers };",
+    "export const handler = { apiModules, routeModules, pageEntries, companionPages, companionLayers };",
     "export async function run(options = {}) {",
     "  return options.run ? options.run(handler) : handler;",
     "}",

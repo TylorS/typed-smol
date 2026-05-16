@@ -71,12 +71,17 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('name: "admin"');
   });
 
-  it("imports an adjacent _browser.ts companion when present", () => {
-    const fixture = createFixture({ "src/_browser.ts": "export const layers = [];" });
+  it("imports entry-adjacent named browser companions when present", () => {
+    const fixture = createFixture({
+      "src/.dependencies.ts": "export const layers = [];",
+      "src/.navigation.ts": "export const onNavigation = () => undefined;",
+    });
     const source = buildBrowser("typed:browser?routes=./routes", fixture.importer) as string;
 
-    expect(source).toContain('import * as BrowserCompanion from "./_browser";');
-    expect(source).toContain("BrowserCompanion.layers");
+    expect(source).toContain('import * as BrowserDependenciesCompanion from "./.dependencies";');
+    expect(source).toContain('import * as BrowserNavigationCompanion from "./.navigation";');
+    expect(source).toContain("BrowserDependenciesCompanion.layers");
+    expect(source).not.toContain("_browser");
   });
 
   it("returns parser diagnostics with the browser plugin name", () => {
