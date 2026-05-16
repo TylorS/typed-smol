@@ -1,10 +1,16 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { attachCompilerHostAdapter } from "./CompilerHostAdapter.js";
 import { PluginManager } from "./PluginManager.js";
+import type {
+  MaterializeVirtualArtifactParams,
+  ResolveVirtualArtifactParams,
+  VirtualArtifactStore,
+} from "./internal/ArtifactStore.js";
+import type { VirtualLogicalIdentity } from "./internal/ArtifactIdentity.js";
 
 const tempDirs: string[] = [];
 
@@ -12,6 +18,38 @@ const createTempDir = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "typed-vm-compiler-"));
   tempDirs.push(dir);
   return dir;
+};
+
+const createFakeArtifactStore = (
+  sourcePath: string,
+  onMaterialize?: (params: MaterializeVirtualArtifactParams) => void,
+): VirtualArtifactStore => {
+  const logicalIdentity = "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
+  const paths = {
+    logicalIdentity,
+    sourcePath,
+    manifestPath: sourcePath.replace(/\.ts$/, ".manifest.json"),
+  };
+  return {
+    indexPath: join(sourcePath, "..", "index.json"),
+    resolve: (_params: ResolveVirtualArtifactParams) => ({
+      status: "miss",
+      reason: "manifest-missing",
+      logicalIdentity,
+      paths,
+      diagnostics: [],
+      warnings: [],
+    }),
+    readManifest: () => ({ status: "missing", reason: "manifest-missing" }),
+    materialize: (params) => {
+      onMaterialize?.(params);
+      mkdirSync(dirname(sourcePath), { recursive: true });
+      writeFileSync(sourcePath, params.sourceText, "utf8");
+      return { logicalIdentity, paths, manifest: {} as never };
+    },
+    readProjectIndex: () => ({ status: "missing", reason: "index-missing" }),
+    __unsafeReleaseLockForTesting: () => {},
+  };
 };
 
 afterEach(() => {
@@ -124,6 +162,263 @@ export const value: Foo = { n: 1 };
     expect(
       program.getSourceFiles().some((sf) => sf.fileName.includes("__virtual_virtual-b_")),
     ).toBe(true);
+  });
+
+  it("keeps logical ids and effective real importers when artifact paths back virtual records", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    const artifactA = join(dir, "node_modules/.typed/virtual/virtual-a/artifact-a.ts");
+    const artifactB = join(dir, "node_modules/.typed/virtual/virtual-b/artifact-b.ts");
+    writeFileSync(entry, `import { x } from "virtual:a"; export const out = x;`, "utf8");
+
+    const buildCalls: string[] = [];
+    const materializeCalls: string[] = [];
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: (id, importer) => {
+          buildCalls.push(`${id}:${importer}`);
+          return `import { x } from "virtual:b"; export { x };`;
+        },
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: (id, importer) => {
+          buildCalls.push(`${id}:${importer}`);
+          return `export const x = 1;`;
+        },
+      },
+    ]);
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: ({ pluginName }) =>
+        createFakeArtifactStore(pluginName === "virtual-a" ? artifactA : artifactB, (params) => {
+          materializeCalls.push(`${params.id}:${params.importer}:${params.sourceText}`);
+        }),
+    });
+
+    const program = ts.createProgram([entry], compilerOptions, host);
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(buildCalls).toEqual([`virtual:a:${entry}`, `virtual:b:${entry}`]);
+    expect(materializeCalls).toEqual([
+      expect.stringContaining(`virtual:a:${entry}`),
+      expect.stringContaining(`virtual:b:${entry}`),
+    ]);
+    expect(program.getSourceFile(artifactA)).toBeDefined();
+    expect(program.getSourceFile(artifactB)).toBeDefined();
+  });
+
+  it("uses artifact cache hits without rebuilding or rematerializing", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    const artifact = join(dir, "node_modules/.typed/virtual/virtual/hit.ts");
+    const logicalIdentity =
+      "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
+    const paths = {
+      logicalIdentity,
+      sourcePath: artifact,
+      manifestPath: artifact.replace(/\.ts$/, ".manifest.json"),
+    };
+    let buildCount = 0;
+    let materializeCount = 0;
+    writeFileSync(
+      entry,
+      `import type { Foo } from "virtual:foo"; export const value: Foo = { n: 1 };`,
+      "utf8",
+    );
+
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => {
+          buildCount += 1;
+          throw new Error("cache hit should not rebuild");
+        },
+      },
+    ]);
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: () => ({
+        ...createFakeArtifactStore(artifact),
+        resolve: () => ({
+          status: "hit",
+          logicalIdentity,
+          paths,
+          manifest: {
+            dependencyDescriptors: [],
+            diagnostics: [],
+            warnings: [],
+          } as never,
+          sourceText: "export interface Foo { n: number }",
+          diagnostics: [],
+          warnings: [],
+        }),
+        materialize: () => {
+          materializeCount += 1;
+          throw new Error("cache hit should not materialize");
+        },
+      }),
+    });
+
+    const program = ts.createProgram([entry], compilerOptions, host);
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(buildCount).toBe(0);
+    expect(materializeCount).toBe(0);
+    expect(program.getSourceFile(artifact)?.text).toBe("export interface Foo { n: number }");
+  });
+
+  it("reports artifact-store materialization failures through compiler diagnostics", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    const reported: ts.Diagnostic[] = [];
+    writeFileSync(
+      entry,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = {};`,
+      "utf8",
+    );
+
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => `export interface Foo {}`,
+      },
+    ]);
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: () => ({
+        ...createFakeArtifactStore(join(dir, "node_modules/.typed/virtual/virtual/broken.ts")),
+        materialize: () => {
+          throw new Error("disk cache is read-only");
+        },
+      }),
+      reportDiagnostic: (diagnostic) => reported.push(diagnostic),
+    });
+
+    ts.createProgram([entry], compilerOptions, host);
+
+    expect(reported.map((diagnostic) => String(diagnostic.messageText))).toContain(
+      "Virtual artifact materialization failed: disk cache is read-only",
+    );
+  });
+
+  it("rebuilds recoverable artifact cache invalid states instead of reporting cache diagnostics", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    const reported: ts.Diagnostic[] = [];
+    const artifact = join(dir, "node_modules/.typed/virtual/virtual/corrupt.ts");
+    const materializeCalls: MaterializeVirtualArtifactParams[] = [];
+    writeFileSync(
+      entry,
+      `import type { Foo } from "virtual:foo"; export const x: Foo = {};`,
+      "utf8",
+    );
+
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:foo",
+        build: () => `export interface Foo {}`,
+      },
+    ]);
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: () => ({
+        ...createFakeArtifactStore(artifact, (params) => {
+          materializeCalls.push(params);
+        }),
+        resolve: () => {
+          const logicalIdentity =
+            "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
+          return {
+            status: "invalid",
+            reason: "manifest-corrupt",
+            logicalIdentity,
+            paths: {
+              logicalIdentity,
+              sourcePath: artifact,
+              manifestPath: artifact.replace(/\.ts$/, ".manifest.json"),
+            },
+            diagnostics: [
+              {
+                severity: "error",
+                message: "artifact manifest could not be parsed",
+                code: "manifest-corrupt",
+                source: "virtual",
+              },
+            ],
+            warnings: [],
+          };
+        },
+      }),
+      reportDiagnostic: (diagnostic) => reported.push(diagnostic),
+    });
+
+    const program = ts.createProgram([entry], compilerOptions, host);
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(reported).toHaveLength(0);
+    expect(materializeCalls).toHaveLength(1);
   });
 
   it("evicts virtual record when importer no longer exists (fileExists returns false)", () => {

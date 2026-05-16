@@ -1,11 +1,21 @@
 import type * as ts from "typescript";
 import type {
   ResolveVirtualModuleOptions,
+  VirtualArtifactStoreFactory,
+  VirtualModulePluginNameResolution,
   VirtualModuleDiagnostic,
   VirtualModuleRecord,
   VirtualModuleResolution,
 } from "../types.js";
-import { createVirtualFileName, createVirtualKey, createWatchDescriptorKey } from "./path.js";
+import type { ResolveVirtualArtifactResult } from "./ArtifactStore.js";
+import type { VirtualArtifactMessage } from "./ArtifactManifest.js";
+import { rewriteSourceForPreviewLocation } from "./materializeVirtualFile.js";
+import {
+  createVirtualFileName,
+  createVirtualKey,
+  createWatchDescriptorKey,
+  toPosixPath,
+} from "./path.js";
 
 export type MutableVirtualRecord = Omit<VirtualModuleRecord, "version" | "stale"> & {
   version: number;
@@ -35,8 +45,10 @@ export interface VirtualRecordStoreOptions {
   readonly projectRoot: string;
   readonly resolver: {
     resolveModule(options: ResolveVirtualModuleOptions): VirtualModuleResolution;
+    resolvePluginName?(options: ResolveVirtualModuleOptions): VirtualModulePluginNameResolution;
   };
   readonly createTypeInfoApiSession?: ResolveVirtualModuleOptions["createTypeInfoApiSession"];
+  readonly artifactStoreFactory?: VirtualArtifactStoreFactory;
   readonly debounceMs?: number;
   readonly watchHost?: {
     watchFile?(path: string, callback: () => void): ts.FileWatcher;
@@ -198,6 +210,23 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     }
   };
 
+  const storeRecord = (
+    record: MutableVirtualRecord,
+    previous?: MutableVirtualRecord,
+  ): ResolveRecordResultResolved => {
+    recordsByKey.set(record.key, record);
+    if (previous && previous.virtualFileName !== record.virtualFileName) {
+      recordsByVirtualFile.delete(previous.virtualFileName);
+    }
+    recordsByVirtualFile.set(record.virtualFileName, record);
+    registerWatchers(record);
+    onRecordResolved?.(record);
+    return {
+      status: "resolved",
+      record,
+    };
+  };
+
   const resolveRecord = (
     id: string,
     importer: string,
@@ -205,11 +234,32 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
   ): ResolveRecordResult => {
     onBeforeResolve?.();
     try {
+      const key = createVirtualKey(id, importer);
       const resolveOptions: ResolveVirtualModuleOptions = {
         id,
         importer,
         createTypeInfoApiSession: options.createTypeInfoApiSession,
       };
+
+      const cached = resolveCachedArtifactSource(options, resolveOptions, key);
+      if (cached.status === "error") {
+        return cached;
+      }
+      if (cached.status === "resolved") {
+        const record: MutableVirtualRecord = {
+          key,
+          id,
+          importer,
+          pluginName: cached.pluginName,
+          virtualFileName: cached.virtualFileName,
+          sourceText: cached.sourceText,
+          dependencies: cached.dependencies,
+          ...(cached.warnings?.length ? { warnings: cached.warnings } : {}),
+          version: previous ? previous.version + 1 : 1,
+          stale: false,
+        };
+        return storeRecord(record, previous);
+      }
 
       const resolution = options.resolver.resolveModule(resolveOptions);
       if (resolution.status === "unresolved") {
@@ -223,34 +273,37 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
         };
       }
 
-      const key = createVirtualKey(id, importer);
       const virtualFileName = createVirtualFileName(
         resolution.pluginName,
         key,
         { id, importer },
         { projectRoot: options.projectRoot },
       );
+      const materialized = materializeRecordSource(
+        options,
+        resolution,
+        key,
+        id,
+        importer,
+        virtualFileName,
+      );
+      if (materialized.status === "error") {
+        return materialized;
+      }
       const record: MutableVirtualRecord = {
         key,
         id,
         importer,
         pluginName: resolution.pluginName,
-        virtualFileName,
-        sourceText: resolution.sourceText,
+        virtualFileName: materialized.virtualFileName,
+        sourceText: materialized.sourceText,
         dependencies: resolution.dependencies,
         ...(resolution.warnings?.length ? { warnings: resolution.warnings } : {}),
         version: previous ? previous.version + 1 : 1,
         stale: false,
       };
 
-      recordsByKey.set(key, record);
-      recordsByVirtualFile.set(virtualFileName, record);
-      registerWatchers(record);
-      onRecordResolved?.(record);
-      return {
-        status: "resolved",
-        record,
-      };
+      return storeRecord(record, previous);
     } finally {
       onAfterResolve?.();
     }
@@ -271,6 +324,20 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     return resolveRecord(id, importer, existing);
   };
 
+  const findRecordByVirtualFile = (fileName: string): MutableVirtualRecord | undefined => {
+    const exact = recordsByVirtualFile.get(fileName);
+    if (exact) {
+      return exact;
+    }
+    const normalized = toPosixPath(fileName);
+    for (const record of recordsByVirtualFile.values()) {
+      if (toPosixPath(record.virtualFileName) === normalized) {
+        return record;
+      }
+    }
+    return undefined;
+  };
+
   /**
    * Walk the virtual-file chain from containingFile back to the root real-file importer.
    * When a virtual module imports another virtual module, the containing file is a virtual
@@ -283,7 +350,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     while (true) {
       if (visited.has(current)) break;
       visited.add(current);
-      const record = recordsByVirtualFile.get(current);
+      const record = findRecordByVirtualFile(current);
       if (!record) break;
       current = record.importer;
     }
@@ -322,3 +389,195 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     dispose,
   };
 }
+
+type ArtifactSourceResult =
+  | {
+      readonly status: "resolved";
+      readonly pluginName: string;
+      readonly virtualFileName: string;
+      readonly sourceText: string;
+      readonly dependencies: MutableVirtualRecord["dependencies"];
+      readonly warnings?: MutableVirtualRecord["warnings"];
+    }
+  | { readonly status: "miss" }
+  | ResolveRecordResultError;
+
+const resolveCachedArtifactSource = (
+  options: VirtualRecordStoreOptions,
+  resolveOptions: ResolveVirtualModuleOptions,
+  virtualKey: string,
+): ArtifactSourceResult => {
+  const resolvePluginName = options.resolver.resolvePluginName?.bind(options.resolver);
+  if (!options.artifactStoreFactory || !resolvePluginName) {
+    return { status: "miss" };
+  }
+
+  const pluginResolution = resolvePluginName(resolveOptions);
+  if (pluginResolution.status === "unresolved") {
+    return { status: "miss" };
+  }
+  if (pluginResolution.status === "error") {
+    return {
+      status: "error",
+      diagnostic: pluginResolution.diagnostic,
+    };
+  }
+
+  const resolvedArtifact = resolveArtifactStoreEntry(
+    options,
+    pluginResolution.pluginName,
+    virtualKey,
+    resolveOptions.id,
+    resolveOptions.importer,
+  );
+  if (resolvedArtifact.status === "error") {
+    return resolvedArtifact;
+  }
+  if (resolvedArtifact.result.status !== "hit") {
+    return { status: "miss" };
+  }
+
+  return {
+    status: "resolved",
+    pluginName: pluginResolution.pluginName,
+    virtualFileName: resolvedArtifact.result.paths.sourcePath,
+    sourceText: resolvedArtifact.result.sourceText,
+    dependencies: resolvedArtifact.result.manifest.dependencyDescriptors,
+    warnings: toVirtualModuleDiagnostics(
+      pluginResolution.pluginName,
+      resolvedArtifact.result.warnings,
+    ),
+  };
+};
+
+const materializeRecordSource = (
+  options: VirtualRecordStoreOptions,
+  resolution: Extract<VirtualModuleResolution, { status: "resolved" }>,
+  virtualKey: string,
+  id: string,
+  importer: string,
+  fallbackVirtualFileName: string,
+):
+  | { readonly status: "resolved"; readonly virtualFileName: string; readonly sourceText: string }
+  | ResolveRecordResultError => {
+  const artifactStore = options.artifactStoreFactory?.({
+    pluginName: resolution.pluginName,
+    virtualKey,
+    projectRoot: options.projectRoot,
+  });
+  if (!artifactStore) {
+    return {
+      status: "resolved",
+      virtualFileName: fallbackVirtualFileName,
+      sourceText: resolution.sourceText,
+    };
+  }
+
+  const resolvedArtifact = resolveArtifactStoreEntry(
+    options,
+    resolution.pluginName,
+    virtualKey,
+    id,
+    importer,
+  );
+  if (resolvedArtifact.status === "error") {
+    return resolvedArtifact;
+  }
+  if (resolvedArtifact.result.status === "hit") {
+    return {
+      status: "resolved",
+      virtualFileName: resolvedArtifact.result.paths.sourcePath,
+      sourceText: resolvedArtifact.result.sourceText,
+    };
+  }
+
+  const sourceText = rewriteSourceForPreviewLocation(
+    resolution.sourceText,
+    importer,
+    resolvedArtifact.result.paths.sourcePath,
+  );
+
+  try {
+    const materialized = artifactStore.materialize({
+      id,
+      importer,
+      virtualKey,
+      sourceText,
+      dependencyDescriptors: resolution.dependencies,
+      warnings: resolution.warnings?.map((warning) => ({
+        severity: "warning",
+        code: warning.code,
+        message: warning.message,
+        source: warning.pluginName,
+      })),
+    });
+    return {
+      status: "resolved",
+      virtualFileName: materialized.paths.sourcePath,
+      sourceText,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      diagnostic: {
+        code: "artifact-store-materialize-failed",
+        pluginName: resolution.pluginName,
+        message: `Virtual artifact materialization failed: ${toErrorMessage(error)}`,
+      },
+    };
+  }
+};
+
+const resolveArtifactStoreEntry = (
+  options: VirtualRecordStoreOptions,
+  pluginName: string,
+  virtualKey: string,
+  id: string,
+  importer: string,
+):
+  | { readonly status: "ok"; readonly result: ResolveVirtualArtifactResult }
+  | ResolveRecordResultError => {
+  try {
+    const artifactStore = options.artifactStoreFactory?.({
+      pluginName,
+      virtualKey,
+      projectRoot: options.projectRoot,
+    });
+    if (!artifactStore) {
+      return {
+        status: "error",
+        diagnostic: {
+          code: "artifact-store-unavailable",
+          pluginName,
+          message: "Virtual artifact store was unavailable during artifact resolution",
+        },
+      };
+    }
+    return {
+      status: "ok",
+      result: artifactStore.resolve({ id, importer, virtualKey }),
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      diagnostic: {
+        code: "artifact-store-resolve-failed",
+        pluginName,
+        message: `Virtual artifact resolution failed: ${toErrorMessage(error)}`,
+      },
+    };
+  }
+};
+
+const toVirtualModuleDiagnostics = (
+  pluginName: string,
+  messages: readonly VirtualArtifactMessage[],
+): readonly VirtualModuleDiagnostic[] =>
+  messages.map((message) => ({
+    code: message.code ?? "artifact-store-message",
+    pluginName: message.source ?? pluginName,
+    message: message.message,
+  }));
+
+const toErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);

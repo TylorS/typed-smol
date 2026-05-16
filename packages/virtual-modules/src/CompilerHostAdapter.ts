@@ -23,6 +23,8 @@ export const attachCompilerHostAdapter = (
   const watchHost = options.watchHost;
 
   const invalidatedPaths = new Set<string>();
+  const ADAPTER_DIAGNOSTIC_CODE = 99001;
+  const hasArtifactStore = options.artifactStoreFactory !== undefined;
 
   const originalResolveModuleNameLiterals = (
     host as {
@@ -54,6 +56,7 @@ export const attachCompilerHostAdapter = (
     projectRoot: options.projectRoot,
     resolver: options.resolver,
     createTypeInfoApiSession: options.createTypeInfoApiSession,
+    artifactStoreFactory: options.artifactStoreFactory,
     debounceMs: options.debounceMs,
     watchHost,
     shouldEvictRecord: (record) => !originalFileExists(record.importer),
@@ -73,12 +76,24 @@ export const attachCompilerHostAdapter = (
 
   const { recordsByVirtualFile } = store;
 
-  const getOrBuildRecord = (id: string, importer: string): MutableVirtualRecord | undefined => {
-    const result = store.getOrBuildRecord(id, importer);
-    return result.status === "resolved" ? result.record : undefined;
+  const reportAdapterDiagnostic = (diagnostic: VirtualModuleDiagnostic): void => {
+    options.reportDiagnostic?.({
+      category: options.ts.DiagnosticCategory.Error,
+      code: ADAPTER_DIAGNOSTIC_CODE,
+      file: undefined,
+      start: 0,
+      length: 0,
+      messageText: diagnostic.message,
+    });
   };
 
-  const ADAPTER_DIAGNOSTIC_CODE = 99001;
+  const getOrBuildRecord = (id: string, importer: string): MutableVirtualRecord | undefined => {
+    const result = store.getOrBuildRecord(id, importer);
+    if (result.status === "error") {
+      reportAdapterDiagnostic(result.diagnostic);
+    }
+    return result.status === "resolved" ? result.record : undefined;
+  };
 
   const rebuildIfStale = (record: MutableVirtualRecord): MutableVirtualRecord => {
     if (!record.stale) {
@@ -92,14 +107,9 @@ export const attachCompilerHostAdapter = (
 
     if (rebuilt.status === "error" && options.reportDiagnostic) {
       const diag = rebuilt.diagnostic as VirtualModuleDiagnostic;
-      const message = `Virtual module rebuild failed: ${diag.message}`;
-      options.reportDiagnostic({
-        category: options.ts.DiagnosticCategory.Error,
-        code: ADAPTER_DIAGNOSTIC_CODE,
-        file: undefined,
-        start: 0,
-        length: 0,
-        messageText: message,
+      reportAdapterDiagnostic({
+        ...diag,
+        message: `Virtual module rebuild failed: ${diag.message}`,
       });
     }
     return record;
@@ -191,7 +201,7 @@ export const attachCompilerHostAdapter = (
 
   const getSourceTextForRecord = (record: MutableVirtualRecord): string => {
     const fresh = rebuildIfStale(record);
-    if (record.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
+    if (!hasArtifactStore && record.virtualFileName.includes(VIRTUAL_NODE_MODULES_RELATIVE)) {
       return rewriteSourceForPreviewLocation(
         fresh.sourceText,
         fresh.importer,

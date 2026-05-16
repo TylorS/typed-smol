@@ -120,6 +120,32 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - Bare module specifiers remain unchanged; only `./` and `../` static module specifier literals are rewritten relative to the virtual artifact path.
 - memory_updates: deferred until implementation patterns stabilize
 
+### T6 — Core Adapter Integration
+
+- task_id: T6
+- requirement_ids: FR-8, FR-12, FR-13, NFR-6, NFR-8, AC-1, AC-13, AC-14
+- validation_evidence:
+  - Routing: subagent implementation followed by controller review and two reviewer subagents because T6 is the first adapter-facing integration slice.
+  - Red: `pnpm --filter @typed/virtual-modules test -- CompilerHostAdapter LanguageServiceAdapter`; failed with injected artifact-store tests showing no materialization calls and no surfaced store diagnostics, `Test Files 2 failed | 11 passed (13)`, `Tests 4 failed | 122 passed (126)`.
+  - Green: `pnpm --filter @typed/virtual-modules test -- CompilerHostAdapter LanguageServiceAdapter`; passed with `Test Files 13 passed (13)`, `Tests 128 passed (128)`.
+  - Review Red: `pnpm --filter @typed/virtual-modules test -- CompilerHostAdapter LanguageServiceAdapter`; failed after reviewer regressions for artifact hit reuse, recoverable invalid rebuild, artifact-backed script names, and nested virtual diagnostics, `Test Files 2 failed | 11 passed (13)`, `Tests 5 failed | 126 passed (131)`.
+  - Review Green: `pnpm --filter @typed/virtual-modules test -- CompilerHostAdapter LanguageServiceAdapter`; passed with `Test Files 13 passed (13)`, `Tests 131 passed (131)`.
+  - Re-review: spec reviewer approved the cache-hit and recoverable-invalid fixes with no blocking findings.
+  - Re-review: code-quality reviewer approved the cache-hit and nested-diagnostic fixes with no blocking findings.
+  - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/VirtualRecordStore.ts packages/virtual-modules/src/PluginManager.ts packages/virtual-modules/src/CompilerHostAdapter.ts packages/virtual-modules/src/LanguageServiceAdapter.ts packages/virtual-modules/src/types.ts packages/virtual-modules/src/CompilerHostAdapter.test.ts packages/virtual-modules/src/LanguageServiceAdapter.test.ts`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules/src/internal/VirtualRecordStore.ts packages/virtual-modules/src/PluginManager.ts packages/virtual-modules/src/CompilerHostAdapter.ts packages/virtual-modules/src/LanguageServiceAdapter.ts packages/virtual-modules/src/types.ts packages/virtual-modules/src/CompilerHostAdapter.test.ts packages/virtual-modules/src/LanguageServiceAdapter.test.ts`; 0 warnings, 0 errors.
+  - `pnpm --filter @typed/virtual-modules build`; exit 0.
+- commit: deferred by user request
+- deviations_or_replans:
+  - Kept artifact-store integration opt-in through `artifactStoreFactory`; no-factory adapter behavior is preserved for existing callers.
+  - Did not add a default adapter store factory in T6 because defaulting changed existing source-file identity assumptions outside the scoped adapter contract.
+- context_updates:
+  - Artifact-backed records use the materialized artifact source path and rewritten source text, while plugin `build(id, importer, api)` still receives the original virtual id and effective real importer.
+  - Artifact cache hits are read before plugin build when the resolver can provide a plugin name without building, and hit source is served without rematerializing.
+  - Recoverable invalid artifacts rebuild and rematerialize instead of failing from cache diagnostics; materialization failures still surface through compiler-host `reportDiagnostic` and language-service semantic diagnostics.
+  - Nested virtual import artifact failures are attached to the real importer diagnostics so editor calls against the root file can see them.
+- memory_updates: deferred until implementation patterns stabilize
+
 ## Deferred Work
 
 - Adapter migration starts only after T1 through T5 are committed and passing.
