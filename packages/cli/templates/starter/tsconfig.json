@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@__APP_NAME__/shared": ["packages/shared/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*.ts", "typed.config.ts", "vite.config.ts"]
+}

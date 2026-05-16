@@ -6,8 +6,9 @@ import { run } from "./run.js";
 import { test } from "./test.js";
 import { lint } from "./lint.js";
 import { format } from "./format.js";
+import { create } from "./create.js";
 
 export const typed = Command.make("typed").pipe(
   Command.withDescription("Typed-smol CLI: Vite 7 + server-side capabilities"),
-  Command.withSubcommands([serve, build, preview, run, test, lint, format]),
+  Command.withSubcommands([serve, build, preview, run, test, lint, format, create]),
 );

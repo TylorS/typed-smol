@@ -1,0 +1,17 @@
+{
+  "name": "__APP_NAME__",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "typed serve --entry packages/app/src/entry.server.ts",
+    "build": "typed build --entry packages/app/src/entry.server.ts",
+    "test": "pnpm -r test",
+    "lint": "typed lint",
+    "format": "typed format"
+  },
+  "devDependencies": {
+    "@typed/cli": "^1.0.0-beta.1",
+    "typescript": "6.0.3"
+  }
+}

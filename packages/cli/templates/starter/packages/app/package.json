@@ -1,0 +1,21 @@
+{
+  "name": "@__APP_NAME__/app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "build": "vite build --app"
+  },
+  "dependencies": {
+    "@__APP_NAME__/shared": "workspace:*",
+    "@typed/app": "^1.0.0-beta.4",
+    "@typed/router": "^1.0.0-beta.4",
+    "@typed/vite-plugin": "^1.0.0-beta.4",
+    "effect": "4.0.0-beta.66",
+    "vite": "8.0.12"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vitest": "4.1.6"
+  }
+}
