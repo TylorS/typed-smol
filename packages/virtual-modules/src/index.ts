@@ -15,6 +15,14 @@ export * from "./CompilerHostAdapter.js";
 export * from "./VmcConfigLoader.js";
 export * from "./VmcResolverLoader.js";
 export {
+  createArtifactPaths,
+  createVirtualLogicalIdentity,
+  isVirtualLogicalIdentity,
+  type CreateVirtualLogicalIdentityParams,
+  type VirtualArtifactPaths,
+  type VirtualLogicalIdentity,
+} from "./internal/ArtifactIdentity.js";
+export {
   createVirtualFileName,
   createVirtualKey,
   VIRTUAL_MODULE_URI_SCHEME,
