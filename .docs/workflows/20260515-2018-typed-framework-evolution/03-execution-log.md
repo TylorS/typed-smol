@@ -254,6 +254,29 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - Vite artifact fingerprints include the effective real importer source file per request and supplied/static artifact-store fingerprints when provided; plugin and TypeInfo compiler fingerprints fail closed when Vite cannot safely derive them.
 - memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
 
+### T9 — Cross-Surface Reuse Fixture
+
+- task_id: T9
+- requirement_ids: FR-6, FR-9, FR-11, NFR-1, NFR-5, AC-5, AC-8, AC-11
+- validation_evidence:
+  - Red: `pnpm --filter @typed/virtual-modules-vite test -- vitePlugin.integration` failed after adding the cross-surface fixture, with `Test Files 1 failed | 2 passed (3)`, `Tests 1 failed | 14 passed (15)`. The fixture proved Vite missed the vmc artifact and ran the throwing `build()` path when the request used a non-canonical importer identity.
+  - Red: `pnpm --filter @typed/virtual-modules-compiler test -- cli.integration` failed after tightening manifest assertions, with `Test Files 1 failed (1)`, `Tests 1 failed | 15 passed (16)`. The failure proved source input fingerprints were emitted with TypeScript/vmc's realpath-canonicalized importer (`/private/var/...`) rather than the temp path spelling used by the first assertion (`/var/...`).
+  - Green: `pnpm --filter @typed/virtual-modules-vite test -- vitePlugin.integration`; passed with `Test Files 3 passed (3)`, `Tests 15 passed (15)`.
+  - Green: `pnpm --filter @typed/virtual-modules-compiler test -- cli.integration`; passed with `Test Files 1 passed (1)`, `Tests 16 passed (16)`.
+  - Post-format Green: `pnpm --filter @typed/virtual-modules-vite test -- vitePlugin.integration`; passed with `Test Files 3 passed (3)`, `Tests 15 passed (15)`.
+  - Post-format Green: `pnpm --filter @typed/virtual-modules-compiler test -- cli.integration`; passed with `Test Files 1 passed (1)`, `Tests 16 passed (16)`.
+  - `pnpm exec oxfmt --check packages/virtual-modules-vite/src/vitePlugin.integration.test.ts packages/virtual-modules-compiler/src/cli.integration.test.ts`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules-vite/src/vitePlugin.integration.test.ts packages/virtual-modules-compiler/src/cli.integration.test.ts`; 0 warnings, 0 errors.
+  - `git diff --check`; exit 0.
+- deviations_or_replans:
+  - No production code or public cache-hit instrumentation was needed; the proof boundary is the vmc-written index/manifest plus Vite `buildCount === 0`.
+  - The Vite fixture requests the artifact using `manifest.effectiveImporter` so vmc and Vite use the same canonical importer identity on platforms where temp paths are realpath-normalized.
+  - The Vite fixture now builds the vmc CLI explicitly when `dist/cli.js` is absent, so the proof does not depend on local build residue in clean package-test runs.
+  - The compiler fixture now parses the artifact index/manifest with `parseVirtualArtifactIndex` / `parseVirtualArtifactManifest` and asserts the generated source path, source input fingerprints, plugin fingerprints, and compiler fingerprints that the Vite fixture consumes.
+- context_updates:
+  - Cross-surface reuse is proven by running `vmc --noEmit`, reading the persisted artifact manifest, passing the manifest's plugin/compiler fingerprints into `virtualModulesVitePlugin({ artifactStore })`, and loading `encodeVirtualId("virtual:foo", manifest.effectiveImporter)` through Vite's `/@id/` path while the Vite plugin `build()` throws if called.
+- memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
+
 ## Deferred Work
 
 - Adapter migration starts only after T1 through T5 are committed and passing.

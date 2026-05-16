@@ -175,11 +175,14 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 - Modify or create fixture tests in `packages/virtual-modules-vite/src/vitePlugin.integration.test.ts`
 - Modify or create fixture tests in `packages/virtual-modules-compiler/src/cli.integration.test.ts`
 
-- [ ] Add a fixture project that resolves the same virtual module through vmc and Vite with identical inputs.
-- [ ] Add an assertion that the second surface observes a cache hit from the artifact manifest or project index.
-- [ ] Run targeted Vite/vmc integration tests; expected fail before cache-hit instrumentation exists.
-- [ ] Add minimal cache-hit instrumentation in test-only APIs or public debug metadata if needed.
-- [ ] Run targeted tests again; expected pass.
+- [ ] Add failing cross-surface fixture coverage where `vmc --noEmit` materializes `virtual:foo` for `src/main.ts`, then a Vite dev-server load for the same `virtual:foo`/importer reads the persisted source while the Vite plugin `build()` throws if it runs.
+- [ ] Reuse the vmc-written manifest/index as the proof boundary: Vite supplies the manifest's plugin/compiler fingerprints explicitly and contributes the same importer source fingerprint through the Vite adapter.
+- [ ] Add or tighten compiler-side fixture assertions proving vmc emits the reusable manifest fields the Vite fixture consumes: generated source path, plugin fingerprints, compiler fingerprints, and source input fingerprints.
+- [ ] Run targeted Vite/vmc integration tests; expected fail before the fixture/helper wiring is complete.
+- [ ] Add only minimal test helpers needed to read the artifact manifest/index; avoid public cache-hit instrumentation unless manifest/build-count proof is insufficient.
+- [ ] Run `pnpm --filter @typed/virtual-modules-vite test -- vitePlugin.integration`; expected pass.
+- [ ] Run `pnpm --filter @typed/virtual-modules-compiler test -- cli.integration`; expected pass.
+- [ ] Run targeted formatting/lint checks for changed test files.
 - [ ] Commit with `test: prove cross-surface virtual artifact reuse`.
 
 ### T10: TypeScript Plugin Integration

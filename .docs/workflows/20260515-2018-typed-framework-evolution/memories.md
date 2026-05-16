@@ -12,3 +12,4 @@
 - TypeInfo directory dependency fingerprints should hash only TS-family file extensions (`.ts`, `.tsx`, `.mts`, `.cts`, `.d.ts`), matching `TypeInfoApi.directory()`.
 - `vmc --watch` needs explicit watchers for non-project inputs: the vmc config, config helper modules, loaded plugin entry files, and plugin helper modules. Helper-only changes should trigger `updateRootFileNames()` through the watch handle.
 - Vite cannot safely infer plugin/config fingerprints from preloaded plugin function source. Default Vite artifact reads should fail closed and rebuild unless a host passes explicit `artifactStore.fingerprints.pluginFingerprints`.
+- Cross-surface vmc/Vite reuse fixtures should use the vmc manifest's `effectiveImporter` as the request identity. TypeScript/vmc may realpath temp paths (for example `/var` to `/private/var`), and cache identity/fingerprints must match that canonical importer.

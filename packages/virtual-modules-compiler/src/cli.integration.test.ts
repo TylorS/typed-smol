@@ -1,10 +1,24 @@
 /// <reference types="node" />
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  parseVirtualArtifactIndex,
+  parseVirtualArtifactManifest,
+  type VirtualArtifactIndex,
+  type VirtualArtifactManifest,
+} from "@typed/virtual-modules";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliPath = join(__dirname, "..", "dist", "cli.js");
@@ -139,10 +153,6 @@ interface VmcFixtureOptions {
   readonly entrySource?: string;
 }
 
-interface VirtualArtifactIndexFixture {
-  readonly artifacts?: Record<string, { readonly generatedSourcePath?: string }>;
-}
-
 function writeVmcFixture(dir: string, options: VmcFixtureOptions): void {
   const srcDir = join(dir, "src");
   mkdirSync(srcDir, { recursive: true });
@@ -171,11 +181,26 @@ function writeVmcFixture(dir: string, options: VmcFixtureOptions): void {
 }
 
 function readArtifactSourcePaths(dir: string): string[] {
+  return Object.values(readArtifactIndex(dir).artifacts).map((entry) => entry.generatedSourcePath);
+}
+
+function readArtifactIndex(dir: string): VirtualArtifactIndex {
   const indexPath = join(dir, "node_modules", ".typed", "virtual", "index.json");
-  const index = JSON.parse(readFileSync(indexPath, "utf8")) as VirtualArtifactIndexFixture;
-  return Object.values(index.artifacts ?? {}).flatMap((entry) =>
-    typeof entry.generatedSourcePath === "string" ? [entry.generatedSourcePath] : [],
-  );
+  const index = parseVirtualArtifactIndex(JSON.parse(readFileSync(indexPath, "utf8")));
+  expect(index.ok, index.ok ? "" : index.reason).toBe(true);
+  if (!index.ok) throw new Error(index.reason);
+  return index.index;
+}
+
+function readArtifactManifests(dir: string): VirtualArtifactManifest[] {
+  return Object.values(readArtifactIndex(dir).artifacts).map((entry) => {
+    const manifest = parseVirtualArtifactManifest(
+      JSON.parse(readFileSync(entry.manifestPath, "utf8")),
+    );
+    expect(manifest.ok, manifest.ok ? "" : manifest.reason).toBe(true);
+    if (!manifest.ok) throw new Error(manifest.reason);
+    return manifest.manifest;
+  });
 }
 
 describe("vmc CLI integration", () => {
@@ -287,6 +312,47 @@ describe("vmc CLI integration", () => {
     expect(artifactSources).toHaveLength(1);
     expect(artifactSources[0]).toContain(join("node_modules", ".typed", "virtual"));
     expect(readFileSync(artifactSources[0]!, "utf8")).toContain("ArtifactMarker");
+
+    const [manifest] = readArtifactManifests(dir);
+    expect(manifest).toBeDefined();
+    expect(manifest!.generatedSourcePath).toBe(artifactSources[0]);
+    expect(manifest!.sourceInputFingerprints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "file",
+          name: realpathSync(join(dir, "src", "entry.ts")),
+          hash: expect.stringMatching(/^sha256:/),
+        }),
+      ]),
+    );
+    expect(manifest!.pluginFingerprints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "config",
+          name: "vmc.config.ts",
+          hash: expect.stringMatching(/^sha256:/),
+        }),
+        expect.objectContaining({
+          kind: "config",
+          name: "vmc-resolver",
+          hash: expect.stringMatching(/^sha256:/),
+        }),
+      ]),
+    );
+    expect(manifest!.compilerFingerprints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "typescript",
+          name: "typescript",
+          hash: expect.stringMatching(/^sha256:/),
+        }),
+        expect.objectContaining({
+          kind: "tsconfig",
+          name: "parsed-tsconfig",
+          hash: expect.stringMatching(/^sha256:/),
+        }),
+      ]),
+    );
   });
 
   it("writes virtual module artifacts during build mode", () => {
