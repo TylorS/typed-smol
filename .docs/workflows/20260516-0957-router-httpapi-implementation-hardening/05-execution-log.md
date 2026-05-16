@@ -72,6 +72,24 @@ Task 1 added a reusable generated-source TypeScript compiler harness for virtual
   - non-raw generated handlers with `success` or `error` exports now map success/error channels to `Schema.Schema.Type<typeof Module.success/error>`
 - memory_updates: see `memories.md`
 
+### Task 5
+
+- task_id: T5
+- requirement_ids: FR-5, FR-7, FR-9, NFR-2, NFR-3, AC-3, AC-5
+- ts_scenarios: TS-3
+- validation_evidence:
+  - red: `pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts -t "treats unsupported reserved-looking files as non-participating"` failed because `_unknown.ts` produced `HTTPAPI-ROLE-006`
+  - green: `pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts src/httpapiFileRoles.test.ts src/httpapiDescriptorTree.test.ts` passed with 9 test files, 209 tests, and no type errors
+  - package: `pnpm --filter @typed/app build` passed
+  - package: `pnpm --filter @typed/app test` passed with 9 test files, 209 tests, and no type errors
+- commit: `fix(app): ignore non participating httpapi files`
+- deviations_or_replans:
+  - existing `_api.ts` collision coverage preserved supported-convention diagnostics; the implementation change was scoped to unmatched underscore-prefixed files
+- context_updates:
+  - `classifyHttpApiFileRole` now returns `non_participating` for unmatched underscore-prefixed files
+  - `buildHttpApiDescriptorTree` ignores `non_participating` roles instead of collecting diagnostics
+- memory_updates: see `memories.md`
+
 ## Deferred Work
 
 - HttpApi generated-source harness coverage starts in Task 3 after Router generated-source proof is committed.

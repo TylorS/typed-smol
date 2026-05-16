@@ -1,7 +1,7 @@
 /**
  * File-role classification for HttpApi virtual module discovery.
  * Implements the supported file-role matrix: API root, group, endpoint primary, endpoint companions, directory companions.
- * Diagnostics-ready metadata for unsupported reserved names.
+ * Unsupported reserved-looking names are non-participating unless they collide with a supported convention.
  */
 
 import { toPosixPath } from "./path.js";
@@ -63,7 +63,8 @@ export type HttpApiFileRole =
       readonly path: string;
       readonly diagnosticCode: string;
       readonly diagnosticMessage: string;
-    };
+    }
+  | { readonly role: "non_participating"; readonly path: string };
 
 /** Diagnostic-ready metadata for classification issues (e.g. unsupported companion name). */
 export type HttpApiFileRoleDiagnostic = {
@@ -92,7 +93,7 @@ export function isHttpApiScriptExtension(ext: string): boolean {
 /**
  * Classifies a single file path (relative to API root, posix) into an HttpApi file role.
  * Does not read the filesystem; only interprets path and filename.
- * Returns diagnostic-ready metadata for unsupported reserved names.
+ * Returns diagnostic-ready metadata for unsupported files that conflict with supported conventions.
  */
 export function classifyHttpApiFileRole(relativePath: string): HttpApiFileRole {
   const path = normalizeHttpApiRelativePath(relativePath);
@@ -171,12 +172,7 @@ export function classifyHttpApiFileRole(relativePath: string): HttpApiFileRole {
   }
 
   if (stem.startsWith("_")) {
-    return {
-      role: "unsupported_reserved",
-      path,
-      diagnosticCode: "HTTPAPI-ROLE-006",
-      diagnosticMessage: `reserved underscore-prefixed filename not in supported matrix: ${fileName}`,
-    };
+    return { role: "non_participating", path };
   }
 
   return { role: "endpoint_primary", path };

@@ -75,10 +75,9 @@ describe("httpapiFileRoles", () => {
       expect(r.role).toBe("unsupported_reserved");
       expect("diagnosticCode" in r && r.diagnosticCode).toBe("HTTPAPI-ROLE-001");
     });
-    it("rejects underscore-prefixed non-matrix files as unsupported_reserved", () => {
+    it("treats underscore-prefixed non-matrix files as non-participating", () => {
       const r = classifyHttpApiFileRole("_unknown.ts");
-      expect(r.role).toBe("unsupported_reserved");
-      expect("diagnosticCode" in r && r.diagnosticCode).toBe("HTTPAPI-ROLE-006");
+      expect(r).toEqual({ role: "non_participating", path: "_unknown.ts" });
     });
     it("rejects endpoint companion with empty base name", () => {
       const r = classifyHttpApiFileRole(".openapi.ts");

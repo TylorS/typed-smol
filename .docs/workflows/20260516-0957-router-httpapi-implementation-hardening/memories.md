@@ -15,3 +15,7 @@
 
 - The generated-source harness needs Node types enabled because HttpApi emitted source imports `node:http`.
 - Installed `HttpApiBuilder.handle` checks endpoint handlers against schema-decoded success/error channel types. Generated non-raw handlers should adapt user handler success/error channels to `Schema.Schema.Type<typeof Module.success/error>` when those exports exist.
+
+## T5 HttpApi Non-Participation
+
+- Unsupported underscore-prefixed files like `_unknown.ts` should classify as `non_participating`, not warning-producing `unsupported_reserved`. Keep diagnostics for files that actually collide with supported conventions, such as misplaced `_api.ts`.

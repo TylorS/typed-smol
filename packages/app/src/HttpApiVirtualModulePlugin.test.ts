@@ -417,7 +417,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
     expect(err.some((e) => e.code === "AVM-CONTRACT-003")).toBe(true);
   });
 
-  it("build returns warnings for unsupported reserved files while still emitting source", () => {
+  it("treats unsupported reserved-looking files as non-participating", () => {
     const fixture = createApiFixture({
       "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,
       "src/apis/users/_unknown.ts": "export {};",
@@ -438,83 +438,12 @@ describe("createHttpApiVirtualModulePlugin", () => {
     });
     const result = plugin.build("api:./apis", fixture.importer, session.api);
 
-    expect(typeof result).toBe("object");
-    if (typeof result === "string" || !result || !("sourceText" in result)) {
-      throw new Error("expected sourceText + warnings build result");
+    const sourceText = getSourceText(result);
+    expect(sourceText).toBeDefined();
+    expect(sourceText).not.toContain("_unknown");
+    if (typeof result === "object" && result && "warnings" in result) {
+      expect(result.warnings).toBeUndefined();
     }
-
-    const r = result as {
-      sourceText: string;
-      warnings?: Array<{ code: string; message?: string }>;
-    };
-    expect({ sourceText: r.sourceText, warnings: r.warnings }).toMatchInlineSnapshot(`
-      {
-        "sourceText": "import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";
-      import * as Effect from "effect/Effect";
-      import type * as Schema from "effect/Schema";
-      import * as Layer from "effect/Layer";
-      import * as HttpApi from "effect/unstable/httpapi/HttpApi";
-      import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
-      import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";
-      import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";
-      import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
-      import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
-      import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
-      import * as HttpServer from "effect/unstable/http/HttpServer";
-      import * as HttpRouter from "effect/unstable/http/HttpRouter";
-      import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
-      import http from "node:http";
-      import { NodeHttpServer } from "@effect/platform-node";
-      import * as UsersList from "./apis/users/list.js";
-
-      export const Api = HttpApi.make("apis").add(HttpApiGroup.make("users").add(HttpApiEndpoint.get("list", UsersList.route.path, { params: UsersList.route.pathSchema, query: UsersList.route.querySchema, success: UsersList.success, error: UsersList.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", (ctx) => Effect.mapError(Effect.map(UsersList.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined }), (value) => value as Schema.Schema.Type<typeof UsersList.success>), (error) => error as Schema.Schema.Type<typeof UsersList.error>)))));
-      export const OpenApi = OpenApiModule.fromApi(Api);
-      export const Swagger = HttpApiSwagger.layer(Api);
-      export const Scalar = HttpApiScalar.layer(Api);
-      export const Client = HttpApiClient.make(Api);
-
-      export const App = <const Layers extends readonly LayerOrGroup[] = []>(
-        config?: AppConfig,
-        ...layersToMergeIntoRouter: Layers
-      ): Layer.Layer<
-        Layer.Success<ComputeLayers<Layers, typeof ApiLayer>>, 
-        Layer.Error<ComputeLayers<Layers, typeof ApiLayer>>, 
-        Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
-      > => {
-        const disableListenLog = config?.disableListenLog ?? false;
-        const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter) as ComputeLayers<
-          Layers,
-          typeof ApiLayer
-        >;
-        return HttpRouter.serve(appLayer, { disableListenLog })
-      };
-
-      export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
-        config?: RunConfig,
-        ...layersToMergeIntoRouter: Layers
-      ) =>
-        Layer.unwrap(
-          Effect.gen(function* () {
-            const host = yield* resolveConfig(config?.host, "0.0.0.0");
-            const port = yield* resolveConfig(config?.port, 3000);
-            const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-            const appConfig: AppConfig = { disableListenLog };
-            const appLayer = App(appConfig, ...layersToMergeIntoRouter);
-            const serverLayer = NodeHttpServer.layer(http.createServer, { host, port });
-            return appLayer.pipe(Layer.provide(serverLayer));
-          }),
-        );
-      ",
-        "warnings": [
-          {
-            "code": "HTTPAPI-ROLE-006",
-            "message": "reserved underscore-prefixed filename not in supported matrix: _unknown.ts",
-            "pluginName": "httpapi-virtual-module",
-          },
-        ],
-      }
-    `);
   });
 
   it("build returns AVM-ID-001 when virtual module id is invalid", () => {

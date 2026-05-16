@@ -84,7 +84,7 @@ export type HttpApiTreeDiagnostic = {
 };
 
 export type BuildHttpApiDescriptorTreeInput = {
-  /** Classified file roles (supported and unsupported_reserved). */
+  /** Classified file roles. Unsupported reserved roles become diagnostics; non-participating roles are ignored. */
   readonly roles: readonly HttpApiFileRole[];
   /** Optional: only include paths under this base (relative); not used for filtering if empty. */
   readonly baseDir?: string;
@@ -101,6 +101,9 @@ export function buildHttpApiDescriptorTree(
   const diagnostics: HttpApiTreeDiagnostic[] = [];
   const supported: HttpApiFileRole[] = [];
   for (const r of roles) {
+    if (r.role === "non_participating") {
+      continue;
+    }
     if (r.role === "unsupported_reserved") {
       diagnostics.push({
         code: r.diagnosticCode,

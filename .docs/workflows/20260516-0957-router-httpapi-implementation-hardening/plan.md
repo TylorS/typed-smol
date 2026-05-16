@@ -351,37 +351,43 @@ git commit -m "fix(app): typecheck httpapi generated source" -m "- add generated
 
 ### Task 5: HttpApi Convention Parity and Non-Participation
 
+Status: completed.
+
+Detailed execution notes:
+- Start by changing `_unknown.ts` from warning-producing to non-participating behavior.
+- Keep supported convention collision diagnostics intact; only unsupported reserved-looking files become inert.
+
 **Files:**
 - Modify: `packages/app/src/internal/httpapiFileRoles.ts`
 - Modify: `packages/app/src/internal/httpapiDescriptorTree.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 
-- [ ] **Step 1: Add red tests for non-participating files**
+- [x] **Step 1: Add red tests for non-participating files**
 
 Test that `src/apis/users/_unknown.ts` does not produce warnings/errors and does not affect source.
 
-- [ ] **Step 2: Add red tests for supported convention collisions**
+- [x] **Step 2: Add red tests for supported convention collisions**
 
 Examples:
 
 - duplicate `_api.ts` equivalent from normalized paths if representable;
 - endpoint primary and endpoint companion collision where supported convention semantics are ambiguous.
 
-- [ ] **Step 3: Change role classifier**
+- [x] **Step 3: Change role classifier**
 
 Represent unmatched reserved-looking files as ignored/non-participating, or filter them before descriptor diagnostics.
 
-- [ ] **Step 4: Preserve diagnostics for real collisions**
+- [x] **Step 4: Preserve diagnostics for real collisions**
 
 Keep or add structured `AVM-*` diagnostics only for supported participating conventions that conflict.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```bash
 pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/app/src/internal/httpapiFileRoles.ts packages/app/src/internal/httpapiDescriptorTree.ts packages/app/src/HttpApiVirtualModulePlugin.test.ts
