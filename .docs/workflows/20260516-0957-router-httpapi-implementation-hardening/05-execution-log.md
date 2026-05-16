@@ -90,6 +90,24 @@ Task 1 added a reusable generated-source TypeScript compiler harness for virtual
   - `buildHttpApiDescriptorTree` ignores `non_participating` roles instead of collecting diagnostics
 - memory_updates: see `memories.md`
 
+### Task 6
+
+- task_id: T6
+- requirement_ids: FR-8, FR-10, NFR-5, AC-6, AC-7
+- ts_scenarios: TS-6, TS-7
+- validation_evidence:
+  - red: `pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts -t "openapi"` failed because Scalar CDN/config and API annotations were not emitted
+  - green: same command passed with 9 test files, 210 tests, and no type errors
+  - package: `pnpm --filter @typed/app build` passed
+  - package: `pnpm --filter @typed/app test` passed with 9 test files, 210 tests, and no type errors
+- commit: `fix(app): harden httpapi openapi generation`
+- deviations_or_replans:
+  - stale `additionalProperties` remains a Task 7 docs/spec deferral; implementation still does not emit unsupported `OpenApi.fromApi` options
+- context_updates:
+  - `_api.ts openapi.exposure.scalar` now preserves `source`, `version`, and literal config values
+  - API annotations emit `OpenApiModule.annotations(...)` via `.annotateMerge(...)`
+- memory_updates: see `memories.md`
+
 ## Deferred Work
 
 - HttpApi generated-source harness coverage starts in Task 3 after Router generated-source proof is committed.

@@ -124,6 +124,21 @@ function getSourceText(result: unknown): string | undefined {
   return undefined;
 }
 
+function expectHttpApiGeneratedSourceToTypeCheck(
+  fixture: ReturnType<typeof createApiFixture>,
+  sourceText: string,
+  generatedPath = "src/api.generated.ts",
+) {
+  const typeCheck = typeCheckGeneratedSource({
+    rootDir: fixture.root,
+    generatedPath,
+    sourceText,
+    rootFiles: fixture.paths,
+    moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
+  });
+  expect(typeCheck.diagnostics).toEqual([]);
+}
+
 const NM = join(APP_ROOT, "node_modules");
 
 const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
@@ -1050,7 +1065,7 @@ export const prefix = Route.Parse("/api");
       expect(sourceText).toContain('.prefix("/api")');
     });
 
-    it("_api.ts openapi.exposure: emits HttpApiBuilder/Swagger/Scalar with paths", () => {
+    it("_api.ts openapi.exposure: emits installed JSON, Swagger, and Scalar CDN layers", () => {
       const apiWithExposure = `
 import * as Route from "@typed/router";
 export const prefix = Route.Parse("/api");
@@ -1058,20 +1073,61 @@ export const openapi = {
   exposure: {
     jsonPath: "/api/docs/spec" as const,
     swaggerPath: "/api/docs/swagger" as const,
-    scalar: { path: "/api/docs" as const },
+    scalar: {
+      path: "/api/docs" as const,
+      source: "cdn" as const,
+      version: "1.25.0" as const,
+      config: { theme: "moon" as const, hideModels: true as const },
+    },
   },
 };
 `;
-      const result = buildApiFromFixture({
+      const fixture = createApiFixture({
         "src/apis/_api.ts": apiWithExposure,
         "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
       });
+      const result = buildApiFromExistingFixture(fixture);
       expect(result).not.toHaveProperty("errors");
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
+      if (!sourceText) return;
       expect(sourceText).toContain('openapiPath: "/api/docs/spec"');
       expect(sourceText).toContain('path: "/api/docs/swagger"');
-      expect(sourceText).toContain('path: "/api/docs"');
+      expect(sourceText).toContain("HttpApiScalar.layerCdn(Api");
+      expect(sourceText).toContain('version: "1.25.0"');
+      expect(sourceText).toContain('theme: "moon"');
+      expect(sourceText).toContain("hideModels: true");
+      expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText, "src/api-openapi.generated.ts");
+    });
+
+    it("_api.ts openapi.annotations: annotates generated Api with installed OpenApi annotations", () => {
+      const apiWithAnnotations = `
+export const openapi = {
+  annotations: {
+    title: "Status API" as const,
+    version: "2026.05" as const,
+    description: "Generated docs" as const,
+  },
+};
+`;
+      const fixture = createApiFixture({
+        "src/apis/_api.ts": apiWithAnnotations,
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const result = buildApiFromExistingFixture(fixture);
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      if (!sourceText) return;
+      expect(sourceText).toContain("OpenApiModule.annotations");
+      expect(sourceText).toContain('title: "Status API"');
+      expect(sourceText).toContain('version: "2026.05"');
+      expect(sourceText).toContain(".annotateMerge(");
+      expectHttpApiGeneratedSourceToTypeCheck(
+        fixture,
+        sourceText,
+        "src/api-openapi-annotations.generated.ts",
+      );
     });
   });
 });

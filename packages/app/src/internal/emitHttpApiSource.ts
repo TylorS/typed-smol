@@ -24,7 +24,7 @@ import type {
 import { compareHttpApiPathOrder } from "./httpapiFileRoles.js";
 import { stripScriptExtension, toPosixPath } from "./path.js";
 import { makeUniqueVarNames, pathToIdentifier } from "./routeIdentifiers.js";
-import type { OpenApiExposureConfig } from "./httpapiOpenApiConfig.js";
+import type { OpenApiAnnotationsConfig, OpenApiExposureConfig } from "./httpapiOpenApiConfig.js";
 import type { PrefixByScope } from "./validatePrefixConventions.js";
 
 const ROOT_GROUP_KEY = "__root__";
@@ -432,6 +432,7 @@ export function emitHttpApiSource(input: {
   readonly prefixByScope?: PrefixByScope;
   readonly pathPrefix?: `/${string}`;
   readonly openapiExposure?: OpenApiExposureConfig;
+  readonly openapiAnnotations?: OpenApiAnnotationsConfig;
 }): string {
   const directoryConventions = indexDirectoryConventions(input.tree);
   const endpointSpecs = buildEndpointRenderSpecs(input.tree, directoryConventions);
@@ -518,7 +519,10 @@ export function emitHttpApiSource(input: {
   }
 
   const apiChain = groupExprs.map((g) => `.add(${g})`).join("");
-  const apiExpr = `HttpApi.make(${JSON.stringify(apiId)})${apiChain}`;
+  const apiExpr = renderAnnotatedApiExpression(
+    `HttpApi.make(${JSON.stringify(apiId)})${apiChain}`,
+    input.openapiAnnotations,
+  );
 
   const groupLayerBlocks: string[] = [];
   for (const groupSpec of groupSpecs) {
@@ -561,10 +565,7 @@ export function emitHttpApiSource(input: {
     swaggerPath && typeof swaggerPath === "string"
       ? `HttpApiSwagger.layer(Api, { path: ${JSON.stringify(swaggerPath)} })`
       : "HttpApiSwagger.layer(Api)";
-  const scalarExpr =
-    scalarConfig && typeof scalarConfig === "object" && scalarConfig.path
-      ? `HttpApiScalar.layer(Api, { path: ${JSON.stringify(scalarConfig.path)} })`
-      : "HttpApiScalar.layer(Api)";
+  const scalarExpr = renderScalarLayer("Api", scalarConfig);
   const baseApiLayer = apiLayerOptions
     ? `HttpApiBuilder.layer(Api, ${apiLayerOptions})`
     : `HttpApiBuilder.layer(Api)`;
@@ -650,4 +651,38 @@ function emitHandlerCall(input: HandlerCallInput): string {
   return input.optionalExports.has("error")
     ? `Effect.mapError(${successTyped}, (error) => error as Schema.Schema.Type<typeof ${input.moduleName}.error>)`
     : successTyped;
+}
+
+function renderAnnotatedApiExpression(
+  apiExpression: string,
+  annotations: OpenApiAnnotationsConfig | undefined,
+): string {
+  if (!annotations || Object.keys(annotations).length === 0) return apiExpression;
+  return `${apiExpression}.annotateMerge(OpenApiModule.annotations(${renderObjectLiteral(annotations)}))`;
+}
+
+function renderScalarLayer(apiName: string, scalar: OpenApiExposureConfig["scalar"]): string {
+  if (!scalar || typeof scalar !== "object" || !scalar.path) return `HttpApiScalar.layer(${apiName})`;
+  const options = renderObjectLiteral({
+    path: scalar.path,
+    ...(scalar.config ? { scalar: scalar.config } : {}),
+    ...(scalar.version ? { version: scalar.version } : {}),
+  });
+  return scalar.source === "cdn"
+    ? `HttpApiScalar.layerCdn(${apiName}, ${options})`
+    : `HttpApiScalar.layer(${apiName}, ${options})`;
+}
+
+function renderObjectLiteral(value: Readonly<Record<string, unknown>>): string {
+  const entries = Object.entries(value).map(([key, entry]) => `${key}: ${renderValue(entry)}`);
+  return `{ ${entries.join(", ")} }`;
+}
+
+function renderValue(value: unknown): string {
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value && typeof value === "object") {
+    return renderObjectLiteral(value as Readonly<Record<string, unknown>>);
+  }
+  return "undefined";
 }

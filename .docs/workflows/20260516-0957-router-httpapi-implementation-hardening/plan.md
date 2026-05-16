@@ -396,13 +396,20 @@ git commit -m "fix(app): ignore non participating httpapi files" -m "- stop warn
 
 ### Task 6: OpenAPI Annotations and Exposure
 
+Status: completed.
+
+Detailed execution notes:
+- Added generated-source proof for API-scope OpenAPI exposure and annotations.
+- Implemented installed Effect APIs: `HttpApiScalar.layerCdn`, `OpenApiModule.annotations`, and `.annotateMerge`.
+- Kept stale `additionalProperties` as a documented deferral for Task 7 spec sync; it is still not emitted into `OpenApi.fromApi`.
+
 **Files:**
 - Modify: `packages/app/src/internal/httpapiOpenApiConfig.ts`
 - Modify: `packages/app/src/internal/extractHttpApiOpenApi.ts`
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 
-- [ ] **Step 1: Add red tests for exposure**
+- [x] **Step 1: Add red tests for exposure**
 
 Fixtures:
 
@@ -411,7 +418,7 @@ Fixtures:
 - Scalar inline emits `HttpApiScalar.layer(Api, { path, scalar })`;
 - Scalar CDN emits `HttpApiScalar.layerCdn(Api, { path, scalar, version })`.
 
-- [ ] **Step 2: Add red tests for annotations**
+- [x] **Step 2: Add red tests for annotations**
 
 Fixtures:
 
@@ -419,11 +426,11 @@ Fixtures:
 - `_group.ts` annotations emit group annotation source;
 - endpoint `.openapi.ts` or in-file `openapi` emits endpoint annotation source where supported.
 
-- [ ] **Step 3: Add red test for stale `additionalProperties`**
+- [x] **Step 3: Preserve stale `additionalProperties` as an explicit deferral**
 
 Expected: diagnostic or documented deferral, never emitted `OpenApi.fromApi(Api, ...)`.
 
-- [ ] **Step 4: Implement extraction and rendering**
+- [x] **Step 4: Implement extraction and rendering**
 
 Update extraction to carry:
 
@@ -431,11 +438,11 @@ Update extraction to carry:
 - exposure `{ jsonPath, swaggerPath, scalar: { path, source, version, config } }`;
 - unsupported generation config diagnostics.
 
-- [ ] **Step 5: Verify generated source type-checks**
+- [x] **Step 5: Verify generated source type-checks**
 
 Run targeted OpenAPI tests, then full HttpApi test file.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/app/src/internal/httpapiOpenApiConfig.ts packages/app/src/internal/extractHttpApiOpenApi.ts packages/app/src/internal/emitHttpApiSource.ts packages/app/src/HttpApiVirtualModulePlugin.test.ts

@@ -8,7 +8,16 @@ import type {
   TypeInfoFileSnapshot,
   TypeNode,
 } from "@typed/virtual-modules";
-import type { OpenApiExposureConfig, OpenApiScalarExposureConfig } from "./httpapiOpenApiConfig.js";
+import type {
+  OpenApiAnnotationsConfig,
+  OpenApiExposureConfig,
+  OpenApiScalarExposureConfig,
+} from "./httpapiOpenApiConfig.js";
+
+export type ExtractedOpenApiConfig = {
+  readonly annotations?: OpenApiAnnotationsConfig;
+  readonly exposure?: OpenApiExposureConfig;
+};
 
 /** Match TypeInfo literal text with optional surrounding quotes (same as extractHttpApiLiterals). */
 function normalizeTypeInfoLiteralText(text: string): string {
@@ -43,6 +52,29 @@ function getProperty(type: TypeNode, name: string): TypeNode | undefined {
   return undefined;
 }
 
+function getLiteralValue(node: TypeNode | undefined): unknown {
+  if (!node) return undefined;
+  if (node.text === "true") return true;
+  if (node.text === "false") return false;
+  const literal = getLiteralString(node);
+  if (literal !== null) return literal;
+  const numeric = Number(node.text);
+  return Number.isFinite(numeric) && node.text.trim() !== "" ? numeric : undefined;
+}
+
+function getObjectValue(node: TypeNode | undefined): Record<string, unknown> | undefined {
+  if (!node) return undefined;
+  const obj = getObjectFromNode(node);
+  if (!obj) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const property of obj.properties) {
+    const value =
+      property.type.kind === "object" ? getObjectValue(property.type) : getLiteralValue(property.type);
+    if (value !== undefined) out[property.name] = value;
+  }
+  return out;
+}
+
 function getObjectFromNode(node: TypeNode): ObjectTypeNode | undefined {
   if (node.kind === "object") return node as ObjectTypeNode;
   if (node.kind === "intersection") {
@@ -61,49 +93,59 @@ function getObjectFromNode(node: TypeNode): ObjectTypeNode | undefined {
 export function extractOpenApiExposureConfig(
   snapshot: TypeInfoFileSnapshot,
 ): OpenApiExposureConfig | null {
+  return extractOpenApiConfig(snapshot)?.exposure ?? null;
+}
+
+export function extractOpenApiConfig(snapshot: TypeInfoFileSnapshot): ExtractedOpenApiConfig | null {
   const openapiExport = snapshot.exports.find((e) => e.name === "openapi");
   if (!openapiExport) return null;
 
   const openapiType = openapiExport.type;
+  const annotations = getObjectValue(getProperty(openapiType, "annotations"));
   const exposureObj = getProperty(openapiType, "exposure");
-  if (!exposureObj) return null;
+  const exposure = exposureObj ? extractExposureConfig(exposureObj) : undefined;
 
-  const obj = getObjectFromNode(exposureObj);
-  if (!obj) return null;
+  if (!annotations && !exposure) return null;
+  return {
+    ...(annotations && { annotations }),
+    ...(exposure && { exposure }),
+  };
+}
 
-  let jsonPath: `/${string}` | undefined;
-  let swaggerPath: `/${string}` | undefined;
-  let scalar: OpenApiScalarExposureConfig | undefined;
+function extractExposureConfig(exposureObj: TypeNode): OpenApiExposureConfig | undefined {
+  if (!getObjectFromNode(exposureObj)) return undefined;
 
-  const jsonPathVal = getProperty(exposureObj, "jsonPath");
-  if (jsonPathVal) {
-    const literal = getLiteralString(jsonPathVal);
-    if (literal !== null && literal.startsWith("/")) {
-      jsonPath = literal as `/${string}`;
-    }
-  }
+  const jsonPath = getPathProperty(exposureObj, "jsonPath");
+  const swaggerPath = getPathProperty(exposureObj, "swaggerPath");
+  const scalar = extractScalarConfig(getProperty(exposureObj, "scalar"));
 
-  const swaggerPathVal = getProperty(exposureObj, "swaggerPath");
-  if (swaggerPathVal) {
-    const literal = getLiteralString(swaggerPathVal);
-    if (literal !== null && literal.startsWith("/")) {
-      swaggerPath = literal as `/${string}`;
-    }
-  }
-
-  const scalarVal = getProperty(exposureObj, "scalar");
-  if (scalarVal && scalarVal.kind === "object") {
-    const pathVal = getProperty(scalarVal, "path");
-    const pathLiteral = pathVal ? getLiteralString(pathVal) : null;
-    if (pathLiteral !== null && pathLiteral.startsWith("/")) {
-      scalar = { path: pathLiteral as `/${string}` };
-    }
-  }
-
-  if (!jsonPath && !swaggerPath && !scalar) return null;
+  if (!jsonPath && !swaggerPath && !scalar) return undefined;
   return {
     ...(jsonPath && { jsonPath }),
     ...(swaggerPath && { swaggerPath }),
     ...(scalar && { scalar }),
   } as OpenApiExposureConfig;
+}
+
+function getPathProperty(node: TypeNode, name: string): `/${string}` | undefined {
+  const value = getProperty(node, name);
+  const literal = value ? getLiteralString(value) : null;
+  return literal !== null && literal.startsWith("/") ? (literal as `/${string}`) : undefined;
+}
+
+function extractScalarConfig(node: TypeNode | undefined): OpenApiScalarExposureConfig | undefined {
+  if (!node || node.kind !== "object") return undefined;
+  const pathVal = getProperty(node, "path");
+  const pathLiteral = pathVal ? getLiteralString(pathVal) : null;
+  if (pathLiteral === null || !pathLiteral.startsWith("/")) return undefined;
+
+  const source = getLiteralString(getProperty(node, "source"));
+  const version = getLiteralString(getProperty(node, "version"));
+  const config = getObjectValue(getProperty(node, "config"));
+  return {
+    path: pathLiteral as `/${string}`,
+    ...(source === "cdn" || source === "inline" ? { source } : {}),
+    ...(version ? { version } : {}),
+    ...(config ? { config } : {}),
+  };
 }

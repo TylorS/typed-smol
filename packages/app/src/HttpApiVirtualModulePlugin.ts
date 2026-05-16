@@ -15,7 +15,7 @@ import { classifyHttpApiFileRole } from "./internal/httpapiFileRoles.js";
 import { emitHttpApiSource } from "./internal/emitHttpApiSource.js";
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
 import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
-import { extractOpenApiExposureConfig } from "./internal/extractHttpApiOpenApi.js";
+import { extractOpenApiConfig } from "./internal/extractHttpApiOpenApi.js";
 import { normalizeOpenApiConfig } from "./internal/httpapiOpenApiConfig.js";
 import {
   getCallableReturnType,
@@ -328,6 +328,9 @@ export const createHttpApiVirtualModulePlugin = (
       let openapiExposure:
         | import("./internal/httpapiOpenApiConfig.js").OpenApiExposureConfig
         | undefined;
+      let openapiAnnotations:
+        | import("./internal/httpapiOpenApiConfig.js").OpenApiAnnotationsConfig
+        | undefined;
       const apiRootConvention = tree.conventions.find(
         (c): c is { path: string; kind: "api_root" } =>
           (c as { kind?: string }).kind === "api_root",
@@ -336,13 +339,15 @@ export const createHttpApiVirtualModulePlugin = (
       if (apiRootPath) {
         const apiRootSnapshot = snapshotsByRelativePath.get(apiRootPath);
         if (apiRootSnapshot) {
-          const extracted = extractOpenApiExposureConfig(apiRootSnapshot);
+          const extracted = extractOpenApiConfig(apiRootSnapshot);
           if (extracted) {
             const { config, diagnostics } = normalizeOpenApiConfig("api", {
-              exposure: extracted,
+              annotations: extracted.annotations,
+              exposure: extracted.exposure,
             });
             if (diagnostics.length === 0) {
               openapiExposure = config.exposure;
+              openapiAnnotations = config.annotations;
             }
           }
         }
@@ -401,6 +406,7 @@ export const createHttpApiVirtualModulePlugin = (
         prefixByScope,
         pathPrefix: options.pathPrefix,
         openapiExposure,
+        openapiAnnotations,
       });
       if (tree.diagnostics.length > 0) {
         return {

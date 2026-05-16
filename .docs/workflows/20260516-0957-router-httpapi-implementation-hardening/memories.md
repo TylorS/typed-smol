@@ -19,3 +19,8 @@
 ## T5 HttpApi Non-Participation
 
 - Unsupported underscore-prefixed files like `_unknown.ts` should classify as `non_participating`, not warning-producing `unsupported_reserved`. Keep diagnostics for files that actually collide with supported conventions, such as misplaced `_api.ts`.
+
+## T6 HttpApi OpenAPI
+
+- Installed Effect Scalar CDN support is `HttpApiScalar.layerCdn(Api, { path, scalar, version })`; inline uses `HttpApiScalar.layer(Api, { path, scalar })`.
+- Installed OpenAPI annotations are applied with `.annotateMerge(OpenApiModule.annotations({ ... }))`; `OpenApi.fromApi(Api)` does not accept stale generation options in the installed declarations.
