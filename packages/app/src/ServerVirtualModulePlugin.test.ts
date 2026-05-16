@@ -40,15 +40,18 @@ describe("ServerVirtualModulePlugin", () => {
     expect(plugin.shouldResolve("typed:browser?routes=*", "/project/src/entry.ts")).toBe(false);
   });
 
-  it("emits run, handler, and ServerLayer exports for APIs and routes", () => {
+  it("emits composable run, handler, and ServerLayer exports for APIs and routes", () => {
     const source = buildServer("typed:server?api=./api&routes=./routes1&routes=./routes2") as string;
 
+    expect(source).toContain('import { Effect } from "effect";');
     expect(source).toContain('import * as Api0 from "api:./api";');
     expect(source).toContain('import * as Routes0 from "router:./routes1";');
     expect(source).toContain('import * as Routes1 from "router:./routes2";');
     expect(source).toContain("export const ServerLayer =");
     expect(source).toContain("export const handler =");
-    expect(source).toContain("export async function run");
+    expect(source).toContain("export function run");
+    expect(source).toContain("Effect.succeed(handler)");
+    expect(source).not.toContain("export async function run");
   });
 
   it("preserves source order for repeated api and routes parameters", () => {

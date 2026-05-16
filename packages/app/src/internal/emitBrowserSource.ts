@@ -8,6 +8,7 @@ export interface EmitBrowserSourceInput {
 
 export function emitBrowserSource(input: EmitBrowserSourceInput): string {
   return [
+    'import { Effect } from "effect";',
     ...emitRouteImports(input.parsed.routes),
     ...emitCompanionImports(input.companions ?? []),
     emitRuntime(input.parsed, input.companions ?? []),
@@ -46,9 +47,9 @@ function emitRuntime(
     "  companionLayers,",
     "};",
     "export function hydrate(options = {}) {",
-    "  return options.hydrate ? options.hydrate(BrowserRuntime) : BrowserRuntime;",
+    "  return options.hydrate ? options.hydrate(BrowserRuntime) : Effect.succeed(BrowserRuntime);",
     "}",
-    "export async function run(options = {}) {",
+    "export function run(options = {}) {",
     "  return options.run ? options.run(BrowserRuntime) : hydrate(options);",
     "}",
   ].join("\n");

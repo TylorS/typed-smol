@@ -99,7 +99,7 @@ Status: draft pending human approval.
 | required_options | at least one `api` or `routes` parameter |
 | repeatable_options | `api`, `routes` |
 | optional_options | `html`, `client`, `page`, `base`, `name` |
-| generated_exports | `run`, `handler`, and `ServerLayer` |
+| generated_exports | `run`, `handler`, and `ServerLayer`; `run` returns an `Effect` for user composition |
 | api_behavior | imports each `api` target through the configured HttpApi VM prefix and composes all APIs into one server path |
 | routes_behavior | imports each `routes` target through the configured router VM prefix and composes all routers after API handling |
 | html_behavior | if one `html` is provided, imports `typed:html?path=<html>` for the default SSR fallback rendering |
@@ -122,7 +122,7 @@ Status: draft pending human approval.
 | repeatable_options | `routes` |
 | optional_options | `root`, `base`, `mode`, `name` |
 | option_defaults | `root="#app"`, `base="/"`, `mode="hydrate"` |
-| generated_exports | `run`, `hydrate`, and `BrowserRuntime` |
+| generated_exports | `run`, `hydrate`, and `BrowserRuntime`; `run` and `hydrate` return `Effect`s for user composition |
 | routes_behavior | `routes=*` resolves by convention from the importing entry; explicit `routes=./dir` imports that router VM target |
 | mode_behavior | `hydrate` hydrates SSR markup; `mount` performs CSR mount; `mpa` prepares per-entry bootstrap without changing router ownership |
 | mpa_behavior | a browser entry may be paired with exactly one HTML page by `typed:server`; multiple pages use multiple browser entries |

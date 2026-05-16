@@ -39,7 +39,7 @@ const RESERVED_WORDS = new Set([
 const IDENTIFIER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 export function emitConfigSource(
-  config: Readonly<Record<string, unknown>>,
+  config: Readonly<object>,
   pluginName: string,
 ): string | VirtualModuleBuildError {
   const lines: string[] = [];

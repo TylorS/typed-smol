@@ -15,6 +15,7 @@ export function emitServerSource(input: EmitServerSourceInput): string {
   const imports = createOrderedImports(input.id);
   const pages = createPageEntries(input.parsed);
   return [
+    'import { Effect } from "effect";',
     ...emitImports(imports),
     ...emitHtmlImports(pages),
     ...emitCompanionImports(input.companions ?? []),
@@ -95,8 +96,8 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     `const companionLayers = ${companionLayers};`,
     "export const ServerLayer = { apiModules, routeModules, pageEntries, companionPages, companionLayers };",
     "export const handler = { apiModules, routeModules, pageEntries, companionPages, companionLayers };",
-    "export async function run(options = {}) {",
-    "  return options.run ? options.run(handler) : handler;",
+    "export function run(options = {}) {",
+    "  return options.run ? options.run(handler) : Effect.succeed(handler);",
     "}",
   ].join("\n");
 }
