@@ -1,6 +1,107 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import * as ts from "typescript";
 import { toPosixPath } from "./path.js";
+
+interface LiteralReplacement {
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
+}
+
+const isRelativeModuleSpecifier = (specifier: string): boolean =>
+  specifier.startsWith("./") || specifier.startsWith("../");
+
+const rewriteModuleSpecifierText = (
+  specifier: string,
+  importerDir: string,
+  previewDir: string,
+): string => {
+  if (!isRelativeModuleSpecifier(specifier)) return specifier;
+
+  const absoluteTarget = resolve(importerDir, specifier);
+  const newRel = toPosixPath(relative(previewDir, absoluteTarget));
+  return newRel.startsWith(".") ? newRel : `./${newRel}`;
+};
+
+const createLiteralReplacement = (
+  literal: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral,
+  sourceFile: ts.SourceFile,
+  importerDir: string,
+  previewDir: string,
+): LiteralReplacement | undefined => {
+  const rewritten = rewriteModuleSpecifierText(literal.text, importerDir, previewDir);
+  if (rewritten === literal.text) return undefined;
+  const original = literal.getText(sourceFile);
+  return {
+    start: literal.getStart(sourceFile),
+    end: literal.getEnd(),
+    text: quoteLikeOriginal(original, rewritten),
+  };
+};
+
+const quoteLikeOriginal = (original: string, value: string): string => {
+  const quote = original.startsWith("'") ? "'" : original.startsWith("`") ? "`" : '"';
+  if (quote === "`") return `\`${escapeTemplateLiteralText(value)}\``;
+  return `${quote}${escapeStringLiteralText(value, quote)}${quote}`;
+};
+
+const escapeStringLiteralText = (value: string, quote: "'" | '"'): string =>
+  value.replaceAll("\\", "\\\\").replaceAll(quote, `\\${quote}`);
+
+const escapeTemplateLiteralText = (value: string): string =>
+  value.replaceAll("\\", "\\\\").replaceAll("`", "\\`").replaceAll("${", "\\${");
+
+const rewriteModuleSpecifiers = (
+  sourceFile: ts.SourceFile,
+  importerDir: string,
+  previewDir: string,
+): string => {
+  const replacements: LiteralReplacement[] = [];
+  const add = (literal: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral): void => {
+    const replacement = createLiteralReplacement(literal, sourceFile, importerDir, previewDir);
+    if (replacement) replacements.push(replacement);
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      add(node.moduleSpecifier);
+    } else if (
+      ts.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      add(node.moduleSpecifier);
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const [moduleSpecifier] = node.arguments;
+      if (
+        ts.isStringLiteral(moduleSpecifier) ||
+        ts.isNoSubstitutionTemplateLiteral(moduleSpecifier)
+      ) {
+        add(moduleSpecifier);
+      }
+    } else if (ts.isImportTypeNode(node)) {
+      const argument = node.argument;
+      if (ts.isLiteralTypeNode(argument) && ts.isStringLiteral(argument.literal)) {
+        add(argument.literal);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return applyReplacements(sourceFile.text, replacements);
+};
+
+const applyReplacements = (
+  sourceText: string,
+  replacements: readonly LiteralReplacement[],
+): string => {
+  let rewritten = sourceText;
+  for (const replacement of [...replacements].sort((left, right) => right.start - left.start)) {
+    rewritten =
+      rewritten.slice(0, replacement.start) + replacement.text + rewritten.slice(replacement.end);
+  }
+  return rewritten;
+};
 
 /**
  * Rewrite relative import specifiers in sourceText so they resolve correctly when
@@ -13,13 +114,15 @@ export function rewriteSourceForPreviewLocation(
 ): string {
   const importerDir = dirname(resolve(importer));
   const previewDir = dirname(resolve(virtualFilePath));
-  return sourceText.replace(/from\s+['"](\.\.?\/[^'"]+)['"]/g, (match, spec: string) => {
-    const absoluteTarget = resolve(importerDir, spec);
-    const newRel = toPosixPath(relative(previewDir, absoluteTarget));
-    const newSpec = newRel.startsWith(".") ? newRel : `./${newRel}`;
-    const quote = match.includes('"') ? '"' : "'";
-    return `from ${quote}${newSpec}${quote}`;
-  });
+  const scriptKind = virtualFilePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(
+    virtualFilePath,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
+  );
+  return rewriteModuleSpecifiers(sourceFile, importerDir, previewDir);
 }
 
 /**

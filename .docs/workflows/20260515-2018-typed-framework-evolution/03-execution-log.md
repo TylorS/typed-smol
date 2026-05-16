@@ -98,6 +98,28 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - Normal read paths return miss/invalid states for missing/corrupt/stale artifacts instead of throwing.
 - memory_updates: deferred until implementation patterns stabilize
 
+### T5 — Module Specifier Handling
+
+- task_id: T5
+- requirement_ids: NFR-7, NFR-9, AC-15
+- ts_scenarios: TS-11
+- validation_evidence:
+  - Red: `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile`; failed because side-effect import `import "./setup"` remained unchanged, with `Test Files 1 failed | 12 passed (13)`, `Tests 1 failed | 120 passed (121)`.
+  - Green: `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile`; passed with `Test Files 13 passed (13)`, `Tests 121 passed (121)`.
+  - `pnpm exec oxfmt packages/virtual-modules/src/internal/materializeVirtualFile.ts packages/virtual-modules/src/internal/materializeVirtualFile.test.ts`; formatted touched files.
+  - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/materializeVirtualFile.ts packages/virtual-modules/src/internal/materializeVirtualFile.test.ts`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules/src/internal/materializeVirtualFile.ts packages/virtual-modules/src/internal/materializeVirtualFile.test.ts`; 0 warnings, 0 errors.
+  - `pnpm --filter @typed/virtual-modules build`; exit 0.
+  - Code review first pass requested TSX parsing, `import("./type")` type-node rewriting, no-substitution-template dynamic imports, and reduced source-printer churn.
+  - Syntax Red: `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile`; failed because template dynamic imports and import type nodes were unchanged and TSX printed invalidly, `Test Files 1 failed | 12 passed (13)`, `Tests 2 failed | 120 passed (122)`.
+  - Syntax Green: `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile`; passed with `Test Files 13 passed (13)`, `Tests 122 passed (122)`.
+- commit: pending
+- deviations_or_replans:
+  - Used TypeScript parser plus span-based literal replacement for static imports, re-exports, side-effect imports, string-literal dynamic imports, no-substitution-template dynamic imports, and import type nodes instead of extending the regex.
+- context_updates:
+  - Bare module specifiers remain unchanged; only `./` and `../` static module specifier literals are rewritten relative to the virtual artifact path.
+- memory_updates: deferred until implementation patterns stabilize
+
 ## Deferred Work
 
 - Adapter migration starts only after T1 through T5 are committed and passing.
