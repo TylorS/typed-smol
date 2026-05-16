@@ -4,6 +4,7 @@ export * from "./ConfigVirtualModulePlugin.js";
 export * from "./HtmlVirtualModulePlugin.js";
 export * from "./ServerVirtualModulePlugin.js";
 export * from "./BrowserVirtualModulePlugin.js";
+export * from "./TypedHttpServer.js";
 export * from "./internal/typeTargetSpecs.js";
 export * from "./createTypeInfoApiSessionForApp.js";
 export * from "./HttpApiVirtualModulePlugin.js";
