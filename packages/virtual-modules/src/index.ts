@@ -23,6 +23,22 @@ export {
   type VirtualLogicalIdentity,
 } from "./internal/ArtifactIdentity.js";
 export {
+  createVirtualArtifactIndex,
+  parseVirtualArtifactIndex,
+  parseVirtualArtifactManifest,
+  VIRTUAL_ARTIFACT_MANIFEST_VERSION,
+  type ParseVirtualArtifactIndexResult,
+  type ParseVirtualArtifactManifestResult,
+  type VirtualArtifactDebugMetadata,
+  type VirtualArtifactDependencyDescriptor,
+  type VirtualArtifactFingerprint,
+  type VirtualArtifactFingerprintKind,
+  type VirtualArtifactIndex,
+  type VirtualArtifactIndexEntry,
+  type VirtualArtifactManifest,
+  type VirtualArtifactMessage,
+} from "./internal/ArtifactManifest.js";
+export {
   createVirtualFileName,
   createVirtualKey,
   VIRTUAL_MODULE_URI_SCHEME,
