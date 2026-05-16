@@ -47,6 +47,29 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
 - context_updates: none
 - memory_updates: deferred until implementation patterns stabilize
 
+### T3 — Fingerprints
+
+- task_id: T3
+- requirement_ids: FR-6, FR-7, FR-8, NFR-1, NFR-2, AC-5, AC-6, AC-7
+- ts_scenarios: TS-4
+- validation_evidence:
+  - Red: `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint`; failed with missing helper exports including `TypeError: createSourceInputFingerprint is not a function`, `TypeError: createPluginModuleFingerprint is not a function`, and `Test Files 1 failed | 10 passed (11)`, `Tests 6 failed | 95 passed (101)`.
+  - Green: `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint`; passed with `Test Files 11 passed (11)`, `Tests 101 passed (101)`.
+  - Spec/code review first pass requested collision-resistant JSON normalization, unsupported value fail-closed behavior, and changed-input assertions for each required fingerprint input.
+  - Collision Red: `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint`; failed with cyclic config hashed and `{ a: undefined }` colliding with marker-shaped user data, `Test Files 1 failed | 10 passed (11)`, `Tests 2 failed | 101 passed (103)`.
+  - Collision Green: `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint`; passed with `Test Files 11 passed (11)`, `Tests 103 passed (103)`.
+  - Spec/code review second pass requested `-0` preservation, plugin package-name change coverage, symbol/non-enumerable/accessor rejection, and array side-property rejection.
+  - Descriptor Red: `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint`; failed with ignored symbol properties and `-0` colliding with `0`, `Test Files 1 failed | 10 passed (11)`, `Tests 2 failed | 101 passed (103)`.
+  - Descriptor Green: `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint`; passed with `Test Files 11 passed (11)`, `Tests 103 passed (103)`.
+  - `pnpm exec oxfmt packages/virtual-modules/src/internal/ArtifactFingerprint.ts packages/virtual-modules/src/internal/ArtifactFingerprint.test.ts packages/virtual-modules/src/index.ts`; formatted touched files.
+  - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/ArtifactFingerprint.ts packages/virtual-modules/src/internal/ArtifactFingerprint.test.ts packages/virtual-modules/src/index.ts`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules/src/internal/ArtifactFingerprint.ts packages/virtual-modules/src/internal/ArtifactFingerprint.test.ts packages/virtual-modules/src/index.ts`; 0 warnings, 0 errors.
+  - `pnpm --filter @typed/virtual-modules build`; exit 0.
+- commit: pending
+- deviations_or_replans: none
+- context_updates: none
+- memory_updates: deferred until implementation patterns stabilize
+
 ## Deferred Work
 
 - Adapter migration starts only after T1 through T5 are committed and passing.

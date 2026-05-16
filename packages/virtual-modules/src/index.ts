@@ -23,6 +23,19 @@ export {
   type VirtualLogicalIdentity,
 } from "./internal/ArtifactIdentity.js";
 export {
+  createGeneratedSourceHash,
+  createParsedTsconfigFingerprint,
+  createPluginConfigFingerprint,
+  createPluginModuleFingerprint,
+  createPluginPackageFingerprint,
+  createSourceInputFingerprint,
+  createTypeScriptFingerprint,
+  getNonReusableFingerprintReasons,
+  hashVirtualArtifactContent,
+  hashVirtualArtifactJson,
+  stableJsonStringify,
+} from "./internal/ArtifactFingerprint.js";
+export {
   createVirtualArtifactIndex,
   parseVirtualArtifactIndex,
   parseVirtualArtifactManifest,
