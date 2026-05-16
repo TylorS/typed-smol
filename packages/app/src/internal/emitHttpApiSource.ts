@@ -468,6 +468,7 @@ export function emitHttpApiSource(input: {
     `import * as HttpServer from "effect/unstable/http/HttpServer";`,
     `import * as HttpRouter from "effect/unstable/http/HttpRouter";`,
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
+    `import * as TypedConfigModule from "typed:config";`,
   ];
 
   for (const path of endpointPaths) {
@@ -617,6 +618,16 @@ export const Swagger = ${swaggerExpr};
 export const Scalar = ${scalarExpr};
 export const Client = HttpApiClient.make(Api);
 
+type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };
+type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;
+const typedConfig: TypedConfigExports = TypedConfigModule;
+const typedBuildConfig = typedConfig.build ?? {};
+const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+
+function joinBuildPath(...parts: readonly string[]): string {
+  return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+}
+
 export const App = <const Layers extends readonly LayerOrGroup[] = []>(
   config?: AppConfig,
   ...layersToMergeIntoRouter: Layers
@@ -639,10 +650,11 @@ export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
       const host = yield* resolveConfig(config?.host, "0.0.0.0");
       const port = yield* resolveConfig(config?.port, 3000);
       const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-      const dev = (import.meta as any).env?.DEV === true;
+      const dev = (import.meta as ImportMeta & { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
       const appConfig: AppConfig = { disableListenLog };
       const staticAssetsLayer = TypedHttpServer.staticAssets({
         projectRoot: process.cwd(),
+        clientOutDir,
         dev,
       });
       const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);

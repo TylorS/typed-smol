@@ -28,6 +28,7 @@ export interface TypedHttpServerLayerOptions {
   readonly dev: boolean;
   readonly vaviteHandler?: unknown;
   readonly buildOutDir?: string;
+  readonly clientOutDir?: string;
   readonly host?: string;
   readonly port?: number;
   readonly ssl?: TypedHttpServerSslInput;
@@ -37,6 +38,7 @@ export interface TypedHttpServerStaticAssetsOptions {
   readonly projectRoot: string;
   readonly dev: boolean;
   readonly buildOutDir?: string;
+  readonly clientOutDir?: string;
   readonly prefix?: string;
   readonly spa?: boolean;
   readonly cacheControl?: string;
@@ -76,6 +78,7 @@ export const TypedHttpServer = {
       root: inferStaticAssetRoot({
         projectRoot: options.projectRoot,
         buildOutDir: options.buildOutDir,
+        clientOutDir: options.clientOutDir,
       }),
       prefix: options.prefix,
       spa: options.spa ?? true,
@@ -83,7 +86,7 @@ export const TypedHttpServer = {
     });
   },
 
-  toNodeHandler(appLayer: Layer.Layer<any, any, any>): TypedNodeHandler {
+  toNodeHandler(appLayer: Layer.Layer<any, any, any> | Layer.Layer<never, any, any>): TypedNodeHandler {
     const provided = appLayer.pipe(Layer.provide(NodeHttpServer.layerHttpServices as any));
     const webHandler = HttpRouter.toWebHandler(provided as any);
     const handler = ((request, response, next?: (error?: unknown) => void) => {

@@ -44,10 +44,13 @@ describe("ServerVirtualModulePlugin", () => {
   it("emits composable run, handler, and ServerLayer exports for APIs and routes", () => {
     const source = buildServer("typed:server?api=./api&routes=./routes1&routes=./routes2") as string;
 
-    expect(source).toContain('import { Effect } from "effect";');
+    expect(source).toContain('import * as Cause from "effect/Cause";');
+    expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
     expect(source).toContain('import * as HttpRouter from "effect/unstable/http/HttpRouter";');
-    expect(source).toContain('import { TypedHttpServer } from "@typed/app";');
+    expect(source).toContain(
+      'import { composeWithLayers, TypedHttpServer, type LayerOrGroup } from "@typed/app";',
+    );
     expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(source).toContain('import * as Api0 from "api:./api";');
     expect(source).toContain('import * as Routes0 from "router:./routes1";');
@@ -57,7 +60,10 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain("export const handler =");
     expect(source).toContain("export default handler");
     expect(source).toContain("export function run");
-    expect(source).toContain("Layer.launch(ServerLayer)");
+    expect(source).toContain("Layer.launch(layer)");
+    expect(source).toContain("Effect.tapCause");
+    expect(source).toContain("options.layers");
+    expect(source).toContain("options.onError");
     expect(source).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
     expect(source).not.toContain("export async function run");
   });
@@ -98,13 +104,16 @@ describe("ServerVirtualModulePlugin", () => {
     const fixture = createFixture({
       "src/.dependencies.ts": "export const layers = [];",
       "src/.html.ts": "export const pages = [];",
+      "src/.errors.ts": "export const onError = () => undefined;",
     });
     const source = buildServer("typed:server?routes=./routes", fixture.importer) as string;
 
     expect(source).toContain('import * as ServerDependenciesCompanion from "./.dependencies";');
     expect(source).toContain('import * as ServerHtmlCompanion from "./.html";');
+    expect(source).toContain('import * as ServerErrorsCompanion from "./.errors";');
     expect(source).toContain("ServerDependenciesCompanion.layers");
     expect(source).toContain("ServerHtmlCompanion.pages");
+    expect(source).toContain("ServerErrorsCompanion.onError");
     expect(source).not.toContain("_server");
   });
 
@@ -112,23 +121,40 @@ describe("ServerVirtualModulePlugin", () => {
     const fixture = createFixture({
       "src/api.ts": 'import * as Layer from "effect/Layer";\nexport const ApiLayer = Layer.empty;\n',
       "src/routes.ts": "const routes: any = {};\nexport default routes;\n",
+      "src/typed-config.ts": 'export const build = { outDir: "dist", clientOutDir: "public/client" };\n',
+      "src/typed-app.d.ts": [
+        'declare module "@typed/app" {',
+        '  import type * as Layer from "effect/Layer";',
+        "  export type LayerAny = Layer.Layer<any, any, any> | Layer.Layer<never, any, any>;",
+        "  export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];",
+        "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers: Layers): LayerAny;",
+        "  export const TypedHttpServer: {",
+        "    readonly staticAssets: (options: { readonly projectRoot: string; readonly clientOutDir?: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
+        "    readonly layer: (options: { readonly projectRoot: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
+        "    readonly toNodeHandler: (layer: LayerAny) => unknown;",
+        "  };",
+        "}",
+      ].join("\n"),
       "src/typed-ui.d.ts":
         'declare module "@typed/ui" { export const ssrForHttp: (input: any) => (router: any) => any; }\n',
     });
     const source = buildServer("typed:server?api=./api&routes=./routes", fixture.importer) as string;
     const result = typeCheckGeneratedSource({
       rootDir: fixture.root,
-      generatedPath: "src/generated.server.js",
+      generatedPath: "src/generated.server.ts",
       sourceText: source,
       rootFiles: [
         fixture.importer,
         join(fixture.root, "src/api.ts"),
         join(fixture.root, "src/routes.ts"),
+        join(fixture.root, "src/typed-config.ts"),
+        join(fixture.root, "src/typed-app.d.ts"),
         join(fixture.root, "src/typed-ui.d.ts"),
       ],
       moduleFallbacks: {
         "api:./api": join(fixture.root, "src/api.ts"),
         "router:./routes": join(fixture.root, "src/routes.ts"),
+        "typed:config": join(fixture.root, "src/typed-config.ts"),
       },
     });
 

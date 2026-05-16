@@ -48,6 +48,12 @@ describe("TypedHttpServer", () => {
     );
   });
 
+  it("uses configured client build output when provided", () => {
+    expect(inferStaticAssetRoot({ projectRoot: "/app", clientOutDir: "public/app" })).toBe(
+      "/app/public/app",
+    );
+  });
+
   it("generates parseable development certificates under node_modules/.typed/certs", () => {
     const root = tempRoot();
     const ssl = resolveTypedHttpServerSsl({ projectRoot: root, ssl: true });
@@ -110,13 +116,13 @@ describe("TypedHttpServer", () => {
 
   it("serves inferred static assets outside dev mode", () => {
     const root = tempRoot();
-    const assetRoot = join(root, "dist/client");
+    const assetRoot = join(root, "assets/browser");
     mkdirSync(assetRoot, { recursive: true });
     writeFileSync(join(assetRoot, "hello.txt"), "hello static", "utf8");
 
     const live = TypedHttpServer.staticAssets({
       projectRoot: root,
-      buildOutDir: "dist",
+      clientOutDir: "assets/browser",
       dev: false,
     }).pipe(HttpRouter.serve, Layer.provideMerge(NodeHttpServer.layerTest));
 

@@ -15,11 +15,13 @@ export function emitServerSource(input: EmitServerSourceInput): string {
   const imports = createOrderedImports(input.id);
   const pages = createPageEntries(input.parsed);
   return [
-    'import { Effect } from "effect";',
+    'import * as Cause from "effect/Cause";',
+    'import * as Effect from "effect/Effect";',
     'import * as Layer from "effect/Layer";',
     'import * as HttpRouter from "effect/unstable/http/HttpRouter";',
-    'import { TypedHttpServer } from "@typed/app";',
+    'import { composeWithLayers, TypedHttpServer, type LayerOrGroup } from "@typed/app";',
     'import { ssrForHttp } from "@typed/ui";',
+    'import * as TypedConfigModule from "typed:config";',
     ...emitImports(imports),
     ...emitHtmlImports(pages),
     ...emitCompanionImports(input.companions ?? []),
@@ -73,7 +75,7 @@ function emitConstants(
 ): string {
   return [
     `const apiModules = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}`).join(", ")}];`,
-    `const routeModules = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
+    `const routeModules: readonly RouteModule[] = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
     `const pageEntries = [${pages.map(pageEntrySource).join(", ")}];`,
     `const apiLayers = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}.ApiLayer`).join(", ")}];`,
     "const routeLayers = routeModules.map((routeModule) =>",
@@ -95,24 +97,54 @@ function pageEntrySource(page: TypedServerPage, index: number): string {
 function emitExports(companions: readonly ServerCompanionImport[]): string {
   const pagesCompanion = companions.find((companion) => companion.name === "html");
   const dependenciesCompanion = companions.find((companion) => companion.name === "dependencies");
+  const errorsCompanion = companions.find((companion) => companion.name === "errors");
   const companionPages = pagesCompanion ? `${pagesCompanion.binding}.pages ?? []` : "[]";
   const companionLayers = dependenciesCompanion
     ? `${dependenciesCompanion.binding}.layers ?? []`
     : "[]";
+  const companionOnError = errorsCompanion
+    ? `${errorsCompanion.binding}.onError ?? undefined`
+    : "undefined";
   return [
+    "type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };",
+    "type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;",
+    "type RuntimeErrorHandler = (cause: Cause.Cause<unknown>) => Effect.Effect<unknown, never, never> | void;",
+    "type RouteModule = { readonly default?: unknown; readonly router?: unknown };",
+    "type ServerRunOptions<Layers extends readonly LayerOrGroup[] = []> = {",
+    "  readonly layers?: Layers;",
+    "  readonly onError?: RuntimeErrorHandler;",
+    "  readonly run?: (program: Effect.Effect<never, unknown, unknown>) => Effect.Effect<unknown, unknown, unknown>;",
+    "};",
     `const companionPages = ${companionPages};`,
-    `const companionLayers = ${companionLayers};`,
-    "const dev = import.meta.env?.DEV === true;",
-    "const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: process.cwd(), dev });",
-    "const appLayers = [...apiLayers, ...routeLayers, ...companionLayers, staticAssetsLayer];",
-    "export const AppLayer = Layer.mergeAll(...appLayers);",
+    `const companionLayers: readonly LayerOrGroup[] = ${companionLayers};`,
+    `const companionOnError = ${companionOnError};`,
+    "const typedConfig: TypedConfigExports = TypedConfigModule;",
+    "const typedBuildConfig = typedConfig.build ?? {};",
+    "const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
+    "const dev = (import.meta as ImportMeta & { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;",
+    "const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: process.cwd(), clientOutDir, dev });",
+    "const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);",
+    "export const AppLayer = composeWithLayers(appLayerBase, companionLayers);",
     "export const ServerLayer = HttpRouter.serve(AppLayer).pipe(",
     "  Layer.provide(TypedHttpServer.layer({ projectRoot: process.cwd(), dev })),",
     ");",
     "export const handler = TypedHttpServer.toNodeHandler(AppLayer);",
     "export default handler;",
-    "export function run(options = {}) {",
-    "  return options.run ? options.run(ServerLayer) : Layer.launch(ServerLayer);",
+    "export function run<const Layers extends readonly LayerOrGroup[] = []>(options: ServerRunOptions<Layers> = {}) {",
+    "  const layer = composeWithLayers(ServerLayer, options.layers ?? []);",
+    "  const program = withErrorHandling(Layer.launch(layer), options.onError);",
+    "  return options.run ? options.run(program) : program;",
+    "}",
+    "function withErrorHandling(program: Effect.Effect<never, unknown, unknown>, onError?: RuntimeErrorHandler) {",
+    "  const handler = onError ?? companionOnError;",
+    "  return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;",
+    "}",
+    "function callErrorHandler(handler: RuntimeErrorHandler, cause: Cause.Cause<unknown>) {",
+    "  const result = handler(cause);",
+    "  return Effect.isEffect(result) ? result : Effect.void;",
+    "}",
+    "function joinBuildPath(...parts: readonly string[]): string {",
+    "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
     "}",
   ].join("\n");
 }

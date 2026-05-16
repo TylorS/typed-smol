@@ -43,12 +43,21 @@ describe("BrowserVirtualModulePlugin", () => {
   it("emits composable run, hydrate, and BrowserRuntime exports for wildcard routes", () => {
     const source = buildBrowser("typed:browser?routes=*") as string;
 
-    expect(source).toContain('import { Effect } from "effect";');
+    expect(source).toContain('import * as Cause from "effect/Cause";');
+    expect(source).toContain('import * as Effect from "effect/Effect";');
+    expect(source).toContain('import * as Layer from "effect/Layer";');
+    expect(source).toContain('import { BrowserRouter, merge, type Matcher } from "@typed/router";');
+    expect(source).toContain('import { drainLayer } from "@typed/fx";');
+    expect(source).toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(source).toContain('import * as Routes0 from "router:./routes";');
     expect(source).toContain("export const BrowserRuntime =");
     expect(source).toContain("export function hydrate");
     expect(source).toContain("export function run");
-    expect(source).toContain("Effect.succeed(BrowserRuntime)");
+    expect(source).toContain("Layer.launch(BrowserLayer");
+    expect(source).toContain("Effect.tapCause");
+    expect(source).toContain("options.layers");
+    expect(source).toContain("options.onError");
+    expect(source).not.toContain("Effect.succeed(BrowserRuntime)");
     expect(source).not.toContain("export async function run");
     expect(source).toContain('root: "#app"');
     expect(source).toContain('base: "/"');
@@ -78,12 +87,15 @@ describe("BrowserVirtualModulePlugin", () => {
     const fixture = createFixture({
       "src/.dependencies.ts": "export const layers = [];",
       "src/.navigation.ts": "export const onNavigation = () => undefined;",
+      "src/.errors.ts": "export const onError = () => undefined;",
     });
     const source = buildBrowser("typed:browser?routes=./routes", fixture.importer) as string;
 
     expect(source).toContain('import * as BrowserDependenciesCompanion from "./.dependencies";');
     expect(source).toContain('import * as BrowserNavigationCompanion from "./.navigation";');
+    expect(source).toContain('import * as BrowserErrorsCompanion from "./.errors";');
     expect(source).toContain("BrowserDependenciesCompanion.layers");
+    expect(source).toContain("BrowserErrorsCompanion.onError");
     expect(source).not.toContain("_browser");
   });
 

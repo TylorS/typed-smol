@@ -89,6 +89,8 @@ export interface TypedConfig {
   /** Build defaults. Overridden by CLI flags. */
   readonly build?: {
     readonly outDir?: string;
+    readonly clientOutDir?: string;
+    readonly serverOutDir?: string;
     readonly target?: string;
     readonly sourcemap?: boolean;
     readonly minify?: boolean;

@@ -18,8 +18,10 @@ describe("HtmlVirtualModulePlugin", () => {
   it("emits html, loadHtml, and renderHtml exports", () => {
     const source = buildHtml("typed:html?path=./index.html") as string;
 
+    expect(source).toContain('import * as TypedConfigModule from "typed:config";');
     expect(source).toContain('const sourceHtmlPath = "./index.html";');
-    expect(source).toContain('const builtHtmlPath = "dist/client/index.html";');
+    expect(source).toContain("const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);");
+    expect(source).not.toContain('"dist/client');
     expect(source).toContain("export const html =");
     expect(source).toContain("export async function loadHtml");
     expect(source).toContain("export function renderHtml");
@@ -41,7 +43,9 @@ describe("HtmlVirtualModulePlugin", () => {
   it("references built client html for non-dev loading", () => {
     const source = buildHtml("typed:html?path=./pages/admin.html") as string;
 
-    expect(source).toContain('const builtHtmlPath = "dist/client/pages/admin.html";');
+    expect(source).toContain("typedBuildConfig.clientOutDir");
+    expect(source).toContain("typedBuildConfig.outDir");
+    expect(source).not.toContain('"dist/client/pages/admin.html"');
   });
 
   it("replaces an existing SSR outlet", () => {

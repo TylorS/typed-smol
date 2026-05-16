@@ -50,8 +50,8 @@ export const build = Command.make("build", {
         tc?.build?.outDir,
         path.join(projectRoot, DEFAULT_OUT_DIR),
       );
-      const clientOutDir = path.join(outDir, CLIENT_OUT);
-      const serverOutDir = path.join(outDir, SERVER_OUT);
+      const clientOutDir = resolve(undefined, tc?.build?.clientOutDir, path.join(outDir, CLIENT_OUT));
+      const serverOutDir = resolve(undefined, tc?.build?.serverOutDir, path.join(outDir, SERVER_OUT));
 
       const baseConfig = resolveViteInlineConfig({
         projectRoot,

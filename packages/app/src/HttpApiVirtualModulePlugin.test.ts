@@ -142,7 +142,9 @@ function expectHttpApiGeneratedSourceToTypeCheck(
 const NM = join(APP_ROOT, "node_modules");
 
 const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
+  "@typed/app": join(APP_ROOT, "src", "test-utils", "typedAppGeneratedSourceFallback.d.ts"),
   "@typed/router": join(NM, "@typed", "router", "src", "index.ts"),
+  "typed:config": join(APP_ROOT, "src", "test-utils", "typedConfigGeneratedSourceFallback.ts"),
   effect: join(NM, "effect", "dist", "index.d.ts"),
   "effect/Context": join(NM, "effect", "dist", "Context.d.ts"),
   "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
@@ -331,6 +333,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
+      import * as TypedConfigModule from "typed:config";
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
@@ -339,6 +342,16 @@ describe("createHttpApiVirtualModulePlugin", () => {
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
       export const Client = HttpApiClient.make(Api);
+
+      type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };
+      type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;
+      const typedConfig: TypedConfigExports = TypedConfigModule;
+      const typedBuildConfig = typedConfig.build ?? {};
+      const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+
+      function joinBuildPath(...parts: readonly string[]): string {
+        return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+      }
 
       export const App = <const Layers extends readonly LayerOrGroup[] = []>(
         config?: AppConfig,
@@ -362,10 +375,11 @@ describe("createHttpApiVirtualModulePlugin", () => {
             const host = yield* resolveConfig(config?.host, "0.0.0.0");
             const port = yield* resolveConfig(config?.port, 3000);
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-            const dev = (import.meta as any).env?.DEV === true;
+            const dev = (import.meta as ImportMeta & { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
             const appConfig: AppConfig = { disableListenLog };
             const staticAssetsLayer = TypedHttpServer.staticAssets({
               projectRoot: process.cwd(),
+              clientOutDir,
               dev,
             });
             const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
@@ -608,6 +622,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
+      import * as TypedConfigModule from "typed:config";
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
@@ -616,6 +631,16 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
       export const Client = HttpApiClient.make(Api);
+
+      type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };
+      type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;
+      const typedConfig: TypedConfigExports = TypedConfigModule;
+      const typedBuildConfig = typedConfig.build ?? {};
+      const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+
+      function joinBuildPath(...parts: readonly string[]): string {
+        return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+      }
 
       export const App = <const Layers extends readonly LayerOrGroup[] = []>(
         config?: AppConfig,
@@ -639,10 +664,11 @@ describe("HttpApiVirtualModulePlugin integration", () => {
             const host = yield* resolveConfig(config?.host, "0.0.0.0");
             const port = yield* resolveConfig(config?.port, 3000);
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-            const dev = (import.meta as any).env?.DEV === true;
+            const dev = (import.meta as ImportMeta & { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
             const appConfig: AppConfig = { disableListenLog };
             const staticAssetsLayer = TypedHttpServer.staticAssets({
               projectRoot: process.cwd(),
+              clientOutDir,
               dev,
             });
             const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
