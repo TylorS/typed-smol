@@ -650,7 +650,11 @@ export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
         projectRoot: process.cwd(),
         dev: (import.meta as any).env?.DEV === true,
       }) as any;
-      return appLayer.pipe(Layer.provide(serverLayer));
+      return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
+        Layer.Success<typeof appLayer>,
+        Layer.Error<typeof appLayer>,
+        never
+      >;
     }),
   );
 `;

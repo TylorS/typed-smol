@@ -371,7 +371,11 @@ describe("createHttpApiVirtualModulePlugin", () => {
               projectRoot: process.cwd(),
               dev: (import.meta as any).env?.DEV === true,
             }) as any;
-            return appLayer.pipe(Layer.provide(serverLayer));
+            return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
+              Layer.Success<typeof appLayer>,
+              Layer.Error<typeof appLayer>,
+              never
+            >;
           }),
         );
       "
@@ -382,6 +386,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
     const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
 
     expect(sourceText).toContain("TypedHttpServer.layer");
+    expect(sourceText).toContain("Layer.Error<typeof appLayer>,\n        never");
     expect(sourceText).not.toContain("NodeHttpServer.layer(http.createServer");
   });
 
@@ -602,7 +607,11 @@ describe("HttpApiVirtualModulePlugin integration", () => {
               projectRoot: process.cwd(),
               dev: (import.meta as any).env?.DEV === true,
             }) as any;
-            return appLayer.pipe(Layer.provide(serverLayer));
+            return appLayer.pipe(Layer.provide(serverLayer)) as Layer.Layer<
+              Layer.Success<typeof appLayer>,
+              Layer.Error<typeof appLayer>,
+              never
+            >;
           }),
         );
       "
