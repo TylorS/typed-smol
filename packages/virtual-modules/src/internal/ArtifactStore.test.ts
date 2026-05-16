@@ -520,6 +520,67 @@ describe("ArtifactStore", () => {
     ).toThrow(/Timed out acquiring artifact lock/);
   });
 
+  it("honors the cleanup lock before materializing artifacts", () => {
+    const store = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "typed/app",
+      virtualKey: "routes-key",
+      lockTimeoutMs: 25,
+      staleLockMs: 60_000,
+      fingerprints: {
+        sourceInputFingerprints: [sourceFingerprint()],
+        pluginFingerprints: [pluginFingerprint()],
+        compilerFingerprints: [compilerFingerprint()],
+      },
+    });
+    const cleanupLockPath = join(projectRoot, "node_modules/.typed/virtual.cleanup.lock");
+    mkdirSync(cleanupLockPath, { recursive: true });
+    writeFileSync(
+      join(cleanupLockPath, "lock.json"),
+      JSON.stringify({ createdAt: Date.now(), ownerToken: "active-cleanup" }),
+      "utf8",
+    );
+
+    expect(() =>
+      store.materialize({
+        id: "virtual:routes",
+        importer: join(projectRoot, "src/root.ts"),
+        sourceText: "export const route = '/blocked-by-clean';\n",
+      }),
+    ).toThrow(/Timed out acquiring cleanup lock/);
+  });
+
+  it("honors the cleanup lock before deleting generated artifacts", () => {
+    const store = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "typed/app",
+      virtualKey: "routes-key",
+      lockTimeoutMs: 25,
+      staleLockMs: 60_000,
+      fingerprints: {
+        sourceInputFingerprints: [sourceFingerprint()],
+        pluginFingerprints: [pluginFingerprint()],
+        compilerFingerprints: [compilerFingerprint()],
+      },
+    });
+    const written = store.materialize({
+      id: "virtual:routes",
+      importer: join(projectRoot, "src/root.ts"),
+      sourceText: "export const route = '/before-clean';\n",
+    });
+    const cleanupLockPath = join(projectRoot, "node_modules/.typed/virtual.cleanup.lock");
+    mkdirSync(cleanupLockPath, { recursive: true });
+    writeFileSync(
+      join(cleanupLockPath, "lock.json"),
+      JSON.stringify({ createdAt: Date.now(), ownerToken: "active-materialize" }),
+      "utf8",
+    );
+
+    expect(() => store.clean()).toThrow(/Timed out acquiring cleanup lock/);
+    expect(existsSync(written.paths.sourcePath)).toBe(true);
+    expect(existsSync(written.paths.manifestPath)).toBe(true);
+  });
+
   it("uses temp-file rename writes so concurrent materialization leaves a valid last writer", () => {
     const store = createStore();
     const importer = join(projectRoot, "src/root.ts");
@@ -563,5 +624,58 @@ describe("ArtifactStore", () => {
         virtualId: "virtual:routes",
       }),
     });
+  });
+
+  it("does not prune generated artifacts during normal invalid resolve flows", () => {
+    const written = materialize();
+    const result = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "typed/app",
+      virtualKey: "routes-key",
+      fingerprints: {
+        sourceInputFingerprints: [sourceFingerprint("sha256:changed-source")],
+        pluginFingerprints: [pluginFingerprint()],
+        compilerFingerprints: [compilerFingerprint()],
+      },
+    }).resolve({
+      id: "virtual:routes",
+      importer: join(projectRoot, "src/root.ts"),
+    });
+
+    expect(result.status).toBe("invalid");
+    expect(existsSync(written.paths.sourcePath)).toBe(true);
+    expect(existsSync(written.paths.manifestPath)).toBe(true);
+    expect(createStore().readProjectIndex().status).toBe("ok");
+  });
+
+  it("removes generated artifacts and project index only through explicit clean", () => {
+    const first = materialize("export const route = '/first';\n");
+    const second = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "typed/api",
+      virtualKey: "api-key",
+      fingerprints: {
+        sourceInputFingerprints: [sourceFingerprint()],
+        pluginFingerprints: [pluginFingerprint()],
+        compilerFingerprints: [compilerFingerprint()],
+      },
+    }).materialize({
+      id: "virtual:api",
+      importer: join(projectRoot, "src/root.ts"),
+      sourceText: "export const api = true;\n",
+    });
+    const store = createStore();
+
+    const result = store.clean();
+
+    expect(result).toEqual({
+      removed: true,
+      rootPath: join(projectRoot, "node_modules/.typed/virtual"),
+    });
+    expect(existsSync(first.paths.sourcePath)).toBe(false);
+    expect(existsSync(first.paths.manifestPath)).toBe(false);
+    expect(existsSync(second.paths.sourcePath)).toBe(false);
+    expect(existsSync(second.paths.manifestPath)).toBe(false);
+    expect(store.readProjectIndex().status).toBe("missing");
   });
 });

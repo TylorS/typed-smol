@@ -323,7 +323,7 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/materializeVirtualFile.test.ts packages/virtual-modules/src/index.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.test.ts packages/virtual-modules-vscode/package.json`; all matched files use correct format.
   - `pnpm exec oxlint packages/virtual-modules/src/internal/materializeVirtualFile.test.ts packages/virtual-modules/src/index.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.test.ts`; 0 warnings, 0 errors.
   - `git diff --check`; exit 0.
-- commit: pending
+- commit: `5adc59a`
 - deviations_or_replans:
   - Kept T11 scoped to shared normal-case disk materialization and import-specifier rewriting. Full VS Code artifact-store fingerprint/cache integration remains out of this slice because the extension currently resolves raw source through its own resolver and lacks the compiler/config fingerprint contract from vmc/TS plugin.
   - `writeVirtualPreviewAndGetPath()` remains as the VS Code-facing wrapper to avoid changing extension call sites, but its write/rewrite implementation now delegates to core `materializeVirtualFile()`.
@@ -333,6 +333,37 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - `@typed/virtual-modules` now publicly exports `materializeVirtualFile()` and `rewriteSourceForPreviewLocation()` from the package root.
   - VS Code `virtualPreviewDisk.ts` uses the core `VIRTUAL_NODE_MODULES_RELATIVE` constant and core AST-based materializer, replacing its narrower regex rewrite.
   - `@typed/virtual-modules-vscode` now builds `@typed/virtual-modules` before both build and test commands so esbuild/Vitest consume current public exports instead of stale package `dist` output.
+- memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
+
+### T12 — Explicit Clean/Prune
+
+- task_id: T12
+- requirement_ids: FR-14, NFR-9, AC-12
+- validation_evidence:
+  - Routing: explorer subagent reviewed AC-12, T12, and the existing artifact-store/CLI boundary; recommendation was core API only because AC-12 allows command or API and the artifact-store spec owns cleanup.
+  - Red: `pnpm --filter @typed/virtual-modules test -- ArtifactStore` failed after adding cleanup tests, with `TypeError: store.clean is not a function`, proving the explicit cleanup API was missing.
+  - Reviewer Red: `pnpm --filter @typed/virtual-modules test -- ArtifactStore` failed with `2 failed | 138 passed (140)`, proving cleanup and materialization did not respect a shared cleanup lock.
+  - Green: `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; passed with `Test Files 13 passed (13)`, `Tests 140 passed (140)`.
+  - Green: `pnpm --filter @typed/virtual-modules test -- CompilerHostAdapter`; passed with `Test Files 13 passed (13)`, `Tests 140 passed (140)`, including a normal build-path guard that fails if `clean()` is called.
+  - Green: `pnpm --filter @typed/virtual-modules test -- LanguageServiceAdapter`; passed with `Test Files 13 passed (13)`, `Tests 140 passed (140)`, including a normal typecheck-path guard that fails if `clean()` is called.
+  - Green: `pnpm --filter @typed/virtual-modules test -- clean`; passed with `Test Files 13 passed (13)`, `Tests 140 passed (140)`.
+  - Green: `pnpm --filter @typed/virtual-modules test`; passed with `Test Files 13 passed (13)`, `Tests 140 passed (140)`.
+  - `pnpm --filter @typed/virtual-modules build`; exit 0.
+  - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/ArtifactStore.ts packages/virtual-modules/src/internal/ArtifactStore.test.ts packages/virtual-modules/src/LanguageServiceAdapter.test.ts packages/virtual-modules/src/CompilerHostAdapter.test.ts packages/virtual-modules/src/index.ts`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules/src/internal/ArtifactStore.ts packages/virtual-modules/src/internal/ArtifactStore.test.ts packages/virtual-modules/src/LanguageServiceAdapter.test.ts packages/virtual-modules/src/CompilerHostAdapter.test.ts packages/virtual-modules/src/index.ts`; 0 warnings, 0 errors.
+  - `git diff --check`; exit 0.
+  - Spec re-review: approved; API-only cleanup satisfies AC-12, and adapter build/typecheck non-pruning coverage closes the previous gap.
+  - Code quality re-review: approved; cleanup/materialization race is closed by the sibling cleanup lock. The `VirtualArtifactStore` interface expansion is accepted for this beta surface because T12 intentionally adds the explicit cleanup API.
+- commit: pending
+- deviations_or_replans:
+  - Kept T12 scoped to the core `VirtualArtifactStore.clean()` API and did not add `vmc` CLI wiring. The approved acceptance criteria allow an API path, and this avoids expanding the CLI surface before the framework command shape settles.
+  - Normal invalid resolve flows now have regression coverage proving artifact source, manifest, and project index files are left intact. Cleanup only happens through explicit `clean()`.
+  - Reviewer feedback added a cleanup lock outside the deleted virtual root, and both `clean()` and `materialize()` now acquire it so cleanup cannot remove active writer locks or partially written artifacts.
+  - Adapter test doubles were updated to satisfy the expanded `VirtualArtifactStore` interface without changing adapter behavior.
+- context_updates:
+  - `VirtualArtifactStore.clean()` removes the project root's entire `node_modules/.typed/virtual` tree and returns `{ removed, rootPath }`.
+  - Cleanup serialization uses sibling lock directory `node_modules/.typed/virtual.cleanup.lock`.
+  - `CleanVirtualArtifactsResult` is exported from `@typed/virtual-modules` for callers that need typed cleanup results.
 - memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
 
 ## Deferred Work

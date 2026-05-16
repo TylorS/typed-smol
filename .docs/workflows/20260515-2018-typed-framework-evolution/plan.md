@@ -221,12 +221,12 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 - Modify: `packages/virtual-modules/src/internal/ArtifactStore.test.ts`
 - Consider modify: `packages/virtual-modules-compiler/src/cli.ts` if clean belongs in vmc CLI for v1.
 
-- [ ] Add failing tests proving normal resolve/build/typecheck flows do not prune generated artifacts.
-- [ ] Add failing tests for explicit clean/prune removing artifacts and index entries.
-- [ ] Run `pnpm --filter @typed/virtual-modules test -- clean`; expected failure before implementation.
-- [ ] Implement explicit clean/prune API.
-- [ ] Add CLI wiring only if the API alone is insufficient for AC-12.
-- [ ] Run targeted tests again; expected pass.
+- [x] Add failing tests proving normal resolve/build/typecheck flows do not prune generated artifacts.
+- [x] Add failing tests for explicit clean/prune removing artifacts and index entries.
+- [x] Run focused cleanup/ArtifactStore test; expected failure before implementation.
+- [x] Implement explicit clean/prune API.
+- [x] Add CLI wiring only if the API alone is insufficient for AC-12.
+- [x] Run targeted tests again; expected pass.
 - [ ] Commit with `feat: add explicit virtual artifact cleanup`.
 
 ### T13: Full Integration Verification

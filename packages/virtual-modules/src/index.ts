@@ -54,6 +54,7 @@ export {
 export {
   createVirtualArtifactStore,
   type ArtifactStoreFingerprints,
+  type CleanVirtualArtifactsResult,
   type CreateVirtualArtifactStoreOptions,
   type MaterializedVirtualArtifact,
   type MaterializeVirtualArtifactParams,

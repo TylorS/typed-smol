@@ -23,6 +23,7 @@ const createTempDir = (): string => {
 const createFakeArtifactStore = (
   sourcePath: string,
   onMaterialize?: (params: MaterializeVirtualArtifactParams) => void,
+  onClean?: () => void,
 ): VirtualArtifactStore => {
   const logicalIdentity = "typed-virtual://0/virtual/0123456789abcdef.ts" as VirtualLogicalIdentity;
   const paths = {
@@ -48,6 +49,10 @@ const createFakeArtifactStore = (
       return { logicalIdentity, paths, manifest: {} as never };
     },
     readProjectIndex: () => ({ status: "missing", reason: "index-missing" }),
+    clean: () => {
+      onClean?.();
+      return { removed: false, rootPath: join(sourcePath, "..") };
+    },
     __unsafeReleaseLockForTesting: () => {},
   };
 };
@@ -207,6 +212,7 @@ export const value: Foo = { n: 1 };
 
     const buildCalls: string[] = [];
     const materializeCalls: string[] = [];
+    let cleanCalls = 0;
     const manager = new PluginManager([
       {
         name: "virtual-a",
@@ -241,9 +247,16 @@ export const value: Foo = { n: 1 };
       resolver: manager,
       projectRoot: dir,
       artifactStoreFactory: ({ pluginName }) =>
-        createFakeArtifactStore(pluginName === "virtual-a" ? artifactA : artifactB, (params) => {
-          materializeCalls.push(`${params.id}:${params.importer}:${params.sourceText}`);
-        }),
+        createFakeArtifactStore(
+          pluginName === "virtual-a" ? artifactA : artifactB,
+          (params) => {
+            materializeCalls.push(`${params.id}:${params.importer}:${params.sourceText}`);
+          },
+          () => {
+            cleanCalls += 1;
+            throw new Error("normal build should not clean artifacts");
+          },
+        ),
     });
 
     const program = ts.createProgram([entry], compilerOptions, host);
@@ -257,6 +270,7 @@ export const value: Foo = { n: 1 };
     ]);
     expect(program.getSourceFile(artifactA)).toBeDefined();
     expect(program.getSourceFile(artifactB)).toBeDefined();
+    expect(cleanCalls).toBe(0);
   });
 
   it("uses artifact cache hits without rebuilding or rematerializing", () => {

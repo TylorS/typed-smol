@@ -1,4 +1,12 @@
-import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { hostname } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import {
@@ -72,6 +80,11 @@ export interface MaterializedVirtualArtifact {
   readonly logicalIdentity: VirtualLogicalIdentity;
   readonly paths: VirtualArtifactPaths;
   readonly manifest: VirtualArtifactManifest;
+}
+
+export interface CleanVirtualArtifactsResult {
+  readonly removed: boolean;
+  readonly rootPath: string;
 }
 
 export type ReadVirtualArtifactManifestResult =
@@ -163,6 +176,7 @@ export interface VirtualArtifactStore {
   readManifest(logicalIdentity: VirtualLogicalIdentity): ReadVirtualArtifactManifestResult;
   materialize(params: MaterializeVirtualArtifactParams): MaterializedVirtualArtifact;
   readProjectIndex(): ReadVirtualArtifactIndexResult;
+  clean(): CleanVirtualArtifactsResult;
   __unsafeReleaseLockForTesting(lockPath: string, ownerToken: string): void;
 }
 
@@ -170,7 +184,7 @@ export function createVirtualArtifactStore(
   options: CreateVirtualArtifactStoreOptions,
 ): VirtualArtifactStore {
   const projectRoot = resolve(options.projectRoot);
-  const indexPath = join(projectRoot, VIRTUAL_NODE_MODULES_RELATIVE, "index.json");
+  const indexPath = createProjectIndexPath(projectRoot);
   const defaults = normalizeFingerprints(options.fingerprints);
   const lockOptions = createLockOptions(options);
 
@@ -182,9 +196,33 @@ export function createVirtualArtifactStore(
     materialize: (params) =>
       materializeArtifact(options, projectRoot, defaults, indexPath, lockOptions, params),
     readProjectIndex: () => readProjectIndexFile(indexPath),
+    clean: () => cleanProjectArtifacts(projectRoot, lockOptions),
     __unsafeReleaseLockForTesting: releaseFileLock,
   };
 }
+
+const cleanProjectArtifacts = (
+  projectRoot: string,
+  lockOptions: LockOptions,
+): CleanVirtualArtifactsResult =>
+  withCleanupLock(projectRoot, lockOptions, () => {
+    const rootPath = createVirtualRootPath(projectRoot);
+    const removed = existsSync(rootPath);
+    rmSync(rootPath, { recursive: true, force: true });
+    return { removed, rootPath };
+  });
+
+const withCleanupLock = <T>(projectRoot: string, lockOptions: LockOptions, run: () => T): T =>
+  withFileLock(createCleanupLockPath(projectRoot), "cleanup lock", lockOptions, run);
+
+const createCleanupLockPath = (projectRoot: string): string =>
+  join(projectRoot, "node_modules/.typed/virtual.cleanup.lock");
+
+const createVirtualRootPath = (projectRoot: string): string =>
+  join(projectRoot, VIRTUAL_NODE_MODULES_RELATIVE);
+
+const createProjectIndexPath = (projectRoot: string): string =>
+  join(createVirtualRootPath(projectRoot), "index.json");
 
 const resolveArtifact = (
   options: CreateVirtualArtifactStoreOptions,
@@ -236,11 +274,13 @@ const materializeArtifact = (
     now,
   );
 
-  withFileLock(`${paths.manifestPath}.lock`, "artifact lock", lockOptions, () => {
-    withFileLock(`${indexPath}.lock`, "index lock", lockOptions, () => {
-      atomicWriteText(paths.sourcePath, params.sourceText);
-      atomicWriteJson(paths.manifestPath, manifest);
-      updateProjectIndex(indexPath, createIndexEntry(manifest, paths));
+  withCleanupLock(projectRoot, lockOptions, () => {
+    withFileLock(`${paths.manifestPath}.lock`, "artifact lock", lockOptions, () => {
+      withFileLock(`${indexPath}.lock`, "index lock", lockOptions, () => {
+        atomicWriteText(paths.sourcePath, params.sourceText);
+        atomicWriteJson(paths.manifestPath, manifest);
+        updateProjectIndex(indexPath, createIndexEntry(manifest, paths));
+      });
     });
   });
 

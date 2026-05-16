@@ -26,3 +26,5 @@
 - VS Code preview wrappers should preserve absolute virtual paths already under `node_modules/.typed/virtual`; basename-only reconstruction would flatten artifact-store subdirectories.
 - VS Code extension builds/tests import `@typed/virtual-modules` from package exports, so build `@typed/virtual-modules` first before esbuild/Vitest or new core exports can appear missing from stale `dist`.
 - `@typed/virtual-modules-vscode` now has a focused Vitest harness for `virtualPreviewDisk.ts`; use `pnpm --filter @typed/virtual-modules-vscode test` for wrapper path regressions.
+- Artifact cleanup is an explicit core artifact-store API, not a normal invalidation side effect. `VirtualArtifactStore.clean()` removes the whole `node_modules/.typed/virtual` tree and reports whether that root existed.
+- Because cleanup deletes the virtual artifact root, it must synchronize with materialization through `node_modules/.typed/virtual.cleanup.lock`, a sibling lock outside the deleted tree.
