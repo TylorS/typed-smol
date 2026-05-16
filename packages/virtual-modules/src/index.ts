@@ -72,6 +72,10 @@ export {
   type CreateVirtualFileNameOptions,
 } from "./internal/path.js";
 export {
+  materializeVirtualFile,
+  rewriteSourceForPreviewLocation,
+} from "./internal/materializeVirtualFile.js";
+export {
   ensureTypeTargetBootstrapFile,
   getProgramWithTypeTargetBootstrap,
   getTypeTargetBootstrapPath,

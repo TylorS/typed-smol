@@ -1,37 +1,28 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
-
-const toPosix = (p: string) => p.replaceAll("\\", "/");
+import { isAbsolute, join, relative, resolve } from "node:path";
+import { materializeVirtualFile, VIRTUAL_NODE_MODULES_RELATIVE } from "@typed/virtual-modules";
 
 /** Base directory for virtual preview files: node_modules/.typed/virtual (not user-visible) */
-export const VIRTUAL_PREVIEW_RELATIVE = "node_modules/.typed/virtual";
+export const VIRTUAL_PREVIEW_RELATIVE = VIRTUAL_NODE_MODULES_RELATIVE;
 
 /**
  * Absolute path for a virtual preview file under projectRoot/node_modules/.typed/virtual/.
  * Uses the basename from virtualFileName (e.g. __virtual_router_abc123.ts) for uniqueness.
  */
 export function getVirtualPreviewPath(projectRoot: string, virtualFileName: string): string {
+  const virtualRoot = resolve(projectRoot, VIRTUAL_PREVIEW_RELATIVE);
+  const resolvedVirtualFile = resolve(projectRoot, virtualFileName);
+  if (isAbsolute(virtualFileName) && isPathInside(virtualRoot, resolvedVirtualFile)) {
+    return resolvedVirtualFile;
+  }
+
   const base = virtualFileName.replace(/^.*[/\\]/, ""); // basename
   const dir = join(projectRoot, VIRTUAL_PREVIEW_RELATIVE);
   return resolve(dir, base);
 }
 
-/**
- * Rewrite relative import specifiers in sourceText so they resolve correctly when
- * the file is placed in node_modules/.typed/virtual/ instead of importerDir.
- */
-function rewriteImportsForPreviewLocation(
-  sourceText: string,
-  importerDir: string,
-  previewDir: string,
-): string {
-  return sourceText.replace(/from\s+['"](\.\.?\/[^'"]+)['"]/g, (match, spec: string) => {
-    const absoluteTarget = resolve(importerDir, spec);
-    const newRel = toPosix(relative(previewDir, absoluteTarget));
-    const newSpec = newRel.startsWith(".") ? newRel : `./${newRel}`;
-    const quote = match.includes('"') ? '"' : "'";
-    return `from ${quote}${newSpec}${quote}`;
-  });
+function isPathInside(baseDir: string, candidate: string): boolean {
+  const relativePath = relative(baseDir, candidate);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
 /**
@@ -44,11 +35,7 @@ export function writeVirtualPreviewAndGetPath(
   virtualFileName: string,
   sourceText: string,
 ): string {
-  const importerDir = dirname(resolve(importer));
-  const previewDir = resolve(projectRoot, VIRTUAL_PREVIEW_RELATIVE);
-  const rewritten = rewriteImportsForPreviewLocation(sourceText, importerDir, previewDir);
   const absPath = getVirtualPreviewPath(projectRoot, virtualFileName);
-  mkdirSync(dirname(absPath), { recursive: true });
-  writeFileSync(absPath, rewritten, "utf8");
+  materializeVirtualFile(absPath, importer, sourceText);
   return absPath;
 }

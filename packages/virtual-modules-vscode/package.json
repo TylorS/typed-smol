@@ -12,8 +12,11 @@
     "access": "public"
   },
   "scripts": {
+    "prebuild": "pnpm --filter @typed/virtual-modules run build",
     "build": "esbuild src/extension.ts --bundle --format=cjs --outfile=dist/extension.js --external:vscode --platform=node",
-    "compile": "npm run build"
+    "compile": "npm run build",
+    "pretest": "pnpm --filter @typed/virtual-modules run build",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@typed/virtual-modules": "workspace:*"
@@ -22,7 +25,8 @@
     "@types/node": "^25.7.0",
     "@types/vscode": "^1.118.0",
     "esbuild": "^0.28.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": ">=5.0.0"

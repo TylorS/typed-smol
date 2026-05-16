@@ -22,3 +22,7 @@
 - Long-lived TS language-service sessions can keep virtual records alive without re-running module resolution. Validate/rebuild known records before diagnostics so source snapshot, config, and plugin changes cannot bypass artifact-store fingerprint checks.
 - When TS plugin resolver inputs drift from the startup resolver, fail closed before artifact-store materialization. Do not write a manifest with current fingerprints if source text came from stale resolver/plugin objects.
 - Adapter rebuild failures can be reported on every diagnostics request; dedupe adapter diagnostics by code/message so persistent failures do not grow unbounded.
+- VS Code disk previews should use the core `materializeVirtualFile()`/`rewriteSourceForPreviewLocation()` path; the old regex rewrite missed side-effect imports, dynamic imports, template imports, and import types.
+- VS Code preview wrappers should preserve absolute virtual paths already under `node_modules/.typed/virtual`; basename-only reconstruction would flatten artifact-store subdirectories.
+- VS Code extension builds/tests import `@typed/virtual-modules` from package exports, so build `@typed/virtual-modules` first before esbuild/Vitest or new core exports can appear missing from stale `dist`.
+- `@typed/virtual-modules-vscode` now has a focused Vitest harness for `virtualPreviewDisk.ts`; use `pnpm --filter @typed/virtual-modules-vscode test` for wrapper path regressions.

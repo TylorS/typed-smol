@@ -1,5 +1,9 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { rewriteSourceForPreviewLocation } from "./materializeVirtualFile.js";
+import { materializeVirtualFile as materializePublicVirtualFile } from "../index.js";
 
 describe("materializeVirtualFile", () => {
   it("rewrites relative module specifiers in generated source", () => {
@@ -51,5 +55,35 @@ describe("materializeVirtualFile", () => {
 
     expect(rewritten).toContain('import { View } from "../../../../src/features/view";');
     expect(rewritten).toContain('export const element = <View label="ok" />;');
+  });
+
+  it("exposes shared disk materialization for VS Code preview files", () => {
+    const dir = mkdtempSync(join(tmpdir(), "typed-vm-materialize-"));
+    try {
+      const importer = join(dir, "src", "feature", "entry.ts");
+      const virtualFilePath = join(
+        dir,
+        "node_modules",
+        ".typed",
+        "virtual",
+        "__virtual_plugin_1234.ts",
+      );
+      materializePublicVirtualFile(
+        virtualFilePath,
+        importer,
+        [
+          'import { value } from "./local";',
+          'import "./setup";',
+          'const lazy = await import("../lazy");',
+        ].join("\n"),
+      );
+
+      const materialized = readFileSync(virtualFilePath, "utf8");
+      expect(materialized).toContain('from "../../../src/feature/local"');
+      expect(materialized).toContain('import "../../../src/feature/setup";');
+      expect(materialized).toContain('await import("../../../src/lazy")');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

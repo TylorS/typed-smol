@@ -291,7 +291,7 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/VirtualRecordStore.ts packages/virtual-modules/src/LanguageServiceAdapter.ts packages/virtual-modules/src/CompilerHostAdapter.ts packages/virtual-modules/src/types.ts packages/virtual-modules-ts-plugin/src/plugin.ts packages/virtual-modules-ts-plugin/src/plugin.test.ts packages/virtual-modules-ts-plugin/package.json`; all matched files use correct format.
   - `pnpm exec oxlint packages/virtual-modules/src/internal/VirtualRecordStore.ts packages/virtual-modules/src/LanguageServiceAdapter.ts packages/virtual-modules/src/CompilerHostAdapter.ts packages/virtual-modules/src/types.ts packages/virtual-modules-ts-plugin/src/plugin.ts packages/virtual-modules-ts-plugin/src/plugin.test.ts`; 0 warnings, 0 errors.
   - `git diff --check`; exit 0.
-- commit: deferred by user request
+- commit: `68b4c6c`
 - deviations_or_replans:
   - Updated existing TS plugin assertions from the legacy `__virtual_` source-file name to the shared `node_modules/.typed/virtual` artifact path. The direct `attachLanguageServiceAdapter` no-store test still asserts the old fallback behavior.
   - Did not modify `sample-project.integration.test.ts`; the built-plugin unit tests cover the TS plugin artifact path without adding sample fixture flake risk.
@@ -307,6 +307,32 @@ Execution follows the approved `plan.md`. The first batch is core-only: T1 throu
   - TS plugin artifact fingerprints include LS host script roots, parsed tsconfig roots, type-target bootstrap roots when present, typed config loaded/not-found/error state, loaded `vmc.config.ts` and helper dependencies, loaded vmc plugin modules and helper dependencies, available plugin package versions, merged resolver/plugin snapshot including built-in router/api typed-config prefixes, TypeScript version, and parsed tsconfig snapshot.
   - VMC config comparison tokens include config helper dependencies, loaded plugin entry/helper modules, plugin package versions, and the vmc load snapshot. Current VMC fingerprints are recomputed for each store access and marked non-reusable if they drift from the resolver created at plugin startup.
   - Plugin-facing `build(id, importer, api)` still receives the logical virtual id and effective real importer; the generated source path is only used by the adapter/artifact store.
+- memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
+
+### T11 — VS Code Shared Materialization
+
+- task_id: T11
+- requirement_ids: FR-2, FR-9, FR-12, NFR-6, NFR-7, NFR-9, AC-9, AC-15
+- validation_evidence:
+  - Routing: explorer subagents inspected the VS Code extension write path and the core materialization helper surface before implementation.
+  - Red: `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile` failed after adding the public-export regression, with `TypeError: materializeVirtualFile is not a function`, proving VS Code could not consume the shared core disk materializer through the package root.
+  - Green: `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile`; passed with `Test Files 13 passed (13)`, `Tests 136 passed (136)`.
+  - Green: `pnpm --filter @typed/virtual-modules-vscode test`; passed with `Test Files 1 passed (1)`, `Tests 2 passed (2)`.
+  - Red: `pnpm --filter @typed/virtual-modules-vscode build` failed with `No matching export in "../virtual-modules/dist/index.js" for import "materializeVirtualFile"`, proving the VS Code build could compile against stale core `dist` output.
+  - Green: `pnpm --filter @typed/virtual-modules-vscode build`; passed after adding the package prebuild dependency.
+  - `pnpm exec oxfmt --check packages/virtual-modules/src/internal/materializeVirtualFile.test.ts packages/virtual-modules/src/index.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.test.ts packages/virtual-modules-vscode/package.json`; all matched files use correct format.
+  - `pnpm exec oxlint packages/virtual-modules/src/internal/materializeVirtualFile.test.ts packages/virtual-modules/src/index.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.ts packages/virtual-modules-vscode/src/virtualPreviewDisk.test.ts`; 0 warnings, 0 errors.
+  - `git diff --check`; exit 0.
+- commit: pending
+- deviations_or_replans:
+  - Kept T11 scoped to shared normal-case disk materialization and import-specifier rewriting. Full VS Code artifact-store fingerprint/cache integration remains out of this slice because the extension currently resolves raw source through its own resolver and lacks the compiler/config fingerprint contract from vmc/TS plugin.
+  - `writeVirtualPreviewAndGetPath()` remains as the VS Code-facing wrapper to avoid changing extension call sites, but its write/rewrite implementation now delegates to core `materializeVirtualFile()`.
+  - `getVirtualPreviewPath()` now preserves absolute paths already under `node_modules/.typed/virtual` instead of flattening future artifact-store subdirectories to a basename; legacy adjacent virtual filenames still fall back to basename materialization under the shared directory.
+  - Added a focused `@typed/virtual-modules-vscode` Vitest harness for `virtualPreviewDisk.ts` so the absolute-path preservation and legacy basename fallback are covered directly.
+- context_updates:
+  - `@typed/virtual-modules` now publicly exports `materializeVirtualFile()` and `rewriteSourceForPreviewLocation()` from the package root.
+  - VS Code `virtualPreviewDisk.ts` uses the core `VIRTUAL_NODE_MODULES_RELATIVE` constant and core AST-based materializer, replacing its narrower regex rewrite.
+  - `@typed/virtual-modules-vscode` now builds `@typed/virtual-modules` before both build and test commands so esbuild/Vitest consume current public exports instead of stale package `dist` output.
 - memory_updates: `.docs/workflows/20260515-2018-typed-framework-evolution/memories.md`
 
 ## Deferred Work

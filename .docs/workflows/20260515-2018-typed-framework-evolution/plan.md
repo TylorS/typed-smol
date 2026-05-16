@@ -207,10 +207,11 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 - Modify: `packages/virtual-modules-vscode/src/extension.ts`
 - Add tests in `packages/virtual-modules/src/internal/ArtifactStore.test.ts` or a new core wrapper test if VS Code has no test runner.
 
-- [ ] Add core tests covering the materialization behavior VS Code needs.
-- [ ] Run `pnpm --filter @typed/virtual-modules test -- ArtifactStore`; expected pass after core support exists.
-- [ ] Replace VS Code's duplicate normal-case write/rewrite logic with calls into `@typed/virtual-modules`.
-- [ ] Run `pnpm --filter @typed/virtual-modules-vscode build`; expected pass.
+- [x] Add core tests covering the materialization behavior VS Code needs.
+- [x] Run `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile`; expected pass after core support exists.
+- [x] Replace VS Code's duplicate normal-case write/rewrite logic with calls into `@typed/virtual-modules`.
+- [x] Run `pnpm --filter @typed/virtual-modules-vscode test`; expected pass.
+- [x] Run `pnpm --filter @typed/virtual-modules-vscode build`; expected pass.
 - [ ] Commit with `refactor: share vscode virtual artifact materialization`.
 
 ### T12: Explicit Clean/Prune
