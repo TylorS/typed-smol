@@ -1181,6 +1181,34 @@ export const openapi = {
         "src/api-openapi-generation-allow.generated.ts",
       );
     });
+
+    it("_api.ts openapi generation composes with JSON Swagger and Scalar exposure", () => {
+      const fixture = createApiFixture({
+        "src/apis/_api.ts": `
+export const openapi = {
+  generation: { additionalProperties: false as const },
+  exposure: {
+    jsonPath: "/openapi.json" as const,
+    swaggerPath: "/swagger" as const,
+    scalar: { path: "/docs" as const, source: "inline" as const, config: { theme: "default" as const } },
+  },
+};
+`,
+        "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const result = buildApiFromExistingFixture(fixture);
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toContain('openapiPath: "/openapi.json"');
+      expect(sourceText).toContain('path: "/swagger"');
+      expect(sourceText).toContain("HttpApiScalar.layer(Api");
+      expect(sourceText).toContain("applyOpenApiAdditionalProperties");
+      expectHttpApiGeneratedSourceToTypeCheck(
+        fixture,
+        sourceText!,
+        "src/api-openapi-generation-exposure.generated.ts",
+      );
+    });
   });
 });
 

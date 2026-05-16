@@ -312,7 +312,7 @@ git commit -m "fix(app): support httpapi openapi generation config" -m "- normal
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
 
-- [ ] **Step 1: Write failing composed root test**
+- [x] **Step 1: Write failing composed root test**
 
 Add:
 
@@ -346,7 +346,7 @@ export const openapi = {
 });
 ```
 
-- [ ] **Step 2: Verify red**
+- [x] **Step 2: Verify red**
 
 Run:
 
@@ -356,7 +356,7 @@ pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts -t "gene
 
 Expected: fails until emitter consumes exposure through the plan.
 
-- [ ] **Step 3: Route exposure through plan**
+- [x] **Step 3: Route exposure through plan**
 
 Remove separate `openapiExposure` input from `emitHttpApiSource`. Read:
 
@@ -368,7 +368,7 @@ const scalarConfig = input.openapiPlan?.api.exposure.scalar;
 
 Pass only `openapiPlan` from `HttpApiVirtualModulePlugin.ts`.
 
-- [ ] **Step 4: Verify green and commit**
+- [x] **Step 4: Verify green and commit**
 
 Run:
 
