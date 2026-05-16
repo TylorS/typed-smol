@@ -124,6 +124,21 @@ Task 1 added a reusable generated-source TypeScript compiler harness for virtual
   - testing strategy now treats generated-source type-check fixtures as the current blocking proof path for OpenAPI hardening
 - memory_updates: see `memories.md` and `memory/httpapi-spec-sync.md`
 
+### Task 8
+
+- task_id: T8
+- requirement_ids: finalization
+- ts_scenarios: full verification
+- validation_evidence:
+  - package: `pnpm --filter @typed/app build` passed
+  - package: `pnpm --filter @typed/app test` passed with 9 test files, 210 tests, and no type errors
+  - workspace: `pnpm build` passed
+  - workspace: `pnpm test` passed
+- commit: `docs(app): finalize router httpapi hardening workflow`
+- deviations_or_replans:
+  - broader workspace verification was run because durable workflow/spec docs changed outside `packages/app`
+  - root build emitted existing Vite/lightningcss warnings, but exited successfully
+
 ## Deferred Work
 
 - HttpApi generated-source harness coverage starts in Task 3 after Router generated-source proof is committed.

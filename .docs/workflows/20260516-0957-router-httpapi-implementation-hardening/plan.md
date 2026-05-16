@@ -493,7 +493,7 @@ git commit -m "docs(app): sync httpapi hardening specs" -m "- align durable Http
 **Files:**
 - Modify: `.docs/workflows/20260516-0957-router-httpapi-implementation-hardening/99-finalization.md`
 
-- [ ] **Step 1: Run package verification**
+- [x] **Step 1: Run package verification**
 
 ```bash
 pnpm --filter @typed/app build
@@ -502,7 +502,7 @@ pnpm --filter @typed/app test
 
 Expected: both pass.
 
-- [ ] **Step 2: Run broader verification if touched shared modules**
+- [x] **Step 2: Run broader verification if touched shared modules**
 
 If files outside `packages/app` changed:
 
@@ -513,7 +513,7 @@ pnpm test
 
 Expected: pass or documented environment-only blocker.
 
-- [ ] **Step 3: Write finalization artifact**
+- [x] **Step 3: Write finalization artifact**
 
 Create `.docs/workflows/20260516-0957-router-httpapi-implementation-hardening/99-finalization.md` with:
 
@@ -522,7 +522,7 @@ Create `.docs/workflows/20260516-0957-router-httpapi-implementation-hardening/99
 - commands run;
 - known deferrals.
 
-- [ ] **Step 4: Commit finalization if needed**
+- [x] **Step 4: Commit finalization if needed**
 
 ```bash
 git add .docs/workflows/20260516-0957-router-httpapi-implementation-hardening/99-finalization.md
