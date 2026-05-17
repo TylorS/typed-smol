@@ -45,6 +45,8 @@ describe("realworld framework entrypoints", () => {
     expect(moduleId).toBe("typed:browser?routes=./routes");
     expect(generated).toContain('import Routes0 from "router:./routes";');
     expect(generated).not.toContain("route-handlers:");
+    expect(generated).toContain('import { composeWithLayers } from "@typed/app/runtime";');
+    expect(generated).not.toContain("TypedAppRuntime");
     expect(generated).toContain('import { Fx } from "@typed/fx";');
     expect(generated).toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(generated).toContain("Fx.drainLayer(render(Routes, root))");

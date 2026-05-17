@@ -46,7 +46,8 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('import * as Cause from "effect/Cause";');
     expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
-    expect(source).toContain('import * as TypedAppRuntime from "@typed/app/runtime";');
+    expect(source).toContain('import { composeWithLayers } from "@typed/app/runtime";');
+    expect(source).not.toContain("TypedAppRuntime");
     expect(source).not.toContain('from "@typed/app";');
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
     expect(source).toContain('import { Fx } from "@typed/fx";');

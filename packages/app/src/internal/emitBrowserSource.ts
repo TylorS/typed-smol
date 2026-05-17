@@ -13,7 +13,7 @@ export function emitBrowserSource(input: EmitBrowserSourceInput): string {
     'import * as Context from "effect/Context";',
     'import * as Effect from "effect/Effect";',
     'import * as Layer from "effect/Layer";',
-    'import * as TypedAppRuntime from "@typed/app/runtime";',
+    'import { composeWithLayers } from "@typed/app/runtime";',
     'import { Fx } from "@typed/fx";',
     'import * as TypedRouter from "@typed/router";',
     'import { DomRenderTemplate, render } from "@typed/template";',
@@ -78,8 +78,8 @@ function emitRuntime(
     "  const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);",
     "  const renderLayer = makeRenderLayer(win, root);",
     dependenciesCompanion
-      ? "  return TypedAppRuntime.composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])]);"
-      : "  return options.layers === undefined ? renderLayer : TypedAppRuntime.composeWithLayers(renderLayer, options.layers);",
+      ? "  return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])]);"
+      : "  return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);",
     "}",
     "export function run(options = {}) {",
     "  const BrowserLayer = hydrate(options);",
