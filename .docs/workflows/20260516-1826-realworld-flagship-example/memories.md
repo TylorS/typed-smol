@@ -22,3 +22,10 @@
 - Article list responses intentionally use `ArticlePreview`, whose struct strips `body` on decode/encode while single article responses use full `Article`.
 - Effect Schema `Struct` strips extra keys by default; the schema test locks this behavior for body-free article previews.
 - Timestamps are modeled as branded ISO UTC strings for API compatibility instead of decoded DateTime values.
+
+## Task 3 - Domain Invariants
+
+- Slug helpers are pure and deterministic: `toSlugBase` normalizes titles and `uniqueSlug` appends numeric suffixes starting at `-2`.
+- Tag updates distinguish `undefined` as preserve-existing and `[]` as remove-all, matching the RealWorld article update contract.
+- `parseAuthorizationHeader` returns Effect `Option` and only accepts exact `Token <opaque-token>` headers.
+- Markdown rendering goes through `src/domain/Markdown.ts`; raw dangerous nodes, event-handler attributes, and `javascript:` URLs are stripped or escaped at the boundary.

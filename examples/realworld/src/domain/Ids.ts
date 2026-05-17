@@ -1,4 +1,5 @@
 import type { Brand } from "effect/Brand";
+import { String as Str, pipe } from "effect";
 import * as Schema from "effect/Schema";
 
 export type { Brand };
@@ -57,3 +58,31 @@ export type Email = Schema.Schema.Type<typeof Email>;
 
 export const TagName = NonEmptyString.pipe(Schema.brand("TagName"));
 export type TagName = Schema.Schema.Type<typeof TagName>;
+
+export const toSlugBase = (title: string): string => {
+  const slug = pipe(
+    title,
+    Str.trim,
+    Str.toLowerCase,
+    Str.replaceAll(/[^a-z0-9]+/g, "-"),
+    Str.replaceAll(/^-+|-+$/g, ""),
+  );
+
+  return slug.length > 0 ? slug : "article";
+};
+
+export const uniqueSlug = (
+  title: string,
+  existingSlugs: Iterable<string>,
+): string => {
+  const base = toSlugBase(title);
+  const existing = new Set(existingSlugs);
+  if (!existing.has(base)) return base;
+
+  let suffix = 2;
+  while (existing.has(`${base}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${base}-${suffix}`;
+};

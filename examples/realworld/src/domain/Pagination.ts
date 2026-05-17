@@ -17,3 +17,10 @@ export const ListQuery = Schema.Struct({
   offset: Schema.optionalKey(Offset),
 });
 export type ListQuery = Schema.Schema.Type<typeof ListQuery>;
+
+export const toOffset = (page: number, pageSize: number = defaultLimit): number => {
+  const safePage = Math.max(1, Math.trunc(page));
+  const safePageSize = Math.max(0, Math.trunc(pageSize));
+
+  return (safePage - 1) * safePageSize;
+};

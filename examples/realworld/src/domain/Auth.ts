@@ -1,3 +1,4 @@
+import { Option } from "effect";
 import * as Schema from "effect/Schema";
 import { OpaqueToken } from "./Ids.js";
 
@@ -9,3 +10,16 @@ export const AuthHeader = Schema.String.pipe(
   Schema.brand("AuthHeader"),
 );
 export type AuthHeader = Schema.Schema.Type<typeof AuthHeader>;
+
+export const parseAuthorizationHeader = (
+  header: string | null | undefined,
+): Option.Option<BearerToken> => {
+  const match = /^Token ([^\s]+)$/.exec(header ?? "");
+  if (!match) return Option.none();
+
+  try {
+    return Option.some(Schema.decodeUnknownSync(BearerToken)(match[1]));
+  } catch {
+    return Option.none();
+  }
+};

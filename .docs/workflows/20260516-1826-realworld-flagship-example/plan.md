@@ -488,12 +488,12 @@ Execution refinements:
 - Create: `src/tests/domain/invariants.test.ts`
 - Create: `src/tests/domain/markdown.test.ts`
 
-- [ ] Step 1: Write failing tests for slug generation from duplicate titles, stable slug base, tag order preservation, tag removal, nullable `bio`/`image` normalization, auth header parsing, page-to-offset conversion, and ownership checks.
-- [ ] Step 2: Write failing tests proving malicious Markdown and description strings produce no script tags, event handler attributes, JavaScript URL execution hooks, or raw HTML nodes.
-- [ ] Step 3: Run the domain tests and confirm failures.
-- [ ] Step 4: Implement pure helpers for slug bases, unique slug candidate generation, tag normalization, nullable field normalization, auth token extraction, pagination, ownership checks, and `micromark` rendering.
-- [ ] Step 5: Run `pnpm --filter typed-realworld test:unit`.
-- [ ] Step 6: Commit as `feat: add realworld domain invariants`.
+- [x] Step 1: Write failing tests for slug generation from duplicate titles, stable slug base, tag order preservation, tag removal, nullable `bio`/`image` normalization, auth header parsing, page-to-offset conversion, and ownership checks.
+- [x] Step 2: Write failing tests proving malicious Markdown and description strings produce no script tags, event handler attributes, JavaScript URL execution hooks, or raw HTML nodes.
+- [x] Step 3: Run the domain tests and confirm failures.
+- [x] Step 4: Implement pure helpers for slug bases, unique slug candidate generation, tag normalization, nullable field normalization, auth token extraction, pagination, ownership checks, and `micromark` rendering.
+- [x] Step 5: Run `pnpm --filter typed-realworld test:unit`.
+- [x] Step 6: Commit as `feat: add realworld domain invariants`.
 
 ### Task 4: SQLite Migration, Reset, and Seed
 
