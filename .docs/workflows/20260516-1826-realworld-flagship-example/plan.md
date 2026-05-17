@@ -653,15 +653,18 @@ Execution refinements:
 - Create: `src/tests/presentation/xss.test.ts`
 - Create: `public/default-avatar.svg`
 
-- [ ] Step 1: Write failing selector tests for every required class, input name, placeholder, visible label, active page class, `.error-messages`, and default avatar usage.
-- [ ] Step 2: Write failing XSS tests for malicious image URL, article description, article body Markdown, and comment/avatar contexts.
-- [ ] Step 3: Run selector/XSS tests and confirm failures.
-- [ ] Step 4: Implement local Conduit-compatible CSS without external CSS packages.
-- [ ] Step 5: Ensure each presentation component emits required classes and labels.
-- [ ] Step 6: Ensure image/avatar helpers never spread untrusted strings into attributes other than safe `src`.
-- [ ] Step 7: Run `pnpm --filter typed-realworld test:ssr` and selector/XSS tests.
-- [ ] Step 8: Use browser verification or Playwright screenshot for representative desktop/mobile pages if local browser tooling is available.
-- [ ] Step 9: Commit as `feat: satisfy realworld ui contract`.
+**Progress notes:**
+- 2026-05-17: Selector/XSS slice is complete. Browser verification confirmed the stylesheet loads and applies under raw Vite dev; the app body remains empty there because `typed:browser` is currently hydration-mode and expects SSR HTML, so the full local-server verification belongs to Task 12.
+
+- [x] Step 1: Write failing selector tests for every required class, input name, placeholder, visible label, active page class, `.error-messages`, and default avatar usage.
+- [x] Step 2: Write failing XSS tests for malicious image URL, article description, article body Markdown, and comment/avatar contexts.
+- [x] Step 3: Run selector/XSS tests and confirm failures.
+- [x] Step 4: Implement local Conduit-compatible CSS without external CSS packages.
+- [x] Step 5: Ensure each presentation component emits required classes and labels.
+- [x] Step 6: Ensure image/avatar helpers never spread untrusted strings into attributes other than safe `src`.
+- [x] Step 7: Run `pnpm --filter typed-realworld test:ssr` and selector/XSS tests.
+- [x] Step 8: Use browser verification or Playwright screenshot for representative desktop/mobile pages if local browser tooling is available.
+- [x] Step 9: Commit as `feat: satisfy realworld ui contract`.
 
 ### Task 12: Local/Manual Hurl and E2E Automation
 

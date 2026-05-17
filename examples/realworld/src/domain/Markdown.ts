@@ -25,5 +25,8 @@ export const stripUnsafeHtml = (html: string): string =>
 
 export const renderMarkdown = (source: string): string => stripUnsafeHtml(micromark(source));
 
+export const stripExecutableText = (source: string): string =>
+  source.replace(javascriptProtocolText, "");
+
 export const safeTextPreview = (source: string): string =>
-  escapeHtml(source).replace(javascriptProtocolText, "");
+  escapeHtml(stripExecutableText(source));

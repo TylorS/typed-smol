@@ -1,5 +1,6 @@
 import { html } from "@typed/template";
 import type { ArticlePreview } from "../domain/Article.js";
+import { safeTextPreview } from "../domain/Markdown.js";
 import { BrowserAuth } from "./BrowserAuth.js";
 import { clickIntent } from "./FormEvents.js";
 import { avatarSrc, Banner } from "./Layout.js";
@@ -39,8 +40,8 @@ export const ArticleList = (input: {
 export const ArticlePreviewCard = (article: ArticlePreview) => html`<article class="article-preview">
   <div class="article-meta">${AuthorMeta(article)}</div>
   <a class="preview-link" href=${`/article/${article.slug}`}>
-    <h1>${article.title}</h1>
-    <p>${article.description}</p>
+    <h1>${safeTextPreview(article.title)}</h1>
+    <p>${safeTextPreview(article.description)}</p>
     <span>Read more...</span>
     <ul class="tag-list">
       ${article.tagList.map(Tag)}
@@ -66,7 +67,9 @@ const AuthorMeta = (article: ArticlePreview) => html`<a href=${`/profile/${artic
   <img src=${avatarSrc(article.author.image)} />
 </a>
 <div class="info">
-  <a class="author" href=${`/profile/${article.author.username}`}>${article.author.username}</a>
+  <a class="author" href=${`/profile/${article.author.username}`}>
+    ${safeTextPreview(article.author.username)}
+  </a>
   <span class="date">${article.createdAt}</span>
 </div>
 <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(article)}>

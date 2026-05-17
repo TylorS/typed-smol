@@ -112,3 +112,10 @@
 - Router virtual-module emission must pass non-function `Fx` values directly to `Router.match(route, fx)` instead of wrapping them in `constant(fx)`, otherwise TypeScript selects a broader function-handler path and loses template types.
 - RealWorld route layouts should use router layout support with generic `LayoutParams<Params, A, E, R>` and typed `@typed/template` return channels; avoid manual `{ content: unknown }` wrappers.
 - `LayerAny` in `@typed/app` runtime is intentionally `Layer.Layer<never, unknown, unknown>` to avoid poisoning public generated program types with `any`.
+
+## Task 11 - UI Contract and XSS
+
+- The CSS contract is local to `src/presentation/styles.css` and is loaded from `index.html`; there are no external CSS packages.
+- `avatarSrc` only allows root-relative URLs and absolute `http:`/`https:` URLs; unsafe, empty, protocol-relative, `javascript:`, and `data:` values fall back to `/default-avatar.svg`.
+- Static `@typed/template` rendering currently inserts interpolated strings as HTML, so presentation code must pass untrusted text through `safeTextPreview` or sanitized Markdown before rendering.
+- Raw Vite dev serves the hydration entry without SSR content, so browser verification can confirm asset loading but not full page content until Task 12 wires a local SSR/server acceptance path.

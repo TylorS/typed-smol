@@ -1,5 +1,6 @@
 import { html } from "@typed/template";
 import type { ArticlePreview } from "../domain/Article.js";
+import { safeTextPreview } from "../domain/Markdown.js";
 import type { Profile } from "../domain/User.js";
 import { ArticleList } from "./Feed.js";
 import { BrowserAuth } from "./BrowserAuth.js";
@@ -17,10 +18,10 @@ export const ProfilePage = (input: ProfilePageInput) => html`<section class="pro
   <div class="user-info">
     <div class="container">
       <img class="user-img user-pic" src=${avatarSrc(input.profile.image)} />
-      <h4>${input.profile.username}</h4>
-      <p>${input.profile.bio ?? ""}</p>
+      <h4>${safeTextPreview(input.profile.username)}</h4>
+      <p>${safeTextPreview(input.profile.bio ?? "")}</p>
       <button class="btn btn-sm btn-outline-primary" onclick=${followProfile(input.profile)}>
-        Follow ${input.profile.username}
+        Follow ${safeTextPreview(input.profile.username)}
       </button>
     </div>
   </div>
