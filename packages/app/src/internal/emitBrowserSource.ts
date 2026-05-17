@@ -25,7 +25,7 @@ export function emitBrowserSource(input: EmitBrowserSourceInput): string {
 
 function emitRouteImports(routes: readonly string[]): readonly string[] {
   return routes.map((target, index) => {
-    return `import Routes${index} from "router:${toRouterTarget(target)}?target=browser";`;
+    return `import Routes${index} from "router:${toRouterTarget(target)}";`;
   });
 }
 

@@ -54,8 +54,7 @@ function createPageEntries(
 
 function emitImports(imports: readonly OrderedImport[]): readonly string[] {
   return imports.map((entry) => {
-    const moduleId =
-      entry.kind === "api" ? `api:${entry.target}` : `router:${entry.target}?target=server`;
+    const moduleId = entry.kind === "api" ? `api:${entry.target}` : `router:${entry.target}`;
     const binding = entry.kind === "api" ? `Api${entry.index}` : `Routes${entry.index}`;
     if (entry.kind === "routes") return `import ${binding} from ${JSON.stringify(moduleId)};`;
     return `import * as ${binding} from ${JSON.stringify(moduleId)};`;

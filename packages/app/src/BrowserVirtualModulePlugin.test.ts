@@ -51,7 +51,7 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
     expect(source).toContain('import { Fx } from "@typed/fx";');
     expect(source).toContain('import { DomRenderTemplate, render } from "@typed/template";');
-    expect(source).toContain('import Routes0 from "router:./routes?target=browser";');
+    expect(source).toContain('import Routes0 from "router:./routes";');
     expect(source).toContain("export const Routes = Routes0;");
     expect(source).not.toContain("export const Routes = TypedRouter.merge(Routes0);");
     expect(source).toContain("export const BrowserRuntime =");
@@ -80,8 +80,8 @@ describe("BrowserVirtualModulePlugin", () => {
   it("emits repeated explicit route imports in source order", () => {
     const source = buildBrowser("typed:browser?routes=./main&routes=./admin") as string;
 
-    expect(source.indexOf('import Routes0 from "router:./main?target=browser";')).toBeLessThan(
-      source.indexOf('import Routes1 from "router:./admin?target=browser";'),
+    expect(source.indexOf('import Routes0 from "router:./main";')).toBeLessThan(
+      source.indexOf('import Routes1 from "router:./admin";'),
     );
     expect(source).toContain("export const Routes = TypedRouter.merge(Routes0, Routes1);");
   });

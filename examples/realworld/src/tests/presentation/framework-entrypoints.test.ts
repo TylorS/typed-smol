@@ -21,7 +21,7 @@ describe("realworld framework entrypoints", () => {
     expect(moduleId).toBe(
       "typed:server?routes=./routes&api=./api&html=../index.html&client=./browser.ts",
     );
-    expect(generated).toContain('import Routes0 from "router:./routes?target=server";');
+    expect(generated).toContain('import Routes0 from "router:./routes";');
     expect(generated).toContain('import * as Api0 from "api:./api";');
     expect(generated).toContain('import * as Html0 from "typed:html?path=../index.html";');
     expect(generated).toContain('import { ssrForHttp } from "@typed/ui";');
@@ -40,7 +40,7 @@ describe("realworld framework entrypoints", () => {
     );
 
     expect(moduleId).toBe("typed:browser?routes=./routes");
-    expect(generated).toContain('import Routes0 from "router:./routes?target=browser";');
+    expect(generated).toContain('import Routes0 from "router:./routes";');
     expect(generated).toContain('import { Fx } from "@typed/fx";');
     expect(generated).toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(generated).toContain("Fx.drainLayer(render(Routes, root))");

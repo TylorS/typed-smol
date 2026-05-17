@@ -52,8 +52,8 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
     expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(source).toContain('import * as Api0 from "api:./api";');
-    expect(source).toContain('import Routes0 from "router:./routes1?target=server";');
-    expect(source).toContain('import Routes1 from "router:./routes2?target=server";');
+    expect(source).toContain('import Routes0 from "router:./routes1";');
+    expect(source).toContain('import Routes1 from "router:./routes2";');
     expect(source).toContain("export const AppLayer =");
     expect(source).toContain("export const ServerLayer =");
     expect(source).toContain("export const handler =");
@@ -76,7 +76,7 @@ describe("ServerVirtualModulePlugin", () => {
   it("preserves source order for repeated api and routes parameters", () => {
     const source = buildServer("typed:server?routes=./routes&api=./api1&api=./api2") as string;
 
-    expect(source.indexOf('import Routes0 from "router:./routes?target=server";')).toBeLessThan(
+    expect(source.indexOf('import Routes0 from "router:./routes";')).toBeLessThan(
       source.indexOf('import * as Api0 from "api:./api1";'),
     );
     expect(source.indexOf('import * as Api0 from "api:./api1";')).toBeLessThan(
@@ -166,7 +166,7 @@ describe("ServerVirtualModulePlugin", () => {
       ],
       moduleFallbacks: {
         "api:./api": join(fixture.root, "src/api.ts"),
-        "router:./routes?target=server": join(fixture.root, "src/routes.ts"),
+        "router:./routes": join(fixture.root, "src/routes.ts"),
         "typed:config": join(fixture.root, "src/typed-config.ts"),
         "@typed/template": join(fixture.root, "src/typed-template.d.ts"),
       },

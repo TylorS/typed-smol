@@ -16,7 +16,6 @@ import {
 } from "./routeTypeNode.js";
 
 export type ConcernKind = "guard" | "dependencies" | "layout" | "catch";
-export type RouterBuildTarget = "server" | "browser";
 
 export type ComposedConcerns = {
   readonly guard: readonly string[];
@@ -117,27 +116,6 @@ function listEntrypointExports(snapshot: TypeInfoFileSnapshot): readonly Exporte
   );
 }
 
-function siblingHandlerPath(leafFilePath: string): string {
-  const dir = dirname(leafFilePath);
-  const base = basename(stripScriptExtension(leafFilePath));
-  const file = `${base}.handler.ts`;
-  return dir ? toPosixPath(join(dir, file)) : file;
-}
-
-function selectEntrypoint(
-  target: RouterBuildTarget,
-  routeSnapshot: TypeInfoFileSnapshot,
-  handlerSnapshot: TypeInfoFileSnapshot | undefined,
-): {
-  readonly entrypoints: readonly ExportedTypeInfo[];
-  readonly snapshot: TypeInfoFileSnapshot;
-} {
-  if (target === "server" && handlerSnapshot !== undefined) {
-    return { entrypoints: listEntrypointExports(handlerSnapshot), snapshot: handlerSnapshot };
-  }
-  return { entrypoints: listEntrypointExports(routeSnapshot), snapshot: routeSnapshot };
-}
-
 function isRouteExportCompatible(routeExport: ExportedTypeInfo, api: TypeInfoApi): boolean {
   return typeNodeIsRouteCompatible(routeExport.type, api);
 }
@@ -223,7 +201,6 @@ export function buildRouteDescriptors(
   snapshots: readonly TypeInfoFileSnapshot[],
   baseDir: string,
   api: TypeInfoApi,
-  target: RouterBuildTarget = "server",
 ): {
   readonly descriptors: readonly RouteDescriptor[];
   readonly violations: readonly RouteContractViolation[];
@@ -235,21 +212,11 @@ export function buildRouteDescriptors(
   const descriptors: RouteDescriptor[] = [];
   const violations: RouteContractViolation[] = [];
   const existingPaths = new Set(snapshots.map((s) => toPosixPath(relative(baseDir, s.filePath))));
-  const snapshotByRelativePath = new Map(
-    snapshots.map((s) => [toPosixPath(relative(baseDir, s.filePath)), s] as const),
-  );
-
   for (const snapshot of snapshots) {
     if (isCompanionModulePath(snapshot.filePath)) continue;
     const relPath = toPosixPath(relative(baseDir, snapshot.filePath));
-    const handlerPath = siblingHandlerPath(relPath);
-    const selectedEntrypoint = selectEntrypoint(
-      target,
-      snapshot,
-      snapshotByRelativePath.get(handlerPath),
-    );
-    const entrypoints = selectedEntrypoint.entrypoints;
-    const entrypointRelPath = toPosixPath(relative(baseDir, selectedEntrypoint.snapshot.filePath));
+    const entrypoints = listEntrypointExports(snapshot);
+    const entrypointRelPath = relPath;
     const routeExport = snapshot.exports.find((value) => value.name === "route");
 
     if (!routeExport) {
@@ -303,11 +270,7 @@ export function buildRouteDescriptors(
     const entrypointIsFunction = isCallableNode(entrypoint.type);
     const entrypointExpectsRefSubject =
       entrypointIsFunction && typeNodeExpectsRefSubjectParam(entrypoint.type, api);
-    const discoveredConcerns = resolveComposedConcernsForLeaf(relPath, existingPaths);
-    const composedConcerns =
-      target === "browser"
-        ? { ...discoveredConcerns, dependencies: [] }
-        : discoveredConcerns;
+    const composedConcerns = resolveComposedConcernsForLeaf(relPath, existingPaths);
     const inFileConcerns: InFileConcerns = {};
     for (const name of ["layout", "dependencies", "catch", "guard"] as const) {
       if (snapshot.exports.some((e) => e.name === name)) inFileConcerns[name] = true;

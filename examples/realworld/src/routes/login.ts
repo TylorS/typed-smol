@@ -3,4 +3,4 @@ import { AuthLoginPage } from "../presentation/App.js";
 import { LoginRoute } from "../routing/Routes.js";
 
 export const route = LoginRoute;
-export const template = AuthLoginPage;
+export const handler = RouteHandler(route)(() => AuthLoginPage);

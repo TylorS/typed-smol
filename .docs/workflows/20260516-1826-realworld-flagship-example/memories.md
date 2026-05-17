@@ -136,8 +136,8 @@
 
 ## Declarative Route/Virtual Runtime Refactor
 
-- RealWorld no longer needs a separate `src/browser-routes/**` tree. Server-only route data loaders live in sibling `*.handler.ts` files, while browser-safe route modules keep route declarations and declarative templates in `src/routes/**`.
-- `typed:browser` and `typed:server` now import router virtual modules with explicit `?target=browser` / `?target=server`; the router generator selects sibling `.handler.ts` entrypoints only for the server target and drops route dependencies for the browser target.
+- RealWorld no longer needs a separate `src/browser-routes/**` tree or sibling `*.handler.ts` router companions. Route modules in `src/routes/**` own the route declaration and render handler directly.
+- Router virtual modules are environment-agnostic. `typed:browser` and `typed:server` both import the same `router:./routes` graph; browser/server behavior comes from the provided Navigation/rendering layers (`render(..., root)` vs `ssrForHttp(router)`), not from `router:` targets.
 - `src/server.ts` exports `renderUrl` from the generated `typed:server` virtual module; `src/ssr.ts` was removed after Vite could import the generated server/API/HTML virtual modules directly.
 - Generated `typed:server`, `typed:browser`, `typed:html`, and `api:` runtime modules must remain JavaScript-parseable for Vite/Rolldown. They currently emit `// @ts-nocheck` because VMC writes them as `.ts` files; the durable fix is a separate declaration/type surface, not reintroducing TS-only runtime syntax.
 - `@typed/async-data` now exports `RefAsyncData.fromEffect` and `RefAsyncData.make`, backed by `@typed/fx`, so async lifecycle state can be bound declaratively instead of pre-resolving route snapshots.

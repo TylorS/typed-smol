@@ -2,7 +2,6 @@ import { readdirSync, statSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
 import {
   buildRouteDescriptors,
-  type RouterBuildTarget,
   type RouteContractViolation,
 } from "./internal/buildRouteDescriptors.js";
 import { emitRouterMatchSource } from "./internal/emitRouterSource.js";
@@ -49,7 +48,7 @@ export interface RouterVirtualModulePluginOptions {
 }
 
 export type ParseRouterVirtualModuleIdResult =
-  | { readonly ok: true; readonly relativeDirectory: string; readonly target: RouterBuildTarget }
+  | { readonly ok: true; readonly relativeDirectory: string }
   | { readonly ok: false; readonly reason: string };
 
 export function parseRouterVirtualModuleId(
@@ -68,16 +67,12 @@ export function parseRouterVirtualModuleId(
   const separatorIndex = body.indexOf("?");
   const rawRelativeDirectory = separatorIndex === -1 ? body : body.slice(0, separatorIndex);
   const params = new URLSearchParams(separatorIndex === -1 ? "" : body.slice(separatorIndex + 1));
-  const unsupported = [...params.keys()].find((key) => key !== "target");
+  const unsupported = [...params.keys()][0];
   if (unsupported !== undefined) {
     return {
       ok: false,
       reason: `router virtual module does not support query option "${unsupported}"`,
     };
-  }
-  const target = params.get("target") ?? "server";
-  if (target !== "server" && target !== "browser") {
-    return { ok: false, reason: 'router target must be one of "server" or "browser"' };
   }
 
   let relativeDirectory = rawRelativeDirectory;
@@ -94,11 +89,11 @@ export function parseRouterVirtualModuleId(
   const relativeResult = validatePathSegment(relativeDirectory, "relativeDirectory");
   if (!relativeResult.ok) return { ok: false, reason: relativeResult.reason };
 
-  return { ok: true, relativeDirectory: relativeResult.value, target };
+  return { ok: true, relativeDirectory: relativeResult.value };
 }
 
 export type ResolveRouterTargetDirectoryResult =
-  | { readonly ok: true; readonly targetDirectory: string; readonly target: RouterBuildTarget }
+  | { readonly ok: true; readonly targetDirectory: string }
   | { readonly ok: false; readonly reason: string };
 
 export function resolveRouterTargetDirectory(
@@ -121,7 +116,7 @@ export function resolveRouterTargetDirectory(
     return { ok: false, reason: "resolved target directory is outside importer base directory" };
   }
 
-  return { ok: true, targetDirectory: toPosixPath(resolved.path), target: parsed.target };
+  return { ok: true, targetDirectory: toPosixPath(resolved.path) };
 }
 
 function isExistingDirectory(absolutePath: string): boolean {
@@ -219,7 +214,7 @@ export const createRouterVirtualModulePlugin = (
         catchExportByPath,
         catchFormByPath,
         depsFormByPath,
-      } = buildRouteDescriptors(snapshots, resolved.targetDirectory, api, resolved.target);
+      } = buildRouteDescriptors(snapshots, resolved.targetDirectory, api);
 
       const toDiagnostic = (v: RouteContractViolation) => ({
         code: v.code,
