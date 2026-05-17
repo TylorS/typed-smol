@@ -54,3 +54,12 @@
 - Article listing supports RealWorld global filters for tag, author, favorited username, limit, and offset; feed lists articles from followed authors only.
 - Article writes normalize tags, preserve tags when `tagList` is absent, remove all tags for an empty `tagList`, generate unique slugs, and maintain favorite counts through real SQLite rows.
 - Comment repository methods return `Option` for unknown article/comment targets, support selective owner deletion, and hydrate author profiles from real user rows.
+
+## Task 7 - Application Services
+
+- Application services now live in `src/application/{Users,Profiles,Articles,Comments,Tags}.ts` with `Context.Service` classes and `Layer.effect` constructors.
+- `src/application/Common.ts` owns token resolution, optional viewer lookup, RealWorld error helpers, blank-field validation, and `UserResponse` shaping.
+- `RealWorldError` is a tagged domain error with `{ status, errors }`, matching the API envelope and current service tests.
+- Protected workflows use `Option<OpaqueToken>`; missing tokens map to `401 errors.token[0] == "is missing"` before repository access.
+- Article and comment ownership checks happen in application services so repository `Option`/boolean results become `404` or `403` RealWorld errors.
+- Effect 4 uses `Effect.catch(...)`; `Effect.catchAll` is not available in this workspace.

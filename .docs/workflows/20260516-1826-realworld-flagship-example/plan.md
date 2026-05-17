@@ -568,16 +568,16 @@ Execution refinements:
 - Create: `src/tests/application/articles.test.ts`
 - Create: `src/tests/application/social.test.ts`
 
-- [ ] Step 1: Write failing service tests for every endpoint workflow using repositories through Effect services.
-- [ ] Step 2: Include exact RealWorld error mapping tests for missing token, invalid credentials, blank fields, duplicates, forbidden article/comment operations, and not found.
-- [ ] Step 3: Run application tests and confirm failures.
-- [ ] Step 4: Implement each application service as a class-based `Context.Service` with a `Layer.effect(Service, Effect.gen(...))` constructor that acquires repository/helper services and returns the implementation object.
-- [ ] Step 5: Implement user/auth services.
-- [ ] Step 6: Implement profile/follow services.
-- [ ] Step 7: Implement article/feed/favorite services.
-- [ ] Step 8: Implement comment/tag services.
-- [ ] Step 9: Run `pnpm --filter typed-realworld test:integration -- src/tests/application`.
-- [ ] Step 10: Commit as `feat: add realworld application services`.
+- [x] Step 1: Write failing service tests for every endpoint workflow using repositories through Effect services.
+- [x] Step 2: Include exact RealWorld error mapping tests for missing token, invalid credentials, blank fields, duplicates, forbidden article/comment operations, and not found.
+- [x] Step 3: Run application tests and confirm failures.
+- [x] Step 4: Implement each application service as a class-based `Context.Service` with a `Layer.effect(Service, Effect.gen(...))` constructor that acquires repository/helper services and returns the implementation object.
+- [x] Step 5: Implement user/auth services.
+- [x] Step 6: Implement profile/follow services.
+- [x] Step 7: Implement article/feed/favorite services.
+- [x] Step 8: Implement comment/tag services.
+- [x] Step 9: Run `pnpm --filter typed-realworld test:integration -- src/tests/application`.
+- [x] Step 10: Commit as `feat: add realworld application services`.
 
 ### Task 8: API Endpoint Modules and OpenAPI JSON
 
