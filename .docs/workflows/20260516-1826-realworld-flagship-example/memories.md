@@ -150,3 +150,10 @@
 - Server-only route dependency layers belong in `src/routes/_handlers.dependencies.ts`; do not put RealWorld SQLite/password/session layers in `src/routes/_dependencies.ts`, because router virtual modules import route dependencies in browser and server.
 - Browser-safe route modules should import `RouteHandler` from `@typed/app/RouteHandler`, not the `@typed/app` barrel, so the client bundle does not traverse VM plugin/config/TypeScript compiler exports.
 - This boundary reduced the RealWorld production client chunk from roughly 3.8 MB to 281 kB and removed RealWorld infrastructure/application modules, handler dependencies, `route-handlers:`, and TypeScript compiler sources from the client sourcemap.
+
+## Generated Runtime Import Hygiene
+
+- Generated `typed:server` runtime should import `RouteHandlers`, `TypedHttpServer`, and `composeWithLayers` from narrow `@typed/app` subpaths, not from the package root barrel.
+- Generated `api:*` runtime should import `emptyRecordString`/`emptyRecordStringArray`, `composeWithLayers`, `resolveConfig`, and `TypedHttpServer` from narrow subpaths, not from `@typed/app`.
+- RealWorld endpoint modules should import `ApiHandlerRaw` from `@typed/app/httpapi/ApiHandler`; keep root-barrel imports out of route and API leaf modules.
+- After changing generated imports, rebuild `@typed/vite-plugin` before running Vite-backed RealWorld tests. Its built resolver imports `@typed/app` and can otherwise serve stale generated virtual module code.

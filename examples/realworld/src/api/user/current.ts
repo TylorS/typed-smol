@@ -1,4 +1,4 @@
-import { ApiHandlerRaw } from "@typed/app";
+import { ApiHandlerRaw } from "@typed/app/httpapi/ApiHandler";
 import * as Route from "@typed/router";
 import { Users } from "../../application/Users.js";
 import { ErrorResponse } from "../../domain/Errors.js";

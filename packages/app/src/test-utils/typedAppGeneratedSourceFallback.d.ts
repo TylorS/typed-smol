@@ -72,3 +72,55 @@ declare module "@typed/app" {
     readonly apply: (matcher: any, handlers: any) => any;
   };
 }
+
+declare module "@typed/app/httpapi/ApiHandler" {
+  export const emptyRecordString: Readonly<Record<string, string>>;
+  export const emptyRecordStringArray: Readonly<Record<string, string | readonly string[] | undefined>>;
+}
+
+declare module "@typed/app/runtime" {
+  import type * as Layer from "effect/Layer";
+
+  export type LayerAny = Layer.Layer<never, any, any>;
+  export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];
+
+  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(
+    base: Base,
+    layers: Layers,
+  ): LayerAny;
+}
+
+declare module "@typed/app/internal/resolveConfig" {
+  import type * as Effect from "effect/Effect";
+
+  export function resolveConfig<A>(
+    value: A | Effect.Effect<A> | undefined,
+    fallback: A,
+  ): Effect.Effect<A>;
+}
+
+declare module "@typed/app/TypedHttpServer" {
+  import type * as Layer from "effect/Layer";
+
+  export type LayerAny = Layer.Layer<never, any, any>;
+
+  export const TypedHttpServer: {
+    readonly staticAssets: (options: {
+      readonly projectRoot: string;
+      readonly buildOutDir?: string;
+      readonly clientOutDir?: string;
+      readonly dev: boolean;
+    }) => Layer.Layer<never, never, never>;
+    readonly layer: (options: {
+      readonly projectRoot: string;
+      readonly dev: boolean;
+      readonly host?: string;
+      readonly port?: number;
+    }) => LayerAny;
+    readonly toNodeHandler: (layer: LayerAny) => unknown;
+  };
+}
+
+declare module "@typed/app/RouteHandlers" {
+  export const apply: (matcher: any, handlers: any) => any;
+}

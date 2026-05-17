@@ -143,6 +143,25 @@ const NM = join(APP_ROOT, "node_modules");
 
 const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
   "@typed/app": join(APP_ROOT, "src", "test-utils", "typedAppGeneratedSourceFallback.d.ts"),
+  "@typed/app/httpapi/ApiHandler": join(
+    APP_ROOT,
+    "src",
+    "test-utils",
+    "typedAppGeneratedSourceFallback.d.ts",
+  ),
+  "@typed/app/runtime": join(APP_ROOT, "src", "test-utils", "typedAppGeneratedSourceFallback.d.ts"),
+  "@typed/app/internal/resolveConfig": join(
+    APP_ROOT,
+    "src",
+    "test-utils",
+    "typedAppGeneratedSourceFallback.d.ts",
+  ),
+  "@typed/app/TypedHttpServer": join(
+    APP_ROOT,
+    "src",
+    "test-utils",
+    "typedAppGeneratedSourceFallback.d.ts",
+  ),
   "@typed/router": join(NM, "@typed", "router", "src", "index.ts"),
   "typed:config": join(APP_ROOT, "src", "test-utils", "typedConfigGeneratedSourceFallback.ts"),
   effect: join(NM, "effect", "dist", "index.d.ts"),
@@ -320,7 +339,10 @@ describe("createHttpApiVirtualModulePlugin", () => {
     expect(sourceText).toBeDefined();
     expect(sourceText).toMatchInlineSnapshot(`
       "// @ts-nocheck
-      import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer } from "@typed/app";
+      import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";
+      import { composeWithLayers } from "@typed/app/runtime";
+      import { resolveConfig } from "@typed/app/internal/resolveConfig";
+      import { TypedHttpServer } from "@typed/app/TypedHttpServer";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
@@ -400,6 +422,20 @@ describe("createHttpApiVirtualModulePlugin", () => {
     expect(sourceText).not.toContain("}) as any");
     expect(sourceText).not.toContain("Layer.Error<typeof appLayer>,\n        never");
     expect(sourceText).not.toContain("NodeHttpServer.layer(http.createServer");
+  });
+
+  it("imports runtime helpers from narrow @typed/app subpaths", () => {
+    const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
+
+    expect(sourceText).toContain(
+      'import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";',
+    );
+    expect(sourceText).toContain('import { composeWithLayers } from "@typed/app/runtime";');
+    expect(sourceText).toContain(
+      'import { resolveConfig } from "@typed/app/internal/resolveConfig";',
+    );
+    expect(sourceText).toContain('import { TypedHttpServer } from "@typed/app/TypedHttpServer";');
+    expect(sourceText).not.toContain('from "@typed/app";');
   });
 
   it("type-checks generated HttpApi source", () => {
@@ -604,7 +640,10 @@ describe("HttpApiVirtualModulePlugin integration", () => {
     expect(resolved.pluginName).toBe("httpapi-virtual-module");
     expect(resolved.sourceText).toMatchInlineSnapshot(`
       "// @ts-nocheck
-      import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer } from "@typed/app";
+      import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";
+      import { composeWithLayers } from "@typed/app/runtime";
+      import { resolveConfig } from "@typed/app/internal/resolveConfig";
+      import { TypedHttpServer } from "@typed/app/TypedHttpServer";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
@@ -1113,7 +1152,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
         import * as Schema from "effect/Schema";
         import * as Route from "@typed/router";
         import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
-        import { ApiHandlerRaw } from "@typed/app";
+        import { ApiHandlerRaw } from "@typed/app/httpapi/ApiHandler";
         export const route = Route.Parse("/raw");
         export const method = "POST";
         export const body = Schema.Struct({ name: Schema.String });

@@ -454,7 +454,10 @@ export function emitHttpApiSource(input: {
 
   const importLines: string[] = [
     `// @ts-nocheck`,
-    `import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer } from "@typed/app";`,
+    `import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";`,
+    `import { composeWithLayers } from "@typed/app/runtime";`,
+    `import { resolveConfig } from "@typed/app/internal/resolveConfig";`,
+    `import { TypedHttpServer } from "@typed/app/TypedHttpServer";`,
     `import * as Effect from "effect/Effect";`,
     `import * as Layer from "effect/Layer";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,

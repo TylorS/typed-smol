@@ -104,7 +104,13 @@ describe("typed-realworld package skeleton", () => {
     expect(existsSync(resolve(projectRoot, "src/routes/_handlers.dependencies.ts"))).toBe(true);
 
     for (const path of routeSourceFiles()) {
-      expect(readText(path), path).not.toContain('from "@typed/app"');
+      expect(readText(path), path).not.toContain('from "@typed/app";');
+    }
+  });
+
+  it("keeps api endpoint helpers off the @typed/app package barrel", () => {
+    for (const path of apiEndpointSourceFiles()) {
+      expect(readText(path), path).not.toContain('from "@typed/app";');
     }
   });
 
@@ -138,6 +144,28 @@ const routeSourceFiles = (): readonly string[] => [
   "src/routes/register.ts",
   "src/routes/settings.ts",
   "src/routes/tag.ts",
+];
+
+const apiEndpointSourceFiles = (): readonly string[] => [
+  "src/api/articles/create.ts",
+  "src/api/articles/delete.ts",
+  "src/api/articles/favorite.ts",
+  "src/api/articles/feed.ts",
+  "src/api/articles/get.ts",
+  "src/api/articles/list.ts",
+  "src/api/articles/unfavorite.ts",
+  "src/api/articles/update.ts",
+  "src/api/comments/create.ts",
+  "src/api/comments/delete.ts",
+  "src/api/comments/list.ts",
+  "src/api/profiles/follow.ts",
+  "src/api/profiles/get.ts",
+  "src/api/profiles/unfollow.ts",
+  "src/api/tags/list.ts",
+  "src/api/user/current.ts",
+  "src/api/user/update.ts",
+  "src/api/users/login.ts",
+  "src/api/users/register.ts",
 ];
 
 const effectUnknownErrorChannelLines = (path: string): readonly number[] =>

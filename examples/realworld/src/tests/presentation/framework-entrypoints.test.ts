@@ -23,12 +23,13 @@ describe("realworld framework entrypoints", () => {
     );
     expect(generated).toContain('import Routes0 from "router:./routes";');
     expect(generated).toContain('import RouteHandlers0 from "route-handlers:./routes";');
-    expect(generated).toContain("TypedApp.RouteHandlers.apply(Routes0, RouteHandlers0)");
+    expect(generated).toContain("RouteHandlers.apply(Routes0, RouteHandlers0)");
     expect(generated).toContain('import * as Api0 from "api:./api";');
     expect(generated).toContain('import * as Html0 from "typed:html?path=../index.html";');
     expect(generated).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(generated).toContain("HttpRouter.use(ssrForHttp");
-    expect(generated).toContain("TypedApp.TypedHttpServer.toNodeHandler(AppLayer)");
+    expect(generated).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
+    expect(generated).not.toContain('from "@typed/app";');
     expect(generated).toContain('client: "./browser.ts"');
     expect(generated).not.toContain("options.run");
     expect(generated).not.toContain("readonly run?");

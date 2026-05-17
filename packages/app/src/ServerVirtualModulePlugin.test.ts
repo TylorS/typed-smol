@@ -48,7 +48,10 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
     expect(source).toContain('import * as HttpRouter from "effect/unstable/http/HttpRouter";');
-    expect(source).toContain('import * as TypedApp from "@typed/app";');
+    expect(source).toContain('import * as RouteHandlers from "@typed/app/RouteHandlers";');
+    expect(source).toContain('import { TypedHttpServer } from "@typed/app/TypedHttpServer";');
+    expect(source).toContain('import { composeWithLayers } from "@typed/app/runtime";');
+    expect(source).not.toContain('from "@typed/app";');
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
     expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(source).toContain('import * as Api0 from "api:./api";');
@@ -57,7 +60,7 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import RouteHandlers0 from "route-handlers:./routes1";');
     expect(source).toContain('import RouteHandlers1 from "route-handlers:./routes2";');
     expect(source).toContain(
-      "const routeModules = [TypedApp.RouteHandlers.apply(Routes0, RouteHandlers0), TypedApp.RouteHandlers.apply(Routes1, RouteHandlers1)];",
+      "const routeModules = [RouteHandlers.apply(Routes0, RouteHandlers0), RouteHandlers.apply(Routes1, RouteHandlers1)];",
     );
     expect(source).toContain("export const AppLayer =");
     expect(source).toContain("export const ServerLayer =");
@@ -74,7 +77,7 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).not.toContain("readonly run?");
     expect(source).not.toContain("Effect.Effect<never, unknown");
     expect(source).not.toContain("Effect.Effect<unknown, unknown");
-    expect(source).toContain("TypedApp.TypedHttpServer.toNodeHandler(AppLayer)");
+    expect(source).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
     expect(source).not.toContain("export async function run");
   });
 
@@ -132,18 +135,26 @@ describe("ServerVirtualModulePlugin", () => {
     const fixture = createFixture({
       "src/api.ts": 'import * as Layer from "effect/Layer";\nexport const ApiLayer = Layer.empty;\n',
       "src/routes.ts": "const routes: any = {};\nexport default routes;\n",
+      "src/route-handlers.ts": "const handlers: any = {};\nexport default handlers;\n",
       "src/typed-config.ts": 'export const build = { outDir: "dist", clientOutDir: "public/client" };\n',
       "src/typed-app.d.ts": [
-        'declare module "@typed/app" {',
+        'declare module "@typed/app/runtime" {',
         '  import type * as Layer from "effect/Layer";',
         "  export type LayerAny = Layer.Layer<never, any, any>;",
         "  export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers: Layers): LayerAny;",
+        "}",
+        'declare module "@typed/app/TypedHttpServer" {',
+        '  import type * as Layer from "effect/Layer";',
+        "  export type LayerAny = Layer.Layer<never, any, any>;",
         "  export const TypedHttpServer: {",
         "    readonly staticAssets: (options: { readonly projectRoot: string; readonly clientOutDir?: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
         "    readonly layer: (options: { readonly projectRoot: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
         "    readonly toNodeHandler: (layer: LayerAny) => unknown;",
         "  };",
+        "}",
+        'declare module "@typed/app/RouteHandlers" {',
+        "  export const apply: (matcher: any, handlers: any) => any;",
         "}",
       ].join("\n"),
       "src/typed-ui.d.ts":
@@ -165,6 +176,7 @@ describe("ServerVirtualModulePlugin", () => {
         fixture.importer,
         join(fixture.root, "src/api.ts"),
         join(fixture.root, "src/routes.ts"),
+        join(fixture.root, "src/route-handlers.ts"),
         join(fixture.root, "src/typed-config.ts"),
         join(fixture.root, "src/typed-app.d.ts"),
         join(fixture.root, "src/typed-ui.d.ts"),
@@ -173,7 +185,11 @@ describe("ServerVirtualModulePlugin", () => {
       moduleFallbacks: {
         "api:./api": join(fixture.root, "src/api.ts"),
         "router:./routes": join(fixture.root, "src/routes.ts"),
+        "route-handlers:./routes": join(fixture.root, "src/route-handlers.ts"),
         "typed:config": join(fixture.root, "src/typed-config.ts"),
+        "@typed/app/runtime": join(fixture.root, "src/typed-app.d.ts"),
+        "@typed/app/TypedHttpServer": join(fixture.root, "src/typed-app.d.ts"),
+        "@typed/app/RouteHandlers": join(fixture.root, "src/typed-app.d.ts"),
         "@typed/template": join(fixture.root, "src/typed-template.d.ts"),
       },
     });
