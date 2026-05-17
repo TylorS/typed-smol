@@ -37,3 +37,11 @@
 - The compiled db CLI uses package `process.cwd()` as the example root so `db:reset` writes `examples/realworld/.data/realworld.sqlite`, not under `dist`.
 - The example avoids adding `@types/node`; `src/types/node-lite.d.ts` declares only the Node globals/modules used by this package.
 - Local setup required rebuilding `better-sqlite3` with `node-gyp rebuild --release` after the lockfile-only install left the native binding absent.
+
+## Task 5 - User Persistence Services
+
+- `PasswordHasher` is a class-based `Context.Service` backed by Node `crypto.scrypt`; stored password hashes and salts are modeled with Effect Schema.
+- `SessionTokens` creates opaque base64url tokens, persists them in SQLite, and remains replaceable through its service layer.
+- `UserRepository` composes `PasswordHasher`, `SessionTokens`, `RealWorldConfig`, and `effect/unstable/sql` through `Layer.effect`; it exposes create, lookup, token lookup, update, credential verification, and delegated session creation.
+- Repository inputs are decoded with Effect Schema at the boundary, and database rows are mapped back through the domain `User` schema.
+- Infrastructure tests that mutate SQLite should use isolated database paths when they can run concurrently under Vitest.

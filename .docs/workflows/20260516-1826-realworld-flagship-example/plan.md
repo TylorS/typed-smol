@@ -525,13 +525,13 @@ Execution refinements:
 - Create: `src/infrastructure/repositories/UserRepository.ts`
 - Create: `src/tests/infrastructure/users.test.ts`
 
-- [ ] Step 1: Write failing tests for password hashing/verify, no plaintext persistence, opaque token creation, token lookup, duplicate username/email, user update normalization, and password policy.
-- [ ] Step 2: Run targeted integration tests and confirm failures.
-- [ ] Step 3: Implement `PasswordHasher` as a class-based Effect `Context.Service` with `Layer.effect(PasswordHasher, Effect.gen(...))`, backed by Node `crypto.scrypt`.
-- [ ] Step 4: Implement `SessionTokens` as a class-based Effect `Context.Service` with a layer constructor for opaque token generation and session persistence.
-- [ ] Step 5: Implement `UserRepository` as a class-based Effect `Context.Service` with `Layer.effect(UserRepository, Effect.gen(...))`; expose create, find by email, find by username, find by token, update current user, and create session operations through the service object.
-- [ ] Step 6: Run `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure/users.test.ts`.
-- [ ] Step 7: Commit as `feat: add user persistence services`.
+- [x] Step 1: Write failing tests for password hashing/verify, no plaintext persistence, opaque token creation, token lookup, duplicate username/email, user update normalization, and password policy.
+- [x] Step 2: Run targeted integration tests and confirm failures.
+- [x] Step 3: Implement `PasswordHasher` as a class-based Effect `Context.Service` with `Layer.effect(PasswordHasher, Effect.gen(...))`, backed by Node `crypto.scrypt`.
+- [x] Step 4: Implement `SessionTokens` as a class-based Effect `Context.Service` with a layer constructor for opaque token generation and session persistence.
+- [x] Step 5: Implement `UserRepository` as a class-based Effect `Context.Service` with `Layer.effect(UserRepository, Effect.gen(...))`; expose create, find by email, find by username, find by token, update current user, and create session operations through the service object.
+- [x] Step 6: Run `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure/users.test.ts`.
+- [x] Step 7: Commit as `feat: add user persistence services`.
 
 ### Task 6: Article, Profile, Comment, and Tag Repositories
 

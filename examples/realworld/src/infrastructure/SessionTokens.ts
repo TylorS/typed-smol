@@ -1,0 +1,51 @@
+import { randomBytes } from "node:crypto";
+import { Context, Effect, Layer } from "effect";
+import * as Schema from "effect/Schema";
+import { SqlClient } from "effect/unstable/sql";
+import { OpaqueToken, type UserId } from "../domain/Ids.js";
+import { RealWorldConfig, type RealWorldConfigService } from "./Config.js";
+import { ensureDatabaseDirectory, sqliteLayer } from "./Sql.js";
+
+export interface SessionTokensService {
+  readonly create: (userId: UserId) => Effect.Effect<OpaqueToken, unknown>;
+}
+
+export class SessionTokens extends Context.Service<
+  SessionTokens,
+  SessionTokensService
+>()("@typed/realworld/SessionTokens") {
+  static readonly Live = Layer.effect(
+    SessionTokens,
+    Effect.gen(function* () {
+      const config = yield* RealWorldConfig;
+
+      return {
+        create: (userId) =>
+          runSql(config, Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            const token = Schema.decodeUnknownSync(OpaqueToken)(
+              randomBytes(32).toString("base64url"),
+            );
+            const now = currentIsoTimestamp();
+
+            yield* sql`
+              INSERT INTO sessions (user_id, token, created_at, last_seen_at)
+              VALUES (${userId}, ${token}, ${now}, ${now})
+            `;
+
+            return token;
+          })),
+      };
+    }),
+  );
+}
+
+const runSql = <A, E, R>(
+  config: RealWorldConfigService,
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E | unknown, Exclude<R, SqlClient.SqlClient>> =>
+  ensureDatabaseDirectory(config).pipe(
+    Effect.andThen(Effect.provide(effect, sqliteLayer(config))),
+  );
+
+const currentIsoTimestamp = (): string => new Date().toISOString();
