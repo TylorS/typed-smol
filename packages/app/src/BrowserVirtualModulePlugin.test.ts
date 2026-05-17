@@ -46,27 +46,24 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('import * as Cause from "effect/Cause";');
     expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
-    expect(source).toContain(
-      'import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
-    );
+    expect(source).toContain('import * as TypedAppRuntime from "@typed/app/runtime";');
     expect(source).not.toContain('from "@typed/app";');
-    expect(source).toContain('import { BrowserRouter, merge, type Matcher } from "@typed/router";');
+    expect(source).toContain('import * as TypedRouter from "@typed/router";');
     expect(source).toContain('import { Fx } from "@typed/fx";');
     expect(source).toContain('import { DomRenderTemplate, render } from "@typed/template";');
-    expect(source).toContain('import Routes0 from "router:./routes";');
+    expect(source).toContain('import Routes0 from "router:./routes?target=browser";');
     expect(source).toContain("export const Routes = Routes0;");
-    expect(source).not.toContain("export const Routes = merge(Routes0);");
+    expect(source).not.toContain("export const Routes = TypedRouter.merge(Routes0);");
     expect(source).toContain("export const BrowserRuntime =");
-    expect(source).toContain("type BrowserProgram<Layers extends readonly LayerOrGroup[]>");
+    expect(source).not.toContain("import type");
+    expect(source).not.toContain("type BrowserProgram");
     expect(source).toContain("function makeRenderLayer");
     expect(source).toContain("export function hydrate");
     expect(source).toContain("export function run");
     expect(source).toContain("Fx.drainLayer(render(Routes, root))");
     expect(source).toContain("Layer.launch(BrowserLayer");
     expect(source).toContain("Effect.tapCause");
-    expect(source).toContain(
-      "function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>",
-    );
+    expect(source).toContain("function withErrorHandling(program, onError)");
     expect(source).toContain("options.layers");
     expect(source).toContain("options.onError");
     expect(source).not.toContain("options.run");
@@ -83,10 +80,10 @@ describe("BrowserVirtualModulePlugin", () => {
   it("emits repeated explicit route imports in source order", () => {
     const source = buildBrowser("typed:browser?routes=./main&routes=./admin") as string;
 
-    expect(source.indexOf('import Routes0 from "router:./main";')).toBeLessThan(
-      source.indexOf('import Routes1 from "router:./admin";'),
+    expect(source.indexOf('import Routes0 from "router:./main?target=browser";')).toBeLessThan(
+      source.indexOf('import Routes1 from "router:./admin?target=browser";'),
     );
-    expect(source).toContain("export const Routes = merge(Routes0, Routes1);");
+    expect(source).toContain("export const Routes = TypedRouter.merge(Routes0, Routes1);");
   });
 
   it("emits root, base, mode, and name options", () => {

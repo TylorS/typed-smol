@@ -12,7 +12,7 @@ import { CommentRepository } from "../../infrastructure/repositories/CommentRepo
 import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
 import { TagRepository } from "../../infrastructure/repositories/TagRepository.js";
 import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
-import { renderUrl } from "../../ssr.js";
+import { renderUrl } from "../../server.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "ssr-test.sqlite");
 const TestConfig = RealWorldConfig.layer({ databasePath: testDatabasePath });

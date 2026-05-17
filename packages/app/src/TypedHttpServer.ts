@@ -86,7 +86,7 @@ export const TypedHttpServer = {
     });
   },
 
-  toNodeHandler(appLayer: Layer.Layer<never, unknown, unknown>): TypedNodeHandler {
+  toNodeHandler<ROut, E, RIn>(appLayer: Layer.Layer<ROut, E, RIn>): TypedNodeHandler {
     const provided = appLayer.pipe(Layer.provide(NodeHttpServer.layerHttpServices as any));
     const webHandler = HttpRouter.toWebHandler(provided as any);
     const handler = ((request, response, next?: (error?: unknown) => void) => {

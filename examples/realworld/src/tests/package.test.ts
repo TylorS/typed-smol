@@ -93,6 +93,8 @@ describe("typed-realworld package skeleton", () => {
     expect(existsSync(resolve(projectRoot, "src/main.ts"))).toBe(true);
     expect(existsSync(resolve(projectRoot, "src/server.ts"))).toBe(true);
     expect(existsSync(resolve(projectRoot, "src/browser.ts"))).toBe(true);
+    expect(existsSync(resolve(projectRoot, "src/ssr.ts"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, "src/browser-routes"))).toBe(false);
     expect(existsSync(resolve(projectRoot, "public/default-avatar.svg"))).toBe(true);
   });
 

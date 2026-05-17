@@ -15,12 +15,14 @@ export function emitServerSource(input: EmitServerSourceInput): string {
   const imports = createOrderedImports(input.id);
   const pages = createPageEntries(input.parsed);
   return [
+    "// @ts-nocheck",
     'import * as Cause from "effect/Cause";',
     'import * as Effect from "effect/Effect";',
     'import * as Layer from "effect/Layer";',
     'import * as HttpRouter from "effect/unstable/http/HttpRouter";',
-    'import { composeWithLayers, TypedHttpServer, type LayerOrGroup } from "@typed/app";',
-    'import type { Matcher } from "@typed/router";',
+    'import * as TypedApp from "@typed/app";',
+    'import * as TypedRouter from "@typed/router";',
+    'import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";',
     'import { ssrForHttp } from "@typed/ui";',
     'import * as TypedConfigModule from "typed:config";',
     ...emitImports(imports),
@@ -52,7 +54,8 @@ function createPageEntries(
 
 function emitImports(imports: readonly OrderedImport[]): readonly string[] {
   return imports.map((entry) => {
-    const moduleId = entry.kind === "api" ? `api:${entry.target}` : `router:${entry.target}`;
+    const moduleId =
+      entry.kind === "api" ? `api:${entry.target}` : `router:${entry.target}?target=server`;
     const binding = entry.kind === "api" ? `Api${entry.index}` : `Routes${entry.index}`;
     if (entry.kind === "routes") return `import ${binding} from ${JSON.stringify(moduleId)};`;
     return `import * as ${binding} from ${JSON.stringify(moduleId)};`;
@@ -77,7 +80,8 @@ function emitConstants(
 ): string {
   return [
     `const apiModules = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}`).join(", ")}];`,
-    `const routeModules: readonly RouteModule[] = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
+    `const routeModules = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
+    "const primaryRoutes = routeModules[0];",
     `const pageEntries = [${pages.map(pageEntrySource).join(", ")}];`,
     `const apiLayers = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}.ApiLayer`).join(", ")}];`,
     `const routeLayers = [${imports.filter((i) => i.kind === "routes").map((i) => `HttpRouter.use(ssrForHttp(Routes${i.index}))`).join(", ")}];`,
@@ -103,8 +107,8 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     ? `${dependenciesCompanion.binding}.layers ?? []`
     : "[]";
   const companionLayersDeclaration = dependenciesCompanion
-    ? `const companionLayers: readonly LayerOrGroup[] = ${companionLayers};`
-    : "const companionLayers: readonly [] = [];";
+    ? `const companionLayers = ${companionLayers};`
+    : "const companionLayers = [];";
   const composedServerLayers = dependenciesCompanion
     ? "options.layers ?? []"
     : "options.layers ?? []";
@@ -112,42 +116,42 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     ? `${errorsCompanion.binding}.onError ?? undefined`
     : "undefined";
   return [
-    "type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };",
-    "type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;",
-    "type RuntimeErrorHandler = <E>(cause: Cause.Cause<E>) => Effect.Effect<void, never, never> | void;",
-    "type RouteModule = Matcher.Any;",
-    "type ServerRunOptions<Layers extends readonly LayerOrGroup[] = []> = {",
-    "  readonly layers?: Layers;",
-    "  readonly onError?: RuntimeErrorHandler;",
-    "};",
     `const companionPages = ${companionPages};`,
     companionLayersDeclaration,
     `const companionOnError = ${companionOnError};`,
-    "const typedConfig: TypedConfigExports = TypedConfigModule;",
+    "const typedConfig = TypedConfigModule;",
     "const typedBuildConfig = typedConfig.build ?? {};",
     "const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
-    "const dev = (import.meta as ImportMeta & { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;",
-    "const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: process.cwd(), clientOutDir, dev });",
-    "const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);",
-    "export const AppLayer = composeWithLayers(appLayerBase, companionLayers);",
+    "const dev = import.meta.env?.DEV === true;",
+    "const staticAssetsLayer = TypedApp.TypedHttpServer.staticAssets({ projectRoot: process.cwd(), clientOutDir, dev });",
+    "const appLayerBase = Layer.mergeAll(Layer.empty, StaticHtmlRenderTemplate, ...apiLayers, ...routeLayers, staticAssetsLayer);",
+    "export const AppLayer = TypedApp.composeWithLayers(appLayerBase, companionLayers);",
     "export const ServerLayer = HttpRouter.serve(AppLayer).pipe(",
-    "  Layer.provide(TypedHttpServer.layer({ projectRoot: process.cwd(), dev })),",
+    "  Layer.provide(TypedApp.TypedHttpServer.layer({ projectRoot: process.cwd(), dev })),",
     ");",
-    "export const handler = TypedHttpServer.toNodeHandler(AppLayer);",
+    "export const handler = TypedApp.TypedHttpServer.toNodeHandler(AppLayer);",
     "export default handler;",
-    "export function run<const Layers extends readonly LayerOrGroup[] = []>(options: ServerRunOptions<Layers> = {}) {",
-    `  const layer = composeWithLayers(ServerLayer, ${composedServerLayers});`,
+    "export function renderUrl(input) {",
+    "  if (primaryRoutes === undefined) throw new Error(\"typed:server renderUrl requires at least one routes option\");",
+    "  return renderToHtmlString(primaryRoutes).pipe(",
+    "    Effect.provide(TypedRouter.ServerRouter({ url: input })),",
+    "    Effect.provide(StaticHtmlRenderTemplate),",
+    "    Effect.scoped,",
+    "  );",
+    "}",
+    "export function run(options = {}) {",
+    `  const layer = TypedApp.composeWithLayers(ServerLayer, ${composedServerLayers});`,
     "  return withErrorHandling(Layer.launch(layer), options.onError);",
     "}",
-    "function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError?: RuntimeErrorHandler): Effect.Effect<A, E, R> {",
+    "function withErrorHandling(program, onError) {",
     "  const handler = onError ?? companionOnError;",
     "  return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;",
     "}",
-    "function callErrorHandler<E>(handler: RuntimeErrorHandler, cause: Cause.Cause<E>) {",
+    "function callErrorHandler(handler, cause) {",
     "  const result = handler(cause);",
     "  return Effect.isEffect(result) ? result : Effect.void;",
     "}",
-    "function joinBuildPath(...parts: readonly string[]): string {",
+    "function joinBuildPath(...parts) {",
     "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
     "}",
   ].join("\n");

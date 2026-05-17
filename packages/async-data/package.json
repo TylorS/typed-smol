@@ -24,6 +24,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@typed/fx": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

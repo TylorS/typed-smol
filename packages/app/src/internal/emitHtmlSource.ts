@@ -8,14 +8,11 @@ export interface EmitHtmlSourceInput {
 export function emitHtmlSource(input: EmitHtmlSourceInput): string {
   const outlet = input.outlet ?? DEFAULT_OUTLET;
   return [
+    "// @ts-nocheck",
     'import { readFile } from "node:fs/promises";',
     'import * as TypedConfigModule from "typed:config";',
-    "type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };",
-    "type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;",
-    "type HtmlDevServer = { readonly transformIndexHtml: (url: string, html: string) => string | Promise<string> };",
-    "type LoadHtmlOptions = { readonly readFile?: typeof readFile; readonly dev?: boolean; readonly devServer?: HtmlDevServer; readonly url?: string };",
     `const sourceHtmlPath = ${JSON.stringify(input.sourcePath)};`,
-    "const typedConfig: TypedConfigExports = TypedConfigModule;",
+    "const typedConfig = TypedConfigModule;",
     "const typedBuildConfig = typedConfig.build ?? {};",
     "const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);",
     `const outlet = ${JSON.stringify(outlet)};`,
@@ -40,7 +37,7 @@ export function applySsrOutlet(
 
 function loadHtmlSource(): string {
   return [
-    "export async function loadHtml(options: LoadHtmlOptions = {}) {",
+    "export async function loadHtml(options = {}) {",
     "  const read = options.readFile ?? readFile;",
     "  if (options.dev && options.devServer) {",
     "    const source = await read(sourceHtmlPath, \"utf8\");",
@@ -53,11 +50,11 @@ function loadHtmlSource(): string {
 
 function clientBuildPathSource(): string {
   return [
-    "function joinClientBuildPath(sourcePath: string): string {",
+    "function joinClientBuildPath(sourcePath) {",
     "  const clientOutDir = typedBuildConfig.clientOutDir ?? joinPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
     "  return joinPath(clientOutDir, sourcePath.replace(/^\\.\\//, \"\"));",
     "}",
-    "function joinPath(...parts: readonly string[]): string {",
+    "function joinPath(...parts) {",
     "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
     "}",
   ].join("\n");
@@ -65,7 +62,7 @@ function clientBuildPathSource(): string {
 
 function renderHtmlSource(): string {
   return [
-    "export function renderHtml(template: string, markup: string): string {",
+    "export function renderHtml(template, markup) {",
     "  if (template.includes(outlet)) return template.replace(outlet, markup);",
     "  const bodyMatch = /<body\\b[^>]*>/i.exec(template);",
     "  if (!bodyMatch) return `${template}${markup}`;",

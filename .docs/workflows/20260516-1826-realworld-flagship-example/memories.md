@@ -133,3 +133,13 @@
 - Keep final commits scoped around RealWorld docs/gates; this worktree currently has unrelated dirty VS Code packaging files under `packages/virtual-modules-vscode` and `.cursor/hooks`.
 - Final recursive tests required framework fixes from the other branch: `DateTimes.Fixed` must not follow `TestClock`, `DateTimes.Offset` is the elapsed-clock layer, empty `typed:config` must emit `export {};`, and the TS plugin sample project must bundle/register the config plugin.
 - Final verification passed with `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, `pnpm --filter @typed/app test`, `pnpm --filter @typed/app build`, `pnpm -r run test`, `pnpm -r build`, `pnpm build`, and `git diff --check`.
+
+## Declarative Route/Virtual Runtime Refactor
+
+- RealWorld no longer needs a separate `src/browser-routes/**` tree. Server-only route data loaders live in sibling `*.handler.ts` files, while browser-safe route modules keep route declarations and declarative templates in `src/routes/**`.
+- `typed:browser` and `typed:server` now import router virtual modules with explicit `?target=browser` / `?target=server`; the router generator selects sibling `.handler.ts` entrypoints only for the server target and drops route dependencies for the browser target.
+- `src/server.ts` exports `renderUrl` from the generated `typed:server` virtual module; `src/ssr.ts` was removed after Vite could import the generated server/API/HTML virtual modules directly.
+- Generated `typed:server`, `typed:browser`, `typed:html`, and `api:` runtime modules must remain JavaScript-parseable for Vite/Rolldown. They currently emit `// @ts-nocheck` because VMC writes them as `.ts` files; the durable fix is a separate declaration/type surface, not reintroducing TS-only runtime syntax.
+- `@typed/async-data` now exports `RefAsyncData.fromEffect` and `RefAsyncData.make`, backed by `@typed/fx`, so async lifecycle state can be bound declaratively instead of pre-resolving route snapshots.
+- `TypedHttpServer.toNodeHandler` must not use `Layer.Layer<never, unknown, unknown>`; keep broad layer plumbing on `Layer.Layer<never, any, any>`/generic layer parameters and preserve tests that reject generated `Effect<..., unknown>` channels.
+- Verification for this slice passed with `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, `pnpm --filter @typed/app test`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/async-data test`, `pnpm --filter @typed/async-data build`, and `git diff --check`. `typed-realworld build` still warns about a large client chunk and Node-heavy modules in the browser bundle, so browser/server split hygiene remains a follow-up.

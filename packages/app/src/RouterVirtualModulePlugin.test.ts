@@ -307,7 +307,7 @@ describe("resolveTypeTargetsFromSpecs with ROUTER_TYPE_TARGET_SPECS", () => {
 describe("RouterVirtualModulePlugin", () => {
   it("parses router id with ./ prefix", () => {
     const parsed = parseRouterVirtualModuleId("router:./routes");
-    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
+    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes", target: "server" });
   });
 
   it("rejects ids that do not use the router prefix", () => {
@@ -317,7 +317,12 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("accepts router:routes without ./ prefix (normalized to ./routes)", () => {
     const parsed = parseRouterVirtualModuleId("router:routes");
-    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
+    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes", target: "server" });
+  });
+
+  it("parses browser target ids", () => {
+    const parsed = parseRouterVirtualModuleId("router:./routes?target=browser");
+    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes", target: "browser" });
   });
 
   it("resolves target directory from importer", () => {
@@ -1105,6 +1110,33 @@ describe("RouterVirtualModulePlugin", () => {
       export default router;
       "
     `);
+  });
+
+  it("uses handler companions for server target and in-file template for browser target", () => {
+    const fixture = createFixture({
+      "src/routes/home.ts": route("/", 'export const template = "<main>browser</main>";'),
+      "src/routes/home.handler.ts": 'export const handler = "<main>server</main>";',
+    });
+    const server = buildRouterFromExistingFixture(fixture);
+    expect(typeof server).toBe("string");
+    expect(server as string).toContain('import * as Homehandler from "./routes/home.handler.js";');
+    expect(server as string).toContain("constant(Fx.succeed(Homehandler.handler))");
+
+    const plugin = createRouterVirtualModulePlugin();
+    const files =
+      existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
+        ? [...fixture.paths, BOOTSTRAP_FILE]
+        : fixture.paths;
+    const program = makeProgram(files, files.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root);
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+    });
+    const browser = plugin.build("router:./routes?target=browser", fixture.importer, session.api);
+    expect(typeof browser).toBe("string");
+    expect(browser as string).not.toContain("home.handler.js");
+    expect(browser as string).toContain("constant(Fx.succeed(Home.template))");
   });
 
   it("golden: multiple routes at same level", () => {

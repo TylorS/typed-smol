@@ -16,6 +16,7 @@ import {
 } from "./routeTypeNode.js";
 
 export type ConcernKind = "guard" | "dependencies" | "layout" | "catch";
+export type RouterBuildTarget = "server" | "browser";
 
 export type ComposedConcerns = {
   readonly guard: readonly string[];
@@ -28,7 +29,13 @@ export type ComposedConcerns = {
 export type InFileConcerns = Partial<Record<ConcernKind, true>>;
 
 const ENTRYPOINT_EXPORTS = ["handler", "template", "default"] as const;
-const COMPANION_SUFFIXES = [".guard.ts", ".dependencies.ts", ".layout.ts", ".catch.ts"] as const;
+const COMPANION_SUFFIXES = [
+  ".handler.ts",
+  ".guard.ts",
+  ".dependencies.ts",
+  ".layout.ts",
+  ".catch.ts",
+] as const;
 const DIRECTORY_COMPANIONS = new Set(["_guard.ts", "_dependencies.ts", "_layout.ts", "_catch.ts"]);
 
 const GUARD_EXPORT_NAMES = ["default", "guard"] as const;
@@ -66,6 +73,7 @@ const COMPANION_KIND_TO_DIRECTORY_FILE: Record<ConcernKind, string> = {
 
 export type RouteDescriptor = {
   readonly filePath: string;
+  readonly entrypointFilePath: string;
   readonly entrypointExport: EntryPointExport;
   readonly runtimeKind: RuntimeKind;
   readonly entrypointIsFunction: boolean;
@@ -107,6 +115,27 @@ function listEntrypointExports(snapshot: TypeInfoFileSnapshot): readonly Exporte
   return snapshot.exports.filter((value) =>
     ENTRYPOINT_EXPORTS.some((entrypointName) => entrypointName === value.name),
   );
+}
+
+function siblingHandlerPath(leafFilePath: string): string {
+  const dir = dirname(leafFilePath);
+  const base = basename(stripScriptExtension(leafFilePath));
+  const file = `${base}.handler.ts`;
+  return dir ? toPosixPath(join(dir, file)) : file;
+}
+
+function selectEntrypoint(
+  target: RouterBuildTarget,
+  routeSnapshot: TypeInfoFileSnapshot,
+  handlerSnapshot: TypeInfoFileSnapshot | undefined,
+): {
+  readonly entrypoints: readonly ExportedTypeInfo[];
+  readonly snapshot: TypeInfoFileSnapshot;
+} {
+  if (target === "server" && handlerSnapshot !== undefined) {
+    return { entrypoints: listEntrypointExports(handlerSnapshot), snapshot: handlerSnapshot };
+  }
+  return { entrypoints: listEntrypointExports(routeSnapshot), snapshot: routeSnapshot };
 }
 
 function isRouteExportCompatible(routeExport: ExportedTypeInfo, api: TypeInfoApi): boolean {
@@ -194,6 +223,7 @@ export function buildRouteDescriptors(
   snapshots: readonly TypeInfoFileSnapshot[],
   baseDir: string,
   api: TypeInfoApi,
+  target: RouterBuildTarget = "server",
 ): {
   readonly descriptors: readonly RouteDescriptor[];
   readonly violations: readonly RouteContractViolation[];
@@ -205,17 +235,28 @@ export function buildRouteDescriptors(
   const descriptors: RouteDescriptor[] = [];
   const violations: RouteContractViolation[] = [];
   const existingPaths = new Set(snapshots.map((s) => toPosixPath(relative(baseDir, s.filePath))));
+  const snapshotByRelativePath = new Map(
+    snapshots.map((s) => [toPosixPath(relative(baseDir, s.filePath)), s] as const),
+  );
 
   for (const snapshot of snapshots) {
     if (isCompanionModulePath(snapshot.filePath)) continue;
-    const entrypoints = listEntrypointExports(snapshot);
+    const relPath = toPosixPath(relative(baseDir, snapshot.filePath));
+    const handlerPath = siblingHandlerPath(relPath);
+    const selectedEntrypoint = selectEntrypoint(
+      target,
+      snapshot,
+      snapshotByRelativePath.get(handlerPath),
+    );
+    const entrypoints = selectedEntrypoint.entrypoints;
+    const entrypointRelPath = toPosixPath(relative(baseDir, selectedEntrypoint.snapshot.filePath));
     const routeExport = snapshot.exports.find((value) => value.name === "route");
 
     if (!routeExport) {
-      if (entrypoints.length > 0) {
+      if (listEntrypointExports(snapshot).length > 0) {
         violations.push({
           code: "RVM-ROUTE-001",
-          message: `missing "route" export in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+          message: `missing "route" export in ${relPath}`,
         });
       }
       continue;
@@ -224,7 +265,7 @@ export function buildRouteDescriptors(
     if (!isRouteExportCompatible(routeExport, api)) {
       violations.push({
         code: "RVM-ROUTE-002",
-        message: `route export is not structurally compatible with Route in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+        message: `route export is not structurally compatible with Route in ${relPath}`,
       });
       continue;
     }
@@ -232,7 +273,7 @@ export function buildRouteDescriptors(
     if (entrypoints.length === 0) {
       violations.push({
         code: "RVM-ENTRY-001",
-        message: `expected one of handler|template|default in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+        message: `expected one of handler|template|default in ${entrypointRelPath}`,
       });
       continue;
     }
@@ -240,14 +281,13 @@ export function buildRouteDescriptors(
     if (entrypoints.length > 1) {
       violations.push({
         code: "RVM-ENTRY-002",
-        message: `multiple entrypoint exports found in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+        message: `multiple entrypoint exports found in ${entrypointRelPath}`,
       });
       continue;
     }
 
     const entrypoint = entrypoints[0]!;
-    const relPath = toPosixPath(relative(baseDir, snapshot.filePath));
-    const entrypointNameResult = getEntryPointName(entrypoint, relPath);
+    const entrypointNameResult = getEntryPointName(entrypoint, entrypointRelPath);
     if (!entrypointNameResult.ok) {
       violations.push(entrypointNameResult.violation);
       continue;
@@ -256,20 +296,25 @@ export function buildRouteDescriptors(
     if (runtimeKind === "unknown") {
       violations.push({
         code: "RVM-KIND-001",
-        message: `handler/template/default runtime kind could not be determined (type targets missing). Ensure route files import from @typed/fx, effect, etc. in ${relPath}`,
+        message: `handler/template/default runtime kind could not be determined (type targets missing). Ensure route files import from @typed/fx, effect, etc. in ${entrypointRelPath}`,
       });
       continue;
     }
     const entrypointIsFunction = isCallableNode(entrypoint.type);
     const entrypointExpectsRefSubject =
       entrypointIsFunction && typeNodeExpectsRefSubjectParam(entrypoint.type, api);
-    const composedConcerns = resolveComposedConcernsForLeaf(relPath, existingPaths);
+    const discoveredConcerns = resolveComposedConcernsForLeaf(relPath, existingPaths);
+    const composedConcerns =
+      target === "browser"
+        ? { ...discoveredConcerns, dependencies: [] }
+        : discoveredConcerns;
     const inFileConcerns: InFileConcerns = {};
     for (const name of ["layout", "dependencies", "catch", "guard"] as const) {
       if (snapshot.exports.some((e) => e.name === name)) inFileConcerns[name] = true;
     }
     descriptors.push({
       filePath: relPath,
+      entrypointFilePath: entrypointRelPath,
       entrypointExport: entrypointNameResult.value,
       runtimeKind,
       entrypointIsFunction,

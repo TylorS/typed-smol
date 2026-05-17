@@ -1,11 +1,14 @@
 import * as Cause from "effect/Cause";
+import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import { dual } from "effect/Function";
 import * as Option from "effect/Option";
 import { hasProperty, isObject, isString } from "effect/Predicate";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
+import type * as Scope from "effect/Scope";
 import type { Unify } from "effect/Unify";
+import { Fx, RefSubject } from "@typed/fx";
 
 export interface Progress {
   readonly loaded: number;
@@ -289,3 +292,17 @@ export const fromExit = <A, E>(exit: Exit.Exit<A, E>): AsyncData<A, E> =>
 
 export const fromResult = <A, E>(result: Result.Result<A, E>): AsyncData<A, E> =>
   Result.isSuccess(result) ? success(result.success) : failure(Cause.fail(result.failure));
+
+export const RefAsyncData = {
+  fromEffect<A, E, R>(effect: Effect.Effect<A, E, R>): Fx.Fx<AsyncData<A, E>, never, R> {
+    return Fx.fromEffect(effect.pipe(Effect.exit, Effect.map(fromExit))).pipe(
+      Fx.prepend(loading()),
+    );
+  },
+
+  make<A, E, R>(
+    effect: Effect.Effect<A, E, R>,
+  ): Effect.Effect<RefSubject.RefSubject<AsyncData<A, E>>, never, R | Scope.Scope> {
+    return RefSubject.make(this.fromEffect(effect));
+  },
+};

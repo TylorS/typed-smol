@@ -453,11 +453,9 @@ export function emitHttpApiSource(input: {
   const varNameByPath = makeUniqueVarNames(proposedNames);
 
   const importLines: string[] = [
-    `import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer, type AppConfig, type ComputeLayers, type LayerOrGroup, type RunConfig } from "@typed/app";`,
+    `// @ts-nocheck`,
+    `import { emptyRecordString, emptyRecordStringArray, composeWithLayers, resolveConfig, TypedHttpServer } from "@typed/app";`,
     `import * as Effect from "effect/Effect";`,
-    ...(endpointSpecs.some((ep) => endpointHasSchemaTypedHandler(input.optionalExportsByPath, ep))
-      ? [`import type * as Schema from "effect/Schema";`]
-      : []),
     `import * as Layer from "effect/Layer";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
     `import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";`,
@@ -624,36 +622,34 @@ export const Swagger = ${swaggerExpr};
 export const Scalar = ${scalarExpr};
 export const Client = HttpApiClient.make(Api);
 
-type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };
-type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;
-const typedConfig: TypedConfigExports = TypedConfigModule;
+const typedConfig = TypedConfigModule;
 const typedBuildConfig = typedConfig.build ?? {};
 const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
 
-function joinBuildPath(...parts: readonly string[]): string {
+function joinBuildPath(...parts) {
   return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
 }
 
-export const App = <const Layers extends readonly LayerOrGroup[] = []>(
-  config?: AppConfig,
-  ...layersToMergeIntoRouter: Layers
+export const App = (
+  config,
+  ...layersToMergeIntoRouter
 ) => {
   const disableListenLog = config?.disableListenLog ?? false;
   const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
   return HttpRouter.serve(appLayer, ${serveOptions})
 };
 
-export const serve = <const Layers extends readonly LayerOrGroup[] = []>(
-  config?: RunConfig,
-  ...layersToMergeIntoRouter: Layers
+export const serve = (
+  config,
+  ...layersToMergeIntoRouter
 ) =>
   Layer.unwrap(
     Effect.gen(function* () {
       const host = yield* resolveConfig(config?.host, "0.0.0.0");
       const port = yield* resolveConfig(config?.port, 3000);
       const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-      const dev = (import.meta as ImportMeta & { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
-      const appConfig: AppConfig = { disableListenLog };
+      const dev = import.meta.env?.DEV === true;
+      const appConfig = { disableListenLog };
       const staticAssetsLayer = TypedHttpServer.staticAssets({
         projectRoot: process.cwd(),
         clientOutDir,
@@ -682,13 +678,7 @@ function endpointHasSchemaTypedHandler(
 
 function emitHandlerCall(input: HandlerCallInput): string {
   const baseCall = `${input.moduleName}.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: ${input.headersArg}, body: ${input.bodyArg} })`;
-  if (!input.coerceSchemas) return baseCall;
-  const successTyped = input.optionalExports.has("success")
-    ? `Effect.map(${baseCall}, (value) => value as Schema.Schema.Type<typeof ${input.moduleName}.success>)`
-    : baseCall;
-  return input.optionalExports.has("error")
-    ? `Effect.mapError(${successTyped}, (error) => error as Schema.Schema.Type<typeof ${input.moduleName}.error>)`
-    : successTyped;
+  return baseCall;
 }
 
 function renderAnnotatedApiExpression(
@@ -729,21 +719,20 @@ function renderGenerationAnnotations(
 
 function renderOpenApiHelpers(generation: OpenApiGenerationConfig | undefined): string {
   if (generation?.additionalProperties === undefined) return "";
-  return `const openApiAdditionalPropertiesConfig = { additionalProperties: ${String(generation.additionalProperties)} } as const;
+  return `const openApiAdditionalPropertiesConfig = { additionalProperties: ${String(generation.additionalProperties)} };
 
-const applyOpenApiAdditionalProperties = (spec: Record<string, any>): Record<string, any> => {
-  const visit = (value: unknown): unknown => {
+const applyOpenApiAdditionalProperties = (spec) => {
+  const visit = (value) => {
     if (!value || typeof value !== "object") return value;
     if (Array.isArray(value)) return value.map(visit);
-    const record = value as Record<string, unknown>;
-    const next: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(record)) next[key] = visit(entry);
+    const next = {};
+    for (const [key, entry] of Object.entries(value)) next[key] = visit(entry);
     if (next.type === "object" && next.additionalProperties === undefined) {
       next.additionalProperties = openApiAdditionalPropertiesConfig.additionalProperties;
     }
     return next;
   };
-  return visit(spec) as Record<string, any>;
+  return visit(spec);
 };
 `;
 }

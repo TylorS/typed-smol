@@ -79,6 +79,17 @@ function collectOrderedCompanionPaths(
   return out;
 }
 
+function collectOrderedEntrypointPaths(descriptors: readonly RouteDescriptor[]): readonly string[] {
+  const seen = new Set(descriptors.map((d) => d.filePath));
+  const out: string[] = [];
+  for (const d of descriptors) {
+    if (seen.has(d.entrypointFilePath)) continue;
+    seen.add(d.entrypointFilePath);
+    out.push(d.entrypointFilePath);
+  }
+  return out;
+}
+
 /**
  * Emit Router.merge(...) of directory matchers. Each route compiles to .match(route, { handler, ...opts })
  * with opts only from in-file or sibling. Directory companions (_layout, _dependencies, _catch) apply to
@@ -100,12 +111,14 @@ export function emitRouterMatchSource(
   const layoutPaths = collectOrderedCompanionPaths(descriptors, "layout");
   const guardPaths = collectOrderedCompanionPaths(descriptors, "guard");
   const catchPaths = collectOrderedCompanionPaths(descriptors, "catch");
+  const entrypointPaths = collectOrderedEntrypointPaths(descriptors);
 
   const nameEntries: { path: string; proposedName: string }[] = [
     ...descriptors.map((d) => ({
       path: d.filePath,
       proposedName: routeModuleIdentifier(d.filePath),
     })),
+    ...entrypointPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
     ...depPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
     ...layoutPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
     ...guardPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
@@ -129,6 +142,11 @@ export function emitRouterMatchSource(
     const spec = toImportSpecifier(importerDir, targetDirectory, d.filePath);
     const varName = varNameByPath.get(d.filePath)!;
     importLines.push(`import * as ${varName} from ${JSON.stringify(spec)};`);
+  }
+  for (const p of entrypointPaths) {
+    importLines.push(
+      `import * as ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`,
+    );
   }
   for (const p of depPaths) {
     importLines.push(

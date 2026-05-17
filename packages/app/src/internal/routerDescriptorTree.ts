@@ -25,6 +25,7 @@ export type PathRef = string;
 /** Per-route match configuration (declarative, path-based). */
 export type RouteMatchDescriptor = {
   readonly routePath: PathRef;
+  readonly entrypointPath: PathRef;
   readonly entrypointExport: "handler" | "template" | "default";
   readonly runtimeKind: RuntimeKind;
   readonly entrypointIsFunction: boolean;
@@ -78,6 +79,7 @@ export type RouterDescriptorTree = {
 export type BuildDescriptorTreeInput = {
   readonly descriptors: readonly {
     readonly filePath: string;
+    readonly entrypointFilePath: string;
     readonly entrypointExport: "handler" | "template" | "default";
     readonly runtimeKind: RuntimeKind;
     readonly entrypointIsFunction: boolean;
@@ -138,6 +140,7 @@ export function buildRouterDescriptorTree(input: BuildDescriptorTreeInput): Rout
         : undefined;
     return {
       routePath: d.filePath,
+      entrypointPath: d.entrypointFilePath,
       entrypointExport: d.entrypointExport,
       runtimeKind: d.runtimeKind,
       entrypointIsFunction: d.entrypointIsFunction,
@@ -330,8 +333,9 @@ export function renderRouterDescriptorTree(tree: RouterDescriptorTree, ctx: Rend
 /** Emit Router.match(...) for a route. Favors positional when no extra opts. */
 function emitRoute(match: RouteMatchDescriptor, ctx: RenderContext): string {
   const routeVar = ctx.varNameByPath.get(match.routePath)!;
+  const entrypointVar = ctx.varNameByPath.get(match.entrypointPath)!;
   const routeRef = `${routeVar}.route`;
-  const handlerExpr = ctx.handlerExprFor(match, routeVar);
+  const handlerExpr = ctx.handlerExprFor(match, entrypointVar);
   const hasExtraOpts = match.layoutPath || match.depsPath || match.catchPath;
   const guardPath = match.guardPath;
   const guardExport = guardPath ? ctx.guardExportByPath[guardPath] : undefined;

@@ -14,7 +14,7 @@ declare module "@typed/app" {
     readonly port?: number | Effect.Effect<number>;
   }
 
-  export type LayerAny = Layer.Layer<never, unknown, unknown>;
+  export type LayerAny = Layer.Layer<never, any, any>;
   export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];
 
   export type ComputeLayers<
@@ -64,7 +64,7 @@ declare module "@typed/app" {
       readonly dev: boolean;
       readonly host?: string;
       readonly port?: number;
-    }) => Layer.Layer<never, unknown, unknown>;
+    }) => LayerAny;
     readonly toNodeHandler: (layer: LayerAny) => unknown;
   };
 }
