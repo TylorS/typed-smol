@@ -402,17 +402,31 @@ Required endpoint grouping:
 - Modify: `packages/cli/templates/starter/packages/app/src/api/status.ts`
 - Modify: `packages/virtual-modules-ts-plugin/sample-project/README.md`
 
-- [ ] Step 1: Write or update failing package-level tests proving `ApiHandler(route, method, schemas?)(handler)` is the public endpoint helper and `defineApiHandler` is not imported by tests/templates/docs owned by this cleanup.
-- [ ] Step 2: Update or remove the config-object `ApiHandler({ route, method, ... })(handler)` tests in `packages/app/src/handlers.test.ts`; keep that shape only if it is renamed/internalized with a non-conflicting public name explicitly approved later.
-- [ ] Step 3: Run `pnpm --filter @typed/app test -- defineApiHandler`.
-  - Expected: fail while old `defineApiHandler` tests/imports are still present.
-- [ ] Step 4: Rename tests/descriptions/imports from `defineApiHandler` to route/method `ApiHandler` and remove the historical public alias from `packages/app/src/index.ts`.
-- [ ] Step 5: Consolidate `packages/app/src/httpapi/ApiHandler.ts` and `packages/app/src/httpapi/defineApiHandler.ts` so `@typed/app` exposes one canonical endpoint helper named `ApiHandler` with route/method/schemas call shape.
-- [ ] Step 6: Update `packages/app` docs, starter template, virtual-module sample docs, and HttpApi virtual-module specs to reference route/method `ApiHandler`.
-- [ ] Step 7: Run `rg "defineApiHandler" packages/app packages/cli/templates/starter packages/virtual-modules-ts-plugin/sample-project .docs/specs/httpapi-virtual-module-plugin`.
-  - Expected: no active public API/docs/template usage remains.
-- [ ] Step 8: Run `pnpm --filter @typed/app test` and `pnpm --filter @typed/app build`.
-- [ ] Step 9: Commit as `refactor: canonicalize typed app api handler`.
+- [x] Step 1: Write or update failing package-level tests proving `ApiHandler(route, method, schemas?)(handler)` is the public endpoint helper and `defineApiHandler` is not imported by tests/templates/docs owned by this cleanup.
+- [x] Step 2: Update or remove the config-object `ApiHandler({ route, method, ... })(handler)` tests in `packages/app/src/handlers.test.ts`; keep that shape only if it is renamed/internalized with a non-conflicting public name explicitly approved later.
+- [x] Step 3: Run `pnpm --dir packages/app exec vitest run src/ApiHandler.canonical.test.ts`.
+  - Observed red: failed because the package-root namespace still exposed the historical alias.
+- [x] Step 4: Rename tests/descriptions/imports from the historical helper name to route/method `ApiHandler` and remove the historical public alias from `packages/app/src/index.ts`.
+- [x] Step 5: Consolidate `packages/app/src/httpapi/ApiHandler.ts` and the old helper module so `@typed/app` exposes one canonical endpoint helper named `ApiHandler` with route/method/schemas call shape.
+- [x] Step 6: Update `packages/app` docs, starter template, virtual-module sample docs, and HttpApi virtual-module specs to reference route/method `ApiHandler`.
+- [x] Step 7: Run `rg "defineApiHandler" packages/app packages/cli/templates/starter packages/virtual-modules-ts-plugin/sample-project .docs/specs/httpapi-virtual-module-plugin`.
+  - Observed green: no matches.
+- [x] Step 8: Run `pnpm --filter @typed/app test` and `pnpm --filter @typed/app clean && pnpm --filter @typed/app build`.
+- [x] Step 9: Commit as `refactor: canonicalize typed app api handler`.
+
+#### Task 0 Execution Detail
+
+Initial rebased baseline before Task 0 implementation:
+- `packages/app/src/index.ts` exports `ApiHandler` and `defineApiHandler` from `src/httpapi/defineApiHandler.ts`, while also exporting `src/httpapi/ApiHandler.ts`.
+- `packages/app/src/httpapi/ApiHandler.ts` currently owns a config-object call shape: `ApiHandler({ route, method, ... })(handler)`.
+- `packages/app/src/httpapi/defineApiHandler.ts` currently owns the desired route/method call shape but exposes it through both `ApiHandler` and the historical `defineApiHandler` alias.
+- `packages/app/src/defineApiHandler.test.ts`, `packages/app/README.md`, `packages/app/AGENTS.md`, the starter template, virtual-module sample docs, and HttpApi virtual-module specs still mention `defineApiHandler`.
+
+Execution refinements:
+- First red test must make route/method `ApiHandler(route, method, schemas?)(handler)` the named public contract.
+- The config-object helper must not remain exported as `ApiHandler`; if code reuse is needed, move route/method helper types into `src/httpapi/ApiHandler.ts` and delete the alias module contents or turn it into a non-public internal compatibility file during the cleanup.
+- Root package export must not include `defineApiHandler`.
+- The search gate is strict: `rg "defineApiHandler" packages/app packages/cli/templates/starter packages/virtual-modules-ts-plugin/sample-project .docs/specs/httpapi-virtual-module-plugin` returns no matches.
 
 ### Task 1: Package Skeleton and Approved Dependencies
 

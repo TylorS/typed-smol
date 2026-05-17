@@ -20,6 +20,7 @@ import {
   RouteLayout,
   RouteHandler,
 } from "./index.js";
+import { HttpServerError } from "effect/unstable/http";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 
 // --- RouteHandler (2 overloads: route, guard) ---
@@ -186,15 +187,10 @@ describe("ApiHandler", () => {
     error: Schema.Struct({ code: Schema.String }),
   } as const;
 
-  it("full config: path/query/headers/body input, Effect<Success, Error> output", () => {
-    const handler = ApiHandler({
-      route,
-      method: "GET",
-      headers: schemas.headers,
-      body: schemas.body,
-      success: schemas.success,
-      error: schemas.error,
-    })((params) => Effect.succeed({ ok: true, id: params.path.id }));
+  it("route/method/schemas: path/query/headers/body input, Effect<Success, Error> output", () => {
+    const handler = ApiHandler(route, "GET", schemas)((params) =>
+      Effect.succeed({ ok: true, id: params.path.id }),
+    );
     expectTypeOf(handler).parameter(0).toExtend<{
       path: { id: string };
       headers: { requestId: string };
@@ -212,13 +208,22 @@ describe("ApiHandler", () => {
     ).then((v) => expect(v).toEqual({ ok: true, id: "1" }));
   });
 
-  it("minimal config: only route + method", () => {
-    const handler = ApiHandler({ route: Route.Parse("status"), method: "GET" })(() =>
+  it("minimal helper call: only route + method", () => {
+    const handler = ApiHandler(Route.Parse("status"), "GET")(() =>
       Effect.succeed({ status: "ok" }),
     );
     expectTypeOf(handler).parameter(0).toExtend<{}>();
-    expectTypeOf(handler).returns.toExtend<Effect.Effect<unknown, unknown, never>>();
-    return Effect.runPromise(handler({})).then((v) => expect(v).toEqual({ status: "ok" }));
+    expectTypeOf(handler).returns.toExtend<
+      Effect.Effect<unknown, HttpServerError.HttpServerError, never>
+    >();
+    return Effect.runPromise(
+      handler({
+        path: {},
+        query: {},
+        headers: {},
+        body: undefined,
+      }),
+    ).then((v) => expect(v).toEqual({ status: "ok" }));
   });
 });
 
@@ -230,14 +235,14 @@ describe("ApiHandler negative", () => {
   };
 
   it("rejects wrong success type (ts-expect-error)", () => {
-    ApiHandler({ route, method: "GET", ...schemas })(
+    ApiHandler(route, "GET", schemas)(
       // @ts-expect-error success is { ok: boolean }, not number
       () => Effect.succeed(42),
     );
   });
 
   it("rejects wrong path shape (ts-expect-error)", () => {
-    ApiHandler({ route, method: "GET", ...schemas })((ctx) => {
+    ApiHandler(route, "GET", schemas)((ctx) => {
       // @ts-expect-error path is { id: string }
       const _wrong: { id: number } = ctx.path;
       return Effect.succeed({ ok: true });
