@@ -1,3 +1,5 @@
-import { mountBrowserShell } from "./main.js";
+import * as Effect from "effect/Effect";
+import { run } from "typed:browser?routes=./browser-routes";
 
-mountBrowserShell();
+export const browserRuntime = run();
+void Effect.runPromise(browserRuntime);

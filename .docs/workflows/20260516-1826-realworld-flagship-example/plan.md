@@ -609,13 +609,13 @@ Execution refinements:
 - Create: `src/presentation/ProfilePage.ts`
 - Create: `src/tests/presentation/ssr.test.ts`
 
-- [ ] Step 1: Write failing SSR tests for `/`, `/?page=2`, `/tag/:tag`, `/article/:slug`, `/profile/:username`, and `/profile/:username/favorites`.
-- [ ] Step 2: Assert first HTML response contains seeded article/profile/tag data before hydration.
-- [ ] Step 3: Run SSR tests and confirm failures.
-- [ ] Step 4: Implement route modules with `Route.Parse` and server-side service calls.
-- [ ] Step 5: Implement shared layout, navbar, feed preview, pagination, tag sidebar, article page, and profile page templates.
-- [ ] Step 6: Run `pnpm --filter typed-realworld test:ssr`.
-- [ ] Step 7: Commit as `feat: render realworld pages with ssr`.
+- [x] Step 1: Write failing SSR tests for `/`, `/?page=2`, `/tag/:tag`, `/article/:slug`, `/profile/:username`, and `/profile/:username/favorites`.
+- [x] Step 2: Assert first HTML response contains seeded article/profile/tag data before hydration.
+- [x] Step 3: Run SSR tests and confirm failures.
+- [x] Step 4: Implement route modules with `Route.Parse` and server-side service calls.
+- [x] Step 5: Implement shared layout, navbar, feed preview, pagination, tag sidebar, article page, and profile page templates.
+- [x] Step 6: Run `pnpm --filter typed-realworld test:ssr`.
+- [x] Step 7: Commit as `feat: render realworld pages with ssr`.
 
 ### Task 10: CSR Hydration, Auth State, and Forms
 

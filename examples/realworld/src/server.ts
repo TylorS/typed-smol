@@ -1,10 +1,11 @@
-import { renderShell } from "./main.js";
+export { renderUrl } from "./ssr.js";
 
-// @ts-expect-error typed virtual module resolved by @typed/vite-plugin.
-import * as Api from "api:./api";
+import handler, {
+  AppLayer,
+  ServerLayer,
+  run,
+} from "typed:server?routes=./routes&api=./api&html=../index.html&client=./browser.ts";
 
-export { Api };
+export { AppLayer, ServerLayer, handler, run };
 
-export const render = (): string => renderShell();
-
-export default render;
+export default handler;

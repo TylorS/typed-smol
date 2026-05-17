@@ -71,3 +71,17 @@
 - `_api.ts` owns the `/api` prefix and exposes JSON OpenAPI at `/api/docs/openapi.json`; Swagger and Scalar UI paths are intentionally disabled.
 - The generated `api:` source is tested through `createHttpApiVirtualModulePlugin` and direct endpoint handlers because Vite/Rolldown currently cannot runtime-import the TS-heavy generated virtual module without separate generator hardening.
 - Task 8 verification used `pnpm --filter typed-realworld test:integration -- src/tests/api` and `pnpm --filter typed-realworld build`.
+
+## Task 9 - SSR Route Modules
+
+- Subagent routing decision was direct execution: target route/presentation/test files were already known from the plan, and this Codex session only allows spawned agents when the user explicitly asks for them.
+- SSR tests import `src/ssr.ts` directly instead of `src/server.ts` because static `api:./api` imports still hit the Vite/Rolldown TS-virtual-module parse limitation during runtime tests.
+- `renderUrl(url)` renders the exported `Routes` matcher through `renderToHtmlString`, `ServerRouter`, and `StaticHtmlRenderTemplate`; it does not manually dispatch paths.
+- `src/routes/**` route modules use `Route.Parse`/`RouteHandler` and call application services directly for feeds, tag feeds, article detail, comments, profile articles, and profile favorites.
+- `src/routes/_layout.ts` owns the shared shell through router layout support; presentation modules return `@typed/template` `html` templates rather than manually wrapped strings.
+- `src/server.ts` is the active `typed:server?routes=./routes&api=./api&html=../index.html&client=./browser.ts` entry; `src/browser.ts` runs `typed:browser?routes=./browser-routes`, with source-level tests locking the generated `api:`, `router:`, `ssrForHttp`, and `DomRenderTemplate` usage.
+- `typed:browser` initially failed the RealWorld Vite build because the generator imported a non-existent named root export `drainLayer` from `@typed/fx`; the generator now emits the public `Fx.drainLayer(...)` API.
+- `typed:browser` generated code imports `composeWithLayers` from `@typed/app/runtime`, not the package root, so browser bundles do not traverse Node-heavy app virtual-module/server exports.
+- `src/browser-routes/**` is the browser-safe route tree for hydration and shares route declarations from `src/routing/Routes.ts`; keep server data-loading handlers in `src/routes/**` so SQLite/password/session dependencies stay out of the client bundle.
+- After the browser route split, the Vite client chunk dropped from roughly 3.8 MB to roughly 265 kB. One remaining Vite warning comes from Effect Schema pulling `effect/dist/testing/TestSchema.js` through router schema internals, not from RealWorld server dependencies.
+- Task 9 verification used `pnpm --filter typed-realworld test:ssr` and `pnpm --filter typed-realworld build`.

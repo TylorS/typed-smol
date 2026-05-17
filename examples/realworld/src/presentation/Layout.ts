@@ -1,0 +1,24 @@
+import { html } from "@typed/template";
+
+export const defaultAvatar = "/default-avatar.svg";
+
+export const avatarSrc = (image: string | null | undefined): string =>
+  image == null || image.trim() === "" ? defaultAvatar : image;
+
+export const Navbar = html`<nav class="navbar navbar-light">
+  <div class="container">
+    <a class="navbar-brand" href="/">conduit</a>
+    <ul class="nav navbar-nav pull-xs-right">
+      <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+      <li class="nav-item"><a class="nav-link" href="/login">Sign in</a></li>
+      <li class="nav-item"><a class="nav-link" href="/register">Sign up</a></li>
+    </ul>
+  </div>
+</nav>`;
+
+export const Banner = html`<div class="banner">
+  <div class="container">
+    <h1>conduit</h1>
+    <p>A place to share your knowledge.</p>
+  </div>
+</div>`;

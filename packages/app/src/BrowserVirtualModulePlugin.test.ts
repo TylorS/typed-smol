@@ -46,13 +46,18 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('import * as Cause from "effect/Cause";');
     expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
+    expect(source).toContain(
+      'import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";',
+    );
+    expect(source).not.toContain('from "@typed/app";');
     expect(source).toContain('import { BrowserRouter, merge, type Matcher } from "@typed/router";');
-    expect(source).toContain('import { drainLayer } from "@typed/fx";');
+    expect(source).toContain('import { Fx } from "@typed/fx";');
     expect(source).toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(source).toContain('import * as Routes0 from "router:./routes";');
     expect(source).toContain("export const BrowserRuntime =");
     expect(source).toContain("export function hydrate");
     expect(source).toContain("export function run");
+    expect(source).toContain("Fx.drainLayer(render(Routes, root))");
     expect(source).toContain("Layer.launch(BrowserLayer");
     expect(source).toContain("Effect.tapCause");
     expect(source).toContain("options.layers");
