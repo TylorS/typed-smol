@@ -143,3 +143,10 @@
 - `@typed/async-data` now exports `RefAsyncData.fromEffect` and `RefAsyncData.make`, backed by `@typed/fx`, so async lifecycle state can be bound declaratively instead of pre-resolving route snapshots.
 - `TypedHttpServer.toNodeHandler` must not use `Layer.Layer<never, unknown, unknown>`; keep broad layer plumbing on `Layer.Layer<never, any, any>`/generic layer parameters and preserve tests that reject generated `Effect<..., unknown>` channels.
 - Verification for this slice passed with `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, `pnpm --filter @typed/app test`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/async-data test`, `pnpm --filter @typed/async-data build`, and `git diff --check`. `typed-realworld build` still warns about a large client chunk and Node-heavy modules in the browser bundle, so browser/server split hygiene remains a follow-up.
+
+## Route Handler Overlay Boundary
+
+- `router:*` must stay environment-agnostic. Server data-loading handlers live in `*.handler.ts` and are overlaid by `route-handlers:*` inside `typed:server`, while browser imports only the template-bearing route modules.
+- Server-only route dependency layers belong in `src/routes/_handlers.dependencies.ts`; do not put RealWorld SQLite/password/session layers in `src/routes/_dependencies.ts`, because router virtual modules import route dependencies in browser and server.
+- Browser-safe route modules should import `RouteHandler` from `@typed/app/RouteHandler`, not the `@typed/app` barrel, so the client bundle does not traverse VM plugin/config/TypeScript compiler exports.
+- This boundary reduced the RealWorld production client chunk from roughly 3.8 MB to 281 kB and removed RealWorld infrastructure/application modules, handler dependencies, `route-handlers:`, and TypeScript compiler sources from the client sourcemap.

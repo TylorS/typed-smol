@@ -9,6 +9,8 @@ export * from "./internal/typeTargetSpecs.js";
 export * from "./createTypeInfoApiSessionForApp.js";
 export * from "./HttpApiVirtualModulePlugin.js";
 export * from "./RouteHandler.js";
+export * from "./RouteHandlers.js";
+export * from "./RouteHandlersVirtualModulePlugin.js";
 export * from "./RouteGuard.js";
 export * from "./RouteLayout.js";
 export * from "./RouteCatch.js";

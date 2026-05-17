@@ -28,6 +28,7 @@ describe("createTypedViteResolver", () => {
     const manager = resolver as PluginManager;
     expect(manager.plugins.map((plugin) => plugin.name)).toEqual([
       "router-virtual-module",
+      "route-handlers-virtual-module",
       "httpapi-virtual-module",
       "typed-env-virtual-module",
       "typed-config-virtual-module",
@@ -43,10 +44,11 @@ describe("createTypedViteResolver", () => {
       { createHttpApiVirtualModulePlugin: fakeHttpApiPlugin },
     );
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(7);
+    expect(manager.plugins).toHaveLength(8);
     expect(manager.plugins[0].name).toBe("router-virtual-module");
-    expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
-    const apiPlugin = manager.plugins[1] as VirtualModulePlugin & {
+    expect(manager.plugins[1].name).toBe("route-handlers-virtual-module");
+    expect(manager.plugins[2].name).toBe("httpapi-virtual-module");
+    const apiPlugin = manager.plugins[2] as VirtualModulePlugin & {
       _testOpts: HttpApiVirtualModulePluginOptions;
     };
     expect(apiPlugin._testOpts).toEqual({ prefix: "api:" });
@@ -59,7 +61,7 @@ describe("createTypedViteResolver", () => {
       { createHttpApiVirtualModulePlugin: fakeHttpApiPlugin },
     );
     const manager = resolver as PluginManager;
-    const apiPlugin = manager.plugins[1] as VirtualModulePlugin & {
+    const apiPlugin = manager.plugins[2] as VirtualModulePlugin & {
       _testOpts: HttpApiVirtualModulePluginOptions;
     };
     expect(apiPlugin._testOpts).toEqual(opts);
@@ -70,9 +72,10 @@ describe("createTypedViteResolver", () => {
       routerVmOptions: { prefix: "routes:", name: "custom-router" },
     });
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(7);
+    expect(manager.plugins).toHaveLength(8);
     expect(manager.plugins[0].name).toBe("custom-router");
-    expect(manager.plugins[1].name).toBe("httpapi-virtual-module");
+    expect(manager.plugins[1].name).toBe("route-handlers-virtual-module");
+    expect(manager.plugins[2].name).toBe("httpapi-virtual-module");
   });
 });
 

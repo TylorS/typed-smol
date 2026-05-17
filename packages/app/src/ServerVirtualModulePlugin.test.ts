@@ -54,6 +54,11 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import * as Api0 from "api:./api";');
     expect(source).toContain('import Routes0 from "router:./routes1";');
     expect(source).toContain('import Routes1 from "router:./routes2";');
+    expect(source).toContain('import RouteHandlers0 from "route-handlers:./routes1";');
+    expect(source).toContain('import RouteHandlers1 from "route-handlers:./routes2";');
+    expect(source).toContain(
+      "const routeModules = [TypedApp.RouteHandlers.apply(Routes0, RouteHandlers0), TypedApp.RouteHandlers.apply(Routes1, RouteHandlers1)];",
+    );
     expect(source).toContain("export const AppLayer =");
     expect(source).toContain("export const ServerLayer =");
     expect(source).toContain("export const handler =");
@@ -79,6 +84,7 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source.indexOf('import Routes0 from "router:./routes";')).toBeLessThan(
       source.indexOf('import * as Api0 from "api:./api1";'),
     );
+    expect(source).toContain('import RouteHandlers0 from "route-handlers:./routes";');
     expect(source.indexOf('import * as Api0 from "api:./api1";')).toBeLessThan(
       source.indexOf('import * as Api1 from "api:./api2";'),
     );

@@ -80,6 +80,7 @@ describe("typed-realworld package skeleton", () => {
     expect(readText(".gitignore")).toContain(".hurl/");
 
     expect(readText("vmc.config.ts")).toContain("createRouterVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).toContain("createRouteHandlersVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createHttpApiVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createConfigVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createHtmlVirtualModulePlugin");
@@ -96,6 +97,15 @@ describe("typed-realworld package skeleton", () => {
     expect(existsSync(resolve(projectRoot, "src/ssr.ts"))).toBe(false);
     expect(existsSync(resolve(projectRoot, "src/browser-routes"))).toBe(false);
     expect(existsSync(resolve(projectRoot, "public/default-avatar.svg"))).toBe(true);
+  });
+
+  it("keeps route modules browser-safe and server dependencies handler-scoped", () => {
+    expect(existsSync(resolve(projectRoot, "src/routes/_dependencies.ts"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, "src/routes/_handlers.dependencies.ts"))).toBe(true);
+
+    for (const path of routeSourceFiles()) {
+      expect(readText(path), path).not.toContain('from "@typed/app"');
+    }
   });
 
   it("does not use unknown as an Effect error channel in production source", () => {
@@ -115,6 +125,19 @@ const productionSourceFiles = (): readonly string[] => [
   "src/application/Tags.ts",
   "src/application/Users.ts",
   "src/presentation/FormEvents.ts",
+];
+
+const routeSourceFiles = (): readonly string[] => [
+  "src/routes/article.ts",
+  "src/routes/editor-slug.ts",
+  "src/routes/editor.ts",
+  "src/routes/index.ts",
+  "src/routes/login.ts",
+  "src/routes/profile-favorites.ts",
+  "src/routes/profile.ts",
+  "src/routes/register.ts",
+  "src/routes/settings.ts",
+  "src/routes/tag.ts",
 ];
 
 const effectUnknownErrorChannelLines = (path: string): readonly number[] =>

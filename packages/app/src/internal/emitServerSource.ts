@@ -53,11 +53,16 @@ function createPageEntries(
 }
 
 function emitImports(imports: readonly OrderedImport[]): readonly string[] {
-  return imports.map((entry) => {
+  return imports.flatMap((entry) => {
     const moduleId = entry.kind === "api" ? `api:${entry.target}` : `router:${entry.target}`;
     const binding = entry.kind === "api" ? `Api${entry.index}` : `Routes${entry.index}`;
-    if (entry.kind === "routes") return `import ${binding} from ${JSON.stringify(moduleId)};`;
-    return `import * as ${binding} from ${JSON.stringify(moduleId)};`;
+    if (entry.kind === "routes") {
+      return [
+        `import ${binding} from ${JSON.stringify(moduleId)};`,
+        `import RouteHandlers${entry.index} from ${JSON.stringify(`route-handlers:${entry.target}`)};`,
+      ];
+    }
+    return [`import * as ${binding} from ${JSON.stringify(moduleId)};`];
   });
 }
 
@@ -79,11 +84,11 @@ function emitConstants(
 ): string {
   return [
     `const apiModules = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}`).join(", ")}];`,
-    `const routeModules = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
+    `const routeModules = [${imports.filter((i) => i.kind === "routes").map((i) => `TypedApp.RouteHandlers.apply(Routes${i.index}, RouteHandlers${i.index})`).join(", ")}];`,
     "const primaryRoutes = routeModules[0];",
     `const pageEntries = [${pages.map(pageEntrySource).join(", ")}];`,
     `const apiLayers = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}.ApiLayer`).join(", ")}];`,
-    `const routeLayers = [${imports.filter((i) => i.kind === "routes").map((i) => `HttpRouter.use(ssrForHttp(Routes${i.index}))`).join(", ")}];`,
+    `const routeLayers = [${imports.filter((i) => i.kind === "routes").map((_, index) => `HttpRouter.use(ssrForHttp(routeModules[${index}]))`).join(", ")}];`,
   ].join("\n");
 }
 

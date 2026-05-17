@@ -67,4 +67,8 @@ declare module "@typed/app" {
     }) => LayerAny;
     readonly toNodeHandler: (layer: LayerAny) => unknown;
   };
+
+  export const RouteHandlers: {
+    readonly apply: (matcher: any, handlers: any) => any;
+  };
 }

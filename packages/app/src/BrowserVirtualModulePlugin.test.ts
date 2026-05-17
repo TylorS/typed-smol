@@ -52,6 +52,7 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('import { Fx } from "@typed/fx";');
     expect(source).toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(source).toContain('import Routes0 from "router:./routes";');
+    expect(source).not.toContain("route-handlers:");
     expect(source).toContain("export const Routes = Routes0;");
     expect(source).not.toContain("export const Routes = TypedRouter.merge(Routes0);");
     expect(source).toContain("export const BrowserRuntime =");

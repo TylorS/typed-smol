@@ -9,6 +9,7 @@ import {
   createEnvVirtualModulePlugin,
   createHtmlVirtualModulePlugin,
   createHttpApiVirtualModulePlugin,
+  createRouteHandlersVirtualModulePlugin,
   createRouterVirtualModulePlugin,
   createServerVirtualModulePlugin,
   HttpApiVirtualModulePluginOptions,
@@ -115,6 +116,7 @@ export function createTypedViteResolver(
     dependencies?.createHttpApiVirtualModulePlugin ?? createHttpApiVirtualModulePlugin;
   const plugins: import("@typed/virtual-modules").VirtualModulePlugin[] = [
     createRouterVirtualModulePlugin(options.routerVmOptions ?? {}),
+    createRouteHandlersVirtualModulePlugin(),
     httpApiFactory(options.apiVmOptions ?? {}),
     createEnvVirtualModulePlugin(),
     createConfigVirtualModulePlugin(),
