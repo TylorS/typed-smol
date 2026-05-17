@@ -327,7 +327,7 @@ The exact method type aliases may be adjusted during implementation to match Eff
 Each endpoint module should use the same shape unless a generated-plugin limitation forces a documented exception:
 
 ```ts
-import { ApiHandler } from "@typed/app";
+import { ApiHandler } from "@typed/app/httpapi/ApiHandler";
 import { Route } from "@typed/router";
 import * as Schema from "effect/Schema";
 

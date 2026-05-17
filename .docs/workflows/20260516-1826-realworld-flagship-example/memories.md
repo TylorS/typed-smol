@@ -154,7 +154,7 @@
 ## Generated Runtime Import Hygiene
 
 - Generated `typed:server` runtime should import `RouteHandlers`, `TypedHttpServer`, and `composeWithLayers` from narrow `@typed/app` subpaths, not from the package root barrel.
-- Generated `api:*` runtime should import `emptyRecordString`/`emptyRecordStringArray`, `composeWithLayers`, `resolveConfig`, and `TypedHttpServer` from narrow subpaths, not from `@typed/app`.
+- Generated `api:*` runtime should import `ApiHandlers`, `composeWithLayers`, `resolveConfig`, and `TypedHttpServer` from narrow subpaths, not from `@typed/app`.
 - Generated `typed:browser` runtime should import `composeWithLayers` directly from `@typed/app/runtime` instead of a namespace, keeping all generated runtime surfaces on narrow named imports.
 - Generated `api:*` runtime should register endpoint modules through `ApiHandlers` from `@typed/app/httpapi/Handlers`; keep request/header/body coercion in that shared helper instead of expanding handler-call plumbing inside the virtual module string.
 - RealWorld endpoint modules should import `ApiHandlerRaw` from `@typed/app/httpapi/ApiHandler`; keep root-barrel imports out of route and API leaf modules.
