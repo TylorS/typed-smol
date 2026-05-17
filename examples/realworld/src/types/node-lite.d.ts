@@ -35,6 +35,11 @@ declare module "node:url" {
 
 declare const process: {
   readonly argv: readonly string[];
+  readonly env: Record<string, string | undefined>;
+  readonly pid: number;
+  readonly stderr: { write(chunk: string): boolean };
+  readonly stdout: { write(chunk: string): boolean };
   cwd(): string;
+  exit(code?: number): never;
   exitCode?: number;
 };

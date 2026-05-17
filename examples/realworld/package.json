@@ -13,8 +13,8 @@
     "test:unit": "vitest run --passWithNoTests src/tests/package.test.ts src/tests/domain",
     "test:integration": "vitest run --passWithNoTests src/tests/infrastructure src/tests/application src/tests/api",
     "test:ssr": "vitest run --passWithNoTests src/tests/presentation",
-    "test:e2e:local": "node -e \"console.error('Task 12 will wire local Playwright E2E automation.'); process.exit(1);\"",
-    "test:api:hurl:local": "node -e \"console.error('Task 12 will wire local Hurl API automation.'); process.exit(1);\"",
+    "test:e2e:local": "vmc -p tsconfig.json && node dist/types/scripts/run-e2e-local.js",
+    "test:api:hurl:local": "vmc -p tsconfig.json && node dist/types/scripts/run-hurl-local.js",
     "db:migrate": "vmc -p tsconfig.json && node dist/types/scripts/db.js migrate",
     "db:seed": "vmc -p tsconfig.json && node dist/types/scripts/db.js seed",
     "db:reset": "vmc -p tsconfig.json && node dist/types/scripts/db.js reset"

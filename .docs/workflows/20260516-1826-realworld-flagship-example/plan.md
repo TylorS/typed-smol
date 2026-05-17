@@ -676,15 +676,18 @@ Execution refinements:
 - Modify: `README.md`
 - Create: `src/tests/local-gates.test.ts`
 
-- [ ] Step 1: Write failing tests or script checks that verify `.temp/references/realworld/specs/api/hurl` and `.temp/references/realworld/specs/e2e` are referenced, not vendored.
-- [ ] Step 2: Implement `test:api:hurl:local` wrapper with `HOST`, `UID_VAL`, and helpful missing-`hurl` error.
-- [ ] Step 3: Implement `test:e2e:local` wrapper with app `baseURL`, `API_BASE`, local server host/port, and helpful Playwright/browser prerequisite errors.
-- [ ] Step 4: Update README with exact local acceptance commands and prerequisites.
-- [ ] Step 5: Run `pnpm --filter typed-realworld test:api:hurl:local`.
+**Progress notes:**
+- 2026-05-17: Local acceptance wrappers are wired against the upstream `.temp/references/realworld` checkout without vendoring specs. `test:api:hurl:local` was run and failed with the documented missing-`hurl` prerequisite. `test:e2e:local` was run and failed with the documented missing local app server prerequisite.
+
+- [x] Step 1: Write failing tests or script checks that verify `.temp/references/realworld/specs/api/hurl` and `.temp/references/realworld/specs/e2e` are referenced, not vendored.
+- [x] Step 2: Implement `test:api:hurl:local` wrapper with `HOST`, `UID_VAL`, and helpful missing-`hurl` error.
+- [x] Step 3: Implement `test:e2e:local` wrapper with app `baseURL`, `API_BASE`, local server host/port, and helpful Playwright/browser prerequisite errors.
+- [x] Step 4: Update README with exact local acceptance commands and prerequisites.
+- [x] Step 5: Run `pnpm --filter typed-realworld test:api:hurl:local`.
   - Expected: pass if `hurl` and app server are available; otherwise fail with the documented prerequisite message.
-- [ ] Step 6: Run `pnpm --filter typed-realworld test:e2e:local`.
+- [x] Step 6: Run `pnpm --filter typed-realworld test:e2e:local`.
   - Expected: pass if Playwright browsers and app server are available; otherwise fail with the documented prerequisite message.
-- [ ] Step 7: Commit as `test: add realworld local acceptance scripts`.
+- [x] Step 7: Commit as `test: add realworld local acceptance scripts`.
 
 ### Task 13: Final Verification and Documentation
 

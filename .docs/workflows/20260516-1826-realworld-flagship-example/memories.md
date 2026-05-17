@@ -119,3 +119,10 @@
 - `avatarSrc` only allows root-relative URLs and absolute `http:`/`https:` URLs; unsafe, empty, protocol-relative, `javascript:`, and `data:` values fall back to `/default-avatar.svg`.
 - Static `@typed/template` rendering currently inserts interpolated strings as HTML, so presentation code must pass untrusted text through `safeTextPreview` or sanitized Markdown before rendering.
 - Raw Vite dev serves the hydration entry without SSR content, so browser verification can confirm asset loading but not full page content until Task 12 wires a local SSR/server acceptance path.
+
+## Task 12 - Local Acceptance Wrappers
+
+- `scripts/run-hurl-local.ts` references `.temp/references/realworld/specs/api/hurl`, expands `.hurl` files from that checkout, passes `HOST` and `UID_VAL` through Hurl variables, and fails clearly when `hurl` is missing.
+- `scripts/run-e2e-local.ts` references `.temp/references/realworld/specs/e2e`, requires an already-running app at `APP_BASE`, passes `API_BASE` through to the upstream helpers, and rewrites missing-browser output into a Playwright install prerequisite.
+- `playwright.config.ts` imports the upstream `playwright.base.ts` and points `testDir` at the reference checkout rather than copying specs into `examples/realworld`.
+- In this worktree, `test:api:hurl:local` stops at missing `hurl`; `test:e2e:local` stops at missing local app server. Those are expected prerequisite failures, not code failures.
