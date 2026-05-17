@@ -78,6 +78,13 @@ declare module "@typed/app/httpapi/ApiHandler" {
   export const emptyRecordStringArray: Readonly<Record<string, string | readonly string[] | undefined>>;
 }
 
+declare module "@typed/app/httpapi/Handlers" {
+  export const ApiHandlers: {
+    readonly handle: (handlers: any, name: string, endpoint: any, options?: any) => any;
+    readonly handleRaw: (handlers: any, name: string, endpoint: any, options?: any) => any;
+  };
+}
+
 declare module "@typed/app/runtime" {
   import type * as Layer from "effect/Layer";
 

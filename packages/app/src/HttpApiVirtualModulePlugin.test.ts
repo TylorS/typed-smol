@@ -149,6 +149,12 @@ const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
     "test-utils",
     "typedAppGeneratedSourceFallback.d.ts",
   ),
+  "@typed/app/httpapi/Handlers": join(
+    APP_ROOT,
+    "src",
+    "test-utils",
+    "typedAppGeneratedSourceFallback.d.ts",
+  ),
   "@typed/app/runtime": join(APP_ROOT, "src", "test-utils", "typedAppGeneratedSourceFallback.d.ts"),
   "@typed/app/internal/resolveConfig": join(
     APP_ROOT,
@@ -339,7 +345,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
     expect(sourceText).toBeDefined();
     expect(sourceText).toMatchInlineSnapshot(`
       "// @ts-nocheck
-      import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";
+      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
       import { composeWithLayers } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
@@ -352,7 +358,6 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
       import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
       import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
-      import * as HttpIncomingMessage from "effect/unstable/http/HttpIncomingMessage";
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
@@ -360,7 +365,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined })))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => ApiHandlers.handle(handlers, "status", Status))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -427,9 +432,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
   it("imports runtime helpers from narrow @typed/app subpaths", () => {
     const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
 
-    expect(sourceText).toContain(
-      'import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";',
-    );
+    expect(sourceText).toContain('import { ApiHandlers } from "@typed/app/httpapi/Handlers";');
     expect(sourceText).toContain('import { composeWithLayers } from "@typed/app/runtime";');
     expect(sourceText).toContain(
       'import { resolveConfig } from "@typed/app/internal/resolveConfig";',
@@ -640,7 +643,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
     expect(resolved.pluginName).toBe("httpapi-virtual-module");
     expect(resolved.sourceText).toMatchInlineSnapshot(`
       "// @ts-nocheck
-      import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";
+      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
       import { composeWithLayers } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
@@ -653,7 +656,6 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
       import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
       import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
-      import * as HttpIncomingMessage from "effect/unstable/http/HttpIncomingMessage";
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
@@ -661,7 +663,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: emptyRecordString, body: undefined })))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => ApiHandlers.handle(handlers, "status", Status))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -880,7 +882,8 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("handlers.handle(");
+      expect(sourceText).toContain('import { ApiHandlers } from "@typed/app/httpapi/Handlers";');
+      expect(sourceText).toContain("ApiHandlers.handle(");
     });
 
     it("Wrong typeTargetSpecs: wrong module paths; assignableTo missing; build fails", () => {
@@ -1023,8 +1026,8 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handle("status"');
-      expect(sourceText).toContain('handleRaw("raw"');
+      expect(sourceText).toContain('ApiHandlers.handleRaw(handlers, "raw", Raw)');
+      expect(sourceText).toContain('"status", Status');
     });
   });
 
@@ -1103,9 +1106,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handle("list"');
-      expect(sourceText).toContain('handle("get"');
-      expect(sourceText).toContain('handle("update"');
+      expect(sourceText).toContain('ApiHandlers.handle(handlers, "get", UsersGet)');
+      expect(sourceText).toContain('"list", UsersList');
+      expect(sourceText).toContain('"update", UsersUpdate');
     });
   });
 
@@ -1114,16 +1117,14 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("Status.handler(");
+      expect(sourceText).toContain('ApiHandlers.handle(handlers, "status", Status)');
     });
 
     it("handle for value return: handlers.handle with decoded params", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain(
-        'handlers.handle("status", (ctx) => Status.handler({ path:',
-      );
+      expect(sourceText).toContain('ApiHandlers.handle(handlers, "status", Status)');
     });
 
     it("handleRaw for HttpServerResponse: handlers.handleRaw, handler receives typed endpoint params", () => {
@@ -1141,7 +1142,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handleRaw("raw", (ctx) => Raw.handler({ path:');
+      expect(sourceText).toContain('ApiHandlers.handleRaw(handlers, "raw", Raw)');
       expect(sourceText).not.toContain("Effect.map(Raw.handler");
       expect(sourceText).not.toContain("Effect.mapError(Raw.handler");
     });
@@ -1165,9 +1166,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("Effect.orDie(HttpIncomingMessage.schemaBodyJson(Raw.body)(ctx.request))");
-      expect(sourceText).toContain("Raw.handler({ path:");
-      expect(sourceText).toContain("body: body");
+      expect(sourceText).toContain('ApiHandlers.handleRaw(handlers, "raw", Raw, { body: "json" })');
+      expect(sourceText).not.toContain("HttpIncomingMessage.schemaBodyJson(Raw.body)");
+      expect(sourceText).not.toContain("Raw.handler({ path:");
       expect(sourceText).not.toContain("body: ctx.payload");
     });
   });

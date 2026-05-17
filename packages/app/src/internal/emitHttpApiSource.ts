@@ -107,14 +107,6 @@ type ApiRenderSpec = {
   readonly directoryCompanions: DirectoryCompanionPaths;
 };
 
-type HandlerCallInput = {
-  readonly moduleName: string;
-  readonly optionalExports: ReadonlySet<OptionalExport>;
-  readonly headersArg: string;
-  readonly bodyArg: string;
-  readonly coerceSchemas: boolean;
-};
-
 type DirectoryConventionIndexEntry = {
   readonly apiRootPaths: string[];
   readonly groupOverridePaths: string[];
@@ -454,7 +446,7 @@ export function emitHttpApiSource(input: {
 
   const importLines: string[] = [
     `// @ts-nocheck`,
-    `import { emptyRecordString, emptyRecordStringArray } from "@typed/app/httpapi/ApiHandler";`,
+    `import { ApiHandlers } from "@typed/app/httpapi/Handlers";`,
     `import { composeWithLayers } from "@typed/app/runtime";`,
     `import { resolveConfig } from "@typed/app/internal/resolveConfig";`,
     `import { TypedHttpServer } from "@typed/app/TypedHttpServer";`,
@@ -467,7 +459,6 @@ export function emitHttpApiSource(input: {
     `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
     `import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";`,
     `import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";`,
-    `import * as HttpIncomingMessage from "effect/unstable/http/HttpIncomingMessage";`,
     `import * as HttpServer from "effect/unstable/http/HttpServer";`,
     `import * as HttpRouter from "effect/unstable/http/HttpRouter";`,
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
@@ -547,33 +538,20 @@ export function emitHttpApiSource(input: {
     if (endpointsInGroup.length === 0) continue;
     const groupName = groupSpec.defaultName;
     const handlerIsRaw = input.handlerIsRawByPath;
-    const handleCalls = endpointsInGroup
-      .map((e) => {
-        const varName = varNameByPath.get(e.modulePath)!;
-        const literals = input.extractedLiteralsByPath.get(e.path);
-        const name = literals?.name ?? e.stem;
-        const isRaw = handlerIsRaw?.get(e.path) === true;
-        const optPresent = input.optionalExportsByPath.get(e.path) ?? new Set<OptionalExport>();
-        const headersArg = optPresent.has("headers") ? "ctx.headers" : "emptyRecordString";
-        const bodyArg = optPresent.has("body") ? "ctx.payload" : "undefined";
-        const handlerCall = emitHandlerCall({
-          moduleName: varName,
-          optionalExports: optPresent,
-          headersArg,
-          bodyArg: isRaw && optPresent.has("body") ? "body" : bodyArg,
-          coerceSchemas: !isRaw,
-        });
-        if (isRaw) {
-          if (optPresent.has("body")) {
-            return `.handleRaw(${JSON.stringify(name)}, (ctx) => Effect.flatMap(Effect.orDie(HttpIncomingMessage.schemaBodyJson(${varName}.body)(ctx.request)), (body) => ${handlerCall}))`;
-          }
-          return `.handleRaw(${JSON.stringify(name)}, (ctx) => ${handlerCall})`;
-        }
-        return `.handle(${JSON.stringify(name)}, (ctx) => ${handlerCall})`;
-      })
-      .join("\n      ");
+    const groupHandlers = endpointsInGroup.reduce((handlersExpression, e) => {
+      const varName = varNameByPath.get(e.modulePath)!;
+      const literals = input.extractedLiteralsByPath.get(e.path);
+      const name = literals?.name ?? e.stem;
+      const isRaw = handlerIsRaw?.get(e.path) === true;
+      const optPresent = input.optionalExportsByPath.get(e.path) ?? new Set<OptionalExport>();
+      const options = emitHandlerBindingOptions(isRaw, optPresent);
+      if (isRaw) {
+        return `ApiHandlers.handleRaw(${handlersExpression}, ${JSON.stringify(name)}, ${varName}${options})`;
+      }
+      return `ApiHandlers.handle(${handlersExpression}, ${JSON.stringify(name)}, ${varName}${options})`;
+    }, "handlers");
     groupLayerBlocks.push(
-      `HttpApiBuilder.group(Api, ${JSON.stringify(groupName)}, (handlers) => handlers${handleCalls})`,
+      `HttpApiBuilder.group(Api, ${JSON.stringify(groupName)}, (handlers) => ${groupHandlers})`,
     );
   }
 
@@ -671,17 +649,12 @@ export const serve = (
 `;
 }
 
-function endpointHasSchemaTypedHandler(
-  optionalExportsByPath: ReadonlyMap<string, ReadonlySet<OptionalExport>>,
-  endpoint: EndpointRenderSpec,
-): boolean {
-  const optionalExports = optionalExportsByPath.get(endpoint.path);
-  return Boolean(optionalExports?.has("success") || optionalExports?.has("error"));
-}
-
-function emitHandlerCall(input: HandlerCallInput): string {
-  const baseCall = `${input.moduleName}.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: ${input.headersArg}, body: ${input.bodyArg} })`;
-  return baseCall;
+function emitHandlerBindingOptions(
+  isRaw: boolean,
+  optionalExports: ReadonlySet<OptionalExport>,
+): string {
+  if (!optionalExports.has("body")) return "";
+  return isRaw ? `, { body: "json" }` : `, { body: "payload" }`;
 }
 
 function renderAnnotatedApiExpression(
