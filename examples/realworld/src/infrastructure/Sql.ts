@@ -2,13 +2,20 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { SqliteClient } from "@effect/sql-sqlite-node";
 import { Effect, Layer } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient, SqlError } from "effect/unstable/sql";
 import { RealWorldConfig, type RealWorldConfigService } from "./Config.js";
+import { FileSystemError, formatThrown } from "./Errors.js";
 
 export const ensureDatabaseDirectory = (
   config: RealWorldConfigService,
-): Effect.Effect<void> =>
-  Effect.sync(() => mkdirSync(dirname(config.databasePath), { recursive: true }));
+): Effect.Effect<void, FileSystemError> => {
+  const path = dirname(config.databasePath);
+  return Effect.try({
+    try: () => mkdirSync(path, { recursive: true }),
+    catch: (cause) =>
+      new FileSystemError({ operation: "mkdir", path, reason: formatThrown(cause) }),
+  });
+};
 
 export const sqliteLayer = (
   config: RealWorldConfigService,
@@ -19,7 +26,11 @@ export const sqliteLayer = (
 
 export const withSqlite = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
-): Effect.Effect<A, E, Exclude<R, SqlClient.SqlClient> | RealWorldConfig> =>
+): Effect.Effect<
+  A,
+  E | FileSystemError | SqlError.SqlError,
+  Exclude<R, SqlClient.SqlClient> | RealWorldConfig
+> =>
   Effect.gen(function* () {
     const config = yield* RealWorldConfig;
     yield* ensureDatabaseDirectory(config);

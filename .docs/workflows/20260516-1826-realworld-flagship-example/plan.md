@@ -544,15 +544,15 @@ Execution refinements:
 - Create: `src/tests/infrastructure/profiles.test.ts`
 - Create: `src/tests/infrastructure/comments.test.ts`
 
-- [ ] Step 1: Write failing repository tests for profile lookup/following, follow/unfollow, article create/list/feed/filter/favorite/update/delete, comment create/list/delete, and tag list.
-- [ ] Step 2: Run repository tests and confirm failures.
-- [ ] Step 3: Implement `ProfileRepository` as a class-based Effect `Context.Service` whose layer constructor acquires SQL dependencies and returns profile/follow operations.
-- [ ] Step 4: Implement `ArticleRepository` as a class-based Effect `Context.Service` whose layer constructor acquires SQL dependencies and returns article list/feed/filter queries with author/tag/favorited/limit/offset and total counts.
-- [ ] Step 5: Add article create/update/delete operations to `ArticleRepository` with tag transactions and unique slug handling.
-- [ ] Step 6: Add favorite/unfavorite and favorites count operations to `ArticleRepository`.
-- [ ] Step 7: Implement `CommentRepository` and `TagRepository` as class-based Effect `Context.Service` values with layer constructors.
-- [ ] Step 8: Run `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure`.
-- [ ] Step 9: Commit as `feat: add realworld repositories`.
+- [x] Step 1: Write failing repository tests for profile lookup/following, follow/unfollow, article create/list/feed/filter/favorite/update/delete, comment create/list/delete, and tag list.
+- [x] Step 2: Run repository tests and confirm failures.
+- [x] Step 3: Implement `ProfileRepository` as a class-based Effect `Context.Service` whose layer constructor acquires SQL dependencies and returns profile/follow operations.
+- [x] Step 4: Implement `ArticleRepository` as a class-based Effect `Context.Service` whose layer constructor acquires SQL dependencies and returns article list/feed/filter queries with author/tag/favorited/limit/offset and total counts.
+- [x] Step 5: Add article create/update/delete operations to `ArticleRepository` with tag transactions and unique slug handling.
+- [x] Step 6: Add favorite/unfavorite and favorites count operations to `ArticleRepository`.
+- [x] Step 7: Implement `CommentRepository` and `TagRepository` as class-based Effect `Context.Service` values with layer constructors.
+- [x] Step 8: Run `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure`.
+- [x] Step 9: Commit as `feat: add realworld repositories`.
 
 ### Task 7: Application Services and Error Mapping
 

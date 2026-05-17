@@ -1,16 +1,23 @@
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { Context, Effect, Layer } from "effect";
+import { Migrator, SqlError } from "effect/unstable/sql";
 import { RealWorldConfig } from "./Config.js";
+import { FileSystemError, formatThrown } from "./Errors.js";
 import { runMigrations } from "./Migrations.js";
 import { collectSeedCounts, seedDatabase, type SeedCounts } from "./Seed.js";
 import { ensureDatabaseDirectory, sqliteLayer, withSqlite } from "./Sql.js";
 
+export type DatabaseError =
+  | FileSystemError
+  | Migrator.MigrationError
+  | SqlError.SqlError;
+
 export interface DatabaseManagerService {
-  readonly migrate: Effect.Effect<void, unknown>;
-  readonly seed: Effect.Effect<SeedCounts, unknown>;
-  readonly reset: Effect.Effect<SeedCounts, unknown>;
-  readonly counts: Effect.Effect<SeedCounts, unknown>;
+  readonly migrate: Effect.Effect<void, DatabaseError>;
+  readonly seed: Effect.Effect<SeedCounts, DatabaseError>;
+  readonly reset: Effect.Effect<SeedCounts, DatabaseError>;
+  readonly counts: Effect.Effect<SeedCounts, DatabaseError>;
 }
 
 export class DatabaseManager extends Context.Service<
@@ -54,13 +61,24 @@ export const collectConfiguredSeedCounts = withSqlite(collectSeedCounts);
 
 const resetWithConfig = (
   databasePath: string,
-  migrate: Effect.Effect<void, unknown>,
-  seed: Effect.Effect<SeedCounts, unknown>,
-): Effect.Effect<SeedCounts, unknown> =>
-  Effect.sync(() => {
-    rmSync(databasePath, { force: true });
-    mkdirSync(dirname(databasePath), { recursive: true });
-  }).pipe(
+  migrate: Effect.Effect<void, DatabaseError>,
+  seed: Effect.Effect<SeedCounts, DatabaseError>,
+): Effect.Effect<SeedCounts, DatabaseError> =>
+  removeDatabase(databasePath).pipe(
     Effect.andThen(migrate),
     Effect.andThen(seed),
   );
+
+const removeDatabase = (databasePath: string): Effect.Effect<void, FileSystemError> =>
+  Effect.try({
+    try: () => {
+      rmSync(databasePath, { force: true });
+      mkdirSync(dirname(databasePath), { recursive: true });
+    },
+    catch: (cause) =>
+      new FileSystemError({
+        operation: "rm",
+        path: databasePath,
+        reason: formatThrown(cause),
+      }),
+  });

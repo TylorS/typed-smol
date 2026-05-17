@@ -3,14 +3,20 @@ import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { Email, OpaqueToken, UserId, Username } from "../../domain/Ids.js";
 import { normalizeNullableProfileField, User } from "../../domain/User.js";
-import { RealWorldConfig, type RealWorldConfigService } from "../Config.js";
+import { RealWorldConfig } from "../Config.js";
 import {
   PasswordHasher,
+  PasswordHashError,
   StoredPassword,
   type PasswordHasherService,
 } from "../PasswordHasher.js";
-import { SessionTokens } from "../SessionTokens.js";
-import { ensureDatabaseDirectory, sqliteLayer } from "../Sql.js";
+import { SessionTokens, type SessionTokenError } from "../SessionTokens.js";
+import {
+  currentIsoTimestamp,
+  first,
+  runSql,
+  type RepositoryPersistenceError,
+} from "./Common.js";
 
 const PasswordMinLength = 8;
 
@@ -58,21 +64,37 @@ export class UserNotFound extends Data.TaggedError("UserNotFound")<{
   readonly id: UserId;
 }> {}
 
+export type UserRepositoryError =
+  | DuplicateUserField
+  | PasswordHashError
+  | PasswordPolicyError
+  | RepositoryPersistenceError
+  | SessionTokenError
+  | UserNotFound;
+
 export interface UserRepositoryService {
-  readonly create: (input: CreateUserInput) => Effect.Effect<UserRecord, unknown>;
-  readonly createSession: (userId: UserId) => Effect.Effect<OpaqueToken, unknown>;
-  readonly findByEmail: (email: string) => Effect.Effect<Option.Option<UserRecord>, unknown>;
-  readonly findById: (id: UserId) => Effect.Effect<Option.Option<UserRecord>, unknown>;
-  readonly findByToken: (token: string) => Effect.Effect<Option.Option<UserRecord>, unknown>;
-  readonly findByUsername: (username: string) => Effect.Effect<Option.Option<UserRecord>, unknown>;
+  readonly create: (input: CreateUserInput) => Effect.Effect<UserRecord, UserRepositoryError>;
+  readonly createSession: (userId: UserId) => Effect.Effect<OpaqueToken, UserRepositoryError>;
+  readonly findByEmail: (
+    email: string,
+  ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
+  readonly findById: (
+    id: UserId,
+  ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
+  readonly findByToken: (
+    token: string,
+  ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
+  readonly findByUsername: (
+    username: string,
+  ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
   readonly update: (
     id: UserId,
     input: UpdateUserInput,
-  ) => Effect.Effect<UserRecord, unknown>;
+  ) => Effect.Effect<UserRecord, UserRepositoryError>;
   readonly verifyCredentials: (
     email: string,
     password: string,
-  ) => Effect.Effect<Option.Option<UserRecord>, unknown>;
+  ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
 }
 
 export class UserRepository extends Context.Service<
@@ -114,20 +136,12 @@ interface UserRow {
   readonly updated_at: string;
 }
 
-const runSql = <A, E, R>(
-  config: RealWorldConfigService,
-  effect: Effect.Effect<A, E, R>,
-): Effect.Effect<A, E | unknown, Exclude<R, SqlClient.SqlClient>> =>
-  ensureDatabaseDirectory(config).pipe(
-    Effect.andThen(Effect.provide(effect, sqliteLayer(config))),
-  );
-
 const createUser = (
   rawInput: CreateUserInput,
   passwords: PasswordHasherService,
-): Effect.Effect<UserRecord, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<UserRecord, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
-    const input = decodeCreateUserInput(rawInput);
+    const input = yield* decodeCreateUserInput(rawInput);
     yield* assertPasswordAllowed(input.password);
     const stored = yield* passwords.hash(input.password);
     const sql = yield* SqlClient.SqlClient;
@@ -143,9 +157,9 @@ const updateUser = (
   id: UserId,
   rawInput: UpdateUserInput,
   passwords: PasswordHasherService,
-): Effect.Effect<UserRecord, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<UserRecord, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
-    const input = decodeUpdateUserInput(rawInput);
+    const input = yield* decodeUpdateUserInput(rawInput);
     yield* assertOptionalPasswordAllowed(input.password);
     const current = yield* requireUserRow(id);
     const stored = yield* resolveUpdatedPassword(current, input, passwords);
@@ -158,20 +172,22 @@ const verifyCredentials = (
   email: string,
   password: string,
   passwords: PasswordHasherService,
-): Effect.Effect<Option.Option<UserRecord>, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<Option.Option<UserRecord>, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
-    const row = yield* selectUserRowByEmail(Schema.decodeUnknownSync(Email)(email));
+    const decoded = yield* Schema.decodeUnknownEffect(Email)(email);
+    const row = yield* selectUserRowByEmail(decoded);
     if (Option.isNone(row)) return Option.none();
 
-    const stored = toStoredPassword(row.value);
+    const stored = yield* toStoredPassword(row.value);
     const verified = yield* passwords.verify(password, stored);
-    return verified ? Option.some(toUser(row.value)) : Option.none();
+    const user = yield* toUser(row.value);
+    return verified ? Option.some(user) : Option.none();
   });
 
 const insertUser = (
   input: DecodedCreateUserInput,
   stored: StoredPassword,
-): Effect.Effect<UserRecord, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<UserRecord, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const now = currentIsoTimestamp();
@@ -184,7 +200,7 @@ const insertUser = (
       RETURNING *
     `;
 
-    return toUser(row);
+    return yield* toUser(row);
   });
 
 const updateUserRow = (
@@ -192,7 +208,7 @@ const updateUserRow = (
   current: UserRow,
   input: DecodedUpdateUserInput,
   stored: StoredPassword,
-): Effect.Effect<UserRecord, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<UserRecord, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const [row] = yield* sql<UserRow>`
@@ -208,34 +224,38 @@ const updateUserRow = (
       RETURNING *
     `;
 
-    return toUser(row);
+    return yield* toUser(row);
   });
 
 const findById = (
   id: UserId,
-): Effect.Effect<Option.Option<UserRecord>, unknown, SqlClient.SqlClient> =>
-  selectUserRowById(id).pipe(Effect.map(Option.map(toUser)));
+): Effect.Effect<Option.Option<UserRecord>, UserRepositoryError, SqlClient.SqlClient> =>
+  selectUserRowById(id).pipe(Effect.flatMap(decodeUserOption));
 
 const findByEmail = (
   email: string,
-): Effect.Effect<Option.Option<UserRecord>, unknown, SqlClient.SqlClient> =>
-  selectUserRowByEmail(Schema.decodeUnknownSync(Email)(email)).pipe(
-    Effect.map(Option.map(toUser)),
-  );
+): Effect.Effect<Option.Option<UserRecord>, UserRepositoryError, SqlClient.SqlClient> =>
+  Effect.gen(function* () {
+    const decoded = yield* Schema.decodeUnknownEffect(Email)(email);
+    const row = yield* selectUserRowByEmail(decoded);
+    return yield* decodeUserOption(row);
+  });
 
 const findByUsername = (
   username: string,
-): Effect.Effect<Option.Option<UserRecord>, unknown, SqlClient.SqlClient> =>
-  selectUserRowByUsername(Schema.decodeUnknownSync(Username)(username)).pipe(
-    Effect.map(Option.map(toUser)),
-  );
+): Effect.Effect<Option.Option<UserRecord>, UserRepositoryError, SqlClient.SqlClient> =>
+  Effect.gen(function* () {
+    const decoded = yield* Schema.decodeUnknownEffect(Username)(username);
+    const row = yield* selectUserRowByUsername(decoded);
+    return yield* decodeUserOption(row);
+  });
 
 const findByToken = (
   token: string,
-): Effect.Effect<Option.Option<UserRecord>, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<Option.Option<UserRecord>, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    const decoded = Schema.decodeUnknownSync(OpaqueToken)(token);
+    const decoded = yield* Schema.decodeUnknownEffect(OpaqueToken)(token);
     const rows = yield* sql<UserRow>`
       SELECT users.*
       FROM users
@@ -244,13 +264,13 @@ const findByToken = (
       LIMIT 1
     `;
 
-    return Option.map(first(rows), toUser);
+    return yield* decodeUserOption(first(rows));
   });
 
 const assertUpdateIsUnique = (
   id: UserId,
   input: DecodedUpdateUserInput,
-): Effect.Effect<void, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<void, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
     if (input.username !== undefined) yield* assertUniqueUsername(input.username, id);
     if (input.email !== undefined) yield* assertUniqueEmail(input.email, id);
@@ -259,7 +279,7 @@ const assertUpdateIsUnique = (
 const assertUniqueUsername = (
   username: Username,
   excludingId: number,
-): Effect.Effect<void, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<void, UserRepositoryError, SqlClient.SqlClient> =>
   selectUserRowByUsername(username, excludingId).pipe(
     Effect.flatMap((row) =>
       Option.isSome(row)
@@ -271,7 +291,7 @@ const assertUniqueUsername = (
 const assertUniqueEmail = (
   email: Email,
   excludingId: number,
-): Effect.Effect<void, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<void, UserRepositoryError, SqlClient.SqlClient> =>
   selectUserRowByEmail(email, excludingId).pipe(
     Effect.flatMap((row) =>
       Option.isSome(row)
@@ -282,7 +302,7 @@ const assertUniqueEmail = (
 
 const requireUserRow = (
   id: UserId,
-): Effect.Effect<UserRow, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<UserRow, UserRepositoryError, SqlClient.SqlClient> =>
   selectUserRowById(id).pipe(
     Effect.flatMap((row) =>
       Option.isSome(row) ? Effect.succeed(row.value) : Effect.fail(new UserNotFound({ id })),
@@ -291,7 +311,7 @@ const requireUserRow = (
 
 const selectUserRowById = (
   id: UserId,
-): Effect.Effect<Option.Option<UserRow>, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<Option.Option<UserRow>, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const rows = yield* sql<UserRow>`SELECT * FROM users WHERE id = ${id} LIMIT 1`;
@@ -301,7 +321,7 @@ const selectUserRowById = (
 const selectUserRowByUsername = (
   username: Username,
   excludingId = 0,
-): Effect.Effect<Option.Option<UserRow>, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<Option.Option<UserRow>, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const rows = yield* sql<UserRow>`
@@ -315,7 +335,7 @@ const selectUserRowByUsername = (
 const selectUserRowByEmail = (
   email: Email,
   excludingId = 0,
-): Effect.Effect<Option.Option<UserRow>, unknown, SqlClient.SqlClient> =>
+): Effect.Effect<Option.Option<UserRow>, UserRepositoryError, SqlClient.SqlClient> =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const rows = yield* sql<UserRow>`
@@ -330,9 +350,9 @@ const resolveUpdatedPassword = (
   current: UserRow,
   input: DecodedUpdateUserInput,
   passwords: PasswordHasherService,
-): Effect.Effect<StoredPassword, unknown> =>
+): Effect.Effect<StoredPassword, UserRepositoryError> =>
   input.password === undefined
-    ? Effect.succeed(toStoredPassword(current))
+    ? toStoredPassword(current)
     : passwords.hash(input.password);
 
 const assertOptionalPasswordAllowed = (
@@ -356,20 +376,24 @@ const resolveNullableUpdate = (
     ? normalizeNullableProfileField(input[field])
     : current;
 
-const decodeCreateUserInput = (input: CreateUserInput): DecodedCreateUserInput =>
-  Schema.decodeUnknownSync(CreateUserInputSchema)(input);
+const decodeCreateUserInput = (
+  input: CreateUserInput,
+): Effect.Effect<DecodedCreateUserInput, Schema.SchemaError> =>
+  Schema.decodeUnknownEffect(CreateUserInputSchema)(input);
 
-const decodeUpdateUserInput = (input: UpdateUserInput): DecodedUpdateUserInput =>
-  Schema.decodeUnknownSync(UpdateUserInputSchema)(input);
+const decodeUpdateUserInput = (
+  input: UpdateUserInput,
+): Effect.Effect<DecodedUpdateUserInput, Schema.SchemaError> =>
+  Schema.decodeUnknownEffect(UpdateUserInputSchema)(input);
 
-const toStoredPassword = (row: UserRow): StoredPassword =>
-  Schema.decodeUnknownSync(StoredPassword)({
+const toStoredPassword = (row: UserRow): Effect.Effect<StoredPassword, Schema.SchemaError> =>
+  Schema.decodeUnknownEffect(StoredPassword)({
     passwordHash: row.password_hash,
     passwordSalt: row.password_salt,
   });
 
-const toUser = (row: UserRow): UserRecord =>
-  Schema.decodeUnknownSync(User)({
+const toUser = (row: UserRow): Effect.Effect<UserRecord, Schema.SchemaError> =>
+  Schema.decodeUnknownEffect(User)({
     id: row.id,
     username: row.username,
     email: row.email,
@@ -379,7 +403,7 @@ const toUser = (row: UserRow): UserRecord =>
     updatedAt: row.updated_at,
   });
 
-const first = <A>(rows: readonly A[]): Option.Option<A> =>
-  rows.length > 0 ? Option.some(rows[0]) : Option.none();
-
-const currentIsoTimestamp = (): string => new Date().toISOString();
+const decodeUserOption = (
+  row: Option.Option<UserRow>,
+): Effect.Effect<Option.Option<UserRecord>, Schema.SchemaError> =>
+  Option.isSome(row) ? Effect.map(toUser(row.value), Option.some) : Effect.succeed(Option.none());

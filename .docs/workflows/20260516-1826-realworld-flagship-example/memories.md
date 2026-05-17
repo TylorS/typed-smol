@@ -43,5 +43,14 @@
 - `PasswordHasher` is a class-based `Context.Service` backed by Node `crypto.scrypt`; stored password hashes and salts are modeled with Effect Schema.
 - `SessionTokens` creates opaque base64url tokens, persists them in SQLite, and remains replaceable through its service layer.
 - `UserRepository` composes `PasswordHasher`, `SessionTokens`, `RealWorldConfig`, and `effect/unstable/sql` through `Layer.effect`; it exposes create, lookup, token lookup, update, credential verification, and delegated session creation.
-- Repository inputs are decoded with Effect Schema at the boundary, and database rows are mapped back through the domain `User` schema.
+- Repository inputs are decoded with Effect Schema at the boundary, and database rows are mapped back through the domain `User` schema using typed `Schema.SchemaError` failures rather than defects.
 - Infrastructure tests that mutate SQLite should use isolated database paths when they can run concurrently under Vitest.
+- Infrastructure service and repository method signatures must never use `unknown` error channels; use explicit unions such as `RepositoryPersistenceError`, `UserRepositoryError`, and `DatabaseError`.
+
+## Task 6 - Social and Content Repositories
+
+- `ProfileRepository`, `ArticleRepository`, `CommentRepository`, and `TagRepository` are all class-based `Context.Service` layers that acquire `RealWorldConfig` and SQL dependencies in `Layer.effect`.
+- Repository error channels are explicit; the infrastructure grep gate is `rg "Effect\\.Effect<[^\\n]*unknown|, unknown[>,)]|readonly .*unknown" examples/realworld/src/infrastructure -n`.
+- Article listing supports RealWorld global filters for tag, author, favorited username, limit, and offset; feed lists articles from followed authors only.
+- Article writes normalize tags, preserve tags when `tagList` is absent, remove all tags for an empty `tagList`, generate unique slugs, and maintain favorite counts through real SQLite rows.
+- Comment repository methods return `Option` for unknown article/comment targets, support selective owner deletion, and hydrate author profiles from real user rows.
