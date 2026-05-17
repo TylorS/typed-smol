@@ -15,3 +15,10 @@
 - Database, Hurl, and Playwright scripts are present but fail loudly until their owning tasks wire real implementations.
 - `typed.config.ts` uses `defineConfig` and declares the intended `api:` and `router:` prefixes; the first browser build avoids virtual imports so package wiring can be verified before route/API files exist.
 - Local build verification in this worktree required building `@typed/virtual-modules-vite` and `@typed/vite-plugin` before Vite could load the workspace plugin package.
+
+## Task 2 - Schema Baseline
+
+- Response envelope schemas live in `src/domain/RealWorldApi.ts` and compose schemas from `Ids.ts`, `User.ts`, `Article.ts`, `Pagination.ts`, and `Errors.ts`.
+- Article list responses intentionally use `ArticlePreview`, whose struct strips `body` on decode/encode while single article responses use full `Article`.
+- Effect Schema `Struct` strips extra keys by default; the schema test locks this behavior for body-free article previews.
+- Timestamps are modeled as branded ISO UTC strings for API compatibility instead of decoded DateTime values.

@@ -469,14 +469,14 @@ Execution refinements:
 - Create: `src/domain/Errors.ts`
 - Create: `src/tests/domain/schema.test.ts`
 
-- [ ] Step 1: Write failing schema tests for `UserResponse`, `ProfileResponse`, `SingleArticleResponse`, `MultipleArticlesResponse`, `SingleCommentResponse`, `MultipleCommentsResponse`, `TagsResponse`, and `ErrorResponse`.
-- [ ] Step 2: Run `pnpm --filter typed-realworld test:unit -- src/tests/domain/schema.test.ts`.
+- [x] Step 1: Write failing schema tests for `UserResponse`, `ProfileResponse`, `SingleArticleResponse`, `MultipleArticlesResponse`, `SingleCommentResponse`, `MultipleCommentsResponse`, `TagsResponse`, and `ErrorResponse`.
+- [x] Step 2: Run `pnpm --filter typed-realworld test:unit -- src/tests/domain/schema.test.ts`.
   - Expected: fail because schemas do not exist.
-- [ ] Step 3: Implement domain schemas with Effect Schema.
-- [ ] Step 4: Add encode/decode round-trip tests for all API envelopes.
-- [ ] Step 5: Run `pnpm --filter typed-realworld test:unit -- src/tests/domain/schema.test.ts`.
+- [x] Step 3: Implement domain schemas with Effect Schema.
+- [x] Step 4: Add encode/decode round-trip tests for all API envelopes.
+- [x] Step 5: Run `pnpm --filter typed-realworld test:unit -- src/tests/domain/schema.test.ts`.
   - Expected: pass.
-- [ ] Step 6: Commit as `feat: model realworld schemas`.
+- [x] Step 6: Commit as `feat: model realworld schemas`.
 
 ### Task 3: Domain Invariants and Markdown Safety
 
