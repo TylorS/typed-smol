@@ -330,6 +330,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
       import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
       import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
+      import * as HttpIncomingMessage from "effect/unstable/http/HttpIncomingMessage";
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
@@ -356,11 +357,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       export const App = <const Layers extends readonly LayerOrGroup[] = []>(
         config?: AppConfig,
         ...layersToMergeIntoRouter: Layers
-      ): Layer.Layer<
-        Layer.Success<ComputeLayers<Layers, typeof ApiLayer>>, 
-        Layer.Error<ComputeLayers<Layers, typeof ApiLayer>>, 
-        Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
-      > => {
+      ) => {
         const disableListenLog = config?.disableListenLog ?? false;
         const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
         return HttpRouter.serve(appLayer, { disableListenLog })
@@ -619,6 +616,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
       import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
       import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
+      import * as HttpIncomingMessage from "effect/unstable/http/HttpIncomingMessage";
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
@@ -645,11 +643,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       export const App = <const Layers extends readonly LayerOrGroup[] = []>(
         config?: AppConfig,
         ...layersToMergeIntoRouter: Layers
-      ): Layer.Layer<
-        Layer.Success<ComputeLayers<Layers, typeof ApiLayer>>, 
-        Layer.Error<ComputeLayers<Layers, typeof ApiLayer>>, 
-        Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
-      > => {
+      ) => {
         const disableListenLog = config?.disableListenLog ?? false;
         const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
         return HttpRouter.serve(appLayer, { disableListenLog })
@@ -1097,7 +1091,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       );
     });
 
-    it("handleRaw for HttpServerResponse: handlers.handleRaw, handler receives ctx", () => {
+    it("handleRaw for HttpServerResponse: handlers.handleRaw, handler receives typed endpoint params", () => {
       const rawHandlerSource = `
         import * as Effect from "effect/Effect";
         import * as Schema from "effect/Schema";
@@ -1112,7 +1106,34 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handleRaw("raw", (ctx) => Raw.handler(ctx))');
+      expect(sourceText).toContain('handlers.handleRaw("raw", (ctx) => Raw.handler({ path:');
+      expect(sourceText).not.toContain("Effect.map(Raw.handler");
+      expect(sourceText).not.toContain("Effect.mapError(Raw.handler");
+    });
+
+    it("handleRaw with body decodes request JSON before calling typed handler", () => {
+      const rawHandlerSource = `
+        import * as Effect from "effect/Effect";
+        import * as Schema from "effect/Schema";
+        import * as Route from "@typed/router";
+        import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+        import { ApiHandlerRaw } from "@typed/app";
+        export const route = Route.Parse("/raw");
+        export const method = "POST";
+        export const body = Schema.Struct({ name: Schema.String });
+        export const success = Schema.Struct({});
+        export const error = Schema.Struct({ message: Schema.String });
+        export const handler = ApiHandlerRaw({ route, method, body })(({ body }) =>
+          Effect.succeed(HttpServerResponse.json({ name: body.name }))
+        );
+      `;
+      const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain("Effect.orDie(HttpIncomingMessage.schemaBodyJson(Raw.body)(ctx.request))");
+      expect(sourceText).toContain("Raw.handler({ path:");
+      expect(sourceText).toContain("body: body");
+      expect(sourceText).not.toContain("body: ctx.payload");
     });
   });
 

@@ -25,7 +25,6 @@ import * as ArticleDelete from "../../api/articles/delete.js";
 import * as TagsList from "../../api/tags/list.js";
 import * as UserCurrent from "../../api/user/current.js";
 import * as UsersRegister from "../../api/users/register.js";
-import type { RawApiContext } from "../../api-support/Common.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "api-test.sqlite");
 const testGeneratedDir = resolve(defaultDataDirectory, "api-generated-test");
@@ -70,27 +69,11 @@ const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
 const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   ServiceLayers.reduce((current, layer) => Effect.provide(current, layer), effect);
 
-const json = async <A>(response: Response): Promise<A> => response.json() as Promise<A>;
+const json = async <A>(response: Response): Promise<A> => response.json();
 
-const responseFrom = async <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<Response> =>
-  HttpServerResponse.toWeb(await run(effect as Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>));
-
-const ctx = (
-  options: {
-    readonly body?: unknown;
-    readonly headers?: Record<string, string>;
-    readonly params?: Record<string, string>;
-    readonly url?: string;
-  } = {},
-): RawApiContext =>
-  ({
-    params: options.params,
-    request: {
-      headers: options.headers ?? {},
-      json: Effect.succeed(options.body),
-      url: options.url ?? "/",
-    },
-  }) as RawApiContext;
+const responseFrom = async <E, R>(
+  effect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
+): Promise<Response> => HttpServerResponse.toWeb(await run(effect));
 
 describe("realworld generated api source", () => {
   it("discovers every endpoint and exposes OpenAPI JSON without docs UI paths", () => {
@@ -117,7 +100,7 @@ describe("realworld API endpoint handlers", () => {
   });
 
   it("registers a user, creates an article, and lists tags", async () => {
-    const registered = await responseFrom(UsersRegister.handler(ctx({
+    const registered = await responseFrom(UsersRegister.handler({
       body: {
         user: {
           username: "api_user",
@@ -125,7 +108,7 @@ describe("realworld API endpoint handlers", () => {
           password: "password123",
         },
       },
-    })));
+    }));
     const user = await json<{ user: { readonly token: string; readonly username: string } }>(
       registered,
     );
@@ -133,7 +116,7 @@ describe("realworld API endpoint handlers", () => {
     expect(registered.status).toBe(201);
     expect(user.user.username).toBe("api_user");
 
-    const article = await responseFrom(ArticleCreate.handler(ctx({
+    const article = await responseFrom(ArticleCreate.handler({
       headers: { authorization: `Token ${user.user.token}` },
       body: {
         article: {
@@ -143,23 +126,23 @@ describe("realworld API endpoint handlers", () => {
           tagList: ["api", "typed"],
         },
       },
-    })));
+    }));
     const articleBody = await json<{ article: { readonly slug: string } }>(article);
 
     expect(article.status).toBe(201);
     expect(articleBody.article.slug).toBe("api-article");
 
-    const tags = await responseFrom(TagsList.handler(ctx()));
+    const tags = await responseFrom(TagsList.handler({}));
     expect(tags.status).toBe(200);
     expect(await json(tags)).toMatchObject({ tags: expect.arrayContaining(["typed"]) });
   });
 
   it("returns RealWorld error envelopes and no body for delete success", async () => {
-    const missing = await responseFrom(UserCurrent.handler(ctx()));
+    const missing = await responseFrom(UserCurrent.handler({}));
     expect(missing.status).toBe(401);
     expect(await json(missing)).toEqual({ errors: { token: ["is missing"] } });
 
-    const registered = await responseFrom(UsersRegister.handler(ctx({
+    const registered = await responseFrom(UsersRegister.handler({
       body: {
         user: {
           username: "delete_user",
@@ -167,19 +150,19 @@ describe("realworld API endpoint handlers", () => {
           password: "password123",
         },
       },
-    })));
+    }));
     const user = await json<{ user: { readonly token: string } }>(registered);
-    const created = await responseFrom(ArticleCreate.handler(ctx({
+    const created = await responseFrom(ArticleCreate.handler({
       headers: { authorization: `Token ${user.user.token}` },
       body: {
         article: { title: "Delete Me", description: "x", body: "x" },
       },
-    })));
+    }));
     const article = await json<{ article: { readonly slug: string } }>(created);
-    const deleted = await responseFrom(ArticleDelete.handler(ctx({
+    const deleted = await responseFrom(ArticleDelete.handler({
       headers: { authorization: `Token ${user.user.token}` },
-      params: { slug: article.article.slug },
-    })));
+      path: { slug: article.article.slug },
+    }));
 
     expect(deleted.status).toBe(204);
     expect(await deleted.text()).toBe("");

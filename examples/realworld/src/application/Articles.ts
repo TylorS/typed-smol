@@ -7,13 +7,18 @@ import type {
   SingleArticleResponse,
   UpdateArticleRequest,
 } from "../domain/RealWorldApi.js";
+import type { RealWorldError } from "../domain/Errors.js";
 import { ArticleRepository } from "../infrastructure/repositories/ArticleRepository.js";
 import type {
   ArticleListFilter,
+  ArticleRepositoryError,
   ArticleRepositoryService,
 } from "../infrastructure/repositories/ArticleRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
-import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
+import type {
+  UserRepositoryError,
+  UserRepositoryService,
+} from "../infrastructure/repositories/UserRepository.js";
 import {
   forbidden,
   notFound,
@@ -22,37 +27,39 @@ import {
   requireUser,
 } from "./Common.js";
 
+type ArticlesError = RealWorldError | ArticleRepositoryError | UserRepositoryError;
+
 export interface ArticlesService {
   readonly create: (
     token: Option.Option<OpaqueToken>,
     input: CreateArticleRequest,
-  ) => Effect.Effect<SingleArticleResponse, unknown>;
-  readonly delete: (token: Option.Option<OpaqueToken>, slug: string) => Effect.Effect<void, unknown>;
+  ) => Effect.Effect<SingleArticleResponse, ArticlesError>;
+  readonly delete: (token: Option.Option<OpaqueToken>, slug: string) => Effect.Effect<void, ArticlesError>;
   readonly favorite: (
     token: Option.Option<OpaqueToken>,
     slug: string,
-  ) => Effect.Effect<SingleArticleResponse, unknown>;
+  ) => Effect.Effect<SingleArticleResponse, ArticlesError>;
   readonly feed: (
     token: Option.Option<OpaqueToken>,
     filter: ArticleListFilter,
-  ) => Effect.Effect<MultipleArticlesResponse, unknown>;
+  ) => Effect.Effect<MultipleArticlesResponse, ArticlesError>;
   readonly get: (
     token: Option.Option<OpaqueToken>,
     slug: string,
-  ) => Effect.Effect<SingleArticleResponse, unknown>;
+  ) => Effect.Effect<SingleArticleResponse, ArticlesError>;
   readonly list: (
     filter: ArticleListFilter,
     token: Option.Option<OpaqueToken>,
-  ) => Effect.Effect<MultipleArticlesResponse, unknown>;
+  ) => Effect.Effect<MultipleArticlesResponse, ArticlesError>;
   readonly unfavorite: (
     token: Option.Option<OpaqueToken>,
     slug: string,
-  ) => Effect.Effect<SingleArticleResponse, unknown>;
+  ) => Effect.Effect<SingleArticleResponse, ArticlesError>;
   readonly update: (
     token: Option.Option<OpaqueToken>,
     slug: string,
     input: UpdateArticleRequest,
-  ) => Effect.Effect<SingleArticleResponse, unknown>;
+  ) => Effect.Effect<SingleArticleResponse, ArticlesError>;
 }
 
 export class Articles extends Context.Service<Articles, ArticlesService>()(
@@ -142,7 +149,7 @@ const requireAuthor = (
 
 const validateCreate = (
   input: CreateArticleRequest,
-): Effect.Effect<CreateArticleRequest["article"], unknown> =>
+): Effect.Effect<CreateArticleRequest["article"], RealWorldError> =>
   Effect.all([
     requireNonBlank("title", input.article.title),
     requireNonBlank("description", input.article.description),
@@ -151,7 +158,7 @@ const validateCreate = (
 
 const validateUpdate = (
   input: UpdateArticleRequest,
-): Effect.Effect<UpdateArticleRequest["article"], unknown> =>
+): Effect.Effect<UpdateArticleRequest["article"], RealWorldError> =>
   input.article.title !== undefined
     ? requireNonBlank("title", input.article.title).pipe(Effect.as(input.article))
     : Effect.succeed(input.article);

@@ -20,6 +20,7 @@ export function emitServerSource(input: EmitServerSourceInput): string {
     'import * as Layer from "effect/Layer";',
     'import * as HttpRouter from "effect/unstable/http/HttpRouter";',
     'import { composeWithLayers, TypedHttpServer, type LayerOrGroup } from "@typed/app";',
+    'import type { Matcher } from "@typed/router";',
     'import { ssrForHttp } from "@typed/ui";',
     'import * as TypedConfigModule from "typed:config";',
     ...emitImports(imports),
@@ -53,6 +54,7 @@ function emitImports(imports: readonly OrderedImport[]): readonly string[] {
   return imports.map((entry) => {
     const moduleId = entry.kind === "api" ? `api:${entry.target}` : `router:${entry.target}`;
     const binding = entry.kind === "api" ? `Api${entry.index}` : `Routes${entry.index}`;
+    if (entry.kind === "routes") return `import ${binding} from ${JSON.stringify(moduleId)};`;
     return `import * as ${binding} from ${JSON.stringify(moduleId)};`;
   });
 }
@@ -78,9 +80,7 @@ function emitConstants(
     `const routeModules: readonly RouteModule[] = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
     `const pageEntries = [${pages.map(pageEntrySource).join(", ")}];`,
     `const apiLayers = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}.ApiLayer`).join(", ")}];`,
-    "const routeLayers = routeModules.map((routeModule) =>",
-    "  HttpRouter.use(ssrForHttp(routeModule.default ?? routeModule.router ?? routeModule)),",
-    ");",
+    `const routeLayers = [${imports.filter((i) => i.kind === "routes").map((i) => `HttpRouter.use(ssrForHttp(Routes${i.index}))`).join(", ")}];`,
   ].join("\n");
 }
 
@@ -102,21 +102,27 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
   const companionLayers = dependenciesCompanion
     ? `${dependenciesCompanion.binding}.layers ?? []`
     : "[]";
+  const companionLayersDeclaration = dependenciesCompanion
+    ? `const companionLayers: readonly LayerOrGroup[] = ${companionLayers};`
+    : "const companionLayers: readonly [] = [];";
+  const composedServerLayers = dependenciesCompanion
+    ? "options.layers ?? []"
+    : "options.layers ?? []";
   const companionOnError = errorsCompanion
     ? `${errorsCompanion.binding}.onError ?? undefined`
     : "undefined";
   return [
     "type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };",
     "type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;",
-    "type RuntimeErrorHandler = (cause: Cause.Cause<unknown>) => Effect.Effect<unknown, never, never> | void;",
-    "type RouteModule = { readonly default?: unknown; readonly router?: unknown };",
+    "type RuntimeErrorHandler = <E>(cause: Cause.Cause<E>) => Effect.Effect<unknown, never, never> | void;",
+    "type RouteModule = Matcher.Any;",
     "type ServerRunOptions<Layers extends readonly LayerOrGroup[] = []> = {",
     "  readonly layers?: Layers;",
     "  readonly onError?: RuntimeErrorHandler;",
     "  readonly run?: (program: Effect.Effect<never, unknown, unknown>) => Effect.Effect<unknown, unknown, unknown>;",
     "};",
     `const companionPages = ${companionPages};`,
-    `const companionLayers: readonly LayerOrGroup[] = ${companionLayers};`,
+    companionLayersDeclaration,
     `const companionOnError = ${companionOnError};`,
     "const typedConfig: TypedConfigExports = TypedConfigModule;",
     "const typedBuildConfig = typedConfig.build ?? {};",
@@ -131,15 +137,15 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     "export const handler = TypedHttpServer.toNodeHandler(AppLayer);",
     "export default handler;",
     "export function run<const Layers extends readonly LayerOrGroup[] = []>(options: ServerRunOptions<Layers> = {}) {",
-    "  const layer = composeWithLayers(ServerLayer, options.layers ?? []);",
+    `  const layer = composeWithLayers(ServerLayer, ${composedServerLayers});`,
     "  const program = withErrorHandling(Layer.launch(layer), options.onError);",
     "  return options.run ? options.run(program) : program;",
     "}",
-    "function withErrorHandling(program: Effect.Effect<never, unknown, unknown>, onError?: RuntimeErrorHandler) {",
+    "function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError?: RuntimeErrorHandler): Effect.Effect<A, E, R> {",
     "  const handler = onError ?? companionOnError;",
     "  return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;",
     "}",
-    "function callErrorHandler(handler: RuntimeErrorHandler, cause: Cause.Cause<unknown>) {",
+    "function callErrorHandler<E>(handler: RuntimeErrorHandler, cause: Cause.Cause<E>) {",
     "  const result = handler(cause);",
     "  return Effect.isEffect(result) ? result : Effect.void;",
     "}",

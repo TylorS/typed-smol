@@ -1,57 +1,50 @@
-import { Effect, Option } from "effect";
-import type { HttpServerRequest } from "effect/unstable/http/HttpServerRequest";
+import { Option } from "effect";
 import { parseAuthorizationHeader } from "../domain/Auth.js";
 import type { OpaqueToken } from "../domain/Ids.js";
 import type { ArticleListFilter } from "../infrastructure/repositories/ArticleRepository.js";
 
-export interface RawApiContext<P extends Record<string, string> = Record<string, string>> {
-  readonly params?: P;
-  readonly request: HttpServerRequest;
-}
+export const authToken = (headers?: Record<string, string>): Option.Option<OpaqueToken> =>
+  parseAuthorizationHeader(headers?.authorization ?? headers?.Authorization);
 
-export const authToken = (ctx: RawApiContext): Option.Option<OpaqueToken> =>
-  parseAuthorizationHeader(
-    ctx.request.headers.authorization ?? ctx.request.headers.Authorization,
-  );
-
-export const jsonBody = <A>(ctx: RawApiContext): Effect.Effect<A, unknown> =>
-  ctx.request.json.pipe(Effect.map((body) => body as A));
-
-export const pathParam = <P extends Record<string, string>>(
-  ctx: RawApiContext<P>,
-  key: keyof P,
-): string => ctx.params?.[key] ?? "";
-
-export const intPathParam = <P extends Record<string, string>>(
-  ctx: RawApiContext<P>,
-  key: keyof P,
-): number => Number.parseInt(pathParam(ctx, key), 10);
-
-export const articleFilter = (ctx: RawApiContext): ArticleListFilter => {
-  const query = new URL(ctx.request.url, "http://localhost").searchParams;
-  return compactFilter({
-    tag: query.get("tag") ?? undefined,
-    author: query.get("author") ?? undefined,
-    favorited: query.get("favorited") ?? undefined,
-    limit: toOptionalInt(query.get("limit")),
-    offset: toOptionalInt(query.get("offset")),
+export const articleFilter = (query: ArticleQuery): ArticleListFilter =>
+  compactFilter({
+    tag: query.tag,
+    author: query.author,
+    favorited: query.favorited,
+    limit: toOptionalInt(query.limit),
+    offset: toOptionalInt(query.offset),
   });
+
+export const feedFilter = (query: FeedQuery): ArticleListFilter =>
+  compactFilter({
+    limit: toOptionalInt(query.limit),
+    offset: toOptionalInt(query.offset),
+  });
+
+type ArticleQuery = {
+  readonly author?: string;
+  readonly favorited?: string;
+  readonly limit?: string;
+  readonly offset?: string;
+  readonly tag?: string;
 };
 
-export const feedFilter = (ctx: RawApiContext): ArticleListFilter => {
-  const query = new URL(ctx.request.url, "http://localhost").searchParams;
-  return compactFilter({
-    limit: toOptionalInt(query.get("limit")),
-    offset: toOptionalInt(query.get("offset")),
-  });
+type FeedQuery = {
+  readonly limit?: string;
+  readonly offset?: string;
 };
 
-const compactFilter = (filter: ArticleListFilter): ArticleListFilter =>
-  Object.fromEntries(
-    Object.entries(filter).filter(([, value]) => value !== undefined && value !== ""),
-  ) as ArticleListFilter;
+const compactFilter = (filter: ArticleListFilter): ArticleListFilter => {
+  return {
+    ...(filter.tag !== undefined && filter.tag !== "" ? { tag: filter.tag } : {}),
+    ...(filter.author !== undefined && filter.author !== "" ? { author: filter.author } : {}),
+    ...(filter.favorited !== undefined && filter.favorited !== "" ? { favorited: filter.favorited } : {}),
+    ...(filter.limit !== undefined ? { limit: filter.limit } : {}),
+    ...(filter.offset !== undefined ? { offset: filter.offset } : {}),
+  };
+};
 
-const toOptionalInt = (value: string | null): number | undefined => {
+const toOptionalInt = (value: string | undefined): number | undefined => {
   if (value == null || value.trim() === "") return undefined;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;

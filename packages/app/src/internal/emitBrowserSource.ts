@@ -9,9 +9,10 @@ export interface EmitBrowserSourceInput {
 export function emitBrowserSource(input: EmitBrowserSourceInput): string {
   return [
     'import * as Cause from "effect/Cause";',
+    'import * as Context from "effect/Context";',
     'import * as Effect from "effect/Effect";',
     'import * as Layer from "effect/Layer";',
-    'import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";',
+    'import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
     'import { Fx } from "@typed/fx";',
     'import { BrowserRouter, merge, type Matcher } from "@typed/router";',
     'import { DomRenderTemplate, render } from "@typed/template";',
@@ -23,7 +24,7 @@ export function emitBrowserSource(input: EmitBrowserSourceInput): string {
 
 function emitRouteImports(routes: readonly string[]): readonly string[] {
   return routes.map((target, index) => {
-    return `import * as Routes${index} from "router:${toRouterTarget(target)}";`;
+    return `import Routes${index} from "router:${toRouterTarget(target)}";`;
   });
 }
 
@@ -46,23 +47,28 @@ function emitRuntime(
   const companionLayers = dependenciesCompanion
     ? `${dependenciesCompanion.binding}.layers ?? []`
     : "[]";
+  const companionLayersDeclaration = dependenciesCompanion
+    ? `const companionLayers: readonly LayerOrGroup[] = ${companionLayers};`
+    : "const companionLayers: readonly [] = [];";
   const companionOnError = errorsCompanion
     ? `${errorsCompanion.binding}.onError ?? undefined`
     : "undefined";
   return [
-    "type RuntimeErrorHandler = (cause: Cause.Cause<unknown>) => Effect.Effect<unknown, never, never> | void;",
-    "type RouteModule = { readonly default?: Matcher.Any; readonly router?: Matcher.Any };",
+    "type RuntimeErrorHandler = <E>(cause: Cause.Cause<E>) => Effect.Effect<unknown, never, never> | void;",
+    "type RouteModule = Matcher.Any;",
     "type BrowserRunOptions<Layers extends readonly LayerOrGroup[] = []> = {",
     "  readonly layers?: Layers;",
     "  readonly onError?: RuntimeErrorHandler;",
     "  readonly root?: string | HTMLElement;",
     "  readonly window?: Window;",
-    "  readonly run?: (program: Effect.Effect<never, unknown, unknown>) => Effect.Effect<unknown, unknown, unknown>;",
+    "  readonly run?: (program: BrowserProgram<Layers>) => Effect.Effect<unknown, never, never>;",
     "};",
+    "type BrowserLayerFor<Layers extends readonly LayerOrGroup[]> = ComputeLayers<Layers, ReturnType<typeof makeRenderLayer>>;",
+    "type BrowserProgram<Layers extends readonly LayerOrGroup[]> = Effect.Effect<never, Layer.Error<BrowserLayerFor<Layers>>, Layer.Services<BrowserLayerFor<Layers>>>;",
     `const routeModules: readonly RouteModule[] = [${parsed.routes.map((_, index) => `Routes${index}`).join(", ")}];`,
-    `const companionLayers: readonly LayerOrGroup[] = ${companionLayers};`,
+    companionLayersDeclaration,
     `const companionOnError = ${companionOnError};`,
-    `export const Routes = merge(${parsed.routes.map((_, index) => `routeMatcher(Routes${index})`).join(", ")});`,
+    `export const Routes = ${routeExpression(parsed.routes)};`,
     "export const BrowserRuntime = {",
     "  routeModules,",
     `  root: ${JSON.stringify(parsed.root)},`,
@@ -71,22 +77,30 @@ function emitRuntime(
     `  name: ${JSON.stringify(parsed.name)},`,
     "  companionLayers,",
     "};",
-    "export function hydrate<const Layers extends readonly LayerOrGroup[] = []>(options: BrowserRunOptions<Layers> = {}) {",
-    "  const win = options.window ?? window;",
-    "  const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);",
-    "  const renderLayer = Fx.drainLayer(render(Routes, root)).pipe(",
+    "function makeRenderLayer(win: Window, root: HTMLElement) {",
+    "  return Fx.drainLayer(render(Routes, root)).pipe(",
     "    Layer.provideMerge(BrowserRouter(win)),",
     "    Layer.provideMerge(DomRenderTemplate.using(win.document)),",
     "  );",
-    "  return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])]);",
     "}",
-    "function routeMatcher(module: RouteModule): Matcher.Any {",
-    "  return module.default ?? module.router ?? merge();",
+    "export function hydrate(options?: BrowserRunOptions<readonly []> & { readonly layers?: undefined }): BrowserLayerFor<readonly []>;",
+    "export function hydrate<const Layers extends readonly LayerOrGroup[]>(options: BrowserRunOptions<Layers> & { readonly layers: Layers }): BrowserLayerFor<Layers>;",
+    "export function hydrate(options: BrowserRunOptions<readonly LayerOrGroup[]>): BrowserLayerFor<readonly LayerOrGroup[]>;",
+    "export function hydrate(options: BrowserRunOptions<readonly LayerOrGroup[]> = {}) {",
+    "  const win = options.window ?? window;",
+    "  const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);",
+    "  const renderLayer = makeRenderLayer(win, root);",
+    dependenciesCompanion
+      ? "  return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])]);"
+      : "  return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);",
     "}",
-    "export function run<const Layers extends readonly LayerOrGroup[] = []>(options: BrowserRunOptions<Layers> = {}) {",
+    "export function run(options?: BrowserRunOptions<readonly []> & { readonly layers?: undefined }): BrowserProgram<readonly []>;",
+    "export function run<const Layers extends readonly LayerOrGroup[]>(options: BrowserRunOptions<Layers> & { readonly layers: Layers }): BrowserProgram<Layers>;",
+    "export function run(options: BrowserRunOptions<readonly LayerOrGroup[]> = {}) {",
     "  const BrowserLayer = hydrate(options);",
     "  const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);",
-    "  return options.run ? options.run(program) : program;",
+    "  const runnable = Effect.provide(program, Context.empty());",
+    "  return options.run ? options.run(runnable) : runnable;",
     "}",
     "function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {",
     "  if (typeof root !== \"string\") return root;",
@@ -94,13 +108,19 @@ function emitRuntime(
     "  if (element instanceof HTMLElement) return element;",
     "  throw new Error(`typed:browser root not found: ${root}`);",
     "}",
-    "function withErrorHandling(program: Effect.Effect<never, unknown, unknown>, onError?: RuntimeErrorHandler) {",
+    "function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError?: RuntimeErrorHandler): Effect.Effect<A, E, R> {",
     "  const handler = onError ?? companionOnError;",
     "  return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;",
     "}",
-    "function callErrorHandler(handler: RuntimeErrorHandler, cause: Cause.Cause<unknown>) {",
+    "function callErrorHandler<E>(handler: RuntimeErrorHandler, cause: Cause.Cause<E>) {",
     "  const result = handler(cause);",
     "  return Effect.isEffect(result) ? result : Effect.void;",
     "}",
   ].join("\n");
+}
+
+function routeExpression(routes: readonly string[]): string {
+  if (routes.length === 1) return "Routes0";
+
+  return `merge(${routes.map((_, index) => `Routes${index}`).join(", ")})`;
 }

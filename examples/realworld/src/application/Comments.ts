@@ -7,11 +7,16 @@ import type {
   MultipleCommentsResponse,
   SingleCommentResponse,
 } from "../domain/RealWorldApi.js";
+import type { RealWorldError } from "../domain/Errors.js";
 import { ArticleRepository } from "../infrastructure/repositories/ArticleRepository.js";
-import type { ArticleRepositoryService } from "../infrastructure/repositories/ArticleRepository.js";
+import type {
+  ArticleRepositoryError,
+  ArticleRepositoryService,
+} from "../infrastructure/repositories/ArticleRepository.js";
 import { CommentRepository } from "../infrastructure/repositories/CommentRepository.js";
-import type { CommentRepositoryService } from "../infrastructure/repositories/CommentRepository.js";
+import type { CommentRepositoryError } from "../infrastructure/repositories/CommentRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
+import type { UserRepositoryError } from "../infrastructure/repositories/UserRepository.js";
 import {
   forbidden,
   notFound,
@@ -20,21 +25,23 @@ import {
   requireUser,
 } from "./Common.js";
 
+type CommentsError = RealWorldError | ArticleRepositoryError | CommentRepositoryError | UserRepositoryError;
+
 export interface CommentsService {
   readonly create: (
     token: Option.Option<OpaqueToken>,
     slug: string,
     input: CreateCommentRequest,
-  ) => Effect.Effect<SingleCommentResponse, unknown>;
+  ) => Effect.Effect<SingleCommentResponse, CommentsError>;
   readonly delete: (
     token: Option.Option<OpaqueToken>,
     slug: string,
     commentId: number,
-  ) => Effect.Effect<void, unknown>;
+  ) => Effect.Effect<void, CommentsError>;
   readonly list: (
     slug: string,
     token: Option.Option<OpaqueToken>,
-  ) => Effect.Effect<MultipleCommentsResponse, unknown>;
+  ) => Effect.Effect<MultipleCommentsResponse, CommentsError>;
 }
 
 export class Comments extends Context.Service<Comments, CommentsService>()(

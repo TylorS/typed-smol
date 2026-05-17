@@ -6,6 +6,7 @@ import type {
   UpdateUserRequest,
   UserResponse,
 } from "../domain/RealWorldApi.js";
+import type { RealWorldError } from "../domain/Errors.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
 import {
   duplicate,
@@ -17,16 +18,21 @@ import {
   validationError,
 } from "./Common.js";
 import type { User } from "../domain/User.js";
-import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
+import type {
+  UserRepositoryError,
+  UserRepositoryService,
+} from "../infrastructure/repositories/UserRepository.js";
+
+type UsersError = RealWorldError | UserRepositoryError;
 
 export interface UsersService {
-  readonly current: (token: Option.Option<OpaqueToken>) => Effect.Effect<UserResponse, unknown>;
-  readonly login: (input: LoginUserRequest) => Effect.Effect<UserResponse, unknown>;
-  readonly register: (input: RegisterUserRequest) => Effect.Effect<UserResponse, unknown>;
+  readonly current: (token: Option.Option<OpaqueToken>) => Effect.Effect<UserResponse, UsersError>;
+  readonly login: (input: LoginUserRequest) => Effect.Effect<UserResponse, UsersError>;
+  readonly register: (input: RegisterUserRequest) => Effect.Effect<UserResponse, UsersError>;
   readonly update: (
     token: Option.Option<OpaqueToken>,
     input: UpdateUserRequest,
-  ) => Effect.Effect<UserResponse, unknown>;
+  ) => Effect.Effect<UserResponse, UsersError>;
 }
 
 export class Users extends Context.Service<Users, UsersService>()(
@@ -83,7 +89,7 @@ export class Users extends Context.Service<Users, UsersService>()(
 const loginResponse = (
   user: User,
   repository: UserRepositoryService,
-): Effect.Effect<UserResponse, unknown> =>
+): Effect.Effect<UserResponse, UsersError> =>
   repository.createSession(user.id).pipe(
     Effect.catch(() => Effect.fail(tokenInvalid())),
     Effect.map((token) => userResponse(user, token)),
@@ -91,7 +97,7 @@ const loginResponse = (
 
 const validateRegister = (
   input: RegisterUserRequest,
-): Effect.Effect<RegisterUserRequest["user"], unknown> =>
+): Effect.Effect<RegisterUserRequest["user"], RealWorldError> =>
   Effect.all([
     requireNonBlank("username", input.user.username),
     requireNonBlank("email", input.user.email),
@@ -100,7 +106,7 @@ const validateRegister = (
 
 const validateLogin = (
   input: LoginUserRequest,
-): Effect.Effect<LoginUserRequest["user"], unknown> =>
+): Effect.Effect<LoginUserRequest["user"], RealWorldError> =>
   Effect.all([
     requireNonBlank("email", input.user.email),
     requireNonBlank("password", input.user.password),
@@ -108,12 +114,12 @@ const validateLogin = (
 
 const validateUpdate = (
   input: UpdateUserRequest,
-): Effect.Effect<UpdateUserRequest["user"], unknown> =>
+): Effect.Effect<UpdateUserRequest["user"], RealWorldError> =>
   input.user.password !== undefined && input.user.password.length < 8
     ? Effect.fail(validationError("password"))
     : Effect.succeed(input.user);
 
-const mapUserError = (error: unknown) => {
+const mapUserError = (error: UserRepositoryError): RealWorldError => {
   if (isTagged(error, "DuplicateUserField")) return duplicate(error.field);
   if (isTagged(error, "PasswordPolicyError")) return validationError("password");
   return validationError("user");

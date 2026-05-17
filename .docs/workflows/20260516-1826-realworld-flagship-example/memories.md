@@ -101,3 +101,12 @@
 - Browser form inputs are decoded with the existing `RealWorldApi` Effect schemas before calling workflows, preserving branded request types instead of casting raw strings.
 - The same-origin client now covers settings, create/update/delete article, favorite/unfavorite, follow/unfollow, create/delete comment, plus no-content responses.
 - SSR routes and browser route modules now use real auth/settings/editor form templates instead of `PlaceholderPage`; remaining Task 10 work should focus on visible error rendering, navigation/refresh behavior, and broader hydration assertions.
+
+## Task 11 - Typed Framework Surface Hardening
+
+- RealWorld now compiles through `vmc -p tsconfig.json`; do not reintroduce ambient `typed:browser` or `typed:server` declarations in the example.
+- Endpoint modules should use `ApiHandlerRaw({ route, method, body? })` and destructured inferred params. Avoid `RawApiContext`, `jsonBody`, path-param casts, and `method as const` in endpoint code.
+- `@typed/app` browser virtual modules preserve route and layer types through overloads for `hydrate` and `run`; `run({ layers })` should expose the computed program type rather than `unknown`/`any` requirements.
+- Router virtual-module emission must pass non-function `Fx` values directly to `Router.match(route, fx)` instead of wrapping them in `constant(fx)`, otherwise TypeScript selects a broader function-handler path and loses template types.
+- RealWorld route layouts should use router layout support with generic `LayoutParams<Params, A, E, R>` and typed `@typed/template` return channels; avoid manual `{ content: unknown }` wrappers.
+- `LayerAny` in `@typed/app` runtime is intentionally `Layer.Layer<never, unknown, unknown>` to avoid poisoning public generated program types with `any`.

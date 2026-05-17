@@ -42,7 +42,9 @@ describe("typed-realworld package skeleton", () => {
     expect(Object.keys(pkg.devDependencies).sort()).toEqual([
       "@playwright/test",
       "@typed/tsconfig",
+      "@typed/virtual-modules-compiler",
       "@typed/vite-plugin",
+      "@types/node",
       "typescript",
       "vite",
       "vitest",
@@ -51,6 +53,9 @@ describe("typed-realworld package skeleton", () => {
 
   it("exposes every required local workflow script", () => {
     const pkg = readJson<PackageJson>("package.json");
+
+    expect(pkg.scripts.build).toContain("vmc -p tsconfig.json");
+    expect(pkg.scripts["db:migrate"]).toContain("vmc -p tsconfig.json");
 
     expect(Object.keys(pkg.scripts).sort()).toEqual([
       "build",
@@ -76,6 +81,11 @@ describe("typed-realworld package skeleton", () => {
 
     expect(readText("vmc.config.ts")).toContain("createRouterVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createHttpApiVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).toContain("createConfigVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).toContain("createHtmlVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).toContain("createBrowserVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).toContain("createServerVirtualModulePlugin");
+    expect(existsSync(resolve(projectRoot, "src/types/typed-virtual-modules.d.ts"))).toBe(false);
     expect(readText("vite.config.ts")).toContain("typedVitePlugin");
     expect(readText("typed.config.ts")).toContain("defineConfig");
 
@@ -85,4 +95,28 @@ describe("typed-realworld package skeleton", () => {
     expect(existsSync(resolve(projectRoot, "src/browser.ts"))).toBe(true);
     expect(existsSync(resolve(projectRoot, "public/default-avatar.svg"))).toBe(true);
   });
+
+  it("does not use unknown as an Effect error channel in production source", () => {
+    const offenders = productionSourceFiles()
+      .flatMap((path) =>
+        effectUnknownErrorChannelLines(path).map((line) => `${path}:${line}`));
+
+    expect(offenders).toEqual([]);
+  });
 });
+
+const productionSourceFiles = (): readonly string[] => [
+  "src/api-support/Common.ts",
+  "src/application/Articles.ts",
+  "src/application/Comments.ts",
+  "src/application/Profiles.ts",
+  "src/application/Tags.ts",
+  "src/application/Users.ts",
+  "src/presentation/FormEvents.ts",
+];
+
+const effectUnknownErrorChannelLines = (path: string): readonly number[] =>
+  readText(path)
+    .split("\n")
+    .flatMap((line, index) =>
+      /Effect(?:\.Effect)?<[^>\n,]+,\s*unknown(?:\s*[>,])/.test(line) ? [index + 1] : []);

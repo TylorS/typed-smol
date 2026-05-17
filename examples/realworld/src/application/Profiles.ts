@@ -1,23 +1,28 @@
 import { Context, Effect, Layer, Option } from "effect";
 import type { OpaqueToken } from "../domain/Ids.js";
 import type { ProfileResponse } from "../domain/RealWorldApi.js";
+import type { RealWorldError } from "../domain/Errors.js";
 import { ProfileRepository } from "../infrastructure/repositories/ProfileRepository.js";
+import type { ProfileRepositoryError } from "../infrastructure/repositories/ProfileRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
+import type { UserRepositoryError } from "../infrastructure/repositories/UserRepository.js";
 import { notFound, optionalUserId, requireUser } from "./Common.js";
+
+type ProfilesError = RealWorldError | ProfileRepositoryError | UserRepositoryError;
 
 export interface ProfilesService {
   readonly follow: (
     token: Option.Option<OpaqueToken>,
     username: string,
-  ) => Effect.Effect<ProfileResponse, unknown>;
+  ) => Effect.Effect<ProfileResponse, ProfilesError>;
   readonly get: (
     username: string,
     token: Option.Option<OpaqueToken>,
-  ) => Effect.Effect<ProfileResponse, unknown>;
+  ) => Effect.Effect<ProfileResponse, ProfilesError>;
   readonly unfollow: (
     token: Option.Option<OpaqueToken>,
     username: string,
-  ) => Effect.Effect<ProfileResponse, unknown>;
+  ) => Effect.Effect<ProfileResponse, ProfilesError>;
 }
 
 export class Profiles extends Context.Service<Profiles, ProfilesService>()(

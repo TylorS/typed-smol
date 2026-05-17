@@ -4,7 +4,7 @@
  */
 import * as Layer from "effect/Layer";
 
-export type LayerAny = Layer.Layer<any, any, any> | Layer.Layer<never, any, any>;
+export type LayerAny = Layer.Layer<never, unknown, unknown>;
 
 /** Single layer or non-empty array (uses Layer.mergeAll internally). */
 export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];

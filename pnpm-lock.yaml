@@ -127,9 +127,15 @@ importers:
       '@typed/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
+      '@typed/virtual-modules-compiler':
+        specifier: workspace:*
+        version: link:../../packages/virtual-modules-compiler
       '@typed/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
+      '@types/node':
+        specifier: ^25.7.0
+        version: 25.7.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

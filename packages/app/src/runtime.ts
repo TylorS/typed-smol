@@ -1,2 +1,2 @@
-export type { LayerOrGroup } from "./internal/appLayerTypes.js";
+export type { ComputeLayers, LayerOrGroup } from "./internal/appLayerTypes.js";
 export { composeWithLayers } from "./internal/appLayerTypes.js";

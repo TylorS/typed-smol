@@ -27,7 +27,7 @@ export function handlerExprFor(
         ? `(params) => Fx.switchMap(params, (p) => Fx.fromStream(${ref}(p)))`
         : `constant(Fx.fromStream(${ref}))`;
     case "fx":
-      return isFn ? ref : `constant(${ref})`;
+      return ref;
     case "unknown":
       throw new Error(
         "RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)",

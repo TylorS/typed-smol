@@ -715,7 +715,7 @@ describe("RouterVirtualModulePlugin", () => {
     `);
   });
 
-  it("fx-valued handler is passed through (constant(ref)) since already Fx (T-07, TS-5)", () => {
+  it("fx-valued handler is passed through directly so the Fx overload preserves types (T-07, TS-5)", () => {
     const source = buildRouterFromFixture({
       "src/routes/fx.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
     });
@@ -725,7 +725,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
-      const router = Router.match(MFx.route, constant(MFx.handler));
+      const router = Router.match(MFx.route, MFx.handler);
       export default router;
       "
     `);
@@ -922,7 +922,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as X from "./routes/x.js";
 
-      const router = Router.match(X.route, constant(X.handler));
+      const router = Router.match(X.route, X.handler);
       export default router;
       "
     `);
@@ -1052,7 +1052,7 @@ describe("RouterVirtualModulePlugin", () => {
       import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
-      const router = Router.match(MFx.route, constant(MFx.handler));
+      const router = Router.match(MFx.route, MFx.handler);
       export default router;
       "
     `);

@@ -53,8 +53,8 @@ describe("ServerVirtualModulePlugin", () => {
     );
     expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(source).toContain('import * as Api0 from "api:./api";');
-    expect(source).toContain('import * as Routes0 from "router:./routes1";');
-    expect(source).toContain('import * as Routes1 from "router:./routes2";');
+    expect(source).toContain('import Routes0 from "router:./routes1";');
+    expect(source).toContain('import Routes1 from "router:./routes2";');
     expect(source).toContain("export const AppLayer =");
     expect(source).toContain("export const ServerLayer =");
     expect(source).toContain("export const handler =");
@@ -62,6 +62,9 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain("export function run");
     expect(source).toContain("Layer.launch(layer)");
     expect(source).toContain("Effect.tapCause");
+    expect(source).toContain(
+      "function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>",
+    );
     expect(source).toContain("options.layers");
     expect(source).toContain("options.onError");
     expect(source).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
@@ -125,7 +128,7 @@ describe("ServerVirtualModulePlugin", () => {
       "src/typed-app.d.ts": [
         'declare module "@typed/app" {',
         '  import type * as Layer from "effect/Layer";',
-        "  export type LayerAny = Layer.Layer<any, any, any> | Layer.Layer<never, any, any>;",
+        "  export type LayerAny = Layer.Layer<never, unknown, unknown>;",
         "  export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers: Layers): LayerAny;",
         "  export const TypedHttpServer: {",

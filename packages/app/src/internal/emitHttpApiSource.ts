@@ -112,6 +112,7 @@ type HandlerCallInput = {
   readonly optionalExports: ReadonlySet<OptionalExport>;
   readonly headersArg: string;
   readonly bodyArg: string;
+  readonly coerceSchemas: boolean;
 };
 
 type DirectoryConventionIndexEntry = {
@@ -465,6 +466,7 @@ export function emitHttpApiSource(input: {
     `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
     `import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";`,
     `import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";`,
+    `import * as HttpIncomingMessage from "effect/unstable/http/HttpIncomingMessage";`,
     `import * as HttpServer from "effect/unstable/http/HttpServer";`,
     `import * as HttpRouter from "effect/unstable/http/HttpRouter";`,
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
@@ -550,9 +552,6 @@ export function emitHttpApiSource(input: {
         const literals = input.extractedLiteralsByPath.get(e.path);
         const name = literals?.name ?? e.stem;
         const isRaw = handlerIsRaw?.get(e.path) === true;
-        if (isRaw) {
-          return `.handleRaw(${JSON.stringify(name)}, (ctx) => ${varName}.handler(ctx))`;
-        }
         const optPresent = input.optionalExportsByPath.get(e.path) ?? new Set<OptionalExport>();
         const headersArg = optPresent.has("headers") ? "ctx.headers" : "emptyRecordString";
         const bodyArg = optPresent.has("body") ? "ctx.payload" : "undefined";
@@ -560,8 +559,15 @@ export function emitHttpApiSource(input: {
           moduleName: varName,
           optionalExports: optPresent,
           headersArg,
-          bodyArg,
+          bodyArg: isRaw && optPresent.has("body") ? "body" : bodyArg,
+          coerceSchemas: !isRaw,
         });
+        if (isRaw) {
+          if (optPresent.has("body")) {
+            return `.handleRaw(${JSON.stringify(name)}, (ctx) => Effect.flatMap(Effect.orDie(HttpIncomingMessage.schemaBodyJson(${varName}.body)(ctx.request)), (body) => ${handlerCall}))`;
+          }
+          return `.handleRaw(${JSON.stringify(name)}, (ctx) => ${handlerCall})`;
+        }
         return `.handle(${JSON.stringify(name)}, (ctx) => ${handlerCall})`;
       })
       .join("\n      ");
@@ -631,11 +637,7 @@ function joinBuildPath(...parts: readonly string[]): string {
 export const App = <const Layers extends readonly LayerOrGroup[] = []>(
   config?: AppConfig,
   ...layersToMergeIntoRouter: Layers
-): Layer.Layer<
-  Layer.Success<ComputeLayers<Layers, typeof ApiLayer>>, 
-  Layer.Error<ComputeLayers<Layers, typeof ApiLayer>>, 
-  Exclude<Layer.Services<ComputeLayers<Layers, typeof ApiLayer>>, HttpRouter.HttpRouter> | HttpServer.HttpServer
-> => {
+) => {
   const disableListenLog = config?.disableListenLog ?? false;
   const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
   return HttpRouter.serve(appLayer, ${serveOptions})
@@ -680,6 +682,7 @@ function endpointHasSchemaTypedHandler(
 
 function emitHandlerCall(input: HandlerCallInput): string {
   const baseCall = `${input.moduleName}.handler({ path: ctx.params ?? emptyRecordString, query: ctx.query ?? emptyRecordStringArray, headers: ${input.headersArg}, body: ${input.bodyArg} })`;
+  if (!input.coerceSchemas) return baseCall;
   const successTyped = input.optionalExports.has("success")
     ? `Effect.map(${baseCall}, (value) => value as Schema.Schema.Type<typeof ${input.moduleName}.success>)`
     : baseCall;
