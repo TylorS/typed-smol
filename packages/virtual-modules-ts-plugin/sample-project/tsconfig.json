@@ -4,6 +4,7 @@
   "exclude": ["routes/**/*.example.ts"],
   "compilerOptions": {
     "noEmit": true,
+    "types": ["node"],
     "plugins": [
       {
         "name": "@typed/virtual-modules-ts-plugin"

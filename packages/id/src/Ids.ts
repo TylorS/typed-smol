@@ -17,7 +17,6 @@ import { uuid4 } from "./Uuid4.js";
 import { type Uuid5, uuid5, Uuid5Namespace } from "./Uuid5.js";
 import type { Uuid7 } from "./Uuid7.js";
 import { uuid7, Uuid7State } from "./Uuid7.js";
-import { TestClock } from "effect/testing";
 
 export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
   make: Effect.gen(function* () {
@@ -103,17 +102,18 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
     Layer.provideMerge([DateTimes.Default, RandomValues.Default]),
   );
 
-  static readonly Test = (
-    options?: TestOptions,
-  ): Layer.Layer<Ids | DateTimes | RandomValues | TestClock.TestClock> =>
-    Layer.effect(Ids, Ids.make).pipe(
-      Layer.provide([
-        Layer.effect(CuidState, CuidState.make(options?.envData ?? "node")),
-        Uuid7State.Default,
-      ]),
-      Layer.provideMerge([DateTimes.Fixed(options?.currentTime ?? 0), RandomValues.Random]),
-      Layer.provideMerge(TestClock.layer({})),
+  static readonly Test = (options?: TestOptions): Layer.Layer<Ids> => {
+    const dependencies = Layer.mergeAll(
+      DateTimes.Fixed(options?.currentTime ?? 0),
+      RandomValues.Random,
     );
+    const states = Layer.mergeAll(
+      Layer.effect(CuidState, CuidState.make(options?.envData ?? "node")),
+      Uuid7State.Default,
+    ).pipe(Layer.provide(dependencies));
+
+    return Layer.effect(Ids, Ids.make).pipe(Layer.provide(Layer.mergeAll(dependencies, states)));
+  };
 }
 
 export type TestOptions = {

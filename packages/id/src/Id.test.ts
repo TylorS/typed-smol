@@ -200,7 +200,7 @@ describe("@typed/id", () => {
         Effect.all([Ids.ulid, Ids.ulid, Ids.ksuid, Ids.ksuid], { concurrency: "unbounded" }),
       );
       expect(ulid1.slice(0, 10)).toBe(ulid2.slice(0, 10));
-      expect(ksuid1.slice(0, 5)).toBe(ksuid2.slice(0, 5));
+      expect(ksuidTimestamp(ksuid1)).toBe(ksuidTimestamp(ksuid2));
     });
   });
 
@@ -228,3 +228,31 @@ describe("@typed/id", () => {
     });
   });
 });
+
+const ksuidAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+function ksuidTimestamp(value: string): number {
+  const bytes = base62Decode(value);
+  return (
+    bytes[0] * 2 ** 24 +
+    bytes[1] * 2 ** 16 +
+    bytes[2] * 2 ** 8 +
+    bytes[3]
+  );
+}
+
+function base62Decode(value: string): Uint8Array {
+  let number = 0n;
+  for (const char of value) {
+    const digit = ksuidAlphabet.indexOf(char);
+    if (digit < 0) throw new Error(`invalid ksuid digit: ${char}`);
+    number = number * 62n + BigInt(digit);
+  }
+
+  const bytes = new Uint8Array(20);
+  for (let index = bytes.length - 1; index >= 0; index--) {
+    bytes[index] = Number(number & 0xffn);
+    number >>= 8n;
+  }
+  return bytes;
+}

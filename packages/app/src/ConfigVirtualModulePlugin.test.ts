@@ -27,8 +27,8 @@ describe("ConfigVirtualModulePlugin", () => {
     expect(source).not.toContain("export default");
   });
 
-  it("emits an empty module for empty computed config", () => {
-    expect(buildConfig("typed:config", {})).toBe("");
+  it("emits a module marker for empty computed config", () => {
+    expect(buildConfig("typed:config", {})).toBe("export {};");
   });
 
   it("rejects invalid JavaScript export names", () => {

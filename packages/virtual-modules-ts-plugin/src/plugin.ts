@@ -52,8 +52,13 @@ import {
 } from "@typed/virtual-modules";
 import {
   loadTypedConfig,
+  createBrowserVirtualModulePlugin,
+  createConfigVirtualModulePlugin,
+  createEnvVirtualModulePlugin,
+  createHtmlVirtualModulePlugin,
   createRouterVirtualModulePlugin,
   createHttpApiVirtualModulePlugin,
+  createServerVirtualModulePlugin,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/app";
 import { existsSync, readFileSync } from "node:fs";
@@ -739,6 +744,13 @@ function init(modules: { typescript: typeof import("typescript") }): {
           ? { prefix: typedConfig.api.prefix, pathPrefix: typedConfig.api.pathPrefix }
           : {},
       ),
+      createEnvVirtualModulePlugin(),
+      createConfigVirtualModulePlugin({
+        loadConfig: () => loadedConfig,
+      }),
+      createHtmlVirtualModulePlugin(),
+      createServerVirtualModulePlugin(),
+      createBrowserVirtualModulePlugin(),
     ];
 
     const vmcConfigPathOpt =

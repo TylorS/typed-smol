@@ -8,8 +8,10 @@ const sampleRoot = path.resolve(__dirname, "..");
 const outDir = path.join(sampleRoot, "plugins");
 const routerEntry = path.join(sampleRoot, "scripts", "router-plugin-entry.mjs");
 const httpapiEntry = path.join(sampleRoot, "scripts", "httpapi-plugin-entry.mjs");
+const configEntry = path.join(sampleRoot, "scripts", "config-plugin-entry.mjs");
 const routerOut = path.join(outDir, "router-plugin.mjs");
 const httpapiOut = path.join(outDir, "httpapi-plugin.mjs");
+const configOut = path.join(outDir, "config-plugin.mjs");
 
 if (!existsSync(routerEntry)) {
   console.error("Entry not found:", routerEntry);
@@ -17,6 +19,10 @@ if (!existsSync(routerEntry)) {
 }
 if (!existsSync(httpapiEntry)) {
   console.error("Entry not found:", httpapiEntry);
+  process.exit(1);
+}
+if (!existsSync(configEntry)) {
+  console.error("Entry not found:", configEntry);
   process.exit(1);
 }
 
@@ -44,6 +50,13 @@ try {
     outfile: httpapiOut,
   });
   console.log("Built", httpapiOut);
+
+  await esbuild.build({
+    ...buildConfig,
+    entryPoints: [configEntry],
+    outfile: configOut,
+  });
+  console.log("Built", configOut);
 } catch (err) {
   console.error(err);
   process.exit(1);
