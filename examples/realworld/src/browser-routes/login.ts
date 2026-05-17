@@ -1,5 +1,5 @@
 import { LoginRoute as route } from "../routing/Routes.js";
-import { PlaceholderPage } from "../presentation/App.js";
+import { AuthLoginPage } from "../presentation/App.js";
 
 export { route };
-export const template = PlaceholderPage("Sign in");
+export const template = AuthLoginPage;

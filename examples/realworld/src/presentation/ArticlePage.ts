@@ -1,5 +1,7 @@
 import { html } from "@typed/template";
 import type { Article, Comment } from "../domain/Article.js";
+import { BrowserAuth } from "./BrowserAuth.js";
+import { clickIntent, formSubmit, textField } from "./FormEvents.js";
 import { avatarSrc } from "./Layout.js";
 
 export const ArticlePage = (
@@ -19,12 +21,14 @@ export const ArticlePage = (
     </ul>
     <hr />
     <div class="article-actions">
-      <button class="btn btn-outline-primary btn-sm">
+      <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(article)}>
         Favorite Article (${article.favoritesCount})
       </button>
-      <button class="btn btn-outline-primary btn-sm">Follow ${article.author.username}</button>
+      <button class="btn btn-outline-primary btn-sm" onclick=${followAuthor(article)}>
+        Follow ${article.author.username}
+      </button>
     </div>
-    ${CommentForm} ${comments.map(CommentCard)}
+    ${CommentForm(article.slug)} ${comments.map((comment) => CommentCard(article.slug, comment))}
   </div>
 </section>`;
 
@@ -36,25 +40,51 @@ const ArticleMeta = (article: Article) => html`<a href=${`/profile/${article.aut
   <span class="date">${article.createdAt}</span>
 </div>`;
 
-const CommentForm = html`<form class="card comment-form">
+const CommentForm = (slug: string) => html`<form class="card comment-form" onsubmit=${postComment(slug)}>
   <div class="card-block">
-    <textarea class="form-control" placeholder="Write a comment..." rows="3"></textarea>
+    <textarea
+      class="form-control"
+      name="body"
+      placeholder="Write a comment..."
+      rows="3"
+    ></textarea>
   </div>
   <div class="card-footer">
     <button class="btn btn-sm btn-primary">Post Comment</button>
   </div>
 </form>`;
 
-const CommentCard = (comment: Comment) => html`<div class="card">
+const CommentCard = (slug: string, comment: Comment) => html`<div class="card">
   <div class="card-block"><p class="card-text">${comment.body}</p></div>
   <div class="card-footer">
     <a class="comment-author" href=${`/profile/${comment.author.username}`}>
       <img class="comment-author-img" src=${avatarSrc(comment.author.image)} />
       ${comment.author.username}
     </a>
-    <span class="mod-options"><i class="ion-trash-a"></i></span>
+    <span class="mod-options">
+      <button class="btn btn-sm btn-outline-danger" onclick=${deleteComment(slug, comment.id)}>
+        <i class="ion-trash-a"></i>
+      </button>
+    </span>
   </div>
 </div>`;
 
 const Tag = (tag: string) =>
   html`<li class="tag-default tag-pill tag-outline">${tag}</li>`;
+
+const favoriteArticle = (article: Article) =>
+  clickIntent(() =>
+    BrowserAuth.use((auth) => auth.favoriteArticle(article.slug, article.favorited)));
+
+const followAuthor = (article: Article) =>
+  clickIntent(() =>
+    BrowserAuth.use((auth) =>
+      auth.followProfile(article.author.username, article.author.following)));
+
+const postComment = (slug: string) =>
+  formSubmit((form) =>
+    BrowserAuth.use((auth) =>
+      auth.createComment(slug, { comment: { body: textField(form, "body") } })));
+
+const deleteComment = (slug: string, id: number) =>
+  clickIntent(() => BrowserAuth.use((auth) => auth.deleteComment(slug, id)));

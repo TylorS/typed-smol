@@ -1,5 +1,7 @@
 import { html } from "@typed/template";
 import type { ArticlePreview } from "../domain/Article.js";
+import { BrowserAuth } from "./BrowserAuth.js";
+import { clickIntent } from "./FormEvents.js";
 import { avatarSrc, Banner } from "./Layout.js";
 
 export interface FeedPageInput {
@@ -67,7 +69,9 @@ const AuthorMeta = (article: ArticlePreview) => html`<a href=${`/profile/${artic
   <a class="author" href=${`/profile/${article.author.username}`}>${article.author.username}</a>
   <span class="date">${article.createdAt}</span>
 </div>
-<button class="btn btn-outline-primary btn-sm">Favorite ${article.favoritesCount}</button>`;
+<button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(article)}>
+  Favorite ${article.favoritesCount}
+</button>`;
 
 const Pagination = (input: {
   readonly articlesCount: number;
@@ -102,3 +106,7 @@ const TagSidebar = (tags: readonly string[]) => html`<div class="sidebar">
 
 const Tag = (tag: string) =>
   html`<li class="tag-default tag-pill tag-outline">${tag}</li>`;
+
+const favoriteArticle = (article: ArticlePreview) =>
+  clickIntent(() =>
+    BrowserAuth.use((auth) => auth.favoriteArticle(article.slug, article.favorited)));

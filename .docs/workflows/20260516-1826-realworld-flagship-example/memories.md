@@ -93,3 +93,11 @@
 - `src/presentation/ClientApi.ts` is the same-origin browser API boundary; it decodes `UserResponse` and RealWorld error envelopes with Effect Schema and distinguishes HTTP, network, and decode failures.
 - Auth initialization clears stale tokens on current-user 4xx responses, but keeps tokens and reports `unavailable` for network, 5xx, and decode failures so transient outages do not log the user out.
 - Login and register calls store the returned `jwtToken`; logout clears both `localStorage.getItem("jwtToken")` and the legacy `localStorage.jwtToken` property compatibility path.
+
+## Task 10 - Browser Form Workflows
+
+- Form pages follow the TodoMVC shape: `@typed/template` templates bind `EventHandler.make` intents, and mutation handlers stay as thin Effect workflows rather than manual DOM wrappers.
+- `BrowserAuth.Live` is provided through `typed:browser` `run({ layers })`, so route templates can depend on the auth store without manually wrapping route output.
+- Browser form inputs are decoded with the existing `RealWorldApi` Effect schemas before calling workflows, preserving branded request types instead of casting raw strings.
+- The same-origin client now covers settings, create/update/delete article, favorite/unfavorite, follow/unfollow, create/delete comment, plus no-content responses.
+- SSR routes and browser route modules now use real auth/settings/editor form templates instead of `PlaceholderPage`; remaining Task 10 work should focus on visible error rendering, navigation/refresh behavior, and broader hydration assertions.

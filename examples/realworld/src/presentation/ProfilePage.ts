@@ -2,6 +2,8 @@ import { html } from "@typed/template";
 import type { ArticlePreview } from "../domain/Article.js";
 import type { Profile } from "../domain/User.js";
 import { ArticleList } from "./Feed.js";
+import { BrowserAuth } from "./BrowserAuth.js";
+import { clickIntent } from "./FormEvents.js";
 import { avatarSrc } from "./Layout.js";
 
 export interface ProfilePageInput {
@@ -17,7 +19,9 @@ export const ProfilePage = (input: ProfilePageInput) => html`<section class="pro
       <img class="user-img user-pic" src=${avatarSrc(input.profile.image)} />
       <h4>${input.profile.username}</h4>
       <p>${input.profile.bio ?? ""}</p>
-      <button class="btn btn-sm btn-outline-primary">Follow ${input.profile.username}</button>
+      <button class="btn btn-sm btn-outline-primary" onclick=${followProfile(input.profile)}>
+        Follow ${input.profile.username}
+      </button>
     </div>
   </div>
   <div class="container">
@@ -48,3 +52,7 @@ const ProfileTabs = (input: ProfilePageInput) => html`<li class="nav-item">
       Favorited Articles
     </a>
   </li>`;
+
+const followProfile = (profile: Profile) =>
+  clickIntent(() =>
+    BrowserAuth.use((auth) => auth.followProfile(profile.username, profile.following)));

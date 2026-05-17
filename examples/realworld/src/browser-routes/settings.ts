@@ -1,5 +1,5 @@
 import { SettingsRoute as route } from "../routing/Routes.js";
-import { PlaceholderPage } from "../presentation/App.js";
+import { UserSettingsPage } from "../presentation/App.js";
 
 export { route };
-export const template = PlaceholderPage("Update Settings");
+export const template = UserSettingsPage;

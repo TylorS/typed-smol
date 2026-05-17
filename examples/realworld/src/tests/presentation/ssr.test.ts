@@ -98,4 +98,31 @@ describe("realworld SSR pages", () => {
     expect(html).toContain("Seeded Typed RealWorld 1");
     expect(html).not.toContain("Seeded Typed RealWorld 2");
   });
+
+  it("renders auth and settings forms with RealWorld field contracts", async () => {
+    const login = await render("/login");
+    const register = await render("/register");
+    const settings = await render("/settings");
+
+    expect(login).toContain('class="auth-page"');
+    expect(login).toContain('name="email"');
+    expect(login).toContain('name="password"');
+    expect(register).toContain('name="username"');
+    expect(register).toContain("Have an account?");
+    expect(settings).toContain('class="settings-page"');
+    expect(settings).toContain('name="image"');
+    expect(settings).toContain("Or click here to logout.");
+  });
+
+  it("renders editor forms for create and edit routes", async () => {
+    const create = await render("/editor");
+    const edit = await render("/editor/seeded-typed-realworld-1");
+
+    expect(create).toContain('class="editor-page"');
+    expect(create).toContain('name="title"');
+    expect(create).toContain('name="description"');
+    expect(create).toContain('name="body"');
+    expect(create).toContain('name="tagList"');
+    expect(edit).toContain("Edit Article");
+  });
 });

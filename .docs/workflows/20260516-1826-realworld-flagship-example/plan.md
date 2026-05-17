@@ -632,6 +632,7 @@ Execution refinements:
 
 **Progress notes:**
 - 2026-05-17: Auth/debug runtime slice is complete and committed separately from the remaining form/mutation work. It covers `jwtToken` storage compatibility, `/api/user` initialization, login/register/logout token updates, `__conduit_debug__`, and 4xx/5xx/network/decode auth-state handling.
+- 2026-05-17: TodoMVC-style form/mutation slice is complete and committed separately. It uses `@typed/template` `EventHandler` bindings, schema-decoded form requests, a browser auth service layer passed through `typed:browser`, and same-origin workflows for settings, editor, favorite/follow, comment, and delete mutations.
 
 - [ ] Step 1: Write failing browser/hydration tests for `jwtToken`, `__conduit_debug__`, auth states, login/register/logout/settings, editor create/update, favorite/follow/comment workflows, and API error display.
 - [ ] Step 2: Run presentation tests and confirm failures.
