@@ -5,10 +5,30 @@ This package is the full-stack RealWorld/Conduit flagship example for
 and HTML entrypoints, SQLite-backed services, SSR route rendering, and
 `@typed/template` browser workflows.
 
+## Architecture
+
+- Domain schemas and invariants live under `src/domain` and use Effect Schema
+  for branded RealWorld request/response types.
+- SQLite migrations, seed data, repositories, password hashing, and session
+  tokens live under `src/infrastructure`.
+- Application services under `src/application` convert repository outcomes into
+  typed RealWorld errors and response envelopes.
+- API endpoint modules under `src/api` are discovered by the `api:` virtual
+  module compiler surface and use inferred `@typed/app` API handlers.
+- SSR route modules under `src/routes` use typed router layouts and render real
+  data with `@typed/template`.
+- Browser-safe route modules under `src/browser-routes` hydrate the same route
+  declarations without pulling SQLite or server-only dependencies into the
+  client bundle.
+- Browser workflows under `src/presentation` use `@typed/template`
+  `EventHandler` bindings, schema-decoded forms, and a typed auth service layer
+  supplied through `typed:browser`.
+
 ## Scripts
 
 - `pnpm --filter typed-realworld dev` starts the local Vite dev server.
 - `pnpm --filter typed-realworld build` type-checks and builds the package.
+- `pnpm --filter typed-realworld test` runs all RealWorld tests.
 - `pnpm --filter typed-realworld test:unit` runs package-skeleton/domain tests.
 - `pnpm --filter typed-realworld test:integration` runs infrastructure,
   application, and API tests.
@@ -17,11 +37,18 @@ and HTML entrypoints, SQLite-backed services, SSR route rendering, and
   RealWorld Hurl API specs from `.temp/references/realworld/specs/api/hurl`.
 - `pnpm --filter typed-realworld test:e2e:local` runs the upstream RealWorld
   Playwright specs from `.temp/references/realworld/specs/e2e`.
+- `pnpm --filter typed-realworld db:reset` migrates and seeds the configured
+  SQLite database.
 
 ## Local Acceptance Prerequisites
 
 The local acceptance wrappers reference the upstream spec checkout; they do not
 vendor spec files into this example.
+
+The default local acceptance URLs assume a full app server at
+`http://127.0.0.1:3000` with API routes under `/api`. The plain Vite dev server
+is useful for client asset development, but it serves the hydration entry
+without SSR HTML and is not the full acceptance target.
 
 For API acceptance, install `hurl`, start a local RealWorld app server, then run:
 
@@ -41,3 +68,16 @@ APP_BASE=http://127.0.0.1:3000 API_BASE=http://127.0.0.1:3000/api \
 
 Both wrappers fail with prerequisite messages when the external tools, upstream
 spec checkout, browser installation, or app server are missing.
+
+## Known Local Caveats
+
+- The upstream RealWorld reference checkout is intentionally kept under
+  `.temp/references/realworld` and is ignored by git.
+- `test:api:hurl:local` requires `hurl` on `PATH`; without it, the wrapper exits
+  before attempting any network calls.
+- `test:e2e:local` requires a running app server at `APP_BASE`; without one, the
+  wrapper exits before invoking Playwright.
+- The production browser build may warn that Effect Schema imports
+  `effect/dist/testing/TestSchema.js`; this warning is currently upstream of the
+  example presentation code and does not indicate server dependencies in the
+  RealWorld client route tree.

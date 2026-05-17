@@ -126,3 +126,10 @@
 - `scripts/run-e2e-local.ts` references `.temp/references/realworld/specs/e2e`, requires an already-running app at `APP_BASE`, passes `API_BASE` through to the upstream helpers, and rewrites missing-browser output into a Playwright install prerequisite.
 - `playwright.config.ts` imports the upstream `playwright.base.ts` and points `testDir` at the reference checkout rather than copying specs into `examples/realworld`.
 - In this worktree, `test:api:hurl:local` stops at missing `hurl`; `test:e2e:local` stops at missing local app server. Those are expected prerequisite failures, not code failures.
+
+## Task 13 - Final Verification Notes
+
+- README should distinguish plain Vite client development from the full local acceptance target. Vite dev serves the hydration entry and CSS, but Hurl/E2E need a full app server with SSR HTML and `/api` routes.
+- Keep final commits scoped around RealWorld docs/gates; this worktree currently has unrelated dirty VS Code packaging files under `packages/virtual-modules-vscode` and `.cursor/hooks`.
+- Final recursive tests required framework fixes from the other branch: `DateTimes.Fixed` must not follow `TestClock`, `DateTimes.Offset` is the elapsed-clock layer, empty `typed:config` must emit `export {};`, and the TS plugin sample project must bundle/register the config plugin.
+- Final verification passed with `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, `pnpm --filter @typed/app test`, `pnpm --filter @typed/app build`, `pnpm -r run test`, `pnpm -r build`, `pnpm build`, and `git diff --check`.

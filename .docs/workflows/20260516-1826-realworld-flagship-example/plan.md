@@ -696,18 +696,21 @@ Execution refinements:
 - Create: `.docs/workflows/20260516-1826-realworld-flagship-example/memories.md`
 - Modify: `.docs/workflows/20260516-1826-realworld-flagship-example/plan.md`
 
-- [ ] Step 1: Update README with final architecture, scripts, local/manual gates, and known prerequisites.
-- [ ] Step 2: Record durable implementation notes in workflow `memories.md`.
-- [ ] Step 3: Run `pnpm --filter typed-realworld test`.
-- [ ] Step 4: Run `pnpm --filter typed-realworld build`.
-- [ ] Step 5: Run `pnpm --filter @typed/app test`.
-- [ ] Step 6: Run `pnpm --filter @typed/app build`.
-- [ ] Step 7: Run `pnpm -r run test`.
-- [ ] Step 8: Run `pnpm -r build`.
-- [ ] Step 9: Run `pnpm build`.
-- [ ] Step 10: Run `git diff --check`.
-- [ ] Step 11: Inspect `git status --short` and confirm no `.data`, upstream spec clone, build output, or unrelated dirty files are staged.
-- [ ] Step 12: Commit final docs as `docs: document realworld example workflow`.
+**Progress notes:**
+- 2026-05-17: Final verification is complete. Recursive gates required bringing over framework hardening for `DateTimes.Fixed`/`DateTimes.Offset`, empty `typed:config` output, and the virtual-modules TS plugin sample config coverage before the full workspace tests/builds passed.
+
+- [x] Step 1: Update README with final architecture, scripts, local/manual gates, and known prerequisites.
+- [x] Step 2: Record durable implementation notes in workflow `memories.md`.
+- [x] Step 3: Run `pnpm --filter typed-realworld test`.
+- [x] Step 4: Run `pnpm --filter typed-realworld build`.
+- [x] Step 5: Run `pnpm --filter @typed/app test`.
+- [x] Step 6: Run `pnpm --filter @typed/app build`.
+- [x] Step 7: Run `pnpm -r run test`.
+- [x] Step 8: Run `pnpm -r build`.
+- [x] Step 9: Run `pnpm build`.
+- [x] Step 10: Run `git diff --check`.
+- [x] Step 11: Inspect `git status --short` and confirm no `.data`, upstream spec clone, build output, or unrelated dirty files are staged.
+- [x] Step 12: Commit final docs as `docs: document realworld example workflow`.
 
 ## Tactical Replanning Triggers
 
