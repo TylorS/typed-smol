@@ -63,3 +63,11 @@
 - Protected workflows use `Option<OpaqueToken>`; missing tokens map to `401 errors.token[0] == "is missing"` before repository access.
 - Article and comment ownership checks happen in application services so repository `Option`/boolean results become `404` or `403` RealWorld errors.
 - Effect 4 uses `Effect.catch(...)`; `Effect.catchAll` is not available in this workspace.
+
+## Task 8 - API Endpoint Modules
+
+- RealWorld API helpers live under `src/api-support`, not `src/api`, because the HttpApi virtual-module scanner treats every non-reserved file in `src/api` as an endpoint primary module.
+- Endpoint primary modules export `route`, `method`, schemas, and raw `HttpServerResponse` handlers so application `RealWorldError` values can map to dynamic HTTP statuses and RealWorld error envelopes.
+- `_api.ts` owns the `/api` prefix and exposes JSON OpenAPI at `/api/docs/openapi.json`; Swagger and Scalar UI paths are intentionally disabled.
+- The generated `api:` source is tested through `createHttpApiVirtualModulePlugin` and direct endpoint handlers because Vite/Rolldown currently cannot runtime-import the TS-heavy generated virtual module without separate generator hardening.
+- Task 8 verification used `pnpm --filter typed-realworld test:integration -- src/tests/api` and `pnpm --filter typed-realworld build`.

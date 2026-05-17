@@ -586,17 +586,17 @@ Execution refinements:
 - Create: `src/tests/api/endpoints.test.ts`
 - Create: `src/tests/api/openapi.test.ts`
 
-- [ ] Step 1: Write failing tests that import the generated `api:./api` module and assert endpoint discovery includes EP-1 through EP-20.
-- [ ] Step 2: Write failing HTTP/API tests for success statuses and RealWorld error envelopes.
-- [ ] Step 3: Write failing OpenAPI JSON test asserting all endpoint paths exist and docs UI paths do not.
-- [ ] Step 4: Run API tests and confirm failures.
-- [ ] Step 5: Implement `_api.ts` with `/api` prefix, metadata, and JSON OpenAPI exposure path.
-- [ ] Step 6: Implement `_dependencies.ts` with application/infrastructure layers.
-- [ ] Step 7: Implement endpoint modules in small groups: auth/user, profiles, articles, comments, tags.
-- [ ] Step 8: Implement `src/api/HttpErrors.ts` to convert application errors to status/envelope responses.
-- [ ] Step 9: Run `pnpm --filter typed-realworld test:integration -- src/tests/api`.
-- [ ] Step 10: Run `pnpm --filter typed-realworld build`.
-- [ ] Step 11: Commit as `feat: expose realworld api modules`.
+- [x] Step 1: Write failing generated API source tests that assert endpoint discovery includes EP-1 through EP-20.
+- [x] Step 2: Write failing HTTP/API tests for success statuses and RealWorld error envelopes.
+- [x] Step 3: Write failing OpenAPI JSON test asserting all endpoint paths exist and docs UI paths do not.
+- [x] Step 4: Run API tests and confirm failures.
+- [x] Step 5: Implement `_api.ts` with `/api` prefix, metadata, and JSON OpenAPI exposure path.
+- [x] Step 6: Implement `_dependencies.ts` with application/infrastructure layers.
+- [x] Step 7: Implement endpoint modules in small groups: auth/user, profiles, articles, comments, tags.
+- [x] Step 8: Implement API support helpers to convert application errors to status/envelope responses.
+- [x] Step 9: Run `pnpm --filter typed-realworld test:integration -- src/tests/api`.
+- [x] Step 10: Run `pnpm --filter typed-realworld build`.
+- [x] Step 11: Commit as `feat: expose realworld api modules`.
 
 ### Task 9: SSR Route Modules and Real-Data Page Rendering
 
