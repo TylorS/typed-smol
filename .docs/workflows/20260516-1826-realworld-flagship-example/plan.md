@@ -630,6 +630,9 @@ Execution refinements:
 - Create: `src/tests/presentation/hydration.test.ts`
 - Create: `src/tests/presentation/auth-state.test.ts`
 
+**Progress notes:**
+- 2026-05-17: Auth/debug runtime slice is complete and committed separately from the remaining form/mutation work. It covers `jwtToken` storage compatibility, `/api/user` initialization, login/register/logout token updates, `__conduit_debug__`, and 4xx/5xx/network/decode auth-state handling.
+
 - [ ] Step 1: Write failing browser/hydration tests for `jwtToken`, `__conduit_debug__`, auth states, login/register/logout/settings, editor create/update, favorite/follow/comment workflows, and API error display.
 - [ ] Step 2: Run presentation tests and confirm failures.
 - [ ] Step 3: Implement browser local API client with Effect HTTP/Schema decoding.

@@ -85,3 +85,11 @@
 - `src/browser-routes/**` is the browser-safe route tree for hydration and shares route declarations from `src/routing/Routes.ts`; keep server data-loading handlers in `src/routes/**` so SQLite/password/session dependencies stay out of the client bundle.
 - After the browser route split, the Vite client chunk dropped from roughly 3.8 MB to roughly 265 kB. One remaining Vite warning comes from Effect Schema pulling `effect/dist/testing/TestSchema.js` through router schema internals, not from RealWorld server dependencies.
 - Task 9 verification used `pnpm --filter typed-realworld test:ssr` and `pnpm --filter typed-realworld build`.
+
+## Task 10 - Browser Auth Runtime
+
+- `src/browser.ts` now runs both `typed:browser?routes=./browser-routes` and an auth initialization Effect that installs `window.__conduit_debug__`.
+- Browser auth state lives in `src/presentation/State.ts` and uses `@typed/fx` `RefSubject` with a synchronous snapshot for the RealWorld debug contract.
+- `src/presentation/ClientApi.ts` is the same-origin browser API boundary; it decodes `UserResponse` and RealWorld error envelopes with Effect Schema and distinguishes HTTP, network, and decode failures.
+- Auth initialization clears stale tokens on current-user 4xx responses, but keeps tokens and reports `unavailable` for network, 5xx, and decode failures so transient outages do not log the user out.
+- Login and register calls store the returned `jwtToken`; logout clears both `localStorage.getItem("jwtToken")` and the legacy `localStorage.jwtToken` property compatibility path.
