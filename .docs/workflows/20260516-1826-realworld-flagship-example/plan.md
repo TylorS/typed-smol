@@ -444,18 +444,18 @@ Execution refinements:
 - Create: `examples/realworld/src/browser.ts`
 - Create: `examples/realworld/public/default-avatar.svg`
 
-- [ ] Step 1: Write the package manifest with approved dependencies and scripts.
+- [x] Step 1: Write the package manifest with approved dependencies and scripts.
   - Dependencies: workspace Typed packages, `effect`, `@effect/sql-sqlite-node`, `micromark`.
   - Dev dependencies: `@typed/tsconfig`, `@typed/vite-plugin`, `@playwright/test`, `typescript`, `vite`, `vitest`.
   - Scripts: `dev`, `build`, `preview`, `test`, `test:unit`, `test:integration`, `test:ssr`, `test:e2e:local`, `test:api:hurl:local`, `db:migrate`, `db:seed`, `db:reset`.
-- [ ] Step 2: Add `examples/realworld/.gitignore` with `.data/`, `playwright-report/`, `test-results/`, `.hurl/`, and local coverage output.
-- [ ] Step 3: Add `vmc.config.ts` registering `createRouterVirtualModulePlugin()` and `createHttpApiVirtualModulePlugin()`.
-- [ ] Step 4: Add `vite.config.ts` using `typedVitePlugin()` and local CSS/assets handling.
-- [ ] Step 5: Add minimal server/browser/main entries that compile and render a clearly empty shell before route/API wiring lands.
-- [ ] Step 6: Run `pnpm install --lockfile-only` from the repository root and inspect the lockfile diff for only approved example dependencies.
-- [ ] Step 7: Run `pnpm --filter typed-realworld build`.
+- [x] Step 2: Add `examples/realworld/.gitignore` with `.data/`, `playwright-report/`, `test-results/`, `.hurl/`, and local coverage output.
+- [x] Step 3: Add `vmc.config.ts` registering `createRouterVirtualModulePlugin()` and `createHttpApiVirtualModulePlugin()`.
+- [x] Step 4: Add `vite.config.ts` using `typedVitePlugin()` and local CSS/assets handling.
+- [x] Step 5: Add minimal server/browser/main entries that compile and render a clearly empty shell before route/API wiring lands.
+- [x] Step 6: Run `pnpm install --lockfile-only` from the repository root and inspect the lockfile diff for only approved example dependencies.
+- [x] Step 7: Run `pnpm --filter typed-realworld build`.
   - Expected first result: fail only because route/API files are not implemented, or pass with the empty shell if virtual imports are not yet referenced.
-- [ ] Step 8: Commit as `chore: scaffold realworld example package`.
+- [x] Step 8: Commit as `chore: scaffold realworld example package`.
 
 ### Task 2: Domain Schema Baseline
 

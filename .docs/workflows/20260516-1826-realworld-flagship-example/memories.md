@@ -7,3 +7,11 @@
 - The old config-object `ApiHandler({ route, method, ... })(handler)` shape was removed from public tests to avoid two public helpers with the same name.
 - Verification required building local workspace dependencies in this worktree before app tests could import `@typed/router` and `@typed/virtual-modules`.
 - Dependency bootstrap used `pnpm install --no-frozen-lockfile --lockfile=false` so the unrelated dirty `pnpm-lock.yaml` was not modified by this task.
+
+## Task 1 - Package Skeleton
+
+- `examples/realworld` starts as the single package named `typed-realworld` with only approved runtime/dev dependencies.
+- The build script intentionally compiles only non-test `src/**/*.ts`; Vitest owns `src/tests/**`.
+- Database, Hurl, and Playwright scripts are present but fail loudly until their owning tasks wire real implementations.
+- `typed.config.ts` uses `defineConfig` and declares the intended `api:` and `router:` prefixes; the first browser build avoids virtual imports so package wiring can be verified before route/API files exist.
+- Local build verification in this worktree required building `@typed/virtual-modules-vite` and `@typed/vite-plugin` before Vite could load the workspace plugin package.

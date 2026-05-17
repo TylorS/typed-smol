@@ -1,0 +1,6 @@
+.data/
+.hurl/
+coverage/
+dist/
+playwright-report/
+test-results/
