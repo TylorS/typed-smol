@@ -633,15 +633,16 @@ Execution refinements:
 **Progress notes:**
 - 2026-05-17: Auth/debug runtime slice is complete and committed separately from the remaining form/mutation work. It covers `jwtToken` storage compatibility, `/api/user` initialization, login/register/logout token updates, `__conduit_debug__`, and 4xx/5xx/network/decode auth-state handling.
 - 2026-05-17: TodoMVC-style form/mutation slice is complete and committed separately. It uses `@typed/template` `EventHandler` bindings, schema-decoded form requests, a browser auth service layer passed through `typed:browser`, and same-origin workflows for settings, editor, favorite/follow, comment, and delete mutations.
+- 2026-05-17: Visible form-error rendering and generated runtime hardening are complete. Form workflows render typed API/auth/decode/form failures into `.error-messages` as text nodes, and generated `typed:browser`/`typed:server` runtime options no longer expose unsafe `options.run`.
 
-- [ ] Step 1: Write failing browser/hydration tests for `jwtToken`, `__conduit_debug__`, auth states, login/register/logout/settings, editor create/update, favorite/follow/comment workflows, and API error display.
-- [ ] Step 2: Run presentation tests and confirm failures.
-- [ ] Step 3: Implement browser local API client with Effect HTTP/Schema decoding.
-- [ ] Step 4: Implement RefSubject/AsyncData stores for auth, feeds, article detail, profile, editor/settings forms, comments, favorites, and follows.
-- [ ] Step 5: Install debug interface with exact method names and return states.
-- [ ] Step 6: Implement form event handlers and optimistic refresh where it reduces duplicate code.
-- [ ] Step 7: Run `pnpm --filter typed-realworld test:ssr` and browser/presentation tests.
-- [ ] Step 8: Commit as `feat: hydrate realworld client workflows`.
+- [x] Step 1: Write failing browser/hydration tests for `jwtToken`, `__conduit_debug__`, auth states, login/register/logout/settings, editor create/update, favorite/follow/comment workflows, and API error display.
+- [x] Step 2: Run presentation tests and confirm failures.
+- [x] Step 3: Implement browser local API client with Effect HTTP/Schema decoding.
+- [x] Step 4: Implement RefSubject/AsyncData stores for auth, feeds, article detail, profile, editor/settings forms, comments, favorites, and follows.
+- [x] Step 5: Install debug interface with exact method names and return states.
+- [x] Step 6: Implement form event handlers and optimistic refresh where it reduces duplicate code.
+- [x] Step 7: Run `pnpm --filter typed-realworld test:ssr` and browser/presentation tests.
+- [x] Step 8: Commit as `feat: hydrate realworld client workflows`.
 
 ### Task 11: UI Selector Contract, CSS, Assets, and XSS Hardening
 

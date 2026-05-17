@@ -100,7 +100,9 @@
 - `BrowserAuth.Live` is provided through `typed:browser` `run({ layers })`, so route templates can depend on the auth store without manually wrapping route output.
 - Browser form inputs are decoded with the existing `RealWorldApi` Effect schemas before calling workflows, preserving branded request types instead of casting raw strings.
 - The same-origin client now covers settings, create/update/delete article, favorite/unfavorite, follow/unfollow, create/delete comment, plus no-content responses.
-- SSR routes and browser route modules now use real auth/settings/editor form templates instead of `PlaceholderPage`; remaining Task 10 work should focus on visible error rendering, navigation/refresh behavior, and broader hydration assertions.
+- SSR routes and browser route modules now use real auth/settings/editor form templates instead of `PlaceholderPage`.
+- `FormEvents.formSubmit` catches the typed RealWorld workflow error union and renders visible `.error-messages` as text nodes; keep new form workflows inside that union instead of widening to arbitrary errors.
+- `ClientApiError` carries string `reason` values for network/decode cases, not raw thrown `unknown`, so the error channel remains explicit and display helpers do not need casts.
 
 ## Task 11 - Typed Framework Surface Hardening
 

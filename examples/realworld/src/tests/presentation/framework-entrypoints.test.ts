@@ -21,13 +21,15 @@ describe("realworld framework entrypoints", () => {
     expect(moduleId).toBe(
       "typed:server?routes=./routes&api=./api&html=../index.html&client=./browser.ts",
     );
-    expect(generated).toContain('import * as Routes0 from "router:./routes";');
+    expect(generated).toContain('import Routes0 from "router:./routes";');
     expect(generated).toContain('import * as Api0 from "api:./api";');
     expect(generated).toContain('import * as Html0 from "typed:html?path=../index.html";');
     expect(generated).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(generated).toContain("HttpRouter.use(ssrForHttp");
     expect(generated).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
     expect(generated).toContain('client: "./browser.ts"');
+    expect(generated).not.toContain("options.run");
+    expect(generated).not.toContain("readonly run?");
   });
 
   it("uses typed:browser to hydrate the generated router with @typed/template", () => {
@@ -38,13 +40,15 @@ describe("realworld framework entrypoints", () => {
     );
 
     expect(moduleId).toBe("typed:browser?routes=./browser-routes");
-    expect(generated).toContain('import * as Routes0 from "router:./browser-routes";');
+    expect(generated).toContain('import Routes0 from "router:./browser-routes";');
     expect(generated).toContain('import { Fx } from "@typed/fx";');
     expect(generated).toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(generated).toContain("Fx.drainLayer(render(Routes, root))");
     expect(generated).toContain("BrowserRouter(win)");
     expect(generated).toContain('root: "#app"');
     expect(generated).toContain('mode: "hydrate"');
+    expect(generated).not.toContain("options.run");
+    expect(generated).not.toContain("readonly run?");
   });
 });
 

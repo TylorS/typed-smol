@@ -54,14 +54,13 @@ function emitRuntime(
     ? `${errorsCompanion.binding}.onError ?? undefined`
     : "undefined";
   return [
-    "type RuntimeErrorHandler = <E>(cause: Cause.Cause<E>) => Effect.Effect<unknown, never, never> | void;",
+    "type RuntimeErrorHandler = <E>(cause: Cause.Cause<E>) => Effect.Effect<void, never, never> | void;",
     "type RouteModule = Matcher.Any;",
     "type BrowserRunOptions<Layers extends readonly LayerOrGroup[] = []> = {",
     "  readonly layers?: Layers;",
     "  readonly onError?: RuntimeErrorHandler;",
     "  readonly root?: string | HTMLElement;",
     "  readonly window?: Window;",
-    "  readonly run?: (program: BrowserProgram<Layers>) => Effect.Effect<unknown, never, never>;",
     "};",
     "type BrowserLayerFor<Layers extends readonly LayerOrGroup[]> = ComputeLayers<Layers, ReturnType<typeof makeRenderLayer>>;",
     "type BrowserProgram<Layers extends readonly LayerOrGroup[]> = Effect.Effect<never, Layer.Error<BrowserLayerFor<Layers>>, Layer.Services<BrowserLayerFor<Layers>>>;",
@@ -99,8 +98,7 @@ function emitRuntime(
     "export function run(options: BrowserRunOptions<readonly LayerOrGroup[]> = {}) {",
     "  const BrowserLayer = hydrate(options);",
     "  const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);",
-    "  const runnable = Effect.provide(program, Context.empty());",
-    "  return options.run ? options.run(runnable) : runnable;",
+    "  return Effect.provide(program, Context.empty());",
     "}",
     "function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {",
     "  if (typeof root !== \"string\") return root;",

@@ -25,8 +25,8 @@ export type FetchLike = (
 
 export type ClientApiError =
   | { readonly _tag: "HttpStatus"; readonly status: number; readonly errors: ErrorResponse | null }
-  | { readonly _tag: "Network"; readonly error: unknown }
-  | { readonly _tag: "Decode"; readonly error: unknown };
+  | { readonly _tag: "Network"; readonly reason: string }
+  | { readonly _tag: "Decode"; readonly reason: string };
 
 export interface RealWorldClient {
   readonly currentUser: (token: string) => Effect.Effect<UserResponse, ClientApiError>;
@@ -155,7 +155,7 @@ const requestJson = <A>(
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
       try: () => fetchImpl(input, init),
-      catch: (error): ClientApiError => ({ _tag: "Network", error }),
+      catch: (error): ClientApiError => ({ _tag: "Network", reason: formatThrown(error) }),
     });
     const body = yield* readJson(response);
 
@@ -181,7 +181,7 @@ const requestNoContent = (
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
       try: () => fetchImpl(input, init),
-      catch: (error): ClientApiError => ({ _tag: "Network", error }),
+      catch: (error): ClientApiError => ({ _tag: "Network", reason: formatThrown(error) }),
     });
 
     if (!response.ok) {
@@ -224,7 +224,7 @@ const pathSegment = (value: string): string => encodeURIComponent(value);
 const readJson = (response: Response): Effect.Effect<unknown, ClientApiError> =>
   Effect.tryPromise({
     try: () => response.json() as Promise<unknown>,
-    catch: (error): ClientApiError => ({ _tag: "Decode", error }),
+    catch: (error): ClientApiError => ({ _tag: "Decode", reason: formatThrown(error) }),
   });
 
 const decode = <A>(
@@ -233,7 +233,7 @@ const decode = <A>(
 ): Effect.Effect<A, ClientApiError> =>
   Effect.try({
     try: () => Schema.decodeUnknownSync(schema)(body),
-    catch: (error): ClientApiError => ({ _tag: "Decode", error }),
+    catch: (error): ClientApiError => ({ _tag: "Decode", reason: formatThrown(error) }),
   });
 
 const decodeErrorResponse = (body: unknown): ErrorResponse | null => {
@@ -243,3 +243,6 @@ const decodeErrorResponse = (body: unknown): ErrorResponse | null => {
     return null;
   }
 };
+
+const formatThrown = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);

@@ -69,6 +69,10 @@ describe("BrowserVirtualModulePlugin", () => {
     );
     expect(source).toContain("options.layers");
     expect(source).toContain("options.onError");
+    expect(source).not.toContain("options.run");
+    expect(source).not.toContain("readonly run?");
+    expect(source).not.toContain("Effect.Effect<never, unknown");
+    expect(source).not.toContain("Effect.Effect<unknown, unknown");
     expect(source).not.toContain("Effect.succeed(BrowserRuntime)");
     expect(source).not.toContain("export async function run");
     expect(source).toContain('root: "#app"');

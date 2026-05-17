@@ -67,6 +67,10 @@ describe("ServerVirtualModulePlugin", () => {
     );
     expect(source).toContain("options.layers");
     expect(source).toContain("options.onError");
+    expect(source).not.toContain("options.run");
+    expect(source).not.toContain("readonly run?");
+    expect(source).not.toContain("Effect.Effect<never, unknown");
+    expect(source).not.toContain("Effect.Effect<unknown, unknown");
     expect(source).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
     expect(source).not.toContain("export async function run");
   });
