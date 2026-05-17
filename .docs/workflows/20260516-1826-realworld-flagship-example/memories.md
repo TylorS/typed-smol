@@ -29,3 +29,11 @@
 - Tag updates distinguish `undefined` as preserve-existing and `[]` as remove-all, matching the RealWorld article update contract.
 - `parseAuthorizationHeader` returns Effect `Option` and only accepts exact `Token <opaque-token>` headers.
 - Markdown rendering goes through `src/domain/Markdown.ts`; raw dangerous nodes, event-handler attributes, and `javascript:` URLs are stripped or escaped at the boundary.
+
+## Task 4 - SQLite Storage
+
+- SQLite wiring uses `SqliteClient.layer({ filename })` and accesses SQL through `yield* SqlClient.SqlClient`.
+- `DatabaseManager` is a class-based `Context.Service`; `resetDatabase`, `migrateDatabase`, and `seedConfiguredDatabase` provide that service from `DatabaseManager.Live`, which depends on `RealWorldConfig`.
+- The compiled db CLI uses package `process.cwd()` as the example root so `db:reset` writes `examples/realworld/.data/realworld.sqlite`, not under `dist`.
+- The example avoids adding `@types/node`; `src/types/node-lite.d.ts` declares only the Node globals/modules used by this package.
+- Local setup required rebuilding `better-sqlite3` with `node-gyp rebuild --release` after the lockfile-only install left the native binding absent.

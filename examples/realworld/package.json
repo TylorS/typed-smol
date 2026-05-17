@@ -15,9 +15,9 @@
     "test:ssr": "vitest run --passWithNoTests src/tests/presentation",
     "test:e2e:local": "node -e \"console.error('Task 12 will wire local Playwright E2E automation.'); process.exit(1);\"",
     "test:api:hurl:local": "node -e \"console.error('Task 12 will wire local Hurl API automation.'); process.exit(1);\"",
-    "db:migrate": "node -e \"console.error('Task 4 will wire SQLite migrations.'); process.exit(1);\"",
-    "db:seed": "node -e \"console.error('Task 4 will wire deterministic seed data.'); process.exit(1);\"",
-    "db:reset": "node -e \"console.error('Task 4 will wire SQLite reset/migrate/seed.'); process.exit(1);\""
+    "db:migrate": "tsc -p tsconfig.json && node dist/types/scripts/db.js migrate",
+    "db:seed": "tsc -p tsconfig.json && node dist/types/scripts/db.js seed",
+    "db:reset": "tsc -p tsconfig.json && node dist/types/scripts/db.js reset"
   },
   "dependencies": {
     "@effect/sql-sqlite-node": "4.0.0-beta.66",

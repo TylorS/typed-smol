@@ -506,16 +506,16 @@ Execution refinements:
 - Create: `scripts/db.ts`
 - Create: `src/tests/infrastructure/database.test.ts`
 
-- [ ] Step 1: Write failing tests that reset creates `examples/realworld/.data/realworld.sqlite`, migrations create all tables/indexes, and second reset returns identical seed counts.
-- [ ] Step 2: Run `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure/database.test.ts`.
+- [x] Step 1: Write failing tests that reset creates `examples/realworld/.data/realworld.sqlite`, migrations create all tables/indexes, and second reset returns identical seed counts.
+- [x] Step 2: Run `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure/database.test.ts`.
   - Expected: fail because SQL layer/reset does not exist.
-- [ ] Step 3: Implement SQLite client layer using `@effect/sql-sqlite-node` and `effect/unstable/sql`.
-- [ ] Step 4: Implement migrations for users, sessions, follows, articles, tags, article_tags, favorites, and comments with required indexes/unique constraints.
-- [ ] Step 5: Implement deterministic seed with at least two users, one follow, fifteen articles, multiple tags, one favorite, one comment, and a missing-avatar user.
-- [ ] Step 6: Implement `db:migrate`, `db:seed`, and `db:reset` scripts.
-- [ ] Step 7: Run `pnpm --filter typed-realworld db:reset` and `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure/database.test.ts`.
-- [ ] Step 8: Verify `git status --short examples/realworld/.data` shows no tracked data.
-- [ ] Step 9: Commit as `feat: add realworld sqlite storage`.
+- [x] Step 3: Implement SQLite client layer using `@effect/sql-sqlite-node` and `effect/unstable/sql`.
+- [x] Step 4: Implement migrations for users, sessions, follows, articles, tags, article_tags, favorites, and comments with required indexes/unique constraints.
+- [x] Step 5: Implement deterministic seed with at least two users, one follow, fifteen articles, multiple tags, one favorite, one comment, and a missing-avatar user.
+- [x] Step 6: Implement `db:migrate`, `db:seed`, and `db:reset` scripts.
+- [x] Step 7: Run `pnpm --filter typed-realworld db:reset` and `pnpm --filter typed-realworld test:integration -- src/tests/infrastructure/database.test.ts`.
+- [x] Step 8: Verify `git status --short examples/realworld/.data` shows no tracked data.
+- [x] Step 9: Commit as `feat: add realworld sqlite storage`.
 
 ### Task 5: Password, Sessions, and User Repository
 
