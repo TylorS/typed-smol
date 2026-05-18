@@ -3,6 +3,7 @@
  * See .docs/specs/httpapi-virtual-module-plugin/spec.md (Vite Plugin Integration Surface)
  * and testing-strategy.md (typedVitePlugin registration order and option wiring).
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PluginManager } from "@typed/virtual-modules";
 import type { VirtualModulePlugin } from "@typed/virtual-modules";
@@ -80,6 +81,13 @@ describe("createTypedViteResolver", () => {
 });
 
 describe("typedVitePlugin", () => {
+  it("imports @typed/app helpers through narrow subpaths", () => {
+    const source = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
+
+    expect(source).not.toContain('from "@typed/app";');
+    expect(source).not.toContain('from "@typed/app"');
+  });
+
   it("returns a non-empty plugin array", () => {
     const plugins = typedVitePlugin();
     expect(Array.isArray(plugins)).toBe(true);

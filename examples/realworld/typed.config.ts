@@ -1,4 +1,4 @@
-import { defineConfig } from "@typed/app";
+import { defineConfig } from "@typed/app/config/defineConfig";
 
 export default defineConfig({
   api: {

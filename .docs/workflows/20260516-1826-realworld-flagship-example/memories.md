@@ -158,4 +158,5 @@
 - Generated `typed:browser` runtime should import `composeWithLayers` directly from `@typed/app/runtime` instead of a namespace, keeping all generated runtime surfaces on narrow named imports.
 - Generated `api:*` runtime should register endpoint modules through `ApiHandlers` from `@typed/app/httpapi/Handlers`; keep request/header/body coercion in that shared helper instead of expanding handler-call plumbing inside the virtual module string.
 - RealWorld endpoint modules should import `ApiHandlerRaw` from `@typed/app/httpapi/ApiHandler`; keep root-barrel imports out of route and API leaf modules.
+- RealWorld VM/config files and `@typed/vite-plugin` internals should import `@typed/app` helpers through narrow subpaths; the root barrel is only a convenience API, not a dependency path for generated-runtime tooling.
 - After changing generated imports, rebuild `@typed/vite-plugin` before running Vite-backed RealWorld tests. Its built resolver imports `@typed/app` and can otherwise serve stale generated virtual module code.

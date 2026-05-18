@@ -86,9 +86,11 @@ describe("typed-realworld package skeleton", () => {
     expect(readText("vmc.config.ts")).toContain("createHtmlVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createBrowserVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createServerVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).not.toContain('from "@typed/app";');
     expect(existsSync(resolve(projectRoot, "src/types/typed-virtual-modules.d.ts"))).toBe(false);
     expect(readText("vite.config.ts")).toContain("typedVitePlugin");
     expect(readText("typed.config.ts")).toContain("defineConfig");
+    expect(readText("typed.config.ts")).not.toContain('from "@typed/app";');
 
     expect(existsSync(resolve(projectRoot, "index.html"))).toBe(true);
     expect(existsSync(resolve(projectRoot, "src/main.ts"))).toBe(true);

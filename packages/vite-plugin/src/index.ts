@@ -2,20 +2,22 @@
  * @typed/vite-plugin — One-stop Vite preset: tsconfig paths, bundle analyzer,
  * Brotli compression, virtual-modules Vite plugin, and @typed/app VM plugins.
  */
-import type { TypedConfig } from "@typed/app";
+import { createBrowserVirtualModulePlugin } from "@typed/app/BrowserVirtualModulePlugin";
+import { createConfigVirtualModulePlugin } from "@typed/app/ConfigVirtualModulePlugin";
+import { createEnvVirtualModulePlugin } from "@typed/app/EnvVirtualModulePlugin";
+import { createHtmlVirtualModulePlugin } from "@typed/app/HtmlVirtualModulePlugin";
 import {
-  createBrowserVirtualModulePlugin,
-  createConfigVirtualModulePlugin,
-  createEnvVirtualModulePlugin,
-  createHtmlVirtualModulePlugin,
   createHttpApiVirtualModulePlugin,
-  createRouteHandlersVirtualModulePlugin,
+  type HttpApiVirtualModulePluginOptions,
+} from "@typed/app/HttpApiVirtualModulePlugin";
+import { createRouteHandlersVirtualModulePlugin } from "@typed/app/RouteHandlersVirtualModulePlugin";
+import {
   createRouterVirtualModulePlugin,
-  createServerVirtualModulePlugin,
-  HttpApiVirtualModulePluginOptions,
-  loadTypedConfig,
-  RouterVirtualModulePluginOptions,
-} from "@typed/app";
+  type RouterVirtualModulePluginOptions,
+} from "@typed/app/RouterVirtualModulePlugin";
+import { createServerVirtualModulePlugin } from "@typed/app/ServerVirtualModulePlugin";
+import type { TypedConfig } from "@typed/app/config/TypedConfig";
+import { loadTypedConfig } from "@typed/app/config/loadTypedConfig";
 import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
 import {
   collectTypeTargetSpecsFromPlugins,

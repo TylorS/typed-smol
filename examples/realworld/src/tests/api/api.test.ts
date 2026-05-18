@@ -5,11 +5,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import ts from "typescript";
 import { Effect } from "effect";
 import { HttpServerResponse } from "effect/unstable/http";
+import { createHttpApiVirtualModulePlugin } from "@typed/app/HttpApiVirtualModulePlugin";
 import {
   APP_TYPE_TARGET_BOOTSTRAP_CONTENT,
-  createHttpApiVirtualModulePlugin,
   createTypeInfoApiSessionForApp,
-} from "@typed/app";
+} from "@typed/app/createTypeInfoApiSessionForApp";
 import { ApplicationServices } from "../../application/Services.js";
 import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
 import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";

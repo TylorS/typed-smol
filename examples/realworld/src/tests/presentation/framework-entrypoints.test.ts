@@ -2,10 +2,8 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  createBrowserVirtualModulePlugin,
-  createServerVirtualModulePlugin,
-} from "@typed/app";
+import { createBrowserVirtualModulePlugin } from "@typed/app/BrowserVirtualModulePlugin";
+import { createServerVirtualModulePlugin } from "@typed/app/ServerVirtualModulePlugin";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const srcRoot = resolve(testDir, "../..");
