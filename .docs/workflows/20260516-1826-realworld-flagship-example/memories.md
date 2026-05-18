@@ -159,4 +159,5 @@
 - Generated `api:*` runtime should register endpoint modules through `ApiHandlers` from `@typed/app/httpapi/Handlers`; keep request/header/body coercion in that shared helper instead of expanding handler-call plumbing inside the virtual module string.
 - RealWorld endpoint modules should import `ApiHandlerRaw` from `@typed/app/httpapi/ApiHandler`; keep root-barrel imports out of route and API leaf modules.
 - RealWorld VM/config files and `@typed/vite-plugin` internals should import `@typed/app` helpers through narrow subpaths; the root barrel is only a convenience API, not a dependency path for generated-runtime tooling.
+- Generated router catch wrappers should never emit `Cause.Cause<unknown>`; when the catch error type cannot be preserved through broad generated glue, use `Cause.Cause<any>` so strict type checks pass without pretending the error channel is meaningful `unknown`.
 - After changing generated imports, rebuild `@typed/vite-plugin` before running Vite-backed RealWorld tests. Its built resolver imports `@typed/app` and can otherwise serve stale generated virtual module code.

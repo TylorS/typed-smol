@@ -488,6 +488,7 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/api/item.catch.ts": "export const catchFn = () => null;",
     });
     expect(typeof source).toBe("string");
+    expect(source).not.toContain("Cause.Cause<unknown>");
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
@@ -501,7 +502,7 @@ describe("RouterVirtualModulePlugin", () => {
       import * as ApiLayout from "./routes/api/_layout.js";
       import * as ApiItemcatch from "./routes/api/item.catch.js";
 
-      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), catch: (causeRef: RefSubject<Cause.Cause<unknown>>) => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => Fx.succeed(ApiItemcatch.catchFn(e)) })) }).layout(ApiLayout.layout).provide(Dependencies.default);
+      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), catch: (causeRef: RefSubject<Cause.Cause<any>>) => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => Fx.succeed(ApiItemcatch.catchFn(e)) })) }).layout(ApiLayout.layout).provide(Dependencies.default);
       export default router;
       "
     `);

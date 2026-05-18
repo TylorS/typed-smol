@@ -60,7 +60,7 @@ export function liftToFx(expr: string, kind: RuntimeKind): string {
 export function catchExprFor(catchForm: CatchForm, varName: string, exportName: string): string {
   const ref = `${varName}.${exportName}`;
   const { form, returnKind } = catchForm;
-  const causeRef = `(causeRef: RefSubject<Cause.Cause<unknown>>)`;
+  const causeRef = `(causeRef: RefSubject<Cause.Cause<any>>)`;
 
   if (form === "native") {
     return ref;
@@ -68,7 +68,7 @@ export function catchExprFor(catchForm: CatchForm, varName: string, exportName: 
 
   if (form === "value") {
     const lifted = liftToFx(ref, returnKind);
-    return `(_causeRef: RefSubject<Cause.Cause<unknown>>) => ${lifted}`;
+    return `(_causeRef: RefSubject<Cause.Cause<any>>) => ${lifted}`;
   }
 
   if (form === "fn-cause") {
