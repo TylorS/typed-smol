@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createBrowserVirtualModulePlugin } from "./index.js";
+import { typeCheckGeneratedSource } from "./test-utils/generatedSourceHarness.js";
 
 const tempDirs: string[] = [];
 
@@ -43,10 +44,13 @@ describe("BrowserVirtualModulePlugin", () => {
   it("emits composable run, hydrate, and BrowserRuntime exports for wildcard routes", () => {
     const source = buildBrowser("typed:browser?routes=*") as string;
 
+    expect(source).not.toContain("// @ts-nocheck");
     expect(source).toContain('import * as Cause from "effect/Cause";');
     expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
-    expect(source).toContain('import { composeWithLayers } from "@typed/app/runtime";');
+    expect(source).toContain(
+      'import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
+    );
     expect(source).not.toContain("TypedAppRuntime");
     expect(source).not.toContain('from "@typed/app";');
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
@@ -57,15 +61,22 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain("export const Routes = Routes0;");
     expect(source).not.toContain("export const Routes = TypedRouter.merge(Routes0);");
     expect(source).toContain("export const BrowserRuntime =");
-    expect(source).not.toContain("import type");
     expect(source).not.toContain("type BrowserProgram");
+    expect(source).toContain("type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;");
+    expect(source).toContain("type BrowserLayerInputs = readonly LayerOrGroup[];");
+    expect(source).toContain(
+      "type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;",
+    );
     expect(source).toContain("function makeRenderLayer");
     expect(source).toContain("export function hydrate");
     expect(source).toContain("export function run");
     expect(source).toContain("Fx.drainLayer(render(Routes, root))");
     expect(source).toContain("Layer.launch(BrowserLayer");
     expect(source).toContain("Effect.tapCause");
-    expect(source).toContain("function withErrorHandling(program, onError)");
+    expect(source).toContain("function withErrorHandling<A, E, R>");
+    expect(source).not.toContain("Effect.Effect<void, any, never>");
+    expect(source).not.toContain("Context.empty() as");
+    expect(source).not.toContain("Cause.Cause<any>");
     expect(source).toContain("options.layers");
     expect(source).toContain("options.onError");
     expect(source).not.toContain("options.run");
@@ -77,6 +88,48 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('root: "#app"');
     expect(source).toContain('base: "/"');
     expect(source).toContain('mode: "hydrate"');
+  });
+
+  it("type-checks generated browser entry source without ts-nocheck", () => {
+    const fixture = createFixture({
+      "src/routes.ts": "const routes: any = {};\nexport default routes;\n",
+      "src/typed-app.d.ts": [
+        'declare module "@typed/app/runtime" {',
+        '  import type * as Layer from "effect/Layer";',
+        "  export type LayerAny = Layer.Layer<never, unknown, unknown>;",
+        "  export type LayerOrGroup = LayerAny;",
+        "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
+        "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
+        "}",
+      ].join("\n"),
+      "src/typed-template.d.ts": [
+        'declare module "@typed/template" {',
+        '  import type { Fx } from "@typed/fx";',
+        '  import type * as Layer from "effect/Layer";',
+        "  export const DomRenderTemplate: { readonly using: (document: Document) => Layer.Layer<never, never, never> };",
+        "  export function render(input: any, root: HTMLElement): Fx<never, never, never>;",
+        "}",
+      ].join("\n"),
+    });
+    const source = buildBrowser("typed:browser?routes=./routes", fixture.importer) as string;
+    const result = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/generated.browser.ts",
+      sourceText: source,
+      rootFiles: [
+        fixture.importer,
+        join(fixture.root, "src/routes.ts"),
+        join(fixture.root, "src/typed-app.d.ts"),
+        join(fixture.root, "src/typed-template.d.ts"),
+      ],
+      moduleFallbacks: {
+        "router:./routes": join(fixture.root, "src/routes.ts"),
+        "@typed/app/runtime": join(fixture.root, "src/typed-app.d.ts"),
+        "@typed/template": join(fixture.root, "src/typed-template.d.ts"),
+      },
+    });
+
+    expect(result.diagnostics).toEqual([]);
   });
 
   it("emits repeated explicit route imports in source order", () => {

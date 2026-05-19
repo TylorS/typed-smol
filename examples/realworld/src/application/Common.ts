@@ -5,11 +5,9 @@ import type { UserResponse } from "../domain/RealWorldApi.js";
 import type { User } from "../domain/User.js";
 import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
 
-export const tokenMissing = (): RealWorldError =>
-  makeRealWorldError(401, "token", "is missing");
+export const tokenMissing = (): RealWorldError => makeRealWorldError(401, "token", "is missing");
 
-export const tokenInvalid = (): RealWorldError =>
-  makeRealWorldError(401, "token", "is invalid");
+export const tokenInvalid = (): RealWorldError => makeRealWorldError(401, "token", "is invalid");
 
 export const validationError = (field: string): RealWorldError =>
   makeRealWorldError(422, field, "can't be blank");
@@ -38,27 +36,22 @@ export const requireUser = (
   token: Option.Option<OpaqueToken>,
   users: UserRepositoryService,
 ): Effect.Effect<User, RealWorldError> =>
-  Option.isNone(token)
-    ? Effect.fail(tokenMissing())
-    : users.findByToken(token.value).pipe(
-        Effect.catch(() => Effect.fail(tokenInvalid())),
-        Effect.flatMap((user) =>
-          Option.isSome(user) ? Effect.succeed(user.value) : Effect.fail(tokenInvalid()),
-        ),
-      );
+  Option.match(token, {
+    onNone: () => Effect.fail(tokenMissing()),
+    onSome: (value) =>
+      users.findByToken(value).pipe(
+        Effect.flatMap(Effect.fromOption),
+        Effect.catch(tokenInvalid),
+      ),
+  });
 
 export const optionalUserId = (
   token: Option.Option<OpaqueToken>,
   users: UserRepositoryService,
-): Effect.Effect<Option.Option<UserId>, RealWorldError> =>
-  Option.isNone(token)
-    ? Effect.succeed(Option.none())
-    : requireUser(token, users).pipe(Effect.map((user) => Option.some(user.id)));
+): Effect.Effect<Option.Option<UserId>> =>
+  requireUser(token, users).pipe(Effect.option, Effect.map(Option.map((user) => user.id)));
 
-export const userResponse = (
-  user: User,
-  token: OpaqueToken,
-): UserResponse => ({
+export const userResponse = (user: User, token: OpaqueToken): UserResponse => ({
   user: {
     email: user.email,
     token,

@@ -6,7 +6,11 @@ import {
   buildVirtualModuleUri,
   createVirtualModuleProvider,
 } from "./VirtualModuleProvider";
-import { writeVirtualPreviewAndGetPath } from "./virtualPreviewDisk";
+import {
+  getVirtualPreviewSource,
+  writeVirtualPreviewAndGetPath,
+  type VirtualPreviewResolver,
+} from "./virtualPreviewDisk";
 import { createResolver, getProjectRootForFile } from "./resolver";
 import {
   createVirtualModulesTreeProvider,
@@ -24,11 +28,22 @@ export function activate(context: vscode.ExtensionContext): void {
   let refreshDebounceTimer: ReturnType<typeof setTimeout> | undefined;
   let pendingRefreshRoots = new Set<string>();
 
-  function cacheVirtualModule(result: { virtualFileName: string; sourceText: string }): void {
+  function cacheVirtualModule(
+    projectRoot: string,
+    importer: string,
+    result: { virtualFileName: string; sourceText: string },
+  ): void {
     const path = result.virtualFileName.startsWith("/")
       ? result.virtualFileName
       : `/${result.virtualFileName}`;
-    contentByVirtualPath.set(path.replace(/\\/g, "/").replace(/^\/+/, "/"), result.sourceText);
+    const sourceText = getVirtualPreviewSource(
+      projectRoot,
+      importer,
+      result.virtualFileName,
+      result.sourceText,
+      createNestedPreviewResolver(projectRoot, importer),
+    );
+    contentByVirtualPath.set(path.replace(/\\/g, "/").replace(/^\/+/, "/"), sourceText);
   }
 
   function getResolver(projectRoot: string): ReturnType<typeof createResolver> {
@@ -47,6 +62,27 @@ export function activate(context: vscode.ExtensionContext): void {
       virtualModuleRegistry.set(projectRoot, set);
     }
     set.add(`${moduleId}::${importer}`);
+  }
+
+  function createNestedPreviewResolver(
+    projectRoot: string,
+    importer: string,
+  ): VirtualPreviewResolver {
+    return (moduleId) => getResolver(projectRoot).resolve(moduleId, importer);
+  }
+
+  function writeResolvedVirtualPreview(
+    projectRoot: string,
+    importer: string,
+    result: { virtualFileName: string; sourceText: string },
+  ): string {
+    return writeVirtualPreviewAndGetPath(
+      projectRoot,
+      importer,
+      result.virtualFileName,
+      result.sourceText,
+      createNestedPreviewResolver(projectRoot, importer),
+    );
   }
 
   function fireRefreshesForProject(
@@ -68,14 +104,9 @@ export function activate(context: vscode.ExtensionContext): void {
       const resolver = getResolver(projectRoot);
       const result = resolver.resolve(moduleId, importer);
       if (result) {
-        cacheVirtualModule(result);
+        cacheVirtualModule(projectRoot, importer, result);
         onDidChangeEmitter.fire(buildVirtualModuleUri(moduleId, importer, result));
-        writeVirtualPreviewAndGetPath(
-          projectRoot,
-          importer,
-          result.virtualFileName,
-          result.sourceText,
-        );
+        writeResolvedVirtualPreview(projectRoot, importer, result);
       } else {
         onDidChangeEmitter.fire(buildVirtualModuleUri(moduleId, importer));
       }
@@ -86,6 +117,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const provider = createVirtualModuleProvider({
     getResolver,
+    getProjectRoot,
     onDidChangeEmitter,
     onResolved: (moduleId, importer) => {
       const path = importer.startsWith("file:") ? vscode.Uri.parse(importer).fsPath : importer;
@@ -142,7 +174,7 @@ export function activate(context: vscode.ExtensionContext): void {
     getProjectRoot,
     onResolved: (projectRoot, moduleId, importer) =>
       registerVirtualModule(projectRoot, moduleId, importer),
-    onCache: cacheVirtualModule,
+    onCache: (result, importer, projectRoot) => cacheVirtualModule(projectRoot, importer, result),
   });
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("typedVirtualModules", treeProvider),
@@ -178,7 +210,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const root = getProjectRoot(importer);
       if (root) registerVirtualModule(root, moduleId, importer);
     },
-    cacheVirtualModule,
+    (result, importer, projectRoot) => cacheVirtualModule(projectRoot, importer, result),
     outputChannel,
   );
 
@@ -193,13 +225,8 @@ export function activate(context: vscode.ExtensionContext): void {
           return;
         }
         registerVirtualModule(projectRoot, moduleId, importer);
-        cacheVirtualModule(result);
-        const absPath = writeVirtualPreviewAndGetPath(
-          projectRoot,
-          importer,
-          result.virtualFileName,
-          result.sourceText,
-        );
+        cacheVirtualModule(projectRoot, importer, result);
+        const absPath = writeResolvedVirtualPreview(projectRoot, importer, result);
         const doc = await vscode.workspace.openTextDocument(absPath);
         await vscode.window.showTextDocument(doc, { preview: false });
       },
@@ -225,7 +252,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const root = getProjectRoot(importer);
       if (root) registerVirtualModule(root, moduleId, importer);
     },
-    cacheVirtualModule,
+    (result, importer, projectRoot) => cacheVirtualModule(projectRoot, importer, result),
   );
   context.subscriptions.push(
     vscode.languages.registerDocumentLinkProvider(
@@ -283,13 +310,8 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       registerVirtualModule(projectRoot, moduleId.trim(), importer);
-      cacheVirtualModule(result);
-      const absPath = writeVirtualPreviewAndGetPath(
-        projectRoot,
-        importer,
-        result.virtualFileName,
-        result.sourceText,
-      );
+      cacheVirtualModule(projectRoot, importer, result);
+      const absPath = writeResolvedVirtualPreview(projectRoot, importer, result);
       const doc = await vscode.workspace.openTextDocument(absPath);
       await vscode.window.showTextDocument(doc, { preview: false });
     }),
@@ -338,12 +360,7 @@ export function activate(context: vscode.ExtensionContext): void {
       outputChannel.appendLine(`Resolved: virtualFileName="${result.virtualFileName}"`);
 
       try {
-        const absPath = writeVirtualPreviewAndGetPath(
-          projectRoot,
-          importer,
-          result.virtualFileName,
-          result.sourceText,
-        );
+        const absPath = writeResolvedVirtualPreview(projectRoot, importer, result);
         outputChannel.appendLine(`OK: would open "${absPath}"`);
       } catch (err) {
         outputChannel.appendLine(`FAIL: ${err}`);
@@ -380,13 +397,8 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       registerVirtualModule(projectRoot, moduleId, importer);
-      cacheVirtualModule(result);
-      const absPath = writeVirtualPreviewAndGetPath(
-        projectRoot,
-        importer,
-        result.virtualFileName,
-        result.sourceText,
-      );
+      cacheVirtualModule(projectRoot, importer, result);
+      const absPath = writeResolvedVirtualPreview(projectRoot, importer, result);
       const virtualDoc = await vscode.workspace.openTextDocument(absPath);
       await vscode.window.showTextDocument(virtualDoc, { preview: false });
     }),
@@ -419,7 +431,11 @@ function createVirtualModuleDefinitionProvider(
   getResolver: (root: string) => ReturnType<typeof createResolver>,
   getProjectRoot: (path: string) => string | undefined,
   onResolved?: (moduleId: string, importer: string) => void,
-  onCache?: (result: { virtualFileName: string; sourceText: string }) => void,
+  onCache?: (
+    result: { virtualFileName: string; sourceText: string },
+    importer: string,
+    projectRoot: string,
+  ) => void,
   outputChannel?: vscode.OutputChannel,
 ): vscode.DefinitionProvider {
   const log = (msg: string) => outputChannel?.appendLine(`[go-to-def] ${msg}`);
@@ -452,12 +468,13 @@ function createVirtualModuleDefinitionProvider(
         log(`resolved virtualFileName="${result.virtualFileName}"`);
         try {
           onResolved?.(moduleId, importer);
-          onCache?.(result);
+          onCache?.(result, importer, projectRoot);
           const absPath = writeVirtualPreviewAndGetPath(
             projectRoot,
             importer,
             result.virtualFileName,
             result.sourceText,
+            (nestedId) => resolver.resolve(nestedId, importer),
           );
           log(`OK returning Location(${absPath}) [import specifier]`);
           return [new vscode.Location(vscode.Uri.file(absPath), new vscode.Position(0, 0))];
@@ -480,7 +497,11 @@ function createVirtualModuleDocumentLinkProvider(
   getResolver: (root: string) => ReturnType<typeof createResolver>,
   getProjectRoot: (path: string) => string | undefined,
   onResolved?: (moduleId: string, importer: string) => void,
-  onCache?: (result: { virtualFileName: string; sourceText: string }) => void,
+  onCache?: (
+    result: { virtualFileName: string; sourceText: string },
+    importer: string,
+    projectRoot: string,
+  ) => void,
 ): vscode.DocumentLinkProvider {
   return {
     provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
@@ -498,7 +519,7 @@ function createVirtualModuleDocumentLinkProvider(
         if (!result) continue;
 
         onResolved?.(moduleId, importer);
-        onCache?.(result);
+        onCache?.(result, importer, projectRoot);
         const position = document.positionAt(match.index + match[0].indexOf(moduleId));
         const range = new vscode.Range(
           position,
@@ -509,6 +530,7 @@ function createVirtualModuleDocumentLinkProvider(
           importer,
           result.virtualFileName,
           result.sourceText,
+          (nestedId) => resolver.resolve(nestedId, importer),
         );
         links.push(new vscode.DocumentLink(range, vscode.Uri.file(absPath)));
       }

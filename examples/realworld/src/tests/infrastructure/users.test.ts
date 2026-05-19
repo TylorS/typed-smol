@@ -7,7 +7,7 @@ import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Conf
 import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
 import { SessionTokens } from "../../infrastructure/SessionTokens.js";
-import { withSqlite } from "../../infrastructure/Sql.js";
+import { SqliteLive, withSqlite } from "../../infrastructure/Sql.js";
 import {
   DuplicateUserField,
   PasswordPolicyError,
@@ -23,6 +23,7 @@ const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Effect.provide(UserRepository.Live),
     Effect.provide(SessionTokens.Live),
     Effect.provide(PasswordHasher.Live),
+    Effect.provide(SqliteLive),
     Effect.provide(TestConfig),
   );
 

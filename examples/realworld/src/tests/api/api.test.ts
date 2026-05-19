@@ -14,6 +14,7 @@ import { ApplicationServices } from "../../application/Services.js";
 import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
 import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
+import { SqliteLive } from "../../infrastructure/Sql.js";
 import { SessionTokens } from "../../infrastructure/SessionTokens.js";
 import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository.js";
 import { CommentRepository } from "../../infrastructure/repositories/CommentRepository.js";
@@ -38,6 +39,7 @@ const ServiceLayers = [
   TagRepository.Live,
   SessionTokens.Live,
   PasswordHasher.Live,
+  SqliteLive,
   TestConfig,
 ] as const;
 

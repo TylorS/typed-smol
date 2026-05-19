@@ -12,7 +12,11 @@ import {
   type HttpApiTreeNode,
 } from "./internal/httpapiDescriptorTree.js";
 import { classifyHttpApiFileRole } from "./internal/httpapiFileRoles.js";
-import { emitHttpApiSource } from "./internal/emitHttpApiSource.js";
+import {
+  emitHttpApiSource,
+  type HttpApiExportExpression,
+  type HttpApiExportExpressionImport,
+} from "./internal/emitHttpApiSource.js";
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
 import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
 import { buildHttpApiOpenApiPlan } from "./internal/httpapiOpenApiPlan.js";
@@ -23,6 +27,7 @@ import {
 } from "./internal/routeTypeNode.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type {
+  ImportInfo,
   TypeInfoApi,
   TypeInfoFileSnapshot,
   VirtualModuleBuildError,
@@ -66,8 +71,10 @@ export interface HttpApiVirtualModulePluginOptions {
   readonly pathPrefix?: `/${string}`;
 }
 
+export type HttpApiVirtualModuleMode = "full" | "client";
+
 export type ParseHttpApiVirtualModuleIdResult =
-  | { readonly ok: true; readonly relativeDirectory: string }
+  | { readonly ok: true; readonly relativeDirectory: string; readonly mode: HttpApiVirtualModuleMode }
   | { readonly ok: false; readonly reason: string };
 
 export function parseHttpApiVirtualModuleId(
@@ -82,7 +89,24 @@ export function parseHttpApiVirtualModuleId(
     return { ok: false, reason: `id must start with "${prefix}"` };
   }
 
-  let relativeDirectory = id.slice(prefix.length);
+  const body = id.slice(prefix.length);
+  const separatorIndex = body.indexOf("?");
+  let relativeDirectory = separatorIndex === -1 ? body : body.slice(0, separatorIndex);
+  const params = new URLSearchParams(separatorIndex === -1 ? "" : body.slice(separatorIndex + 1));
+  const mode = params.get("mode") ?? "full";
+  const unsupported = [...params.keys()].find((key) => key !== "mode");
+  if (unsupported !== undefined) {
+    return {
+      ok: false,
+      reason: `api virtual module does not support query option "${unsupported}"`,
+    };
+  }
+  if (mode !== "full" && mode !== "client") {
+    return {
+      ok: false,
+      reason: 'api virtual module mode must be one of "full" or "client"',
+    };
+  }
   if (
     relativeDirectory.length > 0 &&
     relativeDirectory !== "." &&
@@ -96,11 +120,15 @@ export function parseHttpApiVirtualModuleId(
   const relativeResult = validatePathSegment(relativeDirectory, "relativeDirectory");
   if (!relativeResult.ok) return { ok: false, reason: relativeResult.reason };
 
-  return { ok: true, relativeDirectory: relativeResult.value };
+  return { ok: true, relativeDirectory: relativeResult.value, mode };
 }
 
 export type ResolveHttpApiTargetDirectoryResult =
-  | { readonly ok: true; readonly targetDirectory: string }
+  | {
+      readonly ok: true;
+      readonly targetDirectory: string;
+      readonly mode: HttpApiVirtualModuleMode;
+    }
   | { readonly ok: false; readonly reason: string };
 
 export function resolveHttpApiTargetDirectory(
@@ -123,7 +151,7 @@ export function resolveHttpApiTargetDirectory(
     return { ok: false, reason: "resolved target directory is outside importer base directory" };
   }
 
-  return { ok: true, targetDirectory: toPosixPath(resolved.path) };
+  return { ok: true, targetDirectory: toPosixPath(resolved.path), mode: parsed.mode };
 }
 
 function isExistingDirectory(absolutePath: string): boolean {
@@ -240,6 +268,81 @@ function validateEndpointContracts(
   return violations.sort((a, b) => a.message.localeCompare(b.message, "en"));
 }
 
+function extractExportExpressionsByPath(
+  snapshotsByPath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+): ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>> {
+  return new Map(
+    [...snapshotsByPath].map(([path, snapshot]) => [
+      path,
+      new Map(
+        snapshot.exports.flatMap((exported) => {
+          const expression = extractConstExportExpression(exported.declarationText);
+          if (!expression) return [];
+          return [[exported.name, {
+            expression,
+            imports: importsForExpression(expression, snapshot.imports ?? []),
+          } satisfies HttpApiExportExpression]];
+        }),
+      ),
+    ]),
+  );
+}
+
+function extractConstExportExpression(declarationText: string | undefined): string | undefined {
+  if (!declarationText) return undefined;
+  const match = declarationText.match(
+    /^(?:export\s+)?(?:const\s+)?\w+\s*(?::[^=]+)?=\s*([\s\S]*?);?$/,
+  );
+  return match?.[1]?.trim();
+}
+
+function importsForExpression(
+  expression: string,
+  imports: readonly ImportInfo[],
+): readonly HttpApiExportExpressionImport[] {
+  const specs: HttpApiExportExpressionImport[] = [];
+  for (const imported of imports) {
+    for (const name of imported.importedNames ?? []) {
+      const [importedName, localName] = splitNamedImport(name);
+      if (!referencesIdentifier(expression, localName)) continue;
+      specs.push({
+        kind: "named",
+        moduleSpecifier: imported.moduleSpecifier,
+        importedName,
+        localName,
+      });
+    }
+    if (imported.namespaceImport && referencesIdentifier(expression, imported.namespaceImport)) {
+      specs.push({
+        kind: "namespace",
+        moduleSpecifier: imported.moduleSpecifier,
+        localName: imported.namespaceImport,
+      });
+    }
+    if (imported.defaultImport && referencesIdentifier(expression, imported.defaultImport)) {
+      specs.push({
+        kind: "default",
+        moduleSpecifier: imported.moduleSpecifier,
+        localName: imported.defaultImport,
+      });
+    }
+  }
+  return specs;
+}
+
+function splitNamedImport(name: string): readonly [importedName: string, localName: string] {
+  const match = name.match(/^(.+)\s+as\s+(.+)$/);
+  return match ? [match[1]!.trim(), match[2]!.trim()] : [name, name];
+}
+
+function referencesIdentifier(expression: string, identifier: string): boolean {
+  return new RegExp(`\\b${escapeRegExp(identifier)}\\b`).test(expression);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Creates the HttpApi virtual module plugin with sync shouldResolve and build behavior.
  */
@@ -344,6 +447,7 @@ export const createHttpApiVirtualModulePlugin = (
         string,
         { path: string; method: string; name: string }
       >();
+      const exportExpressionsByPath = extractExportExpressionsByPath(snapshotsByRelativePath);
       const optionalExportsByPath = new Map<
         string,
         ReadonlySet<"headers" | "body" | "success" | "error">
@@ -383,6 +487,8 @@ export const createHttpApiVirtualModulePlugin = (
         prefixByScope,
         pathPrefix: options.pathPrefix,
         openapiPlan,
+        mode: resolved.mode === "client" ? "client" : "full",
+        exportExpressionsByPath,
       });
       if (tree.diagnostics.length > 0) {
         return {

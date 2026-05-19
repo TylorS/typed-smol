@@ -1,15 +1,14 @@
 import { ApiHandlerRaw } from "@typed/app/httpapi/ApiHandler";
 import * as Route from "@typed/router";
+import { headers } from "./_headers.js";
 import { Users } from "../../application/Users.js";
-import { ErrorResponse } from "../../domain/Errors.js";
 import { UserResponse } from "../../domain/RealWorldApi.js";
-import { authToken } from "../../api-support/Common.js";
+import { HttpMethod, authToken } from "../../api-support/Common.js";
 import { respond } from "../../api-support/HttpErrors.js";
 
 export const route = Route.Parse("/user");
-export const method = "GET";
+export const method = HttpMethod.Get;
 export const success = UserResponse;
-export const error = ErrorResponse;
 
-export const handler = ApiHandlerRaw({ route, method })(({ headers }) =>
+export const handler = ApiHandlerRaw({ route, method, headers })(({ headers }) =>
   respond(Users.use((users) => users.current(authToken(headers)))));

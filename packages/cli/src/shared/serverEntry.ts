@@ -37,11 +37,24 @@ const fileExistsSync = (p: string): boolean => {
 export const resolveServerEntry = (
   cliEntry: Option.Option<string>,
   projectRoot: string,
+  configEntry?: string,
 ): Effect.Effect<string, ServerEntryNotFoundError> =>
   Effect.gen(function* () {
     const fromCli = Option.getOrUndefined(cliEntry);
     if (fromCli) {
       const resolved = path.isAbsolute(fromCli) ? fromCli : path.resolve(projectRoot, fromCli);
+      if (fileExistsSync(resolved)) return resolved;
+      return yield* Effect.fail(
+        new ServerEntryNotFoundError(`Server entry not found: ${resolved}`, projectRoot, [
+          resolved,
+        ]),
+      );
+    }
+
+    if (configEntry) {
+      const resolved = path.isAbsolute(configEntry)
+        ? configEntry
+        : path.resolve(projectRoot, configEntry);
       if (fileExistsSync(resolved)) return resolved;
       return yield* Effect.fail(
         new ServerEntryNotFoundError(`Server entry not found: ${resolved}`, projectRoot, [

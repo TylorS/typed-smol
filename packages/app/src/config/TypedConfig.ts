@@ -74,8 +74,8 @@ export interface TypedConfig {
   /** Path to tsconfig.json (relative to project root or absolute). Default: auto-discovered. */
   readonly tsconfig?: string;
 
-  /** Enable tsconfig path alias resolution. Default: true. */
-  readonly tsconfigPaths?: boolean | Record<string, unknown>;
+  /** Enable Vite-native tsconfig path alias resolution. Default: true. */
+  readonly tsconfigPaths?: boolean;
 
   /** Dev server defaults. Overridden by CLI flags. */
   readonly server?: {

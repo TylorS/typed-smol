@@ -102,7 +102,7 @@ const validateRegister = (
     requireNonBlank("username", input.user.username),
     requireNonBlank("email", input.user.email),
     requireNonBlank("password", input.user.password),
-  ]).pipe(Effect.as(input.user));
+  ], { concurrency: "unbounded" }).pipe(Effect.as(input.user));
 
 const validateLogin = (
   input: LoginUserRequest,
@@ -110,7 +110,7 @@ const validateLogin = (
   Effect.all([
     requireNonBlank("email", input.user.email),
     requireNonBlank("password", input.user.password),
-  ]).pipe(Effect.as(input.user));
+  ], { concurrency: "unbounded" }).pipe(Effect.as(input.user));
 
 const validateUpdate = (
   input: UpdateUserRequest,

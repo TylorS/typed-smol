@@ -4,7 +4,7 @@
  */
 import * as Layer from "effect/Layer";
 
-export type LayerAny = Layer.Layer<never, any, any>;
+export type LayerAny = Layer.Layer<never, unknown, unknown>;
 
 /** Single layer or non-empty array (uses Layer.mergeAll internally). */
 export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];
@@ -31,8 +31,12 @@ export function composeWithLayers<
 >(base: Base, layers: Layers): ComputeLayers<Layers, Base>;
 export function composeWithLayers<
   Base extends LayerAny,
+>(base: Base, layers?: undefined): Base;
+export function composeWithLayers<
+  Base extends LayerAny,
   const Layers extends ReadonlyArray<LayerOrGroup>,
->(base: Base, layers: Layers): LayerAny {
+>(base: Base, layers?: Layers): LayerAny {
+  if (layers === undefined) return base;
   if (layers.length === 0) return base;
   let out: LayerAny = base;
   for (const layer of layers) {

@@ -1,15 +1,14 @@
 import { ApiHandlerRaw } from "@typed/app/httpapi/ApiHandler";
 import * as Route from "@typed/router";
+import { headers } from "./_headers.js";
 import { Articles } from "../../application/Articles.js";
-import { ErrorResponse } from "../../domain/Errors.js";
 import { SingleArticleResponse } from "../../domain/RealWorldApi.js";
-import { authToken } from "../../api-support/Common.js";
+import { HttpMethod, authToken } from "../../api-support/Common.js";
 import { respond } from "../../api-support/HttpErrors.js";
 
 export const route = Route.Parse("/articles/:slug");
-export const method = "GET";
+export const method = HttpMethod.Get;
 export const success = SingleArticleResponse;
-export const error = ErrorResponse;
 
-export const handler = ApiHandlerRaw({ route, method })(({ headers, path }) =>
+export const handler = ApiHandlerRaw({ route, method, headers })(({ headers, path }) =>
   respond(Articles.use((articles) => articles.get(authToken(headers), path.slug))));

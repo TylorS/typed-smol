@@ -8,6 +8,7 @@ import { Users } from "../../application/Users.js";
 import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
 import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
+import { SqliteLive } from "../../infrastructure/Sql.js";
 import { SessionTokens } from "../../infrastructure/SessionTokens.js";
 import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
 
@@ -20,6 +21,7 @@ const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Effect.provide(UserRepository.Live),
     Effect.provide(SessionTokens.Live),
     Effect.provide(PasswordHasher.Live),
+    Effect.provide(SqliteLive),
     Effect.provide(TestConfig),
   );
 

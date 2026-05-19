@@ -24,6 +24,17 @@ export const sqliteLayer = (
     filename: config.databasePath,
   });
 
+export const SqliteLive: Layer.Layer<
+  SqliteClient.SqliteClient | SqlClient.SqlClient,
+  FileSystemError,
+  RealWorldConfig
+> =
+  Layer.unwrap(Effect.gen(function* () {
+    const config = yield* RealWorldConfig;
+    yield* ensureDatabaseDirectory(config);
+    return sqliteLayer(config);
+  }));
+
 export const withSqlite = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<

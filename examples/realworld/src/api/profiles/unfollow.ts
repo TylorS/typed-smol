@@ -1,17 +1,16 @@
 import { ApiHandlerRaw } from "@typed/app/httpapi/ApiHandler";
 import * as Route from "@typed/router";
+import { headers } from "./_headers.js";
 import { Profiles } from "../../application/Profiles.js";
-import { ErrorResponse } from "../../domain/Errors.js";
 import { ProfileResponse } from "../../domain/RealWorldApi.js";
-import { authToken } from "../../api-support/Common.js";
+import { HttpMethod, authToken } from "../../api-support/Common.js";
 import { respond } from "../../api-support/HttpErrors.js";
 
 export const route = Route.Parse("/profiles/:username/follow");
-export const method = "DELETE";
+export const method = HttpMethod.Delete;
 export const success = ProfileResponse;
-export const error = ErrorResponse;
 
-export const handler = ApiHandlerRaw({ route, method })(({ headers, path }) =>
+export const handler = ApiHandlerRaw({ route, method, headers })(({ headers, path }) =>
   respond(
     Profiles.use((profiles) => profiles.unfollow(authToken(headers), path.username)),
   ));

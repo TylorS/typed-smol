@@ -1,93 +1,171 @@
-import { html } from "@typed/template";
+import * as AsyncData from "@typed/async-data";
+import { RefAsyncData, RefSubject } from "@typed/fx";
+import type { RefSubject as RefSubjectType } from "@typed/fx/RefSubject/RefSubject";
+import { html, many } from "@typed/template";
+import * as Effect from "effect/Effect";
 import type { Article, Comment } from "../domain/Article.js";
+import type { ArticlePageData } from "../page-data/PageData.js";
 import { renderMarkdown, safeTextPreview } from "../domain/Markdown.js";
 import { BrowserAuth } from "./BrowserAuth.js";
-import { clickIntent, formSubmit, textField } from "./FormEvents.js";
+import { FormTargetError, clickIntent, formSubmit, textField } from "./FormEvents.js";
 import { avatarSrc } from "./Layout.js";
+import { AsyncDataMessages, AsyncDataSuccess } from "./AsyncDataView.js";
 
-export const ArticlePage = (
-  article: Article,
-  comments: readonly Comment[],
-) => html`<section class="article-page">
-  <div class="banner">
-    <div class="container">
-      <h1>${safeTextPreview(article.title)}</h1>
-      <div class="article-meta">${ArticleMeta(article)}</div>
+export const ArticlePage = <E, R>(
+  input: RefAsyncData.RefAsyncData<ArticlePageData, E, never, R>,
+) => html`${AsyncDataMessages(input)} ${AsyncDataSuccess(input, ArticlePageContent)}`;
+
+const ArticlePageContent = <E, R>(
+  input: RefSubject.Computed<ArticlePageData, E, R>,
+) => {
+  const { article, comments } = RefSubject.proxy(input);
+  const articleFields = RefSubject.proxy(article);
+  const author = RefSubject.proxy(articleFields.author);
+  const title = RefSubject.map(articleFields.title, safeTextPreview);
+  const body = RefSubject.map(articleFields.body, renderMarkdown);
+  const authorName = RefSubject.map(author.username, safeTextPreview);
+
+  return html`<section class="article-page">
+    <div class="banner">
+      <div class="container">
+        <h1>${title}</h1>
+        <div class="article-meta">${ArticleMeta(article)}</div>
+      </div>
     </div>
-  </div>
-  <div class="container page">
-    <div class="article-content">${renderMarkdown(article.body)}</div>
-    <ul class="tag-list">
-      ${article.tagList.map(Tag)}
-    </ul>
-    <hr />
-    <div class="article-actions">
-      <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(article)}>
-        Favorite Article (${article.favoritesCount})
-      </button>
-      <button class="btn btn-outline-primary btn-sm" onclick=${followAuthor(article)}>
-        Follow ${safeTextPreview(article.author.username)}
-      </button>
+    <div class="container page">
+      <div class="article-content">${body}</div>
+      <ul class="tag-list">
+        ${many(articleFields.tagList, (tag) => tag, Tag)}
+      </ul>
+      <hr />
+      <div class="article-actions">
+        <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(article)}>
+          Favorite Article (${articleFields.favoritesCount})
+        </button>
+        <button class="btn btn-outline-primary btn-sm" onclick=${followAuthor(article)}>
+          Follow ${authorName}
+        </button>
+      </div>
+      ${CommentForm(articleFields.slug)}
+      ${many(
+        comments,
+        (comment) => comment.id,
+        (comment) => CommentCard(articleFields.slug, comment),
+      )}
     </div>
-    ${CommentForm(article.slug)} ${comments.map((comment) => CommentCard(article.slug, comment))}
-  </div>
-</section>`;
+  </section>`;
+};
 
-const ArticleMeta = (article: Article) => html`<a href=${`/profile/${article.author.username}`}>
-  <img src=${avatarSrc(article.author.image)} />
-</a>
-<div class="info">
-  <a class="author" href=${`/profile/${article.author.username}`}>
-    ${safeTextPreview(article.author.username)}
-  </a>
-  <span class="date">${article.createdAt}</span>
-</div>`;
+export type ArticleAsyncData<E = never> = AsyncData.AsyncData<ArticlePageData, E>;
 
-const CommentForm = (slug: string) => html`<form class="card comment-form" onsubmit=${postComment(slug)}>
+const ArticleMeta = <E, R>(articleRef: RefSubject.Computed<Article, E, R>) => {
+  const article = RefSubject.proxy(articleRef);
+  const author = RefSubject.proxy(article.author);
+  const profileHref = RefSubject.map(author.username, (value) => `/profile/${value}`);
+  const avatar = RefSubject.map(author.image, avatarSrc);
+  const displayName = RefSubject.map(author.username, safeTextPreview);
+
+  return html`<a href=${profileHref}>
+      <img src=${avatar} />
+    </a>
+    <div class="info">
+      <a class="author" href=${profileHref}>
+        ${displayName}
+      </a>
+      <span class="date">${article.createdAt}</span>
+    </div>
+  `;
+};
+
+const CommentForm = <E, R>(slug: RefSubject.Computed<string, E, R>) => html`<form
+  class="card comment-form"
+  onsubmit=${postComment(slug)}
+>
   <div class="card-block">
-    <textarea
-      class="form-control"
-      name="body"
-      placeholder="Write a comment..."
-      rows="3"
-    ></textarea>
+    <textarea class="form-control" name="body" placeholder="Write a comment..." rows="3"></textarea>
   </div>
   <div class="card-footer">
     <button class="btn btn-sm btn-primary">Post Comment</button>
   </div>
 </form>`;
 
-const CommentCard = (slug: string, comment: Comment) => html`<div class="card">
-  <div class="card-block"><p class="card-text">${safeTextPreview(comment.body)}</p></div>
-  <div class="card-footer">
-    <a class="comment-author" href=${`/profile/${comment.author.username}`}>
-      <img class="comment-author-img" src=${avatarSrc(comment.author.image)} />
-      ${safeTextPreview(comment.author.username)}
-    </a>
-    <span class="mod-options">
-      <button class="btn btn-sm btn-outline-danger" onclick=${deleteComment(slug, comment.id)}>
-        <i class="ion-trash-a"></i>
-      </button>
-    </span>
-  </div>
-</div>`;
+const CommentCard = <E, R>(
+  slug: RefSubject.Computed<string, E, R>,
+  commentRef: RefSubjectType<Comment>,
+) => {
+  const comment = RefSubject.proxy(commentRef);
+  const author = RefSubject.proxy(comment.author);
+  const body = RefSubject.map(comment.body, safeTextPreview);
+  const profileHref = RefSubject.map(author.username, (value) => `/profile/${value}`);
+  const avatar = RefSubject.map(author.image, avatarSrc);
+  const displayName = RefSubject.map(author.username, safeTextPreview);
+  return html`<div class="card">
+    <div class="card-block">
+      <p class="card-text">${body}</p>
+    </div>
+    <div class="card-footer">
+      <a
+        class="comment-author"
+        href=${profileHref}
+      >
+        <img class="comment-author-img" src=${avatar} />
+        ${displayName}
+      </a>
+      <span class="mod-options">
+        <button class="btn btn-sm btn-outline-danger" onclick=${deleteComment(slug, comment.id)}>
+          <i class="ion-trash-a"></i>
+        </button>
+      </span>
+    </div>
+  </div>`;
+};
 
-const Tag = (tag: string) =>
+const Tag = <A extends string>(tag: RefSubjectType<A>) =>
   html`<li class="tag-default tag-pill tag-outline">${tag}</li>`;
 
-const favoriteArticle = (article: Article) =>
-  clickIntent(() =>
-    BrowserAuth.use((auth) => auth.favoriteArticle(article.slug, article.favorited)));
+const favoriteArticle = <E, R>(article: RefSubject.Computed<Article, E, R>) =>
+  clickIntent(
+    Effect.fn(function* () {
+      const current = yield* readActionValue(article);
+      const auth = yield* BrowserAuth;
+      return yield* auth.favoriteArticle(current.slug, current.favorited);
+    }),
+  );
 
-const followAuthor = (article: Article) =>
-  clickIntent(() =>
-    BrowserAuth.use((auth) =>
-      auth.followProfile(article.author.username, article.author.following)));
+const followAuthor = <E, R>(article: RefSubject.Computed<Article, E, R>) =>
+  clickIntent(
+    Effect.fn(function* () {
+      const current = yield* readActionValue(article);
+      const auth = yield* BrowserAuth;
+      return yield* auth.followProfile(current.author.username, current.author.following);
+    }),
+  );
 
-const postComment = (slug: string) =>
-  formSubmit((form) =>
-    BrowserAuth.use((auth) =>
-      auth.createComment(slug, { comment: { body: textField(form, "body") } })));
+const postComment = <E, R>(slug: RefSubject.Computed<string, E, R>) =>
+  formSubmit(
+    Effect.fn(function* (form: HTMLFormElement) {
+      const currentSlug = yield* readActionValue(slug);
+      const auth = yield* BrowserAuth;
+      return yield* auth.createComment(currentSlug, { comment: { body: textField(form, "body") } });
+    }),
+  );
 
-const deleteComment = (slug: string, id: number) =>
-  clickIntent(() => BrowserAuth.use((auth) => auth.deleteComment(slug, id)));
+const deleteComment = <A extends number, E, R>(
+  slug: RefSubject.Computed<string, E, R>,
+  id: RefSubject.Computed<A>,
+) =>
+  clickIntent(
+    Effect.fn(function* () {
+      const currentSlug = yield* readActionValue(slug);
+      const commentId = yield* id;
+      const auth = yield* BrowserAuth;
+      return yield* auth.deleteComment(currentSlug, commentId);
+    }),
+  );
+
+const readActionValue = <A, E, R>(
+  value: RefSubject.Computed<A, E, R>,
+): Effect.Effect<A, FormTargetError, R> =>
+  value.pipe(
+    Effect.mapError(() => new FormTargetError({ reason: "reactive value is unavailable" })),
+  );

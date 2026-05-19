@@ -41,8 +41,10 @@ describe("typed-realworld package skeleton", () => {
 
     expect(Object.keys(pkg.devDependencies).sort()).toEqual([
       "@playwright/test",
+      "@typed/cli",
       "@typed/tsconfig",
       "@typed/virtual-modules-compiler",
+      "@typed/virtual-modules-ts-plugin",
       "@typed/vite-plugin",
       "@types/node",
       "typescript",
@@ -65,6 +67,7 @@ describe("typed-realworld package skeleton", () => {
       "dev",
       "preview",
       "test",
+      "test:acceptance:local",
       "test:api:hurl:local",
       "test:e2e:local",
       "test:integration",
@@ -80,7 +83,7 @@ describe("typed-realworld package skeleton", () => {
     expect(readText(".gitignore")).toContain(".hurl/");
 
     expect(readText("vmc.config.ts")).toContain("createRouterVirtualModulePlugin");
-    expect(readText("vmc.config.ts")).toContain("createRouteHandlersVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).not.toContain("createRouteHandlersVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createHttpApiVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createConfigVirtualModulePlugin");
     expect(readText("vmc.config.ts")).toContain("createHtmlVirtualModulePlugin");
@@ -101,12 +104,17 @@ describe("typed-realworld package skeleton", () => {
     expect(existsSync(resolve(projectRoot, "public/default-avatar.svg"))).toBe(true);
   });
 
-  it("keeps route modules browser-safe and server dependencies handler-scoped", () => {
+  it("keeps route modules environment-agnostic with entrypoint-scoped dependencies", () => {
     expect(existsSync(resolve(projectRoot, "src/routes/_dependencies.ts"))).toBe(false);
-    expect(existsSync(resolve(projectRoot, "src/routes/_handlers.dependencies.ts"))).toBe(true);
+    expect(existsSync(resolve(projectRoot, "src/routes/_handlers.dependencies.ts"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, "src/.server.dependencies.ts"))).toBe(true);
+
+    expect(routeSourceFiles().filter((path) => path.includes(".handler."))).toEqual([]);
 
     for (const path of routeSourceFiles()) {
       expect(readText(path), path).not.toContain('from "@typed/app";');
+      expect(readText(path), path).not.toContain("../presentation/App.js");
+      expect(readText(path), path).not.toContain("switchMap");
     }
   });
 
@@ -116,11 +124,55 @@ describe("typed-realworld package skeleton", () => {
     }
   });
 
+  it("uses the generated api virtual module instead of a hand-written client api", () => {
+    expect(existsSync(resolve(projectRoot, "src/presentation/ClientApi.ts"))).toBe(false);
+
+    expect(readText("src/Api.ts")).toContain('from "api:./api"');
+    expect(readText("src/presentation/BrowserApiClient.ts")).toContain('from "../Api.js"');
+    expect(readText("src/page-data/BrowserPageData.ts")).toContain('from "../Api.js"');
+    expect(readText("src/presentation/State.ts")).toContain('from "../Api.js"');
+
+    for (const path of productionSourceFiles()) {
+      expect(readText(path), path).not.toContain("ClientApi");
+      expect(readText(path), path).not.toContain("createRealWorldClient");
+    }
+  });
+
   it("does not use unknown as an Effect error channel in production source", () => {
     const offenders = productionSourceFiles()
       .flatMap((path) =>
         effectUnknownErrorChannelLines(path).map((line) => `${path}:${line}`));
 
+    expect(offenders).toEqual([]);
+  });
+
+  it("uses Effect.gen for sequential browser state effects", () => {
+    const offenders = genPreferredSourceFiles()
+      .flatMap((path) =>
+        effectCombinatorLines(path).map((line) => `${path}:${line}`));
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("models asynchronously loaded route data with RefAsyncData", () => {
+    for (const path of asyncRouteSourceFiles()) {
+      const source = readText(path);
+      expect(source, path).toContain("RefAsyncData");
+      expect(source, path).not.toContain("RefSubject.mapEffect");
+    }
+
+    for (const path of asyncPageSourceFiles()) {
+      expect(readText(path), path).toContain("AsyncData");
+    }
+  });
+
+  it("provides SqlClient through layers instead of rebuilding sqlite per repository call", () => {
+    const dependencyLayer = readText("src/.server.dependencies.ts");
+    const offenders = repositorySourceFiles()
+      .flatMap((path) =>
+        readText(path).includes("runSql") ? [path] : []);
+
+    expect(dependencyLayer).toContain("SqliteLive");
     expect(offenders).toEqual([]);
   });
 });
@@ -132,7 +184,12 @@ const productionSourceFiles = (): readonly string[] => [
   "src/application/Profiles.ts",
   "src/application/Tags.ts",
   "src/application/Users.ts",
+  "src/browser.ts",
+  "src/page-data/BrowserPageData.ts",
+  "src/page-data/PageData.ts",
+  "src/presentation/BrowserAuth.ts",
   "src/presentation/FormEvents.ts",
+  "src/presentation/State.ts",
 ];
 
 const routeSourceFiles = (): readonly string[] => [
@@ -146,6 +203,20 @@ const routeSourceFiles = (): readonly string[] => [
   "src/routes/register.ts",
   "src/routes/settings.ts",
   "src/routes/tag.ts",
+];
+
+const asyncRouteSourceFiles = (): readonly string[] => [
+  "src/routes/article.ts",
+  "src/routes/index.ts",
+  "src/routes/profile-favorites.ts",
+  "src/routes/profile.ts",
+  "src/routes/tag.ts",
+];
+
+const asyncPageSourceFiles = (): readonly string[] => [
+  "src/presentation/ArticlePage.ts",
+  "src/presentation/Feed.ts",
+  "src/presentation/ProfilePage.ts",
 ];
 
 const apiEndpointSourceFiles = (): readonly string[] => [
@@ -170,8 +241,31 @@ const apiEndpointSourceFiles = (): readonly string[] => [
   "src/api/users/register.ts",
 ];
 
+const repositorySourceFiles = (): readonly string[] => [
+  "src/infrastructure/repositories/ArticleRepository.ts",
+  "src/infrastructure/repositories/CommentRepository.ts",
+  "src/infrastructure/repositories/ProfileRepository.ts",
+  "src/infrastructure/repositories/TagRepository.ts",
+  "src/infrastructure/repositories/UserRepository.ts",
+  "src/infrastructure/SessionTokens.ts",
+];
+
+const genPreferredSourceFiles = (): readonly string[] => [
+  "src/page-data/BrowserPageData.ts",
+  "src/presentation/AuthSessionStorage.ts",
+  "src/presentation/BrowserApiClient.ts",
+  "src/presentation/BrowserAuth.ts",
+  "src/presentation/State.ts",
+];
+
 const effectUnknownErrorChannelLines = (path: string): readonly number[] =>
   readText(path)
     .split("\n")
     .flatMap((line, index) =>
       /Effect(?:\.Effect)?<[^>\n,]+,\s*unknown(?:\s*[>,])/.test(line) ? [index + 1] : []);
+
+const effectCombinatorLines = (path: string): readonly number[] =>
+  readText(path)
+    .split("\n")
+    .flatMap((line, index) =>
+      /Effect\.(?:flatMap|map)\(/.test(line) ? [index + 1] : []);

@@ -3,10 +3,9 @@ import { Context, Effect, Layer } from "effect";
 import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { OpaqueToken, type UserId } from "../domain/Ids.js";
-import { RealWorldConfig } from "./Config.js";
 import {
   currentIsoTimestamp,
-  runSql,
+  provideRepositorySql,
   type RepositoryPersistenceError,
 } from "./repositories/Common.js";
 
@@ -23,11 +22,11 @@ export class SessionTokens extends Context.Service<
   static readonly Live = Layer.effect(
     SessionTokens,
     Effect.gen(function* () {
-      const config = yield* RealWorldConfig;
+      const sql = yield* SqlClient.SqlClient;
 
       return {
         create: (userId) =>
-          runSql(config, Effect.gen(function* () {
+          provideRepositorySql(Effect.gen(function* () {
             const sql = yield* SqlClient.SqlClient;
             const token = yield* Schema.decodeUnknownEffect(OpaqueToken)(
               randomBytes(32).toString("base64url"),
@@ -40,7 +39,7 @@ export class SessionTokens extends Context.Service<
             `;
 
             return token;
-          })),
+          }), sql),
       };
     }),
   );

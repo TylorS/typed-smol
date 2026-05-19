@@ -2,7 +2,6 @@ import { createBrowserVirtualModulePlugin } from "@typed/app/BrowserVirtualModul
 import { createConfigVirtualModulePlugin } from "@typed/app/ConfigVirtualModulePlugin";
 import { createHtmlVirtualModulePlugin } from "@typed/app/HtmlVirtualModulePlugin";
 import { createHttpApiVirtualModulePlugin } from "@typed/app/HttpApiVirtualModulePlugin";
-import { createRouteHandlersVirtualModulePlugin } from "@typed/app/RouteHandlersVirtualModulePlugin";
 import { createRouterVirtualModulePlugin } from "@typed/app/RouterVirtualModulePlugin";
 import { createServerVirtualModulePlugin } from "@typed/app/ServerVirtualModulePlugin";
 
@@ -11,7 +10,6 @@ export default {
     createConfigVirtualModulePlugin(),
     createHtmlVirtualModulePlugin(),
     createRouterVirtualModulePlugin(),
-    createRouteHandlersVirtualModulePlugin(),
     createHttpApiVirtualModulePlugin(),
     createBrowserVirtualModulePlugin(),
     createServerVirtualModulePlugin(),

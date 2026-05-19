@@ -1,10 +1,11 @@
+import type * as Effect from "effect/Effect";
 import type { AuthStore, AuthState } from "./State.js";
 import type { UserResponse } from "../domain/RealWorldApi.js";
 
 export interface ConduitDebug {
-  readonly getToken: () => string | null;
-  readonly getAuthState: () => AuthState;
-  readonly getCurrentUser: () => UserResponse["user"] | null;
+  readonly getToken: Effect.Effect<string | null>;
+  readonly getAuthState: Effect.Effect<AuthState>;
+  readonly getCurrentUser: Effect.Effect<UserResponse["user"] | null>;
 }
 
 export type DebugWindow = {

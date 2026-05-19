@@ -16,10 +16,5 @@ export const parseAuthorizationHeader = (
 ): Option.Option<BearerToken> => {
   const match = /^Token ([^\s]+)$/.exec(header ?? "");
   if (!match) return Option.none();
-
-  try {
-    return Option.some(Schema.decodeUnknownSync(BearerToken)(match[1]));
-  } catch {
-    return Option.none();
-  }
+  return Schema.decodeOption(BearerToken)(match[1]);
 };

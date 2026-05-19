@@ -25,6 +25,8 @@ export const HTTPAPI_SCRIPT_EXTENSION_SET = new Set<string>(
 /** Directory companion filenames (exact match). */
 export const HTTPAPI_DIRECTORY_COMPANION_FILES = [
   "_dependencies.ts",
+  "_errors.ts",
+  "_headers.ts",
   "_middlewares.ts",
   "_prefix.ts",
   "_openapi.ts",

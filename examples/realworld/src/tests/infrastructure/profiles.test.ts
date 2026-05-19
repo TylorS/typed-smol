@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { UserId } from "../../domain/Ids.js";
 import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
+import { SqliteLive } from "../../infrastructure/Sql.js";
 import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "profiles-test.sqlite");
@@ -15,6 +16,7 @@ const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
   Effect.runPromise(
     effect.pipe(
       Effect.provide(ProfileRepository.Live),
+      Effect.provide(SqliteLive),
       Effect.provide(TestConfig),
     ),
   );

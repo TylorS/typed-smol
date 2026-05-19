@@ -15,11 +15,8 @@ and HTML entrypoints, SQLite-backed services, SSR route rendering, and
   typed RealWorld errors and response envelopes.
 - API endpoint modules under `src/api` are discovered by the `api:` virtual
   module compiler surface and use inferred `@typed/app` API handlers.
-- SSR route modules under `src/routes` use typed router layouts and render real
-  data with `@typed/template`.
-- Browser-safe route modules under `src/browser-routes` hydrate the same route
-  declarations without pulling SQLite or server-only dependencies into the
-  client bundle.
+- Route modules under `src/routes` are shared by browser hydration and SSR; page
+  data is supplied through environment-specific `PageData` layers.
 - Browser workflows under `src/presentation` use `@typed/template`
   `EventHandler` bindings, schema-decoded forms, and a typed auth service layer
   supplied through `typed:browser`.
@@ -33,6 +30,9 @@ and HTML entrypoints, SQLite-backed services, SSR route rendering, and
 - `pnpm --filter typed-realworld test:integration` runs infrastructure,
   application, and API tests.
 - `pnpm --filter typed-realworld test:ssr` runs presentation and SSR tests.
+- `pnpm --filter typed-realworld test:acceptance:local` resets the database,
+  starts the full app server at `http://127.0.0.1:3000`, runs API acceptance,
+  runs browser E2E acceptance, and tears the server down.
 - `pnpm --filter typed-realworld test:api:hurl:local` runs the upstream
   RealWorld Hurl API specs from `.temp/references/realworld/specs/api/hurl`.
 - `pnpm --filter typed-realworld test:e2e:local` runs the upstream RealWorld
@@ -46,9 +46,16 @@ The local acceptance wrappers reference the upstream spec checkout; they do not
 vendor spec files into this example.
 
 The default local acceptance URLs assume a full app server at
-`http://127.0.0.1:3000` with API routes under `/api`. The plain Vite dev server
-is useful for client asset development, but it serves the hydration entry
-without SSR HTML and is not the full acceptance target.
+`http://127.0.0.1:3000` with API routes under `/api`. The acceptance runner
+starts that server through Vite with the `typed.config.ts` server entry, so SSR,
+API handlers, and browser hydration share the same route tree.
+
+For the full local gate, install `hurl` and Playwright browsers, then run:
+
+```sh
+pnpm --filter typed-realworld exec playwright install chromium
+pnpm --filter typed-realworld test:acceptance:local
+```
 
 For API acceptance, install `hurl`, start a local RealWorld app server, then run:
 

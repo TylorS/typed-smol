@@ -12,6 +12,7 @@ import {
   typedVitePlugin,
   type HttpApiVirtualModulePluginOptions,
 } from "./index.js";
+import { createSsrRunnableEnvironment } from "./vaviteIntegration.js";
 
 function fakeHttpApiPlugin(opts: HttpApiVirtualModulePluginOptions): VirtualModulePlugin {
   return {
@@ -94,6 +95,28 @@ describe("typedVitePlugin", () => {
     expect(plugins.length).toBeGreaterThan(0);
   });
 
+  it("enables Vite-native tsconfig path resolution without vite-tsconfig-paths", () => {
+    const plugins = typedVitePlugin({ compression: false });
+    const tsconfigPlugin = plugins.find((plugin) =>
+      (plugin as { name?: string }).name === "typed-vite:native-tsconfig-paths"
+    );
+    const config = {};
+
+    expect(plugins.some((plugin) => (plugin as { name?: string }).name === "vite-tsconfig-paths"))
+      .toBe(false);
+    expect(tsconfigPlugin).toBeDefined();
+    (tsconfigPlugin as { config: (config: Record<string, any>) => void }).config(config);
+    expect(config).toEqual({ resolve: { tsconfigPaths: true } });
+  });
+
+  it("does not configure native tsconfig path resolution when disabled", () => {
+    const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
+
+    expect(plugins.some((plugin) =>
+      (plugin as { name?: string }).name === "typed-vite:native-tsconfig-paths"
+    )).toBe(false);
+  });
+
   it("returns virtual-modules plugin with resolveId and load", () => {
     const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
     const virtualPlugin = plugins.find(
@@ -134,5 +157,54 @@ describe("typedVitePlugin", () => {
     });
 
     expect(plugins.some((plugin) => (plugin as { name?: string }).name === "vavite")).toBe(true);
+  });
+
+  it("configures the ssr environment as runnable for vavite dev entries", () => {
+    const plugins = typedVitePlugin({
+      tsconfigPaths: false,
+      compression: false,
+      serverEntry: "/src/entry.server.ts",
+    });
+    const runnablePlugin = plugins.find((plugin) =>
+      (plugin as { name?: string }).name === "typed-vavite:ssr-runnable-environment"
+    );
+    const config = {};
+
+    expect(runnablePlugin).toBeDefined();
+    (runnablePlugin as { config: (config: Record<string, any>) => void }).config(config);
+
+    expect(config).toEqual({
+      environments: {
+        ssr: {
+          dev: {
+            createEnvironment: createSsrRunnableEnvironment,
+          },
+        },
+      },
+    });
+  });
+
+  it("does not apply vavite while Vite is running tests", () => {
+    const plugins = typedVitePlugin({
+      tsconfigPaths: false,
+      compression: false,
+      serverEntry: "/src/entry.server.ts",
+    });
+    const vavitePlugin = plugins.find((plugin) => (plugin as { name?: string }).name === "vavite");
+    const apply = (vavitePlugin as { apply?: unknown } | undefined)?.apply;
+
+    expect(typeof apply).toBe("function");
+    expect(
+      (apply as (config: unknown, env: { readonly mode: string }) => boolean)(
+        {},
+        { mode: "test" },
+      ),
+    ).toBe(false);
+    expect(
+      (apply as (config: unknown, env: { readonly mode: string }) => boolean)(
+        {},
+        { mode: "development" },
+      ),
+    ).toBe(true);
   });
 });

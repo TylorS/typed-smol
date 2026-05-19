@@ -3,11 +3,10 @@ import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { UserId, Username } from "../../domain/Ids.js";
 import { Profile } from "../../domain/User.js";
-import { RealWorldConfig } from "../Config.js";
 import {
   currentIsoTimestamp,
   first,
-  runSql,
+  provideRepositorySql,
   type RepositoryPersistenceError,
 } from "./Common.js";
 
@@ -35,13 +34,15 @@ export class ProfileRepository extends Context.Service<
   static readonly Live = Layer.effect(
     ProfileRepository,
     Effect.gen(function* () {
-      const config = yield* RealWorldConfig;
-      const run = <A, E, R>(effect: Effect.Effect<A, E, R>) => runSql(config, effect);
+      const sql = yield* SqlClient.SqlClient;
 
       return {
-        findByUsername: (username, viewerId) => run(findByUsername(username, viewerId)),
-        follow: (followerId, username) => run(followProfile(followerId, username)),
-        unfollow: (followerId, username) => run(unfollowProfile(followerId, username)),
+        findByUsername: (username, viewerId) =>
+          provideRepositorySql(findByUsername(username, viewerId), sql),
+        follow: (followerId, username) =>
+          provideRepositorySql(followProfile(followerId, username), sql),
+        unfollow: (followerId, username) =>
+          provideRepositorySql(unfollowProfile(followerId, username), sql),
       };
     }),
   );

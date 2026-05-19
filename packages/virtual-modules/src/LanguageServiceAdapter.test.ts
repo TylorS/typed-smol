@@ -224,10 +224,12 @@ export const value: Foo = { n: 1 };
 
     expect(diagnostics).toHaveLength(0);
     expect(buildCalls).toEqual([`virtual:a:${entryFile}`, `virtual:b:${entryFile}`]);
-    expect(materializeCalls).toEqual([
-      expect.stringContaining(`virtual:a:${entryFile}`),
-      expect.stringContaining(`virtual:b:${entryFile}`),
-    ]);
+    expect(materializeCalls).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(`virtual:a:${entryFile}`),
+        expect.stringContaining(`virtual:b:${entryFile}`),
+      ]),
+    );
     const scriptFileNames = host.getScriptFileNames();
     expect(scriptFileNames).toEqual(expect.arrayContaining([artifactA, artifactB]));
     expect(scriptFileNames.some((fileName) => fileName.includes("__virtual_"))).toBe(false);

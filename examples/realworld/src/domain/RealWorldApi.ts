@@ -7,7 +7,8 @@ import { Profile, UserResponseUser } from "./User.js";
 
 export { ErrorResponse };
 
-const Password = NonEmptyString.pipe(Schema.brand("Password"));
+export const Password = NonEmptyString.pipe(Schema.brand("Password"));
+export type Password = Schema.Schema.Type<typeof Password>;
 
 export const UserResponse = Schema.Struct({
   user: UserResponseUser,

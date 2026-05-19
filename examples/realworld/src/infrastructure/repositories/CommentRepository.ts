@@ -4,11 +4,10 @@ import { SqlClient } from "effect/unstable/sql";
 import { Comment } from "../../domain/Article.js";
 import { CommentId, Slug, UserId } from "../../domain/Ids.js";
 import { Profile } from "../../domain/User.js";
-import { RealWorldConfig } from "../Config.js";
 import {
   currentIsoTimestamp,
   first,
-  runSql,
+  provideRepositorySql,
   type RepositoryPersistenceError,
 } from "./Common.js";
 
@@ -40,14 +39,15 @@ export class CommentRepository extends Context.Service<
   static readonly Live = Layer.effect(
     CommentRepository,
     Effect.gen(function* () {
-      const config = yield* RealWorldConfig;
-      const run = <A, E, R>(effect: Effect.Effect<A, E, R>) => runSql(config, effect);
+      const sql = yield* SqlClient.SqlClient;
 
       return {
-        create: (authorId, slug, body) => run(createComment(authorId, slug, body)),
-        delete: (authorId, commentId) => run(deleteComment(authorId, commentId)),
-        findOwnerId: (commentId) => run(findOwnerId(commentId)),
-        listByArticle: (slug, viewerId) => run(listByArticle(slug, viewerId)),
+        create: (authorId, slug, body) =>
+          provideRepositorySql(createComment(authorId, slug, body), sql),
+        delete: (authorId, commentId) =>
+          provideRepositorySql(deleteComment(authorId, commentId), sql),
+        findOwnerId: (commentId) => provideRepositorySql(findOwnerId(commentId), sql),
+        listByArticle: (slug, viewerId) => provideRepositorySql(listByArticle(slug, viewerId), sql),
       };
     }),
   );

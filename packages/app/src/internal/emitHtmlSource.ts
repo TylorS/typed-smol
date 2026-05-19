@@ -8,9 +8,14 @@ export interface EmitHtmlSourceInput {
 export function emitHtmlSource(input: EmitHtmlSourceInput): string {
   const outlet = input.outlet ?? DEFAULT_OUTLET;
   return [
-    "// @ts-nocheck",
     'import { readFile } from "node:fs/promises";',
     'import * as TypedConfigModule from "typed:config";',
+    "interface LoadHtmlOptions {",
+    "  readonly readFile?: (path: string, encoding: \"utf8\") => Promise<string>;",
+    "  readonly dev?: boolean;",
+    "  readonly devServer?: { readonly transformIndexHtml: (url: string, html: string) => string | Promise<string> };",
+    "  readonly url?: string;",
+    "}",
     `const sourceHtmlPath = ${JSON.stringify(input.sourcePath)};`,
     "const typedConfig = TypedConfigModule;",
     "const typedBuildConfig = typedConfig.build ?? {};",
@@ -37,7 +42,7 @@ export function applySsrOutlet(
 
 function loadHtmlSource(): string {
   return [
-    "export async function loadHtml(options = {}) {",
+    "export async function loadHtml(options: LoadHtmlOptions = {}) {",
     "  const read = options.readFile ?? readFile;",
     "  if (options.dev && options.devServer) {",
     "    const source = await read(sourceHtmlPath, \"utf8\");",
@@ -50,11 +55,11 @@ function loadHtmlSource(): string {
 
 function clientBuildPathSource(): string {
   return [
-    "function joinClientBuildPath(sourcePath) {",
+    "function joinClientBuildPath(sourcePath: string): string {",
     "  const clientOutDir = typedBuildConfig.clientOutDir ?? joinPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
     "  return joinPath(clientOutDir, sourcePath.replace(/^\\.\\//, \"\"));",
     "}",
-    "function joinPath(...parts) {",
+    "function joinPath(...parts: readonly string[]): string {",
     "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
     "}",
   ].join("\n");
@@ -62,7 +67,7 @@ function clientBuildPathSource(): string {
 
 function renderHtmlSource(): string {
   return [
-    "export function renderHtml(template, markup) {",
+    "export function renderHtml(template: string, markup: string): string {",
     "  if (template.includes(outlet)) return template.replace(outlet, markup);",
     "  const bodyMatch = /<body\\b[^>]*>/i.exec(template);",
     "  if (!bodyMatch) return `${template}${markup}`;",

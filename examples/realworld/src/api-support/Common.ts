@@ -1,7 +1,19 @@
 import { Option } from "effect";
+import * as Schema from "effect/Schema";
 import { parseAuthorizationHeader } from "../domain/Auth.js";
 import type { OpaqueToken } from "../domain/Ids.js";
 import type { ArticleListFilter } from "../infrastructure/repositories/ArticleRepository.js";
+
+export const RequestHeaders = Schema.Record(Schema.String, Schema.String);
+
+export const HttpMethod = {
+  Delete: "DELETE",
+  Get: "GET",
+  Post: "POST",
+  Put: "PUT",
+} as const;
+
+export type HttpMethod = typeof HttpMethod[keyof typeof HttpMethod];
 
 export const authToken = (headers?: Record<string, string>): Option.Option<OpaqueToken> =>
   parseAuthorizationHeader(headers?.authorization ?? headers?.Authorization);

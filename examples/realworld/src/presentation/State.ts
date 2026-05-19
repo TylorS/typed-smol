@@ -1,5 +1,9 @@
-import { RefSubject } from "@typed/fx";
+import * as AsyncData from "@typed/async-data";
+import { RefAsyncData } from "@typed/fx";
 import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
+import * as Schema from "effect/Schema";
+import type { ApiClientError, RealWorldClient } from "../Api.js";
 import type {
   CreateArticleRequest,
   CreateCommentRequest,
@@ -12,16 +16,22 @@ import type {
   UserResponse,
   ProfileResponse,
 } from "../domain/RealWorldApi.js";
-import type { ClientApiError, RealWorldClient } from "./ClientApi.js";
+import { UserResponse as UserResponseSchema } from "../domain/RealWorldApi.js";
 
 export type AuthState = "loading" | "authenticated" | "unauthenticated" | "unavailable";
-export type AuthWorkflowError = ClientApiError | { readonly _tag: "AuthRequired" };
+export type AuthWorkflowError = ApiClientError | { readonly _tag: "AuthRequired" };
 
 export interface AuthSnapshot {
   readonly state: AuthState;
   readonly token: string | null;
   readonly currentUser: UserResponse["user"] | null;
 }
+
+export class BrowserAuthState extends RefAsyncData.Service<
+  BrowserAuthState,
+  AuthSnapshot,
+  ApiClientError
+>()("RealWorld/BrowserAuthState") {}
 
 export interface AuthStore {
   readonly createArticle: (
@@ -42,9 +52,9 @@ export interface AuthStore {
     following: boolean,
   ) => Effect.Effect<ProfileResponse, AuthWorkflowError>;
   readonly initialize: Effect.Effect<void>;
-  readonly login: (input: LoginUserRequest) => Effect.Effect<UserResponse, ClientApiError>;
+  readonly login: (input: LoginUserRequest) => Effect.Effect<UserResponse, ApiClientError>;
   readonly logout: Effect.Effect<void>;
-  readonly register: (input: RegisterUserRequest) => Effect.Effect<UserResponse, ClientApiError>;
+  readonly register: (input: RegisterUserRequest) => Effect.Effect<UserResponse, ApiClientError>;
   readonly updateArticle: (
     slug: string,
     input: UpdateArticleRequest,
@@ -52,107 +62,184 @@ export interface AuthStore {
   readonly updateSettings: (
     input: UpdateUserRequest,
   ) => Effect.Effect<UserResponse, AuthWorkflowError>;
-  readonly getToken: () => string | null;
-  readonly getAuthState: () => AuthState;
-  readonly getCurrentUser: () => UserResponse["user"] | null;
+  readonly getToken: Effect.Effect<string | null>;
+  readonly getAuthState: Effect.Effect<AuthState>;
+  readonly getCurrentUser: Effect.Effect<UserResponse["user"] | null>;
 }
 
-export type BrowserAuthWindow = {
-  readonly localStorage: Storage;
-};
-
 export const createAuthStore = (
-  win: BrowserAuthWindow,
   client: RealWorldClient,
-): Effect.Effect<AuthStore> =>
-  Effect.scoped(Effect.gen(function* () {
-    const initial = snapshot("loading", readToken(win), null);
-    const ref = yield* RefSubject.make(initial);
-    let current = initial;
-
-    const setCurrent = (next: AuthSnapshot) =>
+): Effect.Effect<AuthStore, never, BrowserAuthState> =>
+  Effect.gen(function* () {
+    const ref = yield* BrowserAuthState.service;
+    const readSnapshot = currentSnapshot(ref);
+    const setSnapshot = (next: AuthSnapshot) => RefAsyncData.setSuccess(ref, next);
+    const setUnauthenticated = () => setSnapshot(snapshot("unauthenticated", null, null));
+    const setUnavailable = Effect.fn(function* (token: string) {
+      yield* setSnapshot(snapshot("unavailable", token, null));
+    });
+    const setAuthenticated = Effect.fn(function* (response: UserResponse) {
+      yield* setSnapshot(snapshot("authenticated", response.user.token, response.user));
+    });
+    const requireToken = protectedToken(() =>
       Effect.gen(function* () {
-        current = next;
-        yield* RefSubject.set(ref, next);
-      });
-
-    const setUnauthenticated = () =>
-      setCurrent(snapshot("unauthenticated", null, null));
-    const setUnavailable = (token: string) =>
-      setCurrent(snapshot("unavailable", token, null));
-    const setAuthenticated = (response: UserResponse) =>
-      Effect.gen(function* () {
-        writeToken(win, response.user.token);
-        yield* setCurrent(snapshot("authenticated", response.user.token, response.user));
-      });
-    const requireToken = protectedToken(() => current.token ?? readToken(win));
+        const snapshot = yield* readSnapshot;
+        return snapshot.token;
+      })
+    );
 
     return {
-      createArticle: (input) =>
-        requireToken.pipe(Effect.flatMap((token) => client.createArticle(token, input))),
-      createComment: (slug, input) =>
-        requireToken.pipe(Effect.flatMap((token) => client.createComment(token, slug, input))),
-      deleteArticle: (slug) =>
-        requireToken.pipe(Effect.flatMap((token) => client.deleteArticle(token, slug))),
-      deleteComment: (slug, id) =>
-        requireToken.pipe(Effect.flatMap((token) => client.deleteComment(token, slug, id))),
-      favoriteArticle: (slug, favorited) =>
-        requireToken.pipe(Effect.flatMap((token) => client.favoriteArticle(token, slug, favorited))),
-      followProfile: (username, following) =>
-        requireToken.pipe(Effect.flatMap((token) => client.followProfile(token, username, following))),
+      createArticle: Effect.fn(function* (input) {
+        const token = yield* requireToken;
+        return yield* client.articles.create({
+          params: {},
+          query: {},
+          headers: authHeaders(token),
+          payload: input,
+        });
+      }),
+      createComment: Effect.fn(function* (slug, input) {
+        const token = yield* requireToken;
+        return yield* client.comments.create({
+          params: { slug },
+          query: {},
+          headers: authHeaders(token),
+          payload: input,
+        });
+      }),
+      deleteArticle: Effect.fn(function* (slug) {
+        const token = yield* requireToken;
+        return yield* client.articles.delete({
+          params: { slug },
+          query: {},
+          headers: authHeaders(token),
+        });
+      }),
+      deleteComment: Effect.fn(function* (slug, id) {
+        const token = yield* requireToken;
+        return yield* client.comments.delete({
+          params: { slug, id: String(id) },
+          query: {},
+          headers: authHeaders(token),
+        });
+      }),
+      favoriteArticle: Effect.fn(function* (slug, favorited) {
+        const token = yield* requireToken;
+        const requestInput = { params: { slug }, query: {}, headers: authHeaders(token) };
+        const request = favorited
+          ? client.articles.unfavorite(requestInput)
+          : client.articles.favorite(requestInput);
+        return yield* request;
+      }),
+      followProfile: Effect.fn(function* (username, following) {
+        const token = yield* requireToken;
+        const requestInput = { params: { username }, query: {}, headers: authHeaders(token) };
+        const request = following
+          ? client.profiles.unfollow(requestInput)
+          : client.profiles.follow(requestInput);
+        return yield* request;
+      }),
       initialize: Effect.gen(function* () {
-        const token = readToken(win);
+        yield* RefAsyncData.setLoading(ref);
+        const current = yield* readSnapshot;
+        const token = current.token;
         if (!token) {
           yield* setUnauthenticated();
           return;
         }
 
-        yield* client.currentUser(token).pipe(
-          Effect.matchEffect({
-            onFailure: (error) => handleCurrentUserFailure(win, token, error, {
-              setUnauthenticated,
-              setUnavailable,
-            }),
-            onSuccess: setAuthenticated,
-          }),
+        const result = yield* loadCurrentUser(client, token).pipe(
+          Effect.catch(() => Effect.succeed({ _tag: "Unavailable" as const })),
         );
+        switch (result._tag) {
+          case "Authenticated":
+            yield* setAuthenticated(result.response);
+            return;
+          case "Unauthenticated":
+            yield* setUnauthenticated();
+            return;
+          case "Unavailable":
+            yield* setUnavailable(token);
+            return;
+        }
       }),
-      login: (input) =>
-        client.login(input).pipe(Effect.tap((response) => setAuthenticated(response))),
-      logout: Effect.sync(() => clearToken(win)).pipe(
-        Effect.andThen(setUnauthenticated()),
-      ),
-      register: (input) =>
-        client.register(input).pipe(Effect.tap((response) => setAuthenticated(response))),
-      updateArticle: (slug, input) =>
-        requireToken.pipe(Effect.flatMap((token) => client.updateArticle(token, slug, input))),
-      updateSettings: (input) =>
-        requireToken.pipe(
-          Effect.flatMap((token) => client.updateUser(token, input)),
-          Effect.tap((response) => setAuthenticated(response)),
-        ),
-      getToken: () => current.token,
-      getAuthState: () => current.state,
-      getCurrentUser: () => current.currentUser,
+      login: Effect.fn(function* (input) {
+        yield* RefAsyncData.setLoading(ref);
+        const response = yield* client.users.login({ params: {}, query: {}, payload: input });
+        yield* setAuthenticated(response);
+        return response;
+      }),
+      logout: setUnauthenticated(),
+      register: Effect.fn(function* (input) {
+        yield* RefAsyncData.setLoading(ref);
+        const response = yield* client.users.register({ params: {}, query: {}, payload: input });
+        yield* setAuthenticated(response);
+        return response;
+      }),
+      updateArticle: Effect.fn(function* (slug, input) {
+        const token = yield* requireToken;
+        return yield* client.articles.update({
+          params: { slug },
+          query: {},
+          headers: authHeaders(token),
+          payload: input,
+        });
+      }),
+      updateSettings: Effect.fn(function* (input) {
+        const token = yield* requireToken;
+        const response = yield* client.user.update({
+          params: {},
+          query: {},
+          headers: authHeaders(token),
+          payload: input,
+        });
+        yield* setAuthenticated(response);
+        return response;
+      }),
+      getToken: Effect.gen(function* () {
+        const snapshot = yield* readSnapshot;
+        return snapshot.token;
+      }),
+      getAuthState: Effect.gen(function* () {
+        const snapshot = yield* readSnapshot;
+        return snapshot.state;
+      }),
+      getCurrentUser: Effect.gen(function* () {
+        const snapshot = yield* readSnapshot;
+        return snapshot.currentUser;
+      }),
     };
-  }));
+  });
 
-const handleCurrentUserFailure = (
-  win: BrowserAuthWindow,
+type CurrentUserLoad =
+  | { readonly _tag: "Authenticated"; readonly response: UserResponse }
+  | { readonly _tag: "Unauthenticated" }
+  | { readonly _tag: "Unavailable" };
+
+const loadCurrentUser: (
+  client: RealWorldClient,
   token: string,
-  error: ClientApiError,
-  actions: {
-    readonly setUnauthenticated: () => Effect.Effect<void>;
-    readonly setUnavailable: (token: string) => Effect.Effect<void>;
-  },
-): Effect.Effect<void> => {
-  if (error._tag === "HttpStatus" && error.status >= 400 && error.status < 500) {
-    clearToken(win);
-    return actions.setUnauthenticated();
-  }
+) => Effect.Effect<CurrentUserLoad, ApiClientError> =
+  Effect.fn(function* (client, token) {
+    const response = yield* client.user.current({
+      params: {},
+      query: {},
+      headers: authHeaders(token),
+      responseMode: "response-only",
+    });
 
-  return actions.setUnavailable(token);
-};
+    if (response.status >= 400 && response.status < 500) {
+      return { _tag: "Unauthenticated" };
+    }
+
+    if (response.status < 200 || response.status >= 300) {
+      return { _tag: "Unavailable" };
+    }
+
+    const body = yield* response.json;
+    const decoded: UserResponse = yield* Schema.decodeUnknownEffect(UserResponseSchema)(body);
+    return { _tag: "Authenticated" as const, response: decoded };
+  });
 
 const snapshot = (
   state: AuthState,
@@ -160,40 +247,26 @@ const snapshot = (
   currentUser: UserResponse["user"] | null,
 ): AuthSnapshot => ({ state, token, currentUser });
 
-const readToken = (win: BrowserAuthWindow): string | null => {
-  const token = win.localStorage.getItem("jwtToken") ?? storageTokenProperty(win);
-  return token && token.trim() !== "" ? token : null;
-};
+const currentSnapshot = (
+  ref: RefAsyncData.RefAsyncData<AuthSnapshot, ApiClientError>,
+): Effect.Effect<AuthSnapshot> =>
+  Effect.gen(function* () {
+    const data = yield* ref;
+    return Option.getOrElse(AsyncData.getSuccess(data), () => snapshot("loading", null, null));
+  });
 
-const writeToken = (win: BrowserAuthWindow, token: string): void => {
-  win.localStorage.setItem("jwtToken", token);
-  setStorageTokenProperty(win, token);
-};
+const authHeaders = (token: string): Record<string, string> => ({
+  authorization: `Token ${token}`,
+});
 
-const clearToken = (win: BrowserAuthWindow): void => {
-  win.localStorage.removeItem("jwtToken");
-  setStorageTokenProperty(win, null);
-};
+const protectedToken = <E, R>(
+  read: () => Effect.Effect<string | null, E, R>,
+): Effect.Effect<string, AuthWorkflowError | E, R> =>
+  Effect.gen(function* () {
+    const token = yield* read();
+    if (token == null) {
+      return yield* Effect.fail({ _tag: "AuthRequired" as const });
+    }
 
-const storageTokenProperty = (win: BrowserAuthWindow): string | null => {
-  const token = (win.localStorage as Storage & { readonly jwtToken?: string }).jwtToken;
-  return typeof token === "string" ? token : null;
-};
-
-const setStorageTokenProperty = (win: BrowserAuthWindow, token: string | null): void => {
-  const storage = win.localStorage as Storage & { jwtToken?: string };
-  if (token == null) {
-    delete storage.jwtToken;
-  } else {
-    storage.jwtToken = token;
-  }
-};
-
-const protectedToken = (
-  read: () => string | null,
-): Effect.Effect<string, AuthWorkflowError> =>
-  Effect.sync(read).pipe(
-    Effect.flatMap((token) =>
-      token == null ? Effect.fail({ _tag: "AuthRequired" as const }) : Effect.succeed(token),
-    ),
-  );
+    return token;
+  });

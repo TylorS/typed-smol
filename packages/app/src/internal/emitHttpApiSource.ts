@@ -34,6 +34,31 @@ import type { PrefixByScope } from "./validatePrefixConventions.js";
 
 const ROOT_GROUP_KEY = "__root__";
 
+export type HttpApiEmitMode = "full" | "client";
+
+export type HttpApiExportExpressionImport =
+  | {
+      readonly kind: "named";
+      readonly moduleSpecifier: string;
+      readonly importedName: string;
+      readonly localName: string;
+    }
+  | {
+      readonly kind: "namespace";
+      readonly moduleSpecifier: string;
+      readonly localName: string;
+    }
+  | {
+      readonly kind: "default";
+      readonly moduleSpecifier: string;
+      readonly localName: string;
+    };
+
+export interface HttpApiExportExpression {
+  readonly expression: string;
+  readonly imports: readonly HttpApiExportExpressionImport[];
+}
+
 function joinPathSegments(segments: readonly string[]): string {
   const combined = segments
     .filter((s) => s.length > 0)
@@ -66,6 +91,8 @@ function resolveEffectivePrefixForGroup(
 
 const DIRECTORY_CONVENTION_KINDS = [
   "_dependencies.ts",
+  "_errors.ts",
+  "_headers.ts",
   "_middlewares.ts",
   "_prefix.ts",
   "_openapi.ts",
@@ -121,6 +148,8 @@ type EndpointWithGroupKey = {
 function createMutableDirectoryCompanionPaths(): MutableDirectoryCompanionPaths {
   return {
     "_dependencies.ts": [],
+    "_errors.ts": [],
+    "_headers.ts": [],
     "_middlewares.ts": [],
     "_prefix.ts": [],
     "_openapi.ts": [],
@@ -132,6 +161,8 @@ function freezeDirectoryCompanionPaths(
 ): DirectoryCompanionPaths {
   return {
     "_dependencies.ts": [...paths["_dependencies.ts"]],
+    "_errors.ts": [...paths["_errors.ts"]],
+    "_headers.ts": [...paths["_headers.ts"]],
     "_middlewares.ts": [...paths["_middlewares.ts"]],
     "_prefix.ts": [...paths["_prefix.ts"]],
     "_openapi.ts": [...paths["_openapi.ts"]],
@@ -384,6 +415,34 @@ function buildApiRenderSpec(
   };
 }
 
+function collectDirectoryOptionPaths(endpointSpecs: readonly EndpointRenderSpec[]): readonly string[] {
+  const paths: string[] = [];
+  for (const endpoint of endpointSpecs) {
+    for (const option of OPTIONAL_ENDPOINT_EXPORTS) {
+      const inherited = inheritedDirectoryOption(endpoint, option);
+      if (inherited) pushUnique(paths, inherited.path);
+    }
+  }
+  return paths.sort(compareHttpApiPathOrder);
+}
+
+function inheritedDirectoryOption(
+  endpoint: EndpointRenderSpec,
+  option: OptionalExport,
+): { readonly path: string; readonly exportName: string } | undefined {
+  const mapping =
+    option === "headers"
+      ? DIRECTORY_EXPORT_BY_OPTION.headers
+      : option === "error"
+        ? DIRECTORY_EXPORT_BY_OPTION.error
+        : undefined;
+  if (mapping === undefined) return undefined;
+
+  const paths = endpoint.directoryCompanions[mapping.companion];
+  const path = paths[paths.length - 1];
+  return path ? { path, exportName: mapping.exportName } : undefined;
+}
+
 function toImportSpecifier(
   importerDir: string,
   targetDir: string,
@@ -416,6 +475,13 @@ const EXPORT_TO_OPTION: Record<OptionalExport, string> = {
   error: "error",
 };
 
+const DIRECTORY_EXPORT_BY_OPTION = {
+  headers: { companion: "_headers.ts", exportName: "headers" },
+  error: { companion: "_errors.ts", exportName: "error" },
+} as const satisfies Partial<
+  Record<OptionalExport, { readonly companion: DirectoryConventionKind; readonly exportName: string }>
+>;
+
 export function emitHttpApiSource(input: {
   readonly tree: HttpApiDescriptorTree;
   readonly targetDirectory: string;
@@ -425,11 +491,16 @@ export function emitHttpApiSource(input: {
     { readonly path: string; readonly method: string; readonly name: string }
   >;
   readonly optionalExportsByPath: ReadonlyMap<string, ReadonlySet<OptionalExport>>;
-  /** When true for an endpoint path, handler returns HttpServerResponse; use handleRaw instead of handle. */
+  /** When true for an endpoint path, handler returns HttpServerResponse. */
   readonly handlerIsRawByPath?: ReadonlyMap<string, boolean>;
   readonly prefixByScope?: PrefixByScope;
   readonly pathPrefix?: `/${string}`;
   readonly openapiPlan?: HttpApiOpenApiPlan;
+  readonly mode?: HttpApiEmitMode;
+  readonly exportExpressionsByPath?: ReadonlyMap<
+    string,
+    ReadonlyMap<string, HttpApiExportExpression>
+  >;
 }): string {
   const directoryConventions = indexDirectoryConventions(input.tree);
   const endpointSpecs = buildEndpointRenderSpecs(input.tree, directoryConventions);
@@ -437,17 +508,40 @@ export function emitHttpApiSource(input: {
   const apiSpec = buildApiRenderSpec(input.targetDirectory, directoryConventions);
 
   const endpointPaths = endpointSpecs.map((e) => e.modulePath);
+  const directoryOptionPaths = collectDirectoryOptionPaths(endpointSpecs);
   const importerDir = dirname(toPosixPath(input.importer));
+
+  if (input.mode === "client") {
+    return emitHttpApiClientSource({
+      apiSpec,
+      endpointSpecs,
+      groupSpecs,
+      importerDir,
+      targetDirectory: input.targetDirectory,
+      extractedLiteralsByPath: input.extractedLiteralsByPath,
+      optionalExportsByPath: input.optionalExportsByPath,
+      directoryOptionNameByPath: new Map(),
+      exportExpressionsByPath: input.exportExpressionsByPath ?? new Map(),
+      prefixByScope: input.prefixByScope,
+      pathPrefix: input.pathPrefix,
+      openapiPlan: input.openapiPlan,
+    });
+  }
+
   const proposedNames = endpointPaths.map((path) => ({
     path,
     proposedName: pathToIdentifier(path),
   }));
   const varNameByPath = makeUniqueVarNames(proposedNames);
+  const directoryOptionNameByPath = makeUniqueVarNames(
+    directoryOptionPaths.map((path) => ({
+      path,
+      proposedName: pathToIdentifier(`__${path}`),
+    })),
+  );
 
   const importLines: string[] = [
-    `// @ts-nocheck`,
-    `import { ApiHandlers } from "@typed/app/httpapi/Handlers";`,
-    `import { composeWithLayers } from "@typed/app/runtime";`,
+    `import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";`,
     `import { resolveConfig } from "@typed/app/internal/resolveConfig";`,
     `import { TypedHttpServer } from "@typed/app/TypedHttpServer";`,
     `import * as Effect from "effect/Effect";`,
@@ -469,6 +563,12 @@ export function emitHttpApiSource(input: {
     const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
     importLines.push(
       `import * as ${varNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
+    );
+  }
+  for (const path of directoryOptionPaths) {
+    const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
+    importLines.push(
+      `import * as ${directoryOptionNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
     );
   }
 
@@ -496,6 +596,14 @@ export function emitHttpApiSource(input: {
         if (optionalPresent.has(exp)) {
           const optName = EXPORT_TO_OPTION[exp];
           optsParts.push(`${optName}: ${m}.${exp}`);
+          continue;
+        }
+
+        const inherited = inheritedDirectoryOption(ep, exp);
+        if (inherited) {
+          const optName = EXPORT_TO_OPTION[exp];
+          const inheritedModule = directoryOptionNameByPath.get(inherited.path);
+          optsParts.push(`${optName}: ${inheritedModule}.${inherited.exportName}`);
         }
       }
       const opts = optsParts.join(", ");
@@ -537,18 +645,13 @@ export function emitHttpApiSource(input: {
     const endpointsInGroup = endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
     const groupName = groupSpec.defaultName;
-    const handlerIsRaw = input.handlerIsRawByPath;
     const groupHandlers = endpointsInGroup.reduce((handlersExpression, e) => {
       const varName = varNameByPath.get(e.modulePath)!;
       const literals = input.extractedLiteralsByPath.get(e.path);
       const name = literals?.name ?? e.stem;
-      const isRaw = handlerIsRaw?.get(e.path) === true;
       const optPresent = input.optionalExportsByPath.get(e.path) ?? new Set<OptionalExport>();
-      const options = emitHandlerBindingOptions(isRaw, optPresent);
-      if (isRaw) {
-        return `ApiHandlers.handleRaw(${handlersExpression}, ${JSON.stringify(name)}, ${varName}${options})`;
-      }
-      return `ApiHandlers.handle(${handlersExpression}, ${JSON.stringify(name)}, ${varName}${options})`;
+      const handler = emitEndpointHandler(varName, e, optPresent, directoryOptionNameByPath);
+      return `${handlersExpression}.handle(${JSON.stringify(name)}, ${handler})`;
     }, "handlers");
     groupLayerBlocks.push(
       `HttpApiBuilder.group(Api, ${JSON.stringify(groupName)}, (handlers) => ${groupHandlers})`,
@@ -607,36 +710,47 @@ const typedConfig = TypedConfigModule;
 const typedBuildConfig = typedConfig.build ?? {};
 const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
 
-function joinBuildPath(...parts) {
+function joinBuildPath(...parts: readonly string[]): string {
   return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
 }
 
-export const App = (
-  config,
-  ...layersToMergeIntoRouter
+type HttpApiRuntimeConfig = {
+  readonly disableListenLog?: boolean;
+  readonly host?: string;
+  readonly port?: number;
+};
+
+function isDevImportMeta(meta: ImportMeta & { readonly env?: { readonly DEV?: boolean } }): boolean {
+  return meta.env?.DEV === true;
+}
+
+export const App = <const Layers extends readonly LayerOrGroup[]>(
+  config: HttpApiRuntimeConfig = {},
+  ...layersToMergeIntoRouter: Layers
 ) => {
   const disableListenLog = config?.disableListenLog ?? false;
   const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
   return HttpRouter.serve(appLayer, ${serveOptions})
 };
 
-export const serve = (
-  config,
-  ...layersToMergeIntoRouter
+export const serve = <const Layers extends readonly LayerOrGroup[]>(
+  config: HttpApiRuntimeConfig = {},
+  ...layersToMergeIntoRouter: Layers
 ) =>
   Layer.unwrap(
     Effect.gen(function* () {
       const host = yield* resolveConfig(config?.host, "0.0.0.0");
       const port = yield* resolveConfig(config?.port, 3000);
       const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-      const dev = import.meta.env?.DEV === true;
+      const dev = isDevImportMeta(import.meta);
       const appConfig = { disableListenLog };
       const staticAssetsLayer = TypedHttpServer.staticAssets({
         projectRoot: process.cwd(),
         clientOutDir,
         dev,
       });
-      const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
+      const appLayers = [staticAssetsLayer, ...layersToMergeIntoRouter] as const;
+      const appLayer = App(appConfig, ...appLayers);
       const serverLayer = TypedHttpServer.layer({
         host,
         port,
@@ -649,12 +763,206 @@ export const serve = (
 `;
 }
 
-function emitHandlerBindingOptions(
-  isRaw: boolean,
+function emitHttpApiClientSource(input: {
+  readonly apiSpec: ApiRenderSpec;
+  readonly endpointSpecs: readonly EndpointRenderSpec[];
+  readonly groupSpecs: readonly GroupRenderSpec[];
+  readonly importerDir: string;
+  readonly targetDirectory: string;
+  readonly extractedLiteralsByPath: ReadonlyMap<
+    string,
+    { readonly path: string; readonly method: string; readonly name: string }
+  >;
+  readonly optionalExportsByPath: ReadonlyMap<string, ReadonlySet<OptionalExport>>;
+  readonly directoryOptionNameByPath: ReadonlyMap<string, string>;
+  readonly exportExpressionsByPath: ReadonlyMap<
+    string,
+    ReadonlyMap<string, HttpApiExportExpression>
+  >;
+  readonly prefixByScope?: PrefixByScope;
+  readonly pathPrefix?: `/${string}`;
+  readonly openapiPlan?: HttpApiOpenApiPlan;
+}): string {
+  void input.directoryOptionNameByPath;
+  const imports = new ClientImportBuilder(input.importerDir, input.targetDirectory);
+  const importLines: string[] = [
+    `import * as Route from "@typed/router";`,
+    `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
+    `import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`,
+    `import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";`,
+    `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
+    `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
+  ];
+
+  const groupExprs: string[] = [];
+  for (const groupSpec of input.groupSpecs) {
+    const endpointsInGroup = input.endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
+    if (endpointsInGroup.length === 0) continue;
+
+    const endpointExprs = endpointsInGroup.map((endpoint) => {
+      const literals = input.extractedLiteralsByPath.get(endpoint.path);
+      const routePath = literals?.path ?? `/${endpoint.stem}`;
+      const method = (literals?.method ?? "GET").toUpperCase();
+      const name = literals?.name ?? endpoint.stem;
+      const factory = METHOD_FACTORIES[method] ?? "get";
+      const routeExpr = `Route.Parse(${JSON.stringify(routePath)})`;
+      const optsParts = [
+        `params: ${routeExpr}.pathSchema`,
+        `query: ${routeExpr}.querySchema`,
+      ];
+      const optionalPresent =
+        input.optionalExportsByPath.get(endpoint.path) ?? new Set<OptionalExport>();
+      for (const option of OPTIONAL_ENDPOINT_EXPORTS) {
+        const optionName = EXPORT_TO_OPTION[option];
+        if (optionalPresent.has(option)) {
+          const expression = imports.expressionFor(endpoint.path, option, input.exportExpressionsByPath);
+          if (expression) optsParts.push(`${optionName}: ${expression}`);
+          continue;
+        }
+
+        const inherited = inheritedDirectoryOption(endpoint, option);
+        if (inherited) {
+          const expression = imports.expressionFor(
+            inherited.path,
+            inherited.exportName,
+            input.exportExpressionsByPath,
+          );
+          if (expression) optsParts.push(`${optionName}: ${expression}`);
+        }
+      }
+
+      return renderAnnotatedEndpointExpression(
+        `HttpApiEndpoint.${factory}(${JSON.stringify(name)}, ${JSON.stringify(routePath)}, { ${optsParts.join(", ")} })`,
+        input.openapiPlan?.endpointAnnotationsByPath.get(endpoint.path),
+      );
+    });
+
+    const effectivePrefix = resolveEffectivePrefixForGroup(
+      groupSpec.dirPath,
+      input.prefixByScope,
+      input.pathPrefix,
+    );
+    const suffix = effectivePrefix ? `.prefix(${JSON.stringify(effectivePrefix)})` : "";
+    const groupChain = endpointExprs.map((expr) => `.add(${expr})`).join("");
+    groupExprs.push(
+      renderAnnotatedGroupExpression(
+        `HttpApiGroup.make(${JSON.stringify(groupSpec.defaultName)})${groupChain}${suffix}`,
+        input.openapiPlan?.groupAnnotationsByPath.get(groupSpec.dirPath),
+      ),
+    );
+  }
+
+  const apiChain = groupExprs.map((g) => `.add(${g})`).join("");
+  const apiExpr = renderAnnotatedApiExpression(
+    `HttpApi.make(${JSON.stringify(input.apiSpec.defaultIdentifier)})${apiChain}`,
+    input.openapiPlan?.api.annotations,
+    input.openapiPlan?.api.generation,
+  );
+  const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
+  const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
+
+  return `${[...importLines, ...imports.lines()].join("\n")}${openApiHelperBlock}
+
+export const Api = ${apiExpr};
+export const OpenApi = OpenApiModule.fromApi(Api);
+export const Client = HttpApiClient.make(Api);
+`;
+}
+
+class ClientImportBuilder {
+  readonly #importerDir: string;
+  readonly #targetDirectory: string;
+  readonly #imports: string[] = [];
+  readonly #seenImports = new Set<string>();
+
+  constructor(importerDir: string, targetDirectory: string) {
+    this.#importerDir = importerDir;
+    this.#targetDirectory = targetDirectory;
+  }
+
+  expressionFor(
+    sourcePath: string,
+    exportName: string,
+    expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
+  ): string | undefined {
+    const expression = expressionsByPath.get(sourcePath)?.get(exportName);
+    if (!expression) return undefined;
+    const replacements = new Map<string, string>();
+    const baseAlias = `${pathToIdentifier(sourcePath)}${capitalize(exportName)}`;
+
+    for (const spec of expression.imports) {
+      const importSpecifier = this.#toImportSpecifier(sourcePath, spec.moduleSpecifier);
+      if (spec.kind === "named") {
+        const alias =
+          expression.expression.trim() === spec.localName
+            ? baseAlias
+            : `${baseAlias}${capitalize(spec.localName)}`;
+        this.#pushImport(
+          `import { ${spec.importedName} as ${alias} } from ${JSON.stringify(importSpecifier)};`,
+        );
+        replacements.set(spec.localName, alias);
+        continue;
+      }
+      const alias = `${baseAlias}${capitalize(spec.localName)}`;
+      if (spec.kind === "namespace") {
+        this.#pushImport(`import * as ${alias} from ${JSON.stringify(importSpecifier)};`);
+      } else {
+        this.#pushImport(`import ${alias} from ${JSON.stringify(importSpecifier)};`);
+      }
+      replacements.set(spec.localName, alias);
+    }
+
+    return replaceIdentifiers(expression.expression, replacements);
+  }
+
+  lines(): readonly string[] {
+    return this.#imports;
+  }
+
+  #toImportSpecifier(sourcePath: string, moduleSpecifier: string): string {
+    if (!moduleSpecifier.startsWith(".") && !moduleSpecifier.startsWith("/")) {
+      return moduleSpecifier;
+    }
+    const absPath = join(this.#targetDirectory, dirname(sourcePath), moduleSpecifier);
+    const rel = toPosixPath(relative(this.#importerDir, absPath));
+    const specifier = rel.startsWith(".") ? rel : `./${rel}`;
+    return stripScriptExtension(specifier) + ".js";
+  }
+
+  #pushImport(line: string): void {
+    if (this.#seenImports.has(line)) return;
+    this.#seenImports.add(line);
+    this.#imports.push(line);
+  }
+}
+
+function replaceIdentifiers(expression: string, replacements: ReadonlyMap<string, string>): string {
+  let output = expression;
+  for (const [from, to] of replacements) {
+    output = output.replace(new RegExp(`\\b${escapeRegExp(from)}\\b`, "g"), to);
+  }
+  return output;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function capitalize(value: string): string {
+  return value.length === 0 ? value : `${value[0]!.toUpperCase()}${value.slice(1)}`;
+}
+
+function emitEndpointHandler(
+  moduleName: string,
+  endpoint: EndpointRenderSpec,
   optionalExports: ReadonlySet<OptionalExport>,
+  directoryOptionNameByPath: ReadonlyMap<string, string>,
 ): string {
-  if (!optionalExports.has("body")) return "";
-  return isRaw ? `, { body: "json" }` : `, { body: "payload" }`;
+  void endpoint;
+  void directoryOptionNameByPath;
+  const args = ["path: ctx.params", "query: ctx.query", "headers: ctx.headers"];
+  args.push(optionalExports.has("body") ? "body: ctx.payload" : "body: undefined");
+  return `(ctx) => ${moduleName}.handler({ ${args.join(", ")} })`;
 }
 
 function renderAnnotatedApiExpression(
@@ -697,18 +1005,30 @@ function renderOpenApiHelpers(generation: OpenApiGenerationConfig | undefined): 
   if (generation?.additionalProperties === undefined) return "";
   return `const openApiAdditionalPropertiesConfig = { additionalProperties: ${String(generation.additionalProperties)} };
 
-const applyOpenApiAdditionalProperties = (spec) => {
-  const visit = (value) => {
+type OpenApiValue =
+  | null
+  | boolean
+  | number
+  | string
+  | readonly (OpenApiValue | undefined)[]
+  | { readonly [key: string]: OpenApiValue | undefined };
+
+const applyOpenApiAdditionalProperties = (
+  spec: Record<string, OpenApiValue | undefined>,
+): Record<string, OpenApiValue | undefined> => {
+  const visit = (value: OpenApiValue | undefined): OpenApiValue | undefined => {
     if (!value || typeof value !== "object") return value;
     if (Array.isArray(value)) return value.map(visit);
-    const next = {};
+    const next: Record<string, OpenApiValue | undefined> = {};
     for (const [key, entry] of Object.entries(value)) next[key] = visit(entry);
     if (next.type === "object" && next.additionalProperties === undefined) {
       next.additionalProperties = openApiAdditionalPropertiesConfig.additionalProperties;
     }
     return next;
   };
-  return visit(spec);
+  const next: Record<string, OpenApiValue | undefined> = {};
+  for (const [key, entry] of Object.entries(spec)) next[key] = visit(entry);
+  return next;
 };
 `;
 }

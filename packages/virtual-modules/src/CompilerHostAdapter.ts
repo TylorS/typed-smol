@@ -1,4 +1,5 @@
 import type * as ts from "typescript";
+import { dirname, relative, resolve } from "node:path";
 import {
   type CompilerHostAdapterOptions,
   type VirtualModuleAdapterHandle,
@@ -11,6 +12,7 @@ import {
   type MutableVirtualRecord,
 } from "./internal/VirtualRecordStore.js";
 import { VIRTUAL_NODE_MODULES_RELATIVE } from "./internal/path.js";
+import { toPosixPath } from "./internal/path.js";
 
 export const attachCompilerHostAdapter = (
   options: CompilerHostAdapterOptions,
@@ -46,6 +48,7 @@ export const attachCompilerHostAdapter = (
   ).getSourceFileByPath?.bind(host);
   const originalFileExists = host.fileExists.bind(host);
   const originalReadFile = host.readFile.bind(host);
+  const originalWriteFile = host.writeFile?.bind(host);
   const originalHasInvalidatedResolutions = (
     host as {
       hasInvalidatedResolutions?: (...args: readonly unknown[]) => boolean;
@@ -76,6 +79,7 @@ export const attachCompilerHostAdapter = (
   });
 
   const { recordsByVirtualFile } = store;
+  let lastCompilerOptions: ts.CompilerOptions | undefined;
 
   const reportAdapterDiagnostic = (diagnostic: VirtualModuleDiagnostic): void => {
     options.reportDiagnostic?.({
@@ -130,6 +134,20 @@ export const attachCompilerHostAdapter = (
     return result.resolvedModule as ts.ResolvedModuleFull | undefined;
   };
 
+  const findRecordForRelativeVirtualImport = (
+    moduleName: string,
+    containingFile: string,
+  ): MutableVirtualRecord | undefined => {
+    if (!isRelativeModuleSpecifier(moduleName)) return undefined;
+    const target = resolve(dirname(containingFile), moduleName);
+    return (
+      store.findRecordByVirtualFile(target) ??
+      virtualSourceAlternatives(target)
+        .map((candidate) => store.findRecordByVirtualFile(candidate))
+        .find((record): record is MutableVirtualRecord => record !== undefined)
+    );
+  };
+
   (host as ts.CompilerHost).resolveModuleNames = (
     moduleNames: readonly string[],
     containingFile: string,
@@ -138,6 +156,7 @@ export const attachCompilerHostAdapter = (
     compilerOptions: ts.CompilerOptions,
     containingSourceFile?: ts.SourceFile,
   ): (ts.ResolvedModule | undefined)[] => {
+    lastCompilerOptions = compilerOptions;
     const fallback = originalResolveModuleNames
       ? originalResolveModuleNames(
           moduleNames,
@@ -153,6 +172,10 @@ export const attachCompilerHostAdapter = (
 
     const effectiveImporter = store.resolveEffectiveImporter(containingFile);
     return moduleNames.map((moduleName, index) => {
+      const relativeVirtualRecord = findRecordForRelativeVirtualImport(moduleName, containingFile);
+      if (relativeVirtualRecord) {
+        return toResolvedModule(options.ts, relativeVirtualRecord.virtualFileName);
+      }
       const record = getOrBuildRecord(moduleName, effectiveImporter);
       if (!record) {
         return fallback[index];
@@ -169,6 +192,7 @@ export const attachCompilerHostAdapter = (
     containingSourceFile: ts.SourceFile | undefined,
     reusedNames?: readonly { readonly text: string }[],
   ): readonly ts.ResolvedModuleWithFailedLookupLocations[] => {
+    lastCompilerOptions = compilerOptions;
     const fallback = originalResolveModuleNameLiterals
       ? (originalResolveModuleNameLiterals(
           moduleLiterals as unknown as readonly ts.StringLiteralLike[],
@@ -188,6 +212,15 @@ export const attachCompilerHostAdapter = (
 
     const effectiveImporter = store.resolveEffectiveImporter(containingFile);
     return moduleLiterals.map((moduleLiteral, index) => {
+      const relativeVirtualRecord = findRecordForRelativeVirtualImport(
+        moduleLiteral.text,
+        containingFile,
+      );
+      if (relativeVirtualRecord) {
+        return {
+          resolvedModule: toResolvedModule(options.ts, relativeVirtualRecord.virtualFileName),
+        };
+      }
       const record = getOrBuildRecord(moduleLiteral.text, effectiveImporter);
       if (!record) {
         return fallback[index];
@@ -228,6 +261,58 @@ export const attachCompilerHostAdapter = (
     );
     (sourceFile as { version?: string }).version = String(fresh.version);
     return sourceFile;
+  };
+
+  const outputFileForSource = (sourceFileName: string, outputFileName: string): string => {
+    const compilerOptions = lastCompilerOptions ?? {};
+    const outDir = typeof compilerOptions.outDir === "string" ? compilerOptions.outDir : undefined;
+    const rootDir =
+      typeof compilerOptions.rootDir === "string" ? compilerOptions.rootDir : options.projectRoot;
+    if (!outDir) return replaceTypeScriptExtension(sourceFileName);
+    const outputRoot = resolve(options.projectRoot, outDir);
+    const sourceRoot = resolve(options.projectRoot, rootDir);
+    const sourceRelative = relative(sourceRoot, sourceFileName);
+    if (sourceRelative.startsWith("..")) {
+      return outputFileName;
+    }
+    return replaceTypeScriptExtension(resolve(outputRoot, sourceRelative));
+  };
+
+  const rewriteEmittedVirtualImports = (
+    text: string,
+    outputFileName: string,
+    sourceFiles: readonly ts.SourceFile[] | undefined,
+  ): string => {
+    if (!sourceFiles || sourceFiles.length === 0) return text;
+    const replacements: LiteralReplacement[] = [];
+    const emitted = options.ts.createSourceFile(
+      outputFileName,
+      text,
+      options.ts.ScriptTarget.Latest,
+      true,
+      options.ts.ScriptKind.JS,
+    );
+    collectModuleSpecifierReplacements(options.ts, emitted, (specifier) =>
+      emittedVirtualImportReplacement(specifier, outputFileName, sourceFiles),
+    ).forEach((replacement) => replacements.push(replacement));
+    return applyLiteralReplacements(text, replacements);
+  };
+
+  const emittedVirtualImportReplacement = (
+    specifier: string,
+    outputFileName: string,
+    sourceFiles: readonly ts.SourceFile[],
+  ): string | undefined => {
+    if (isRelativeModuleSpecifier(specifier)) return undefined;
+    const sourceFile = sourceFiles[0];
+    if (!sourceFile) return undefined;
+    const importer = store.resolveEffectiveImporter(sourceFile.fileName);
+    const record = getOrBuildRecord(specifier, importer);
+    if (!record) return undefined;
+    return toRelativeOutputSpecifier(
+      outputFileName,
+      outputFileForSource(record.virtualFileName, outputFileName),
+    );
   };
 
   host.getSourceFile = (
@@ -289,6 +374,26 @@ export const attachCompilerHostAdapter = (
     return getSourceTextForRecord(record);
   };
 
+  if (originalWriteFile) {
+    host.writeFile = (
+      fileName,
+      text,
+      writeByteOrderMark,
+      onError,
+      sourceFiles,
+      data,
+    ): void => {
+      originalWriteFile(
+        fileName,
+        rewriteEmittedVirtualImports(text, fileName, sourceFiles),
+        writeByteOrderMark,
+        onError,
+        sourceFiles,
+        data,
+      );
+    };
+  }
+
   if (originalHasInvalidatedResolutions) {
     (
       host as { hasInvalidatedResolutions: (...args: readonly unknown[]) => boolean }
@@ -325,6 +430,9 @@ export const attachCompilerHostAdapter = (
       }
       host.fileExists = originalFileExists;
       host.readFile = originalReadFile;
+      if (originalWriteFile) {
+        host.writeFile = originalWriteFile;
+      }
       (
         host as { hasInvalidatedResolutions?: (...args: readonly unknown[]) => boolean }
       ).hasInvalidatedResolutions = originalHasInvalidatedResolutions;
@@ -334,3 +442,93 @@ export const attachCompilerHostAdapter = (
     },
   };
 };
+
+interface LiteralReplacement {
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
+}
+
+const isRelativeModuleSpecifier = (specifier: string): boolean =>
+  specifier.startsWith("./") || specifier.startsWith("../");
+
+const virtualSourceAlternatives = (target: string): readonly string[] => {
+  if (target.endsWith(".js")) return [target.slice(0, -3) + ".ts"];
+  if (target.endsWith(".mjs")) return [target.slice(0, -4) + ".mts"];
+  if (target.endsWith(".cjs")) return [target.slice(0, -4) + ".cts"];
+  return [];
+};
+
+const replaceTypeScriptExtension = (fileName: string): string =>
+  fileName.replace(/\.[cm]?tsx?$/, ".js");
+
+const toRelativeOutputSpecifier = (fromFile: string, toFile: string): string => {
+  const relativePath = toPosixPath(relative(dirname(fromFile), toFile));
+  return relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+};
+
+const collectModuleSpecifierReplacements = (
+  tsMod: typeof import("typescript"),
+  sourceFile: ts.SourceFile,
+  rewrite: (specifier: string) => string | undefined,
+): readonly LiteralReplacement[] => {
+  const replacements: LiteralReplacement[] = [];
+  const add = (literal: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral): void => {
+    const rewritten = rewrite(literal.text);
+    if (!rewritten || rewritten === literal.text) return;
+    replacements.push({
+      start: literal.getStart(sourceFile),
+      end: literal.getEnd(),
+      text: quoteLikeOriginal(literal.getText(sourceFile), rewritten),
+    });
+  };
+  const visit = (node: ts.Node): void => {
+    if (tsMod.isImportDeclaration(node) && tsMod.isStringLiteral(node.moduleSpecifier)) {
+      add(node.moduleSpecifier);
+    } else if (
+      tsMod.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      tsMod.isStringLiteral(node.moduleSpecifier)
+    ) {
+      add(node.moduleSpecifier);
+    } else if (
+      tsMod.isCallExpression(node) &&
+      node.expression.kind === tsMod.SyntaxKind.ImportKeyword
+    ) {
+      const [moduleSpecifier] = node.arguments;
+      if (
+        tsMod.isStringLiteral(moduleSpecifier) ||
+        tsMod.isNoSubstitutionTemplateLiteral(moduleSpecifier)
+      ) {
+        add(moduleSpecifier);
+      }
+    }
+    tsMod.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return replacements;
+};
+
+const applyLiteralReplacements = (
+  sourceText: string,
+  replacements: readonly LiteralReplacement[],
+): string => {
+  let rewritten = sourceText;
+  for (const replacement of [...replacements].sort((left, right) => right.start - left.start)) {
+    rewritten =
+      rewritten.slice(0, replacement.start) + replacement.text + rewritten.slice(replacement.end);
+  }
+  return rewritten;
+};
+
+const quoteLikeOriginal = (original: string, value: string): string => {
+  const quote = original.startsWith("'") ? "'" : original.startsWith("`") ? "`" : '"';
+  if (quote === "`") return `\`${escapeTemplateLiteralText(value)}\``;
+  return `${quote}${escapeStringLiteralText(value, quote)}${quote}`;
+};
+
+const escapeStringLiteralText = (value: string, quote: "'" | '"'): string =>
+  value.replaceAll("\\", "\\\\").replaceAll(quote, `\\${quote}`);
+
+const escapeTemplateLiteralText = (value: string): string =>
+  value.replaceAll("\\", "\\\\").replaceAll("`", "\\`").replaceAll("${", "\\${");

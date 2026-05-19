@@ -57,9 +57,9 @@ export const error = Schema.Struct({ message: Schema.String });
 export const handler = ({ path, query, headers, body }: {
   path: Record<string, string>;
   query: Record<string, string | string[] | undefined>;
-  headers: Record<string, string>;
-  body: unknown;
-}) => Effect.succeed({ status: "ok" });
+  headers?: Record<string, string>;
+  body?: unknown;
+}) => Effect.succeed({ status: "ok" as const });
 `;
 
 function createApiFixture(spec: FixtureSpec): {
@@ -100,6 +100,7 @@ function buildApiFromFixture(spec: FixtureSpec, pluginOptions?: { pathPrefix?: `
 function buildApiFromExistingFixture(
   fixture: ReturnType<typeof createApiFixture>,
   pluginOptions?: { pathPrefix?: `/${string}` },
+  id = "api:./apis",
 ) {
   const plugin = createHttpApiVirtualModulePlugin(pluginOptions ?? {});
   const files =
@@ -112,7 +113,7 @@ function buildApiFromExistingFixture(
     program,
     typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
   });
-  return plugin.build("api:./apis", fixture.importer, session.api);
+  return plugin.build(id, fixture.importer, session.api);
 }
 
 /** Extract source text from build result (string or { sourceText, warnings }). */
@@ -127,7 +128,7 @@ function getSourceText(result: unknown): string | undefined {
 function expectHttpApiGeneratedSourceToTypeCheck(
   fixture: ReturnType<typeof createApiFixture>,
   sourceText: string,
-  generatedPath = "src/api.generated.js",
+  generatedPath = "src/api.generated.ts",
 ) {
   const typeCheck = typeCheckGeneratedSource({
     rootDir: fixture.root,
@@ -344,9 +345,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       typeof result === "string" ? result : (result as { sourceText?: string }).sourceText;
     expect(sourceText).toBeDefined();
     expect(sourceText).toMatchInlineSnapshot(`
-      "// @ts-nocheck
-      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
-      import { composeWithLayers } from "@typed/app/runtime";
+      "import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
       import * as Effect from "effect/Effect";
@@ -365,7 +364,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => ApiHandlers.handle(handlers, "status", Status))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined })))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -375,36 +374,47 @@ describe("createHttpApiVirtualModulePlugin", () => {
       const typedBuildConfig = typedConfig.build ?? {};
       const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
 
-      function joinBuildPath(...parts) {
+      function joinBuildPath(...parts: readonly string[]): string {
         return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
       }
 
-      export const App = (
-        config,
-        ...layersToMergeIntoRouter
+      type HttpApiRuntimeConfig = {
+        readonly disableListenLog?: boolean;
+        readonly host?: string;
+        readonly port?: number;
+      };
+
+      function isDevImportMeta(meta: ImportMeta & { readonly env?: { readonly DEV?: boolean } }): boolean {
+        return meta.env?.DEV === true;
+      }
+
+      export const App = <const Layers extends readonly LayerOrGroup[]>(
+        config: HttpApiRuntimeConfig = {},
+        ...layersToMergeIntoRouter: Layers
       ) => {
         const disableListenLog = config?.disableListenLog ?? false;
         const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
         return HttpRouter.serve(appLayer, { disableListenLog })
       };
 
-      export const serve = (
-        config,
-        ...layersToMergeIntoRouter
+      export const serve = <const Layers extends readonly LayerOrGroup[]>(
+        config: HttpApiRuntimeConfig = {},
+        ...layersToMergeIntoRouter: Layers
       ) =>
         Layer.unwrap(
           Effect.gen(function* () {
             const host = yield* resolveConfig(config?.host, "0.0.0.0");
             const port = yield* resolveConfig(config?.port, 3000);
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-            const dev = import.meta.env?.DEV === true;
+            const dev = isDevImportMeta(import.meta);
             const appConfig = { disableListenLog };
             const staticAssetsLayer = TypedHttpServer.staticAssets({
               projectRoot: process.cwd(),
               clientOutDir,
               dev,
             });
-            const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
+            const appLayers = [staticAssetsLayer, ...layersToMergeIntoRouter] as const;
+            const appLayer = App(appConfig, ...appLayers);
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
@@ -416,6 +426,82 @@ describe("createHttpApiVirtualModulePlugin", () => {
         );
       "
     `);
+  });
+
+  it("inherits common headers and errors from directory companions", () => {
+    const sourceText = getSourceText(buildApiFromFixture({
+      "src/apis/_errors.ts": `
+import * as Schema from "effect/Schema";
+export const error = Schema.Struct({ message: Schema.String });
+`,
+      "src/apis/users/_headers.ts": `
+import * as Schema from "effect/Schema";
+export const headers = Schema.Struct({ authorization: Schema.String });
+`,
+      "src/apis/users/current.ts": `
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+import * as Route from "@typed/router";
+export const route = Route.Parse("/current");
+export const method = "GET";
+export const success = Schema.Struct({ status: Schema.Literal("ok") });
+export const handler = () => Effect.succeed({ status: "ok" });
+`,
+    }));
+
+    expect(sourceText).toContain('import * as Errors from "./apis/_errors.js";');
+    expect(sourceText).toContain('import * as UsersHeaders from "./apis/users/_headers.js";');
+    expect(sourceText).toContain(
+      'headers: UsersHeaders.headers, success: UsersCurrent.success, error: Errors.error',
+    );
+  });
+
+  it("emits a client-only API module without server imports or endpoint modules", () => {
+    const fixture = createApiFixture({
+      "src/domain.ts": `
+import * as Schema from "effect/Schema";
+export const Body = Schema.Struct({ name: Schema.String });
+export const Success = Schema.Struct({ ok: Schema.Boolean });
+export const ErrorBody = Schema.Struct({ message: Schema.String });
+`,
+      "src/apis/_errors.ts": `
+import { ErrorBody } from "../domain.js";
+export const error = ErrorBody;
+`,
+      "src/apis/status.ts": `
+import { ApiHandlerRaw } from "@typed/app/httpapi/ApiHandler";
+import * as Effect from "effect/Effect";
+import * as Route from "@typed/router";
+import { ServerOnly } from "../server-only.js";
+import { Body, Success } from "../domain.js";
+export const route = Route.Parse("/status");
+export const method = "POST";
+export const body = Body;
+export const success = Success;
+export const handler = ApiHandlerRaw({ route, method, body })(({ body }) =>
+  ServerOnly.use(() => Effect.succeed({ ok: true, body })),
+);
+`,
+      "src/server-only.ts": `
+import { readFileSync } from "node:fs";
+export const ServerOnly = { use: readFileSync };
+`,
+    });
+    const sourceText = getSourceText(buildApiFromExistingFixture(fixture, undefined, "api:./apis?mode=client"));
+
+    expect(sourceText).toBeDefined();
+    expect(sourceText).toContain('import * as Route from "@typed/router";');
+    expect(sourceText).toContain('import { Body as StatusBody } from "./domain.js";');
+    expect(sourceText).toContain('import { Success as StatusSuccess } from "./domain.js";');
+    expect(sourceText).toContain('import { ErrorBody as ErrorsError } from "./domain.js";');
+    expect(sourceText).toContain('export const Client = HttpApiClient.make(Api);');
+    expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
+    expect(sourceText).not.toContain("HttpApiBuilder");
+    expect(sourceText).not.toContain("./apis/status.js");
+    expect(sourceText).not.toContain("server-only");
+    expect(sourceText).not.toContain("node:fs");
+    expect(sourceText).not.toContain("export const serve");
+    expect(sourceText).not.toContain("export const ApiLayer");
   });
 
   it("delegates generated server wiring to TypedHttpServer", () => {
@@ -432,8 +518,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
   it("imports runtime helpers from narrow @typed/app subpaths", () => {
     const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
 
-    expect(sourceText).toContain('import { ApiHandlers } from "@typed/app/httpapi/Handlers";');
-    expect(sourceText).toContain('import { composeWithLayers } from "@typed/app/runtime";');
+    expect(sourceText).toContain('import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";');
     expect(sourceText).toContain(
       'import { resolveConfig } from "@typed/app/internal/resolveConfig";',
     );
@@ -450,7 +535,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
     if (!sourceText) return;
     const typeCheck = typeCheckGeneratedSource({
       rootDir: fixture.root,
-      generatedPath: "src/api.generated.js",
+      generatedPath: "src/api.generated.ts",
       sourceText,
       rootFiles: fixture.paths,
       moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
@@ -490,7 +575,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
     if (!sourceText) return;
     const typeCheck = typeCheckGeneratedSource({
       rootDir: fixture.root,
-      generatedPath: "src/api.generated.js",
+      generatedPath: "src/api.generated.ts",
       sourceText,
       rootFiles: fixture.paths,
       moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
@@ -642,9 +727,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
     if (resolved.status !== "resolved") return;
     expect(resolved.pluginName).toBe("httpapi-virtual-module");
     expect(resolved.sourceText).toMatchInlineSnapshot(`
-      "// @ts-nocheck
-      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
-      import { composeWithLayers } from "@typed/app/runtime";
+      "import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
       import * as Effect from "effect/Effect";
@@ -663,7 +746,7 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => ApiHandlers.handle(handlers, "status", Status))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined })))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -673,36 +756,47 @@ describe("HttpApiVirtualModulePlugin integration", () => {
       const typedBuildConfig = typedConfig.build ?? {};
       const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
 
-      function joinBuildPath(...parts) {
+      function joinBuildPath(...parts: readonly string[]): string {
         return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
       }
 
-      export const App = (
-        config,
-        ...layersToMergeIntoRouter
+      type HttpApiRuntimeConfig = {
+        readonly disableListenLog?: boolean;
+        readonly host?: string;
+        readonly port?: number;
+      };
+
+      function isDevImportMeta(meta: ImportMeta & { readonly env?: { readonly DEV?: boolean } }): boolean {
+        return meta.env?.DEV === true;
+      }
+
+      export const App = <const Layers extends readonly LayerOrGroup[]>(
+        config: HttpApiRuntimeConfig = {},
+        ...layersToMergeIntoRouter: Layers
       ) => {
         const disableListenLog = config?.disableListenLog ?? false;
         const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
         return HttpRouter.serve(appLayer, { disableListenLog })
       };
 
-      export const serve = (
-        config,
-        ...layersToMergeIntoRouter
+      export const serve = <const Layers extends readonly LayerOrGroup[]>(
+        config: HttpApiRuntimeConfig = {},
+        ...layersToMergeIntoRouter: Layers
       ) =>
         Layer.unwrap(
           Effect.gen(function* () {
             const host = yield* resolveConfig(config?.host, "0.0.0.0");
             const port = yield* resolveConfig(config?.port, 3000);
             const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-            const dev = import.meta.env?.DEV === true;
+            const dev = isDevImportMeta(import.meta);
             const appConfig = { disableListenLog };
             const staticAssetsLayer = TypedHttpServer.staticAssets({
               projectRoot: process.cwd(),
               clientOutDir,
               dev,
             });
-            const appLayer = App(appConfig, staticAssetsLayer, ...layersToMergeIntoRouter);
+            const appLayers = [staticAssetsLayer, ...layersToMergeIntoRouter] as const;
+            const appLayer = App(appConfig, ...appLayers);
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
@@ -882,8 +976,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('import { ApiHandlers } from "@typed/app/httpapi/Handlers";');
-      expect(sourceText).toContain("ApiHandlers.handle(");
+      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
     });
 
     it("Wrong typeTargetSpecs: wrong module paths; assignableTo missing; build fails", () => {
@@ -989,7 +1082,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       expect((result as VirtualModuleBuildError).errors[0].code).toBe("AVM-CONTRACT-004");
     });
 
-    it("Handler returns HttpServerResponse: uses handleRaw", () => {
+    it("Handler returns HttpServerResponse: emits a typed handler adapter", () => {
       const rawHandlerSource = `
         import * as Effect from "effect/Effect";
         import * as Schema from "effect/Schema";
@@ -1004,8 +1097,8 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain("handleRaw");
-      expect(sourceText).toContain("raw");
+      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).not.toContain("handleRaw");
     });
 
     it("Handler returns value vs raw: both in same API", () => {
@@ -1026,8 +1119,8 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('ApiHandlers.handleRaw(handlers, "raw", Raw)');
-      expect(sourceText).toContain('"status", Status');
+      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
     });
   });
 
@@ -1106,28 +1199,28 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('ApiHandlers.handle(handlers, "get", UsersGet)');
-      expect(sourceText).toContain('"list", UsersList');
-      expect(sourceText).toContain('"update", UsersUpdate');
+      expect(sourceText).toContain('handlers.handle("get", (ctx) => UsersGet.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handle("list", (ctx) => UsersList.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handle("update", (ctx) => UsersUpdate.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
     });
   });
 
-  describe("3f. Coercion paths (handle vs handleRaw)", () => {
+  describe("3f. Handler adapter paths", () => {
     it("Direct handler export: emitted correctly", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('ApiHandlers.handle(handlers, "status", Status)');
+      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
     });
 
-    it("handle for value return: handlers.handle with decoded params", () => {
+    it("value return: handlers.handle with decoded params", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('ApiHandlers.handle(handlers, "status", Status)');
+      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
     });
 
-    it("handleRaw for HttpServerResponse: handlers.handleRaw, handler receives typed endpoint params", () => {
+    it("HttpServerResponse return: handler receives typed endpoint params", () => {
       const rawHandlerSource = `
         import * as Effect from "effect/Effect";
         import * as Schema from "effect/Schema";
@@ -1142,12 +1235,12 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('ApiHandlers.handleRaw(handlers, "raw", Raw)');
+      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
       expect(sourceText).not.toContain("Effect.map(Raw.handler");
       expect(sourceText).not.toContain("Effect.mapError(Raw.handler");
     });
 
-    it("handleRaw with body decodes request JSON before calling typed handler", () => {
+    it("body endpoints pass decoded payload to the typed handler", () => {
       const rawHandlerSource = `
         import * as Effect from "effect/Effect";
         import * as Schema from "effect/Schema";
@@ -1166,10 +1259,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('ApiHandlers.handleRaw(handlers, "raw", Raw, { body: "json" })');
+      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: ctx.payload }))');
       expect(sourceText).not.toContain("HttpIncomingMessage.schemaBodyJson(Raw.body)");
-      expect(sourceText).not.toContain("Raw.handler({ path:");
-      expect(sourceText).not.toContain("body: ctx.payload");
+      expect(sourceText).not.toContain("handleRaw");
     });
   });
 
@@ -1243,7 +1335,7 @@ export const openapi = {
       expect(sourceText).toContain('version: "1.25.0"');
       expect(sourceText).toContain('theme: "moon"');
       expect(sourceText).toContain("hideModels: true");
-      expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText, "src/api-openapi.generated.js");
+      expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText, "src/api-openapi.generated.ts");
     });
 
     it("_api.ts openapi.annotations: annotates generated Api with installed OpenApi annotations", () => {
@@ -1272,7 +1364,7 @@ export const openapi = {
       expectHttpApiGeneratedSourceToTypeCheck(
         fixture,
         sourceText,
-        "src/api-openapi-annotations.generated.js",
+        "src/api-openapi-annotations.generated.ts",
       );
     });
 
@@ -1301,7 +1393,7 @@ export const openapi = {
       expectHttpApiGeneratedSourceToTypeCheck(
         fixture,
         sourceText,
-        "src/api-openapi-generation.generated.js",
+        "src/api-openapi-generation.generated.ts",
       );
     });
 
@@ -1324,7 +1416,7 @@ export const openapi = {
       expectHttpApiGeneratedSourceToTypeCheck(
         fixture,
         sourceText!,
-        "src/api-openapi-generation-allow.generated.js",
+        "src/api-openapi-generation-allow.generated.ts",
       );
     });
 
@@ -1352,7 +1444,7 @@ export const openapi = {
       expectHttpApiGeneratedSourceToTypeCheck(
         fixture,
         sourceText!,
-        "src/api-openapi-generation-exposure.generated.js",
+        "src/api-openapi-generation-exposure.generated.ts",
       );
     });
 
@@ -1420,7 +1512,7 @@ export const openapi = {
       expectHttpApiGeneratedSourceToTypeCheck(
         fixture,
         sourceText!,
-        "src/api-openapi-group-annotations.generated.js",
+        "src/api-openapi-group-annotations.generated.ts",
       );
     });
 
@@ -1445,7 +1537,7 @@ export const openapi = {
       expectHttpApiGeneratedSourceToTypeCheck(
         fixture,
         sourceText!,
-        "src/api-openapi-endpoint-direct.generated.js",
+        "src/api-openapi-endpoint-direct.generated.ts",
       );
     });
 
@@ -1493,7 +1585,7 @@ export const openapi = {
       expectHttpApiGeneratedSourceToTypeCheck(
         fixture,
         sourceText!,
-        "src/api-openapi-endpoint-precedence.generated.js",
+        "src/api-openapi-endpoint-precedence.generated.ts",
       );
     });
   });

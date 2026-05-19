@@ -3,7 +3,6 @@ import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { Email, OpaqueToken, UserId, Username } from "../../domain/Ids.js";
 import { normalizeNullableProfileField, User } from "../../domain/User.js";
-import { RealWorldConfig } from "../Config.js";
 import {
   PasswordHasher,
   PasswordHashError,
@@ -14,7 +13,7 @@ import { SessionTokens, type SessionTokenError } from "../SessionTokens.js";
 import {
   currentIsoTimestamp,
   first,
-  runSql,
+  provideRepositorySql,
   type RepositoryPersistenceError,
 } from "./Common.js";
 
@@ -104,21 +103,20 @@ export class UserRepository extends Context.Service<
   static readonly Live = Layer.effect(
     UserRepository,
     Effect.gen(function* () {
-      const config = yield* RealWorldConfig;
+      const sql = yield* SqlClient.SqlClient;
       const passwords = yield* PasswordHasher;
       const sessions = yield* SessionTokens;
-      const run = <A, E, R>(effect: Effect.Effect<A, E, R>) => runSql(config, effect);
 
       return {
-        create: (input) => run(createUser(input, passwords)),
+        create: (input) => provideRepositorySql(createUser(input, passwords), sql),
         createSession: sessions.create,
-        findByEmail: (email) => run(findByEmail(email)),
-        findById: (id) => run(findById(id)),
-        findByToken: (token) => run(findByToken(token)),
-        findByUsername: (username) => run(findByUsername(username)),
-        update: (id, input) => run(updateUser(id, input, passwords)),
+        findByEmail: (email) => provideRepositorySql(findByEmail(email), sql),
+        findById: (id) => provideRepositorySql(findById(id), sql),
+        findByToken: (token) => provideRepositorySql(findByToken(token), sql),
+        findByUsername: (username) => provideRepositorySql(findByUsername(username), sql),
+        update: (id, input) => provideRepositorySql(updateUser(id, input, passwords), sql),
         verifyCredentials: (email, password) =>
-          run(verifyCredentials(email, password, passwords)),
+          provideRepositorySql(verifyCredentials(email, password, passwords), sql),
       };
     }),
   );

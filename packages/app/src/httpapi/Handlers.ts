@@ -1,5 +1,7 @@
 import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 import * as HttpIncomingMessage from "effect/unstable/http/HttpIncomingMessage";
+import type * as HttpServerError from "effect/unstable/http/HttpServerError";
 import { emptyRecordString, emptyRecordStringArray } from "./ApiHandler.js";
 
 export type ApiHandlerBodyMode = "empty" | "payload" | "json";
@@ -8,69 +10,103 @@ export interface ApiHandlerBindingOptions {
   readonly body?: ApiHandlerBodyMode;
 }
 
-export interface ApiEndpointModule {
-  readonly body?: any;
-  readonly handler: (params: ApiEndpointParams) => Effect.Effect<any, any, any>;
+export interface ApiEndpointModule<A = unknown, E = never, R = never, Body extends Schema.Top = Schema.Top> {
+  readonly body?: Body;
+  readonly handler: (params: ApiEndpointParams) => Effect.Effect<A, E, R>;
 }
 
 export interface ApiEndpointParams {
   readonly path: Record<string, string>;
   readonly query: Record<string, string | readonly string[] | undefined>;
   readonly headers: Record<string, string>;
-  readonly body: any;
+  readonly body: unknown;
 }
 
-export interface ApiEndpointHandlerBuilder<Self> {
-  readonly handle: (name: string, handler: (ctx: any) => Effect.Effect<any, any, any>) => Self;
-  readonly handleRaw: (name: string, handler: (ctx: any) => Effect.Effect<any, any, any>) => Self;
+export interface ApiEndpointRuntimeContext {
+  readonly params?: Record<string, string>;
+  readonly query?: Record<string, string | readonly string[] | undefined>;
+  readonly headers?: Record<string, string>;
+  readonly payload?: unknown;
+  readonly request?: HttpIncomingMessage.HttpIncomingMessage<HttpServerError.HttpServerError>;
 }
 
-export function handle<Handlers extends ApiEndpointHandlerBuilder<Handlers>>(
-  handlers: Handlers,
-  name: string,
-  endpoint: ApiEndpointModule,
+export function handle<Handlers, const Name extends string, A, E, R, Out>(
+  handlers: Handlers & {
+    readonly handle: (
+      name: Name,
+      handler: (ctx: ApiEndpointRuntimeContext) => Effect.Effect<A, E, R>,
+    ) => Out;
+  },
+  name: Name,
+  endpoint: ApiEndpointModule<A, E, R>,
   options: ApiHandlerBindingOptions = {},
-): Handlers {
+): Out {
   return handlers.handle(name, (ctx) => call(endpoint, ctx, options));
 }
 
-export function handleRaw<Handlers extends ApiEndpointHandlerBuilder<Handlers>>(
-  handlers: Handlers,
-  name: string,
-  endpoint: ApiEndpointModule,
+export function handler<A, E, R>(
+  endpoint: ApiEndpointModule<A, E, R>,
   options: ApiHandlerBindingOptions = {},
-): Handlers {
-  return handlers.handleRaw(name, (ctx) => {
-    if (options.body !== "json") return call(endpoint, ctx, options);
+): (ctx: ApiEndpointRuntimeContext) => Effect.Effect<A, E, R> {
+  return (ctx) => call(endpoint, ctx, options);
+}
 
-    return Effect.flatMap(
-      Effect.orDie(HttpIncomingMessage.schemaBodyJson(endpoint.body)(ctx.request)),
-      (body) => call(endpoint, ctx, options, body),
+export function rawHandler<A, E, R, Body extends Schema.Top>(
+  endpoint: ApiEndpointModule<A, E, R, Body>,
+  options: ApiHandlerBindingOptions = {},
+): (ctx: ApiEndpointRuntimeContext) => Effect.Effect<A, E, R | Body["DecodingServices"]> {
+  return (ctx) => {
+    if (options.body !== "json") return call(endpoint, ctx, options);
+    if (!ctx.request) return call(endpoint, ctx, options);
+    if (!endpoint.body) return call(endpoint, ctx, options);
+
+    return HttpIncomingMessage.schemaBodyJson(endpoint.body)(ctx.request).pipe(
+      Effect.orDie,
+      Effect.flatMap((body) => call(endpoint, ctx, options, body)),
     );
-  });
+  };
+}
+
+export function rawJsonBody<Body extends Schema.Top, E>(
+  body: Body,
+  request: HttpIncomingMessage.HttpIncomingMessage<E>,
+): Effect.Effect<Body["Type"], never, E | Body["DecodingServices"]> {
+  return HttpIncomingMessage.schemaBodyJson(body)(request).pipe(Effect.orDie);
 }
 
 export const ApiHandlers = {
   handle,
-  handleRaw,
+  handler,
+  rawHandler,
+  rawJsonBody,
 };
 
-function call(
-  endpoint: ApiEndpointModule,
-  ctx: any,
+function call<A, E, R>(
+  endpoint: ApiEndpointModule<A, E, R>,
+  ctx: ApiEndpointRuntimeContext,
   options: ApiHandlerBindingOptions,
-  decodedBody?: any,
-): Effect.Effect<any, any, any> {
+  decodedBody?: unknown,
+): Effect.Effect<A, E, R> {
   return endpoint.handler({
     path: ctx.params ?? emptyRecordString,
     query: ctx.query ?? emptyRecordStringArray,
-    headers: ctx.headers ?? ctx.request?.headers ?? emptyRecordString,
+    headers: ctx.headers ?? requestHeaders(ctx.request) ?? emptyRecordString,
     body: bodyFromContext(ctx, options, decodedBody),
   });
 }
 
-function bodyFromContext(ctx: any, options: ApiHandlerBindingOptions, decodedBody?: any): any {
+function bodyFromContext(
+  ctx: ApiEndpointRuntimeContext,
+  options: ApiHandlerBindingOptions,
+  decodedBody?: unknown,
+): unknown {
   if (options.body === "json") return decodedBody;
   if (options.body === "payload") return ctx.payload;
   return undefined;
+}
+
+function requestHeaders(
+  request: ApiEndpointRuntimeContext["request"],
+): Record<string, string> | undefined {
+  return request?.headers;
 }

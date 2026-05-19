@@ -8,18 +8,36 @@ export interface EmitBrowserSourceInput {
 
 export function emitBrowserSource(input: EmitBrowserSourceInput): string {
   return [
-    "// @ts-nocheck",
     'import * as Cause from "effect/Cause";',
-    'import * as Context from "effect/Context";',
     'import * as Effect from "effect/Effect";',
     'import * as Layer from "effect/Layer";',
-    'import { composeWithLayers } from "@typed/app/runtime";',
+    'import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
     'import { Fx } from "@typed/fx";',
     'import * as TypedRouter from "@typed/router";',
     'import { DomRenderTemplate, render } from "@typed/template";',
     ...emitRouteImports(input.parsed.routes),
     ...emitCompanionImports(input.companions ?? []),
+    emitTypes(),
     emitRuntime(input.parsed, input.companions ?? []),
+  ].join("\n");
+}
+
+function emitTypes(): string {
+  return [
+    "type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;",
+    "type BrowserLayerInputs = readonly LayerOrGroup[];",
+    "type BrowserBaseLayer = ReturnType<typeof makeRenderLayer>;",
+    "type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<Layers, BrowserBaseLayer>;",
+    "type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserBaseLayer | BrowserLayerWith<Layers>;",
+    "type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;",
+    "type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;",
+    "interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {",
+    "  readonly window?: Window;",
+    "  readonly root?: string | HTMLElement;",
+    "  readonly layers?: Layers;",
+    "  readonly onError?: BrowserErrorHandler<Layer.Error<BrowserLayerWith<Layers>>>;",
+    "}",
+    "type BrowserOptionsWithLayers<Layers extends BrowserLayerInputs> = BrowserOptions<Layers> & { readonly layers: Layers };",
   ].join("\n");
 }
 
@@ -49,8 +67,8 @@ function emitRuntime(
     ? `${dependenciesCompanion.binding}.layers ?? []`
     : "[]";
   const companionLayersDeclaration = dependenciesCompanion
-    ? `const companionLayers = ${companionLayers};`
-    : "const companionLayers = [];";
+    ? `const companionLayers: BrowserLayerInputs = ${companionLayers};`
+    : "const companionLayers: readonly [] = [];";
   const companionOnError = errorsCompanion
     ? `${errorsCompanion.binding}.onError ?? undefined`
     : "undefined";
@@ -67,13 +85,18 @@ function emitRuntime(
     `  name: ${JSON.stringify(parsed.name)},`,
     "  companionLayers,",
     "};",
-    "function makeRenderLayer(win, root) {",
+    "function makeRenderLayer(win: Window, root: HTMLElement) {",
     "  return Fx.drainLayer(render(Routes, root)).pipe(",
     "    Layer.provideMerge(TypedRouter.BrowserRouter(win)),",
     "    Layer.provideMerge(DomRenderTemplate.using(win.document)),",
     "  );",
     "}",
-    "export function hydrate(options = {}) {",
+    "export function hydrate(options?: BrowserOptions<readonly []>): BrowserBaseLayer;",
+    "export function hydrate<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): BrowserLayerWith<Layers>;",
+    "export function hydrate(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserHydratedLayer<BrowserLayerInputs> {",
+    "  return hydrateFromOptions(options);",
+    "}",
+    "function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {",
     "  const win = options.window ?? window;",
     "  const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);",
     "  const renderLayer = makeRenderLayer(win, root);",
@@ -81,22 +104,24 @@ function emitRuntime(
       ? "  return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])]);"
       : "  return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);",
     "}",
-    "export function run(options = {}) {",
-    "  const BrowserLayer = hydrate(options);",
+    "export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;",
+    "export function run<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<BrowserLayerWith<Layers>>, Layer.Services<BrowserLayerWith<Layers>>>;",
+    "export function run(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserRunEffect<BrowserLayerInputs> {",
+    "  const BrowserLayer = hydrateFromOptions(options);",
     "  const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);",
-    "  return Effect.provide(program, Context.empty());",
+    "  return program;",
     "}",
-    "function resolveRoot(root, document) {",
+    "function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {",
     "  if (typeof root !== \"string\") return root;",
     "  const element = document.querySelector(root);",
     "  if (element instanceof HTMLElement) return element;",
     "  throw new Error(`typed:browser root not found: ${root}`);",
     "}",
-    "function withErrorHandling(program, onError) {",
+    "function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: BrowserErrorHandler<E> | undefined): Effect.Effect<A, E, R> {",
     "  const handler = onError ?? companionOnError;",
     "  return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;",
     "}",
-    "function callErrorHandler(handler, cause) {",
+    "function callErrorHandler<E>(handler: BrowserErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {",
     "  const result = handler(cause);",
     "  return Effect.isEffect(result) ? result : Effect.void;",
     "}",

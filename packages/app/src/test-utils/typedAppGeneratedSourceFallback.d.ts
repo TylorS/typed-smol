@@ -90,6 +90,7 @@ declare module "@typed/app/runtime" {
 
   export type LayerAny = Layer.Layer<never, any, any>;
   export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];
+  export const Ids: { readonly Default: Layer.Layer<never, never, never> };
 
   export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(
     base: Base,

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import * as AsyncData from "@typed/async-data";
+import { RefAsyncData } from "@typed/fx";
 import { Effect } from "effect";
 import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
 import { ArticlePage } from "../../presentation/ArticlePage.js";
@@ -38,13 +40,20 @@ describe("realworld presentation XSS hardening", () => {
   });
 
   it("escapes article body Markdown, comments, avatars, and author text contexts", async () => {
-    const html = await render(ArticlePage(article, [{
-      id: 1,
-      createdAt: article.createdAt,
-      updatedAt: article.updatedAt,
-      body: "<script>alert(1)</script> javascript:alert(1)",
-      author: profile,
-    }]));
+    const html = await render(Effect.gen(function* () {
+      const input = yield* RefAsyncData.make(AsyncData.success({
+        article,
+        comments: [{
+          id: 1,
+          createdAt: article.createdAt,
+          updatedAt: article.updatedAt,
+          body: "<script>alert(1)</script> javascript:alert(1)",
+          author: profile,
+        }],
+      }));
+
+      return ArticlePage(input);
+    }));
 
     expect(html).not.toContain("<script");
     expect(html).not.toContain("<img src=x");
@@ -54,17 +63,25 @@ describe("realworld presentation XSS hardening", () => {
   });
 
   it("escapes feed descriptions and profile bio contexts", async () => {
-    const feed = await render(FeedPage({
-      articles: [article],
-      articlesCount: 1,
-      page: 1,
-      tags: ["typed"],
+    const feed = await render(Effect.gen(function* () {
+      const input = yield* RefAsyncData.make(AsyncData.success({
+        articles: [article],
+        articlesCount: 1,
+        page: 1,
+        tags: ["typed"],
+      }));
+
+      return FeedPage(input);
     }));
-    const page = await render(ProfilePage({
-      articles: [article],
-      articlesCount: 1,
-      favorites: false,
-      profile,
+    const page = await render(Effect.gen(function* () {
+      const input = yield* RefAsyncData.make(AsyncData.success({
+        articles: [article],
+        articlesCount: 1,
+        favorites: false,
+        profile,
+      }));
+
+      return ProfilePage(input);
     }));
 
     expect(feed).not.toContain("<img src=x");
@@ -74,9 +91,12 @@ describe("realworld presentation XSS hardening", () => {
   });
 });
 
-const render = (template: Parameters<typeof renderToHtmlString>[0]): Promise<string> =>
+const render = (
+  template: Effect.Effect<Parameters<typeof renderToHtmlString>[0], never, never>,
+): Promise<string> =>
   Effect.runPromise(
-    renderToHtmlString(template).pipe(
+    template.pipe(
+      Effect.flatMap(renderToHtmlString),
       Effect.provide(StaticHtmlRenderTemplate),
       Effect.scoped,
     ),

@@ -13,11 +13,10 @@ import {
 } from "../../domain/Ids.js";
 import { defaultLimit } from "../../domain/Pagination.js";
 import { Profile } from "../../domain/User.js";
-import { RealWorldConfig } from "../Config.js";
 import {
   currentIsoTimestamp,
   first,
-  runSql,
+  provideRepositorySql,
   type RepositoryPersistenceError,
 } from "./Common.js";
 
@@ -104,19 +103,19 @@ export class ArticleRepository extends Context.Service<
   static readonly Live = Layer.effect(
     ArticleRepository,
     Effect.gen(function* () {
-      const config = yield* RealWorldConfig;
-      const run = <A, E, R>(effect: Effect.Effect<A, E, R>) => runSql(config, effect);
+      const sql = yield* SqlClient.SqlClient;
 
       return {
-        create: (authorId, input) => run(createArticle(authorId, input)),
-        delete: (authorId, slug) => run(deleteArticle(authorId, slug)),
-        favorite: (userId, slug) => run(favoriteArticle(userId, slug)),
-        feed: (userId, filter) => run(feedArticles(userId, filter)),
-        findBySlug: (slug, viewerId) => run(findBySlug(slug, viewerId)),
-        findOwnerIdBySlug: (slug) => run(findOwnerIdBySlug(slug)),
-        list: (filter, viewerId) => run(listArticles(filter, viewerId)),
-        unfavorite: (userId, slug) => run(unfavoriteArticle(userId, slug)),
-        update: (authorId, slug, input) => run(updateArticle(authorId, slug, input)),
+        create: (authorId, input) => provideRepositorySql(createArticle(authorId, input), sql),
+        delete: (authorId, slug) => provideRepositorySql(deleteArticle(authorId, slug), sql),
+        favorite: (userId, slug) => provideRepositorySql(favoriteArticle(userId, slug), sql),
+        feed: (userId, filter) => provideRepositorySql(feedArticles(userId, filter), sql),
+        findBySlug: (slug, viewerId) => provideRepositorySql(findBySlug(slug, viewerId), sql),
+        findOwnerIdBySlug: (slug) => provideRepositorySql(findOwnerIdBySlug(slug), sql),
+        list: (filter, viewerId) => provideRepositorySql(listArticles(filter, viewerId), sql),
+        unfavorite: (userId, slug) => provideRepositorySql(unfavoriteArticle(userId, slug), sql),
+        update: (authorId, slug, input) =>
+          provideRepositorySql(updateArticle(authorId, slug, input), sql),
       };
     }),
   );

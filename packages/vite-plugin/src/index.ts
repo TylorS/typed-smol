@@ -25,13 +25,12 @@ import {
   PluginManager,
 } from "@typed/virtual-modules";
 import { virtualModulesVitePlugin } from "@typed/virtual-modules-vite";
-import { dirname, relative, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { visualizer } from "rollup-plugin-visualizer";
 import ts from "typescript";
 import type { Plugin } from "vite";
 import viteCompression from "vite-plugin-compression";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { createTypedVavitePlugin } from "./vaviteIntegration.js";
 
 /** Options for vite-plugin-compression when compression is enabled. */
@@ -64,8 +63,8 @@ export interface TypedVitePluginOptions {
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
 
   /**
-   * Path to tsconfig.json (relative to cwd or absolute). When set, both the
-   * Language Service session and vite-tsconfig-paths use this tsconfig.
+   * Path to tsconfig.json (relative to cwd or absolute). Used by the Language
+   * Service session. Vite's native resolve.tsconfigPaths discovers tsconfig.json.
    * Default: auto-discovered from project root.
    */
   readonly tsconfig?: string;
@@ -73,7 +72,7 @@ export interface TypedVitePluginOptions {
   /**
    * Enable tsconfig path resolution. Default true.
    */
-  readonly tsconfigPaths?: boolean | Record<string, unknown>;
+  readonly tsconfigPaths?: boolean;
 
   /**
    * Enable bundle analyzer. Default: process.env.ANALYZE === '1'.
@@ -188,21 +187,7 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
   const plugins: Plugin[] = [];
 
   if (resolvedOptions.tsconfigPaths !== false) {
-    const basePathsOpts =
-      typeof resolvedOptions.tsconfigPaths === "object" ? resolvedOptions.tsconfigPaths : {};
-    const cwd = process.cwd();
-    const resolvedTsconfig = resolvedOptions.tsconfig
-      ? resolve(cwd, resolvedOptions.tsconfig)
-      : undefined;
-    const pathsOpts =
-      resolvedTsconfig !== undefined
-        ? {
-            ...basePathsOpts,
-            root: cwd,
-            projects: [relative(cwd, resolvedTsconfig)],
-          }
-        : basePathsOpts;
-    plugins.push(tsconfigPaths(pathsOpts) as Plugin);
+    plugins.push(nativeTsconfigPathsPlugin);
   }
 
   plugins.push(
@@ -210,6 +195,8 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
       resolver,
       createTypeInfoApiSession,
       warnOnError: resolvedOptions.warnOnError ?? true,
+      mapId: ({ id, consumer }) =>
+        consumer === "client" ? withClientHttpApiMode(id, resolvedOptions.apiVmOptions) : id,
     }),
   );
 
@@ -251,4 +238,21 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
   }
 
   return plugins;
+}
+
+export const nativeTsconfigPathsPlugin: Plugin = {
+  name: "typed-vite:native-tsconfig-paths",
+  config(config) {
+    config.resolve ??= {};
+    config.resolve.tsconfigPaths ??= true;
+  },
+};
+
+function withClientHttpApiMode(
+  id: string,
+  options: HttpApiVirtualModulePluginOptions | undefined,
+): string {
+  const prefix = options?.prefix ?? "api:";
+  if (!id.startsWith(prefix) || id.includes("?")) return id;
+  return `${id}?mode=client`;
 }

@@ -19,6 +19,7 @@ describe("HtmlVirtualModulePlugin", () => {
     const source = buildHtml("typed:html?path=./index.html") as string;
 
     expect(source).toContain('import * as TypedConfigModule from "typed:config";');
+    expect(source).not.toContain("@ts-nocheck");
     expect(source).toContain('const sourceHtmlPath = "./index.html";');
     expect(source).toContain("const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);");
     expect(source).not.toContain('"dist/client');

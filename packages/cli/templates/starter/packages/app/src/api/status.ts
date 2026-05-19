@@ -1,6 +1,6 @@
 import * as Route from "@typed/router";
 import * as Effect from "effect/Effect";
-import { ApiHandler } from "@typed/app";
+import { ApiHandler } from "@typed/app/httpapi/ApiHandler";
 import { message } from "@__APP_NAME__/shared";
 
 export const route = Route.Parse("status");

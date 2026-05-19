@@ -154,7 +154,7 @@ const validateCreate = (
     requireNonBlank("title", input.article.title),
     requireNonBlank("description", input.article.description),
     requireNonBlank("body", input.article.body),
-  ]).pipe(Effect.as(input.article));
+  ], { concurrency: "unbounded" }).pipe(Effect.as(input.article));
 
 const validateUpdate = (
   input: UpdateArticleRequest,

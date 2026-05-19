@@ -4,8 +4,9 @@
   "type": "module",
   "packageManager": "pnpm@10.0.0",
   "scripts": {
-    "dev": "typed serve --entry packages/app/src/entry.server.ts",
-    "build": "typed build --entry packages/app/src/entry.server.ts",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vmc -p tsconfig.json && typed build",
+    "preview": "vite preview --host 127.0.0.1",
     "test": "pnpm -r test",
     "lint": "typed lint",
     "format": "typed format"
@@ -15,7 +16,10 @@
     "@typed/cli": "^1.0.0-beta.4",
     "@typed/fx": "^2.0.0-beta.4",
     "@typed/router": "^1.0.0-beta.4",
+    "@typed/tsconfig": "^1.0.0-beta.4",
     "@typed/ui": "^1.0.0-beta.4",
+    "@typed/virtual-modules-compiler": "^1.0.0-beta.4",
+    "@typed/virtual-modules-ts-plugin": "^1.0.0-beta.4",
     "@typed/vite-plugin": "^1.0.0-beta.4",
     "effect": "4.0.0-beta.66",
     "typescript": "6.0.3",

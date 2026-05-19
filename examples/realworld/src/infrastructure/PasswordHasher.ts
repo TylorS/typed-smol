@@ -15,37 +15,29 @@ export class PasswordHashError extends Data.TaggedError("PasswordHashError")<{
 }> {}
 
 export interface PasswordHasherService {
-  readonly hash: (
-    password: string,
-  ) => Effect.Effect<StoredPassword, PasswordHashError>;
+  readonly hash: (password: string) => Effect.Effect<StoredPassword, PasswordHashError>;
   readonly verify: (
     password: string,
     stored: StoredPassword,
   ) => Effect.Effect<boolean, PasswordHashError>;
 }
 
-export class PasswordHasher extends Context.Service<
-  PasswordHasher,
-  PasswordHasherService
->()("@typed/realworld/PasswordHasher") {
-  static readonly Live = Layer.effect(
-    PasswordHasher,
-    Effect.gen(function* () {
-      return {
-        hash: (password) =>
-          Effect.gen(function* () {
-            const passwordSalt = randomBytes(16).toString("hex");
-            const passwordHash = yield* derivePasswordHash(password, passwordSalt);
-            return Schema.decodeUnknownSync(StoredPassword)({ passwordHash, passwordSalt });
-          }),
-        verify: (password, stored) =>
-          Effect.gen(function* () {
-            const passwordHash = yield* derivePasswordHash(password, stored.passwordSalt);
-            return timingSafeEqualHex(passwordHash, stored.passwordHash);
-          }),
-      };
-    }),
-  );
+export class PasswordHasher extends Context.Service<PasswordHasher, PasswordHasherService>()(
+  "@typed/realworld/PasswordHasher",
+) {
+  static readonly Live = Layer.succeed(PasswordHasher, {
+    hash: (password) =>
+      Effect.gen(function* () {
+        const passwordSalt = randomBytes(16).toString("hex");
+        const passwordHash = yield* derivePasswordHash(password, passwordSalt);
+        return Schema.decodeUnknownSync(StoredPassword)({ passwordHash, passwordSalt });
+      }),
+    verify: (password, stored) =>
+      Effect.gen(function* () {
+        const passwordHash = yield* derivePasswordHash(password, stored.passwordSalt);
+        return timingSafeEqualHex(passwordHash, stored.passwordHash);
+      }),
+  });
 }
 
 const derivePasswordHash = (
@@ -70,10 +62,7 @@ const derivePasswordHash = (
       }),
   });
 
-const timingSafeEqualHex = (
-  leftHex: string,
-  rightHex: string,
-): boolean => {
+const timingSafeEqualHex = (leftHex: string, rightHex: string): boolean => {
   const left = Uint8Array.from(Buffer.from(leftHex, "hex"));
   const right = Uint8Array.from(Buffer.from(rightHex, "hex"));
 

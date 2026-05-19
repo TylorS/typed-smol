@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
-import { createRealWorldClient } from "../../presentation/ClientApi.js";
-import { createAuthStore } from "../../presentation/State.js";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import { makeBrowserClient } from "../../presentation/BrowserApiClient.js";
+import { BrowserAuthState, createAuthStore, type AuthStore } from "../../presentation/State.js";
 
 const profile = {
   username: "reader",
@@ -45,16 +46,18 @@ describe("realworld browser mutation workflows", () => {
       token: "old-token",
       fetch: fetchSequence([{ status: 200, body: { user: { ...user, token: "new-token" } } }]),
     });
-    const store = await run(createAuthStore(win, createRealWorldClient({ fetch: win.fetch })));
-
-    await run(store.updateSettings({
-      user: {
-        bio: "Updated bio",
-        email: "reader@example.com",
-        image: null,
-        username: "reader",
-      },
-    }));
+    const token = await withAuthStore(win, (store) =>
+      Effect.gen(function* () {
+        yield* store.updateSettings({
+          user: {
+            bio: "Updated bio",
+            email: "reader@example.com",
+            image: null,
+            username: "reader",
+          },
+        });
+        return yield* store.getToken;
+      }));
 
     expect(win.fetch.calls[0]).toMatchObject({
       input: "/api/user",
@@ -69,7 +72,7 @@ describe("realworld browser mutation workflows", () => {
         },
       },
     });
-    expect(win.localStorage.getItem("jwtToken")).toBe("new-token");
+    expect(token).toBe("new-token");
   });
 
   it("creates and updates articles with authenticated same-origin requests", async () => {
@@ -80,21 +83,22 @@ describe("realworld browser mutation workflows", () => {
         { status: 200, body: { article: { ...article, title: "Typed Runtime Updated" } } },
       ]),
     });
-    const store = await run(createAuthStore(win, createRealWorldClient({ fetch: win.fetch })));
-
-    await run(store.createArticle({
-      article: {
-        title: "Typed Runtime",
-        description: "Runtime workflows",
-        body: "Typed template workflows.",
-        tagList: ["typed", "effect"],
-      },
-    }));
-    await run(store.updateArticle("typed-runtime", {
-      article: {
-        title: "Typed Runtime Updated",
-      },
-    }));
+    await withAuthStore(win, (store) =>
+      Effect.gen(function* () {
+        yield* store.createArticle({
+          article: {
+            title: "Typed Runtime",
+            description: "Runtime workflows",
+            body: "Typed template workflows.",
+            tagList: ["typed", "effect"],
+          },
+        });
+        yield* store.updateArticle("typed-runtime", {
+          article: {
+            title: "Typed Runtime Updated",
+          },
+        });
+      }));
 
     expect(win.fetch.calls).toMatchObject([
       {
@@ -121,13 +125,14 @@ describe("realworld browser mutation workflows", () => {
         { status: 204 },
       ]),
     });
-    const store = await run(createAuthStore(win, createRealWorldClient({ fetch: win.fetch })));
-
-    await run(store.favoriteArticle("typed-runtime", false));
-    await run(store.followProfile("reader", false));
-    await run(store.createComment("typed-runtime", { comment: { body: "Nice workflow." } }));
-    await run(store.deleteComment("typed-runtime", 1));
-    await run(store.deleteArticle("typed-runtime"));
+    await withAuthStore(win, (store) =>
+      Effect.gen(function* () {
+        yield* store.favoriteArticle("typed-runtime", false);
+        yield* store.followProfile("reader", false);
+        yield* store.createComment("typed-runtime", { comment: { body: "Nice workflow." } });
+        yield* store.deleteComment("typed-runtime", 1);
+        yield* store.deleteArticle("typed-runtime");
+      }));
 
     expect(win.fetch.calls).toMatchObject([
       { input: "/api/articles/typed-runtime/favorite", method: "POST" },
@@ -144,15 +149,14 @@ describe("realworld browser mutation workflows", () => {
 
   it("fails protected workflows before fetch when jwtToken is absent", async () => {
     const win = windowWith({ fetch: fetchSequence([]) });
-    const store = await run(createAuthStore(win, createRealWorldClient({ fetch: win.fetch })));
-
-    const exit = await Effect.runPromiseExit(store.createArticle({
-      article: {
-        title: "Typed Runtime",
-        description: "Runtime workflows",
-        body: "Typed template workflows.",
-      },
-    }));
+    const exit = await Effect.runPromiseExit(withAuthStoreEffect(win, (store) =>
+      store.createArticle({
+        article: {
+          title: "Typed Runtime",
+          description: "Runtime workflows",
+          body: "Typed template workflows.",
+        },
+      })));
 
     expect(exit._tag).toBe("Failure");
     expect(win.fetch.calls).toEqual([]);
@@ -164,15 +168,7 @@ type TestWindow = {
   readonly localStorage: Storage & { jwtToken?: string };
 };
 
-type TestFetch = {
-  (
-    input: string,
-    init?: {
-      readonly body?: string;
-      readonly headers?: Record<string, string>;
-      readonly method?: string;
-    },
-  ): Promise<Response>;
+type TestFetch = typeof globalThis.fetch & {
   readonly calls: Array<{
     readonly input: string;
     readonly authorization?: string;
@@ -181,8 +177,31 @@ type TestFetch = {
   }>;
 };
 
+let currentFetch: typeof globalThis.fetch = globalThis.fetch;
+
 const run = <A, E>(effect: Effect.Effect<A, E, never>): Promise<A> =>
-  Effect.runPromise(effect);
+  Effect.runPromise(Effect.provideService(effect, FetchHttpClient.Fetch, currentFetch));
+
+const withAuthStore = <A, E>(
+  win: TestWindow,
+  useStore: (store: AuthStore) => Effect.Effect<A, E>,
+) => {
+  currentFetch = win.fetch;
+  return run(withAuthStoreEffect(win, useStore));
+};
+
+const withAuthStoreEffect = <A, E>(
+  win: TestWindow,
+  useStore: (store: AuthStore) => Effect.Effect<A, E>,
+) =>
+  Effect.gen(function* () {
+    const client = yield* makeBrowserClient({ baseUrl: "http://typed.test" });
+    const store = yield* createAuthStore(client);
+    return yield* useStore(store);
+  }).pipe(
+    Effect.provide(BrowserAuthState.make(authSnapshotFor(win))),
+    Effect.provide(FetchHttpClient.layer),
+  );
 
 const windowWith = (options: {
   readonly fetch: TestFetch;
@@ -191,6 +210,12 @@ const windowWith = (options: {
   const storage = storageWith(options.token);
   return { fetch: options.fetch, localStorage: storage };
 };
+
+const authSnapshotFor = (win: TestWindow) => ({
+  state: "loading" as const,
+  token: win.localStorage.getItem("jwtToken") ?? win.localStorage.jwtToken ?? null,
+  currentUser: null,
+});
 
 const storageWith = (token?: string): Storage => {
   const values = new Map<string, string>();
@@ -212,11 +237,11 @@ const fetchSequence = (
 ): TestFetch => {
   const calls: TestFetch["calls"] = [];
   let index = 0;
-  const fetch: TestFetch = async (input, init) => {
+  const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     calls.push({
-      input,
-      authorization: init?.headers?.authorization,
-      body: init?.body ? JSON.parse(init.body) as unknown : undefined,
+      input: urlPath(input),
+      authorization: authorization(init?.headers),
+      body: jsonBody(init?.body),
       method: init?.method,
     });
     const response = responses[index++];
@@ -226,6 +251,19 @@ const fetchSequence = (
       { status: response.status, headers: { "content-type": "application/json" } },
     );
   };
-  Object.defineProperty(fetch, "calls", { value: calls });
-  return fetch;
+  return Object.assign(fetch, { calls });
 };
+
+const authorization = (headers: HeadersInit | undefined): string | undefined =>
+  headers === undefined ? undefined : new Headers(headers).get("authorization") ?? undefined;
+
+const urlPath = (input: RequestInfo | URL): string => {
+  const url = input instanceof Request ? input.url : String(input);
+  return new URL(url).pathname;
+};
+
+const jsonBody = (body: BodyInit | null | undefined): unknown =>
+  body === undefined || body === null ? undefined : JSON.parse(bodyText(body));
+
+const bodyText = (body: BodyInit): string =>
+  typeof body === "string" ? body : body instanceof Uint8Array ? new TextDecoder().decode(body) : "";

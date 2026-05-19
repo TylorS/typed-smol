@@ -140,8 +140,7 @@ export function compile(params: CompileParams): number {
     });
 
     const preEmit = ts.getPreEmitDiagnostics(program);
-    // oxlint-disable-next-line typescript/unbound-method
-    const emitResult = program.emit(undefined, sys.writeFile);
+    const emitResult = program.emit();
     const allDiagnostics = [...preEmit, ...emitResult.diagnostics];
 
     for (const d of allDiagnostics) {

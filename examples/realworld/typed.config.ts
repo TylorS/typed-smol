@@ -1,6 +1,7 @@
 import { defineConfig } from "@typed/app/config/defineConfig";
 
 export default defineConfig({
+  entry: "src/server.ts",
   api: {
     prefix: "api:",
     pathPrefix: "/api",

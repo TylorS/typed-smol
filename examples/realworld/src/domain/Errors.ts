@@ -1,4 +1,3 @@
-import { Data } from "effect";
 import * as Schema from "effect/Schema";
 import { NonEmptyString } from "./Ids.js";
 
@@ -13,10 +12,10 @@ export const ErrorResponse = Schema.Struct({
 });
 export type ErrorResponse = Schema.Schema.Type<typeof ErrorResponse>;
 
-export class RealWorldError extends Data.TaggedError("RealWorldError")<{
-  readonly status: number;
-  readonly errors: ErrorMap;
-}> {}
+export class RealWorldError extends Schema.TaggedErrorClass<RealWorldError>()("RealWorldError", {
+  status: Schema.Number,
+  errors: ErrorMap,
+}) {}
 
 export const makeRealWorldError = (
   status: number,

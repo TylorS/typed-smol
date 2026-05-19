@@ -16,8 +16,11 @@ const rewriteModuleSpecifierText = (
   specifier: string,
   importerDir: string,
   previewDir: string,
+  resolveNonRelativeModuleSpecifier?: (specifier: string) => string | undefined,
 ): string => {
-  if (!isRelativeModuleSpecifier(specifier)) return specifier;
+  if (!isRelativeModuleSpecifier(specifier)) {
+    return resolveNonRelativeModuleSpecifier?.(specifier) ?? specifier;
+  }
 
   const absoluteTarget = resolve(importerDir, specifier);
   const newRel = toPosixPath(relative(previewDir, absoluteTarget));
@@ -29,8 +32,14 @@ const createLiteralReplacement = (
   sourceFile: ts.SourceFile,
   importerDir: string,
   previewDir: string,
+  resolveNonRelativeModuleSpecifier?: (specifier: string) => string | undefined,
 ): LiteralReplacement | undefined => {
-  const rewritten = rewriteModuleSpecifierText(literal.text, importerDir, previewDir);
+  const rewritten = rewriteModuleSpecifierText(
+    literal.text,
+    importerDir,
+    previewDir,
+    resolveNonRelativeModuleSpecifier,
+  );
   if (rewritten === literal.text) return undefined;
   const original = literal.getText(sourceFile);
   return {
@@ -56,10 +65,17 @@ const rewriteModuleSpecifiers = (
   sourceFile: ts.SourceFile,
   importerDir: string,
   previewDir: string,
+  resolveNonRelativeModuleSpecifier?: (specifier: string) => string | undefined,
 ): string => {
   const replacements: LiteralReplacement[] = [];
   const add = (literal: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral): void => {
-    const replacement = createLiteralReplacement(literal, sourceFile, importerDir, previewDir);
+    const replacement = createLiteralReplacement(
+      literal,
+      sourceFile,
+      importerDir,
+      previewDir,
+      resolveNonRelativeModuleSpecifier,
+    );
     if (replacement) replacements.push(replacement);
   };
   const visit = (node: ts.Node): void => {
@@ -111,6 +127,7 @@ export function rewriteSourceForPreviewLocation(
   sourceText: string,
   importer: string,
   virtualFilePath: string,
+  resolveNonRelativeModuleSpecifier?: (specifier: string) => string | undefined,
 ): string {
   const importerDir = dirname(resolve(importer));
   const previewDir = dirname(resolve(virtualFilePath));
@@ -122,7 +139,12 @@ export function rewriteSourceForPreviewLocation(
     true,
     scriptKind,
   );
-  return rewriteModuleSpecifiers(sourceFile, importerDir, previewDir);
+  return rewriteModuleSpecifiers(
+    sourceFile,
+    importerDir,
+    previewDir,
+    resolveNonRelativeModuleSpecifier,
+  );
 }
 
 /**

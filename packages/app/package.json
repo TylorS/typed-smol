@@ -30,6 +30,7 @@
   "dependencies": {
     "@effect/platform-node": "catalog:",
     "@typed/fx": "workspace:*",
+    "@typed/id": "workspace:*",
     "@typed/router": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
     "effect": "catalog:"
