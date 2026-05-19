@@ -38,7 +38,7 @@ import { keyToPartType } from "./internal/keyToPartType.js";
 import { findPath } from "./internal/ParentChildNodes.js";
 import { parse } from "./Parser.js";
 import type { Renderable } from "./Renderable.js";
-import { DomRenderEvent, type RenderEvent } from "./RenderEvent.js";
+import { DomRenderEvent, isRenderEvent, type RenderEvent } from "./RenderEvent.js";
 import * as RQ from "./RenderQueue.js";
 import { RenderTemplate } from "./RenderTemplate.js";
 import * as Template from "./Template.js";
@@ -114,6 +114,10 @@ export const CurrentRenderQueue = Context.Reference<RQ.RenderQueue>("RenderQueue
 export const CurrentRenderPriority = Context.Reference<number>("CurrentRenderPriority", {
   defaultValue: () => RQ.RenderPriority.Raf(10),
 });
+
+export const CurrentEventHandlerScope = Context.Service<Scope.Scope>(
+  "@typed/template/CurrentEventHandlerScope",
+);
 
 /**
  * A Layer that provides the `RenderTemplate` service implemented for DOM rendering.
@@ -226,7 +230,13 @@ export const DomRenderTemplate = Object.assign(
 
               if (effects.length > 0) {
                 yield* Effect.all(
-                  effects.map(flow(Effect.catchCause(ctx.onCause), Effect.forkIn(ctx.scope))),
+                  effects.map((effect) =>
+                    effect.pipe(
+                      Effect.provideContext(ctx.services),
+                      Effect.catchCause(ctx.onCause),
+                      Effect.forkIn(ctx.scope),
+                    )
+                  ),
                 );
 
                 if (ctx.expected > 0 && ctx.refCounter.expect(ctx.expected)) {
@@ -241,7 +251,7 @@ export const DomRenderTemplate = Object.assign(
               }
 
               // Setup our event listeners for our rendered content.
-              yield* ctx.eventSource.setup(rendered, ctx.scope);
+              yield* ctx.eventSource.setup(rendered, ctx.scope, ctx.parentScope);
 
               // If we're hydrating, we need to mark this part of the stack as hydrated
               if (hydration !== undefined) {
@@ -611,7 +621,9 @@ function matchRenderable<X, A, B, C>(
   },
 ): A | B | C | void {
   if (isNullish(renderable)) return;
-  else if (Fx.isFx(renderable)) {
+  else if (isRenderEvent(renderable)) {
+    return matches.Primitive(renderable as X);
+  } else if (Fx.isFx(renderable)) {
     return matches.Fx(renderable as any);
   } else if (isStream(renderable)) {
     return matches.Fx(Fx.fromStream(renderable));
@@ -676,9 +688,11 @@ export type TemplateContext<R = never> = {
   readonly disposables: Set<Disposable>;
   readonly eventSource: EventSource;
   readonly refCounter: IndexRefCounter;
+  readonly parentScope: Scope.Scope;
   readonly scope: Scope.Closeable;
   readonly values: ArrayLike<Renderable<unknown, any, any>>;
   readonly services: Context.Context<R | Scope.Scope>;
+  readonly eventServices: Context.Context<R | Scope.Scope>;
   readonly onCause: (cause: Cause.Cause<any>) => Effect.Effect<unknown>;
 
   /**
@@ -707,20 +721,34 @@ const makeTemplateContext = Effect.fn(function* <
   const services: Context.Context<Renderable.Services<Values[number]> | RSink | Scope.Scope> =
     yield* Effect.context<Renderable.Services<Values[number]> | RSink | Scope.Scope>();
   const refCounter: IndexRefCounter = yield* makeRefCounter;
-  const scope: Scope.Closeable = yield* Scope.fork(Context.get(services, Scope.Scope));
+  const parentScope = Context.get(services, Scope.Scope);
+  const eventHandlerScope = Context.getOrUndefined(services, CurrentEventHandlerScope)
+    ?? parentScope;
+  const scope: Scope.Closeable = yield* Scope.fork(parentScope);
   const eventSource: EventSource = makeEventSource();
-  const servicesWithScope = Context.add(services, Scope.Scope, scope);
+  const servicesWithScope = Context.add(
+    Context.add(services, Scope.Scope, scope),
+    CurrentEventHandlerScope,
+    eventHandlerScope,
+  );
+  const eventServices = Context.add(
+    Context.add(services, Scope.Scope, eventHandlerScope),
+    CurrentEventHandlerScope,
+    eventHandlerScope,
+  );
   const hydrateContext = Context.getOption(services, HydrateContext);
   const ctx: TemplateContext<Renderable.Services<Values[number]> | RSink | Scope.Scope> = {
-    services: Context.add(services, Scope.Scope, scope),
+    services: servicesWithScope,
+    eventServices,
     document,
     renderQueue,
     disposables: new Set(),
     eventSource,
     refCounter,
+    parentScope,
     scope,
     values,
-    onCause: flow(onCause, Effect.provideContext(servicesWithScope)),
+    onCause: flow(onCause, Effect.provideContext(eventServices)),
     expected: 0,
     dynamicIndex: values.length,
     hydrateContext: getOrUndefined(hydrateContext),
@@ -743,6 +771,8 @@ function liftRenderableToFx<E = never, R = never>(
     case "object": {
       if (isNullish(renderable)) {
         return Fx.null;
+      } else if (isRenderEvent(renderable)) {
+        return Fx.succeed(renderable);
       } else if (Array.isArray(renderable)) {
         return Fx.tuple(...renderable.map(liftRenderableToFx<E, R>));
       } else if (isOption(renderable)) {
@@ -801,7 +831,7 @@ function setupEventHandler(element: Element, ctx: TemplateContext, index: number
       value as
         | Effect.Effect<unknown, never, never>
         | EventHandler.EventHandler<Event, never, never>,
-    ).pipe(EventHandler.provide(ctx.services), EventHandler.catchCause(ctx.onCause)),
+    ).pipe(EventHandler.provide(ctx.eventServices), EventHandler.catchCause(ctx.onCause)),
   );
 }
 

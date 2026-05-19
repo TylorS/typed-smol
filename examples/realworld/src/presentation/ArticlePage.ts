@@ -1,7 +1,8 @@
 import * as AsyncData from "@typed/async-data";
 import { RefAsyncData, RefSubject } from "@typed/fx";
 import type { RefSubject as RefSubjectType } from "@typed/fx/RefSubject/RefSubject";
-import { html, many } from "@typed/template";
+import { html, many, unsafeHtml } from "@typed/template";
+import { Link } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import type { Article, Comment } from "../domain/Article.js";
 import type { ArticlePageData } from "../page-data/PageData.js";
@@ -22,7 +23,7 @@ const ArticlePageContent = <E, R>(
   const articleFields = RefSubject.proxy(article);
   const author = RefSubject.proxy(articleFields.author);
   const title = RefSubject.map(articleFields.title, safeTextPreview);
-  const body = RefSubject.map(articleFields.body, renderMarkdown);
+  const body = RefSubject.map(articleFields.body, (source) => unsafeHtml(renderMarkdown(source)));
   const authorName = RefSubject.map(author.username, safeTextPreview);
 
   return html`<section class="article-page">
@@ -65,13 +66,9 @@ const ArticleMeta = <E, R>(articleRef: RefSubject.Computed<Article, E, R>) => {
   const avatar = RefSubject.map(author.image, avatarSrc);
   const displayName = RefSubject.map(author.username, safeTextPreview);
 
-  return html`<a href=${profileHref}>
-      <img src=${avatar} />
-    </a>
+  return html`${Link({ href: profileHref, content: html`<img src=${avatar} />` })}
     <div class="info">
-      <a class="author" href=${profileHref}>
-        ${displayName}
-      </a>
+      ${Link({ class: "author", href: profileHref, content: displayName })}
       <span class="date">${article.createdAt}</span>
     </div>
   `;
@@ -104,13 +101,12 @@ const CommentCard = <E, R>(
       <p class="card-text">${body}</p>
     </div>
     <div class="card-footer">
-      <a
-        class="comment-author"
-        href=${profileHref}
-      >
-        <img class="comment-author-img" src=${avatar} />
-        ${displayName}
-      </a>
+      ${Link({
+        class: "comment-author",
+        href: profileHref,
+        content: html`<img class="comment-author-img" src=${avatar} />
+          ${displayName}`,
+      })}
       <span class="mod-options">
         <button class="btn btn-sm btn-outline-danger" onclick=${deleteComment(slug, comment.id)}>
           <i class="ion-trash-a"></i>

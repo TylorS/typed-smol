@@ -104,6 +104,15 @@ describe("typed-realworld package skeleton", () => {
     expect(existsSync(resolve(projectRoot, "public/default-avatar.svg"))).toBe(true);
   });
 
+  it("uses the SSR outlet and explicitly configures the browser root", () => {
+    const html = readText("index.html");
+    const browserEntry = readText("src/browser.ts");
+
+    expect(html).toContain('<div id="realworld-root"><!--typed-ssr-outlet--></div>');
+    expect(html).not.toContain('<div id="app"></div>');
+    expect(browserEntry).toContain('root: "#realworld-root"');
+  });
+
   it("keeps route modules environment-agnostic with entrypoint-scoped dependencies", () => {
     expect(existsSync(resolve(projectRoot, "src/routes/_dependencies.ts"))).toBe(false);
     expect(existsSync(resolve(projectRoot, "src/routes/_handlers.dependencies.ts"))).toBe(false);
@@ -164,6 +173,14 @@ describe("typed-realworld package skeleton", () => {
     for (const path of asyncPageSourceFiles()) {
       expect(readText(path), path).toContain("AsyncData");
     }
+  });
+
+  it("uses @typed/ui Link for internal navigation anchors", () => {
+    const offenders = linkSourceFiles()
+      .flatMap((path) =>
+        rawAnchorHrefLines(path).map((line) => `${path}:${line}`));
+
+    expect(offenders).toEqual([]);
   });
 
   it("provides SqlClient through layers instead of rebuilding sqlite per repository call", () => {
@@ -258,6 +275,15 @@ const genPreferredSourceFiles = (): readonly string[] => [
   "src/presentation/State.ts",
 ];
 
+const linkSourceFiles = (): readonly string[] => [
+  "src/presentation/ArticlePage.ts",
+  "src/presentation/Feed.ts",
+  "src/presentation/Layout.ts",
+  "src/presentation/ProfilePage.ts",
+  "src/routes/login.ts",
+  "src/routes/register.ts",
+];
+
 const effectUnknownErrorChannelLines = (path: string): readonly number[] =>
   readText(path)
     .split("\n")
@@ -269,3 +295,23 @@ const effectCombinatorLines = (path: string): readonly number[] =>
     .split("\n")
     .flatMap((line, index) =>
       /Effect\.(?:flatMap|map)\(/.test(line) ? [index + 1] : []);
+
+const rawAnchorHrefLines = (path: string): readonly number[] => {
+  const lines = readText(path).split("\n");
+  const offenders: number[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!lines[index].includes("<a")) continue;
+
+    let openingTag = lines[index];
+    const startLine = index + 1;
+    while (!openingTag.includes(">") && index + 1 < lines.length) {
+      index += 1;
+      openingTag += `\n${lines[index]}`;
+    }
+
+    if (openingTag.includes("href=")) offenders.push(startLine);
+  }
+
+  return offenders;
+};

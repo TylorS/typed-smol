@@ -1,4 +1,5 @@
 import { html } from "@typed/template";
+import { Link } from "@typed/ui";
 
 export const defaultAvatar = "/default-avatar.svg";
 
@@ -17,11 +18,11 @@ export const avatarSrc = (image: string | null | undefined): string => {
 
 export const Navbar = html`<nav class="navbar navbar-light">
   <div class="container">
-    <a class="navbar-brand" href="/">conduit</a>
+    ${Link({ class: "navbar-brand", href: "/", content: "conduit" })}
     <ul class="nav navbar-nav pull-xs-right">
-      <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-      <li class="nav-item"><a class="nav-link" href="/login">Sign in</a></li>
-      <li class="nav-item"><a class="nav-link" href="/register">Sign up</a></li>
+      <li class="nav-item">${Link({ class: "nav-link", href: "/", content: "Home" })}</li>
+      <li class="nav-item">${Link({ class: "nav-link", href: "/login", content: "Sign in" })}</li>
+      <li class="nav-item">${Link({ class: "nav-link", href: "/register", content: "Sign up" })}</li>
     </ul>
   </div>
 </nav>`;

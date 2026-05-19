@@ -3,7 +3,9 @@ import type { Scope } from "effect/Scope";
 import type { Stream } from "effect/Stream";
 import { type Fx, gen } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx/RefSubject";
-import { getUrl, type NavigationError, Navigation } from "@typed/navigation";
+import { getUrl } from "@typed/navigation/_core";
+import { Navigation } from "@typed/navigation/Navigation";
+import * as Router from "@typed/router";
 import {
   EventHandler,
   type Renderable,
@@ -40,6 +42,8 @@ type AnchorProperties = {
 };
 
 export interface LinkOptions extends AnchorEventHandlers, AnchorRef, AnchorProperties {
+  readonly "aria-current"?: Renderable<string | null | undefined, any, any>;
+  readonly class?: Renderable<string | null | undefined, any, any>;
   readonly href: Renderable<string, any, any>;
   readonly content: Renderable<
     string | number | boolean | null | undefined | void | RenderEvent,
@@ -53,8 +57,8 @@ function makeLinkClickHandler(
   replace$: RefSubject.RefSubject<boolean>,
 ): EventHandler.EventHandler<
   MouseEvent & { readonly currentTarget: HTMLAnchorElement },
-  NavigationError,
-  Navigation
+  never,
+  Router.Router | Scope
 > {
   return EventHandler.make((ev: MouseEvent & { readonly currentTarget: HTMLAnchorElement }) =>
     Effect.gen(function* () {
@@ -67,7 +71,7 @@ function makeLinkClickHandler(
       if (target.origin !== nav.origin) return;
       ev.preventDefault();
       const replace = yield* replace$;
-      yield* nav.navigate(href, { history: replace ? "replace" : "push" });
+      yield* (replace ? Router.replace(href) : Router.push(href));
     }),
   );
 }

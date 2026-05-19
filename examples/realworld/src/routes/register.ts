@@ -1,4 +1,6 @@
 import { html } from "@typed/template";
+import { Link } from "@typed/ui";
+import * as Router from "@typed/router";
 import * as Effect from "effect/Effect";
 import { RegisterUserRequest } from "../domain/RealWorldApi.js";
 import { BrowserAuth } from "../presentation/BrowserAuth.js";
@@ -7,7 +9,7 @@ import { RegisterRoute } from "../routing/Routes.js";
 
 export const route = RegisterRoute;
 
-const submitRegister = formSubmit(
+export const submitRegister = formSubmit(
   Effect.fn(function* (form: HTMLFormElement) {
     const input = yield* decodeForm(RegisterUserRequest, {
       user: {
@@ -17,7 +19,9 @@ const submitRegister = formSubmit(
       },
     });
     const auth = yield* BrowserAuth;
-    return yield* auth.register(input);
+    const response = yield* auth.register(input);
+    yield* Router.push("/");
+    return response;
   }),
 );
 
@@ -26,7 +30,7 @@ export const template = html`<section class="auth-page">
     <div class="row">
       <div class="col-md-6 offset-md-3 col-xs-12">
         <h1 class="text-xs-center">Sign up</h1>
-        <p class="text-xs-center"><a href="/login">Have an account?</a></p>
+        <p class="text-xs-center">${Link({ href: "/login", content: "Have an account?" })}</p>
         <ul class="error-messages"></ul>
         <form onsubmit=${submitRegister}>
           <fieldset class="form-group">

@@ -1,5 +1,4 @@
 import * as Effect from "effect/Effect";
-import * as Fiber from "effect/Fiber";
 import * as Scope from "effect/Scope";
 import type { EventHandler } from "./EventHandler.js";
 import { getElements, type Rendered } from "./Wire.js";
@@ -56,11 +55,15 @@ export interface EventSource {
   /**
    * Sets up event listeners for a rendered template within a scope.
    */
-  readonly setup: (rendered: Rendered, scope: Scope.Scope) => Effect.Effect<void>;
+  readonly setup: (
+    rendered: Rendered,
+    listenerScope: Scope.Scope,
+    handlerScope?: Scope.Scope,
+  ) => Effect.Effect<void>;
 }
 
 type Entry = readonly [Element, Handler<any>];
-type Run = <E, A>(effect: Effect.Effect<A, E>) => Fiber.Fiber<A, E>;
+type Run = <E, A>(effect: Effect.Effect<A, E>) => void;
 
 const disposable = (f: () => void): Disposable => ({ [Symbol.dispose]: f });
 const dispose = (d: Disposable): void => d[Symbol.dispose]();
@@ -139,21 +142,19 @@ export function makeEventSource(): EventSource {
     return disposables;
   }
 
-  function setup(rendered: Rendered, scope: Scope.Scope) {
+  function setup(rendered: Rendered, listenerScope: Scope.Scope, handlerScope = listenerScope) {
     if (listeners.size === 0) return Effect.void;
 
     const elements = getElements(rendered);
     if (elements.length === 0) return Effect.void;
 
     const disposables: Array<Disposable> = [];
-    const fibers = new Map<symbol, Fiber.Fiber<any, any>>();
     const run: Run = <E, A>(effect: Effect.Effect<A, E>) => {
-      const id = Symbol();
-      const fiber = Effect.runFork(
-        Effect.onExit(effect, () => Effect.sync(() => fibers.delete(id))),
+      Effect.runFork(
+        Effect.forkScoped(effect, { startImmediately: true }).pipe(
+          Effect.provideService(Scope.Scope, handlerScope),
+        ),
       );
-      fibers.set(id, fiber);
-      return fiber;
     };
 
     if (listeners.size > 0) {
@@ -164,11 +165,9 @@ export function makeEventSource(): EventSource {
     }
 
     return Scope.addFinalizer(
-      scope,
-      Effect.suspend(() => {
+      listenerScope,
+      Effect.sync(() => {
         disposables.forEach(dispose);
-        if (fibers.size === 0) return Effect.void;
-        return Fiber.interruptAll(fibers.values());
       }),
     );
   }

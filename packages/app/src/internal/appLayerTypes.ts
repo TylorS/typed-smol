@@ -71,10 +71,10 @@ export type Provide<A extends LayerAny, B extends LayerAny> = Layer.Layer<
 >;
 
 type ComputeLayer<L extends LayerOrGroup> =
-  L extends Layer.Layer<infer A, infer E, infer R>
-    ? Layer.Layer<A, E, R>
-    : L extends ReadonlyArray<Layer.Layer<infer A, infer E, infer R>>
-      ? Layer.Layer<A, E, R>
+  L extends ReadonlyArray<LayerAny>
+    ? Layer.Layer<Layer.Success<L[number]>, Layer.Error<L[number]>, Layer.Services<L[number]>>
+    : L extends LayerAny
+      ? Layer.Layer<Layer.Success<L>, Layer.Error<L>, Layer.Services<L>>
       : never;
 
 /** Normalizes LayerOrGroup to a single Layer at runtime. Arrays use Layer.mergeAll. */

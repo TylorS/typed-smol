@@ -40,6 +40,10 @@ export function applySsrOutlet(
   return `${template.slice(0, insertAt)}${markup}${template.slice(insertAt)}`;
 }
 
+export function normalizeClientHtmlPath(sourcePath: string): string {
+  return sourcePath.split("/").filter(isClientHtmlPathSegment).join("/");
+}
+
 function loadHtmlSource(): string {
   return [
     "export async function loadHtml(options: LoadHtmlOptions = {}) {",
@@ -57,12 +61,22 @@ function clientBuildPathSource(): string {
   return [
     "function joinClientBuildPath(sourcePath: string): string {",
     "  const clientOutDir = typedBuildConfig.clientOutDir ?? joinPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
-    "  return joinPath(clientOutDir, sourcePath.replace(/^\\.\\//, \"\"));",
+    "  return joinPath(clientOutDir, normalizeClientHtmlPath(sourcePath));",
+    "}",
+    "function normalizeClientHtmlPath(sourcePath: string): string {",
+    "  return sourcePath.split(\"/\").filter(isClientHtmlPathSegment).join(\"/\");",
+    "}",
+    "function isClientHtmlPathSegment(segment: string): boolean {",
+    "  return segment !== \"\" && segment !== \".\" && segment !== \"..\";",
     "}",
     "function joinPath(...parts: readonly string[]): string {",
     "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
     "}",
   ].join("\n");
+}
+
+function isClientHtmlPathSegment(segment: string): boolean {
+  return segment !== "" && segment !== "." && segment !== "..";
 }
 
 function renderHtmlSource(): string {

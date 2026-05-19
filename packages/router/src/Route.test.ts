@@ -126,6 +126,14 @@ describe("typed/router/Route", () => {
 
         expect(decoded).toEqual({ userId: "u1", postId: "p1" });
       }).pipe(Effect.scoped, Effect.runPromise));
+
+    it("decodes typed params from joined routes", () =>
+      Effect.gen(function* () {
+        const route = Route.Join(Route.Parse("comments"), Route.Int("commentId"));
+        const decoded = yield* Schema.decodeEffect(route.paramsSchema)({ commentId: "42" });
+
+        expect(decoded).toEqual({ commentId: 42 });
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 
   describe("pathSchema", () => {
@@ -145,6 +153,42 @@ describe("typed/router/Route", () => {
         const decoded = yield* Schema.decodeEffect(route.querySchema)({});
 
         expect(decoded).toEqual({});
+      }).pipe(Effect.scoped, Effect.runPromise));
+
+    it("creates typed query params without adding them to the route path", () =>
+      Effect.gen(function* () {
+        const route = Route.Join(Route.Parse("articles"), Route.QueryParams(Route.Int("page")));
+        const decoded = yield* Schema.decodeEffect(route.querySchema)({ page: "3" });
+
+        expect(route.path).toEqual("/articles");
+        expect(decoded).toEqual({ page: 3 });
+      }).pipe(Effect.scoped, Effect.runPromise));
+
+    it("merges query params from joined route segments", () =>
+      Effect.gen(function* () {
+        const route = Route.Join(
+          Route.Parse("articles"),
+          Route.QueryParams(Route.Int("page")),
+          Route.QueryParams(Route.Param("tag")),
+        );
+        const decoded = yield* Schema.decodeEffect(route.paramsSchema)({
+          page: "2",
+          tag: "typed",
+        });
+
+        expect(decoded).toEqual({ page: 2, tag: "typed" });
+      }).pipe(Effect.scoped, Effect.runPromise));
+
+    it("decodes optional typed query params", () =>
+      Effect.gen(function* () {
+        const route = Route.Join(
+          Route.Parse("articles"),
+          Route.QueryParams(Route.OptionalInt("page")),
+        );
+        const decode = Schema.decodeEffect(route.querySchema);
+
+        expect(yield* decode({})).toEqual({});
+        expect(yield* decode({ page: "2" })).toEqual({ page: 2 });
       }).pipe(Effect.scoped, Effect.runPromise));
   });
 

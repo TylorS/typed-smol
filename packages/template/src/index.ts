@@ -11,4 +11,5 @@ export * from "./RenderEvent.js";
 export * from "./RenderQueue.js";
 export * from "./RenderTemplate.js";
 export * from "./Template.js";
+export * from "./unsafeHtml.js";
 export * from "./Wire.js";

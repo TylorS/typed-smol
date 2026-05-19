@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import * as Logger from "effect/Logger";
 import { makeBrowserClient } from "../../presentation/BrowserApiClient.js";
 import { BrowserAuth } from "../../presentation/BrowserAuth.js";
 import { AuthSessionStorage } from "../../presentation/AuthSessionStorage.js";
@@ -291,6 +292,23 @@ describe("realworld browser auth state", () => {
     );
 
     expect(persisted).toBe("token-reader");
+  });
+
+  it("ignores empty auth emissions while persisting tokens", async () => {
+    const win = windowWith({ fetch: fetchJson({ user }, 200), token: "stored-token" });
+    const missingSnapshot: Parameters<typeof AuthSessionStorage.persist>[0] | undefined = undefined;
+    const logs: Array<unknown> = [];
+    const logger = Logger.make(({ message }) => logs.push(message));
+
+    await run(
+      AuthSessionStorage.persist(missingSnapshot).pipe(
+        Effect.provide(AuthSessionStorage.local(() => win.localStorage)),
+        Effect.provide(Logger.layer([logger])),
+      ),
+    );
+
+    expect(win.localStorage.getItem("jwtToken")).toBe("stored-token");
+    expect(logs).toEqual([]);
   });
 
   it("adds authorization through an HttpClient middleware backed by BrowserAuthState", async () => {

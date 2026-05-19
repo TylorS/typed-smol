@@ -14,6 +14,7 @@ const authSessionLayer = AuthSessionStorage.local(() => window.localStorage);
 const authStateLayer = BrowserAuthState.make(AuthSessionStorage.authSnapshot);
 
 export const browserRuntime = run({
+  root: "#realworld-root",
   layers: [BrowserAuth.WithState(window, client), BrowserPageData(client)],
 }).pipe(
   Effect.provide(authStateLayer),

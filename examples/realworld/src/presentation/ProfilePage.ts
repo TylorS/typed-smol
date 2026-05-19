@@ -2,6 +2,7 @@ import * as AsyncData from "@typed/async-data";
 import { RefAsyncData, RefSubject } from "@typed/fx";
 import type { RefSubject as RefSubjectType } from "@typed/fx/RefSubject/RefSubject";
 import { html, many } from "@typed/template";
+import { Link } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import type { ArticlePreview } from "../domain/Article.js";
 import type { ProfilePageData } from "../page-data/PageData.js";
@@ -86,12 +87,7 @@ const ProfileTab = (tabRef: RefSubjectType<ProfileTabData>) => {
   const tab = RefSubject.proxy(tabRef);
   const tabClass = RefSubject.map(tab.active, (active) => `nav-link${active ? " active" : ""}`);
   return html`<li class="nav-item">
-    <a
-      class=${tabClass}
-      href=${tab.href}
-    >
-      ${tab.label}
-    </a>
+    ${Link({ class: tabClass, href: tab.href, content: tab.label })}
   </li>`;
 };
 

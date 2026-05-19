@@ -118,7 +118,7 @@ export const createAuthStore = (
       deleteComment: Effect.fn(function* (slug, id) {
         const token = yield* requireToken;
         return yield* client.comments.delete({
-          params: { slug, id: String(id) },
+          params: { slug, commentId: id },
           query: {},
           headers: authHeaders(token),
         });

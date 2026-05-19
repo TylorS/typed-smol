@@ -1,9 +1,10 @@
 import { assert, describe, it } from "vitest";
-import type { Scope } from "effect";
+import type { Scope as ScopeType } from "effect";
 import { Effect } from "effect";
+import * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
 import type { Renderable, RenderTemplate } from "./index.js";
-import { DomRenderTemplate, EventHandler, html, render } from "./index.js";
+import { DomRenderTemplate, EventHandler, html, render, unsafeHtml } from "./index.js";
 import type { Rendered } from "./Wire.js";
 import { Window } from "happy-dom";
 
@@ -228,6 +229,34 @@ describe("Render", () => {
       assert(clicked);
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("runs event handler effects with the parent render scope", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const renderScope = yield* Scope.fork(yield* Scope.Scope);
+      let observedScope: ScopeType.Scope | undefined;
+      const [button] = yield* render(
+        html`<button
+          onclick=${EventHandler.make(() =>
+            Effect.gen(function* () {
+              observedScope = yield* Scope.Scope;
+            }))}
+        >
+          Save
+        </button>`,
+        window.document.body,
+      ).pipe(
+        Fx.provide(layer),
+        Fx.take(1),
+        Fx.collectAll,
+        Effect.provideService(Scope.Scope, renderScope),
+      );
+
+      assert(button instanceof window.HTMLElement);
+      button.click();
+      yield* Effect.sleep("10 millis");
+      assert.strictEqual(observedScope, renderScope);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("event handler allows camelCase event names", () =>
     Effect.gen(function* () {
       let clicked = false;
@@ -270,6 +299,13 @@ describe("Render", () => {
       assert.equal(renderEventExample.innerHTML, `<p>Hello, world!</p>${TYPED_NODE_END(0)}`);
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("interpolates unsafe html", () =>
+    Effect.gen(function* () {
+      const renderEventExample =
+        yield* renderHtmlElement`<div>${unsafeHtml("<p>Hello, world!</p>")}</div>`;
+      assert.equal(renderEventExample.innerHTML, `<p>Hello, world!</p>${TYPED_NODE_END(0)}`);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("interpolates array of render events", () =>
     Effect.gen(function* () {
       const renderEventExample = yield* renderHtmlElement`<div>${[
@@ -308,7 +344,7 @@ function renderTemplate<Values extends ReadonlyArray<Renderable.Any>, T extends 
 ): Effect.Effect<
   T,
   Renderable.Error<Values[number]>,
-  Scope.Scope | Exclude<Renderable.Services<Values[number]>, RenderTemplate>
+  ScopeType.Scope | Exclude<Renderable.Services<Values[number]>, RenderTemplate>
 > {
   return Effect.gen(function* () {
     const [window, layer] = createHappyDomLayer();

@@ -37,8 +37,10 @@ export class AuthSessionStorage extends Context.Service<AuthSessionStorage>()(
       };
     });
 
-  static readonly persist = (snapshot: AuthSnapshot): Effect.Effect<void, never, AuthSessionStorage> =>
+  static readonly persist = (snapshot: AuthSnapshot | undefined): Effect.Effect<void, never, AuthSessionStorage> =>
     Effect.gen(function* () {
+      if (snapshot === undefined) return;
+
       const store = yield* AuthSessionStorage;
       if (snapshot.token == null) {
         yield* store.remove(authTokenKey);

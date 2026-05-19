@@ -108,7 +108,7 @@ describe("typed create", () => {
 
     expect(rootPackage).toContain('"dev": "vite --host 127.0.0.1"');
     expect(rootPackage).toContain('"build": "vmc -p tsconfig.json && typed build"');
-    expect(rootPackage).toContain('"preview": "vite preview --host 127.0.0.1"');
+    expect(rootPackage).toContain('"preview": "typed preview"');
     expect(rootPackage).not.toContain("typed build --entry");
     expect(rootPackage).not.toContain("typed serve --entry");
   });

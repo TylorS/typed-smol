@@ -2,6 +2,7 @@ import * as AsyncData from "@typed/async-data";
 import { RefAsyncData, RefSubject } from "@typed/fx";
 import type { RefSubject as RefSubjectType } from "@typed/fx/RefSubject/RefSubject";
 import { html, many } from "@typed/template";
+import { Link } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import type { ArticlePreview } from "../domain/Article.js";
 import { safeTextPreview } from "../domain/Markdown.js";
@@ -83,14 +84,16 @@ export const ArticlePreviewCard = (
   const description = RefSubject.map(article.description, safeTextPreview);
   return html`<article class="article-preview">
   <div class="article-meta">${AuthorMeta(articleRef)}</div>
-  <a class="preview-link" href=${href}>
-    <h1>${title}</h1>
-    <p>${description}</p>
-    <span>Read more...</span>
-    <ul class="tag-list">
-      ${many(article.tagList, (tag) => tag, Tag)}
-    </ul>
-  </a>
+  ${Link({
+    class: "preview-link",
+    href,
+    content: html`<h1>${title}</h1>
+      <p>${description}</p>
+      <span>Read more...</span>
+      <ul class="tag-list">
+        ${many(article.tagList, (tag) => tag, Tag)}
+      </ul>`,
+  })}
 </article>`;
 };
 
@@ -104,10 +107,7 @@ const FeedToggle = <E, R>(inputRef: RefSubject.Computed<FeedPageInput, E, R>) =>
   <ul class="nav nav-pills outline-active">
     <li class="nav-item"><a class="nav-link disabled">Your Feed</a></li>
     <li class="nav-item">
-      <a
-        class=${globalFeedClass}
-        href="/"
-      >Global Feed</a>
+      ${Link({ class: globalFeedClass, href: "/", content: "Global Feed" })}
     </li>
     ${many(selectedTags, (tag) => tag, SelectedTagTab)}
   </ul>
@@ -120,13 +120,9 @@ const AuthorMeta = (articleRef: RefSubjectType<ArticlePreview>) => {
   const profileHref = RefSubject.map(username, (value) => `/profile/${value}`);
   const avatar = RefSubject.map(image, avatarSrc);
   const displayName = RefSubject.map(username, safeTextPreview);
-  return html`<a href=${profileHref}>
-  <img src=${avatar} />
-</a>
+  return html`${Link({ href: profileHref, content: html`<img src=${avatar} />` })}
 <div class="info">
-  <a class="author" href=${profileHref}>
-    ${displayName}
-  </a>
+  ${Link({ class: "author", href: profileHref, content: displayName })}
   <span class="date">${RefSubject.proxy(articleRef).createdAt}</span>
 </div>
 <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(articleRef)}>
@@ -168,9 +164,7 @@ const PageLink = (linkRef: RefSubjectType<PageLinkData>) => {
   const itemClass = RefSubject.map(link.active, (active) => `page-item${active ? " active" : ""}`);
   const ariaCurrent = RefSubject.map(link.active, (active) => active ? "page" : null);
   return html`<li class=${itemClass}>
-    <a class="page-link" href=${link.href} aria-current=${ariaCurrent}>
-      ${link.page}
-    </a>
+    ${Link({ class: "page-link", href: link.href, "aria-current": ariaCurrent, content: link.page })}
   </li>`;
 };
 
@@ -180,9 +174,7 @@ const EmptyFeedMessage = <A extends string>(message: RefSubjectType<A>) =>
 const SelectedTagTab = <A extends string>(tag: RefSubject.RefSubject<A>) => {
   const href = RefSubject.map<A, never, never, string>(tag, tagHref);
   return html`<li class="nav-item">
-    <a class="nav-link active" href=${href}>
-      # ${tag}
-    </a>
+    ${Link({ class: "nav-link active", href, content: html`# ${tag}` })}
   </li>`;
 };
 
@@ -195,9 +187,7 @@ const TagSidebar = <E, R>(tags: RefSubject.Computed<readonly string[], E, R>) =>
 
 const TagSidebarLink = <A extends string>(tag: RefSubject.RefSubject<A>) => {
   const href = RefSubject.map<A, never, never, string>(tag, tagHref);
-  return html`<a class="tag-pill tag-default" href=${href}>
-    ${tag}
-  </a>`;
+  return Link({ class: "tag-pill tag-default", href, content: tag });
 };
 
 const Tag = <A extends string>(tag: RefSubjectType<A>) =>

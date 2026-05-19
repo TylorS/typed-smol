@@ -46,9 +46,11 @@ describe("ServerVirtualModulePlugin", () => {
 
     expect(source).not.toContain("// @ts-nocheck");
     expect(source).toContain('import * as Cause from "effect/Cause";');
+    expect(source).toContain('import * as Context from "effect/Context";');
     expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
     expect(source).toContain('import * as HttpRouter from "effect/unstable/http/HttpRouter";');
+    expect(source).toContain('import { pathToFileURL } from "node:url";');
     expect(source).toContain('import { TypedHttpServer } from "@typed/app/TypedHttpServer";');
     expect(source).toContain(
       'import { composeWithLayers, Ids, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
@@ -80,11 +82,23 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).not.toContain("Cause.Cause<any>");
     expect(source).toContain("options.layers");
     expect(source).toContain("options.onError");
+    expect(source).toContain("readonly host?: string;");
+    expect(source).toContain("readonly port?: number;");
     expect(source).not.toContain("options.run");
     expect(source).not.toContain("readonly run?");
     expect(source).not.toContain("Effect.Effect<never, unknown");
     expect(source).not.toContain("Effect.Effect<unknown, unknown");
+    expect(source).toContain("const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);");
+    expect(source).toContain("host: runtimeConfig.host");
+    expect(source).toContain("port: runtimeConfig.port");
+    expect(source).toContain("function makeServerLayer(options: ServerListenConfig = {})");
+    expect(source).toContain("const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);");
+    expect(source).toContain("const baseLayer = hasListenOverrides(options) ? makeServerLayer(options) : ServerLayer;");
+    expect(source).toContain("function mergeListenConfig(base: ServerListenConfig, overrides: ServerListenConfig): ServerListenConfig");
+    expect(source).toContain("function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig");
     expect(source).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
+    expect(source).toContain("function isMainModule(meta: ImportMeta): boolean");
+    expect(source).toContain("Effect.runFork(Effect.provide(run(), Context.empty()))");
     expect(source).not.toContain("export async function run");
   });
 
@@ -108,6 +122,8 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import * as Html0 from "typed:html?path=./index.html";');
     expect(source).toContain('client: "./client.ts"');
     expect(source).toContain('name: "default"');
+    expect(source).toContain("ssrForHttp(routeModules[0], documentOptions(0))");
+    expect(source).toContain("function renderPageHtml(pageIndex: number, url: string | URL, markup: string)");
   });
 
   it("emits repeated MPA page pairings", () => {
@@ -132,9 +148,10 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import * as ServerDependenciesCompanion from "./.server.dependencies.js";');
     expect(source).toContain('import * as ServerHtmlCompanion from "./.html.js";');
     expect(source).toContain('import * as ServerErrorsCompanion from "./.errors.js";');
-    expect(source).toContain("ServerDependenciesCompanion.layers");
+    expect(source).toContain("const companionLayers = ServerDependenciesCompanion.layers;");
     expect(source).toContain("ServerHtmlCompanion.pages");
     expect(source).toContain("ServerErrorsCompanion.onError");
+    expect(source).not.toContain("const companionLayers: ServerLayerInputs = ServerDependenciesCompanion.layers ?? [];");
     expect(source).not.toContain("_server");
   });
 
@@ -153,17 +170,22 @@ describe("ServerVirtualModulePlugin", () => {
         "  export const Ids: { readonly Default: Layer.Layer<never, never, never> };",
         "}",
         'declare module "@typed/app/TypedHttpServer" {',
+        '  import type * as HttpServer from "effect/unstable/http/HttpServer";',
         '  import type * as Layer from "effect/Layer";',
         "  export type LayerAny = Layer.Layer<never, unknown, unknown>;",
         "  export const TypedHttpServer: {",
         "    readonly staticAssets: (options: { readonly projectRoot: string; readonly clientOutDir?: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
-        "    readonly layer: (options: { readonly projectRoot: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
+        "    readonly layer: (options: { readonly projectRoot: string; readonly dev: boolean; readonly host?: string; readonly port?: number }) => Layer.Layer<HttpServer.HttpServer, never, never>;",
         "    readonly toNodeHandler: (layer: LayerAny) => unknown;",
         "  };",
         "}",
       ].join("\n"),
-      "src/typed-ui.d.ts":
-        'declare module "@typed/ui" { export const ssrForHttp: (input: any) => (router: any) => any; }\n',
+      "src/typed-ui.d.ts": [
+        'declare module "@typed/ui" {',
+        '  import type * as Effect from "effect/Effect";',
+        "  export const ssrForHttp: (input: unknown, options?: { readonly renderDocument?: (input: { readonly markup: string; readonly url: string }) => Effect.Effect<string, never, never> }) => (router: unknown) => Effect.Effect<void, never, never>;",
+        "}",
+      ].join("\n"),
       "src/typed-template.d.ts": [
         'declare module "@typed/template" {',
         '  import type * as Effect from "effect/Effect";',

@@ -23,27 +23,27 @@ export const articleFilter = (query: ArticleQuery): ArticleListFilter =>
     tag: query.tag,
     author: query.author,
     favorited: query.favorited,
-    limit: toOptionalInt(query.limit),
-    offset: toOptionalInt(query.offset),
+    limit: query.limit,
+    offset: query.offset,
   });
 
 export const feedFilter = (query: FeedQuery): ArticleListFilter =>
   compactFilter({
-    limit: toOptionalInt(query.limit),
-    offset: toOptionalInt(query.offset),
+    limit: query.limit,
+    offset: query.offset,
   });
 
 type ArticleQuery = {
   readonly author?: string;
   readonly favorited?: string;
-  readonly limit?: string;
-  readonly offset?: string;
+  readonly limit?: number;
+  readonly offset?: number;
   readonly tag?: string;
 };
 
 type FeedQuery = {
-  readonly limit?: string;
-  readonly offset?: string;
+  readonly limit?: number;
+  readonly offset?: number;
 };
 
 const compactFilter = (filter: ArticleListFilter): ArticleListFilter => {
@@ -54,10 +54,4 @@ const compactFilter = (filter: ArticleListFilter): ArticleListFilter => {
     ...(filter.limit !== undefined ? { limit: filter.limit } : {}),
     ...(filter.offset !== undefined ? { offset: filter.offset } : {}),
   };
-};
-
-const toOptionalInt = (value: string | undefined): number | undefined => {
-  if (value == null || value.trim() === "") return undefined;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };

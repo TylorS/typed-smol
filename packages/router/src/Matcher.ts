@@ -688,6 +688,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
       const layerManager = makeLayerManager(memoMap, rootScope, fiberId);
       const layoutManager = makeLayoutManager(rootScope, fiberId);
       const catchManager = makeCatchManager(rootScope, fiberId);
+      const currentServices = yield* Effect.context<R>();
 
       for (const entry of entries) {
         const path = entry.route.path;
@@ -777,8 +778,9 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
             const paramsRef = yield* RefSubject.make(matchedParams).pipe(Scope.provide(scope));
 
             const preparedServices = matchedPrepared.services as Context.Context<any>;
+            const routeServices = Context.merge(currentServices, preparedServices);
             const handlerServices = Context.merge(
-              preparedServices,
+              routeServices,
               Context.make(Scope.Scope, scope),
             );
 
@@ -787,12 +789,12 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
               matchedEntry.layouts,
               matchedParams,
               handlerFx,
-              preparedServices,
+              routeServices,
             );
             const withCatches = yield* catchManager.apply(
               matchedEntry.catches,
               withLayouts,
-              preparedServices,
+              routeServices,
             );
             const fx = withCatches;
 
