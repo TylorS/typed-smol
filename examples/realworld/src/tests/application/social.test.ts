@@ -9,45 +9,24 @@ import { Comments } from "../../application/Comments.js";
 import { Profiles } from "../../application/Profiles.js";
 import { Tags } from "../../application/Tags.js";
 import { Users } from "../../application/Users.js";
-import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
-import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
-import { SqliteLive } from "../../infrastructure/Sql.js";
-import { SessionTokens } from "../../infrastructure/SessionTokens.js";
-import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository.js";
-import { CommentRepository } from "../../infrastructure/repositories/CommentRepository.js";
-import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
-import { TagRepository } from "../../infrastructure/repositories/TagRepository.js";
-import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
+import {
+  ApplicationTestLayer,
+  defaultDataDirectory,
+  exitWithLayer,
+  runWithLayer,
+} from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "application-social-test.sqlite");
-const TestConfig = RealWorldConfig.layer({ databasePath: testDatabasePath });
-
-const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(
-    Effect.provide(Comments.Live),
-    Effect.provide(Articles.Live),
-    Effect.provide(Profiles.Live),
-    Effect.provide(Tags.Live),
-    Effect.provide(Users.Live),
-    Effect.provide(CommentRepository.Live),
-    Effect.provide(ArticleRepository.Live),
-    Effect.provide(ProfileRepository.Live),
-    Effect.provide(TagRepository.Live),
-    Effect.provide(UserRepository.Live),
-    Effect.provide(SessionTokens.Live),
-    Effect.provide(PasswordHasher.Live),
-    Effect.provide(SqliteLive),
-    Effect.provide(TestConfig),
-  );
+const TestLayer = ApplicationTestLayer({ databasePath: testDatabasePath });
 
 const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  Effect.runPromise(provideServices(effect));
+  runWithLayer(effect, TestLayer);
 
 const expectRealWorldError = async <A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Promise<RealWorldError> => {
-  const exit = await Effect.runPromiseExit(provideServices(effect));
+  const exit = await exitWithLayer(effect, TestLayer);
   if (Exit.isFailure(exit)) {
     const result = Cause.findFail(exit.cause);
     if (Result.isSuccess(result)) return result.success.error as RealWorldError;

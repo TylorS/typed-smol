@@ -737,6 +737,26 @@ Execution refinements:
 - [x] Step 9: Run `pnpm --filter typed-realworld build`.
 - [x] Step 10: Run `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/HttpApiVirtualModulePlugin.test.ts`.
 
+### Task 15: RealWorld Test Layer Composition
+
+**Files:**
+- Add: `examples/realworld/src/tests/helpers/layers.ts`
+- Modify: `examples/realworld/src/tests/api/api.test.ts`
+- Modify: `examples/realworld/src/tests/application/*.test.ts`
+- Modify: `examples/realworld/src/tests/infrastructure/*.test.ts`
+- Modify: `examples/realworld/src/tests/presentation/ssr.test.ts`
+- Modify: `examples/realworld/src/tests/presentation/selectors.test.ts`
+- Modify: `examples/realworld/src/tests/package.test.ts`
+
+**Progress notes:**
+- 2026-05-20: Follow-on cleanup from the Task 14 API harness repair. The previous fix used sequential `Effect.provide(...)` calls in each harness. This task subsumes that wiring into shared composed Layer helpers so test services share one Layer graph, Scope, and MemoMap before each effect is provided once at the run boundary.
+
+- [x] Step 1: Add a failing package-level guard proving the RealWorld API/application/infrastructure/SSR harnesses do not carry local stacked `Effect.provide(...)` or `ServiceLayers.reduce(...)` wiring.
+- [x] Step 2: Add shared RealWorld test Layer helpers for infrastructure, repository, application, server-page, and focused repository test graphs.
+- [x] Step 3: Migrate API, application, infrastructure, SSR, and selector tests to the shared composed Layer helpers.
+- [x] Step 4: Run focused tests for the migrated harnesses and the package guard.
+- [x] Step 5: Run RealWorld typecheck, full test, build, and `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

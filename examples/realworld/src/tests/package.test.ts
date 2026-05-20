@@ -212,6 +212,14 @@ describe("typed-realworld package skeleton", () => {
     expect(dependencyLayer).toContain("SqliteLive");
     expect(offenders).toEqual([]);
   });
+
+  it("uses composed Layer test harnesses instead of stacked Effect.provide", () => {
+    const offenders = layerHarnessSourceFiles()
+      .flatMap((path) =>
+        stackedProvideLines(path).map((line) => `${path}:${line}`));
+
+    expect(offenders).toEqual([]);
+  });
 });
 
 const productionSourceFiles = (): readonly string[] => [
@@ -287,6 +295,19 @@ const repositorySourceFiles = (): readonly string[] => [
   "src/infrastructure/SessionTokens.ts",
 ];
 
+const layerHarnessSourceFiles = (): readonly string[] => [
+  "src/tests/api/api.test.ts",
+  "src/tests/application/articles.test.ts",
+  "src/tests/application/social.test.ts",
+  "src/tests/application/users.test.ts",
+  "src/tests/infrastructure/articles.test.ts",
+  "src/tests/infrastructure/comments.test.ts",
+  "src/tests/infrastructure/profiles.test.ts",
+  "src/tests/infrastructure/users.test.ts",
+  "src/tests/presentation/selectors.test.ts",
+  "src/tests/presentation/ssr.test.ts",
+];
+
 const genPreferredSourceFiles = (): readonly string[] => [
   "src/page-data/BrowserPageData.ts",
   "src/presentation/AuthSessionStorage.ts",
@@ -335,3 +356,11 @@ const rawAnchorHrefLines = (path: string): readonly number[] => {
 
   return offenders;
 };
+
+const stackedProvideLines = (path: string): readonly number[] =>
+  readText(path)
+    .split("\n")
+    .flatMap((line, index) =>
+      /ServiceLayers\.reduce|provideServices|Effect\.provide\(/.test(line)
+        ? [index + 1]
+        : []);

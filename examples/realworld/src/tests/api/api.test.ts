@@ -15,34 +15,17 @@ import * as ArticleDelete from "../../api/articles/delete.js";
 import * as TagsList from "../../api/tags/list.js";
 import * as UserCurrent from "../../api/user/current.js";
 import * as UsersRegister from "../../api/users/register.js";
-import { ApplicationServices } from "../../application/Services.js";
-import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
-import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
-import { SessionTokens } from "../../infrastructure/SessionTokens.js";
-import { SqliteLive } from "../../infrastructure/Sql.js";
-import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository.js";
-import { CommentRepository } from "../../infrastructure/repositories/CommentRepository.js";
-import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
-import { TagRepository } from "../../infrastructure/repositories/TagRepository.js";
-import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
 import { email, password, tagName, username } from "../helpers/domain.js";
+import {
+  ApplicationTestLayer,
+  defaultDataDirectory,
+  runWithLayer,
+} from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "api-test.sqlite");
 const testGeneratedDir = resolve(defaultDataDirectory, "api-generated-test");
-const TestConfig = RealWorldConfig.layer({ databasePath: testDatabasePath });
-const ServiceLayers = [
-  ApplicationServices,
-  UserRepository.Live,
-  ProfileRepository.Live,
-  ArticleRepository.Live,
-  CommentRepository.Live,
-  TagRepository.Live,
-  SessionTokens.Live,
-  PasswordHasher.Live,
-  SqliteLive,
-  TestConfig,
-] as const;
+const TestLayer = ApplicationTestLayer({ databasePath: testDatabasePath });
 
 const expectedModuleNames = [
   "ArticlesCreate",
@@ -67,10 +50,7 @@ const expectedModuleNames = [
 ] as const;
 
 const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  Effect.runPromise(ServiceLayers.reduce(
-    (current, layer) => Effect.provide(current, layer),
-    effect,
-  ));
+  runWithLayer(effect, TestLayer);
 
 const json = async <A>(response: Response): Promise<A> => response.json();
 

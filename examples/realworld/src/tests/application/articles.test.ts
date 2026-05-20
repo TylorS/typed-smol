@@ -6,38 +6,24 @@ import { parseAuthorizationHeader } from "../../domain/Auth.js";
 import { RealWorldError } from "../../domain/Errors.js";
 import { Articles } from "../../application/Articles.js";
 import { Users } from "../../application/Users.js";
-import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
-import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
-import { SqliteLive } from "../../infrastructure/Sql.js";
-import { SessionTokens } from "../../infrastructure/SessionTokens.js";
-import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository.js";
-import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
-import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
+import {
+  ApplicationTestLayer,
+  defaultDataDirectory,
+  exitWithLayer,
+  runWithLayer,
+} from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "application-articles-test.sqlite");
-const TestConfig = RealWorldConfig.layer({ databasePath: testDatabasePath });
-
-const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(
-    Effect.provide(Articles.Live),
-    Effect.provide(Users.Live),
-    Effect.provide(ArticleRepository.Live),
-    Effect.provide(ProfileRepository.Live),
-    Effect.provide(UserRepository.Live),
-    Effect.provide(SessionTokens.Live),
-    Effect.provide(PasswordHasher.Live),
-    Effect.provide(SqliteLive),
-    Effect.provide(TestConfig),
-  );
+const TestLayer = ApplicationTestLayer({ databasePath: testDatabasePath });
 
 const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  Effect.runPromise(provideServices(effect));
+  runWithLayer(effect, TestLayer);
 
 const expectRealWorldError = async <A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Promise<RealWorldError> => {
-  const exit = await Effect.runPromiseExit(provideServices(effect));
+  const exit = await exitWithLayer(effect, TestLayer);
   if (Exit.isFailure(exit)) {
     const result = Cause.findFail(exit.cause);
     if (Result.isSuccess(result)) return result.success.error as RealWorldError;

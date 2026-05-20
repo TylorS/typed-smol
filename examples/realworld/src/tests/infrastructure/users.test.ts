@@ -3,32 +3,27 @@ import { resolve } from "node:path";
 import { Cause, Effect, Exit, Option, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
 import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
 import { SessionTokens } from "../../infrastructure/SessionTokens.js";
-import { SqliteLive, withSqlite } from "../../infrastructure/Sql.js";
+import { withSqlite } from "../../infrastructure/Sql.js";
 import {
   DuplicateUserField,
   PasswordPolicyError,
   UserRepository,
 } from "../../infrastructure/repositories/UserRepository.js";
+import {
+  defaultDataDirectory,
+  exitWithLayer,
+  runWithLayer,
+  UserRepositoryTestLayer,
+} from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "users-test.sqlite");
-
-const TestConfig = RealWorldConfig.layer({ databasePath: testDatabasePath });
-
-const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(
-    Effect.provide(UserRepository.Live),
-    Effect.provide(SessionTokens.Live),
-    Effect.provide(PasswordHasher.Live),
-    Effect.provide(SqliteLive),
-    Effect.provide(TestConfig),
-  );
+const TestLayer = UserRepositoryTestLayer({ databasePath: testDatabasePath });
 
 const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  Effect.runPromise(provideServices(effect));
+  runWithLayer(effect, TestLayer);
 
 const createUser = UserRepository.use((repo) =>
   repo.create({
@@ -52,7 +47,7 @@ const readPasswordRow = (email: string) =>
 const expectFailure = async <A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Promise<E> => {
-  const exit = await Effect.runPromiseExit(provideServices(effect));
+  const exit = await exitWithLayer(effect, TestLayer);
 
   if (Exit.isFailure(exit)) {
     const result = Cause.findFail(exit.cause);

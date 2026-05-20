@@ -2,35 +2,16 @@ import { readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Effect } from "effect";
-import { ApplicationServices } from "../../application/Services.js";
-import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
-import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
-import { SqliteLive } from "../../infrastructure/Sql.js";
-import { SessionTokens } from "../../infrastructure/SessionTokens.js";
-import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository.js";
-import { CommentRepository } from "../../infrastructure/repositories/CommentRepository.js";
-import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
-import { TagRepository } from "../../infrastructure/repositories/TagRepository.js";
-import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
-import { ServerPageData } from "../../page-data/ServerPageData.js";
 import { renderUrl } from "../../server.js";
+import {
+  defaultDataDirectory,
+  runWithLayer,
+  ServerPageTestLayer,
+} from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "selectors-test.sqlite");
-const TestConfig = RealWorldConfig.layer({ databasePath: testDatabasePath });
-const ServiceLayers = [
-  ServerPageData,
-  ApplicationServices,
-  UserRepository.Live,
-  ProfileRepository.Live,
-  ArticleRepository.Live,
-  CommentRepository.Live,
-  TagRepository.Live,
-  SessionTokens.Live,
-  PasswordHasher.Live,
-  SqliteLive,
-  TestConfig,
-] as const;
+const TestLayer = ServerPageTestLayer({ databasePath: testDatabasePath });
 
 describe("realworld selector contract", () => {
   beforeEach(async () => {
@@ -79,9 +60,6 @@ describe("realworld selector contract", () => {
 });
 
 const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  Effect.runPromise(ServiceLayers.reduce(
-    (current, layer) => Effect.provide(current, layer),
-    effect,
-  ));
+  runWithLayer(effect, TestLayer);
 
 const render = (url: string): Promise<string> => run(renderUrl(url));
