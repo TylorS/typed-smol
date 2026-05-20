@@ -9,6 +9,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vmc -p tsconfig.json && typed build",
     "preview": "typed preview",
+    "typecheck": "vmc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:unit": "vitest run --passWithNoTests src/tests/package.test.ts src/tests/domain",
     "test:integration": "vitest run --passWithNoTests src/tests/infrastructure src/tests/application src/tests/api",

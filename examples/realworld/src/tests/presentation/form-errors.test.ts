@@ -13,10 +13,10 @@ describe("realworld browser form errors", () => {
 
   it("formats auth, network, decode, and form decoding failures", () => {
     expect(workflowErrorMessages({ _tag: "AuthRequired" })).toEqual(["token is missing"]);
-    expect(workflowErrorMessages({ _tag: "Network", reason: "offline" })).toEqual([
+    expect(workflowErrorMessages({ _tag: "HttpClientError" })).toEqual([
       "network request failed",
     ]);
-    expect(workflowErrorMessages({ _tag: "Decode", reason: "bad json" })).toEqual([
+    expect(workflowErrorMessages({ _tag: "SchemaError" })).toEqual([
       "response could not be decoded",
     ]);
     expect(workflowErrorMessages(new FormDecodeError({ reason: "Expected string" }))).toEqual([

@@ -1,31 +1,32 @@
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import ts from "typescript";
-import { Effect } from "effect";
-import { HttpServerResponse } from "effect/unstable/http";
 import { createHttpApiVirtualModulePlugin } from "@typed/app/HttpApiVirtualModulePlugin";
 import {
   APP_TYPE_TARGET_BOOTSTRAP_CONTENT,
   createTypeInfoApiSessionForApp,
 } from "@typed/app/createTypeInfoApiSessionForApp";
-import { ApplicationServices } from "../../application/Services.js";
-import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
-import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
-import { resetDatabase } from "../../infrastructure/Reset.js";
-import { SqliteLive } from "../../infrastructure/Sql.js";
-import { SessionTokens } from "../../infrastructure/SessionTokens.js";
-import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository.js";
-import { CommentRepository } from "../../infrastructure/repositories/CommentRepository.js";
-import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
-import { TagRepository } from "../../infrastructure/repositories/TagRepository.js";
-import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
+import { Effect } from "effect";
+import { HttpServerResponse } from "effect/unstable/http";
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import ts from "typescript";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as ArticleCreate from "../../api/articles/create.js";
 import * as ArticleDelete from "../../api/articles/delete.js";
 import * as TagsList from "../../api/tags/list.js";
 import * as UserCurrent from "../../api/user/current.js";
 import * as UsersRegister from "../../api/users/register.js";
+import { ApplicationServices } from "../../application/Services.js";
+import { defaultDataDirectory, RealWorldConfig } from "../../infrastructure/Config.js";
+import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
+import { resetDatabase } from "../../infrastructure/Reset.js";
+import { SessionTokens } from "../../infrastructure/SessionTokens.js";
+import { SqliteLive } from "../../infrastructure/Sql.js";
+import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository.js";
+import { CommentRepository } from "../../infrastructure/repositories/CommentRepository.js";
+import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
+import { TagRepository } from "../../infrastructure/repositories/TagRepository.js";
+import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
+import { email, password, tagName, username } from "../helpers/domain.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "api-test.sqlite");
 const testGeneratedDir = resolve(defaultDataDirectory, "api-generated-test");
@@ -66,10 +67,10 @@ const expectedModuleNames = [
 ] as const;
 
 const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  Effect.runPromise(provideServices(effect));
-
-const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  ServiceLayers.reduce((current, layer) => Effect.provide(current, layer), effect);
+  Effect.runPromise(ServiceLayers.reduce(
+    (current, layer) => Effect.provide(current, layer),
+    effect,
+  ));
 
 const json = async <A>(response: Response): Promise<A> => response.json();
 
@@ -105,9 +106,9 @@ describe("realworld API endpoint handlers", () => {
     const registered = await responseFrom(UsersRegister.handler({
       body: {
         user: {
-          username: "api_user",
-          email: "api.user@example.com",
-          password: "password123",
+          username: username("api_user"),
+          email: email("api.user@example.com"),
+          password: password("password123"),
         },
       },
     }));
@@ -125,7 +126,7 @@ describe("realworld API endpoint handlers", () => {
           title: "API Article",
           description: "created through HTTP",
           body: "API body",
-          tagList: ["api", "typed"],
+          tagList: [tagName("api"), tagName("typed")],
         },
       },
     }));
@@ -147,9 +148,9 @@ describe("realworld API endpoint handlers", () => {
     const registered = await responseFrom(UsersRegister.handler({
       body: {
         user: {
-          username: "delete_user",
-          email: "delete.user@example.com",
-          password: "password123",
+          username: username("delete_user"),
+          email: email("delete.user@example.com"),
+          password: password("password123"),
         },
       },
     }));

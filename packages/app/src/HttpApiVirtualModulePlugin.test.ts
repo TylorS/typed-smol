@@ -216,6 +216,14 @@ const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
     "http",
     "HttpServerResponse.d.ts",
   ),
+  "effect/unstable/http/HttpServerError": join(
+    NM,
+    "effect",
+    "dist",
+    "unstable",
+    "http",
+    "HttpServerError.d.ts",
+  ),
 };
 
 function makeProgram(rootFiles: readonly string[], fixtureRoot?: string): ts.Program {
@@ -703,6 +711,60 @@ export const ServerOnly = { use: readFileSync };
 });
 
 describe("HttpApiVirtualModulePlugin integration", () => {
+  it("emits plugin-specific decoded API types for an endpoint importing ./$api-types", () => {
+    const fixture = createApiFixture({
+      "src/apis/articles.ts": `
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+import * as Route from "@typed/router";
+import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+import type { RawHandler } from "./$api-types";
+
+export const route = Route.Join(
+  Route.Parse("/articles"),
+  Route.QueryParams(Route.Int("page")),
+);
+export const method = "POST";
+export const headers = Schema.Struct({ authorization: Schema.String });
+export const body = Schema.Struct({ article: Schema.Struct({ title: Schema.String }) });
+
+export const handler = (({ headers, query, body }) => {
+  const authorization: string = headers.authorization;
+  const page: number = query.page;
+  const title: string = body.article.title;
+  return HttpServerResponse.json({ authorization, page, title });
+}) satisfies RawHandler;
+`,
+    });
+    const importer = join(fixture.root, "src/apis/articles.ts");
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(
+      files,
+      files.includes(BOOTSTRAP_HTTPAPI_FILE) ? APP_ROOT : fixture.root,
+    );
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+    });
+    const result = createHttpApiVirtualModulePlugin().build("./$api-types", importer, session.api);
+
+    expect(typeof result).toBe("string");
+    if (typeof result !== "string") return;
+
+    const typeCheck = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/apis/$api-types.ts",
+      sourceText: result,
+      rootFiles: fixture.paths,
+      moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
+    });
+    expect(typeCheck.diagnostics).toEqual([]);
+  });
+
   it("resolves through PluginManager when target exists with script files", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
     const files =

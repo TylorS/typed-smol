@@ -161,3 +161,12 @@
 - RealWorld VM/config files and `@typed/vite-plugin` internals should import `@typed/app` helpers through narrow subpaths; the root barrel is only a convenience API, not a dependency path for generated-runtime tooling.
 - Generated router catch wrappers should never emit `Cause.Cause<unknown>`; when the catch error type cannot be preserved through broad generated glue, use `Cause.Cause<any>` so strict type checks pass without pretending the error channel is meaningful `unknown`.
 - After changing generated imports, rebuild `@typed/vite-plugin` before running Vite-backed RealWorld tests. Its built resolver imports `@typed/app` and can otherwise serve stale generated virtual module code.
+
+## Generated Local Route/API Type Modules
+
+- `createRouterVirtualModulePlugin()` now resolves `./$route-types` from a route leaf module and emits `Params`, `Template`, and `Handler` types derived from that file's `route` export. Route modules can use `export const template = Fx.fn(... ) satisfies Template` without importing `RouteHandler`.
+- `createHttpApiVirtualModulePlugin()` now resolves `./$api-types` from an endpoint leaf module and emits `Context`, `Handler`, and `RawHandler` types derived from the file's `route`, `method`, `headers`, and `body` exports. Endpoint modules can use `RawHandler<never, Service>` annotations without importing `ApiHandlerRaw`.
+- RealWorld package guards now reject `RouteHandler` imports in `src/routes/**` and `ApiHandlerRaw` imports in `src/api/**`, keeping the example declarative and pushing inference recovery into the framework.
+- For API request schemas, keep exported request TypeScript aliases decoded (`Schema.Schema.Type<typeof RequestSchema>`). Browser form code already uses `decodeForm(RequestSchema, rawInput)` before calling the generated client, and the generated Effect HttpApi client expects decoded schema payloads.
+- Test harnesses that need services from dependent layers should keep sequential `Effect.provide(...)` composition or use the app layer composition helper. `Layer.mergeAll(...)` merges sibling outputs but does not provide sibling outputs to dependent layers like `ApplicationServices`, which caused the missing `@typed/realworld/UserRepository` failure.
+- Verification for this slice passed with `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/HttpApiVirtualModulePlugin.test.ts`.

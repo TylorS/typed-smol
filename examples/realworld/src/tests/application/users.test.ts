@@ -11,9 +11,16 @@ import { resetDatabase } from "../../infrastructure/Reset.js";
 import { SqliteLive } from "../../infrastructure/Sql.js";
 import { SessionTokens } from "../../infrastructure/SessionTokens.js";
 import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
+import { email as emailValue, password as passwordValue, username as usernameValue } from "../helpers/domain.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "application-users-test.sqlite");
 const TestConfig = RealWorldConfig.layer({ databasePath: testDatabasePath });
+type TestServices =
+  | Users
+  | UserRepository
+  | SessionTokens
+  | PasswordHasher
+  | RealWorldConfig;
 
 const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(
@@ -25,7 +32,7 @@ const provideServices = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Effect.provide(TestConfig),
   );
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
+const run = <A, E>(effect: Effect.Effect<A, E, TestServices>): Promise<A> =>
   Effect.runPromise(provideServices(effect));
 
 const expectRealWorldError = async <A, E, R>(
@@ -46,7 +53,7 @@ const register = (username = "app_user", email = "app.user@example.com") =>
       user: {
         username,
         email,
-        password: "password123",
+        password: passwordValue("password123"),
       },
     }),
   );
@@ -66,8 +73,8 @@ describe("user application service", () => {
     const loggedIn = await run(Users.use((users) =>
       users.login({
         user: {
-          email: "app.user@example.com",
-          password: "password123",
+          email: emailValue("app.user@example.com"),
+          password: passwordValue("password123"),
         },
       }),
     ));
@@ -92,8 +99,8 @@ describe("user application service", () => {
       users.register({
         user: {
           username: "",
-          email: "blank@example.com",
-          password: "password123",
+          email: emailValue("blank@example.com"),
+          password: passwordValue("password123"),
         },
       }),
     ));
@@ -114,8 +121,8 @@ describe("user application service", () => {
     const credentials = await expectRealWorldError(Users.use((users) =>
       users.login({
         user: {
-          email: "app.user@example.com",
-          password: "wrong-password",
+          email: emailValue("app.user@example.com"),
+          password: passwordValue("wrong-password"),
         },
       }),
     ));

@@ -1,5 +1,5 @@
 import { readdirSync, statSync } from "node:fs";
-import { dirname, extname, join, relative } from "node:path";
+import { basename, dirname, extname, join, relative } from "node:path";
 import {
   pathIsUnderBase,
   resolvePathUnderBase,
@@ -37,6 +37,7 @@ import { HTTPAPI_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
 const DEFAULT_PREFIX = "api:";
 const DEFAULT_PLUGIN_NAME = "httpapi-virtual-module";
+const API_TYPES_MODULE_ID = "./$api-types";
 
 /** Extensions that count as script files when checking if a directory should resolve. */
 const SCRIPT_EXTENSION_SET = new Set([
@@ -343,6 +344,107 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function emitApiTypesModule(
+  importer: string,
+  api: TypeInfoApi,
+  pluginName: string,
+): string | VirtualModuleBuildError {
+  const source = api.file(`./${basename(importer)}`, { baseDir: dirname(importer), watch: true });
+  if (!source.ok) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-001",
+          message: `could not inspect API source for ${API_TYPES_MODULE_ID}: ${source.error}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+
+  const routeExport = source.snapshot.exports.find((value) => value.name === "route");
+  if (!routeExport) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-002",
+          message: `API type module requires a "route" export in ${source.snapshot.filePath}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+  if (!typeNodeIsRouteCompatible(routeExport.type, api)) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-003",
+          message: `route export is not structurally compatible with Route in ${source.snapshot.filePath}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+  if (!source.snapshot.exports.some((value) => value.name === "method")) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-004",
+          message: `API type module requires a "method" export in ${source.snapshot.filePath}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+
+  return emitApiTypesSource(importer);
+}
+
+function emitApiTypesSource(importer: string): string {
+  const moduleSpecifier = endpointModuleSpecifier(importer);
+  return `import type { ApiHandlerParamsFromConfig } from "@typed/app/httpapi/ApiHandler";
+import type * as Effect from "effect/Effect";
+import type * as HttpServerError from "effect/unstable/http/HttpServerError";
+import type { HttpServerResponse } from "effect/unstable/http/HttpServerResponse";
+import type * as EndpointModule from ${JSON.stringify(moduleSpecifier)};
+
+type Endpoint = typeof EndpointModule;
+
+type OptionalHeaders<T> = T extends { readonly headers: infer Headers }
+  ? { readonly headers: Headers }
+  : {};
+
+type OptionalBody<T> = T extends { readonly body: infer Body }
+  ? { readonly body: Body }
+  : {};
+
+type SchemaType<T, Fallback> = T extends { readonly Type: infer A } ? A : Fallback;
+
+type Config = {
+  readonly route: Endpoint["route"];
+  readonly method: Endpoint["method"];
+} & OptionalHeaders<Endpoint> & OptionalBody<Endpoint>;
+
+export type Context = ApiHandlerParamsFromConfig<Config>;
+
+export type Success = Endpoint extends { readonly success: infer S } ? SchemaType<S, unknown> : unknown;
+
+export type Error = Endpoint extends { readonly error: infer S } ? SchemaType<S, never> : never;
+
+export type Handler<R = never> = (
+  params: Context,
+) => Effect.Effect<Success, Error | HttpServerError.HttpServerError, R>;
+
+export type RawHandler<E = any, R = never> = (
+  params: Context,
+) => Effect.Effect<HttpServerResponse, E, R>;
+`;
+}
+
+function endpointModuleSpecifier(importer: string): string {
+  return `./${basename(importer).replace(/\.[cm]?[tj]sx?$/, ".js")}`;
+}
+
 /**
  * Creates the HttpApi virtual module plugin with sync shouldResolve and build behavior.
  */
@@ -356,12 +458,17 @@ export const createHttpApiVirtualModulePlugin = (
     name,
     typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
     shouldResolve(id, importer) {
+      if (id === API_TYPES_MODULE_ID && importer) return true;
       const resolved = resolveHttpApiTargetDirectory(id, importer, prefix);
       if (!resolved.ok) return false;
       if (!isExistingDirectory(resolved.targetDirectory)) return false;
       return directoryHasScriptFiles(resolved.targetDirectory);
     },
     build(id, importer, api) {
+      if (id === API_TYPES_MODULE_ID) {
+        return emitApiTypesModule(importer, api, name);
+      }
+
       const resolved = resolveHttpApiTargetDirectory(id, importer, prefix);
       if (!resolved.ok) {
         return {

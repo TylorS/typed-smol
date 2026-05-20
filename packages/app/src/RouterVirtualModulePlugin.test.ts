@@ -1300,6 +1300,53 @@ describe("RouterVirtualModulePlugin", () => {
 });
 
 describe("RouterVirtualModulePlugin integration", () => {
+  it("emits plugin-specific decoded route types for a route file importing ./$route-types", () => {
+    const fixture = createFixture({
+      "src/routes/article.ts": `
+import * as Fx from "@typed/fx/Fx";
+import * as Route from "@typed/router";
+import type { Template } from "./$route-types";
+
+export const route = Route.Join(
+  Route.Parse("articles"),
+  Route.Param("slug"),
+  Route.QueryParams(Route.Int("page")),
+);
+
+export const template = ((params) =>
+  Fx.map(params, (value) => {
+    const slug: string = value.slug;
+    const page: number = value.page;
+    return \`\${slug}:\${page}\`;
+  })) satisfies Template;
+`,
+    });
+    const importer = join(fixture.root, "src/routes/article.ts");
+    const files =
+      existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
+        ? [...fixture.paths, BOOTSTRAP_FILE]
+        : fixture.paths;
+    const program = makeProgram(files, files.includes(BOOTSTRAP_FILE) ? APP_ROOT : fixture.root);
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
+    });
+    const result = createRouterVirtualModulePlugin().build("./$route-types", importer, session.api);
+
+    expect(typeof result).toBe("string");
+    if (typeof result !== "string") return;
+
+    const typeCheck = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/routes/$route-types.ts",
+      sourceText: result,
+      rootFiles: fixture.paths,
+      moduleFallbacks: MODULE_FALLBACKS,
+    });
+    expect(typeCheck.diagnostics).toEqual([]);
+  });
+
   it("resolves through PluginManager when target exists with valid routes (SG-C1)", () => {
     const fixture = createFixture({
       "src/routes/home.ts": route("/", "export const handler = 1;"),

@@ -712,6 +712,31 @@ Execution refinements:
 - [x] Step 11: Inspect `git status --short` and confirm no `.data`, upstream spec clone, build output, or unrelated dirty files are staged.
 - [x] Step 12: Commit final docs as `docs: document realworld example workflow`.
 
+### Task 14: Generated Route/API Local Type Modules
+
+**Files:**
+- Modify: `packages/app/src/RouterVirtualModulePlugin.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: `examples/realworld/src/routes/*.ts`
+- Modify: `examples/realworld/src/api/**/*.ts`
+- Modify: `examples/realworld/src/tests/package.test.ts`
+
+**Progress notes:**
+- 2026-05-20: Follow-on framework simplification slice. Generated local `./$route-types` and `./$api-types` modules now let route/API leaf files keep declarative exports without importing `RouteHandler` or `ApiHandlerRaw` just to recover inferred params. Direct subagent execution was not used because this Codex runtime only permits spawned agents when the user explicitly asks for them.
+
+- [x] Step 1: Add failing package-level guards proving RealWorld route files do not import `RouteHandler` and API endpoint files do not import `ApiHandlerRaw`.
+- [x] Step 2: Add framework tests proving `createRouterVirtualModulePlugin()` emits `./$route-types` with decoded route params and `createHttpApiVirtualModulePlugin()` emits `./$api-types` with decoded handler context.
+- [x] Step 3: Implement plugin-local type modules and migrate RealWorld route/API files to `satisfies Template` and `RawHandler`.
+- [x] Step 4: Repair the API test layer harness after confirming `Layer.mergeAll(...)` was the root cause of a missing `UserRepository` service.
+- [x] Step 5: Keep request DTO aliases on decoded schema types; browser forms already decode raw strings through Effect Schema before calling the typed client.
+- [x] Step 6: Run focused guards: `pnpm --filter typed-realworld exec vitest run src/tests/package.test.ts src/tests/api/api.test.ts src/tests/presentation/ssr.test.ts`.
+- [x] Step 7: Run `pnpm --filter typed-realworld typecheck`.
+- [x] Step 8: Run `pnpm --filter typed-realworld test`.
+- [x] Step 9: Run `pnpm --filter typed-realworld build`.
+- [x] Step 10: Run `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/HttpApiVirtualModulePlugin.test.ts`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

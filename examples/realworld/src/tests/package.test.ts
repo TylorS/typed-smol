@@ -57,6 +57,7 @@ describe("typed-realworld package skeleton", () => {
     const pkg = readJson<PackageJson>("package.json");
 
     expect(pkg.scripts.build).toContain("vmc -p tsconfig.json");
+    expect(pkg.scripts.typecheck).toBe("vmc --noEmit -p tsconfig.json");
     expect(pkg.scripts["db:migrate"]).toContain("vmc -p tsconfig.json");
 
     expect(Object.keys(pkg.scripts).sort()).toEqual([
@@ -73,6 +74,7 @@ describe("typed-realworld package skeleton", () => {
       "test:integration",
       "test:ssr",
       "test:unit",
+      "typecheck",
     ]);
   });
 
@@ -127,9 +129,27 @@ describe("typed-realworld package skeleton", () => {
     }
   });
 
+  it("uses generated route type modules instead of RouteHandler wrappers", () => {
+    for (const path of routeSourceFiles()) {
+      const source = readText(path);
+
+      expect(source, path).not.toContain("RouteHandler");
+      expect(source, path).not.toContain("@typed/app/RouteHandler");
+    }
+  });
+
   it("keeps api endpoint helpers off the @typed/app package barrel", () => {
     for (const path of apiEndpointSourceFiles()) {
       expect(readText(path), path).not.toContain('from "@typed/app";');
+    }
+  });
+
+  it("uses generated api type modules instead of ApiHandlerRaw wrappers", () => {
+    for (const path of apiEndpointSourceFiles()) {
+      const source = readText(path);
+
+      expect(source, path).not.toContain("ApiHandlerRaw");
+      expect(source, path).not.toContain("@typed/app/httpapi/ApiHandler");
     }
   });
 
