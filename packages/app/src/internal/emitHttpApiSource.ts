@@ -544,6 +544,7 @@ export function emitHttpApiSource(input: {
     `import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";`,
     `import { resolveConfig } from "@typed/app/internal/resolveConfig";`,
     `import { TypedHttpServer } from "@typed/app/TypedHttpServer";`,
+    `import { ApiHandlers } from "@typed/app/httpapi/Handlers";`,
     `import * as Effect from "effect/Effect";`,
     `import * as Layer from "effect/Layer";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
@@ -960,9 +961,9 @@ function emitEndpointHandler(
 ): string {
   void endpoint;
   void directoryOptionNameByPath;
-  const args = ["path: ctx.params", "query: ctx.query", "headers: ctx.headers"];
-  args.push(optionalExports.has("body") ? "body: ctx.payload" : "body: undefined");
-  return `(ctx) => ${moduleName}.handler({ ${args.join(", ")} })`;
+  return optionalExports.has("body")
+    ? `ApiHandlers.handler(${moduleName}, { body: "payload" })`
+    : `ApiHandlers.handler(${moduleName})`;
 }
 
 function renderAnnotatedApiExpression(

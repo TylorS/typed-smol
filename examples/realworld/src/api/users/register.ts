@@ -1,4 +1,5 @@
 import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
 import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
 import { Users } from "../../application/Users.js";
 import { RegisterUserRequest, UserResponse } from "../../domain/RealWorldApi.js";
@@ -11,8 +12,9 @@ export const method = HttpMethod.Post;
 export const body = RegisterUserRequest;
 export const success = HttpApiSchema.status(201)(UserResponse);
 
-export const handler: RawHandler<never, Users> = ({ body }) =>
-  respond(
+export const handler = Effect.fn("Users.register")(function* ({ body }) {
+  return yield* respond(
     Users.use((users) => users.register(body)),
     201,
   );
+}) satisfies RawHandler<Users>;

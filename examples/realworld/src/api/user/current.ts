@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import { Users } from "../../application/Users.js";
 import { UserResponse } from "../../domain/RealWorldApi.js";
 import { HttpMethod, authToken } from "../../api-support/Common.js";
@@ -10,5 +10,6 @@ export const route = Route.Parse("/user");
 export const method = HttpMethod.Get;
 export const success = UserResponse;
 
-export const handler: RawHandler<never, Users> = ({ headers }) =>
-  respond(Users.use((users) => users.current(authToken(headers))));
+export const handler = Effect.fn("Users.current")(function* ({ headers }) {
+  return yield* respond(Users.use((users) => users.current(authToken(headers))));
+}) satisfies RawHandler<Users>;

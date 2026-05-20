@@ -153,6 +153,17 @@ describe("typed-realworld package skeleton", () => {
     }
   });
 
+  it("uses Effect.fn handlers checked with satisfies RawHandler", () => {
+    for (const path of apiEndpointSourceFiles()) {
+      const source = readText(path);
+
+      expect(source, path).toContain("Effect.fn(");
+      expect(source, path).toContain("satisfies RawHandler<");
+      expect(source, path).not.toMatch(/export const handler\s*:/);
+      expect(source, path).not.toContain("RawHandler<never,");
+    }
+  });
+
   it("uses the generated api virtual module instead of a hand-written client api", () => {
     expect(existsSync(resolve(projectRoot, "src/presentation/ClientApi.ts"))).toBe(false);
 

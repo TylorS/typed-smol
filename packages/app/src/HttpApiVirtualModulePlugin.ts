@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
 import {
   pathIsUnderBase,
@@ -402,47 +402,78 @@ function emitApiTypesModule(
 
 function emitApiTypesSource(importer: string): string {
   const moduleSpecifier = endpointModuleSpecifier(importer);
-  return `import type { ApiHandlerParamsFromConfig } from "@typed/app/httpapi/ApiHandler";
-import type * as Effect from "effect/Effect";
-import type * as HttpServerError from "effect/unstable/http/HttpServerError";
-import type { HttpServerResponse } from "effect/unstable/http/HttpServerResponse";
+  const inheritedHeaders = inheritedCompanionImport(importer, "_headers.ts");
+  const inheritedError = inheritedCompanionImport(importer, "_errors.ts");
+  const inheritedImports = [
+    inheritedError
+      ? `import type * as InheritedErrors0 from ${JSON.stringify(inheritedError)};`
+      : undefined,
+    inheritedHeaders
+      ? `import type * as InheritedHeaders0 from ${JSON.stringify(inheritedHeaders)};`
+      : undefined,
+  ].filter((line): line is string => line !== undefined);
+  const inheritedHeadersType = inheritedHeaders
+    ? '{ readonly headers: typeof InheritedHeaders0.headers }'
+    : "{}";
+  const inheritedErrorType = inheritedError
+    ? '{ readonly error: typeof InheritedErrors0.error }'
+    : "{}";
+
+  return `import type { ApiHandlerFromConfig, ApiHandlerParamsFromConfig, ApiHandlerRawFromConfig } from "@typed/app/httpapi/ApiHandler";
 import type * as EndpointModule from ${JSON.stringify(moduleSpecifier)};
+${inheritedImports.join("\n")}
 
 type Endpoint = typeof EndpointModule;
 
 type OptionalHeaders<T> = T extends { readonly headers: infer Headers }
   ? { readonly headers: Headers }
-  : {};
+  : ${inheritedHeadersType};
 
 type OptionalBody<T> = T extends { readonly body: infer Body }
   ? { readonly body: Body }
   : {};
 
-type SchemaType<T, Fallback> = T extends { readonly Type: infer A } ? A : Fallback;
+type OptionalSuccess<T> = T extends { readonly success: infer Success }
+  ? { readonly success: Success }
+  : {};
+
+type OptionalError<T> = T extends { readonly error: infer Error }
+  ? { readonly error: Error }
+  : ${inheritedErrorType};
 
 type Config = {
   readonly route: Endpoint["route"];
   readonly method: Endpoint["method"];
-} & OptionalHeaders<Endpoint> & OptionalBody<Endpoint>;
+} & OptionalHeaders<Endpoint> & OptionalBody<Endpoint> & OptionalSuccess<Endpoint> & OptionalError<Endpoint>;
 
 export type Context = ApiHandlerParamsFromConfig<Config>;
 
-export type Success = Endpoint extends { readonly success: infer S } ? SchemaType<S, unknown> : unknown;
+export type Handler<R = any> = ApiHandlerFromConfig<Config, R>;
 
-export type Error = Endpoint extends { readonly error: infer S } ? SchemaType<S, never> : never;
-
-export type Handler<R = never> = (
-  params: Context,
-) => Effect.Effect<Success, Error | HttpServerError.HttpServerError, R>;
-
-export type RawHandler<E = any, R = never> = (
-  params: Context,
-) => Effect.Effect<HttpServerResponse, E, R>;
+export type RawHandler<R = any> = ApiHandlerRawFromConfig<Config, R>;
 `;
 }
 
 function endpointModuleSpecifier(importer: string): string {
   return `./${basename(importer).replace(/\.[cm]?[tj]sx?$/, ".js")}`;
+}
+
+function inheritedCompanionImport(importer: string, companionName: string): string | undefined {
+  let current = dirname(importer);
+  while (true) {
+    const candidate = join(current, companionName);
+    if (existsSync(candidate)) return moduleSpecifierFrom(dirname(importer), candidate);
+
+    const parent = dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+function moduleSpecifierFrom(fromDir: string, target: string): string {
+  const relativePath = toPosixPath(relative(fromDir, target));
+  const withDot = relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+  return withDot.replace(/\.[cm]?[tj]sx?$/, ".js");
 }
 
 /**

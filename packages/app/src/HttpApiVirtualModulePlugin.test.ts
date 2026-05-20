@@ -356,6 +356,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       "import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
+      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
@@ -372,7 +373,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined })))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -711,6 +712,71 @@ export const ServerOnly = { use: readFileSync };
 });
 
 describe("HttpApiVirtualModulePlugin integration", () => {
+  it("emits generated handler aliases from the effective endpoint contract", () => {
+    const fixture = createApiFixture({
+      "src/apis/_errors.ts": `
+import * as Schema from "effect/Schema";
+
+export const error = Schema.Struct({ message: Schema.String });
+`,
+      "src/apis/articles/_headers.ts": `
+import * as Schema from "effect/Schema";
+
+export const headers = Schema.Struct({ authorization: Schema.String });
+`,
+      "src/apis/articles/create.ts": `
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+import * as Route from "@typed/router";
+import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+import type { Handler, RawHandler } from "./$api-types";
+
+export const route = Route.Parse("/articles");
+export const method = "POST";
+export const body = Schema.Struct({ article: Schema.Struct({ title: Schema.String }) });
+export const success = Schema.Struct({ ok: Schema.String });
+
+export const handler = Effect.fn("Articles.create")(function* ({ body, headers }) {
+  const authorization: string = headers.authorization;
+  const title: string = body.article.title;
+  return yield* HttpServerResponse.json({ authorization, title });
+}) satisfies RawHandler;
+
+export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body, headers }) {
+  if (headers.authorization === "") {
+    return yield* Effect.fail({ message: "missing" });
+  }
+  return { ok: body.article.title };
+}) satisfies Handler;
+`,
+    });
+    const importer = join(fixture.root, "src/apis/articles/create.ts");
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(
+      files,
+      files.includes(BOOTSTRAP_HTTPAPI_FILE) ? APP_ROOT : fixture.root,
+    );
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+    });
+    const result = createHttpApiVirtualModulePlugin().build("./$api-types", importer, session.api);
+    const source = getSourceText(result);
+
+    expect(source).toContain("ApiHandlerFromConfig");
+    expect(source).toContain("ApiHandlerRawFromConfig");
+    expect(source).toContain('import type * as InheritedErrors0 from "../_errors.js";');
+    expect(source).toContain('import type * as InheritedHeaders0 from "./_headers.js";');
+    expect(source).toContain("export type Handler<R = any> = ApiHandlerFromConfig<Config, R>;");
+    expect(source).toContain("export type RawHandler<R = any> = ApiHandlerRawFromConfig<Config, R>;");
+    expect(source).not.toContain("RawHandler<E");
+    expect(source).not.toContain("Effect.Effect<Success");
+  });
+
   it("emits plugin-specific decoded API types for an endpoint importing ./$api-types", () => {
     const fixture = createApiFixture({
       "src/apis/articles.ts": `
@@ -732,7 +798,7 @@ export const handler = (({ headers, query, body }) => {
   const authorization: string = headers.authorization;
   const page: number = query.page;
   const title: string = body.article.title;
-  return HttpServerResponse.json({ authorization, page, title });
+  return HttpServerResponse.json({ authorization, page, title }).pipe(Effect.orDie);
 }) satisfies RawHandler;
 `,
     });
@@ -792,6 +858,7 @@ export const handler = (({ headers, query, body }) => {
       "import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
+      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
@@ -808,7 +875,7 @@ export const handler = (({ headers, query, body }) => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined })))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -1038,7 +1105,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handlers.handle("status", ApiHandlers.handler(Status))');
     });
 
     it("Wrong typeTargetSpecs: wrong module paths; assignableTo missing; build fails", () => {
@@ -1159,7 +1226,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw))');
       expect(sourceText).not.toContain("handleRaw");
     });
 
@@ -1181,8 +1248,8 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
-      expect(sourceText).toContain('handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw))');
+      expect(sourceText).toContain('handle("status", ApiHandlers.handler(Status))');
     });
   });
 
@@ -1261,9 +1328,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("get", (ctx) => UsersGet.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
-      expect(sourceText).toContain('handle("list", (ctx) => UsersList.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
-      expect(sourceText).toContain('handle("update", (ctx) => UsersUpdate.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handlers.handle("get", ApiHandlers.handler(UsersGet))');
+      expect(sourceText).toContain('handle("list", ApiHandlers.handler(UsersList))');
+      expect(sourceText).toContain('handle("update", ApiHandlers.handler(UsersUpdate))');
     });
   });
 
@@ -1272,14 +1339,14 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handlers.handle("status", ApiHandlers.handler(Status))');
     });
 
     it("value return: handlers.handle with decoded params", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("status", (ctx) => Status.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handlers.handle("status", ApiHandlers.handler(Status))');
     });
 
     it("HttpServerResponse return: handler receives typed endpoint params", () => {
@@ -1297,7 +1364,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: undefined }))');
+      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw))');
       expect(sourceText).not.toContain("Effect.map(Raw.handler");
       expect(sourceText).not.toContain("Effect.mapError(Raw.handler");
     });
@@ -1321,7 +1388,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", (ctx) => Raw.handler({ path: ctx.params, query: ctx.query, headers: ctx.headers, body: ctx.payload }))');
+      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw, { body: "payload" }))');
       expect(sourceText).not.toContain("HttpIncomingMessage.schemaBodyJson(Raw.body)");
       expect(sourceText).not.toContain("handleRaw");
     });

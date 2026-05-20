@@ -1,4 +1,5 @@
 import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
 import { Tags } from "../../application/Tags.js";
 import { TagsResponse } from "../../domain/RealWorldApi.js";
 import { HttpMethod } from "../../api-support/Common.js";
@@ -9,4 +10,6 @@ export const route = Route.Parse("/tags");
 export const method = HttpMethod.Get;
 export const success = TagsResponse;
 
-export const handler: RawHandler<never, Tags> = () => respond(Tags.use((tags) => tags.list()));
+export const handler = Effect.fn("Tags.list")(function* () {
+  return yield* respond(Tags.use((tags) => tags.list()));
+}) satisfies RawHandler<Tags>;

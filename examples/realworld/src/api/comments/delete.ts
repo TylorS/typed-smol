@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
 import { Comments } from "../../application/Comments.js";
 import { HttpMethod, authToken } from "../../api-support/Common.js";
@@ -10,9 +10,10 @@ export const route = Route.Join(Route.Parse("/articles/:slug/comments"), Route.I
 export const method = HttpMethod.Delete;
 export const success = HttpApiSchema.NoContent;
 
-export const handler: RawHandler<never, Comments> = ({ headers, path }) =>
-  respondNoContent(
+export const handler = Effect.fn("Comments.delete")(function* ({ headers, path }) {
+  return yield* respondNoContent(
     Comments.use((comments) =>
       comments.delete(authToken(headers), path.slug, path.commentId),
     ),
   );
+}) satisfies RawHandler<Comments>;

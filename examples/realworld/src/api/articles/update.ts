@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import { Articles } from "../../application/Articles.js";
 import { SingleArticleResponse, UpdateArticleRequest } from "../../domain/RealWorldApi.js";
 import { HttpMethod, authToken } from "../../api-support/Common.js";
@@ -11,7 +11,8 @@ export const method = HttpMethod.Put;
 export const body = UpdateArticleRequest;
 export const success = SingleArticleResponse;
 
-export const handler: RawHandler<never, Articles> = ({ body, headers, path }) =>
-  respond(
+export const handler = Effect.fn("Articles.update")(function* ({ body, headers, path }) {
+  return yield* respond(
     Articles.use((articles) => articles.update(authToken(headers), path.slug, body)),
   );
+}) satisfies RawHandler<Articles>;

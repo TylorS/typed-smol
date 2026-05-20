@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
 import { Articles } from "../../application/Articles.js";
 import { CreateArticleRequest, SingleArticleResponse } from "../../domain/RealWorldApi.js";
@@ -12,8 +12,9 @@ export const method = HttpMethod.Post;
 export const body = CreateArticleRequest;
 export const success = HttpApiSchema.status(201)(SingleArticleResponse);
 
-export const handler: RawHandler<never, Articles> = ({ body, headers }) =>
-  respond(
+export const handler = Effect.fn("Articles.create")(function* ({ body, headers }) {
+  return yield* respond(
     Articles.use((articles) => articles.create(authToken(headers), body)),
     201,
   );
+}) satisfies RawHandler<Articles>;

@@ -12,20 +12,20 @@ export interface ApiHandlerBindingOptions {
 
 export interface ApiEndpointModule<A = unknown, E = never, R = never, Body extends Schema.Top = Schema.Top> {
   readonly body?: Body;
-  readonly handler: (params: ApiEndpointParams) => Effect.Effect<A, E, R>;
+  readonly handler: (params: any) => Effect.Effect<A, E, R>;
 }
 
 export interface ApiEndpointParams {
-  readonly path: Record<string, string>;
-  readonly query: Record<string, string | readonly string[] | undefined>;
-  readonly headers: Record<string, string>;
+  readonly path: any;
+  readonly query: any;
+  readonly headers: any;
   readonly body: unknown;
 }
 
 export interface ApiEndpointRuntimeContext {
-  readonly params?: Record<string, string>;
-  readonly query?: Record<string, string | readonly string[] | undefined>;
-  readonly headers?: Record<string, string>;
+  readonly params?: any;
+  readonly query?: any;
+  readonly headers?: any;
   readonly payload?: unknown;
   readonly request?: HttpIncomingMessage.HttpIncomingMessage<HttpServerError.HttpServerError>;
 }

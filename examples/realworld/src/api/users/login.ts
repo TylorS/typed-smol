@@ -1,4 +1,5 @@
 import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
 import { Users } from "../../application/Users.js";
 import { LoginUserRequest, UserResponse } from "../../domain/RealWorldApi.js";
 import { HttpMethod } from "../../api-support/Common.js";
@@ -10,7 +11,8 @@ export const method = HttpMethod.Post;
 export const body = LoginUserRequest;
 export const success = UserResponse;
 
-export const handler: RawHandler<never, Users> = ({ body }) =>
-  respond(
+export const handler = Effect.fn("Users.login")(function* ({ body }) {
+  return yield* respond(
     Users.use((users) => users.login(body)),
   );
+}) satisfies RawHandler<Users>;

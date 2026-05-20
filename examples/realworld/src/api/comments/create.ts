@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
 import { Comments } from "../../application/Comments.js";
 import { CreateCommentRequest, SingleCommentResponse } from "../../domain/RealWorldApi.js";
@@ -12,8 +12,9 @@ export const method = HttpMethod.Post;
 export const body = CreateCommentRequest;
 export const success = HttpApiSchema.status(201)(SingleCommentResponse);
 
-export const handler: RawHandler<never, Comments> = ({ body, headers, path }) =>
-  respond(
+export const handler = Effect.fn("Comments.create")(function* ({ body, headers, path }) {
+  return yield* respond(
     Comments.use((comments) => comments.create(authToken(headers), path.slug, body)),
     201,
   );
+}) satisfies RawHandler<Comments>;

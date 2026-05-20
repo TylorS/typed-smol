@@ -74,13 +74,53 @@ declare module "@typed/app" {
 }
 
 declare module "@typed/app/httpapi/ApiHandler" {
+  import type * as Effect from "effect/Effect";
+  import type * as Schema from "effect/Schema";
+  import type { HttpServerResponse } from "effect/unstable/http/HttpServerResponse";
+  import type * as Route from "@typed/router";
+
   export const emptyRecordString: Readonly<Record<string, string>>;
   export const emptyRecordStringArray: Readonly<Record<string, string | readonly string[] | undefined>>;
+
+  export type ApiRoute = Route.Route.Any;
+  export type ApiEndpointConfig = {
+    readonly route: ApiRoute;
+    readonly method: string;
+    readonly success?: Schema.Top;
+    readonly error?: Schema.Top;
+    readonly headers?: Schema.Top & { Type: Record<string, string> };
+    readonly body?: Schema.Top;
+  };
+  export type ApiHandlerParamsFromConfig<C extends ApiEndpointConfig> = {
+    readonly path: Route.Route.PathType<C["route"]>;
+    readonly query: Route.Route.QueryType<C["route"]>;
+    readonly headers: C["headers"] extends Schema.Top ? C["headers"]["Type"] : Record<string, string>;
+    readonly body: C["body"] extends Schema.Top ? C["body"]["Type"] : unknown;
+  };
+  export type ApiHandlerSuccessFromConfig<C extends ApiEndpointConfig> =
+    C extends { readonly success: infer Success }
+      ? Success extends { readonly Type: infer A }
+        ? A
+        : unknown
+      : unknown;
+  export type ApiHandlerErrorFromConfig<C extends ApiEndpointConfig> =
+    C extends { readonly error: infer Error }
+      ? Error extends { readonly Type: infer A }
+        ? A
+        : never
+      : never;
+  export type ApiHandlerFromConfig<C extends ApiEndpointConfig, R = any> = (
+    params: ApiHandlerParamsFromConfig<C>,
+  ) => Effect.Effect<ApiHandlerSuccessFromConfig<C>, ApiHandlerErrorFromConfig<C>, R>;
+  export type ApiHandlerRawFromConfig<C extends ApiEndpointConfig, R = any> = (
+    params: ApiHandlerParamsFromConfig<C>,
+  ) => Effect.Effect<HttpServerResponse, ApiHandlerErrorFromConfig<C>, R>;
 }
 
 declare module "@typed/app/httpapi/Handlers" {
   export const ApiHandlers: {
     readonly handle: (handlers: any, name: string, endpoint: any, options?: any) => any;
+    readonly handler: (endpoint: any, options?: any) => any;
     readonly handleRaw: (handlers: any, name: string, endpoint: any, options?: any) => any;
   };
 }

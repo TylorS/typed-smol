@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import { Users } from "../../application/Users.js";
 import { UpdateUserRequest, UserResponse } from "../../domain/RealWorldApi.js";
 import { HttpMethod, authToken } from "../../api-support/Common.js";
@@ -11,7 +11,8 @@ export const method = HttpMethod.Put;
 export const body = UpdateUserRequest;
 export const success = UserResponse;
 
-export const handler: RawHandler<never, Users> = ({ body, headers }) =>
-  respond(
+export const handler = Effect.fn("Users.update")(function* ({ body, headers }) {
+  return yield* respond(
     Users.use((users) => users.update(authToken(headers), body)),
   );
+}) satisfies RawHandler<Users>;

@@ -757,6 +757,28 @@ Execution refinements:
 - [x] Step 4: Run focused tests for the migrated harnesses and the package guard.
 - [x] Step 5: Run RealWorld typecheck, full test, build, and `git diff --check`.
 
+### Task 16: HttpApi Handler Contract Aliases
+
+**Files:**
+- Modify: `packages/app/src/httpapi/ApiHandler.ts`
+- Modify: `packages/app/src/httpapi/Handlers.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: `packages/app/src/internal/emitHttpApiSource.ts`
+- Modify: `packages/app/src/test-utils/typedAppGeneratedSourceFallback.d.ts`
+- Modify: `examples/realworld/src/api/**/*.ts`
+- Modify: `examples/realworld/src/tests/package.test.ts`
+
+**Progress notes:**
+- 2026-05-20: Generated `./$api-types` now mirrors the value-level HttpApi handler contract. `Handler` and `RawHandler` derive path/query/header/body/success/error from the endpoint module plus nearest inherited `_headers.ts` and `_errors.ts` companions, and leave only the requirements channel generic.
+- 2026-05-20: RealWorld endpoint handlers now use `Effect.fn("Span.name")(function* (...) { ... }) satisfies RawHandler<Service>` rather than annotated `RawHandler<never, Service>`, preserving inference while checking the generated endpoint contract.
+
+- [x] Step 1: Add failing framework and RealWorld package guards for full generated handler aliases and `Effect.fn(...) satisfies RawHandler<Service>` endpoint shape.
+- [x] Step 2: Add framework full-config handler aliases and generated `$api-types` inherited companion resolution.
+- [x] Step 3: Route generated `api:*` handler invocation through `ApiHandlers.handler(...)` so `satisfies`-preserved endpoint inference does not force direct-call annotations.
+- [x] Step 4: Migrate RealWorld endpoint modules to `Effect.fn` span names and `satisfies RawHandler<Service>`.
+- [x] Step 5: Run focused HttpApi tests, full `@typed/app` tests, RealWorld package guards, RealWorld typecheck/test/build, and `@typed/app` build.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

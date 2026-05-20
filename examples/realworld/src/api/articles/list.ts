@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { Articles } from "../../application/Articles.js";
 import { NonNegativeInt } from "../../domain/Ids.js";
@@ -21,5 +21,6 @@ export const route = Route.Join(
 export const method = HttpMethod.Get;
 export const success = MultipleArticlesResponse;
 
-export const handler: RawHandler<never, Articles> = ({ headers, query }) =>
-  respond(Articles.use((articles) => articles.list(articleFilter(query), authToken(headers))));
+export const handler = Effect.fn("Articles.list")(function* ({ headers, query }) {
+  return yield* respond(Articles.use((articles) => articles.list(articleFilter(query), authToken(headers))));
+}) satisfies RawHandler<Articles>;

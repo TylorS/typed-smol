@@ -1,5 +1,5 @@
 import * as Route from "@typed/router";
-import { headers } from "./_headers.js";
+import * as Effect from "effect/Effect";
 import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
 import { Articles } from "../../application/Articles.js";
 import { HttpMethod, authToken } from "../../api-support/Common.js";
@@ -10,7 +10,8 @@ export const route = Route.Parse("/articles/:slug");
 export const method = HttpMethod.Delete;
 export const success = HttpApiSchema.NoContent;
 
-export const handler: RawHandler<never, Articles> = ({ headers, path }) =>
-  respondNoContent(
+export const handler = Effect.fn("Articles.delete")(function* ({ headers, path }) {
+  return yield* respondNoContent(
     Articles.use((articles) => articles.delete(authToken(headers), path.slug)),
   );
+}) satisfies RawHandler<Articles>;
