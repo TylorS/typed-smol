@@ -20,7 +20,11 @@ import {
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
 import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
 import { buildHttpApiOpenApiPlan } from "./internal/httpapiOpenApiPlan.js";
-import { TypeModuleSource, typeUnion } from "./internal/typeModuleSource.js";
+import {
+  dependencyLayerType,
+  TypeModuleSource,
+  typeTuple,
+} from "./internal/typeModuleSource.js";
 import {
   getCallableReturnType,
   isCallableNode,
@@ -482,6 +486,7 @@ function emitApiTypesSource(
   source.importLine(
     `import type { ApiHandlerFromConfig, ApiHandlerParamsFromConfig, ApiHandlerRawFromConfig } from "@typed/app/httpapi/ApiHandler";`,
   );
+  source.importTypeNamespace("Layer", "effect/Layer");
   source.importTypeNamespace("EndpointModule", moduleSpecifier);
   for (const value of importedCompanions) {
     source.importTypeNamespace(value.alias, value.moduleSpecifier);
@@ -513,7 +518,7 @@ function emitApiTypesSource(
     endpointPrefix,
     exportNames,
   );
-  const openApiEntries = apiCompanionTypeEntries(
+  const openApiType = apiCompanionSingleType(
     source,
     "openapi",
     openApis,
@@ -521,6 +526,7 @@ function emitApiTypesSource(
     exportNames,
   );
   const nameType = apiNameType(endpointName, exportNames);
+  const dependenciesType = dependencyLayerType(source, dependencyEntries);
 
   source.add("type Endpoint = typeof EndpointModule;");
   source.add(`type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]: infer Value }
@@ -559,13 +565,13 @@ export type Success = Config extends { readonly success: infer Success } ? Succe
 
 export type Error = Config extends { readonly error: infer Error } ? Error : never;
 
-export type Dependencies = ${typeUnion(dependencyEntries)};
+export type Dependencies = ${dependenciesType};
 
-export type Middlewares = ${typeUnion(middlewareEntries)};
+export type Middlewares = ${typeTuple(middlewareEntries)};
 
-export type Prefixes = ${typeUnion(prefixEntries)};
+export type Prefixes = ${typeTuple(prefixEntries)};
 
-export type OpenApis = ${typeUnion(openApiEntries)};
+export type OpenApi = ${openApiType};
 
 export type Name = ${nameType};
 
@@ -579,7 +585,7 @@ export type ApiTypes = {
   readonly dependencies: Dependencies;
   readonly middlewares: Middlewares;
   readonly prefixes: Prefixes;
-  readonly openApis: OpenApis;
+  readonly openApi: OpenApi;
   readonly name: Name;
 };
 
@@ -672,6 +678,21 @@ function apiCompanionTypeEntries(
   return [...imported, endpointType, inFile].filter(
     (value): value is string => value !== undefined,
   );
+}
+
+function apiCompanionSingleType(
+  source: TypeModuleSource,
+  kind: ApiCompanionKind,
+  inherited: readonly ApiCompanionImport[],
+  endpoint: ApiCompanionImport | undefined,
+  exportNames: ReadonlySet<string>,
+): string {
+  if (!exportNames.has(kind) && endpoint === undefined && inherited.length === 0) return "never";
+  const valueType = apiCompanionValueType(source, kind);
+  if (exportNames.has(kind)) return `${valueType}<Endpoint>`;
+  if (endpoint) return `${valueType}<typeof ${endpoint.alias}>`;
+  const inheritedValue = last(inherited);
+  return inheritedValue ? `${valueType}<typeof ${inheritedValue.alias}>` : "never";
 }
 
 function apiCompanionValueType(source: TypeModuleSource, kind: ApiCompanionKind): string {

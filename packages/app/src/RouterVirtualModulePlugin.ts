@@ -13,7 +13,11 @@ import {
   toPosixPath,
 } from "./internal/path.js";
 import { typeNodeIsRouteCompatible } from "./internal/routeTypeNode.js";
-import { TypeModuleSource, typeUnion } from "./internal/typeModuleSource.js";
+import {
+  dependencyLayerType,
+  TypeModuleSource,
+  typeUnion,
+} from "./internal/typeModuleSource.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type {
   TypeInfoApi,
@@ -359,9 +363,11 @@ function emitRouteTypesSource(
   const guardEntries = routeConcernTypeEntries(source, "guard", guards, exportNames);
   const layoutEntries = routeConcernTypeEntries(source, "layout", layouts, exportNames);
   const catchEntries = routeConcernTypeEntries(source, "catch", catches, exportNames);
+  const dependenciesType = dependencyLayerType(source, dependencyEntries);
 
   source.importLine(`import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";`);
   source.importLine(`import type { MatchHandlerReturnValue, Route } from "@typed/router";`);
+  source.importTypeNamespace("Layer", "effect/Layer");
   source.importTypeNamespace("RouteModule", moduleSpecifier);
   source.add(`type RouteExport = typeof RouteModule extends { readonly route: infer Rt } ? Rt : never;
 type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]: infer Value }
@@ -370,7 +376,7 @@ type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]
 
   source.add(`export type Params = RouteExport extends Route.Any ? Route.Type<RouteExport> : never;
 
-export type Dependencies = ${typeUnion(dependencyEntries)};
+export type Dependencies = ${dependenciesType};
 
 export type Guards = ${typeUnion(guardEntries)};
 

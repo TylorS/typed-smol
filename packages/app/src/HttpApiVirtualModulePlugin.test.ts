@@ -725,7 +725,11 @@ describe("HttpApiVirtualModulePlugin integration", () => {
   it("emits generated handler aliases from the effective endpoint contract", () => {
     const fixture = createApiFixture({
       "src/apis/_dependencies.ts": `
-export const dependencies = ["api-root"] as const;
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class RootApiService extends Context.Service<RootApiService, { readonly root: string }>()("RootApiService") {}
+export const dependencies = Layer.succeed(RootApiService, { root: "root" });
 `,
       "src/apis/_errors.ts": `
 import * as Schema from "effect/Schema";
@@ -744,7 +748,11 @@ export const headers = Schema.Struct({ authorization: Schema.String });
 export const middleware = "articles-middleware" as const;
 `,
       "src/apis/articles/create.dependencies.ts": `
-export const dependencies = ["create"] as const;
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class CreateApiService extends Context.Service<CreateApiService, { readonly create: string }>()("CreateApiService") {}
+export const dependencies = Layer.succeed(CreateApiService, { create: "create" });
 `,
       "src/apis/articles/create.middlewares.ts": `
 export const middleware = "create-middleware" as const;
@@ -766,9 +774,11 @@ import type {
   Handler,
   Middlewares,
   Name,
-  OpenApis,
+  OpenApi,
+  Prefixes,
   RawHandler,
 } from "./$api-types";
+import type * as Layer from "effect/Layer";
 
 type Equals<A, B> =
   (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
@@ -782,22 +792,36 @@ export const openapi = { annotations: { description: "in-file" as const } };
 
 type _dependencies = Expect<Equals<
   Dependencies,
-  | typeof import("../_dependencies.js").dependencies
-  | typeof import("./create.dependencies.js").dependencies
+  Layer.Layer<
+    Layer.Success<
+      | typeof import("../_dependencies.js").dependencies
+      | typeof import("./create.dependencies.js").dependencies
+    >,
+    Layer.Error<
+      | typeof import("../_dependencies.js").dependencies
+      | typeof import("./create.dependencies.js").dependencies
+    >,
+    Layer.Services<
+      | typeof import("../_dependencies.js").dependencies
+      | typeof import("./create.dependencies.js").dependencies
+    >
+  >
 >>;
 type _middlewares = Expect<Equals<
   Middlewares,
-  | typeof import("./_middlewares.js").middleware
-  | typeof import("./create.middlewares.js").middleware
+  readonly [
+    typeof import("./_middlewares.js").middleware,
+    typeof import("./create.middlewares.js").middleware,
+  ]
 >>;
-type _openApis = Expect<Equals<
-  OpenApis,
-  | typeof import("../_openapi.js").default
-  | typeof import("./create.openapi.js").default
-  | typeof openapi
+type _prefixes = Expect<Equals<Prefixes, readonly []>>;
+type _openApi = Expect<Equals<
+  OpenApi,
+  typeof openapi
 >>;
 type _name = Expect<Equals<Name, typeof import("./create.name.js").name>>;
 type _apiTypes = Expect<Equals<ApiTypes["dependencies"], Dependencies>>;
+type _apiTypeOpenApi = Expect<Equals<ApiTypes["openApi"], OpenApi>>;
 
 export const handler = Effect.fn("Articles.create")(function* ({ body, headers }) {
   const authorization: string = headers.authorization;
@@ -836,7 +860,9 @@ export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body
     expect(source).toContain('import type * as InheritedHeaders0 from "./_headers.js";');
     expect(source).toContain("export type Dependencies =");
     expect(source).toContain("export type Middlewares =");
-    expect(source).toContain("export type OpenApis =");
+    expect(source).toContain("export type Prefixes =");
+    expect(source).toContain("export type OpenApi =");
+    expect(source).not.toContain("export type OpenApis");
     expect(source).toContain("export type ApiTypes = {");
     expect(source).toContain("export type Handler<R = any> = ApiHandlerFromConfig<Config, R>;");
     expect(source).toContain(
@@ -853,6 +879,26 @@ export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body
       moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
     });
     expect(typeCheck.diagnostics).toEqual([]);
+  });
+
+  it("applies directory dependencies to the owning HttpApiGroup layer", () => {
+    const fixture = createApiFixture({
+      "src/apis/users/_dependencies.ts": `
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class UsersService extends Context.Service<UsersService, { readonly users: string }>()("UsersService") {}
+export default Layer.succeed(UsersService, { users: "users" });
+`,
+      "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,
+    });
+    const result = buildApiFromExistingFixture(fixture);
+    const sourceText = getSourceText(result);
+
+    expect(sourceText).toContain('import * as UsersDependencies from "./apis/users/_dependencies.js";');
+    expect(sourceText).toContain(
+      'HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", ApiHandlers.handler(UsersList))).pipe(Layer.provideMerge(UsersDependencies.default))',
+    );
   });
 
   it("emits plugin-specific decoded API types for an endpoint importing ./$api-types", () => {

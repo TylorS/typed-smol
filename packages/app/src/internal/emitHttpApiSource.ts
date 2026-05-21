@@ -426,6 +426,14 @@ function collectDirectoryOptionPaths(endpointSpecs: readonly EndpointRenderSpec[
   return paths.sort(compareHttpApiPathOrder);
 }
 
+function collectGroupDependencyPaths(groupSpecs: readonly GroupRenderSpec[]): readonly string[] {
+  const paths: string[] = [];
+  for (const groupSpec of groupSpecs) {
+    pushUniqueMany(paths, groupSpec.directoryCompanions["_dependencies.ts"]);
+  }
+  return paths.sort(compareHttpApiPathOrder);
+}
+
 function inheritedDirectoryOption(
   endpoint: EndpointRenderSpec,
   option: OptionalExport,
@@ -441,6 +449,19 @@ function inheritedDirectoryOption(
   const paths = endpoint.directoryCompanions[mapping.companion];
   const path = paths[paths.length - 1];
   return path ? { path, exportName: mapping.exportName } : undefined;
+}
+
+function renderGroupLayerExpression(
+  groupLayerExpression: string,
+  groupSpec: GroupRenderSpec,
+  dependencyNameByPath: ReadonlyMap<string, string>,
+): string {
+  return groupSpec.directoryCompanions["_dependencies.ts"].reduce((expression, path) => {
+    const dependencyModule = dependencyNameByPath.get(path);
+    return dependencyModule
+      ? `${expression}.pipe(Layer.provideMerge(${dependencyModule}.default))`
+      : expression;
+  }, groupLayerExpression);
 }
 
 function toImportSpecifier(
@@ -509,6 +530,7 @@ export function emitHttpApiSource(input: {
 
   const endpointPaths = endpointSpecs.map((e) => e.modulePath);
   const directoryOptionPaths = collectDirectoryOptionPaths(endpointSpecs);
+  const groupDependencyPaths = collectGroupDependencyPaths(groupSpecs);
   const importerDir = dirname(toPosixPath(input.importer));
 
   if (input.mode === "client") {
@@ -535,6 +557,12 @@ export function emitHttpApiSource(input: {
   const varNameByPath = makeUniqueVarNames(proposedNames);
   const directoryOptionNameByPath = makeUniqueVarNames(
     directoryOptionPaths.map((path) => ({
+      path,
+      proposedName: pathToIdentifier(`__${path}`),
+    })),
+  );
+  const groupDependencyNameByPath = makeUniqueVarNames(
+    groupDependencyPaths.map((path) => ({
       path,
       proposedName: pathToIdentifier(`__${path}`),
     })),
@@ -570,6 +598,12 @@ export function emitHttpApiSource(input: {
     const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
     importLines.push(
       `import * as ${directoryOptionNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
+    );
+  }
+  for (const path of groupDependencyPaths) {
+    const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
+    importLines.push(
+      `import * as ${groupDependencyNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
     );
   }
 
@@ -655,7 +689,11 @@ export function emitHttpApiSource(input: {
       return `${handlersExpression}.handle(${JSON.stringify(name)}, ${handler})`;
     }, "handlers");
     groupLayerBlocks.push(
-      `HttpApiBuilder.group(Api, ${JSON.stringify(groupName)}, (handlers) => ${groupHandlers})`,
+      renderGroupLayerExpression(
+        `HttpApiBuilder.group(Api, ${JSON.stringify(groupName)}, (handlers) => ${groupHandlers})`,
+        groupSpec,
+        groupDependencyNameByPath,
+      ),
     );
   }
 

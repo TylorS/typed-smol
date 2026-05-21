@@ -1296,11 +1296,19 @@ describe("RouterVirtualModulePlugin integration", () => {
   it("emits plugin-specific decoded route types for a route file importing ./$route-types", () => {
     const fixture = createFixture({
       "src/routes/_dependencies.ts": `
-const dependencies = ["root"] as const;
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class RootRouteService extends Context.Service<RootRouteService, { readonly root: string }>()("RootRouteService") {}
+const dependencies = Layer.succeed(RootRouteService, { root: "root" });
 export default dependencies;
 `,
       "src/routes/articles/_dependencies.ts": `
-const dependencies = ["articles"] as const;
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class ArticlesRouteService extends Context.Service<ArticlesRouteService, { readonly articles: string }>()("ArticlesRouteService") {}
+const dependencies = Layer.succeed(ArticlesRouteService, { articles: "articles" });
 export default dependencies;
 `,
       "src/routes/articles/_guard.ts": validGuardExport,
@@ -1313,7 +1321,11 @@ export const layout = ({ content }: { readonly content: Fx.Fx<unknown, unknown, 
 export const catchFn = (error: { readonly message: string }) => error.message;
 `,
       "src/routes/articles/show.dependencies.ts": `
-export const dependencies = ["show"] as const;
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class ShowRouteService extends Context.Service<ShowRouteService, { readonly show: string }>()("ShowRouteService") {}
+export const dependencies = [Layer.succeed(ShowRouteService, { show: "show" })] as const;
 `,
       "src/routes/articles/show.guard.ts": validGuardExport,
       "src/routes/articles/show.layout.ts": `
@@ -1325,6 +1337,7 @@ export const layout = ({ content }: { readonly content: Fx.Fx<unknown, unknown, 
 import * as Fx from "@typed/fx/Fx";
 import * as Route from "@typed/router";
 import type { Catches, Dependencies, Guards, Layouts, RouteTypes, Template } from "./$route-types";
+import type * as Layer from "effect/Layer";
 
 type Equals<A, B> =
   (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
@@ -1338,9 +1351,23 @@ export const route = Route.Join(
 
 type _dependencies = Expect<Equals<
   Dependencies,
-  | typeof import("./_dependencies.js").default
-  | typeof import("../_dependencies.js").default
-  | typeof import("./show.dependencies.js").dependencies
+  Layer.Layer<
+    Layer.Success<
+      | typeof import("./_dependencies.js").default
+      | typeof import("../_dependencies.js").default
+      | (typeof import("./show.dependencies.js").dependencies)[number]
+    >,
+    Layer.Error<
+      | typeof import("./_dependencies.js").default
+      | typeof import("../_dependencies.js").default
+      | (typeof import("./show.dependencies.js").dependencies)[number]
+    >,
+    Layer.Services<
+      | typeof import("./_dependencies.js").default
+      | typeof import("../_dependencies.js").default
+      | (typeof import("./show.dependencies.js").dependencies)[number]
+    >
+  >
 >>;
 type _guards = Expect<Equals<
   Guards,

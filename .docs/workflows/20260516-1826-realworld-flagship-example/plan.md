@@ -821,6 +821,27 @@ Execution refinements:
 - [x] Step 5: Contain diagnostics-time stale virtual-record rebuilds to records relevant to the requested diagnostics file.
 - [x] Step 6: Run focused app/virtual-modules tests, package builds, full `@typed/app` test, RealWorld package guard, typecheck, test, build, and `git diff --check`.
 
+### Task 19: Correct Companion Aggregation Shapes
+
+**Files:**
+- Modify: `packages/app/src/internal/typeModuleSource.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.ts`
+- Modify: `packages/app/src/internal/emitHttpApiSource.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
+
+**Progress notes:**
+- 2026-05-21: Dependency companion aliases now collapse discovered Layer values into one `Layer<UnionOfServices, UnionOfErrors, UnionOfDeps>` shape for both `$api-types` and `$route-types`.
+- 2026-05-21: API middleware and prefix companion aliases stay as ordered tuples, while OpenAPI is singular (`OpenApi`) and selects the effective endpoint value instead of exporting an all-values union.
+- 2026-05-21: Generated `api:*` group layers now import directory `_dependencies.ts` companions and provide them to their owning `HttpApiGroup` layer.
+
+- [x] Step 1: Add failing framework tests for dependency Layer aggregation, tuple middleware/prefix aliases, singular OpenAPI, and directory dependency group wrapping.
+- [x] Step 2: Add shared generated type helpers for dependency Layer aggregation and tuple aliases.
+- [x] Step 3: Update `$api-types` and `$route-types` generation to emit the corrected shapes.
+- [x] Step 4: Update generated `api:*` runtime group layer composition for directory dependencies.
+- [x] Step 5: Run focused plugin tests, full `@typed/app` build/test, RealWorld typecheck/test/build, and `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.
