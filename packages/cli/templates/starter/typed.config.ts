@@ -2,8 +2,7 @@ import { defineConfig } from "@typed/app/config/defineConfig";
 
 export default defineConfig({
   entry: "packages/app/src/entry.server.ts",
-  router: { prefix: "router:" },
-  api: { prefix: "api:", pathPrefix: "/api" },
+  api: { pathPrefix: "/api" },
   build: {
     clientOutDir: "dist/client",
     serverOutDir: "dist/server",

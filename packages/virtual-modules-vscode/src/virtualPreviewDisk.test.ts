@@ -54,9 +54,9 @@ describe("virtualPreviewDisk", () => {
         projectRoot,
         importer,
         parentVirtualFile,
-        'import Routes0 from "router:./routes";\nexport const Routes = Routes0;\n',
+        'import Routes0 from "typed:router?dir=./routes";\nexport const Routes = Routes0;\n',
         (moduleId) =>
-          moduleId === "router:./routes"
+          moduleId === "typed:router?dir=./routes"
             ? {
                 virtualFileName: routesVirtualFile,
                 sourceText: 'import { route } from "./routes/index.js";\nexport default route;\n',

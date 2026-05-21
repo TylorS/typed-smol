@@ -2,7 +2,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import type { createResolver } from "./resolver";
 
-/** Matches any virtual-style specifier (virtual:foo, router:./routes, etc.) in import/from. */
+/** Matches any virtual-style specifier (virtual:foo, typed:router?dir=./routes, etc.) in import/from. */
 const VIRTUAL_IMPORT_REGEX = /(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/g;
 
 export type VirtualModuleTreeItem = VirtualModuleFolderItem | VirtualModuleLeafItem;

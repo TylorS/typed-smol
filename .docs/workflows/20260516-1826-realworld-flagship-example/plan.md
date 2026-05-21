@@ -863,6 +863,28 @@ Execution refinements:
 - [x] Step 4: Update `$route-types` generation to emit composed guard, layout, and catch aliases.
 - [x] Step 5: Run focused router/app tests, router build/test, app build/test, RealWorld typecheck/test/build, and `git diff --check`.
 
+### Task 21: Typed Query Virtual Module IDs and Resolver Hot Path
+
+**Files:**
+- Modify: `packages/app/src/RouterVirtualModulePlugin.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/internal/emitBrowserSource.ts`
+- Modify: `packages/app/src/internal/emitServerSource.ts`
+- Modify: `packages/vite-plugin/src/index.ts`
+- Modify: RealWorld generated API imports and virtual module tests
+- Modify: starter/sample/editor-preview references
+
+**Progress notes:**
+- 2026-05-21: Router and HttpApi virtual modules now use `typed:router?dir=...` and `typed:api?dir=...`; legacy `router:` and `api:` IDs are intentionally rejected.
+- 2026-05-21: `typed:router?dir=*` maps to `./routes`; `typed:api?dir=*` maps to `./api`; `typed:api` optionally accepts `mode=full|client`.
+- 2026-05-21: Router/HttpApi `shouldResolve` is now parse-only by module kind, so tsserver no longer stats and recursively scans target directories during every resolution probe. Detailed missing/invalid query/path diagnostics are emitted from `build`.
+
+- [x] Step 1: Add failing tests for typed query IDs, missing/invalid query diagnostics, and parse-only `shouldResolve`.
+- [x] Step 2: Update Router and HttpApi parsers/builders to reject legacy IDs and emit specific diagnostic codes.
+- [x] Step 3: Update generated `typed:server` and `typed:browser` imports to target `typed:api?dir=` and `typed:router?dir=`.
+- [x] Step 4: Update RealWorld, starter, sample, VS Code preview, and focused tests to the new IDs.
+- [x] Step 5: Run focused package tests, RealWorld tests, build checks, and scoped `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

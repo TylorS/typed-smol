@@ -93,7 +93,7 @@ function buildRouterFromExistingFixture(
     program,
     typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
   });
-  return plugin.build("router:./routes", fixture.importer, session.api);
+  return plugin.build("typed:router?dir=./routes", fixture.importer, session.api);
 }
 
 function expectRouterGeneratedSourceToTypeCheck(
@@ -298,54 +298,67 @@ describe("resolveTypeTargetsFromSpecs with ROUTER_TYPE_TARGET_SPECS", () => {
 
 // Snapshot test matrix and naming: .docs/workflows/20250221-1200-router-snapshot-test-design/00-router-snapshot-test-design.md
 describe("RouterVirtualModulePlugin", () => {
-  it("parses router id with ./ prefix", () => {
-    const parsed = parseRouterVirtualModuleId("router:./routes");
+  it("parses typed router id with explicit dir", () => {
+    const parsed = parseRouterVirtualModuleId("typed:router?dir=./routes");
     expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
   });
 
-  it("rejects ids that do not use the router prefix", () => {
-    const parsed = parseRouterVirtualModuleId("virtual:./routes");
+  it("rejects legacy router prefix ids", () => {
+    const parsed = parseRouterVirtualModuleId("router:./routes");
     expect(parsed.ok).toBe(false);
   });
 
-  it("accepts router:routes without ./ prefix (normalized to ./routes)", () => {
-    const parsed = parseRouterVirtualModuleId("router:routes");
+  it("accepts typed router wildcard dir as default routes directory", () => {
+    const parsed = parseRouterVirtualModuleId("typed:router?dir=*");
+    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
+  });
+
+  it("accepts bare typed router dir values normalized to relative paths", () => {
+    const parsed = parseRouterVirtualModuleId("typed:router?dir=routes");
     expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
   });
 
   it("rejects target query ids because router modules are environment agnostic", () => {
-    const parsed = parseRouterVirtualModuleId("router:./routes?target=browser");
+    const parsed = parseRouterVirtualModuleId("typed:router?dir=./routes&target=browser");
     expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.code).toBe("RVM-ID-QUERY-001");
+  });
+
+  it("rejects typed router ids that omit dir", () => {
+    const parsed = parseRouterVirtualModuleId("typed:router");
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.code).toBe("RVM-ID-DIR-001");
   });
 
   it("resolves target directory from importer", () => {
     const { importer } = createFixture({ "src/routes/index.ts": "export {};" });
 
-    const resolved = resolveRouterTargetDirectory("router:./routes", importer);
+    const resolved = resolveRouterTargetDirectory("typed:router?dir=./routes", importer);
     expect(resolved.ok).toBe(true);
     if (!resolved.ok) return;
     expect(resolved.targetDirectory.endsWith("/src/routes")).toBe(true);
   });
 
-  it("shouldResolve returns true when target directory exists with .ts files", () => {
+  it("shouldResolve returns true for typed router ids without scanning the target directory", () => {
     const { importer } = createFixture({ "src/routes/index.ts": "export {};" });
 
     const plugin = createRouterVirtualModulePlugin();
-    expect(plugin.shouldResolve("router:./routes", importer)).toBe(true);
+    expect(plugin.shouldResolve("typed:router?dir=./routes", importer)).toBe(true);
   });
 
-  it("shouldResolve returns false when directory has no .ts files (AC-9)", () => {
+  it("shouldResolve returns true for typed router ids whose directory has no .ts files", () => {
     const { importer } = createFixture({ "src/routes/readme.txt": "no ts files" });
 
     const plugin = createRouterVirtualModulePlugin();
-    expect(plugin.shouldResolve("router:./routes", importer)).toBe(false);
+    expect(plugin.shouldResolve("typed:router?dir=./routes", importer)).toBe(true);
   });
 
-  it("shouldResolve returns false when target directory is missing", () => {
+  it("shouldResolve returns true for malformed typed router ids so build can surface diagnostics", () => {
     const { importer } = createFixture({});
 
     const plugin = createRouterVirtualModulePlugin();
-    expect(plugin.shouldResolve("router:./routes", importer)).toBe(false);
+    expect(plugin.shouldResolve("typed:router", importer)).toBe(true);
+    expect(plugin.shouldResolve("typed:router?dir=./routes&target=browser", importer)).toBe(true);
   });
 
   it("type-checks a generated Router virtual module source fixture", () => {
@@ -616,16 +629,28 @@ describe("RouterVirtualModulePlugin", () => {
     expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-LEAF-001");
   });
 
-  it("build returns RVM-ID-001 when virtual module id is invalid (e.g. empty relative path)", () => {
+  it("build returns RVM-ID-DIR-001 when typed router dir query is missing", () => {
     const fixture = createFixture({
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     const plugin = createRouterVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
     const session = createTypeInfoApiSession({ ts, program });
-    const result = plugin.build("router:", fixture.importer, session.api);
+    const result = plugin.build("typed:router", fixture.importer, session.api);
     expect(result).toMatchObject({ errors: expect.any(Array) });
-    expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-ID-001");
+    expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-ID-DIR-001");
+  });
+
+  it("build returns RVM-ID-QUERY-001 when typed router query has unsupported options", () => {
+    const fixture = createFixture({
+      "src/routes/home.ts": route("/", "export const handler = 1;"),
+    });
+    const plugin = createRouterVirtualModulePlugin();
+    const program = makeProgram(fixture.paths);
+    const session = createTypeInfoApiSession({ ts, program });
+    const result = plugin.build("typed:router?dir=./routes&target=browser", fixture.importer, session.api);
+    expect(result).toMatchObject({ errors: expect.any(Array) });
+    expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-ID-QUERY-001");
   });
 
   it("build returns RVM-DISC-001 when target directory does not exist", () => {
@@ -922,7 +947,7 @@ describe("RouterVirtualModulePlugin", () => {
       (handlerExport! as { assignableTo?: { Fx?: boolean } }).assignableTo?.Fx,
     ).toBeUndefined();
     const plugin = createRouterVirtualModulePlugin();
-    const buildResult = plugin.build("router:./routes", fixture.importer, session.api);
+    const buildResult = plugin.build("typed:router?dir=./routes", fixture.importer, session.api);
     expect(buildResult).toMatchObject({ errors: expect.any(Array) });
     const codes = (buildResult as VirtualModuleBuildError).errors.map((e) => e.code);
     expect(codes.some((c) => c === "RVM-KIND-001" || c === "RVM-ROUTE-002")).toBe(true);
@@ -976,7 +1001,7 @@ describe("RouterVirtualModulePlugin", () => {
       program,
       typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
     });
-    const result = plugin.build("router:./routes", fixture.importer, session.api);
+    const result = plugin.build("typed:router?dir=./routes", fixture.importer, session.api);
     expect(typeof result).toBe("string");
     expect((result as string).length).toBeGreaterThan(0);
   });
@@ -1000,8 +1025,8 @@ describe("RouterVirtualModulePlugin", () => {
       program,
       typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
     });
-    const source1 = plugin.build("router:./routes", fixture.importer, session1.api);
-    const source2 = plugin.build("router:./routes", fixture.importer, session2.api);
+    const source1 = plugin.build("typed:router?dir=./routes", fixture.importer, session1.api);
+    const source2 = plugin.build("typed:router?dir=./routes", fixture.importer, session2.api);
     expect(typeof source1).toBe(typeof source2);
     if (typeof source1 === "string") {
       expect(source1).toBe(source2);
@@ -1549,7 +1574,7 @@ export const template = ((params) =>
     const manager = new PluginManager([createRouterVirtualModulePlugin()]);
 
     const resolved = manager.resolveModule({
-      id: "router:./routes",
+      id: "typed:router?dir=./routes",
       importer: fixture.importer,
       createTypeInfoApiSession: sessionFactory,
     });
@@ -1568,11 +1593,13 @@ export const template = ((params) =>
     expect(resolved.status).toBe("unresolved");
   });
 
-  it("returns unresolved through PluginManager when target directory has no .ts files (T-09)", () => {
+  it("returns error through PluginManager when target directory has no .ts files (T-09)", () => {
     const { importer } = createFixture({ "src/routes/readme.txt": "no ts" });
     const manager = new PluginManager([createRouterVirtualModulePlugin()]);
-    const resolved = manager.resolveModule({ id: "router:./routes", importer });
-    expect(resolved.status).toBe("unresolved");
+    const resolved = manager.resolveModule({ id: "typed:router?dir=./routes", importer });
+    expect(resolved.status).toBe("error");
+    if (resolved.status !== "error") return;
+    expect(resolved.diagnostic.code).toBe("RVM-LEAF-001");
   });
 
   it("returns error when build throws (invalid routes)", () => {
@@ -1582,7 +1609,7 @@ export const template = ((params) =>
     const manager = new PluginManager([createRouterVirtualModulePlugin()]);
 
     const resolved = manager.resolveModule({
-      id: "router:./routes",
+      id: "typed:router?dir=./routes",
       importer: fixture.importer,
       createTypeInfoApiSession: sessionFactory,
     });

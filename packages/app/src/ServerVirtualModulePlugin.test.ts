@@ -58,9 +58,9 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).not.toContain('from "@typed/app";');
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
     expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
-    expect(source).toContain('import * as Api0 from "api:./api";');
-    expect(source).toContain('import Routes0 from "router:./routes1";');
-    expect(source).toContain('import Routes1 from "router:./routes2";');
+    expect(source).toContain('import * as Api0 from "typed:api?dir=./api";');
+    expect(source).toContain('import Routes0 from "typed:router?dir=./routes1";');
+    expect(source).toContain('import Routes1 from "typed:router?dir=./routes2";');
     expect(source).not.toContain("route-handlers:");
     expect(source).not.toContain("RouteHandlers.apply");
     expect(source).toContain("const routeModules = [Routes0, Routes1];");
@@ -105,12 +105,12 @@ describe("ServerVirtualModulePlugin", () => {
   it("preserves source order for repeated api and routes parameters", () => {
     const source = buildServer("typed:server?routes=./routes&api=./api1&api=./api2") as string;
 
-    expect(source.indexOf('import Routes0 from "router:./routes";')).toBeLessThan(
-      source.indexOf('import * as Api0 from "api:./api1";'),
+    expect(source.indexOf('import Routes0 from "typed:router?dir=./routes";')).toBeLessThan(
+      source.indexOf('import * as Api0 from "typed:api?dir=./api1";'),
     );
     expect(source).not.toContain("route-handlers:");
-    expect(source.indexOf('import * as Api0 from "api:./api1";')).toBeLessThan(
-      source.indexOf('import * as Api1 from "api:./api2";'),
+    expect(source.indexOf('import * as Api0 from "typed:api?dir=./api1";')).toBeLessThan(
+      source.indexOf('import * as Api1 from "typed:api?dir=./api2";'),
     );
   });
 
@@ -209,8 +209,8 @@ describe("ServerVirtualModulePlugin", () => {
         join(fixture.root, "src/typed-template.d.ts"),
       ],
       moduleFallbacks: {
-        "api:./api": join(fixture.root, "src/api.ts"),
-        "router:./routes": join(fixture.root, "src/routes.ts"),
+        "typed:api?dir=./api": join(fixture.root, "src/api.ts"),
+        "typed:router?dir=./routes": join(fixture.root, "src/routes.ts"),
         "typed:config": join(fixture.root, "src/typed-config.ts"),
         "@typed/app/runtime": join(fixture.root, "src/typed-app.d.ts"),
         "@typed/app/TypedHttpServer": join(fixture.root, "src/typed-app.d.ts"),

@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { basename, dirname, extname, join, relative } from "node:path";
+import { existsSync, statSync } from "node:fs";
+import { basename, dirname, join, relative } from "node:path";
 import {
   buildRouteDescriptors,
   type RouteContractViolation,
@@ -27,21 +27,9 @@ import type {
 } from "@typed/virtual-modules";
 import { ROUTER_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
-const DEFAULT_PREFIX = "router:";
+const DEFAULT_PREFIX = "typed:router";
 const DEFAULT_PLUGIN_NAME = "router-virtual-module";
 const ROUTE_TYPES_MODULE_ID = "./$route-types";
-
-/** Extensions that count as route/script files when checking if a directory should resolve. */
-const SCRIPT_EXTENSION_SET = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mts",
-  ".cts",
-  ".mjs",
-  ".cjs",
-]);
 
 /** Glob patterns for discovering route files. */
 const ROUTE_FILE_GLOBS: readonly string[] = [
@@ -62,31 +50,43 @@ export interface RouterVirtualModulePluginOptions {
 
 export type ParseRouterVirtualModuleIdResult =
   | { readonly ok: true; readonly relativeDirectory: string }
-  | { readonly ok: false; readonly reason: string };
+  | { readonly ok: false; readonly code: string; readonly reason: string };
+
+function isRouterVirtualModuleId(id: string, prefix: string): boolean {
+  return id === prefix || id.startsWith(`${prefix}?`);
+}
 
 export function parseRouterVirtualModuleId(
   id: string,
   prefix: string = DEFAULT_PREFIX,
 ): ParseRouterVirtualModuleIdResult {
   const idResult = validateNonEmptyString(id, "id");
-  if (!idResult.ok) return { ok: false, reason: idResult.reason };
+  if (!idResult.ok) return { ok: false, code: "RVM-ID-001", reason: idResult.reason };
   const prefixResult = validateNonEmptyString(prefix, "prefix");
-  if (!prefixResult.ok) return { ok: false, reason: prefixResult.reason };
-  if (!id.startsWith(prefix)) {
-    return { ok: false, reason: `id must start with "${prefix}"` };
+  if (!prefixResult.ok) return { ok: false, code: "RVM-ID-001", reason: prefixResult.reason };
+  if (!isRouterVirtualModuleId(id, prefix)) {
+    return { ok: false, code: "RVM-ID-001", reason: `id must be "${prefix}?dir=<path>"` };
   }
 
-  const body = id.slice(prefix.length);
-  const separatorIndex = body.indexOf("?");
-  const rawRelativeDirectory = separatorIndex === -1 ? body : body.slice(0, separatorIndex);
-  const params = new URLSearchParams(separatorIndex === -1 ? "" : body.slice(separatorIndex + 1));
-  const unsupported = [...params.keys()][0];
+  const query = id === prefix ? "" : id.slice(prefix.length + 1);
+  const params = new URLSearchParams(query);
+  const unsupported = [...params.keys()].find((key) => key !== "dir");
   if (unsupported !== undefined) {
     return {
       ok: false,
-      reason: `router virtual module does not support query option "${unsupported}"`,
+      code: "RVM-ID-QUERY-001",
+      reason: `typed:router does not support query option "${unsupported}"`,
     };
   }
+  const dirValues = params.getAll("dir");
+  if (dirValues.length !== 1) {
+    return {
+      ok: false,
+      code: "RVM-ID-DIR-001",
+      reason: `typed:router requires exactly one "dir" query option`,
+    };
+  }
+  const rawRelativeDirectory = dirValues[0] === "*" ? "./routes" : dirValues[0];
 
   let relativeDirectory = rawRelativeDirectory;
   if (
@@ -100,14 +100,16 @@ export function parseRouterVirtualModuleId(
     relativeDirectory = `./${relativeDirectory}`;
   }
   const relativeResult = validatePathSegment(relativeDirectory, "relativeDirectory");
-  if (!relativeResult.ok) return { ok: false, reason: relativeResult.reason };
+  if (!relativeResult.ok) {
+    return { ok: false, code: "RVM-ID-DIR-002", reason: relativeResult.reason };
+  }
 
   return { ok: true, relativeDirectory: relativeResult.value };
 }
 
 export type ResolveRouterTargetDirectoryResult =
   | { readonly ok: true; readonly targetDirectory: string }
-  | { readonly ok: false; readonly reason: string };
+  | { readonly ok: false; readonly code: string; readonly reason: string };
 
 export function resolveRouterTargetDirectory(
   id: string,
@@ -118,15 +120,25 @@ export function resolveRouterTargetDirectory(
   if (!parsed.ok) return parsed;
 
   const importerResult = validatePathSegment(importer, "importer");
-  if (!importerResult.ok) return { ok: false, reason: importerResult.reason };
+  if (!importerResult.ok) {
+    return { ok: false, code: "RVM-ID-IMPORTER-001", reason: importerResult.reason };
+  }
 
   const importerDir = dirname(toPosixPath(importerResult.value));
   const resolved = resolvePathUnderBase(importerDir, parsed.relativeDirectory);
   if (!resolved.ok) {
-    return { ok: false, reason: "resolved target directory escapes importer base directory" };
+    return {
+      ok: false,
+      code: "RVM-ID-DIR-003",
+      reason: "resolved target directory escapes importer base directory",
+    };
   }
   if (!pathIsUnderBase(importerDir, resolved.path)) {
-    return { ok: false, reason: "resolved target directory is outside importer base directory" };
+    return {
+      ok: false,
+      code: "RVM-ID-DIR-003",
+      reason: "resolved target directory is outside importer base directory",
+    };
   }
 
   return { ok: true, targetDirectory: toPosixPath(resolved.path) };
@@ -135,24 +147,6 @@ export function resolveRouterTargetDirectory(
 function isExistingDirectory(absolutePath: string): boolean {
   try {
     return statSync(absolutePath).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-function directoryHasScriptFiles(dir: string): boolean {
-  try {
-    const items = readdirSync(dir, { withFileTypes: true });
-    for (const e of items) {
-      if (
-        e.isFile() &&
-        SCRIPT_EXTENSION_SET.has(extname(e.name).toLowerCase()) &&
-        !e.name.toLowerCase().endsWith(".d.ts")
-      )
-        return true;
-      if (e.isDirectory() && directoryHasScriptFiles(join(dir, e.name))) return true;
-    }
-    return false;
   } catch {
     return false;
   }
@@ -192,10 +186,7 @@ export const createRouterVirtualModulePlugin = (
     typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
     shouldResolve(id, importer) {
       if (id === ROUTE_TYPES_MODULE_ID && importer) return true;
-      const resolved = resolveRouterTargetDirectory(id, importer, prefix);
-      if (!resolved.ok) return false;
-      if (!isExistingDirectory(resolved.targetDirectory)) return false;
-      return directoryHasScriptFiles(resolved.targetDirectory);
+      return Boolean(importer) && isRouterVirtualModuleId(id, prefix);
     },
     build(id, importer, api) {
       if (id === ROUTE_TYPES_MODULE_ID) {
@@ -205,7 +196,7 @@ export const createRouterVirtualModulePlugin = (
       const resolved = resolveRouterTargetDirectory(id, importer, prefix);
       if (!resolved.ok) {
         return {
-          errors: [{ code: "RVM-ID-001", message: resolved.reason, pluginName: name }],
+          errors: [{ code: resolved.code, message: resolved.reason, pluginName: name }],
         } satisfies VirtualModuleBuildError;
       }
       if (!isExistingDirectory(resolved.targetDirectory)) {

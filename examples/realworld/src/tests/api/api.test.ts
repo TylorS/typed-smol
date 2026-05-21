@@ -168,7 +168,7 @@ function buildGeneratedApiSource(): string {
   });
   const session = createTypeInfoApiSessionForApp({ ts, program });
   const result = createHttpApiVirtualModulePlugin().build(
-    "api:./api",
+    "typed:api?dir=./api",
     join(root, "src/server.ts"),
     session.api,
   );

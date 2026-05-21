@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { basename, dirname, extname, join, relative } from "node:path";
+import { existsSync, statSync } from "node:fs";
+import { basename, dirname, join, relative } from "node:path";
 import {
   pathIsUnderBase,
   resolvePathUnderBase,
@@ -40,21 +40,9 @@ import type {
 } from "@typed/virtual-modules";
 import { HTTPAPI_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
-const DEFAULT_PREFIX = "api:";
+const DEFAULT_PREFIX = "typed:api";
 const DEFAULT_PLUGIN_NAME = "httpapi-virtual-module";
 const API_TYPES_MODULE_ID = "./$api-types";
-
-/** Extensions that count as script files when checking if a directory should resolve. */
-const SCRIPT_EXTENSION_SET = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mts",
-  ".cts",
-  ".mjs",
-  ".cjs",
-]);
 
 /** Glob patterns for discovering API source files. */
 const API_FILE_GLOBS: readonly string[] = [
@@ -85,38 +73,59 @@ export type ParseHttpApiVirtualModuleIdResult =
       readonly relativeDirectory: string;
       readonly mode: HttpApiVirtualModuleMode;
     }
-  | { readonly ok: false; readonly reason: string };
+  | { readonly ok: false; readonly code: string; readonly reason: string };
+
+function isHttpApiVirtualModuleId(id: string, prefix: string): boolean {
+  return id === prefix || id.startsWith(`${prefix}?`);
+}
 
 export function parseHttpApiVirtualModuleId(
   id: string,
   prefix: string = DEFAULT_PREFIX,
 ): ParseHttpApiVirtualModuleIdResult {
   const idResult = validateNonEmptyString(id, "id");
-  if (!idResult.ok) return { ok: false, reason: idResult.reason };
+  if (!idResult.ok) return { ok: false, code: "AVM-ID-001", reason: idResult.reason };
   const prefixResult = validateNonEmptyString(prefix, "prefix");
-  if (!prefixResult.ok) return { ok: false, reason: prefixResult.reason };
-  if (!id.startsWith(prefix)) {
-    return { ok: false, reason: `id must start with "${prefix}"` };
+  if (!prefixResult.ok) return { ok: false, code: "AVM-ID-001", reason: prefixResult.reason };
+  if (!isHttpApiVirtualModuleId(id, prefix)) {
+    return { ok: false, code: "AVM-ID-001", reason: `id must be "${prefix}?dir=<path>"` };
   }
 
-  const body = id.slice(prefix.length);
-  const separatorIndex = body.indexOf("?");
-  let relativeDirectory = separatorIndex === -1 ? body : body.slice(0, separatorIndex);
-  const params = new URLSearchParams(separatorIndex === -1 ? "" : body.slice(separatorIndex + 1));
-  const mode = params.get("mode") ?? "full";
-  const unsupported = [...params.keys()].find((key) => key !== "mode");
+  const query = id === prefix ? "" : id.slice(prefix.length + 1);
+  const params = new URLSearchParams(query);
+  const unsupported = [...params.keys()].find((key) => key !== "dir" && key !== "mode");
   if (unsupported !== undefined) {
     return {
       ok: false,
-      reason: `api virtual module does not support query option "${unsupported}"`,
+      code: "AVM-ID-QUERY-001",
+      reason: `typed:api does not support query option "${unsupported}"`,
     };
   }
+  const dirValues = params.getAll("dir");
+  if (dirValues.length !== 1) {
+    return {
+      ok: false,
+      code: "AVM-ID-DIR-001",
+      reason: `typed:api requires exactly one "dir" query option`,
+    };
+  }
+  const modeValues = params.getAll("mode");
+  if (modeValues.length > 1) {
+    return {
+      ok: false,
+      code: "AVM-ID-MODE-001",
+      reason: `typed:api accepts at most one "mode" query option`,
+    };
+  }
+  const mode = modeValues[0] ?? "full";
   if (mode !== "full" && mode !== "client") {
     return {
       ok: false,
-      reason: 'api virtual module mode must be one of "full" or "client"',
+      code: "AVM-ID-MODE-001",
+      reason: 'typed:api mode must be one of "full" or "client"',
     };
   }
+  let relativeDirectory = dirValues[0] === "*" ? "./api" : dirValues[0];
   if (
     relativeDirectory.length > 0 &&
     relativeDirectory !== "." &&
@@ -128,7 +137,9 @@ export function parseHttpApiVirtualModuleId(
     relativeDirectory = `./${relativeDirectory}`;
   }
   const relativeResult = validatePathSegment(relativeDirectory, "relativeDirectory");
-  if (!relativeResult.ok) return { ok: false, reason: relativeResult.reason };
+  if (!relativeResult.ok) {
+    return { ok: false, code: "AVM-ID-DIR-002", reason: relativeResult.reason };
+  }
 
   return { ok: true, relativeDirectory: relativeResult.value, mode };
 }
@@ -139,7 +150,7 @@ export type ResolveHttpApiTargetDirectoryResult =
       readonly targetDirectory: string;
       readonly mode: HttpApiVirtualModuleMode;
     }
-  | { readonly ok: false; readonly reason: string };
+  | { readonly ok: false; readonly code: string; readonly reason: string };
 
 export function resolveHttpApiTargetDirectory(
   id: string,
@@ -150,15 +161,25 @@ export function resolveHttpApiTargetDirectory(
   if (!parsed.ok) return parsed;
 
   const importerResult = validatePathSegment(importer, "importer");
-  if (!importerResult.ok) return { ok: false, reason: importerResult.reason };
+  if (!importerResult.ok) {
+    return { ok: false, code: "AVM-ID-IMPORTER-001", reason: importerResult.reason };
+  }
 
   const importerDir = dirname(toPosixPath(importerResult.value));
   const resolved = resolvePathUnderBase(importerDir, parsed.relativeDirectory);
   if (!resolved.ok) {
-    return { ok: false, reason: "resolved target directory escapes importer base directory" };
+    return {
+      ok: false,
+      code: "AVM-ID-DIR-003",
+      reason: "resolved target directory escapes importer base directory",
+    };
   }
   if (!pathIsUnderBase(importerDir, resolved.path)) {
-    return { ok: false, reason: "resolved target directory is outside importer base directory" };
+    return {
+      ok: false,
+      code: "AVM-ID-DIR-003",
+      reason: "resolved target directory is outside importer base directory",
+    };
   }
 
   return { ok: true, targetDirectory: toPosixPath(resolved.path), mode: parsed.mode };
@@ -167,24 +188,6 @@ export function resolveHttpApiTargetDirectory(
 function isExistingDirectory(absolutePath: string): boolean {
   try {
     return statSync(absolutePath).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-function directoryHasScriptFiles(dir: string): boolean {
-  try {
-    const items = readdirSync(dir, { withFileTypes: true });
-    for (const e of items) {
-      if (
-        e.isFile() &&
-        SCRIPT_EXTENSION_SET.has(extname(e.name).toLowerCase()) &&
-        !e.name.toLowerCase().endsWith(".d.ts")
-      )
-        return true;
-      if (e.isDirectory() && directoryHasScriptFiles(join(dir, e.name))) return true;
-    }
-    return false;
   } catch {
     return false;
   }
@@ -761,10 +764,7 @@ export const createHttpApiVirtualModulePlugin = (
     typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
     shouldResolve(id, importer) {
       if (id === API_TYPES_MODULE_ID && importer) return true;
-      const resolved = resolveHttpApiTargetDirectory(id, importer, prefix);
-      if (!resolved.ok) return false;
-      if (!isExistingDirectory(resolved.targetDirectory)) return false;
-      return directoryHasScriptFiles(resolved.targetDirectory);
+      return Boolean(importer) && isHttpApiVirtualModuleId(id, prefix);
     },
     build(id, importer, api) {
       if (id === API_TYPES_MODULE_ID) {
@@ -774,7 +774,7 @@ export const createHttpApiVirtualModulePlugin = (
       const resolved = resolveHttpApiTargetDirectory(id, importer, prefix);
       if (!resolved.ok) {
         return {
-          errors: [{ code: "AVM-ID-001", message: resolved.reason, pluginName: name }],
+          errors: [{ code: resolved.code, message: resolved.reason, pluginName: name }],
         } satisfies VirtualModuleBuildError;
       }
       if (!isExistingDirectory(resolved.targetDirectory)) {

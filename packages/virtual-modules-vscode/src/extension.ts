@@ -335,7 +335,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const extracted = extractVirtualImportAtPosition(doc, pos);
       if (!extracted) {
         outputChannel.appendLine(
-          "FAIL: Cursor is not on a virtual import specifier. Place cursor inside the quoted part (e.g. 'api:./api').",
+          "FAIL: Cursor is not on a virtual import specifier. Place cursor inside the quoted part (e.g. 'typed:api?dir=./api').",
         );
         return;
       }
@@ -380,7 +380,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const moduleId = match?.[1];
       if (!moduleId) {
         vscode.window.showInformationMessage(
-          "Place cursor on a virtual module import (e.g. import x from 'virtual:foo' or 'router:./routes')",
+          "Place cursor on a virtual module import (e.g. import x from 'virtual:foo' or 'typed:router?dir=./routes')",
         );
         return;
       }
@@ -405,7 +405,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-/** Matches virtual module specifiers (e.g. virtual:foo, router:./routes) in import/from. */
+/** Matches virtual module specifiers (e.g. virtual:foo, typed:router?dir=./routes) in import/from. */
 const VIRTUAL_IMPORT_SPECIFIER_REGEX = /(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/g;
 
 function extractVirtualImportAtPosition(

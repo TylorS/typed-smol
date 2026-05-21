@@ -252,7 +252,9 @@ function withClientHttpApiMode(
   id: string,
   options: HttpApiVirtualModulePluginOptions | undefined,
 ): string {
-  const prefix = options?.prefix ?? "api:";
-  if (!id.startsWith(prefix) || id.includes("?")) return id;
-  return `${id}?mode=client`;
+  const prefix = options?.prefix ?? "typed:api";
+  if (id !== prefix && !id.startsWith(`${prefix}?`)) return id;
+  const query = id.includes("?") ? id.slice(id.indexOf("?") + 1) : "";
+  if (new URLSearchParams(query).has("mode")) return id;
+  return `${id}${id.includes("?") ? "&" : "?"}mode=client`;
 }

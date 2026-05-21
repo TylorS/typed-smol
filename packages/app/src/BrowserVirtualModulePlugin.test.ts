@@ -56,7 +56,7 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
     expect(source).toContain('import { Fx } from "@typed/fx";');
     expect(source).toContain('import { DomRenderTemplate, render } from "@typed/template";');
-    expect(source).toContain('import Routes0 from "router:./routes";');
+    expect(source).toContain('import Routes0 from "typed:router?dir=*";');
     expect(source).not.toContain("route-handlers:");
     expect(source).toContain("export const Routes = Routes0;");
     expect(source).not.toContain("export const Routes = TypedRouter.merge(Routes0);");
@@ -123,7 +123,7 @@ describe("BrowserVirtualModulePlugin", () => {
         join(fixture.root, "src/typed-template.d.ts"),
       ],
       moduleFallbacks: {
-        "router:./routes": join(fixture.root, "src/routes.ts"),
+        "typed:router?dir=./routes": join(fixture.root, "src/routes.ts"),
         "@typed/app/runtime": join(fixture.root, "src/typed-app.d.ts"),
         "@typed/template": join(fixture.root, "src/typed-template.d.ts"),
       },
@@ -135,8 +135,8 @@ describe("BrowserVirtualModulePlugin", () => {
   it("emits repeated explicit route imports in source order", () => {
     const source = buildBrowser("typed:browser?routes=./main&routes=./admin") as string;
 
-    expect(source.indexOf('import Routes0 from "router:./main";')).toBeLessThan(
-      source.indexOf('import Routes1 from "router:./admin";'),
+    expect(source.indexOf('import Routes0 from "typed:router?dir=./main";')).toBeLessThan(
+      source.indexOf('import Routes1 from "typed:router?dir=./admin";'),
     );
     expect(source).toContain("export const Routes = TypedRouter.merge(Routes0, Routes1);");
   });

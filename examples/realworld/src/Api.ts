@@ -1,9 +1,9 @@
-import { Api, Client } from "api:./api";
+import { Api, Client } from "typed:api?dir=./api";
 import type * as Effect from "effect/Effect";
 import type * as HttpClient from "effect/unstable/http/HttpClient";
 import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";
 
-export { Api, Client, OpenApi } from "api:./api";
+export { Api, Client, OpenApi } from "typed:api?dir=./api";
 
 export type RealWorldClient = Effect.Success<typeof Client>;
 export type ApiClientError = Effect.Error<ReturnType<RealWorldClient["users"]["login"]>>;

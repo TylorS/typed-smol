@@ -42,7 +42,7 @@ describe("createTypedViteResolver", () => {
 
   it("uses DI override for HttpApi plugin when provided", () => {
     const resolver = createTypedViteResolver(
-      { apiVmOptions: { prefix: "api:" } },
+      { apiVmOptions: { prefix: "typed:custom-api" } },
       { createHttpApiVirtualModulePlugin: fakeHttpApiPlugin },
     );
     const manager = resolver as PluginManager;
@@ -53,7 +53,7 @@ describe("createTypedViteResolver", () => {
     const apiPlugin = manager.plugins[2] as VirtualModulePlugin & {
       _testOpts: HttpApiVirtualModulePluginOptions;
     };
-    expect(apiPlugin._testOpts).toEqual({ prefix: "api:" });
+    expect(apiPlugin._testOpts).toEqual({ prefix: "typed:custom-api" });
   });
 
   it("passes apiVmOptions through to createHttpApiVirtualModulePlugin", () => {

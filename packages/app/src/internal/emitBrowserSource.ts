@@ -43,12 +43,12 @@ function emitTypes(): string {
 
 function emitRouteImports(routes: readonly string[]): readonly string[] {
   return routes.map((target, index) => {
-    return `import Routes${index} from "router:${toRouterTarget(target)}";`;
+    return `import Routes${index} from "typed:router?dir=${toRouterTarget(target)}";`;
   });
 }
 
 function toRouterTarget(target: string): string {
-  return target === "*" ? "./routes" : target;
+  return target;
 }
 
 function emitCompanionImports(companions: readonly BrowserCompanionImport[]): readonly string[] {

@@ -100,7 +100,7 @@ function buildApiFromFixture(spec: FixtureSpec, pluginOptions?: { pathPrefix?: `
 function buildApiFromExistingFixture(
   fixture: ReturnType<typeof createApiFixture>,
   pluginOptions?: { pathPrefix?: `/${string}` },
-  id = "api:./apis",
+  id = "typed:api?dir=./apis",
 ) {
   const plugin = createHttpApiVirtualModulePlugin(pluginOptions ?? {});
   const files =
@@ -285,65 +285,75 @@ afterEach(() => {
 });
 
 describe("parseHttpApiVirtualModuleId", () => {
-  it("returns ok with relativeDirectory when id is api:./apis", () => {
+  it("returns ok with relativeDirectory when id is typed:api?dir=./apis", () => {
+    const result = parseHttpApiVirtualModuleId("typed:api?dir=./apis");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.relativeDirectory).toBe("./apis");
+  });
+
+  it("normalizes typed api bare dir values to relative paths", () => {
+    const result = parseHttpApiVirtualModuleId("typed:api?dir=apis");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.relativeDirectory).toBe("./apis");
+  });
+
+  it("maps typed api wildcard dir to the default api directory", () => {
+    const result = parseHttpApiVirtualModuleId("typed:api?dir=*");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.relativeDirectory).toBe("./api");
+  });
+
+  it("returns not ok for legacy api prefix ids", () => {
     const result = parseHttpApiVirtualModuleId("api:./apis");
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.relativeDirectory).toBe("./apis");
-  });
-
-  it("normalizes api:apis to api:./apis", () => {
-    const result = parseHttpApiVirtualModuleId("api:apis");
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.relativeDirectory).toBe("./apis");
-  });
-
-  it("returns not ok when id does not start with prefix", () => {
-    expect(parseHttpApiVirtualModuleId("router:./routes")).toMatchInlineSnapshot(`
-      {
-        "ok": false,
-        "reason": "id must start with "api:"",
-      }
-    `);
-  });
-
-  it("returns not ok when id is empty after prefix", () => {
-    const result = parseHttpApiVirtualModuleId("api:");
     expect(result.ok).toBe(false);
+  });
+
+  it("returns not ok when dir is missing", () => {
+    const result = parseHttpApiVirtualModuleId("typed:api");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("AVM-ID-DIR-001");
+  });
+
+  it("returns not ok for unsupported query options", () => {
+    const result = parseHttpApiVirtualModuleId("typed:api?dir=./apis&target=server");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("AVM-ID-QUERY-001");
   });
 });
 
 describe("resolveHttpApiTargetDirectory", () => {
-  it("resolves api:./apis relative to importer directory", () => {
+  it("resolves typed:api?dir=./apis relative to importer directory", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": "export {};" });
-    const result = resolveHttpApiTargetDirectory("api:./apis", fixture.importer);
+    const result = resolveHttpApiTargetDirectory("typed:api?dir=./apis", fixture.importer);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.targetDirectory).toContain("apis");
   });
 
   it("returns not ok when path escapes base", () => {
     const fixture = createApiFixture({ "src/entry.ts": "export {};" });
-    const result = resolveHttpApiTargetDirectory("api:../../../etc", fixture.importer);
+    const result = resolveHttpApiTargetDirectory("typed:api?dir=../../../etc", fixture.importer);
     expect(result.ok).toBe(false);
   });
 });
 
 describe("createHttpApiVirtualModulePlugin", () => {
-  it("shouldResolve returns true when target directory exists with .ts files", () => {
+  it("shouldResolve returns true for typed api ids without scanning the target directory", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": "export {};" });
     const plugin = createHttpApiVirtualModulePlugin();
-    expect(plugin.shouldResolve("api:./apis", fixture.importer)).toBe(true);
+    expect(plugin.shouldResolve("typed:api?dir=./apis", fixture.importer)).toBe(true);
   });
 
-  it("shouldResolve returns false when directory has no script files", () => {
+  it("shouldResolve returns true for typed api ids whose directory has no script files", () => {
     const fixture = createApiFixture({ "src/apis/readme.txt": "no ts" });
     const plugin = createHttpApiVirtualModulePlugin();
-    expect(plugin.shouldResolve("api:./apis", fixture.importer)).toBe(false);
+    expect(plugin.shouldResolve("typed:api?dir=./apis", fixture.importer)).toBe(true);
   });
 
-  it("shouldResolve returns false when target directory is missing", () => {
+  it("shouldResolve returns true for malformed typed api ids so build can surface diagnostics", () => {
     const fixture = createApiFixture({ "src/entry.ts": "export {};" });
     const plugin = createHttpApiVirtualModulePlugin();
-    expect(plugin.shouldResolve("api:./apis", fixture.importer)).toBe(false);
+    expect(plugin.shouldResolve("typed:api", fixture.importer)).toBe(true);
+    expect(plugin.shouldResolve("typed:api?dir=./apis&target=server", fixture.importer)).toBe(true);
   });
 
   it("build renders deterministic HttpApi assembly source when contracts are valid", () => {
@@ -499,7 +509,7 @@ export const ServerOnly = { use: readFileSync };
 `,
     });
     const sourceText = getSourceText(
-      buildApiFromExistingFixture(fixture, undefined, "api:./apis?mode=client"),
+      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
     );
 
     expect(sourceText).toBeDefined();
@@ -661,7 +671,7 @@ export const ServerOnly = { use: readFileSync };
       program,
       typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
     });
-    const result = plugin.build("api:./apis", fixture.importer, session.api);
+    const result = plugin.build("typed:api?dir=./apis", fixture.importer, session.api);
 
     const sourceText = getSourceText(result);
     expect(sourceText).toBeDefined();
@@ -671,15 +681,26 @@ export const ServerOnly = { use: readFileSync };
     }
   });
 
-  it("build returns AVM-ID-001 when virtual module id is invalid", () => {
+  it("build returns AVM-ID-DIR-001 when typed api dir query is missing", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": "export {};" });
     const plugin = createHttpApiVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
     const session = createTypeInfoApiSession({ ts, program });
-    const result = plugin.build("api:", fixture.importer, session.api);
+    const result = plugin.build("typed:api", fixture.importer, session.api);
     expect(result).toHaveProperty("errors");
     const err = result as VirtualModuleBuildError;
-    expect(err.errors[0].code).toBe("AVM-ID-001");
+    expect(err.errors[0].code).toBe("AVM-ID-DIR-001");
+  });
+
+  it("build returns AVM-ID-QUERY-001 when typed api query has unsupported options", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": "export {};" });
+    const plugin = createHttpApiVirtualModulePlugin();
+    const program = makeProgram(fixture.paths);
+    const session = createTypeInfoApiSession({ ts, program });
+    const result = plugin.build("typed:api?dir=./apis&target=server", fixture.importer, session.api);
+    expect(result).toHaveProperty("errors");
+    const err = result as VirtualModuleBuildError;
+    expect(err.errors[0].code).toBe("AVM-ID-QUERY-001");
   });
 
   it("build returns AVM-DISC-001 when target directory does not exist", () => {
@@ -687,7 +708,7 @@ export const ServerOnly = { use: readFileSync };
     const plugin = createHttpApiVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
     const session = createTypeInfoApiSession({ ts, program });
-    const result = plugin.build("api:./apis", fixture.importer, session.api);
+    const result = plugin.build("typed:api?dir=./apis", fixture.importer, session.api);
     expect(result).toHaveProperty("errors");
     const err = result as VirtualModuleBuildError;
     expect(err.errors[0].code).toBe("AVM-DISC-001");
@@ -714,8 +735,8 @@ export const ServerOnly = { use: readFileSync };
       program,
       typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
     });
-    const source1 = plugin.build("api:./apis", fixture.importer, session1.api);
-    const source2 = plugin.build("api:./apis", fixture.importer, session2.api);
+    const source1 = plugin.build("typed:api?dir=./apis", fixture.importer, session1.api);
+    const source2 = plugin.build("typed:api?dir=./apis", fixture.importer, session2.api);
     expect(typeof source1).toBe(typeof source2);
     if (typeof source1 === "string") expect(source1).toBe(source2);
   });
@@ -973,7 +994,7 @@ export const handler = (({ headers, query, body }) => {
     const manager = new PluginManager([createHttpApiVirtualModulePlugin()]);
 
     const resolved = manager.resolveModule({
-      id: "api:./apis",
+      id: "typed:api?dir=./apis",
       importer: fixture.importer,
       createTypeInfoApiSession: sessionFactory,
     });
@@ -1069,7 +1090,7 @@ export const handler = (({ headers, query, body }) => {
   it("returns unresolved when id does not match", () => {
     const { importer } = createApiFixture({});
     const manager = new PluginManager([createHttpApiVirtualModulePlugin()]);
-    const resolved = manager.resolveModule({ id: "router:./routes", importer });
+    const resolved = manager.resolveModule({ id: "typed:router?dir=./routes", importer });
     expect(resolved.status).toBe("unresolved");
   });
 });
@@ -1218,7 +1239,7 @@ export const handler = () => ({});
     const program = makeProgram(files, fixture.root);
     const session = createTypeInfoApiSession({ ts, program, typeTargetSpecs: wrongSpecs });
     const plugin = createHttpApiVirtualModulePlugin();
-    const result = plugin.build("api:./apis", fixture.importer, session.api);
+    const result = plugin.build("typed:api?dir=./apis", fixture.importer, session.api);
     expect(result).toHaveProperty("errors");
     expect(
       (result as VirtualModuleBuildError).errors.some((e) => e.code === "AVM-CONTRACT-003"),
@@ -1312,7 +1333,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
           typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
         });
         const plugin = createHttpApiVirtualModulePlugin();
-        plugin.build("api:./apis", fixture.importer, session.api);
+        plugin.build("typed:api?dir=./apis", fixture.importer, session.api);
       }).toThrow(/type targets could not be resolved/);
     });
   });

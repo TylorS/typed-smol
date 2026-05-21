@@ -167,7 +167,7 @@ describe("typed-realworld package skeleton", () => {
   it("uses the generated api virtual module instead of a hand-written client api", () => {
     expect(existsSync(resolve(projectRoot, "src/presentation/ClientApi.ts"))).toBe(false);
 
-    expect(readText("src/Api.ts")).toContain('from "api:./api"');
+    expect(readText("src/Api.ts")).toContain('from "typed:api?dir=./api"');
     expect(readText("src/presentation/BrowserApiClient.ts")).toContain('from "../Api.js"');
     expect(readText("src/page-data/BrowserPageData.ts")).toContain('from "../Api.js"');
     expect(readText("src/presentation/State.ts")).toContain('from "../Api.js"');
