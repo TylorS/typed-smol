@@ -125,14 +125,7 @@ const MODULE_FALLBACKS: Record<string, string> = {
   "@typed/fx": join(NM, "@typed", "fx", "src", "index.ts"),
   "@typed/fx/Fx": join(NM, "@typed", "fx", "src", "Fx", "index.ts"),
   "@typed/fx/RefSubject": join(NM, "@typed", "fx", "src", "RefSubject", "index.ts"),
-  "@typed/fx/RefSubject/RefSubject": join(
-    NM,
-    "@typed",
-    "fx",
-    "src",
-    "RefSubject",
-    "RefSubject.ts",
-  ),
+  "@typed/fx/RefSubject/RefSubject": join(NM, "@typed", "fx", "src", "RefSubject", "RefSubject.ts"),
   effect: join(NM, "effect", "dist", "index.d.ts"),
   "effect/Effect": join(NM, "effect", "dist", "Effect.d.ts"),
   "effect/Stream": join(NM, "effect", "dist", "Stream.d.ts"),
@@ -1302,16 +1295,68 @@ describe("RouterVirtualModulePlugin", () => {
 describe("RouterVirtualModulePlugin integration", () => {
   it("emits plugin-specific decoded route types for a route file importing ./$route-types", () => {
     const fixture = createFixture({
-      "src/routes/article.ts": `
+      "src/routes/_dependencies.ts": `
+import * as Layer from "effect/Layer";
+
+const dependencies = Layer.empty;
+export default dependencies;
+`,
+      "src/routes/articles/_dependencies.ts": `
+import * as Layer from "effect/Layer";
+
+const dependencies = Layer.empty;
+export default dependencies;
+`,
+      "src/routes/articles/_guard.ts": validGuardExport,
+      "src/routes/articles/_layout.ts": `
+import type * as Fx from "@typed/fx/Fx";
+
+export const layout = ({ content }: { readonly content: Fx.Fx<unknown, unknown, unknown> }) => content;
+`,
+      "src/routes/articles/show.catch.ts": `
+export const catchFn = (error: { readonly message: string }) => error.message;
+`,
+      "src/routes/articles/show.dependencies.ts": `
+export const dependencies = ["show"] as const;
+`,
+      "src/routes/articles/show.guard.ts": validGuardExport,
+      "src/routes/articles/show.layout.ts": `
+import type * as Fx from "@typed/fx/Fx";
+
+export const layout = ({ content }: { readonly content: Fx.Fx<unknown, unknown, unknown> }) => content;
+`,
+      "src/routes/articles/show.ts": `
 import * as Fx from "@typed/fx/Fx";
 import * as Route from "@typed/router";
-import type { Template } from "./$route-types";
+import type { Catches, Dependencies, Guards, Layouts, RouteTypes, Template } from "./$route-types";
+
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Expect<T extends true> = T;
 
 export const route = Route.Join(
   Route.Parse("articles"),
   Route.Param("slug"),
   Route.QueryParams(Route.Int("page")),
 );
+
+type _dependencies = Expect<Equals<Dependencies, readonly [
+  typeof import("./_dependencies.js").default,
+  typeof import("../_dependencies.js").default,
+  typeof import("./show.dependencies.js").dependencies,
+]>>;
+type _guards = Expect<Equals<Guards, readonly [
+  typeof import("./_guard.js").guard,
+  typeof import("./show.guard.js").guard,
+]>>;
+type _layouts = Expect<Equals<Layouts, readonly [
+  typeof import("./_layout.js").layout,
+  typeof import("./show.layout.js").layout,
+]>>;
+type _catches = Expect<Equals<Catches, readonly [
+  typeof import("./show.catch.js").catchFn,
+]>>;
+type _routeTypes = Expect<Equals<RouteTypes["dependencies"], Dependencies>>;
 
 export const template = ((params) =>
   Fx.map(params, (value) => {
@@ -1321,7 +1366,7 @@ export const template = ((params) =>
   })) satisfies Template;
 `,
     });
-    const importer = join(fixture.root, "src/routes/article.ts");
+    const importer = join(fixture.root, "src/routes/articles/show.ts");
     const files =
       existsSync(BOOTSTRAP_FILE) && !fixture.paths.includes(BOOTSTRAP_FILE)
         ? [...fixture.paths, BOOTSTRAP_FILE]
@@ -1336,10 +1381,15 @@ export const template = ((params) =>
 
     expect(typeof result).toBe("string");
     if (typeof result !== "string") return;
+    expect(result).toContain("export type Dependencies = readonly [");
+    expect(result).toContain("export type Guards = readonly [");
+    expect(result).toContain("export type Layouts = readonly [");
+    expect(result).toContain("export type Catches = readonly [");
+    expect(result).toContain("export type RouteTypes = {");
 
     const typeCheck = typeCheckGeneratedSource({
       rootDir: fixture.root,
-      generatedPath: "src/routes/$route-types.ts",
+      generatedPath: "src/routes/articles/$route-types.ts",
       sourceText: result,
       rootFiles: fixture.paths,
       moduleFallbacks: MODULE_FALLBACKS,

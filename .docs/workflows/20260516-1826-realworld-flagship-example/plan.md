@@ -779,6 +779,25 @@ Execution refinements:
 - [x] Step 4: Migrate RealWorld endpoint modules to `Effect.fn` span names and `satisfies RawHandler<Service>`.
 - [x] Step 5: Run focused HttpApi tests, full `@typed/app` tests, RealWorld package guards, RealWorld typecheck/test/build, and `@typed/app` build.
 
+### Task 17: Re-Expose Effective Companion Type Surfaces
+
+**Files:**
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
+
+**Progress notes:**
+- 2026-05-20: Generated `$api-types` now re-exposes route, method, headers, body, success, error, dependency, middleware, prefix, OpenAPI, and endpoint name types. Companion type tuples preserve inherited-to-endpoint-to-in-file order for API conventions so leaf endpoint modules can type against the same effective contract the generated HttpApi runtime composes.
+- 2026-05-20: Generated `$route-types` now re-exposes effective route companion type tuples for dependencies, guards, layouts, and catches alongside `Params`, `Template`, and `Handler`. Route leaf modules can import those local aliases instead of reaching through companion files manually.
+
+- [x] Step 1: Add failing framework tests proving `$api-types` exposes inherited and endpoint companion dependency, middleware, OpenAPI, and name types.
+- [x] Step 2: Add failing framework tests proving `$route-types` exposes inherited and sibling dependency, guard, layout, and catch types.
+- [x] Step 3: Implement companion import discovery and generated type tuples for API and route type modules.
+- [x] Step 4: Run focused app plugin tests and `@typed/app` build.
+- [x] Step 5: Run RealWorld package guard, typecheck, test, build, and `git diff --check`.
+- [x] Step 6: Record that full `@typed/app` suite retries hit unrelated Vitest timeout/date-duration anomalies while isolated affected tests passed.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

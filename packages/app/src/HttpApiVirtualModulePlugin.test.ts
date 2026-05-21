@@ -438,16 +438,17 @@ describe("createHttpApiVirtualModulePlugin", () => {
   });
 
   it("inherits common headers and errors from directory companions", () => {
-    const sourceText = getSourceText(buildApiFromFixture({
-      "src/apis/_errors.ts": `
+    const sourceText = getSourceText(
+      buildApiFromFixture({
+        "src/apis/_errors.ts": `
 import * as Schema from "effect/Schema";
 export const error = Schema.Struct({ message: Schema.String });
 `,
-      "src/apis/users/_headers.ts": `
+        "src/apis/users/_headers.ts": `
 import * as Schema from "effect/Schema";
 export const headers = Schema.Struct({ authorization: Schema.String });
 `,
-      "src/apis/users/current.ts": `
+        "src/apis/users/current.ts": `
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Route from "@typed/router";
@@ -456,12 +457,13 @@ export const method = "GET";
 export const success = Schema.Struct({ status: Schema.Literal("ok") });
 export const handler = () => Effect.succeed({ status: "ok" });
 `,
-    }));
+      }),
+    );
 
     expect(sourceText).toContain('import * as Errors from "./apis/_errors.js";');
     expect(sourceText).toContain('import * as UsersHeaders from "./apis/users/_headers.js";');
     expect(sourceText).toContain(
-      'headers: UsersHeaders.headers, success: UsersCurrent.success, error: Errors.error',
+      "headers: UsersHeaders.headers, success: UsersCurrent.success, error: Errors.error",
     );
   });
 
@@ -496,14 +498,16 @@ import { readFileSync } from "node:fs";
 export const ServerOnly = { use: readFileSync };
 `,
     });
-    const sourceText = getSourceText(buildApiFromExistingFixture(fixture, undefined, "api:./apis?mode=client"));
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(fixture, undefined, "api:./apis?mode=client"),
+    );
 
     expect(sourceText).toBeDefined();
     expect(sourceText).toContain('import * as Route from "@typed/router";');
     expect(sourceText).toContain('import { Body as StatusBody } from "./domain.js";');
     expect(sourceText).toContain('import { Success as StatusSuccess } from "./domain.js";');
     expect(sourceText).toContain('import { ErrorBody as ErrorsError } from "./domain.js";');
-    expect(sourceText).toContain('export const Client = HttpApiClient.make(Api);');
+    expect(sourceText).toContain("export const Client = HttpApiClient.make(Api);");
     expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
     expect(sourceText).not.toContain("HttpApiBuilder");
     expect(sourceText).not.toContain("./apis/status.js");
@@ -514,7 +518,9 @@ export const ServerOnly = { use: readFileSync };
   });
 
   it("delegates generated server wiring to TypedHttpServer", () => {
-    const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
+    const sourceText = getSourceText(
+      buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }),
+    );
 
     expect(sourceText).toContain("TypedHttpServer.layer");
     expect(sourceText).toContain("TypedHttpServer.staticAssets");
@@ -525,9 +531,13 @@ export const ServerOnly = { use: readFileSync };
   });
 
   it("imports runtime helpers from narrow @typed/app subpaths", () => {
-    const sourceText = getSourceText(buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }));
+    const sourceText = getSourceText(
+      buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }),
+    );
 
-    expect(sourceText).toContain('import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";');
+    expect(sourceText).toContain(
+      'import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";',
+    );
     expect(sourceText).toContain(
       'import { resolveConfig } from "@typed/app/internal/resolveConfig";',
     );
@@ -714,27 +724,77 @@ export const ServerOnly = { use: readFileSync };
 describe("HttpApiVirtualModulePlugin integration", () => {
   it("emits generated handler aliases from the effective endpoint contract", () => {
     const fixture = createApiFixture({
+      "src/apis/_dependencies.ts": `
+export const dependencies = ["api-root"] as const;
+`,
       "src/apis/_errors.ts": `
 import * as Schema from "effect/Schema";
 
 export const error = Schema.Struct({ message: Schema.String });
+`,
+      "src/apis/_openapi.ts": `
+export default { annotations: { summary: "api root" as const } };
 `,
       "src/apis/articles/_headers.ts": `
 import * as Schema from "effect/Schema";
 
 export const headers = Schema.Struct({ authorization: Schema.String });
 `,
+      "src/apis/articles/_middlewares.ts": `
+export const middleware = "articles-middleware" as const;
+`,
+      "src/apis/articles/create.dependencies.ts": `
+export const dependencies = ["create"] as const;
+`,
+      "src/apis/articles/create.middlewares.ts": `
+export const middleware = "create-middleware" as const;
+`,
+      "src/apis/articles/create.name.ts": `
+export const name = "createArticle" as const;
+`,
+      "src/apis/articles/create.openapi.ts": `
+export default { annotations: { summary: "create" as const } };
+`,
       "src/apis/articles/create.ts": `
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Route from "@typed/router";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
-import type { Handler, RawHandler } from "./$api-types";
+import type {
+  ApiTypes,
+  Dependencies,
+  Handler,
+  Middlewares,
+  Name,
+  OpenApis,
+  RawHandler,
+} from "./$api-types";
+
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Expect<T extends true> = T;
 
 export const route = Route.Parse("/articles");
 export const method = "POST";
 export const body = Schema.Struct({ article: Schema.Struct({ title: Schema.String }) });
 export const success = Schema.Struct({ ok: Schema.String });
+export const openapi = { annotations: { description: "in-file" as const } };
+
+type _dependencies = Expect<Equals<Dependencies, readonly [
+  typeof import("../_dependencies.js").dependencies,
+  typeof import("./create.dependencies.js").dependencies,
+]>>;
+type _middlewares = Expect<Equals<Middlewares, readonly [
+  typeof import("./_middlewares.js").middleware,
+  typeof import("./create.middlewares.js").middleware,
+]>>;
+type _openApis = Expect<Equals<OpenApis, readonly [
+  typeof import("../_openapi.js").default,
+  typeof import("./create.openapi.js").default,
+  typeof openapi,
+]>>;
+type _name = Expect<Equals<Name, typeof import("./create.name.js").name>>;
+type _apiTypes = Expect<Equals<ApiTypes["dependencies"], Dependencies>>;
 
 export const handler = Effect.fn("Articles.create")(function* ({ body, headers }) {
   const authorization: string = headers.authorization;
@@ -771,10 +831,25 @@ export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body
     expect(source).toContain("ApiHandlerRawFromConfig");
     expect(source).toContain('import type * as InheritedErrors0 from "../_errors.js";');
     expect(source).toContain('import type * as InheritedHeaders0 from "./_headers.js";');
+    expect(source).toContain("export type Dependencies = readonly [");
+    expect(source).toContain("export type Middlewares = readonly [");
+    expect(source).toContain("export type OpenApis = readonly [");
+    expect(source).toContain("export type ApiTypes = {");
     expect(source).toContain("export type Handler<R = any> = ApiHandlerFromConfig<Config, R>;");
-    expect(source).toContain("export type RawHandler<R = any> = ApiHandlerRawFromConfig<Config, R>;");
+    expect(source).toContain(
+      "export type RawHandler<R = any> = ApiHandlerRawFromConfig<Config, R>;",
+    );
     expect(source).not.toContain("RawHandler<E");
     expect(source).not.toContain("Effect.Effect<Success");
+
+    const typeCheck = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/apis/articles/$api-types.ts",
+      sourceText: source ?? "",
+      rootFiles: fixture.paths,
+      moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
+    });
+    expect(typeCheck.diagnostics).toEqual([]);
   });
 
   it("emits plugin-specific decoded API types for an endpoint importing ./$api-types", () => {
@@ -1388,7 +1463,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw, { body: "payload" }))');
+      expect(sourceText).toContain(
+        'handlers.handle("raw", ApiHandlers.handler(Raw, { body: "payload" }))',
+      );
       expect(sourceText).not.toContain("HttpIncomingMessage.schemaBodyJson(Raw.body)");
       expect(sourceText).not.toContain("handleRaw");
     });

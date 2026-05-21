@@ -75,7 +75,11 @@ export interface HttpApiVirtualModulePluginOptions {
 export type HttpApiVirtualModuleMode = "full" | "client";
 
 export type ParseHttpApiVirtualModuleIdResult =
-  | { readonly ok: true; readonly relativeDirectory: string; readonly mode: HttpApiVirtualModuleMode }
+  | {
+      readonly ok: true;
+      readonly relativeDirectory: string;
+      readonly mode: HttpApiVirtualModuleMode;
+    }
   | { readonly ok: false; readonly reason: string };
 
 export function parseHttpApiVirtualModuleId(
@@ -279,10 +283,15 @@ function extractExportExpressionsByPath(
         snapshot.exports.flatMap((exported) => {
           const expression = extractConstExportExpression(exported.declarationText);
           if (!expression) return [];
-          return [[exported.name, {
-            expression,
-            imports: importsForExpression(expression, snapshot.imports ?? []),
-          } satisfies HttpApiExportExpression]];
+          return [
+            [
+              exported.name,
+              {
+                expression,
+                imports: importsForExpression(expression, snapshot.imports ?? []),
+              } satisfies HttpApiExportExpression,
+            ],
+          ];
         }),
       ),
     ]),
@@ -397,33 +406,110 @@ function emitApiTypesModule(
     };
   }
 
-  return emitApiTypesSource(importer);
+  return emitApiTypesSource(importer, new Set(source.snapshot.exports.map((value) => value.name)));
 }
 
-function emitApiTypesSource(importer: string): string {
+type ApiCompanionKind = "dependencies" | "headers" | "error" | "middlewares" | "prefix" | "openapi";
+
+type ApiCompanionImport = {
+  readonly alias: string;
+  readonly moduleSpecifier: string;
+};
+
+const API_DIRECTORY_COMPANION_BY_KIND = {
+  dependencies: "_dependencies.ts",
+  headers: "_headers.ts",
+  error: "_errors.ts",
+  middlewares: "_middlewares.ts",
+  prefix: "_prefix.ts",
+  openapi: "_openapi.ts",
+} as const satisfies Record<ApiCompanionKind, string>;
+
+const API_ENDPOINT_COMPANION_BY_KIND = {
+  dependencies: ".dependencies.ts",
+  middlewares: ".middlewares.ts",
+  prefix: ".prefix.ts",
+  openapi: ".openapi.ts",
+  name: ".name.ts",
+} as const;
+
+function emitApiTypesSource(importer: string, exportNames: ReadonlySet<string>): string {
   const moduleSpecifier = endpointModuleSpecifier(importer);
-  const inheritedHeaders = inheritedCompanionImport(importer, "_headers.ts");
-  const inheritedError = inheritedCompanionImport(importer, "_errors.ts");
-  const inheritedImports = [
-    inheritedError
-      ? `import type * as InheritedErrors0 from ${JSON.stringify(inheritedError)};`
-      : undefined,
-    inheritedHeaders
-      ? `import type * as InheritedHeaders0 from ${JSON.stringify(inheritedHeaders)};`
-      : undefined,
-  ].filter((line): line is string => line !== undefined);
-  const inheritedHeadersType = inheritedHeaders
-    ? '{ readonly headers: typeof InheritedHeaders0.headers }'
+  const dependencies = apiCompanionImports(importer, "dependencies", "InheritedDependencies");
+  const headers = apiCompanionImports(importer, "headers", "InheritedHeaders");
+  const errors = apiCompanionImports(importer, "error", "InheritedErrors");
+  const middlewares = apiCompanionImports(importer, "middlewares", "InheritedMiddlewares");
+  const prefixes = apiCompanionImports(importer, "prefix", "InheritedPrefixes");
+  const openApis = apiCompanionImports(importer, "openapi", "InheritedOpenApis");
+  const endpointDependencies = apiEndpointCompanionImport(
+    importer,
+    "dependencies",
+    "EndpointDependencies",
+  );
+  const endpointMiddlewares = apiEndpointCompanionImport(
+    importer,
+    "middlewares",
+    "EndpointMiddlewares",
+  );
+  const endpointPrefix = apiEndpointCompanionImport(importer, "prefix", "EndpointPrefix");
+  const endpointOpenApi = apiEndpointCompanionImport(importer, "openapi", "EndpointOpenApi");
+  const endpointName = apiEndpointNameImport(importer);
+  const importedCompanions = [
+    ...dependencies,
+    ...errors,
+    ...headers,
+    ...middlewares,
+    ...prefixes,
+    ...openApis,
+    endpointDependencies,
+    endpointMiddlewares,
+    endpointPrefix,
+    endpointOpenApi,
+    endpointName,
+  ].filter((value): value is ApiCompanionImport => value !== undefined);
+  const companionImports = importedCompanions.map(
+    (value) => `import type * as ${value.alias} from ${JSON.stringify(value.moduleSpecifier)};`,
+  );
+  const inheritedHeadersType = last(headers)
+    ? `{ readonly headers: typeof ${last(headers)!.alias}.headers }`
     : "{}";
-  const inheritedErrorType = inheritedError
-    ? '{ readonly error: typeof InheritedErrors0.error }'
+  const inheritedErrorType = last(errors)
+    ? `{ readonly error: typeof ${last(errors)!.alias}.error }`
     : "{}";
+  const dependencyEntries = apiCompanionTypeEntries(
+    "dependencies",
+    dependencies,
+    endpointDependencies,
+    exportNames,
+  );
+  const middlewareEntries = apiCompanionTypeEntries(
+    "middlewares",
+    middlewares,
+    endpointMiddlewares,
+    exportNames,
+  );
+  const prefixEntries = apiCompanionTypeEntries("prefix", prefixes, endpointPrefix, exportNames);
+  const openApiEntries = apiCompanionTypeEntries("openapi", openApis, endpointOpenApi, exportNames);
+  const nameType = apiNameType(endpointName, exportNames);
 
   return `import type { ApiHandlerFromConfig, ApiHandlerParamsFromConfig, ApiHandlerRawFromConfig } from "@typed/app/httpapi/ApiHandler";
 import type * as EndpointModule from ${JSON.stringify(moduleSpecifier)};
-${inheritedImports.join("\n")}
+${companionImports.join("\n")}
 
 type Endpoint = typeof EndpointModule;
+type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]: infer Value }
+  ? Value
+  : never;
+type DefaultValue<T> = T extends { readonly default: infer Value } ? Value : never;
+type DefaultOrExport<T, Name extends PropertyKey> = [DefaultValue<T>] extends [never]
+  ? ExportValue<T, Name>
+  : DefaultValue<T>;
+type DependencyValue<T> = DefaultOrExport<T, "dependencies">;
+type MiddlewareValue<T> = [ExportValue<T, "middleware">] extends [never]
+  ? DefaultOrExport<T, "middlewares">
+  : ExportValue<T, "middleware">;
+type PrefixValue<T> = DefaultOrExport<T, "prefix">;
+type OpenApiValue<T> = DefaultOrExport<T, "openapi">;
 
 type OptionalHeaders<T> = T extends { readonly headers: infer Headers }
   ? { readonly headers: Headers }
@@ -441,10 +527,46 @@ type OptionalError<T> = T extends { readonly error: infer Error }
   ? { readonly error: Error }
   : ${inheritedErrorType};
 
-type Config = {
+export type Config = {
   readonly route: Endpoint["route"];
   readonly method: Endpoint["method"];
 } & OptionalHeaders<Endpoint> & OptionalBody<Endpoint> & OptionalSuccess<Endpoint> & OptionalError<Endpoint>;
+
+export type Route = Config["route"];
+
+export type Method = Config["method"];
+
+export type Headers = Config extends { readonly headers: infer Headers } ? Headers : never;
+
+export type Body = Config extends { readonly body: infer Body } ? Body : never;
+
+export type Success = Config extends { readonly success: infer Success } ? Success : never;
+
+export type Error = Config extends { readonly error: infer Error } ? Error : never;
+
+export type Dependencies = readonly [${dependencyEntries.join(", ")}];
+
+export type Middlewares = readonly [${middlewareEntries.join(", ")}];
+
+export type Prefixes = readonly [${prefixEntries.join(", ")}];
+
+export type OpenApis = readonly [${openApiEntries.join(", ")}];
+
+export type Name = ${nameType};
+
+export type ApiTypes = {
+  readonly route: Route;
+  readonly method: Method;
+  readonly headers: Headers;
+  readonly body: Body;
+  readonly success: Success;
+  readonly error: Error;
+  readonly dependencies: Dependencies;
+  readonly middlewares: Middlewares;
+  readonly prefixes: Prefixes;
+  readonly openApis: OpenApis;
+  readonly name: Name;
+};
 
 export type Context = ApiHandlerParamsFromConfig<Config>;
 
@@ -458,16 +580,79 @@ function endpointModuleSpecifier(importer: string): string {
   return `./${basename(importer).replace(/\.[cm]?[tj]sx?$/, ".js")}`;
 }
 
-function inheritedCompanionImport(importer: string, companionName: string): string | undefined {
+function apiCompanionImports(
+  importer: string,
+  kind: ApiCompanionKind,
+  aliasPrefix: string,
+): readonly ApiCompanionImport[] {
+  const paths: string[] = [];
   let current = dirname(importer);
   while (true) {
-    const candidate = join(current, companionName);
-    if (existsSync(candidate)) return moduleSpecifierFrom(dirname(importer), candidate);
+    const candidate = join(current, API_DIRECTORY_COMPANION_BY_KIND[kind]);
+    if (existsSync(candidate)) paths.push(candidate);
 
     const parent = dirname(current);
-    if (parent === current) return undefined;
+    if (parent === current)
+      return paths
+        .reverse()
+        .map((path, index) => apiCompanionImport(importer, path, `${aliasPrefix}${index}`));
     current = parent;
   }
+}
+
+function apiEndpointCompanionImport(
+  importer: string,
+  kind: keyof typeof API_ENDPOINT_COMPANION_BY_KIND,
+  alias: string,
+): ApiCompanionImport | undefined {
+  const target = join(
+    dirname(importer),
+    `${basename(importer).replace(/\.[cm]?[tj]sx?$/, "")}${API_ENDPOINT_COMPANION_BY_KIND[kind]}`,
+  );
+  return existsSync(target) ? apiCompanionImport(importer, target, alias) : undefined;
+}
+
+function apiEndpointNameImport(importer: string): ApiCompanionImport | undefined {
+  return apiEndpointCompanionImport(importer, "name", "EndpointName");
+}
+
+function apiCompanionImport(importer: string, target: string, alias: string): ApiCompanionImport {
+  return { alias, moduleSpecifier: moduleSpecifierFrom(dirname(importer), target) };
+}
+
+function apiCompanionTypeEntries(
+  kind: ApiCompanionKind,
+  inherited: readonly ApiCompanionImport[],
+  endpoint: ApiCompanionImport | undefined,
+  exportNames: ReadonlySet<string>,
+): readonly string[] {
+  const inFile = exportNames.has(kind) ? `${apiCompanionValueType(kind)}<Endpoint>` : undefined;
+  const imported = inherited.map(({ alias }) => `${apiCompanionValueType(kind)}<typeof ${alias}>`);
+  const endpointType = endpoint
+    ? `${apiCompanionValueType(kind)}<typeof ${endpoint.alias}>`
+    : undefined;
+  return [...imported, endpointType, inFile].filter(
+    (value): value is string => value !== undefined,
+  );
+}
+
+function apiCompanionValueType(kind: ApiCompanionKind): string {
+  if (kind === "dependencies") return "DependencyValue";
+  if (kind === "middlewares") return "MiddlewareValue";
+  if (kind === "prefix") return "PrefixValue";
+  return kind === "openapi" ? "OpenApiValue" : "ExportValue";
+}
+
+function apiNameType(
+  endpointName: ApiCompanionImport | undefined,
+  exportNames: ReadonlySet<string>,
+): string {
+  if (exportNames.has("name")) return 'ExportValue<Endpoint, "name">';
+  return endpointName ? `ExportValue<typeof ${endpointName.alias}, "name">` : "never";
+}
+
+function last<A>(values: readonly A[]): A | undefined {
+  return values[values.length - 1];
 }
 
 function moduleSpecifierFrom(fromDir: string, target: string): string {
