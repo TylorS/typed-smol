@@ -37,8 +37,8 @@ export type RouteMatchDescriptor = {
     readonly guard?: boolean;
   };
   readonly composedConcerns: ComposedConcernsShape;
-  /** Guard from in-file, sibling, or directory (path). */
-  readonly guardPath?: PathRef;
+  /** Guards from ancestor directories through route-local guard (paths). */
+  readonly guardPaths: readonly PathRef[];
   /** Catch from in-file or sibling (path). */
   readonly catchPath?: PathRef;
   readonly catchExport?: "catch" | "catchFn";
@@ -126,13 +126,18 @@ export function buildRouterDescriptorTree(input: BuildDescriptorTreeInput): Rout
       siblingCompanionPath(d.filePath, k);
     const hasSibling = (k: "guard" | "dependencies" | "layout" | "catch") =>
       d.composedConcerns[k].includes(sibling(k));
-    const dirGuardPath = d.composedConcerns.guard.find(isDirectoryCompanion);
-
-    const guardPath = d.inFileConcerns.guard
+    const directoryGuardPaths = d.composedConcerns.guard
+      .filter(isDirectoryCompanion)
+      .slice()
+      .reverse();
+    const localGuardPath = d.inFileConcerns.guard
       ? d.filePath
       : hasSibling("guard")
         ? sibling("guard")
-        : dirGuardPath;
+        : undefined;
+    const guardPaths = localGuardPath
+      ? [...directoryGuardPaths, localGuardPath]
+      : directoryGuardPaths;
     const catchPath = d.inFileConcerns.catch
       ? d.filePath
       : hasSibling("catch")
@@ -147,7 +152,7 @@ export function buildRouterDescriptorTree(input: BuildDescriptorTreeInput): Rout
       entrypointExpectsRefSubject: d.entrypointExpectsRefSubject,
       inFileConcerns: d.inFileConcerns,
       composedConcerns: d.composedConcerns,
-      guardPath,
+      guardPaths,
       catchPath,
       catchExport: catchPath
         ? (() => {
@@ -337,10 +342,7 @@ function emitRoute(match: RouteMatchDescriptor, ctx: RenderContext): string {
   const routeRef = `${routeVar}.route`;
   const handlerExpr = ctx.handlerExprFor(match, entrypointVar);
   const hasExtraOpts = match.layoutPath || match.depsPath || match.catchPath;
-  const guardPath = match.guardPath;
-  const guardExport = guardPath ? ctx.guardExportByPath[guardPath] : undefined;
-  const guardExpr =
-    guardPath && guardExport ? `${ctx.varNameByPath.get(guardPath)!}.${guardExport}` : undefined;
+  const guardExpr = guardExpression(match.guardPaths, ctx);
 
   const opts: string[] = [`handler: ${handlerExpr}`];
   if (match.depsPath) {
@@ -367,4 +369,19 @@ function emitRoute(match: RouteMatchDescriptor, ctx: RenderContext): string {
     return `Router.match(${routeRef}, ${handlerExpr})`;
   }
   return `Router.match(${routeRef}, { ${opts.join(", ")} })`;
+}
+
+function guardExpression(
+  guardPaths: readonly string[],
+  ctx: RenderContext,
+): string | undefined {
+  const guardExprs = guardPaths
+    .map((guardPath) => {
+      const guardExport = ctx.guardExportByPath[guardPath];
+      return guardExport ? `${ctx.varNameByPath.get(guardPath)!}.${guardExport}` : undefined;
+    })
+    .filter((value): value is string => value !== undefined);
+  if (guardExprs.length === 0) return undefined;
+  if (guardExprs.length === 1) return guardExprs[0];
+  return `Router.composeGuards(${guardExprs.join(", ")})`;
 }

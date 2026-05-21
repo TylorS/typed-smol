@@ -319,38 +319,26 @@ export function buildRouteDescriptors(
   for (const relPath of guardPaths) {
     const snapshot = snapshots.find((s) => toPosixPath(relative(baseDir, s.filePath)) === relPath);
     if (!snapshot) continue;
-    const guardExport =
-      snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[0]) ??
-      snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[1]);
-    if (!guardExport) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard file must export "guard" or default: ${relPath}`,
-      });
+    const result = validateGuardExport(snapshot, relPath, api);
+    if (!result.ok) {
+      guardViolations.push(result.violation);
       continue;
     }
-    if (!isCallableNode(guardExport.type)) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard export must be a function (Effect<Option<*>, *, *>): ${relPath}`,
-      });
+    guardExportByPath[relPath] = result.name;
+  }
+
+  for (const d of dedupedDescriptors) {
+    if (!d.inFileConcerns.guard) continue;
+    const snapshot = snapshots.find(
+      (s) => toPosixPath(relative(baseDir, s.filePath)) === d.filePath,
+    );
+    if (!snapshot) continue;
+    const result = validateGuardExport(snapshot, d.filePath, api);
+    if (!result.ok) {
+      guardViolations.push(result.violation);
       continue;
     }
-    if (!typeNodeIsEffectOptionReturn(guardExport.type, api)) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard return type must be Effect<Option<*>, *, *>: ${relPath}`,
-      });
-      continue;
-    }
-    if (!isGuardExportName(guardExport.name)) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard export name ${JSON.stringify(guardExport.name)} not in [guard, default]: ${relPath}`,
-      });
-      continue;
-    }
-    guardExportByPath[relPath] = guardExport.name;
+    guardExportByPath[d.filePath] = result.name;
   }
 
   const catchExportByPath: Record<string, "catch" | "catchFn"> = {};
@@ -483,4 +471,36 @@ export function buildRouteDescriptors(
     catchFormByPath,
     depsFormByPath,
   };
+}
+
+function validateGuardExport(
+  snapshot: TypeInfoFileSnapshot,
+  relPath: string,
+  api: TypeInfoApi,
+):
+  | { readonly ok: true; readonly name: GuardExportName }
+  | { readonly ok: false; readonly violation: RouteContractViolation } {
+  const guardExport =
+    snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[0]) ??
+    snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[1]);
+  if (!guardExport) return guardViolation(`guard file must export "guard" or default: ${relPath}`);
+  if (!isCallableNode(guardExport.type)) {
+    return guardViolation(
+      `guard export must be a function (Effect<Option<*>, *, *>): ${relPath}`,
+    );
+  }
+  if (!typeNodeIsEffectOptionReturn(guardExport.type, api)) {
+    return guardViolation(`guard return type must be Effect<Option<*>, *, *>: ${relPath}`);
+  }
+  return isGuardExportName(guardExport.name)
+    ? { ok: true, name: guardExport.name }
+    : guardViolation(
+        `guard export name ${JSON.stringify(guardExport.name)} not in [guard, default]: ${relPath}`,
+      );
+}
+
+function guardViolation(
+  message: string,
+): { readonly ok: false; readonly violation: RouteContractViolation } {
+  return { ok: false, violation: { code: "RVM-GUARD-001", message } };
 }

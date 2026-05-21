@@ -682,6 +682,24 @@ describe("RouterVirtualModulePlugin", () => {
     expect(result).not.toContain("??");
   });
 
+  it("composes route guards from ancestor to leaf", () => {
+    const result = buildRouterFromFixture({
+      "src/routes/_guard.ts": validGuardExport,
+      "src/routes/api/_guard.ts": validGuardExport,
+      "src/routes/api/item.guard.ts": validGuardExport,
+      "src/routes/api/item.ts": route("/api/item", "export const handler = 1;"),
+    });
+
+    expect(result).toContain("Router.composeGuards(");
+    const source = String(result);
+    const rootIndex = source.indexOf("Guard.guard");
+    const apiIndex = source.indexOf("ApiGuard.guard");
+    const leafIndex = source.indexOf("ApiItemguard.guard");
+    expect(rootIndex).toBeGreaterThan(-1);
+    expect(apiIndex).toBeGreaterThan(rootIndex);
+    expect(leafIndex).toBeGreaterThan(apiIndex);
+  });
+
   it("classifies plain entrypoint and sets needsLift (TS-5, AC-11)", () => {
     const source = buildRouterFromFixture({
       "src/routes/home.ts": route("/", "export const handler = 42;"),
@@ -1311,14 +1329,65 @@ export class ArticlesRouteService extends Context.Service<ArticlesRouteService, 
 const dependencies = Layer.succeed(ArticlesRouteService, { articles: "articles" });
 export default dependencies;
 `,
-      "src/routes/articles/_guard.ts": validGuardExport,
-      "src/routes/articles/_layout.ts": `
-import type * as Fx from "@typed/fx/Fx";
+      "src/routes/_guard.ts": `
+import type * as Router from "@typed/router";
 
-export const layout = ({ content }: { readonly content: Fx.Fx<unknown, unknown, unknown> }) => content;
+export interface RootGuardService { readonly rootGuard: string }
+type Input = { readonly slug: string; readonly page: number };
+type Output = Input & { readonly rootGuard: true };
+export const guard = null as never as Router.GuardType<Input, Output, "root-guard-error", RootGuardService>;
+`,
+      "src/routes/articles/_guard.ts": `
+import type * as Router from "@typed/router";
+import type { RootGuardService } from "../_guard.js";
+
+type Input = { readonly slug: string; readonly page: number } & { readonly rootGuard: true };
+type Output = Input & { readonly articlesGuard: true };
+export interface ArticlesGuardService { readonly articlesGuard: string }
+export const guard = null as never as Router.GuardType<Input, Output, "articles-guard-error", ArticlesGuardService | RootGuardService>;
+`,
+      "src/routes/articles/_layout.ts": `
+import type * as Router from "@typed/router";
+
+export const layout = null as never as Router.Layout<
+  { readonly slug: string; readonly page: number },
+  "show-layout",
+  "handler-error" | "show-layout-error",
+  "handler-service" | "show-layout-service",
+  "articles-layout",
+  "articles-layout-error",
+  "articles-layout-service"
+>;
+`,
+      "src/routes/_catch.ts": `
+import type * as Router from "@typed/router";
+
+export const catchFn = null as never as Router.CatchHandler<
+  "articles-catch-error",
+  "root-catch",
+  "root-catch-error",
+  "root-catch-service"
+>;
+`,
+      "src/routes/articles/_catch.ts": `
+import type * as Router from "@typed/router";
+
+export const catchFn = null as never as Router.CatchHandler<
+  "show-catch-error",
+  "articles-catch",
+  "articles-catch-error",
+  "articles-catch-service"
+>;
 `,
       "src/routes/articles/show.catch.ts": `
-export const catchFn = (error: { readonly message: string }) => error.message;
+import type * as Router from "@typed/router";
+
+export const catchFn = null as never as Router.CatchHandler<
+  "handler-error",
+  "show-catch",
+  "show-catch-error",
+  "show-catch-service"
+>;
 `,
       "src/routes/articles/show.dependencies.ts": `
 import * as Context from "effect/Context";
@@ -1327,17 +1396,35 @@ import * as Layer from "effect/Layer";
 export class ShowRouteService extends Context.Service<ShowRouteService, { readonly show: string }>()("ShowRouteService") {}
 export const dependencies = [Layer.succeed(ShowRouteService, { show: "show" })] as const;
 `,
-      "src/routes/articles/show.guard.ts": validGuardExport,
-      "src/routes/articles/show.layout.ts": `
-import type * as Fx from "@typed/fx/Fx";
+      "src/routes/articles/show.guard.ts": `
+import type * as Router from "@typed/router";
+import type { ArticlesGuardService } from "./_guard.js";
+import type { RootGuardService } from "../_guard.js";
 
-export const layout = ({ content }: { readonly content: Fx.Fx<unknown, unknown, unknown> }) => content;
+type Input = { readonly slug: string; readonly page: number } & { readonly rootGuard: true; readonly articlesGuard: true };
+type Output = Input & { readonly showGuard: true };
+export interface ShowGuardService { readonly showGuard: string }
+export const guard = null as never as Router.GuardType<Input, Output, "show-guard-error", ShowGuardService | ArticlesGuardService | RootGuardService>;
+`,
+      "src/routes/articles/show.layout.ts": `
+import type * as Router from "@typed/router";
+
+export const layout = null as never as Router.Layout<
+  { readonly slug: string; readonly page: number },
+  "handler",
+  "handler-error",
+  "handler-service",
+  "show-layout",
+  "show-layout-error",
+  "show-layout-service"
+>;
 `,
       "src/routes/articles/show.ts": `
 import * as Fx from "@typed/fx/Fx";
 import * as Route from "@typed/router";
-import type { Catches, Dependencies, Guards, Layouts, RouteTypes, Template } from "./$route-types";
+import type { Catches, Dependencies, Guards, Layouts, Params, RouteTypes, Template } from "./$route-types";
 import type * as Layer from "effect/Layer";
+import type * as RouterTypes from "@typed/router";
 
 type Equals<A, B> =
   (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
@@ -1371,15 +1458,39 @@ type _dependencies = Expect<Equals<
 >>;
 type _guards = Expect<Equals<
   Guards,
-  | typeof import("./_guard.js").guard
-  | typeof import("./show.guard.js").guard
+  RouterTypes.ComposeGuards<
+    Params,
+    readonly [
+      typeof import("../_guard.js").guard,
+      typeof import("./_guard.js").guard,
+      typeof import("./show.guard.js").guard,
+    ]
+  >
 >>;
 type _layouts = Expect<Equals<
-  Layouts,
-  | typeof import("./_layout.js").layout
-  | typeof import("./show.layout.js").layout
+  Layouts<"handler", "handler-error", "handler-service">,
+  RouterTypes.ComposeLayouts<
+    Params,
+    "handler",
+    "handler-error",
+    "handler-service",
+    readonly [
+      typeof import("./_layout.js").layout,
+      typeof import("./show.layout.js").layout,
+    ]
+  >
 >>;
-type _catches = Expect<Equals<Catches, typeof import("./show.catch.js").catchFn>>;
+type _catches = Expect<Equals<
+  Catches<"handler", "handler-error", "handler-service">,
+  RouterTypes.ComposeCatches<
+    "handler-error",
+    readonly [
+      typeof import("../_catch.js").catchFn,
+      typeof import("./_catch.js").catchFn,
+      typeof import("./show.catch.js").catchFn,
+    ]
+  >
+>>;
 type _routeTypes = Expect<Equals<RouteTypes["dependencies"], Dependencies>>;
 
 export const template = ((params) =>
@@ -1407,8 +1518,8 @@ export const template = ((params) =>
     if (typeof result !== "string") return;
     expect(result).toContain("export type Dependencies =");
     expect(result).toContain("export type Guards =");
-    expect(result).toContain("export type Layouts =");
-    expect(result).toContain("export type Catches =");
+    expect(result).toContain("export type Layouts<A = any, E = any, R = any> =");
+    expect(result).toContain("export type Catches<A = any, E = any, R = any> =");
     expect(result).toContain("export type RouteTypes = {");
 
     const typeCheck = typeCheckGeneratedSource({

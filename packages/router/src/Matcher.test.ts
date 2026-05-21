@@ -25,6 +25,28 @@ class TestError extends Data.TaggedError("TestError")<{ readonly message: string
 class OtherError extends Data.TaggedError("OtherError")<{ readonly message: string }> {}
 
 describe("typed/router/Matcher", () => {
+  it("composeGuards runs guards from ancestor to leaf", () =>
+    Effect.gen(function* () {
+      const calls: string[] = [];
+      const guard = Matcher.composeGuards(
+        (input: { readonly id: string }) =>
+          Effect.sync(() => {
+            calls.push("root");
+            return Option.some({ ...input, root: true as const });
+          }),
+        (input) =>
+          Effect.sync(() => {
+            calls.push(input.root ? "leaf" : "missing-root");
+            return Option.some({ ...input, leaf: true as const });
+          }),
+      );
+
+      const result = yield* guard({ id: "a" });
+
+      assert.deepStrictEqual(calls, ["root", "leaf"]);
+      assert.deepStrictEqual(result, Option.some({ id: "a", root: true, leaf: true }));
+    }).pipe(Effect.runPromise));
+
   it("type check for match options inference", () => {
     const route = Route.Parse("type");
 

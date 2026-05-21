@@ -16,6 +16,7 @@ import { typeNodeIsRouteCompatible } from "./internal/routeTypeNode.js";
 import {
   dependencyLayerType,
   TypeModuleSource,
+  typeTuple,
   typeUnion,
 } from "./internal/typeModuleSource.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
@@ -324,6 +325,7 @@ type RouteConcern = "dependencies" | "guard" | "layout" | "catch";
 type RouteConcernImport = {
   readonly alias: string;
   readonly moduleSpecifier: string;
+  readonly path: string;
 };
 
 const ROUTE_DIRECTORY_COMPANION_BY_CONCERN = {
@@ -360,14 +362,18 @@ function emitRouteTypesSource(
     dependencies,
     exportNames,
   );
-  const guardEntries = routeConcernTypeEntries(source, "guard", guards, exportNames);
-  const layoutEntries = routeConcernTypeEntries(source, "layout", layouts, exportNames);
-  const catchEntries = routeConcernTypeEntries(source, "catch", catches, exportNames);
+  const guardEntries = routeComposedConcernTypeEntries(source, "guard", guards, exportNames);
+  const layoutEntries = routeComposedConcernTypeEntries(source, "layout", layouts, exportNames);
+  const catchEntries = routeComposedConcernTypeEntries(source, "catch", catches, exportNames);
   const dependenciesType = dependencyLayerType(source, dependencyEntries);
+  const guardsType = routeComposedGuardsType(source, guardEntries);
+  const layoutsType = routeComposedLayoutsType(source, layoutEntries);
+  const catchesType = routeComposedCatchesType(source, catchEntries);
 
   source.importLine(`import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";`);
   source.importLine(`import type { MatchHandlerReturnValue, Route } from "@typed/router";`);
   source.importTypeNamespace("Layer", "effect/Layer");
+  source.importTypeNamespace("RouterTypes", "@typed/router");
   source.importTypeNamespace("RouteModule", moduleSpecifier);
   source.add(`type RouteExport = typeof RouteModule extends { readonly route: infer Rt } ? Rt : never;
 type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]: infer Value }
@@ -378,11 +384,11 @@ type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]
 
 export type Dependencies = ${dependenciesType};
 
-export type Guards = ${typeUnion(guardEntries)};
+export type Guards = ${guardsType};
 
-export type Layouts = ${typeUnion(layoutEntries)};
+export type Layouts<A = any, E = any, R = any> = ${layoutsType};
 
-export type Catches = ${typeUnion(catchEntries)};
+export type Catches<A = any, E = any, R = any> = ${catchesType};
 
 export type RouteTypes = {
   readonly params: Params;
@@ -456,7 +462,7 @@ function routeSiblingConcernImport(
 }
 
 function routeConcernImport(importer: string, target: string, alias: string): RouteConcernImport {
-  return { alias, moduleSpecifier: moduleSpecifierFrom(dirname(importer), target) };
+  return { alias, moduleSpecifier: moduleSpecifierFrom(dirname(importer), target), path: target };
 }
 
 function routeConcernTypeEntries(
@@ -475,6 +481,48 @@ function routeConcernTypeEntries(
     ({ alias }) => `${routeConcernValueType(source, concern)}<typeof ${alias}>`,
   );
   return inFile ? [inFile, ...imported] : imported;
+}
+
+function routeComposedConcernTypeEntries(
+  source: TypeModuleSource,
+  concern: Exclude<RouteConcern, "dependencies">,
+  imports: readonly RouteConcernImport[],
+  exportNames: ReadonlySet<string>,
+): readonly string[] {
+  const directoryImports = imports.filter(({ path }) => basename(path).startsWith("_")).reverse();
+  const hasInFile =
+    concern === "catch"
+      ? exportNames.has("catch") || exportNames.has("catchFn")
+      : exportNames.has(concern);
+  const sibling = hasInFile
+    ? undefined
+    : imports.find(({ path }) => !basename(path).startsWith("_"));
+  if (directoryImports.length === 0 && sibling === undefined && !hasInFile) return [];
+  const valueType = routeConcernValueType(source, concern);
+  const directoryEntries = directoryImports.map(({ alias }) => `${valueType}<typeof ${alias}>`);
+  const inFile = routeInFileConcernType(source, concern, exportNames);
+  const siblingEntry = sibling ? `${valueType}<typeof ${sibling.alias}>` : undefined;
+  return [...directoryEntries, siblingEntry, inFile].filter(
+    (value): value is string => value !== undefined,
+  );
+}
+
+function routeComposedGuardsType(source: TypeModuleSource, entries: readonly string[]): string {
+  if (entries.length === 0) return "never";
+  source.add(`type GuardValues = ${typeTuple(entries)};`);
+  return "RouterTypes.ComposeGuards<Params, GuardValues>";
+}
+
+function routeComposedLayoutsType(source: TypeModuleSource, entries: readonly string[]): string {
+  if (entries.length === 0) return "never";
+  source.add(`type LayoutValues = ${typeTuple(entries)};`);
+  return "RouterTypes.ComposeLayouts<Params, A, E, R, LayoutValues>";
+}
+
+function routeComposedCatchesType(source: TypeModuleSource, entries: readonly string[]): string {
+  if (entries.length === 0) return "never";
+  source.add(`type CatchValues = ${typeTuple(entries)};`);
+  return "RouterTypes.ComposeCatches<E, CatchValues>";
 }
 
 function routeInFileConcernType(

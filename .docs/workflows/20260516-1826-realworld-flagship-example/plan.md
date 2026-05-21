@@ -842,6 +842,27 @@ Execution refinements:
 - [x] Step 4: Update generated `api:*` runtime group layer composition for directory dependencies.
 - [x] Step 5: Run focused plugin tests, full `@typed/app` build/test, RealWorld typecheck/test/build, and `git diff --check`.
 
+### Task 20: Compose Route Guard, Layout, and Catch Types
+
+**Files:**
+- Modify: `packages/router/src/Matcher.ts`
+- Modify: `packages/router/src/Matcher.test.ts`
+- Modify: `packages/app/src/internal/buildRouteDescriptors.ts`
+- Modify: `packages/app/src/internal/routerDescriptorTree.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
+
+**Progress notes:**
+- 2026-05-21: `@typed/router` now exposes composition helper types for guard, layout, and catch chains, plus a runtime `composeGuards(...)` helper.
+- 2026-05-21: Generated `router:*` modules now compose all directory and route-local guards from ancestor to leaf instead of choosing only the closest guard.
+- 2026-05-21: Generated `$route-types` now exposes `Guards`, `Layouts<A, E, R>`, and `Catches<A, E, R>` as composed effective types in the same order the route graph compiles.
+
+- [x] Step 1: Add failing framework tests for ancestor-to-leaf guard composition and composed generic `$route-types` aliases.
+- [x] Step 2: Add router composition helper types and runtime `composeGuards(...)`.
+- [x] Step 3: Update router descriptor rendering to pass all effective guards to the composed guard helper.
+- [x] Step 4: Update `$route-types` generation to emit composed guard, layout, and catch aliases.
+- [x] Step 5: Run focused router/app tests, router build/test, app build/test, RealWorld typecheck/test/build, and `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

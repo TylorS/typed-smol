@@ -105,6 +105,104 @@ export type GuardServices<G> =
       ? R
       : never;
 
+export type GuardChainInput<Guards extends readonly unknown[]> = Guards extends readonly [
+  infer First,
+  ...unknown[],
+]
+  ? First extends GuardInput<infer Input, any, any, any>
+    ? Input
+    : never
+  : never;
+
+export type GuardChainOutput<Input, Guards extends readonly unknown[]> = Guards extends readonly []
+  ? Input
+  : Guards extends readonly [infer First, ...infer Rest]
+    ? First extends GuardInput<Input, infer Output, any, any>
+      ? GuardChainOutput<Output, Rest>
+      : never
+    : never;
+
+export type GuardChainError<Input, Guards extends readonly unknown[]> = Guards extends readonly []
+  ? never
+  : Guards extends readonly [infer First, ...infer Rest]
+    ? First extends GuardInput<Input, infer Output, infer E, any>
+      ? E | GuardChainError<Output, Rest>
+      : never
+    : never;
+
+export type GuardChainServices<Input, Guards extends readonly unknown[]> =
+  Guards extends readonly []
+    ? never
+    : Guards extends readonly [infer First, ...infer Rest]
+      ? First extends GuardInput<Input, infer Output, any, infer R>
+        ? R | GuardChainServices<Output, Rest>
+        : never
+      : never;
+
+export type ComposeGuards<Input, Guards extends readonly unknown[]> = GuardType<
+  Input,
+  GuardChainOutput<Input, Guards>,
+  GuardChainError<Input, Guards>,
+  GuardChainServices<Input, Guards>
+>;
+
+export type LayoutChainResult<
+  Params,
+  A,
+  E,
+  R,
+  Layouts extends readonly unknown[],
+> = Layouts extends readonly []
+  ? { readonly a: A; readonly e: E; readonly r: R }
+  : Layouts extends readonly [...infer Rest, infer Current]
+    ? Rest extends readonly unknown[]
+      ? Current extends Layout<Params, A, E, R, infer B, infer E2, infer R2>
+        ? LayoutChainResult<Params, B, E | E2, R | R2, Rest>
+        : never
+      : never
+    : never;
+
+export type ComposeLayouts<
+  Params,
+  A,
+  E,
+  R,
+  Layouts extends readonly unknown[],
+> = Layouts extends readonly []
+  ? never
+  : Layout<
+      Params,
+      A,
+      E,
+      R,
+      LayoutChainResult<Params, A, E, R, Layouts>["a"],
+      LayoutChainResult<Params, A, E, R, Layouts>["e"],
+      LayoutChainResult<Params, A, E, R, Layouts>["r"]
+    >;
+
+export type CatchChainResult<E, Catches extends readonly unknown[]> = Catches extends readonly []
+  ? { readonly a: never; readonly e: E; readonly r: never }
+  : Catches extends readonly [...infer Rest, infer Current]
+    ? Rest extends readonly unknown[]
+      ? Current extends CatchHandler<E, infer B, infer E2, infer R2>
+        ? {
+            readonly a: B | CatchChainResult<E2, Rest>["a"];
+            readonly e: CatchChainResult<E2, Rest>["e"];
+            readonly r: R2 | CatchChainResult<E2, Rest>["r"];
+          }
+        : never
+      : never
+    : never;
+
+export type ComposeCatches<E, Catches extends readonly unknown[]> = Catches extends readonly []
+  ? never
+  : CatchHandler<
+      E,
+      CatchChainResult<E, Catches>["a"],
+      CatchChainResult<E, Catches>["e"],
+      CatchChainResult<E, Catches>["r"]
+    >;
+
 type MatchOptions<Rt extends Route.Any, B, E2, R2, D, LB, LE2, LR2, C> = {
   readonly route: Rt;
   readonly handler:
@@ -1133,6 +1231,27 @@ export function normalizeDependencyInput<Deps extends AnyDependency | ReadonlyAr
 
 function getGuard<I, O, E, R>(guard: GuardInput<I, O, E, R>): GuardType<I, O, E, R> {
   return "asGuard" in guard ? guard.asGuard() : guard;
+}
+
+export function composeGuards<
+  const Guards extends readonly [
+    GuardInput<any, any, any, any>,
+    ...GuardInput<any, any, any, any>[],
+  ],
+>(
+  ...guards: Guards
+): ComposeGuards<GuardChainInput<Guards>, Guards> {
+  const normalized = guards.map((guard) => getGuard(guard));
+  return ((input: GuardChainInput<Guards>) =>
+    Effect.gen(function* () {
+      let current: unknown = input;
+      for (const guard of normalized) {
+        const result = yield* guard(current);
+        if (Option.isNone(result)) return Option.none();
+        current = result.value;
+      }
+      return Option.some(current);
+    })) as ComposeGuards<GuardChainInput<Guards>, Guards>;
 }
 
 function defaultGuard<A>(): GuardType<A, A> {
