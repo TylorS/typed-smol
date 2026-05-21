@@ -241,8 +241,17 @@ export const attachLanguageServiceAdapter = (
     return currentRecord;
   };
 
-  const refreshKnownRecordsBeforeDiagnostics = (): void => {
+  const recordsRelevantToFile = (fileName: string): MutableVirtualRecord[] => {
+    const direct = store.findRecordByVirtualFile(fileName);
+    if (direct) return [direct];
+
+    const importer = store.resolveEffectiveImporter(fileName);
     const records = Array.from(store.recordsByKey.values());
+    return records.filter((record) => record.importer === importer);
+  };
+
+  const refreshRecordsBeforeDiagnostics = (fileName: string): void => {
+    const records = recordsRelevantToFile(fileName);
     for (const record of records) {
       rebuildRecordIfNeeded(record);
     }
@@ -537,7 +546,7 @@ export const attachLanguageServiceAdapter = (
         }
       }
       if (!record) return originalGetScriptVersion(fileName);
-      return String(rebuildRecordIfNeeded(record).version);
+      return String(record.version);
     };
   }
 
@@ -585,7 +594,7 @@ export const attachLanguageServiceAdapter = (
   };
 
   options.languageService.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] => {
-    refreshKnownRecordsBeforeDiagnostics();
+    refreshRecordsBeforeDiagnostics(fileName);
     const diagnostics = originalGetSemanticDiagnostics(fileName);
     const adapterDiagnostics = diagnosticsByFile.get(fileName);
     if (!adapterDiagnostics || adapterDiagnostics.length === 0) {
@@ -597,7 +606,7 @@ export const attachLanguageServiceAdapter = (
   options.languageService.getSyntacticDiagnostics = (
     fileName: string,
   ): ts.DiagnosticWithLocation[] => {
-    refreshKnownRecordsBeforeDiagnostics();
+    refreshRecordsBeforeDiagnostics(fileName);
     const diagnostics = originalGetSyntacticDiagnostics(fileName);
     const adapterDiagnostics = diagnosticsByFile.get(fileName);
     if (!adapterDiagnostics || adapterDiagnostics.length === 0) {

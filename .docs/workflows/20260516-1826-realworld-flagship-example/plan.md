@@ -798,6 +798,29 @@ Execution refinements:
 - [x] Step 5: Run RealWorld package guard, typecheck, test, build, and `git diff --check`.
 - [x] Step 6: Record that full `@typed/app` suite retries hit unrelated Vitest timeout/date-duration anomalies while isolated affected tests passed.
 
+### Task 18: Companion Type Unions and Incremental Rebuild Containment
+
+**Files:**
+- Add: `packages/app/src/internal/typeModuleSource.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
+- Modify: `packages/virtual-modules/src/LanguageServiceAdapter.ts`
+- Modify: `packages/virtual-modules/src/LanguageServiceAdapter.test.ts`
+
+**Progress notes:**
+- 2026-05-21: `$api-types` and `$route-types` companion surfaces now collect relevant inherited, endpoint/sibling, and in-file module value types as unions. The generated aliases preserve the "all relevant files contribute" model instead of making later companion sources replace earlier sources.
+- 2026-05-21: Type-module source generation now goes through a small helper that emits imports, helper aliases, and body sections only when used, preventing unused companion helper aliases from appearing in modules that do not need them.
+- 2026-05-21: TypeScript language-service diagnostics no longer rebuild every stale virtual record for one file. Diagnostics refresh only records relevant to the requested file, and `getScriptVersion` no longer rebuilds stale virtual files during broad TypeScript version sweeps.
+
+- [x] Step 1: Add failing app tests proving generated companion surfaces are unions and no-companion API type modules do not emit unused companion helper aliases.
+- [x] Step 2: Add failing virtual-module language-service test proving diagnostics for one real file do not rebuild stale virtual records owned by another file.
+- [x] Step 3: Implement reusable type-module source generation and update API/route generated type modules to emit union aliases.
+- [x] Step 4: Register watched companion files discovered by `$api-types` and `$route-types` so companion edits invalidate the generated type module that imports them.
+- [x] Step 5: Contain diagnostics-time stale virtual-record rebuilds to records relevant to the requested diagnostics file.
+- [x] Step 6: Run focused app/virtual-modules tests, package builds, full `@typed/app` test, RealWorld package guard, typecheck, test, build, and `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

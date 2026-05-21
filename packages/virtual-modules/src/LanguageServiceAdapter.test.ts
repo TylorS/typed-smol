@@ -851,6 +851,102 @@ export const value: Foo = { n: 1 };
     vi.useRealTimers();
   });
 
+  it("does not rebuild stale records for unrelated file diagnostics", () => {
+    const dir = createTempDir();
+    const entryA = join(dir, "entry-a.ts");
+    const entryB = join(dir, "entry-b.ts");
+    const depA = join(dir, "dep-a.ts");
+    const depB = join(dir, "dep-b.ts");
+    writeFileSync(entryA, `import type { A } from "virtual:a"; export const a: A = { a: 1 };`);
+    writeFileSync(entryB, `import type { B } from "virtual:b"; export const b: B = { b: 1 };`);
+    writeFileSync(depA, "export const depA = 1;");
+    writeFileSync(depB, "export const depB = 1;");
+
+    const files = new Map<string, { version: number; content: string }>(
+      [entryA, entryB, depA, depB].map((file) => [
+        file,
+        { version: 1, content: ts.sys.readFile(file) ?? "" },
+      ]),
+    );
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        return content ? ts.ScriptSnapshot.fromString(content) : undefined;
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+
+    const watchCallbacks = new Map<string, () => void>();
+    const watchHost: LanguageServiceWatchHost = {
+      watchFile: (path: string, callback: ts.FileWatcherCallback) => {
+        watchCallbacks.set(path, () => callback(path, ts.FileWatcherEventKind.Changed));
+        return { close: () => watchCallbacks.delete(path) };
+      },
+      watchDirectory: () => ({ close: () => {} }),
+    };
+    const buildCounts = new Map<string, number>();
+    const manager = new PluginManager([
+      {
+        name: "virtual",
+        shouldResolve: (id) => id === "virtual:a" || id === "virtual:b",
+        build: (id, _importer, api) => {
+          buildCounts.set(id, (buildCounts.get(id) ?? 0) + 1);
+          const dep = id === "virtual:a" ? depA : depB;
+          api.file(dep, { baseDir: dir, watch: true });
+          return id === "virtual:a"
+            ? "export interface A { a: number }"
+            : "export interface B { b: number }";
+        },
+      },
+    ]);
+    const languageService = ts.createLanguageService(host);
+    const program = ts.createProgram([entryA, entryB, depA, depB], {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    });
+
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      watchHost,
+      createTypeInfoApiSession: () => createTypeInfoApiSession({ ts, program }),
+    });
+    languageService.getSemanticDiagnostics(entryA);
+    languageService.getSemanticDiagnostics(entryB);
+    expect(buildCounts.get("virtual:a")).toBe(1);
+    expect(buildCounts.get("virtual:b")).toBe(1);
+
+    watchCallbacks.get(depA)?.();
+    languageService.getSemanticDiagnostics(entryB);
+    expect(buildCounts.get("virtual:a")).toBe(1);
+    expect(buildCounts.get("virtual:b")).toBe(1);
+
+    languageService.getSemanticDiagnostics(entryA);
+    expect(buildCounts.get("virtual:a")).toBe(2);
+  });
+
   it("evicts records when importer is no longer in getScriptFileNames", () => {
     const dir = createTempDir();
     const entryFile = join(dir, "entry.ts");

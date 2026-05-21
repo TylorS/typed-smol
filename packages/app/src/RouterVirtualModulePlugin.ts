@@ -13,6 +13,7 @@ import {
   toPosixPath,
 } from "./internal/path.js";
 import { typeNodeIsRouteCompatible } from "./internal/routeTypeNode.js";
+import { TypeModuleSource, typeUnion } from "./internal/typeModuleSource.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type {
   TypeInfoApi,
@@ -309,6 +310,7 @@ function emitRouteTypesModule(
 
   return emitRouteTypesSource(
     importer,
+    api,
     new Set(source.snapshot.exports.map((value) => value.name)),
   );
 }
@@ -334,49 +336,47 @@ const ROUTE_SIBLING_SUFFIX_BY_CONCERN = {
   catch: ".catch.ts",
 } as const satisfies Record<RouteConcern, string>;
 
-function emitRouteTypesSource(importer: string, exportNames: ReadonlySet<string>): string {
+function emitRouteTypesSource(
+  importer: string,
+  api: TypeInfoApi,
+  exportNames: ReadonlySet<string>,
+): string {
   const moduleSpecifier = routeModuleSpecifier(importer);
-  const dependencies = routeConcernImports(importer, "dependencies", "RouteDependencies");
-  const guards = routeConcernImports(importer, "guard", "RouteGuards");
-  const layouts = routeConcernImports(importer, "layout", "RouteLayouts");
-  const catches = routeConcernImports(importer, "catch", "RouteCatches");
-  const companionImports = [...dependencies, ...guards, ...layouts, ...catches].map(
-    (value) => `import type * as ${value.alias} from ${JSON.stringify(value.moduleSpecifier)};`,
+  const source = new TypeModuleSource();
+  const dependencies = routeConcernImports(api, importer, "dependencies", "RouteDependencies");
+  const guards = routeConcernImports(api, importer, "guard", "RouteGuards");
+  const layouts = routeConcernImports(api, importer, "layout", "RouteLayouts");
+  const catches = routeConcernImports(api, importer, "catch", "RouteCatches");
+  for (const value of [...dependencies, ...guards, ...layouts, ...catches]) {
+    source.importTypeNamespace(value.alias, value.moduleSpecifier);
+  }
+  const dependencyEntries = routeConcernTypeEntries(
+    source,
+    "dependencies",
+    dependencies,
+    exportNames,
   );
-  const dependencyEntries = routeConcernTypeEntries("dependencies", dependencies, exportNames);
-  const guardEntries = routeConcernTypeEntries("guard", guards, exportNames);
-  const layoutEntries = routeConcernTypeEntries("layout", layouts, exportNames);
-  const catchEntries = routeConcernTypeEntries("catch", catches, exportNames);
+  const guardEntries = routeConcernTypeEntries(source, "guard", guards, exportNames);
+  const layoutEntries = routeConcernTypeEntries(source, "layout", layouts, exportNames);
+  const catchEntries = routeConcernTypeEntries(source, "catch", catches, exportNames);
 
-  return `import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";
-import type { MatchHandlerReturnValue, Route } from "@typed/router";
-import type * as RouteModule from ${JSON.stringify(moduleSpecifier)};
-${companionImports.join("\n")}
-
-type RouteExport = typeof RouteModule extends { readonly route: infer Rt } ? Rt : never;
+  source.importLine(`import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";`);
+  source.importLine(`import type { MatchHandlerReturnValue, Route } from "@typed/router";`);
+  source.importTypeNamespace("RouteModule", moduleSpecifier);
+  source.add(`type RouteExport = typeof RouteModule extends { readonly route: infer Rt } ? Rt : never;
 type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]: infer Value }
   ? Value
-  : never;
-type DefaultValue<T> = T extends { readonly default: infer Value } ? Value : never;
-type DefaultOrExport<T, Name extends PropertyKey> = [DefaultValue<T>] extends [never]
-  ? ExportValue<T, Name>
-  : DefaultValue<T>;
-type DependencyValue<T> = DefaultOrExport<T, "dependencies">;
-type GuardValue<T> = DefaultOrExport<T, "guard">;
-type LayoutValue<T> = ExportValue<T, "layout">;
-type CatchValue<T> = [ExportValue<T, "catch">] extends [never]
-  ? ExportValue<T, "catchFn">
-  : ExportValue<T, "catch">;
+  : never;`);
 
-export type Params = RouteExport extends Route.Any ? Route.Type<RouteExport> : never;
+  source.add(`export type Params = RouteExport extends Route.Any ? Route.Type<RouteExport> : never;
 
-export type Dependencies = readonly [${dependencyEntries.join(", ")}];
+export type Dependencies = ${typeUnion(dependencyEntries)};
 
-export type Guards = readonly [${guardEntries.join(", ")}];
+export type Guards = ${typeUnion(guardEntries)};
 
-export type Layouts = readonly [${layoutEntries.join(", ")}];
+export type Layouts = ${typeUnion(layoutEntries)};
 
-export type Catches = readonly [${catchEntries.join(", ")}];
+export type Catches = ${typeUnion(catchEntries)};
 
 export type RouteTypes = {
   readonly params: Params;
@@ -390,17 +390,20 @@ export type Template<E = any, R = any> = (
   params: RefSubject<Params>,
 ) => MatchHandlerReturnValue<any, E, R>;
 
-export type Handler<E = any, R = any> = Template<E, R>;
-`;
+export type Handler<E = any, R = any> = Template<E, R>;`);
+
+  return source.emit();
 }
 
 function routeConcernImports(
+  api: TypeInfoApi,
   importer: string,
   concern: RouteConcern,
   aliasPrefix: string,
 ): readonly RouteConcernImport[] {
-  const directoryImports = routeDirectoryConcernImports(importer, concern, aliasPrefix);
+  const directoryImports = routeDirectoryConcernImports(api, importer, concern, aliasPrefix);
   const sibling = routeSiblingConcernImport(
+    api,
     importer,
     concern,
     aliasPrefix,
@@ -410,6 +413,7 @@ function routeConcernImports(
 }
 
 function routeDirectoryConcernImports(
+  api: TypeInfoApi,
   importer: string,
   concern: RouteConcern,
   aliasPrefix: string,
@@ -419,6 +423,7 @@ function routeDirectoryConcernImports(
   while (true) {
     const candidate = join(current, ROUTE_DIRECTORY_COMPANION_BY_CONCERN[concern]);
     if (existsSync(candidate)) {
+      watchCompanion(api, importer, candidate);
       imports.push(routeConcernImport(importer, candidate, `${aliasPrefix}${imports.length}`));
     }
 
@@ -429,6 +434,7 @@ function routeDirectoryConcernImports(
 }
 
 function routeSiblingConcernImport(
+  api: TypeInfoApi,
   importer: string,
   concern: RouteConcern,
   aliasPrefix: string,
@@ -438,9 +444,9 @@ function routeSiblingConcernImport(
     dirname(importer),
     `${basename(stripScriptExtension(importer))}${ROUTE_SIBLING_SUFFIX_BY_CONCERN[concern]}`,
   );
-  return existsSync(candidate)
-    ? routeConcernImport(importer, candidate, `${aliasPrefix}${index}`)
-    : undefined;
+  if (!existsSync(candidate)) return undefined;
+  watchCompanion(api, importer, candidate);
+  return routeConcernImport(importer, candidate, `${aliasPrefix}${index}`);
 }
 
 function routeConcernImport(importer: string, target: string, alias: string): RouteConcernImport {
@@ -448,30 +454,70 @@ function routeConcernImport(importer: string, target: string, alias: string): Ro
 }
 
 function routeConcernTypeEntries(
+  source: TypeModuleSource,
   concern: RouteConcern,
   imports: readonly RouteConcernImport[],
   exportNames: ReadonlySet<string>,
 ): readonly string[] {
-  const inFile = routeInFileConcernType(concern, exportNames);
-  const imported = imports.map(({ alias }) => `${routeConcernValueType(concern)}<typeof ${alias}>`);
+  const hasInFile =
+    concern === "catch"
+      ? exportNames.has("catch") || exportNames.has("catchFn")
+      : exportNames.has(concern);
+  if (!hasInFile && imports.length === 0) return [];
+  const inFile = routeInFileConcernType(source, concern, exportNames);
+  const imported = imports.map(
+    ({ alias }) => `${routeConcernValueType(source, concern)}<typeof ${alias}>`,
+  );
   return inFile ? [inFile, ...imported] : imported;
 }
 
 function routeInFileConcernType(
+  source: TypeModuleSource,
   concern: RouteConcern,
   exportNames: ReadonlySet<string>,
 ): string | undefined {
   if (concern === "catch" && (exportNames.has("catch") || exportNames.has("catchFn"))) {
-    return "CatchValue<typeof RouteModule>";
+    return `${routeConcernValueType(source, concern)}<typeof RouteModule>`;
   }
   return exportNames.has(concern)
-    ? `${routeConcernValueType(concern)}<typeof RouteModule>`
+    ? `${routeConcernValueType(source, concern)}<typeof RouteModule>`
     : undefined;
 }
 
-function routeConcernValueType(concern: RouteConcern): string {
-  if (concern === "dependencies") return "DependencyValue";
-  return concern === "guard" ? "GuardValue" : concern === "layout" ? "LayoutValue" : "CatchValue";
+function routeConcernValueType(source: TypeModuleSource, concern: RouteConcern): string {
+  if (concern === "dependencies") {
+    const helper = defaultOrExportHelper(source);
+    return source.helper(
+      "DependencyValue",
+      `type DependencyValue<T> = ${helper}<T, "dependencies">;`,
+    );
+  }
+  if (concern === "guard") {
+    const helper = defaultOrExportHelper(source);
+    return source.helper("GuardValue", `type GuardValue<T> = ${helper}<T, "guard">;`);
+  }
+  if (concern === "layout") {
+    return source.helper("LayoutValue", `type LayoutValue<T> = ExportValue<T, "layout">;`);
+  }
+  return source.helper(
+    "CatchValue",
+    `type CatchValue<T> = [ExportValue<T, "catch">] extends [never]
+  ? ExportValue<T, "catchFn">
+  : ExportValue<T, "catch">;`,
+  );
+}
+
+function defaultOrExportHelper(source: TypeModuleSource): string {
+  source.helper(
+    "DefaultValue",
+    "type DefaultValue<T> = T extends { readonly default: infer Value } ? Value : never;",
+  );
+  return source.helper(
+    "DefaultOrExport",
+    `type DefaultOrExport<T, Name extends PropertyKey> = [DefaultValue<T>] extends [never]
+  ? ExportValue<T, Name>
+  : DefaultValue<T>;`,
+  );
 }
 
 function routeModuleSpecifier(importer: string): string {
@@ -482,4 +528,10 @@ function moduleSpecifierFrom(fromDir: string, target: string): string {
   const relativePath = toPosixPath(relative(fromDir, target));
   const withDot = relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
   return withDot.replace(/\.[cm]?[tj]sx?$/, ".js");
+}
+
+function watchCompanion(api: TypeInfoApi, importer: string, target: string): void {
+  const relativePath = toPosixPath(relative(dirname(importer), target));
+  const withDot = relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+  api.file(withDot, { baseDir: dirname(importer), watch: true });
 }

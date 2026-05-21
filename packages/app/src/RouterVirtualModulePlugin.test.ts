@@ -1296,15 +1296,11 @@ describe("RouterVirtualModulePlugin integration", () => {
   it("emits plugin-specific decoded route types for a route file importing ./$route-types", () => {
     const fixture = createFixture({
       "src/routes/_dependencies.ts": `
-import * as Layer from "effect/Layer";
-
-const dependencies = Layer.empty;
+const dependencies = ["root"] as const;
 export default dependencies;
 `,
       "src/routes/articles/_dependencies.ts": `
-import * as Layer from "effect/Layer";
-
-const dependencies = Layer.empty;
+const dependencies = ["articles"] as const;
 export default dependencies;
 `,
       "src/routes/articles/_guard.ts": validGuardExport,
@@ -1340,22 +1336,23 @@ export const route = Route.Join(
   Route.QueryParams(Route.Int("page")),
 );
 
-type _dependencies = Expect<Equals<Dependencies, readonly [
-  typeof import("./_dependencies.js").default,
-  typeof import("../_dependencies.js").default,
-  typeof import("./show.dependencies.js").dependencies,
-]>>;
-type _guards = Expect<Equals<Guards, readonly [
-  typeof import("./_guard.js").guard,
-  typeof import("./show.guard.js").guard,
-]>>;
-type _layouts = Expect<Equals<Layouts, readonly [
-  typeof import("./_layout.js").layout,
-  typeof import("./show.layout.js").layout,
-]>>;
-type _catches = Expect<Equals<Catches, readonly [
-  typeof import("./show.catch.js").catchFn,
-]>>;
+type _dependencies = Expect<Equals<
+  Dependencies,
+  | typeof import("./_dependencies.js").default
+  | typeof import("../_dependencies.js").default
+  | typeof import("./show.dependencies.js").dependencies
+>>;
+type _guards = Expect<Equals<
+  Guards,
+  | typeof import("./_guard.js").guard
+  | typeof import("./show.guard.js").guard
+>>;
+type _layouts = Expect<Equals<
+  Layouts,
+  | typeof import("./_layout.js").layout
+  | typeof import("./show.layout.js").layout
+>>;
+type _catches = Expect<Equals<Catches, typeof import("./show.catch.js").catchFn>>;
 type _routeTypes = Expect<Equals<RouteTypes["dependencies"], Dependencies>>;
 
 export const template = ((params) =>
@@ -1381,10 +1378,10 @@ export const template = ((params) =>
 
     expect(typeof result).toBe("string");
     if (typeof result !== "string") return;
-    expect(result).toContain("export type Dependencies = readonly [");
-    expect(result).toContain("export type Guards = readonly [");
-    expect(result).toContain("export type Layouts = readonly [");
-    expect(result).toContain("export type Catches = readonly [");
+    expect(result).toContain("export type Dependencies =");
+    expect(result).toContain("export type Guards =");
+    expect(result).toContain("export type Layouts =");
+    expect(result).toContain("export type Catches =");
     expect(result).toContain("export type RouteTypes = {");
 
     const typeCheck = typeCheckGeneratedSource({

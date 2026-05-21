@@ -780,19 +780,22 @@ export const body = Schema.Struct({ article: Schema.Struct({ title: Schema.Strin
 export const success = Schema.Struct({ ok: Schema.String });
 export const openapi = { annotations: { description: "in-file" as const } };
 
-type _dependencies = Expect<Equals<Dependencies, readonly [
-  typeof import("../_dependencies.js").dependencies,
-  typeof import("./create.dependencies.js").dependencies,
-]>>;
-type _middlewares = Expect<Equals<Middlewares, readonly [
-  typeof import("./_middlewares.js").middleware,
-  typeof import("./create.middlewares.js").middleware,
-]>>;
-type _openApis = Expect<Equals<OpenApis, readonly [
-  typeof import("../_openapi.js").default,
-  typeof import("./create.openapi.js").default,
-  typeof openapi,
-]>>;
+type _dependencies = Expect<Equals<
+  Dependencies,
+  | typeof import("../_dependencies.js").dependencies
+  | typeof import("./create.dependencies.js").dependencies
+>>;
+type _middlewares = Expect<Equals<
+  Middlewares,
+  | typeof import("./_middlewares.js").middleware
+  | typeof import("./create.middlewares.js").middleware
+>>;
+type _openApis = Expect<Equals<
+  OpenApis,
+  | typeof import("../_openapi.js").default
+  | typeof import("./create.openapi.js").default
+  | typeof openapi
+>>;
 type _name = Expect<Equals<Name, typeof import("./create.name.js").name>>;
 type _apiTypes = Expect<Equals<ApiTypes["dependencies"], Dependencies>>;
 
@@ -831,9 +834,9 @@ export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body
     expect(source).toContain("ApiHandlerRawFromConfig");
     expect(source).toContain('import type * as InheritedErrors0 from "../_errors.js";');
     expect(source).toContain('import type * as InheritedHeaders0 from "./_headers.js";');
-    expect(source).toContain("export type Dependencies = readonly [");
-    expect(source).toContain("export type Middlewares = readonly [");
-    expect(source).toContain("export type OpenApis = readonly [");
+    expect(source).toContain("export type Dependencies =");
+    expect(source).toContain("export type Middlewares =");
+    expect(source).toContain("export type OpenApis =");
     expect(source).toContain("export type ApiTypes = {");
     expect(source).toContain("export type Handler<R = any> = ApiHandlerFromConfig<Config, R>;");
     expect(source).toContain(
@@ -895,6 +898,9 @@ export const handler = (({ headers, query, body }) => {
 
     expect(typeof result).toBe("string");
     if (typeof result !== "string") return;
+    expect(result).not.toContain("type DependencyValue");
+    expect(result).not.toContain("type MiddlewareValue");
+    expect(result).not.toContain("type OpenApiValue");
 
     const typeCheck = typeCheckGeneratedSource({
       rootDir: fixture.root,
