@@ -7,3 +7,4 @@
 - `StartupRef.fromData` decodes DOM `dataset` through a whole-object `DataAttr` schema and merges the decoded fields into the existing `RefSubject` state.
 - `StartupRef.compose` combines multiple startup ref callbacks for a single template `ref` attribute.
 - Disclosure uses `DataAttr.encode` through `RefSubject.mapEffect` to emit stable `data-open` while preserving direct `RefSubject` state and inferred template return types.
+- Dialog mirrors the Disclosure data-state pattern and stores the invoking element in a WeakMap keyed by the state ref so close controls can return focus without adding store objects.

@@ -5,6 +5,7 @@
 - Completed T2: RefSubject state provider key.
 - Completed T3: startup refs for DOM data hydration.
 - Completed T4: Disclosure button/content primitives.
+- Completed T5: Dialog content/trigger/close primitives.
 
 ## Task Records
 
@@ -113,6 +114,35 @@
 - memory_updates:
   - candidate captured in `memory/implementation-notes.md`
 
+### Task T5 - Dialog
+
+- task_id: T5
+- requirement_ids:
+  - FR-8
+  - FR-9
+  - FR-13
+  - FR-14
+  - FR-19
+  - NFR-1
+  - NFR-2
+  - NFR-3
+- ts_scenarios:
+  - TS-5: pass
+- validation_evidence:
+  - RED: `pnpm --filter @typed/ui test -- Dialog` failed because `./Dialog.js` was missing.
+  - GREEN: `pnpm --filter @typed/ui test -- Dialog` passed with `7` files and `33` tests.
+  - PACKAGE: `pnpm --filter @typed/ui test` passed with `7` files and `33` tests.
+  - BUILD: `pnpm --filter @typed/ui build` passed.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Browser-runner wiring was not added because `@typed/ui` does not currently link `@vitest/browser-playwright` and `pnpm-lock.yaml` had unrelated dirty changes before this task.
+  - Focus return is covered in happy-dom by rendering trigger and close controls in separate roots so event handlers stay mounted.
+- context_updates:
+  - none
+- memory_updates:
+  - candidate captured in `memory/implementation-notes.md`
+
 ## Deferred Work
 
-- T5 through T7 remain pending.
+- T6 through T7 remain pending.

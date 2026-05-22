@@ -577,7 +577,14 @@ git commit -m "feat: add typed ui disclosure" -m "- add disclosure RefSubject st
 - Create: `packages/ui/src/Dialog.ts`
 - Create: `packages/ui/src/Dialog.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
+
+Current task detail:
+- Keep Dialog state as `RefSubject.RefSubject<{ open: boolean }>` with no store wrapper.
+- Emit stable public `data-open` through the DataAttr schema conventions.
+- Render modal dialog semantics in `Content`: `role="dialog"`, `aria-modal="true"`, label, `hidden`.
+- Add trigger and close controls that update the backing `RefSubject`.
+- Cover focus return in happy-dom for this slice; keep browser-runner wiring deferred until dependency linkage can be changed without mixing into the already-dirty lockfile.
 
 ```ts
 import { assert, describe, it } from "vitest";
@@ -605,7 +612,7 @@ describe("typed/ui/Dialog", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -615,7 +622,7 @@ pnpm --filter @typed/ui test -- Dialog
 
 Expected: FAIL because `Dialog.ts` does not exist.
 
-- [ ] **Step 3: Implement Dialog**
+- [x] **Step 3: Implement Dialog**
 
 Implement the minimal Dialog state/content/close behavior first. Keep deeper browser focus verification as a dedicated follow-up check in this task:
 
@@ -644,61 +651,11 @@ export function Content(options: {
 }
 ```
 
-- [ ] **Step 4: Add browser focus behavior tests**
+- [x] **Step 4: Add focus-return behavior coverage**
 
-Create `packages/ui/vitest.browser.config.ts`:
+Covered focus return in `Dialog.test.ts` using happy-dom. Browser-runner wiring was not added in this slice because `@typed/ui` does not currently have `@vitest/browser-playwright` linked and `pnpm-lock.yaml` already had unrelated dirty changes before this task.
 
-```ts
-import { playwright } from "@vitest/browser-playwright";
-import { defineConfig } from "vitest/config";
-
-export default defineConfig({
-  test: {
-    include: ["src/**/*.browser.test.ts"],
-    exclude: ["**/node_modules/**", "**/dist/**"],
-    browser: {
-      enabled: true,
-      provider: playwright(),
-      instances: [{ browser: "chromium" }],
-      headless: true,
-    },
-  },
-});
-```
-
-Modify `packages/ui/package.json` scripts:
-
-```json
-{
-  "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests",
-    "test:browser": "vitest run --config vitest.browser.config.ts"
-  }
-}
-```
-
-Add `packages/ui/src/Dialog.browser.test.ts` with browser-only focus checks:
-
-```ts
-import { assert, describe, it } from "vitest";
-
-describe("typed/ui/Dialog browser behavior", () => {
-  it("returns focus to the invoking element after close", async () => {
-    document.body.innerHTML = `<button id="open">Open</button><div id="root"></div>`;
-    const opener = document.getElementById("open") as HTMLButtonElement;
-    opener.focus();
-    assert.strictEqual(document.activeElement, opener);
-    opener.click();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    assert.strictEqual(document.activeElement, opener);
-  });
-});
-```
-
-Adapt the browser test during implementation so it mounts the real `Dialog` component rather than static HTML before the task is committed.
-
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run:
 
@@ -712,7 +669,6 @@ Expected: PASS for unit/integration checks.
 
 ```bash
 git add packages/ui/src/Dialog.ts packages/ui/src/Dialog.test.ts
-git add packages/ui/src/Dialog.browser.test.ts packages/ui/vitest.browser.config.ts packages/ui/package.json
 git commit -m "feat: add typed ui dialog" -m "- add dialog RefSubject state and modal content primitives\n- cover modal aria/data state and close behavior"
 ```
 
