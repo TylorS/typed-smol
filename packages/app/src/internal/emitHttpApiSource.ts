@@ -433,11 +433,15 @@ function collectPrefixRoutePaths(
   apiSpec: ApiRenderSpec,
   endpointSpecs: readonly EndpointRenderSpec[],
   groupSpecs: readonly GroupRenderSpec[],
+  expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
 ): readonly string[] {
   const groupsByKey = new Map(groupSpecs.map((spec) => [spec.key, spec]));
   const paths: string[] = [];
   for (const endpoint of endpointSpecs) {
-    pushUniqueMany(paths, endpointPrefixRoutePaths(apiSpec, endpoint, groupsByKey));
+    pushUniqueMany(
+      paths,
+      endpointPrefixRoutePaths(apiSpec, endpoint, groupsByKey, expressionsByPath),
+    );
   }
   return paths.sort(compareHttpApiPathOrder);
 }
@@ -487,11 +491,13 @@ function endpointPrefixRouteExpressions(
   directoryOptionNameByPath: ReadonlyMap<string, string>,
   expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
 ): readonly string[] {
-  return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey).flatMap((path) => {
-    const moduleName = directoryOptionNameByPath.get(path);
-    const exportName = prefixRouteExportName(expressionsByPath, path);
-    return moduleName && exportName ? [`${moduleName}.${exportName}`] : [];
-  });
+  return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey, expressionsByPath).flatMap(
+    (path) => {
+      const moduleName = directoryOptionNameByPath.get(path);
+      const exportName = prefixRouteExportName(expressionsByPath, path);
+      return moduleName && exportName ? [`${moduleName}.${exportName}`] : [];
+    },
+  );
 }
 
 function renderEffectiveEndpointRoute(
@@ -507,12 +513,15 @@ function endpointPrefixRoutePaths(
   apiSpec: ApiRenderSpec,
   endpoint: EndpointRenderSpec,
   groupSpecByKey: ReadonlyMap<string, GroupRenderSpec>,
+  expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
 ): readonly string[] {
   const paths: string[] = [];
   if (apiSpec.apiRootPath) pushUnique(paths, apiSpec.apiRootPath);
   pushUniqueMany(paths, endpoint.directoryCompanions["_prefix.ts"]);
   const groupPrefix = groupSpecByKey.get(endpoint.groupKey)?.overridePath;
-  if (groupPrefix) pushUnique(paths, groupPrefix);
+  if (groupPrefix && prefixRouteExportName(expressionsByPath, groupPrefix) === "prefix") {
+    pushUnique(paths, groupPrefix);
+  }
   return paths;
 }
 
@@ -596,6 +605,7 @@ export function emitHttpApiSource(input: {
   readonly pathPrefix?: `/${string}`;
   readonly openapiPlan?: HttpApiOpenApiPlan;
   readonly mode?: HttpApiEmitMode;
+  readonly groupNamesByPath?: ReadonlyMap<string, string>;
   readonly exportExpressionsByPath?: ReadonlyMap<
     string,
     ReadonlyMap<string, HttpApiExportExpression>
@@ -607,7 +617,13 @@ export function emitHttpApiSource(input: {
   const apiSpec = buildApiRenderSpec(input.targetDirectory, directoryConventions);
 
   const endpointPaths = endpointSpecs.map((e) => e.modulePath);
-  const prefixRoutePaths = collectPrefixRoutePaths(apiSpec, endpointSpecs, groupSpecs);
+  const exportExpressionsByPath = input.exportExpressionsByPath ?? new Map();
+  const prefixRoutePaths = collectPrefixRoutePaths(
+    apiSpec,
+    endpointSpecs,
+    groupSpecs,
+    exportExpressionsByPath,
+  );
   const directoryOptionPaths = [
     ...new Set([...collectDirectoryOptionPaths(endpointSpecs), ...prefixRoutePaths]),
   ].sort(compareHttpApiPathOrder);
@@ -624,7 +640,8 @@ export function emitHttpApiSource(input: {
       extractedLiteralsByPath: input.extractedLiteralsByPath,
       optionalExportsByPath: input.optionalExportsByPath,
       directoryOptionNameByPath: new Map(),
-      exportExpressionsByPath: input.exportExpressionsByPath ?? new Map(),
+      groupNamesByPath: input.groupNamesByPath ?? new Map(),
+      exportExpressionsByPath,
       prefixByScope: input.prefixByScope,
       pathPrefix: input.pathPrefix,
       openapiPlan: input.openapiPlan,
@@ -715,7 +732,7 @@ export function emitHttpApiSource(input: {
           apiSpec,
           groupSpecByKey,
           directoryOptionNameByPath,
-          input.exportExpressionsByPath ?? new Map(),
+          exportExpressionsByPath,
         ),
       );
       const optionalPresent = input.optionalExportsByPath.get(ep.path) ?? new Set<OptionalExport>();
@@ -747,7 +764,7 @@ export function emitHttpApiSource(input: {
       );
     }
 
-    const groupName = groupSpec.defaultName;
+    const groupName = input.groupNamesByPath?.get(groupSpec.dirPath) ?? groupSpec.defaultName;
     const groupChain = endpointExprs.map((expr) => `.add(${expr})`).join("");
     const effectivePrefix = resolveEffectivePrefixForGroup(
       groupSpec.dirPath,
@@ -775,7 +792,7 @@ export function emitHttpApiSource(input: {
   for (const groupSpec of groupSpecs) {
     const endpointsInGroup = endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
-    const groupName = groupSpec.defaultName;
+    const groupName = input.groupNamesByPath?.get(groupSpec.dirPath) ?? groupSpec.defaultName;
     const groupHandlers = endpointsInGroup.reduce((handlersExpression, e) => {
       const varName = varNameByPath.get(e.modulePath)!;
       const literals = input.extractedLiteralsByPath.get(e.path);
@@ -910,6 +927,7 @@ function emitHttpApiClientSource(input: {
   >;
   readonly optionalExportsByPath: ReadonlyMap<string, ReadonlySet<OptionalExport>>;
   readonly directoryOptionNameByPath: ReadonlyMap<string, string>;
+  readonly groupNamesByPath: ReadonlyMap<string, string>;
   readonly exportExpressionsByPath: ReadonlyMap<
     string,
     ReadonlyMap<string, HttpApiExportExpression>
@@ -992,9 +1010,10 @@ function emitHttpApiClientSource(input: {
     );
     const suffix = effectivePrefix ? `.prefix(${JSON.stringify(effectivePrefix)})` : "";
     const groupChain = endpointExprs.map((expr) => `.add(${expr})`).join("");
+    const groupName = input.groupNamesByPath.get(groupSpec.dirPath) ?? groupSpec.defaultName;
     groupExprs.push(
       renderAnnotatedGroupExpression(
-        `HttpApiGroup.make(${JSON.stringify(groupSpec.defaultName)})${groupChain}${suffix}`,
+        `HttpApiGroup.make(${JSON.stringify(groupName)})${groupChain}${suffix}`,
         input.openapiPlan?.groupAnnotationsByPath.get(groupSpec.dirPath),
       ),
     );
@@ -1091,11 +1110,15 @@ function clientEndpointPrefixRouteExpressions(
   imports: ClientImportBuilder,
   expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
 ): readonly string[] {
-  return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey).flatMap((path) => {
-    const exportName = prefixRouteExportName(expressionsByPath, path);
-    const expression = exportName ? imports.expressionFor(path, exportName, expressionsByPath) : undefined;
-    return expression ? [expression] : [];
-  });
+  return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey, expressionsByPath).flatMap(
+    (path) => {
+      const exportName = prefixRouteExportName(expressionsByPath, path);
+      const expression = exportName
+        ? imports.expressionFor(path, exportName, expressionsByPath)
+        : undefined;
+      return expression ? [expression] : [];
+    },
+  );
 }
 
 function replaceIdentifiers(expression: string, replacements: ReadonlyMap<string, string>): string {

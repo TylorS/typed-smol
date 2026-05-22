@@ -948,6 +948,26 @@ Execution refinements:
 - [x] Step 4: Fix full/client HttpApi emission so effective endpoint route schemas include recursive prefixes.
 - [x] Step 5: Run app/router/RealWorld verification gates and scoped `git diff --check`.
 
+### Task 25: Explicit HttpApiGroup Companions
+
+**Files:**
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/internal/emitHttpApiSource.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Add: RealWorld `_group.ts` files under each API resource directory
+- Modify: RealWorld package tests
+
+**Progress notes:**
+- 2026-05-21: `_group.ts` now participates in generated group naming through `export const name = ...`, so directory group companions can explicitly name the `HttpApiGroup` used by both `HttpApiGroup.make(...)` and `HttpApiBuilder.group(...)`.
+- 2026-05-21: RealWorld now declares `_group.ts` for every endpoint-owning API resource directory: `articles`, `articles/comments`, `profiles`, `tags`, `user`, and `users`.
+- 2026-05-21: `_group.ts` without a `prefix` export no longer gets treated as an effective endpoint-prefix route input; group metadata and prefix composition stay separate.
+
+- [x] Step 1: Add failing generator coverage for `_group.ts` name overrides.
+- [x] Step 2: Add a RealWorld guard requiring group companions for every API resource directory.
+- [x] Step 3: Implement group name extraction and keep `_group.ts` prefix participation conditional on a `prefix` export.
+- [x] Step 4: Add RealWorld group companions with group-level OpenAPI annotations.
+- [x] Step 5: Run app and RealWorld verification gates and scoped `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

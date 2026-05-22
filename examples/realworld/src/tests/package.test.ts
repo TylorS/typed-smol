@@ -174,6 +174,22 @@ describe("typed-realworld package skeleton", () => {
     expect(repeatedRoots).toEqual([]);
   });
 
+  it("declares an HttpApiGroup companion for every API resource directory", () => {
+    const expectedGroups = [
+      "src/api/articles/_group.ts",
+      "src/api/articles/comments/_group.ts",
+      "src/api/profiles/_group.ts",
+      "src/api/tags/_group.ts",
+      "src/api/user/_group.ts",
+      "src/api/users/_group.ts",
+    ];
+
+    for (const path of expectedGroups) {
+      expect(existsSync(resolve(projectRoot, path)), path).toBe(true);
+      expect(readText(path), path).toContain("export const name");
+    }
+  });
+
   it("uses Effect.fn handlers checked with satisfies RawHandler", () => {
     for (const path of apiEndpointSourceFiles()) {
       const source = readText(path);

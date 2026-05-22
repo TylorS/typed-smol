@@ -1494,6 +1494,19 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       expect(sourceText).toContain("items/get");
     });
 
+    it("_group.ts name export overrides the generated HttpApiGroup name", () => {
+      const result = buildApiFromFixture({
+        "src/apis/articles/_group.ts": 'export const name = "ArticleResources" as const;',
+        "src/apis/articles/list.ts": VALID_ENDPOINT_SOURCE,
+      });
+      const sourceText = getSourceText(result);
+
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain('HttpApiGroup.make("ArticleResources")');
+      expect(sourceText).toContain('HttpApiBuilder.group(Api, "ArticleResources"');
+      expect(sourceText).not.toContain('HttpApiGroup.make("articles")');
+    });
+
     it("Multiple endpoints per group: correct wiring", () => {
       const result = buildApiFromFixture({
         "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,

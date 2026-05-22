@@ -316,6 +316,39 @@ function extractConstExportExpression(declarationText: string | undefined): stri
   return match?.[1]?.trim();
 }
 
+function extractStringLiteralExport(
+  snapshot: TypeInfoFileSnapshot,
+  exportName: string,
+): string | undefined {
+  const exported = snapshot.exports.find((value) => value.name === exportName);
+  if (exported?.type.kind !== "literal") return undefined;
+  return normalizeStringLiteralText((exported.type as { readonly text?: string }).text);
+}
+
+function normalizeStringLiteralText(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  const trimmed = text.trim();
+  if (trimmed.length < 2) return trimmed;
+  const quote = trimmed[0];
+  return (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote
+    ? trimmed.slice(1, -1)
+    : trimmed;
+}
+
+function extractGroupNamesByPath(
+  roles: readonly ReturnType<typeof classifyHttpApiFileRole>[],
+  snapshotsByPath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+): ReadonlyMap<string, string> {
+  const groupNames = new Map<string, string>();
+  for (const role of roles) {
+    if (role.role !== "group_override") continue;
+    const snapshot = snapshotsByPath.get(role.path);
+    const name = snapshot ? extractStringLiteralExport(snapshot, "name") : undefined;
+    if (name) groupNames.set(dirname(role.path), name);
+  }
+  return groupNames;
+}
+
 function importsForExpression(
   expression: string,
   imports: readonly ImportInfo[],
@@ -864,6 +897,7 @@ export const createHttpApiVirtualModulePlugin = (
         { path: string; method: string; name: string }
       >();
       const exportExpressionsByPath = extractExportExpressionsByPath(snapshotsByRelativePath);
+      const groupNamesByPath = extractGroupNamesByPath(roles, snapshotsByRelativePath);
       const optionalExportsByPath = new Map<
         string,
         ReadonlySet<"headers" | "body" | "success" | "error">
@@ -904,6 +938,7 @@ export const createHttpApiVirtualModulePlugin = (
         pathPrefix: options.pathPrefix,
         openapiPlan,
         mode: resolved.mode === "client" ? "client" : "full",
+        groupNamesByPath,
         exportExpressionsByPath,
       });
       if (tree.diagnostics.length > 0) {
