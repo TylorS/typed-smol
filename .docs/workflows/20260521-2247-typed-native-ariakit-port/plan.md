@@ -665,7 +665,7 @@ pnpm --filter @typed/ui test -- Dialog
 
 Expected: PASS for unit/integration checks.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/ui/src/Dialog.ts packages/ui/src/Dialog.test.ts

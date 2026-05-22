@@ -134,7 +134,7 @@
   - PACKAGE: `pnpm --filter @typed/ui test` passed with `7` files and `33` tests.
   - BUILD: `pnpm --filter @typed/ui build` passed.
 - commit:
-  - pending
+  - `6e655b4 feat(ui): add dialog primitives`
 - deviations_or_replans:
   - Browser-runner wiring was not added because `@typed/ui` does not currently link `@vitest/browser-playwright` and `pnpm-lock.yaml` had unrelated dirty changes before this task.
   - Focus return is covered in happy-dom by rendering trigger and close controls in separate roots so event handlers stay mounted.
