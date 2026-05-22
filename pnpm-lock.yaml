@@ -191,6 +191,9 @@ importers:
       '@effect/platform-node':
         specifier: 'catalog:'
         version: 4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.9.3)
+      '@typed/compiler':
+        specifier: workspace:*
+        version: link:../compiler
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx
@@ -200,6 +203,9 @@ importers:
       '@typed/router':
         specifier: workspace:*
         version: link:../router
+      '@typed/template':
+        specifier: workspace:*
+        version: link:../template
       '@typed/virtual-modules':
         specifier: workspace:*
         version: link:../virtual-modules
@@ -213,6 +219,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.6
         version: 4.1.6(@vitest/browser@4.1.6)(vitest@4.1.6)
+      happy-dom:
+        specifier: 'catalog:'
+        version: 20.9.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -266,6 +275,31 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+
+  packages/compiler:
+    dependencies:
+      '@typed/fx':
+        specifier: workspace:*
+        version: link:../fx
+      '@typed/template':
+        specifier: workspace:*
+        version: link:../template
+      '@typed/virtual-modules':
+        specifier: workspace:*
+        version: link:../virtual-modules
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.66
+    devDependencies:
+      happy-dom:
+        specifier: 'catalog:'
+        version: 20.9.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.6(@types/node@25.7.0)(@vitest/browser-playwright@4.1.6)(@vitest/coverage-v8@4.1.6)(happy-dom@20.9.0)(vite@8.0.12(@types/node@25.7.0)(esbuild@0.28.0)(yaml@2.9.0))
 
   packages/fx:
     dependencies:

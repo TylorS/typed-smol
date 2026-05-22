@@ -49,13 +49,13 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain('import * as Effect from "effect/Effect";');
     expect(source).toContain('import * as Layer from "effect/Layer";');
     expect(source).toContain(
-      'import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
+      'import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
     );
     expect(source).not.toContain("TypedAppRuntime");
     expect(source).not.toContain('from "@typed/app";');
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
-    expect(source).toContain('import { Fx } from "@typed/fx";');
-    expect(source).toContain('import { DomRenderTemplate, render } from "@typed/template";');
+    expect(source).not.toContain('import { Fx } from "@typed/fx";');
+    expect(source).not.toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(source).toContain('import Routes0 from "typed:router?dir=*";');
     expect(source).not.toContain("route-handlers:");
     expect(source).toContain("export const Routes = Routes0;");
@@ -70,7 +70,7 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).toContain("function makeRenderLayer");
     expect(source).toContain("export function hydrate");
     expect(source).toContain("export function run");
-    expect(source).toContain("Fx.drainLayer(render(Routes, root))");
+    expect(source).toContain("Layer.effectDiscard(mountRuntime(Routes, { root }))");
     expect(source).toContain("Layer.launch(BrowserLayer");
     expect(source).toContain("Effect.tapCause");
     expect(source).toContain("function withErrorHandling<A, E, R>");
@@ -95,19 +95,13 @@ describe("BrowserVirtualModulePlugin", () => {
       "src/routes.ts": "const routes: any = {};\nexport default routes;\n",
       "src/typed-app.d.ts": [
         'declare module "@typed/app/runtime" {',
+        '  import type * as Effect from "effect/Effect";',
         '  import type * as Layer from "effect/Layer";',
         "  export type LayerAny = Layer.Layer<never, unknown, unknown>;",
         "  export type LayerOrGroup = LayerAny;",
         "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
-        "}",
-      ].join("\n"),
-      "src/typed-template.d.ts": [
-        'declare module "@typed/template" {',
-        '  import type { Fx } from "@typed/fx";',
-        '  import type * as Layer from "effect/Layer";',
-        "  export const DomRenderTemplate: { readonly using: (document: Document) => Layer.Layer<never, never, never> };",
-        "  export function render(input: any, root: HTMLElement): Fx<never, never, never>;",
+        "  export function mount(input: any, options: { readonly root: HTMLElement }): Effect.Effect<unknown, never, never>;",
         "}",
       ].join("\n"),
     });
@@ -120,12 +114,10 @@ describe("BrowserVirtualModulePlugin", () => {
         fixture.importer,
         join(fixture.root, "src/routes.ts"),
         join(fixture.root, "src/typed-app.d.ts"),
-        join(fixture.root, "src/typed-template.d.ts"),
       ],
       moduleFallbacks: {
         "typed:router?dir=./routes": join(fixture.root, "src/routes.ts"),
         "@typed/app/runtime": join(fixture.root, "src/typed-app.d.ts"),
-        "@typed/template": join(fixture.root, "src/typed-template.d.ts"),
       },
     });
 

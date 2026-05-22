@@ -53,7 +53,7 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import { pathToFileURL } from "node:url";');
     expect(source).toContain('import { TypedHttpServer } from "@typed/app/TypedHttpServer";');
     expect(source).toContain(
-      'import { composeWithLayers, Ids, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
+      'import { composeWithLayers, Ids, renderServer, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
     );
     expect(source).not.toContain('from "@typed/app";');
     expect(source).toContain('import * as TypedRouter from "@typed/router";');
@@ -66,6 +66,8 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain("const routeModules = [Routes0, Routes1];");
     expect(source).toContain("export const AppLayer =");
     expect(source).toContain("export const ServerLayer =");
+    expect(source).toContain("export const ServerRuntime =");
+    expect(source).toContain("renderServer,");
     expect(source).toContain("export const handler =");
     expect(source).toContain("export default handler");
     expect(source).toContain("export function run");
@@ -168,6 +170,7 @@ describe("ServerVirtualModulePlugin", () => {
         "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
         "  export const Ids: { readonly Default: Layer.Layer<never, never, never> };",
+        "  export const renderServer: unknown;",
         "}",
         'declare module "@typed/app/TypedHttpServer" {',
         '  import type * as HttpServer from "effect/unstable/http/HttpServer";',

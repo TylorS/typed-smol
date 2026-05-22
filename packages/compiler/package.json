@@ -1,20 +1,15 @@
 {
-  "name": "@typed/app",
+  "name": "@typed/compiler",
   "version": "1.0.0-beta.4",
-  "files": [
-    "dist",
-    "src"
-  ],
+  "files": ["dist", "src"],
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
       "import": "./dist/index.js"
     },
     "./*": {
       "types": "./dist/*.d.ts",
-      "require": "./dist/*.js",
       "import": "./dist/*.js"
     }
   },
@@ -24,23 +19,15 @@
   "scripts": {
     "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@effect/platform-node": "catalog:",
-    "@typed/compiler": "workspace:*",
     "@typed/fx": "workspace:*",
-    "@typed/id": "workspace:*",
-    "@typed/router": "workspace:*",
     "@typed/template": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^25.7.0",
-    "@vitest/coverage-v8": "^4.1.6",
-    "effect": "catalog:",
     "happy-dom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
