@@ -81,7 +81,7 @@ function emitRuntime(
     "  routeModules,",
     `  root: ${JSON.stringify(parsed.root)},`,
     `  base: ${JSON.stringify(parsed.base)},`,
-    `  mode: ${JSON.stringify(parsed.mode)},`,
+    ...(parsed.mode === undefined ? [] : [`  mode: ${JSON.stringify(parsed.mode)},`]),
     `  name: ${JSON.stringify(parsed.name)},`,
     "  companionLayers,",
     "};",

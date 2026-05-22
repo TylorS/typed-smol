@@ -87,7 +87,7 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).not.toContain("export async function run");
     expect(source).toContain('root: "#app"');
     expect(source).toContain('base: "/"');
-    expect(source).toContain('mode: "hydrate"');
+    expect(source).not.toContain('mode: "hydrate"');
   });
 
   it("type-checks generated browser entry source without ts-nocheck", () => {
@@ -174,7 +174,7 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(result.errors).toEqual([
       {
         code: "TVM-BROWSER-002",
-        message: 'typed:browser mode must be one of "hydrate", "mount", or "mpa"',
+        message: 'typed:browser mode must be one of "mount" or "mpa"',
         pluginName: "typed-browser-virtual-module",
       },
     ]);

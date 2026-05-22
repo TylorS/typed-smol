@@ -25,13 +25,13 @@ export type TypedVirtualModuleId =
       readonly routes: readonly string[];
       readonly root: string;
       readonly base: string;
-      readonly mode: BrowserMode;
+      readonly mode: BrowserMode | undefined;
       readonly name: string | undefined;
     };
 
 export type ParseTypedVirtualModuleIdResult = TypedVirtualModuleId | ParseFail;
 
-export type BrowserMode = "hydrate" | "mount" | "mpa";
+export type BrowserMode = "mount" | "mpa";
 
 export interface TypedServerPage {
   readonly name: string;
@@ -41,7 +41,7 @@ export interface TypedServerPage {
 
 const TYPED_PREFIX = "typed:";
 const DEFAULT_HTML_OUTLET = "<!--typed-ssr-outlet-->";
-const BROWSER_MODES = new Set<BrowserMode>(["hydrate", "mount", "mpa"]);
+const BROWSER_MODES = new Set<BrowserMode>(["mount", "mpa"]);
 
 export function parseTypedVirtualModuleId(id: string): ParseTypedVirtualModuleIdResult {
   const idResult = validateNonEmptyString(id, "id");
@@ -146,11 +146,11 @@ function parseBrowser(params: URLSearchParams): ParseTypedVirtualModuleIdResult 
   if (routes.values.length === 0) {
     return fail("TVM-BROWSER-001", "typed:browser requires at least one routes option");
   }
-  const mode = params.get("mode") ?? "hydrate";
-  if (!BROWSER_MODES.has(mode as BrowserMode)) {
-    return fail("TVM-BROWSER-002", 'typed:browser mode must be one of "hydrate", "mount", or "mpa"');
+  const mode = params.get("mode");
+  if (mode !== null && !BROWSER_MODES.has(mode as BrowserMode)) {
+    return fail("TVM-BROWSER-002", 'typed:browser mode must be one of "mount" or "mpa"');
   }
-  return browserOk(params, routes.values, mode as BrowserMode);
+  return browserOk(params, routes.values, mode === null ? undefined : (mode as BrowserMode));
 }
 
 const serverOptions = ["api", "routes", "html", "client", "page", "base", "name"] as const;
@@ -259,7 +259,7 @@ function serverOk(
 function browserOk(
   params: URLSearchParams,
   routes: readonly string[],
-  mode: BrowserMode,
+  mode: BrowserMode | undefined,
 ): TypedVirtualModuleId {
   return {
     ok: true,

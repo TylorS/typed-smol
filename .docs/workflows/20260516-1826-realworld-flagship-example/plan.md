@@ -968,6 +968,25 @@ Execution refinements:
 - [x] Step 4: Add RealWorld group companions with group-level OpenAPI annotations.
 - [x] Step 5: Run app and RealWorld verification gates and scoped `git diff --check`.
 
+### Task 26: Remove Hydrate Browser Mode
+
+**Files:**
+- Modify: `packages/app/src/internal/frameworkVirtualModuleId.ts`
+- Modify: `packages/app/src/internal/emitBrowserSource.ts`
+- Modify: `packages/app/src/internal/frameworkVirtualModuleId.test.ts`
+- Modify: `packages/app/src/BrowserVirtualModulePlugin.test.ts`
+- Modify: RealWorld framework entrypoint tests
+
+**Progress notes:**
+- 2026-05-21: `typed:browser` no longer accepts or emits `mode=hydrate`. Hydration is the default behavior of the generated browser runtime through `hydrate()` and `run()`, so the runtime metadata does not need a `"hydrate"` mode.
+- 2026-05-21: Browser mode remains optional and only accepts explicit non-default modes: `"mount"` or `"mpa"`.
+
+- [x] Step 1: Add failing parser/emitter tests proving default browser hydration has no `mode: "hydrate"` output and explicit `mode=hydrate` is rejected.
+- [x] Step 2: Make browser mode optional in the virtual-module id parser.
+- [x] Step 3: Stop emitting `mode` in `BrowserRuntime` when no explicit browser mode is provided.
+- [x] Step 4: Update RealWorld entrypoint assertions for implicit hydration.
+- [x] Step 5: Run app and RealWorld verification gates and scoped `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

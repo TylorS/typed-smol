@@ -60,7 +60,7 @@ describe("realworld framework entrypoints", () => {
     expect(generated).toContain("Fx.drainLayer(render(Routes, root))");
     expect(generated).toContain("TypedRouter.BrowserRouter(win)");
     expect(generated).toContain('root: "#app"');
-    expect(generated).toContain('mode: "hydrate"');
+    expect(generated).not.toContain('mode: "hydrate"');
     expect(generated).not.toContain("options.run");
     expect(generated).not.toContain("readonly run?");
     expect(browserSource).not.toContain("as Effect.Effect");

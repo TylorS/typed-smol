@@ -175,7 +175,7 @@ describe("parseTypedVirtualModuleId", () => {
       routes: ["*"],
       root: "#app",
       base: "/",
-      mode: "hydrate",
+      mode: undefined,
       name: undefined,
     });
   });
@@ -193,6 +193,14 @@ describe("parseTypedVirtualModuleId", () => {
       });
   });
 
+  it("rejects typed:browser hydrate mode because hydration is the default behavior", () => {
+    expect(parseTypedVirtualModuleId("typed:browser?routes=*&mode=hydrate")).toEqual({
+      ok: false,
+      code: "TVM-BROWSER-002",
+      reason: 'typed:browser mode must be one of "mount" or "mpa"',
+    });
+  });
+
   it("rejects typed:browser with no routes", () => {
     expect(parseTypedVirtualModuleId("typed:browser?mode=hydrate")).toEqual({
       ok: false,
@@ -205,7 +213,7 @@ describe("parseTypedVirtualModuleId", () => {
     expect(parseTypedVirtualModuleId("typed:browser?routes=*&mode=server")).toEqual({
       ok: false,
       code: "TVM-BROWSER-002",
-      reason: 'typed:browser mode must be one of "hydrate", "mount", or "mpa"',
+      reason: 'typed:browser mode must be one of "mount" or "mpa"',
     });
   });
 
