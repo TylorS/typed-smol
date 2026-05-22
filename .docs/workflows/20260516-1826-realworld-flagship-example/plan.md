@@ -1082,6 +1082,28 @@ Execution refinements:
 - [x] Step 5: Update RealWorld route modules to use `Handler` and explicit generated `Params` annotations where needed.
 - [x] Step 6: Run app and RealWorld verification gates and scoped `git diff --check`.
 
+### Task 29: Route Query Primitive Ergonomics
+
+**Files:**
+
+- Modify: `packages/router/src/Route.ts`
+- Modify: `packages/router/src/Route.test.ts`
+- Create: `examples/realworld/src/common/routeParams.ts`
+- Modify: `examples/realworld/src/common/routes.ts`
+- Modify: `examples/realworld/src/api/articles/feed.ts`
+- Modify: `examples/realworld/src/api/articles/list.ts`
+
+**Progress notes:**
+
+- 2026-05-22: Added router primitives for non-negative and positive integer params so route declarations do not repeat `Schema.NumberFromString.pipe(...)` for common numeric query fields.
+- 2026-05-22: Extracted RealWorld page, limit, and offset route query fragments into `src/common/routeParams.ts`, keeping domain schemas free of `@typed/*` imports.
+- 2026-05-22: Subagent routing decision was direct execution because the target files were already known and the change was a focused API ergonomics cleanup.
+
+- [x] Step 1: Add failing route tests for optional non-negative and positive integer query params.
+- [x] Step 2: Implement `Route.NonNegativeInt`, `Route.OptionalNonNegativeInt`, `Route.PositiveInt`, and `Route.OptionalPositiveInt`.
+- [x] Step 3: Extract shared RealWorld route params and replace inline article list/feed pagination schemas.
+- [x] Step 4: Run router, RealWorld, root build, and scoped diff verification.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.
