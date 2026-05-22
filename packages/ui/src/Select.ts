@@ -7,7 +7,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
 type RequiredString = ReactiveValue<string, any, any>;
@@ -163,9 +163,9 @@ export interface OptionOptions<Value extends string = string> {
 
 export function Option<const Opts extends OptionOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
-    const id = yield* RefSubject.make(options.id);
-    const value = yield* RefSubject.make(options.value);
-    const disabledValue = yield* RefSubject.make(options.disabled ?? false);
+    const id = yield* makeRef(options.id);
+    const value = yield* makeRef(options.value);
+    const disabledValue = yield* makeRef(options.disabled ?? false);
     const disabled = isDisabled(disabledValue);
     const selected = isSelected(options.state, value);
     const onClick = EventHandler.make(() =>

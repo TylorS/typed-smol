@@ -1,3 +1,4 @@
+export * as Checkbox from "./Checkbox.js";
 export * as Collection from "./Collection.js";
 export * as Composite from "./Composite.js";
 export * as DataAttr from "./DataAttr.js";

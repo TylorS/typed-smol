@@ -3,7 +3,7 @@ import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
 type RequiredString = ReactiveValue<string, any, any>;
@@ -68,8 +68,8 @@ export interface TabOptions {
 
 export function Tab<const Opts extends TabOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
-    const id = yield* RefSubject.make(options.id);
-    const panelId = yield* RefSubject.make(options.panelId);
+    const id = yield* makeRef(options.id);
+    const panelId = yield* makeRef(options.panelId);
     const selected = isSelected(options.state, id);
     const onClick = EventHandler.make(() =>
       Effect.gen(function* () {
@@ -100,8 +100,8 @@ export interface PanelOptions {
 
 export function Panel<const Opts extends PanelOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
-    const id = yield* RefSubject.make(options.id);
-    const tabId = yield* RefSubject.make(options.tabId);
+    const id = yield* makeRef(options.id);
+    const tabId = yield* makeRef(options.tabId);
     const selected = isSelected(options.state, tabId);
     const props = {
       id,

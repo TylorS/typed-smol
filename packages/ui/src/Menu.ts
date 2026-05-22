@@ -7,7 +7,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
 type RequiredString = ReactiveValue<string, any, any>;
@@ -150,8 +150,8 @@ export interface ItemOptions {
 
 export function Item<const Opts extends ItemOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
-    const id = yield* RefSubject.make(options.id);
-    const disabledValue = yield* RefSubject.make(options.disabled ?? false);
+    const id = yield* makeRef(options.id);
+    const disabledValue = yield* makeRef(options.disabled ?? false);
     const disabled = isDisabled(disabledValue);
     const data = dataEncoded(options.state, id, disabled);
 

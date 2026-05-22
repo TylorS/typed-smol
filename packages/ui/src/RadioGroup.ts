@@ -5,7 +5,7 @@ import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
 type RequiredString = ReactiveValue<string, any, any>;
@@ -107,8 +107,8 @@ export function Item<const Value extends string, const Opts extends ItemOptions<
   options: Opts,
 ): Component<Opts> {
   return gen(function* () {
-    const id = yield* RefSubject.make(options.id);
-    const value = yield* RefSubject.make(options.value);
+    const id = yield* makeRef(options.id);
+    const value = yield* makeRef(options.value);
     const checked = isChecked(options.state, value);
     const onClick = EventHandler.make(() =>
       Effect.gen(function* () {
