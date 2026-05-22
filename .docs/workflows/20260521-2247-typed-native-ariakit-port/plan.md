@@ -474,7 +474,14 @@ git commit -m "feat: add typed ui startup refs" -m "- initialize RefSubject stat
 - Create: `packages/ui/src/Disclosure.ts`
 - Create: `packages/ui/src/Disclosure.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
+
+Current task detail:
+- Keep Disclosure state as `RefSubject.RefSubject<{ open: boolean }>` with no store wrapper.
+- Emit stable public `data-open` through the DataAttr schema conventions.
+- Render APG-compatible button attributes: `type`, `aria-expanded`, optional `aria-controls`.
+- Add minimal content primitive with `hidden` and matching `data-open`.
+- Prove click toggling updates the backing RefSubject and rendered attributes.
 
 ```ts
 import { assert, describe, it } from "vitest";
@@ -501,7 +508,7 @@ describe("typed/ui/Disclosure", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -511,7 +518,7 @@ pnpm --filter @typed/ui test -- Disclosure
 
 Expected: FAIL because `Disclosure.ts` does not exist.
 
-- [ ] **Step 3: Implement Disclosure**
+- [x] **Step 3: Implement Disclosure**
 
 Implement state and button/content components on top of `RefSubject`, `DataAttr`, `StartupRef`, `EventHandler`, and `html`. Keep the first pass minimal:
 
@@ -547,7 +554,7 @@ export function Button(options: {
 
 The exact import aliases can change during implementation; the behavior and tests must remain traceable to FR-12 and AC-5.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 

@@ -4,6 +4,7 @@
 - Completed T1: Schema-backed public `.data={object}` attributes.
 - Completed T2: RefSubject state provider key.
 - Completed T3: startup refs for DOM data hydration.
+- Completed T4: Disclosure button/content primitives.
 
 ## Task Records
 
@@ -84,6 +85,34 @@
 - memory_updates:
   - candidate captured in `memory/implementation-notes.md`
 
+### Task T4 - Disclosure
+
+- task_id: T4
+- requirement_ids:
+  - FR-8
+  - FR-9
+  - FR-12
+  - FR-19
+  - NFR-1
+  - NFR-2
+  - NFR-3
+- ts_scenarios:
+  - TS-4: pass
+- validation_evidence:
+  - RED: `pnpm --filter @typed/ui test -- Disclosure` failed because `./Disclosure.js` was missing.
+  - GREEN: `pnpm --filter @typed/ui test -- Disclosure` passed with `6` files and `30` tests.
+  - PACKAGE: `pnpm --filter @typed/ui test` passed with `6` files and `30` tests.
+  - BUILD: `pnpm --filter @typed/ui build` passed.
+- commit:
+  - pending
+- deviations_or_replans:
+  - The first return type annotation widened incorrectly around renderable services; the implementation now lets the template return type infer from generic content options.
+  - Disclosure emits `data-open` through the shared `DataAttr` schema and keeps state as direct `RefSubject.RefSubject<State>`.
+- context_updates:
+  - none
+- memory_updates:
+  - candidate captured in `memory/implementation-notes.md`
+
 ## Deferred Work
 
-- T4 through T7 remain pending.
+- T5 through T7 remain pending.
