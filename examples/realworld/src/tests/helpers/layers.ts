@@ -14,7 +14,7 @@ import { CommentRepository } from "../../infrastructure/repositories/CommentRepo
 import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
 import { TagRepository } from "../../infrastructure/repositories/TagRepository.js";
 import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
-import { ServerPageData } from "../../page-data/ServerPageData.js";
+import { ServerApiClient } from "../../common/serverApiClient.js";
 
 type ConfigOverrides = Partial<RealWorldConfigService>;
 
@@ -41,7 +41,7 @@ export const ApplicationTestLayer = (overrides: ConfigOverrides) =>
   ]);
 
 export const ServerPageTestLayer = (overrides: ConfigOverrides) =>
-  composeWithLayers(ServerPageData, [
+  composeWithLayers(ServerApiClient, [
     ApplicationServices,
     RepositoryTestLayer,
     InfrastructureTestLayer(overrides),

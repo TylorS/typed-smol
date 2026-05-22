@@ -1,5 +1,6 @@
 export * as EventHandler from "./EventHandler.js";
 export * from "./EventSource.js";
+export * as FormData from "./FormData.js";
 export * from "./Html.js";
 export * from "./HtmlChunk.js";
 export * from "./HydrateContext.js";

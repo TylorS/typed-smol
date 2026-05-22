@@ -14,24 +14,28 @@ export function dependencyLayerType(
   source: TypeModuleSource,
   entries: readonly string[],
   layerAlias = "Layer",
+  contextAlias = "EffectContext",
 ): string {
   if (entries.length === 0) return `${layerAlias}.Layer<never, never, never>`;
+  source.importTypeNamespace(contextAlias, "effect/Context");
   source.add(`type DependencyInput = ${typeUnion(entries)};`);
   source.helper(
     "DependencyLayerValue",
     "type DependencyLayerValue<T> = T extends readonly (infer Value)[] ? Value : T;",
   );
   source.helper(
-    "DependencyLayer",
-    `type DependencyLayer<T> = DependencyLayerValue<T> extends infer Value
+    "NormalizeDependency",
+    `type NormalizeDependency<T> = DependencyLayerValue<T> extends infer Value
   ? Value extends ${layerAlias}.Layer<any, any, any>
     ? Value
-    : never
+    : Value extends ${contextAlias}.Context<infer R>
+      ? ${layerAlias}.Layer<R>
+      : never
   : never;`,
   );
   return `${layerAlias}.Layer<
-  ${layerAlias}.Success<DependencyLayer<DependencyInput>>,
-  ${layerAlias}.Error<DependencyLayer<DependencyInput>>,
-  ${layerAlias}.Services<DependencyLayer<DependencyInput>>
+  ${layerAlias}.Success<NormalizeDependency<DependencyInput>>,
+  ${layerAlias}.Error<NormalizeDependency<DependencyInput>>,
+  ${layerAlias}.Services<NormalizeDependency<DependencyInput>>
 >`;
 }

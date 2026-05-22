@@ -2,10 +2,12 @@ import { Context, Effect, Layer, Option } from "effect";
 import type { OpaqueToken } from "../domain/Ids.js";
 import type { ProfileResponse } from "../domain/RealWorldApi.js";
 import type { RealWorldError } from "../domain/Errors.js";
+import type {
+  ProfileRepositoryError,
+  UserRepositoryError,
+} from "../domain/RepositoryErrors.js";
 import { ProfileRepository } from "../infrastructure/repositories/ProfileRepository.js";
-import type { ProfileRepositoryError } from "../infrastructure/repositories/ProfileRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
-import type { UserRepositoryError } from "../infrastructure/repositories/UserRepository.js";
 import { notFound, optionalUserId, requireUser } from "./Common.js";
 
 type ProfilesError = RealWorldError | ProfileRepositoryError | UserRepositoryError;

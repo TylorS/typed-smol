@@ -8,13 +8,12 @@ import { ProfileRepository } from "../infrastructure/repositories/ProfileReposit
 import { TagRepository } from "../infrastructure/repositories/TagRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
 
-export default Layer.mergeAll(
-  ApplicationServices,
-  UserRepository.Live,
-  ProfileRepository.Live,
-  ArticleRepository.Live,
-  CommentRepository.Live,
-  TagRepository.Live,
-  SessionTokens.Live,
-  PasswordHasher.Live,
+export default ApplicationServices.pipe(
+  Layer.provideMerge(UserRepository.Live),
+  Layer.provideMerge(ProfileRepository.Live),
+  Layer.provideMerge(ArticleRepository.Live),
+  Layer.provideMerge(CommentRepository.Live),
+  Layer.provideMerge(TagRepository.Live),
+  Layer.provideMerge(SessionTokens.Live),
+  Layer.provideMerge(PasswordHasher.Live),
 );

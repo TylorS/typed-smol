@@ -3,11 +3,13 @@ import { Window } from "happy-dom";
 import * as AsyncData from "@typed/async-data";
 import { Fx, RefAsyncData } from "@typed/fx";
 import { Effect } from "effect";
-import { DomRenderTemplate, render as renderDom, renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
-import { ArticlePage } from "../../presentation/ArticlePage.js";
-import { FeedPage } from "../../presentation/Feed.js";
-import { ProfilePage } from "../../presentation/ProfilePage.js";
-import { avatarSrc, defaultAvatar } from "../../presentation/Layout.js";
+import { DomRenderTemplate, html, render as renderDom, renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+import { ArticleContent } from "../../common/components/ArticleContent.js";
+import { AsyncDataView } from "../../common/components/AsyncDataView.js";
+import { Banner } from "../../common/components/Banner.js";
+import { FeedContent } from "../../common/components/FeedContent.js";
+import { ProfileContent } from "../../common/components/ProfileContent.js";
+import { avatarSrc, defaultAvatar } from "../../common/Layout.js";
 
 const profile = {
   username: "reader",
@@ -41,7 +43,7 @@ describe("realworld presentation XSS hardening", () => {
   });
 
   it("escapes article body Markdown, comments, avatars, and author text contexts", async () => {
-    const html = await render(Effect.gen(function* () {
+    const markup = await render(Effect.gen(function* () {
       const input = yield* RefAsyncData.make(AsyncData.success({
         article,
         comments: [{
@@ -53,16 +55,16 @@ describe("realworld presentation XSS hardening", () => {
         }],
       }));
 
-      return ArticlePage(input);
+      return html`${AsyncDataView(input, ArticleContent)}`;
     }));
 
-    expect(html).not.toContain("<script");
-    expect(html).not.toContain("<img src=x");
-    expect(html).not.toContain("onerror=");
-    expect(html).not.toContain("javascript:");
-    expect(html).toContain('src="/default-avatar.svg"');
-    expect(html).toContain("<h2>Body</h2>");
-    expect(html).not.toContain("&lt;h2&gt;Body&lt;/h2&gt;");
+    expect(markup).not.toContain("<script");
+    expect(markup).not.toContain("<img src=x");
+    expect(markup).not.toContain("onerror=");
+    expect(markup).not.toContain("javascript:");
+    expect(markup).toContain('src="/default-avatar.svg"');
+    expect(markup).toContain("<h2>Body</h2>");
+    expect(markup).not.toContain("&lt;h2&gt;Body&lt;/h2&gt;");
   });
 
   it("renders article body Markdown as DOM nodes instead of escaped text", async () => {
@@ -76,7 +78,10 @@ describe("realworld presentation XSS hardening", () => {
           comments: [],
         }));
 
-        yield* renderDom(ArticlePage(input), root).pipe(
+        yield* renderDom(
+          html`${AsyncDataView(input, ArticleContent)}`,
+          root,
+        ).pipe(
           Fx.provide(DomRenderTemplate.using(window.document)),
           Fx.drain,
           Effect.forkScoped,
@@ -98,7 +103,12 @@ describe("realworld presentation XSS hardening", () => {
         tags: ["typed"],
       }));
 
-      return FeedPage(input);
+      return html`<section class="home-page">
+        ${Banner}
+        <div class="container page">
+          ${AsyncDataView(input, FeedContent)}
+        </div>
+      </section>`;
     }));
     const page = await render(Effect.gen(function* () {
       const input = yield* RefAsyncData.make(AsyncData.success({
@@ -108,7 +118,7 @@ describe("realworld presentation XSS hardening", () => {
         profile,
       }));
 
-      return ProfilePage(input);
+      return html`${AsyncDataView(input, ProfileContent)}`;
     }));
 
     expect(feed).not.toContain("<img src=x");

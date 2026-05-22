@@ -1,19 +1,30 @@
-import { html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as Effect from "effect/Effect";
 import { CreateArticleRequest } from "../domain/RealWorldApi.js";
-import { BrowserAuth } from "../presentation/BrowserAuth.js";
-import { decodeForm, formSubmit, tagListField, textField } from "../presentation/FormEvents.js";
-import { EditorRoute } from "../routing/Routes.js";
+import { BrowserAuth } from "../common/BrowserAuth.js";
+import { decodeForm, tagListField, textField } from "../common/formInput.js";
+import { formFromSubmitEvent, renderWorkflowFailure } from "../common/workflowErrors.js";
+import { EditorRoute } from "../common/routes.js";
 
 export const route = EditorRoute;
 
-const createArticle = formSubmit(
-  Effect.fn(function* (form: HTMLFormElement) {
+const createArticle = EventHandler.make(
+  (event: SubmitEvent) =>
+    formFromSubmitEvent(event).pipe(
+      Effect.flatMap((form) =>
+        publishArticle(form).pipe(Effect.catch((error) => renderWorkflowFailure(form, error))),
+      ),
+      Effect.asVoid,
+      Effect.catch(() => Effect.void),
+    ),
+  { preventDefault: true },
+);
+
+const publishArticle = Effect.fn(function* (form: HTMLFormElement) {
     const input = yield* decodeForm(CreateArticleRequest, { article: articleForm(form) });
     const auth = yield* BrowserAuth;
     return yield* auth.createArticle(input);
-  }),
-);
+});
 
 const articleForm = (form: HTMLFormElement) => ({
   title: textField(form, "title"),

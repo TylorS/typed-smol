@@ -307,7 +307,7 @@ export default {
     }
   });
 
-  it("fingerprints source roots from language-service snapshots", () => {
+  it("stores dependency-scoped source fingerprints instead of whole-project source roots", () => {
     const dir = createTempDirInWorkspace();
     writeFileSync(
       join(dir, "test-plugin.mjs"),
@@ -348,27 +348,35 @@ export default {
     expect(wrapped.getSemanticDiagnostics(entryPath)).toHaveLength(0);
 
     const manifest = readSingleArtifactManifest(dir);
-    expect(manifest.sourceInputFingerprints).toEqual(
+    expect(manifest.sourceInputFingerprints).toEqual([
+      {
+        kind: "source",
+        name: "ts-plugin-source-inputs",
+        hash: hashVirtualArtifactContent("dependency-descriptor-scoped"),
+      },
+    ]);
+    expect(manifest.sourceInputFingerprints).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: "file",
           name: entryPath,
-          hash: hashVirtualArtifactContent(snapshotSource),
         }),
       ]),
     );
   });
 
-  it("does not reuse stale artifacts after source snapshots change", () => {
+  it("does not reuse stale artifacts after dependency snapshots change", () => {
     const dir = createTempDirInWorkspace();
     writeFileSync(
       join(dir, "test-plugin.mjs"),
-      `globalThis.__typedTsPluginBuildCount = globalThis.__typedTsPluginBuildCount ?? 0;
+      `import path from "node:path";
+globalThis.__typedTsPluginBuildCount = globalThis.__typedTsPluginBuildCount ?? 0;
 export default {
   name: "snapshot-change-test",
   shouldResolve: (id) => id === "virtual:snapshot-change",
-  build: () => {
+  build: (id, importer, api) => {
     globalThis.__typedTsPluginBuildCount++;
+    const dep = api.file("./dep.ts", { baseDir: path.dirname(importer), watch: true });
+    if (!dep.ok) throw new Error("dep.ts was not available");
     return "export interface SnapshotChangeValue { n: number }";
   }
 };
@@ -387,40 +395,133 @@ export default {
           moduleResolution: "bundler",
           skipLibCheck: true,
         },
-        files: ["entry.ts"],
+        files: ["entry.ts", "dep.ts"],
       }),
       "utf8",
     );
     const entryPath = join(dir, "entry.ts");
+    const depPath = join(dir, "dep.ts");
     writeFileSync(
       entryPath,
       'import type { SnapshotChangeValue } from "virtual:snapshot-change";\nexport const value: SnapshotChangeValue = { n: 1 };\n',
       "utf8",
     );
-    const firstSource =
-      'import type { SnapshotChangeValue } from "virtual:snapshot-change";\nexport const value: SnapshotChangeValue = { n: 1 };\n// first\n';
-    const secondSource =
-      'import type { SnapshotChangeValue } from "virtual:snapshot-change";\nexport const value: SnapshotChangeValue = { n: 1 };\n// second\n';
+    writeFileSync(depPath, "export const dep = 1;\n", "utf8");
+    const entrySource = readFileSync(entryPath, "utf8");
+    const firstDepSource = "export const dep = 1;\n";
+    const secondDepSource = "export const dep = 2;\n";
 
     const globalState = globalThis as { __typedTsPluginBuildCount?: number };
     try {
       globalState.__typedTsPluginBuildCount = 0;
-      const scriptTextByPath = new Map([[entryPath, firstSource]]);
-      const scriptVersionByPath = new Map([[entryPath, "1"]]);
+      const scriptTextByPath = new Map([
+        [entryPath, entrySource],
+        [depPath, firstDepSource],
+      ]);
+      const scriptVersionByPath = new Map([
+        [entryPath, "1"],
+        [depPath, "1"],
+      ]);
       const service = createPluginLanguageService(dir, entryPath, {
+        scriptFileNames: [entryPath, depPath],
         scriptTextByPath,
         scriptVersionByPath,
       });
       expect(service.getSemanticDiagnostics(entryPath)).toHaveLength(0);
       expect(globalState.__typedTsPluginBuildCount).toBe(1);
-      const virtualPath = readSingleArtifactManifest(dir).generatedSourcePath;
+      const manifest = readSingleArtifactManifest(dir);
+      expect(manifest.dependencyDescriptors).toEqual([
+        {
+          type: "file",
+          path: depPath,
+        },
+      ]);
+      const virtualPath = manifest.generatedSourcePath;
 
-      scriptTextByPath.set(entryPath, secondSource);
-      scriptVersionByPath.set(entryPath, "2");
+      scriptTextByPath.set(depPath, secondDepSource);
+      scriptVersionByPath.set(depPath, "2");
       service.cleanupSemanticCache();
       expect(service.getSemanticDiagnostics(virtualPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBeGreaterThan(1);
+    } finally {
+      delete globalState.__typedTsPluginBuildCount;
+    }
+  });
+
+  it("keeps cached artifacts when unrelated source snapshots change", () => {
+    const dir = createTempDirInWorkspace();
+    writeFileSync(
+      join(dir, "test-plugin.mjs"),
+      `import path from "node:path";
+globalThis.__typedTsPluginBuildCount = globalThis.__typedTsPluginBuildCount ?? 0;
+export default {
+  name: "dependency-scoped-cache-test",
+  shouldResolve: (id) => id === "virtual:dependency-scoped-cache",
+  build: (id, importer, api) => {
+    globalThis.__typedTsPluginBuildCount++;
+    const dep = api.file("./dep.ts", { baseDir: path.dirname(importer), watch: true });
+    if (!dep.ok) throw new Error("dep.ts was not available");
+    return "export interface DependencyScopedValue { n: number }";
+  }
+};
+`,
+      "utf8",
+    );
+    writeFileSync(join(dir, "vmc.config.ts"), `export default { plugins: ["./test-plugin.mjs"] };`);
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+        },
+        files: ["entry.ts", "dep.ts", "unrelated.ts"],
+      }),
+      "utf8",
+    );
+    const entryPath = join(dir, "entry.ts");
+    const depPath = join(dir, "dep.ts");
+    const unrelatedPath = join(dir, "unrelated.ts");
+    writeFileSync(
+      entryPath,
+      'import type { DependencyScopedValue } from "virtual:dependency-scoped-cache";\nexport const value: DependencyScopedValue = { n: 1 };\n',
+      "utf8",
+    );
+    writeFileSync(depPath, "export const dep = 1;\n", "utf8");
+    writeFileSync(unrelatedPath, "export const unrelated = 1;\n", "utf8");
+
+    const globalState = globalThis as { __typedTsPluginBuildCount?: number };
+    try {
+      globalState.__typedTsPluginBuildCount = 0;
+      const scriptTextByPath = new Map([
+        [entryPath, readFileSync(entryPath, "utf8")],
+        [depPath, readFileSync(depPath, "utf8")],
+        [unrelatedPath, "export const unrelated = 1;\n"],
+      ]);
+      const scriptVersionByPath = new Map([
+        [entryPath, "1"],
+        [depPath, "1"],
+        [unrelatedPath, "1"],
+      ]);
+      const service = createPluginLanguageService(dir, entryPath, {
+        scriptFileNames: [entryPath, depPath, unrelatedPath],
+        scriptTextByPath,
+        scriptVersionByPath,
+      });
+
       expect(service.getSemanticDiagnostics(entryPath)).toHaveLength(0);
-      expect(globalState.__typedTsPluginBuildCount).toBe(2);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
+
+      scriptTextByPath.set(unrelatedPath, "export const unrelated = 2;\n");
+      scriptVersionByPath.set(unrelatedPath, "2");
+      service.cleanupSemanticCache();
+
+      expect(service.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
     } finally {
       delete globalState.__typedTsPluginBuildCount;
     }
@@ -739,6 +840,7 @@ export default { plugins: [plugin] };
 });
 
 interface CreatePluginLanguageServiceOptions {
+  readonly scriptFileNames?: readonly string[];
   readonly scriptTextByPath?: ReadonlyMap<string, string>;
   readonly scriptVersionByPath?: ReadonlyMap<string, string>;
 }
@@ -759,7 +861,7 @@ function createPluginLanguageService(
 
   const host: ts.LanguageServiceHost & { configFilePath?: string } = {
     getCompilationSettings: () => compilerOptions,
-    getScriptFileNames: () => [entryPath],
+    getScriptFileNames: () => [...(options.scriptFileNames ?? [entryPath])],
     getScriptVersion: (fileName: string) => options.scriptVersionByPath?.get(fileName) ?? "1",
     getProjectVersion: () =>
       options.scriptVersionByPath ? [...options.scriptVersionByPath.values()].join(":") : "1",

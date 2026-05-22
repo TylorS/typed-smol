@@ -1,7 +1,7 @@
 import { Context, Effect, Layer } from "effect";
 import type { TagsResponse } from "../domain/RealWorldApi.js";
+import type { TagRepositoryError } from "../domain/RepositoryErrors.js";
 import { TagRepository } from "../infrastructure/repositories/TagRepository.js";
-import type { TagRepositoryError } from "../infrastructure/repositories/TagRepository.js";
 
 export interface TagsService {
   readonly list: () => Effect.Effect<TagsResponse, TagRepositoryError>;

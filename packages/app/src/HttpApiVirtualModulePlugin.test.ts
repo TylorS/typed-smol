@@ -383,13 +383,21 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
+      export const DependenciesLayer = Layer.empty;
       export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
       export const Client = HttpApiClient.make(Api);
 
-      const typedConfig = TypedConfigModule;
+      type TypedConfigBuildOptions = {
+        readonly build?: {
+          readonly outDir?: string;
+          readonly clientOutDir?: string;
+        };
+      };
+
+      const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
       const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
 
@@ -948,8 +956,79 @@ export default Layer.succeed(UsersService, { users: "users" });
 
     expect(sourceText).toContain('import * as UsersDependencies from "./apis/users/_dependencies.js";');
     expect(sourceText).toContain(
-      'HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", ApiHandlers.handler(UsersList))).pipe(Layer.provideMerge(UsersDependencies.default))',
+      'HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", ApiHandlers.handler(UsersList))).pipe(Layer.provideMerge(Router.normalizeDependencyInput(UsersDependencies.default)))',
     );
+  });
+
+  it("re-exports discovered API dependencies as a reusable layer", () => {
+    const fixture = createApiFixture({
+      "src/apis/_dependencies.ts": `
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class RootApiService extends Context.Service<RootApiService, { readonly root: string }>()("RootApiService") {}
+export default Layer.succeed(RootApiService, { root: "root" });
+`,
+      "src/apis/users/_dependencies.ts": `
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class UsersService extends Context.Service<UsersService, { readonly users: string }>()("UsersService") {}
+export default Layer.succeed(UsersService, { users: "users" });
+`,
+      "src/apis/users/list.ts": VALID_ENDPOINT_SOURCE,
+    });
+    const result = buildApiFromExistingFixture(fixture);
+    const sourceText = getSourceText(result);
+
+    expect(sourceText).toContain("export const DependenciesLayer = Layer.mergeAll(");
+    expect(sourceText).toContain("Router.normalizeDependencyInput(Dependencies.default)");
+    expect(sourceText).toContain("Router.normalizeDependencyInput(UsersDependencies.default)");
+  });
+
+  it("accepts Context default exports in generated Dependencies types", () => {
+    const fixture = createApiFixture({
+      "src/apis/_dependencies.ts": `
+import * as Context from "effect/Context";
+
+export class RootConfig extends Context.Service<RootConfig, { readonly root: string }>()("RootConfig") {}
+export default Context.make(RootConfig, { root: "root" });
+`,
+      "src/apis/items/list.ts": VALID_ENDPOINT_SOURCE.replace(
+        'Route.Parse("/articles")',
+        'Route.Parse("/items")',
+      ),
+    });
+    const importer = join(fixture.root, "src/apis/items/list.ts");
+    const files =
+      existsSync(BOOTSTRAP_HTTPAPI_FILE) && !fixture.paths.includes(BOOTSTRAP_HTTPAPI_FILE)
+        ? [...fixture.paths, BOOTSTRAP_HTTPAPI_FILE]
+        : fixture.paths;
+    const program = makeProgram(
+      files,
+      files.includes(BOOTSTRAP_HTTPAPI_FILE) ? APP_ROOT : fixture.root,
+    );
+    const session = createTypeInfoApiSession({
+      ts,
+      program,
+      typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
+    });
+    const result = createHttpApiVirtualModulePlugin().build("./$api-types", importer, session.api);
+
+    expect(typeof result).toBe("string");
+    if (typeof result !== "string") return;
+
+    expect(result).toContain("NormalizeDependency");
+    expect(result).not.toContain("type DependencyLayer<");
+
+    const typeCheck = typeCheckGeneratedSource({
+      rootDir: fixture.root,
+      generatedPath: "src/apis/items/$api-types.ts",
+      sourceText: result,
+      rootFiles: fixture.paths,
+      moduleFallbacks: HTTPAPI_MODULE_FALLBACKS,
+    });
+    expect(typeCheck.diagnostics).toEqual([]);
   });
 
   it("emits plugin-specific decoded API types for an endpoint importing ./$api-types", () => {
@@ -1053,13 +1132,21 @@ export const handler = (({ headers, query, body }) => {
       import * as Status from "./apis/status.js";
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
+      export const DependenciesLayer = Layer.empty;
       export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
       export const Client = HttpApiClient.make(Api);
 
-      const typedConfig = TypedConfigModule;
+      type TypedConfigBuildOptions = {
+        readonly build?: {
+          readonly outDir?: string;
+          readonly clientOutDir?: string;
+        };
+      };
+
+      const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
       const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
 

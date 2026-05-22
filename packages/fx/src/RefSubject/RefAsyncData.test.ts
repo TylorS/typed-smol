@@ -5,6 +5,7 @@ import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import * as Fx from "../Fx/index.js";
 import * as RefAsyncData from "./RefAsyncData.js";
 import * as RefSubject from "./RefSubject.js";
 
@@ -20,6 +21,35 @@ describe("RefAsyncData", () => {
 
       expect(RefSubject.isRefSubject(ref)).toBe(true);
       expect(yield* ref).toEqual(AsyncData.NoData);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("serializes refresh so another refresh cannot interleave loading and result", () =>
+    Effect.gen(function* () {
+      const ref = yield* RefAsyncData.make<number, ApiError>(AsyncData.success(0));
+      const gate = yield* Deferred.make<void>();
+      const progress = { loaded: 1, total: 2 };
+
+      const refresh1 = yield* Effect.forkChild(
+        RefAsyncData.refresh(ref, Effect.as(Deferred.await(gate), 1), progress),
+        { startImmediately: true },
+      );
+
+      yield* Effect.yieldNow;
+      expect(yield* ref).toEqual(AsyncData.success(0, progress));
+
+      const refresh2 = yield* Effect.forkChild(
+        RefAsyncData.refresh(ref, Effect.succeed(2)),
+        { startImmediately: true },
+      );
+
+      yield* Effect.yieldNow;
+      expect(yield* ref).toEqual(AsyncData.success(0, progress));
+
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(refresh1);
+      yield* Fiber.join(refresh2);
+
+      expect(yield* ref).toEqual(AsyncData.success(2));
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("refreshes through loading into success without failing the Effect channel", () =>
@@ -66,6 +96,38 @@ describe("RefAsyncData", () => {
       yield* Effect.yieldNow;
 
       expect(yield* ref).toEqual(AsyncData.success("page-2"));
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("matches RefAsyncData into a computed value", () =>
+    Effect.gen(function* () {
+      const ref = yield* RefAsyncData.make<number, ApiError>(AsyncData.success(1));
+      const label = RefAsyncData.match(ref, {
+        NoData: () => "none",
+        Loading: () => "loading",
+        Failure: (cause) => `failure:${Cause.pretty(cause)}`,
+        Success: (value) => `success:${value}`,
+        Optimistic: (value) => `optimistic:${value}`,
+      });
+
+      expect(yield* label).toBe("success:1");
+
+      yield* RefAsyncData.setNoData(ref);
+      expect(yield* label).toBe("none");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("matches RefAsyncData into Fx and gives successful branches a value ref", () =>
+    Effect.gen(function* () {
+      const ref = yield* RefAsyncData.make<number, ApiError>(AsyncData.success(1));
+      const labels = RefAsyncData.matchFx(ref, {
+        NoData: () => Fx.succeed("none"),
+        Loading: () => Fx.succeed("loading"),
+        Failure: () => Fx.succeed("failure"),
+        Success: (value) => Fx.fromEffect(Effect.map(value, (current) => `success:${current}`)),
+        Optimistic: (value) =>
+          Fx.fromEffect(Effect.map(value, (current) => `optimistic:${current}`)),
+      });
+
+      expect(yield* Fx.collectUpTo(labels, 1)).toEqual(["success:1"]);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("preserves value, async-error, ref-error, and service type parameters", () => {

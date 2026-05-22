@@ -3,15 +3,13 @@ import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { Comment } from "../../domain/Article.js";
 import { CommentId, Slug, UserId } from "../../domain/Ids.js";
+import { type CommentRepositoryError } from "../../domain/RepositoryErrors.js";
 import { Profile } from "../../domain/User.js";
 import {
   currentIsoTimestamp,
   first,
   provideRepositorySql,
-  type RepositoryPersistenceError,
 } from "./Common.js";
-
-export type CommentRepositoryError = RepositoryPersistenceError;
 
 export interface CommentRepositoryService {
   readonly create: (

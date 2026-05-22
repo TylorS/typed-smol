@@ -1,18 +1,15 @@
 import { Buffer } from "node:buffer";
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { Context, Data, Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 import * as Schema from "effect/Schema";
 import { NonEmptyString } from "../domain/Ids.js";
+import { PasswordHashError } from "../domain/RepositoryErrors.js";
 
 export const StoredPassword = Schema.Struct({
   passwordHash: NonEmptyString,
   passwordSalt: NonEmptyString,
 });
 export type StoredPassword = Schema.Schema.Type<typeof StoredPassword>;
-
-export class PasswordHashError extends Data.TaggedError("PasswordHashError")<{
-  readonly reason: string;
-}> {}
 
 export interface PasswordHasherService {
   readonly hash: (password: string) => Effect.Effect<StoredPassword, PasswordHashError>;

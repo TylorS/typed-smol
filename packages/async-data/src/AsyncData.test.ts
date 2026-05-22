@@ -2,6 +2,7 @@
 import { assert, describe, it } from "vitest";
 import { Effect } from "effect";
 import * as Cause from "effect/Cause";
+import * as Equivalence from "effect/Equivalence";
 import * as Exit from "effect/Exit";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
@@ -440,5 +441,36 @@ describe("AsyncData", () => {
         assert(Option.isSome(error));
         assert(error.value === "error");
       }).pipe(Effect.scoped, Effect.runPromise));
+  });
+
+  describe("makeEquivalence", () => {
+    const eq = AsyncData.makeEquivalence(Equivalence.Number, Equivalence.String);
+
+    it("treats NoData as equal", () => {
+      assert(eq(AsyncData.NoData, AsyncData.NoData));
+    });
+
+    it("compares success values with the provided value equivalence", () => {
+      assert(eq(AsyncData.success(1), AsyncData.success(1)));
+      assert(!eq(AsyncData.success(1), AsyncData.success(2)));
+    });
+
+    it("compares failure errors with the provided error equivalence", () => {
+      const left = AsyncData.failure(Cause.fail("left"));
+      const right = AsyncData.failure(Cause.fail("left"));
+      const other = AsyncData.failure(Cause.fail("right"));
+
+      assert(eq(left, right));
+      assert(!eq(left, other));
+    });
+
+    it("compares optimistic values recursively", () => {
+      const left = AsyncData.optimistic(AsyncData.success(1), 2);
+      const right = AsyncData.optimistic(AsyncData.success(1), 2);
+      const other = AsyncData.optimistic(AsyncData.success(1), 3);
+
+      assert(eq(left, right));
+      assert(!eq(left, other));
+    });
   });
 });

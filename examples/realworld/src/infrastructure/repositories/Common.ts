@@ -1,12 +1,5 @@
 import { Effect, Option } from "effect";
-import * as Schema from "effect/Schema";
-import { SqlClient, SqlError } from "effect/unstable/sql";
-import { FileSystemError } from "../Errors.js";
-
-export type RepositoryPersistenceError =
-  | FileSystemError
-  | Schema.SchemaError
-  | SqlError.SqlError;
+import { SqlClient } from "effect/unstable/sql";
 
 export const provideRepositorySql = <A, E, R>(
   effect: Effect.Effect<A, E, R>,

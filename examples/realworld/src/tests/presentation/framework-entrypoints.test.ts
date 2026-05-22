@@ -59,11 +59,13 @@ describe("realworld framework entrypoints", () => {
     expect(generated).toContain('import { DomRenderTemplate, render } from "@typed/template";');
     expect(generated).toContain("Fx.drainLayer(render(Routes, root))");
     expect(generated).toContain("TypedRouter.BrowserRouter(win)");
-    expect(generated).toContain('root: "#app"');
+    expect(generated).toContain('root: "#typed-root"');
     expect(generated).not.toContain('mode: "hydrate"');
     expect(generated).not.toContain("options.run");
     expect(generated).not.toContain("readonly run?");
     expect(browserSource).not.toContain("as Effect.Effect");
+    expect(browserSource).not.toContain("root:");
+    expect(generated).toContain('import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";');
   });
 
   it("keeps server and browser entrypoints on one route directory", () => {

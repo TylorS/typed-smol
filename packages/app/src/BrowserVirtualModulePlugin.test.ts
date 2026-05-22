@@ -85,7 +85,7 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source).not.toContain("Effect.Effect<unknown, unknown");
     expect(source).not.toContain("Effect.succeed(BrowserRuntime)");
     expect(source).not.toContain("export async function run");
-    expect(source).toContain('root: "#app"');
+    expect(source).toContain('root: "#typed-root"');
     expect(source).toContain('base: "/"');
     expect(source).not.toContain('mode: "hydrate"');
   });
@@ -154,15 +154,15 @@ describe("BrowserVirtualModulePlugin", () => {
 
   it("imports entry-adjacent named browser companions when present", () => {
     const fixture = createFixture({
-      "src/.dependencies.ts": "export const layers = [];",
+      "src/.browser.dependencies.ts": "export const layers = [];",
       "src/.navigation.ts": "export const onNavigation = () => undefined;",
       "src/.errors.ts": "export const onError = () => undefined;",
     });
     const source = buildBrowser("typed:browser?routes=./routes", fixture.importer) as string;
 
-    expect(source).toContain('import * as BrowserDependenciesCompanion from "./.dependencies";');
-    expect(source).toContain('import * as BrowserNavigationCompanion from "./.navigation";');
-    expect(source).toContain('import * as BrowserErrorsCompanion from "./.errors";');
+    expect(source).toContain('import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";');
+    expect(source).toContain('import * as BrowserNavigationCompanion from "./.navigation.js";');
+    expect(source).toContain('import * as BrowserErrorsCompanion from "./.errors.js";');
     expect(source).toContain("BrowserDependenciesCompanion.layers");
     expect(source).toContain("BrowserErrorsCompanion.onError");
     expect(source).not.toContain("_browser");

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { FormDecodeError, renderFormErrors, workflowErrorMessages } from "../../presentation/FormEvents.js";
+import { FormDecodeError } from "../../common/formInput.js";
+import { renderFormErrors, workflowErrorMessages } from "../../common/workflowErrors.js";
 
 describe("realworld browser form errors", () => {
   it("formats RealWorld API error envelopes for visible form messages", () => {

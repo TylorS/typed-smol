@@ -3,8 +3,8 @@ import { dirname } from "node:path";
 import { SqliteClient } from "@effect/sql-sqlite-node";
 import { Effect, Layer } from "effect";
 import { SqlClient, SqlError } from "effect/unstable/sql";
+import { FileSystemError, formatThrown } from "../domain/RepositoryErrors.js";
 import { RealWorldConfig, type RealWorldConfigService } from "./Config.js";
-import { FileSystemError, formatThrown } from "./Errors.js";
 
 export const ensureDatabaseDirectory = (
   config: RealWorldConfigService,

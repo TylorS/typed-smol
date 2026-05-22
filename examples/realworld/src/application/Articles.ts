@@ -8,17 +8,17 @@ import type {
   UpdateArticleRequest,
 } from "../domain/RealWorldApi.js";
 import type { RealWorldError } from "../domain/Errors.js";
+import type {
+  ArticleRepositoryError,
+  UserRepositoryError,
+} from "../domain/RepositoryErrors.js";
 import { ArticleRepository } from "../infrastructure/repositories/ArticleRepository.js";
 import type {
   ArticleListFilter,
-  ArticleRepositoryError,
   ArticleRepositoryService,
 } from "../infrastructure/repositories/ArticleRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
-import type {
-  UserRepositoryError,
-  UserRepositoryService,
-} from "../infrastructure/repositories/UserRepository.js";
+import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
 import {
   forbidden,
   notFound,

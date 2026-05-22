@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createPluginConfigFingerprint,
   createSourceInputFingerprint,
@@ -59,6 +59,29 @@ describe("virtualModulesVitePlugin", () => {
     const plugin = virtualModulesVitePlugin({ resolver: manager });
     const resolveId = plugin.resolveId! as ResolveId;
     expect(resolveId("virtual:x", undefined)).toBeNull();
+  });
+
+  it("resolveId ignores Vite internal null-byte importers before resolver validation", () => {
+    let shouldResolveCalls = 0;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const manager = new PluginManager([
+      {
+        name: "test",
+        shouldResolve: () => {
+          shouldResolveCalls += 1;
+          return true;
+        },
+        build: () => "export {};",
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager });
+    const resolveId = plugin.resolveId! as ResolveId;
+
+    expect(resolveId("typed:server?routes=./routes", "\0vite/internal.js")).toBeNull();
+    expect(shouldResolveCalls).toBe(0);
+    expect(warn).not.toHaveBeenCalled();
+
+    warn.mockRestore();
   });
 
   it("resolveId returns encoded id when resolver resolves", () => {

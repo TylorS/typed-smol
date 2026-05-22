@@ -1,16 +1,28 @@
-import { html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import { Link } from "@typed/ui";
 import * as Router from "@typed/router";
 import * as Effect from "effect/Effect";
 import { RegisterUserRequest } from "../domain/RealWorldApi.js";
-import { BrowserAuth } from "../presentation/BrowserAuth.js";
-import { decodeForm, formSubmit, textField } from "../presentation/FormEvents.js";
-import { RegisterRoute } from "../routing/Routes.js";
+import { BrowserAuth } from "../common/BrowserAuth.js";
+import { decodeForm, textField } from "../common/formInput.js";
+import { formFromSubmitEvent, renderWorkflowFailure } from "../common/workflowErrors.js";
+import { RegisterRoute } from "../common/routes.js";
 
 export const route = RegisterRoute;
 
-export const submitRegister = formSubmit(
-  Effect.fn(function* (form: HTMLFormElement) {
+export const submitRegister = EventHandler.make(
+  (event: SubmitEvent) =>
+    formFromSubmitEvent(event).pipe(
+      Effect.flatMap((form) =>
+        register(form).pipe(Effect.catch((error) => renderWorkflowFailure(form, error))),
+      ),
+      Effect.asVoid,
+      Effect.catch(() => Effect.void),
+    ),
+  { preventDefault: true },
+);
+
+const register = Effect.fn(function* (form: HTMLFormElement) {
     const input = yield* decodeForm(RegisterUserRequest, {
       user: {
         username: textField(form, "username"),
@@ -22,8 +34,7 @@ export const submitRegister = formSubmit(
     const response = yield* auth.register(input);
     yield* Router.push("/");
     return response;
-  }),
-);
+});
 
 export const template = html`<section class="auth-page">
   <div class="container page">

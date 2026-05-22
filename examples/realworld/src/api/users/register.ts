@@ -3,8 +3,8 @@ import * as Effect from "effect/Effect";
 import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
 import { Users } from "../../application/Users.js";
 import { RegisterUserRequest, UserResponse } from "../../domain/RealWorldApi.js";
-import { HttpMethod } from "../../api-support/Common.js";
-import { respond } from "../../api-support/HttpErrors.js";
+import { HttpMethod } from "../../common/http.js";
+import { respond } from "../../common/errors.js";
 import type { RawHandler } from "./$api-types";
 
 export const route = Route.Slash;

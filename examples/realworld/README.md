@@ -13,13 +13,13 @@ and HTML entrypoints, SQLite-backed services, SSR route rendering, and
   tokens live under `src/infrastructure`.
 - Application services under `src/application` convert repository outcomes into
   typed RealWorld errors and response envelopes.
-- API endpoint modules under `src/api` are discovered by the `api:` virtual
+- API endpoint modules under `src/api` are discovered by the `typed:api` virtual
   module compiler surface and use inferred `@typed/app` API handlers.
 - Route modules under `src/routes` are shared by browser hydration and SSR; page
-  data is supplied through environment-specific `PageData` layers.
-- Browser workflows under `src/presentation` use `@typed/template`
-  `EventHandler` bindings, schema-decoded forms, and a typed auth service layer
-  supplied through `typed:browser`.
+  views are colocated next to the routes that render them.
+- Shared browser/runtime helpers live under `src/common`; route data is loaded
+  through an API-client-shaped service backed by the generated API client in the
+  browser and in-process services on the server.
 
 ## Scripts
 
@@ -86,5 +86,5 @@ spec checkout, browser installation, or app server are missing.
   wrapper exits before invoking Playwright.
 - The production browser build may warn that Effect Schema imports
   `effect/dist/testing/TestSchema.js`; this warning is currently upstream of the
-  example presentation code and does not indicate server dependencies in the
+  example browser code and does not indicate server dependencies in the
   RealWorld client route tree.

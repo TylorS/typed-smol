@@ -8,15 +8,15 @@ import type {
   SingleCommentResponse,
 } from "../domain/RealWorldApi.js";
 import type { RealWorldError } from "../domain/Errors.js";
-import { ArticleRepository } from "../infrastructure/repositories/ArticleRepository.js";
 import type {
   ArticleRepositoryError,
-  ArticleRepositoryService,
-} from "../infrastructure/repositories/ArticleRepository.js";
+  CommentRepositoryError,
+  UserRepositoryError,
+} from "../domain/RepositoryErrors.js";
+import { ArticleRepository } from "../infrastructure/repositories/ArticleRepository.js";
+import type { ArticleRepositoryService } from "../infrastructure/repositories/ArticleRepository.js";
 import { CommentRepository } from "../infrastructure/repositories/CommentRepository.js";
-import type { CommentRepositoryError } from "../infrastructure/repositories/CommentRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
-import type { UserRepositoryError } from "../infrastructure/repositories/UserRepository.js";
 import {
   forbidden,
   notFound,

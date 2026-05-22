@@ -7,13 +7,15 @@ import * as AsyncData from "@typed/async-data";
 import type * as Cause from "effect/Cause";
 import type * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
-import * as Equivalence from "effect/Equivalence";
+import type { Equivalence } from "effect/Equivalence";
 import type * as Layer from "effect/Layer";
 import type * as Scope from "effect/Scope";
-import type * as Fx from "../Fx/index.js";
+import type { Unify } from "effect/Unify";
+import * as Fx from "../Fx/index.js";
 import { skip } from "../Fx/combinators/skip.js";
 import { observe } from "../Fx/run/observe.js";
 import * as RefSubject from "./RefSubject.js";
+import { equals } from "effect/Equal";
 
 /**
  * A RefAsyncData is a RefSubject specialized over AsyncData state.
@@ -40,7 +42,7 @@ export declare namespace RefAsyncData {
     readonly service: Context.Service<Self, RefAsyncData<A, E, Err>>;
 
     readonly make: <R = never>(
-      value?: A | AsyncData.AsyncData<A, E> | Effect.Effect<A, E, R>,
+      value: AsyncData.AsyncData<A, E> | Effect.Effect<A, E, R>,
     ) => Layer.Layer<Self, never, Exclude<R, Scope.Scope>>;
 
     readonly layer: <E2, R2>(
@@ -69,8 +71,14 @@ export function make<A, E, Err = never, R = never>(
     | AsyncData.AsyncData<A, E>
     | Effect.Effect<AsyncData.AsyncData<A, E>, Err, R>
     | Fx.Fx<AsyncData.AsyncData<A, E>, Err, R>,
+  options?: {
+    errorEq?: Equivalence<E>;
+    valueEq?: Equivalence<A>;
+  },
 ): Effect.Effect<RefAsyncData<A, E, Err, R>, never, R | Scope.Scope> {
-  return RefSubject.make(initial ?? AsyncData.NoData, { eq: Equivalence.strictEqual() });
+  return RefSubject.make(initial ?? AsyncData.NoData, {
+    eq: AsyncData.makeEquivalence(options?.valueEq ?? equals, options?.errorEq ?? equals),
+  });
 }
 
 /**
@@ -81,15 +89,20 @@ export function make<A, E, Err = never, R = never>(
 export function fromEffect<A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<RefAsyncData<A, E, never, R>, never, R | Scope.Scope> {
-  return make(Effect.exit(effect).pipe(Effect.map(AsyncData.fromExit)));
+  return make(
+    Fx.mergeAll(
+      Fx.succeed(AsyncData.NoData),
+      Fx.sync(() => AsyncData.loading()),
+      Fx.fromEffect(effect.pipe(Effect.exit, Effect.map(AsyncData.fromExit))),
+    )
+  );
 }
 
 function normalizeInitial<A, E, R>(
-  value: A | AsyncData.AsyncData<A, E> | Effect.Effect<A, E, R> | undefined,
-): AsyncData.AsyncData<A, E> | Effect.Effect<AsyncData.AsyncData<A, E>, never, R> {
-  if (value === undefined) return AsyncData.NoData;
+  value: AsyncData.AsyncData<A, E> | Effect.Effect<A, E, R>,
+): Effect.Effect<AsyncData.AsyncData<A, E>, never, R> {
   if (Effect.isEffect(value)) return Effect.exit(value).pipe(Effect.map(AsyncData.fromExit));
-  return AsyncData.isAsyncData(value) ? value : AsyncData.success(value);
+  return Effect.succeed(value);
 }
 
 /**
@@ -111,7 +124,7 @@ export function Service<Self, A, E, Err = never>() {
       static readonly service = service.service as Context.Service<Self, RefAsyncData<A, E, Err>>;
       static readonly layer = service.layer as RefAsyncData.Service<Self, Id, A, E, Err>["layer"];
       static readonly make = <R = never>(
-        value?: A | AsyncData.AsyncData<A, E> | Effect.Effect<A, E, R>,
+        value: AsyncData.AsyncData<A, E> | Effect.Effect<A, E, R>,
       ): Layer.Layer<Self, never, Exclude<R, Scope.Scope>> => {
         const initial = normalizeInitial(value);
         return service.make(initial) as Layer.Layer<Self, never, Exclude<R, Scope.Scope>>;
@@ -139,7 +152,11 @@ export function fromComputedEffect<I, A, E, E2, R, R2>(
   progress?: AsyncData.Progress,
 ): Effect.Effect<RefAsyncData<A, E2 | E, never, R | R2>, never, Scope.Scope | R | R2> {
   return Effect.gen(function* () {
-    const ref = yield* fromEffect(Effect.flatMap(input, f));
+    const initial = yield* Effect.flatMap(input, f).pipe(
+      Effect.exit,
+      Effect.map(AsyncData.fromExit),
+    );
+    const ref = yield* make(initial);
 
     yield* input.pipe(
       skip(1),
@@ -163,9 +180,14 @@ export const refresh: <A, E, Err, R, R2>(
   progress?: AsyncData.Progress,
 ) => Effect.Effect<AsyncData.AsyncData<A, E>, Err, R | R2> = Effect.fn(
   function* (ref, effect, progress) {
-    yield* RefSubject.update(ref, (data) => AsyncData.startLoading(data, progress));
-    const next = yield* Effect.exit(effect).pipe(Effect.map(AsyncData.fromExit));
-    return yield* RefSubject.set(ref, next);
+    return yield* ref.updates(
+      Effect.fn(function* (txn) {
+        const current = yield* txn.get;
+        yield* txn.set(AsyncData.startLoading(current, progress));
+        const next = yield* Effect.exit(effect).pipe(Effect.map(AsyncData.fromExit));
+        return yield* txn.set(next);
+      }),
+    );
   },
 );
 
@@ -217,6 +239,118 @@ export const setFailure: <A, E, Err, R>(
 ) => Effect.Effect<AsyncData.AsyncData<A, E>, Err, R> = Effect.fn(function* (ref, cause, progress) {
   return yield* RefSubject.set(ref, AsyncData.failure(cause, progress));
 });
+
+/**
+ * Matches the current AsyncData state into a computed value.
+ * @since 1.18.0
+ * @category computed
+ */
+export function match<A, E, Err, R, R1, R2, R3, R4, R5>(
+  ref: RefAsyncData<A, E, Err, R>,
+  matchers: {
+    readonly NoData: (data: AsyncData.NoData) => R1;
+    readonly Loading: (data: AsyncData.Loading) => R2;
+    readonly Failure: (cause: Cause.Cause<E>, data: AsyncData.Failure<E>) => R3;
+    readonly Success: (value: A, data: AsyncData.Success<A>) => R4;
+    readonly Optimistic: (value: A, data: AsyncData.Optimistic<A, E>) => R5;
+  },
+): RefSubject.Computed<Unify<R1 | R2 | R3 | R4 | R5>, Err, R> {
+  return RefSubject.map(ref, (data) => AsyncData.match(data, matchers));
+}
+
+/**
+ * Matches AsyncData state into Fx. Success and optimistic branches receive a
+ * scoped RefSubject of the current value so renderers can stay reactive.
+ * @since 1.18.0
+ * @category computed
+ */
+export function matchFx<
+  A,
+  E,
+  Err,
+  R,
+  NoDataFx extends Fx.Fx.Any,
+  LoadingFx extends Fx.Fx.Any,
+  FailureFx extends Fx.Fx.Any,
+  SuccessFx extends Fx.Fx.Any,
+  OptimisticFx extends Fx.Fx.Any,
+>(
+  ref: RefAsyncData<A, E, Err, R>,
+  matchers: {
+    readonly NoData: (data: AsyncData.NoData) => NoDataFx;
+    readonly Loading: (data: AsyncData.Loading) => LoadingFx;
+    readonly Failure: (cause: Cause.Cause<E>, data: AsyncData.Failure<E>) => FailureFx;
+    readonly Success: (
+      value: RefSubject.RefSubject<A>,
+      data: AsyncData.Success<A>,
+    ) => SuccessFx;
+    readonly Optimistic: (
+      value: RefSubject.RefSubject<A>,
+      data: AsyncData.Optimistic<A, E>,
+    ) => OptimisticFx;
+  },
+): RefAsyncDataMatchFxResult<
+  Err,
+  R,
+  NoDataFx,
+  LoadingFx,
+  FailureFx,
+  SuccessFx,
+  OptimisticFx
+> {
+  return Fx.switchMap(ref, (data): RefAsyncDataMatchFxBranch<
+    NoDataFx,
+    LoadingFx,
+    FailureFx,
+    SuccessFx,
+    OptimisticFx
+  > => {
+    switch (data._tag) {
+      case "NoData":
+        return matchers.NoData(data);
+      case "Loading":
+        return matchers.Loading(data);
+      case "Failure":
+        return matchers.Failure(data.cause, data);
+      case "Success":
+        return Fx.unwrap(
+          Effect.map(RefSubject.make(data.value), (valueRef) => matchers.Success(valueRef, data)),
+        );
+      case "Optimistic":
+        return Fx.unwrap(
+          Effect.map(RefSubject.make(data.value), (valueRef) =>
+            matchers.Optimistic(valueRef, data)
+          ),
+        );
+    }
+  });
+}
+
+type RefAsyncDataMatchFxBranch<
+  NoDataFx extends Fx.Fx.Any,
+  LoadingFx extends Fx.Fx.Any,
+  FailureFx extends Fx.Fx.Any,
+  SuccessFx extends Fx.Fx.Any,
+  OptimisticFx extends Fx.Fx.Any,
+> = Fx.Fx<
+  Fx.Success<NoDataFx | LoadingFx | FailureFx | SuccessFx | OptimisticFx>,
+  Fx.Error<NoDataFx | LoadingFx | FailureFx | SuccessFx | OptimisticFx>,
+  Fx.Services<NoDataFx | LoadingFx | FailureFx | SuccessFx | OptimisticFx> | Scope.Scope
+>;
+
+type RefAsyncDataMatchFxResult<
+  Err,
+  R,
+  NoDataFx extends Fx.Fx.Any,
+  LoadingFx extends Fx.Fx.Any,
+  FailureFx extends Fx.Fx.Any,
+  SuccessFx extends Fx.Fx.Any,
+  OptimisticFx extends Fx.Fx.Any,
+> = Fx.Fx<
+  Fx.Success<NoDataFx | LoadingFx | FailureFx | SuccessFx | OptimisticFx>,
+  Err | Fx.Error<NoDataFx | LoadingFx | FailureFx | SuccessFx | OptimisticFx>,
+  R | Fx.Services<NoDataFx | LoadingFx | FailureFx | SuccessFx | OptimisticFx> | Scope.Scope
+>;
 
 /**
  * Computes the successful or optimistic value when one is present.

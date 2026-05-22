@@ -1,4 +1,7 @@
 import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createConfigVirtualModulePlugin } from "./index.js";
 
@@ -29,6 +32,36 @@ describe("ConfigVirtualModulePlugin", () => {
 
   it("emits a module marker for empty computed config", () => {
     expect(buildConfig("typed:config", {})).toBe("export {};");
+  });
+
+  it("loads the typed config nearest to the importer when no config is provided", () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "typed-config-vm-"));
+    const cwd = process.cwd();
+    try {
+      const appRoot = join(fixtureRoot, "app");
+      const srcRoot = join(appRoot, "node_modules", ".typed", "virtual");
+      mkdirSync(srcRoot, { recursive: true });
+      writeFileSync(join(fixtureRoot, "typed.config.ts"), `export default { entry: "wrong.ts" };`);
+      writeFileSync(
+        join(appRoot, "typed.config.ts"),
+        `export default { entry: "src/server.ts", build: { outDir: "dist" } };`,
+      );
+      writeFileSync(join(srcRoot, "importer.ts"), `import "typed:config";`, { flag: "wx" });
+      process.chdir(fixtureRoot);
+
+      const source = createConfigVirtualModulePlugin().build(
+        "typed:config",
+        join(srcRoot, "importer.ts"),
+        {} as never,
+      );
+
+      expect(source).toContain('export const entry = "src/server.ts";');
+      expect(source).toContain('export const build = {"outDir":"dist"};');
+      expect(source).not.toContain("wrong.ts");
+    } finally {
+      process.chdir(cwd);
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 
   it("rejects invalid JavaScript export names", () => {

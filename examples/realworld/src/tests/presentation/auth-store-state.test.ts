@@ -3,8 +3,8 @@ import { RefAsyncData } from "@typed/fx";
 import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import type { RealWorldClient } from "../../Api.js";
-import { makeBrowserClient } from "../../presentation/BrowserApiClient.js";
-import { BrowserAuthState, createAuthStore } from "../../presentation/State.js";
+import { makeBrowserClient } from "../../common/BrowserApiClient.js";
+import { BrowserAuthState, createAuthStore } from "../../common/State.js";
 
 const user = {
   email: "reader@example.com",
@@ -20,19 +20,17 @@ describe("realworld auth store state", () => {
       Effect.gen(function* () {
         const store = yield* createAuthStore(unusedClient);
 
-        yield* store.initialize;
-
         return {
           token: yield* store.getToken,
           state: yield* store.getAuthState,
           currentUser: yield* store.getCurrentUser,
         };
       }).pipe(
-        Effect.provide(BrowserAuthState.make({
+        Effect.provide(BrowserAuthState.make(Effect.succeed({
           state: "loading",
           token: null,
           currentUser: null,
-        })),
+        }))),
       ),
     );
 
@@ -96,11 +94,11 @@ describe("realworld auth store state", () => {
           currentUser: yield* store.getCurrentUser,
         };
       }).pipe(
-        Effect.provide(BrowserAuthState.make({
+        Effect.provide(BrowserAuthState.make(Effect.succeed({
           state: "loading",
           token: null,
           currentUser: null,
-        })),
+        }))),
       ),
     );
 

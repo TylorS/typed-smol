@@ -479,7 +479,7 @@ function renderGroupLayerExpression(
   return groupSpec.directoryCompanions["_dependencies.ts"].reduce((expression, path) => {
     const dependencyModule = dependencyNameByPath.get(path);
     return dependencyModule
-      ? `${expression}.pipe(Layer.provideMerge(${dependencyModule}.default))`
+      ? `${expression}.pipe(Layer.provideMerge(Router.normalizeDependencyInput(${dependencyModule}.default)))`
       : expression;
   }, groupLayerExpression);
 }
@@ -702,6 +702,9 @@ export function emitHttpApiSource(input: {
       `import * as ${directoryOptionNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
     );
   }
+  if (groupDependencyPaths.length > 0) {
+    importLines.push(`import * as Router from "@typed/router";`);
+  }
   for (const path of groupDependencyPaths) {
     const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
     importLines.push(
@@ -830,6 +833,7 @@ export function emitHttpApiSource(input: {
           (acc, groupBlock) => `${acc}.pipe(Layer.provideMerge(${groupBlock}))`,
           baseApiLayer,
         );
+  const dependenciesLayer = renderDependenciesLayer(groupDependencyPaths, groupDependencyNameByPath);
 
   const middlewaresPath = apiSpec.directoryCompanions["_middlewares.ts"][0];
   const hasMiddlewares = Boolean(middlewaresPath);
@@ -852,13 +856,21 @@ export function emitHttpApiSource(input: {
   return `${importLines.join("\n")}${openApiHelperBlock}
 
 export const Api = ${apiExpr};
+export const DependenciesLayer = ${dependenciesLayer};
 export const ApiLayer = ${mergedApiLayer};
 export const OpenApi = OpenApiModule.fromApi(Api);
 export const Swagger = ${swaggerExpr};
 export const Scalar = ${scalarExpr};
 export const Client = HttpApiClient.make(Api);
 
-const typedConfig = TypedConfigModule;
+type TypedConfigBuildOptions = {
+  readonly build?: {
+    readonly outDir?: string;
+    readonly clientOutDir?: string;
+  };
+};
+
+const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
 const typedBuildConfig = typedConfig.build ?? {};
 const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
 
@@ -913,6 +925,26 @@ export const serve = <const Layers extends readonly LayerOrGroup[]>(
     }),
   );
 `;
+}
+
+function renderDependenciesLayer(
+  dependencyPaths: readonly string[],
+  dependencyNameByPath: ReadonlyMap<string, string>,
+): string {
+  if (dependencyPaths.length === 0) return "Layer.empty";
+
+  const layers = dependencyPaths
+    .map((path) => {
+      const dependencyModule = dependencyNameByPath.get(path);
+      return dependencyModule
+        ? `Router.normalizeDependencyInput(${dependencyModule}.default)`
+        : undefined;
+    })
+    .filter((value): value is string => value !== undefined);
+
+  return layers.length === 0
+    ? "Layer.empty"
+    : `Layer.mergeAll(Layer.empty, ${layers.join(", ")})`;
 }
 
 function emitHttpApiClientSource(input: {

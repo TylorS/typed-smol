@@ -32,11 +32,20 @@ export function resolveBrowserCompanion(importer: string): BrowserCompanionResol
   const importerDir = dirname(importer);
   return {
     imports: BROWSER_COMPANIONS.flatMap((name) => {
-      const candidate = join(importerDir, `.${name}.ts`);
-      if (!existsSync(candidate)) return [];
-      return [{ name, binding: toBinding(name), importPath: `./.${name}` as const }];
+      const companion = resolveCompanion(importerDir, name);
+      return companion === undefined
+        ? []
+        : [{ name, binding: toBinding(name), importPath: companion }];
     }),
   };
+}
+
+function resolveCompanion(
+  importerDir: string,
+  name: BrowserCompanionName,
+): `./${string}` | undefined {
+  const candidate = name === "dependencies" ? ".browser.dependencies" : `.${name}`;
+  return existsSync(join(importerDir, `${candidate}.ts`)) ? `./${candidate}.js` : undefined;
 }
 
 function toBinding(name: BrowserCompanionName): string {

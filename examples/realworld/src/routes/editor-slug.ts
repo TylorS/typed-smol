@@ -1,16 +1,18 @@
-import { RefSubject } from "@typed/fx";
-import type { RefSubject as RefSubjectType } from "@typed/fx/RefSubject/RefSubject";
-import type { Route } from "@typed/router";
-import { html } from "@typed/template";
+// oxlint-disable require-yield
+import { Fx, RefSubject } from "@typed/fx";
+import { EventHandler, html } from "@typed/template";
 import * as Effect from "effect/Effect";
 import { UpdateArticleRequest } from "../domain/RealWorldApi.js";
-import { BrowserAuth } from "../presentation/BrowserAuth.js";
-import { decodeForm, formSubmit, tagListField, textField } from "../presentation/FormEvents.js";
-import { EditorSlugRoute } from "../routing/Routes.js";
+import { BrowserAuth } from "../common/BrowserAuth.js";
+import { decodeForm, tagListField, textField } from "../common/formInput.js";
+import { formFromSubmitEvent, renderWorkflowFailure } from "../common/workflowErrors.js";
+import { EditorSlugRoute } from "../common/routes.js";
+import type { Handler } from "./$route-types";
 
 export const route = EditorSlugRoute;
-export const template = (params: RefSubjectType<Route.Type<typeof route>>) => {
+export const template = ((params) => Fx.gen(function* () {
   const { slug } = RefSubject.proxy(params);
+
   return html`<section class="editor-page">
     <div class="container page">
       <div class="row">
@@ -51,17 +53,32 @@ export const template = (params: RefSubjectType<Route.Type<typeof route>>) => {
       </div>
     </div>
   </section>`;
-};
+})) satisfies Handler;
 
 const updateArticle = (slug: RefSubject.Computed<string>) =>
-  formSubmit(
-    Effect.fn(function* (form: HTMLFormElement) {
-      const currentSlug = yield* slug;
-      const input = yield* decodeForm(UpdateArticleRequest, { article: articleForm(form) });
-      const auth = yield* BrowserAuth;
-      return yield* auth.updateArticle(currentSlug, input);
-    }),
+  EventHandler.make(
+    (event: SubmitEvent) =>
+      formFromSubmitEvent(event).pipe(
+        Effect.flatMap((form) =>
+          updateArticleFromForm(slug, form).pipe(
+            Effect.catch((error) => renderWorkflowFailure(form, error)),
+          ),
+        ),
+        Effect.asVoid,
+        Effect.catch(() => Effect.void),
+      ),
+    { preventDefault: true },
   );
+
+const updateArticleFromForm = Effect.fn(function* (
+  slug: RefSubject.Computed<string>,
+  form: HTMLFormElement,
+) {
+  const currentSlug = yield* slug;
+  const input = yield* decodeForm(UpdateArticleRequest, { article: articleForm(form) });
+  const auth = yield* BrowserAuth;
+  return yield* auth.updateArticle(currentSlug, input);
+});
 
 const articleForm = (form: HTMLFormElement) => ({
   title: textField(form, "title"),

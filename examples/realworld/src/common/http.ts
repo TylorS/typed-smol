@@ -46,12 +46,10 @@ type FeedQuery = {
   readonly offset?: number;
 };
 
-const compactFilter = (filter: ArticleListFilter): ArticleListFilter => {
-  return {
-    ...(filter.tag !== undefined && filter.tag !== "" ? { tag: filter.tag } : {}),
-    ...(filter.author !== undefined && filter.author !== "" ? { author: filter.author } : {}),
-    ...(filter.favorited !== undefined && filter.favorited !== "" ? { favorited: filter.favorited } : {}),
-    ...(filter.limit !== undefined ? { limit: filter.limit } : {}),
-    ...(filter.offset !== undefined ? { offset: filter.offset } : {}),
-  };
-};
+const compactFilter = (filter: ArticleListFilter): ArticleListFilter => ({
+  ...(filter.tag !== undefined && filter.tag !== "" ? { tag: filter.tag } : {}),
+  ...(filter.author !== undefined && filter.author !== "" ? { author: filter.author } : {}),
+  ...(filter.favorited !== undefined && filter.favorited !== "" ? { favorited: filter.favorited } : {}),
+  ...(filter.limit !== undefined ? { limit: filter.limit } : {}),
+  ...(filter.offset !== undefined ? { offset: filter.offset } : {}),
+});

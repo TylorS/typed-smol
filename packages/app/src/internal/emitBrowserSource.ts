@@ -27,8 +27,10 @@ function emitTypes(): string {
     "type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;",
     "type BrowserLayerInputs = readonly LayerOrGroup[];",
     "type BrowserBaseLayer = ReturnType<typeof makeRenderLayer>;",
-    "type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<Layers, BrowserBaseLayer>;",
-    "type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserBaseLayer | BrowserLayerWith<Layers>;",
+    "type BrowserCompanionLayers = typeof companionLayers;",
+    "type BrowserAllLayers<Layers extends BrowserLayerInputs> = readonly [...BrowserCompanionLayers, ...Layers];",
+    "type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<BrowserAllLayers<Layers>, BrowserBaseLayer>;",
+    "type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserLayerWith<Layers>;",
     "type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;",
     "type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;",
     "interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {",
@@ -64,11 +66,11 @@ function emitRuntime(
   const dependenciesCompanion = companions.find((companion) => companion.name === "dependencies");
   const errorsCompanion = companions.find((companion) => companion.name === "errors");
   const companionLayers = dependenciesCompanion
-    ? `${dependenciesCompanion.binding}.layers ?? []`
+    ? `${dependenciesCompanion.binding}.layers`
     : "[]";
   const companionLayersDeclaration = dependenciesCompanion
-    ? `const companionLayers: BrowserLayerInputs = ${companionLayers};`
-    : "const companionLayers: readonly [] = [];";
+    ? `const companionLayers = ${companionLayers};`
+    : "const companionLayers = [] as const;";
   const companionOnError = errorsCompanion
     ? `${errorsCompanion.binding}.onError ?? undefined`
     : "undefined";
@@ -91,7 +93,7 @@ function emitRuntime(
     "    Layer.provideMerge(DomRenderTemplate.using(win.document)),",
     "  );",
     "}",
-    "export function hydrate(options?: BrowserOptions<readonly []>): BrowserBaseLayer;",
+    "export function hydrate(options?: BrowserOptions<readonly []>): BrowserLayerWith<readonly []>;",
     "export function hydrate<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): BrowserLayerWith<Layers>;",
     "export function hydrate(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserHydratedLayer<BrowserLayerInputs> {",
     "  return hydrateFromOptions(options);",
@@ -101,7 +103,7 @@ function emitRuntime(
     "  const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);",
     "  const renderLayer = makeRenderLayer(win, root);",
     dependenciesCompanion
-      ? "  return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])]);"
+      ? "  return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])] as BrowserAllLayers<BrowserLayerInputs>);"
       : "  return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);",
     "}",
     "export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;",

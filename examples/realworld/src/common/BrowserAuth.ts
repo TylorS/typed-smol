@@ -3,7 +3,6 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { AuthSessionStorage } from "./AuthSessionStorage.js";
-import { installConduitDebug } from "./Debug.js";
 import { BrowserAuthState, createAuthStore, type AuthStore } from "./State.js";
 import type { RealWorldClient } from "../Api.js";
 
@@ -22,10 +21,7 @@ export class BrowserAuth extends Context.Service<BrowserAuth, AuthStore>()(
       BrowserAuth,
       Effect.gen(function* () {
         const client = yield* clientEffect;
-        const store = yield* createAuthStore(client);
-        yield* Effect.sync(() => installConduitDebug(win, store));
-        yield* store.initialize;
-        return store;
+        return yield* createAuthStore(client);
       }),
     );
 

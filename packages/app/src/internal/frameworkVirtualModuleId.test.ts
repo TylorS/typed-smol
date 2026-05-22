@@ -173,7 +173,7 @@ describe("parseTypedVirtualModuleId", () => {
       ok: true,
       kind: "browser",
       routes: ["*"],
-      root: "#app",
+      root: "#typed-root",
       base: "/",
       mode: undefined,
       name: undefined,

@@ -1,15 +1,23 @@
 import { Fx, RefAsyncData, RefSubject } from "@typed/fx";
-import { PageData } from "../page-data/PageData.js";
-import { FeedPage } from "../presentation/Feed.js";
-import { HomeRoute } from "../routing/Routes.js";
-import type { Handler, Params } from "./$route-types";
+import { ApiClient, home } from "../common/routeData.js";
+import { html } from "@typed/template";
+import { AsyncDataView } from "../common/components/AsyncDataView.js";
+import { Banner } from "../common/components/Banner.js";
+import { FeedContent } from "../common/components/FeedContent.js";
+import { HomeRoute } from "../common/routes.js";
+import type { Handler } from "./$route-types";
 
 export const route = HomeRoute;
-export const template = Fx.fn("HomePage")(function* (params: RefSubject.RefSubject<Params>) {
-  const pageData = yield* PageData;
+export const template = ((params) => Fx.gen(function* () {
+  const client = yield* ApiClient;
   const page = RefSubject.map(params, ({ page }) => page ?? 1);
   const data = yield* RefAsyncData.fromComputedEffect(page, (currentPage) =>
-    pageData.home({ page: currentPage }));
+    home(client, { page: currentPage }));
 
-  return FeedPage(data);
-}) satisfies Handler;
+  return html`<section class="home-page">
+    ${Banner}
+    <div class="container page">
+      ${AsyncDataView(data, FeedContent)}
+    </div>
+  </section>`;
+})) satisfies Handler;

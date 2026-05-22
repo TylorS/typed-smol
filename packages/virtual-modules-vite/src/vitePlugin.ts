@@ -113,6 +113,9 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         return null;
       }
       const effectiveImporter = decodeEffectiveImporter(importer);
+      if (!effectiveImporter) {
+        return null;
+      }
       const relativeVirtualImport = resolveRelativeVirtualImport(id, importer, effectiveImporter);
       if (relativeVirtualImport) return relativeVirtualImport;
       const mappedId = mapVirtualId(options, id, effectiveImporter, this?.environment);
@@ -392,12 +395,14 @@ const getArtifactStoreFingerprints = (
 const artifactStoreEnabled = (options: VirtualModulesVitePluginOptions): boolean =>
   options.artifactStore !== false;
 
-const decodeEffectiveImporter = (importer: string): string => {
-  if (!isVirtualId(importer)) return importer;
+const decodeEffectiveImporter = (importer: string): string | undefined => {
+  if (!isVirtualId(importer)) {
+    return importer.includes("\0") ? undefined : importer;
+  }
   const decoded = decodeVirtualId(importer);
   return decoded && validateDecodedPayload(decoded.id, decoded.importer)
     ? decoded.importer
-    : importer;
+    : undefined;
 };
 
 const resolveOptionalProjectRoot = (projectRoot: string | undefined): string | undefined =>

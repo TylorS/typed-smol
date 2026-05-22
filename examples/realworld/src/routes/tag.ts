@@ -1,17 +1,25 @@
 import { Fx, RefAsyncData, RefSubject } from "@typed/fx";
-import { PageData } from "../page-data/PageData.js";
-import { FeedPage } from "../presentation/Feed.js";
-import { TagRoute } from "../routing/Routes.js";
-import type { Handler, Params } from "./$route-types";
+import { ApiClient, tag as tagRouteData } from "../common/routeData.js";
+import { html } from "@typed/template";
+import { AsyncDataView } from "../common/components/AsyncDataView.js";
+import { Banner } from "../common/components/Banner.js";
+import { FeedContent } from "../common/components/FeedContent.js";
+import { TagRoute } from "../common/routes.js";
+import type { Handler } from "./$route-types";
 
 export const route = TagRoute;
-export const template = Fx.fn("TagPage")(function* (params: RefSubject.RefSubject<Params>) {
-  const pageData = yield* PageData;
+export const template = ((params) => Fx.gen(function* () {
+  const client = yield* ApiClient;
   const input = RefSubject.map(params, ({ page, tag }) => ({ page: page ?? 1, tag }));
   const data = yield* RefAsyncData.fromComputedEffect(
     input,
-    (input) => pageData.tag(input),
+    (input) => tagRouteData(client, input),
   );
 
-  return FeedPage(data);
-}) satisfies Handler;
+  return html`<section class="home-page">
+    ${Banner}
+    <div class="container page">
+      ${AsyncDataView(data, FeedContent)}
+    </div>
+  </section>`;
+})) satisfies Handler;

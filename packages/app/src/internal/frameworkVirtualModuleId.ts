@@ -265,7 +265,7 @@ function browserOk(
     ok: true,
     kind: "browser",
     routes,
-    root: params.get("root") ?? "#app",
+    root: params.get("root") ?? "#typed-root",
     base: params.get("base") ?? "/",
     mode,
     name: params.get("name") ?? undefined,

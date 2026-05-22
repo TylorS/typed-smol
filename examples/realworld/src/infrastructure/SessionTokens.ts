@@ -3,13 +3,8 @@ import { Context, Effect, Layer } from "effect";
 import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { OpaqueToken, type UserId } from "../domain/Ids.js";
-import {
-  currentIsoTimestamp,
-  provideRepositorySql,
-  type RepositoryPersistenceError,
-} from "./repositories/Common.js";
-
-export type SessionTokenError = RepositoryPersistenceError;
+import { type SessionTokenError } from "../domain/RepositoryErrors.js";
+import { currentIsoTimestamp, provideRepositorySql } from "./repositories/Common.js";
 
 export interface SessionTokensService {
   readonly create: (userId: UserId) => Effect.Effect<OpaqueToken, SessionTokenError>;

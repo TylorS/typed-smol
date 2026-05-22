@@ -7,13 +7,13 @@ import * as Matcher from "@typed/router/Matcher";
 import { TestRouter } from "@typed/router/Router";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
-import { BrowserAuth } from "../../presentation/BrowserAuth.js";
-import type { AuthStore } from "../../presentation/State.js";
+import { BrowserAuth } from "../../common/BrowserAuth.js";
+import type { AuthStore } from "../../common/State.js";
 import { Email, OpaqueToken, Username } from "../../domain/Ids.js";
 import type { UserResponse } from "../../domain/RealWorldApi.js";
 import { template as loginTemplate } from "../../routes/login.js";
 import { template as registerTemplate } from "../../routes/register.js";
-import { HomeRoute, LoginRoute, RegisterRoute } from "../../routing/Routes.js";
+import { HomeRoute, LoginRoute, RegisterRoute } from "../../common/routes.js";
 
 describe("realworld auth route navigation", () => {
   it("navigates home after successful registration", () =>
@@ -97,7 +97,6 @@ const authStore: AuthStore = {
   deleteComment: () => unexpected("deleteComment"),
   favoriteArticle: () => unexpected("favoriteArticle"),
   followProfile: () => unexpected("followProfile"),
-  initialize: Effect.void,
   login: () => Effect.succeed(userResponse),
   logout: Effect.void,
   register: () => Effect.succeed(userResponse),

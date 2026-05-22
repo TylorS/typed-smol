@@ -4,8 +4,8 @@ import * as Schema from "effect/Schema";
 import { Articles } from "../../application/Articles.js";
 import { NonNegativeInt } from "../../domain/Ids.js";
 import { MultipleArticlesResponse } from "../../domain/RealWorldApi.js";
-import { HttpMethod, articleFilter, authToken } from "../../api-support/Common.js";
-import { respond } from "../../api-support/HttpErrors.js";
+import { HttpMethod, articleFilter, authToken } from "../../common/http.js";
+import { respond } from "../../common/errors.js";
 import type { RawHandler } from "./$api-types";
 
 export const route = Route.Join(

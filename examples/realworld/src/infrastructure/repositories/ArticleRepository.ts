@@ -1,4 +1,4 @@
-import { Context, Data, Effect, Layer, Option } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { Article, ArticlePreview, normalizeTagList } from "../../domain/Article.js";
@@ -14,21 +14,14 @@ import {
 import { defaultLimit } from "../../domain/Pagination.js";
 import { Profile } from "../../domain/User.js";
 import {
+  ArticleRepositoryInvariantError,
+  type ArticleRepositoryError,
+} from "../../domain/RepositoryErrors.js";
+import {
   currentIsoTimestamp,
   first,
   provideRepositorySql,
-  type RepositoryPersistenceError,
 } from "./Common.js";
-
-export class ArticleRepositoryInvariantError extends Data.TaggedError(
-  "ArticleRepositoryInvariantError",
-)<{
-  readonly message: string;
-}> {}
-
-export type ArticleRepositoryError =
-  | ArticleRepositoryInvariantError
-  | RepositoryPersistenceError;
 
 export interface ArticleListResult {
   readonly articles: readonly ArticlePreview[];

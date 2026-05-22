@@ -7,6 +7,7 @@ import type {
   UserResponse,
 } from "../domain/RealWorldApi.js";
 import type { RealWorldError } from "../domain/Errors.js";
+import type { UserRepositoryError } from "../domain/RepositoryErrors.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
 import {
   duplicate,
@@ -18,10 +19,7 @@ import {
   validationError,
 } from "./Common.js";
 import type { User } from "../domain/User.js";
-import type {
-  UserRepositoryError,
-  UserRepositoryService,
-} from "../infrastructure/repositories/UserRepository.js";
+import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
 
 type UsersError = RealWorldError | UserRepositoryError;
 

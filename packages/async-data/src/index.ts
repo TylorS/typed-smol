@@ -1,5 +1,8 @@
 import * as Cause from "effect/Cause";
 import * as Exit from "effect/Exit";
+import { equals } from "effect/Equal";
+import * as Equivalence_ from "effect/Equivalence";
+import type { Equivalence } from "effect/Equivalence";
 import { dual } from "effect/Function";
 import * as Option from "effect/Option";
 import { hasProperty, isObject, isString } from "effect/Predicate";
@@ -82,27 +85,30 @@ export const AsyncData = <const A extends Schema.Top, E extends Schema.Top>(
   return AsyncData;
 };
 
-export const isNoData = <A, E>(asyncData: AsyncData<A, E>): asyncData is NoData =>
+export const isNoData = <A, E = never>(asyncData: AsyncData<A, E>): asyncData is NoData =>
   asyncData._tag === "NoData";
-export const isLoading = <A, E>(asyncData: AsyncData<A, E>): asyncData is Loading =>
+export const isLoading = <A, E = never>(asyncData: AsyncData<A, E>): asyncData is Loading =>
   asyncData._tag === "Loading";
-export const isSuccess = <A, E>(asyncData: AsyncData<A, E>): asyncData is Success<A> =>
+export const isSuccess = <A, E = never>(asyncData: AsyncData<A, E>): asyncData is Success<A> =>
   asyncData._tag === "Success";
-export const isFailure = <A, E>(asyncData: AsyncData<A, E>): asyncData is Failure<E> =>
+export const isFailure = <A, E = never>(asyncData: AsyncData<A, E>): asyncData is Failure<E> =>
   asyncData._tag === "Failure";
-export const isOptimistic = <A, E>(asyncData: AsyncData<A, E>): asyncData is Optimistic<A, E> =>
-  asyncData._tag === "Optimistic";
+export const isOptimistic = <A, E = never>(
+  asyncData: AsyncData<A, E>,
+): asyncData is Optimistic<A, E> => asyncData._tag === "Optimistic";
 
 const TAGS = new Set(["NoData", "Loading", "Success", "Failure", "Optimistic"]);
 
-export const isAsyncData = <A, E>(u: unknown): u is AsyncData<A, E> =>
+export const isAsyncData = <A, E = never>(u: unknown): u is AsyncData<A, E> =>
   isObject(u) && hasProperty(u, "_tag") && isString(u._tag) && TAGS.has(u._tag);
 
-export const isRefreshing = <A, E>(asyncData: AsyncData<A, E>): asyncData is Refreshing<A, E> =>
+export const isRefreshing = <A, E = never>(
+  asyncData: AsyncData<A, E>,
+): asyncData is Refreshing<A, E> =>
   (asyncData._tag === "Success" || asyncData._tag === "Failure") &&
   asyncData.progress !== undefined;
 
-export const isPending = <A, E>(
+export const isPending = <A, E = never>(
   asyncData: AsyncData<A, E>,
 ): asyncData is Loading | Refreshing<A, E> =>
   asyncData._tag === "Loading" || isRefreshing(asyncData);
@@ -117,19 +123,25 @@ export const success = <A>(value: A, progress?: Progress): Success<A> => ({
   progress,
 });
 
-export const failure = <E>(cause: Cause.Cause<E>, progress?: Progress): Failure<E> => ({
+export const failure = <E = never>(cause: Cause.Cause<E>, progress?: Progress): Failure<E> => ({
   _tag: "Failure",
   cause,
   progress,
 });
 
-export const optimistic = <A, E>(previous: AsyncData<A, E>, value: A): Optimistic<A, E> => ({
+export const optimistic = <A, E = never>(
+  previous: AsyncData<A, E>,
+  value: A,
+): Optimistic<A, E> => ({
   _tag: "Optimistic",
   value,
   previous,
 });
 
-export const startLoading = <A, E>(data: AsyncData<A, E>, progress?: Progress): AsyncData<A, E> => {
+export const startLoading = <A, E = never>(
+  data: AsyncData<A, E>,
+  progress?: Progress,
+): AsyncData<A, E> => {
   if (isSuccess(data)) {
     return success(data.value, progress);
   } else if (isFailure(data)) {
@@ -141,7 +153,7 @@ export const startLoading = <A, E>(data: AsyncData<A, E>, progress?: Progress): 
   }
 };
 
-export const stopLoading = <A, E>(data: AsyncData<A, E>): AsyncData<A, E> => {
+export const stopLoading = <A, E = never>(data: AsyncData<A, E>): AsyncData<A, E> => {
   if (isSuccess(data)) {
     return success(data.value);
   } else if (isFailure(data)) {
@@ -198,7 +210,7 @@ export const match: {
   },
 );
 
-export function getSuccess<A, E>(data: AsyncData<A, E>): Option.Option<A> {
+export function getSuccess<A, E = never>(data: AsyncData<A, E>): Option.Option<A> {
   return match(data, {
     NoData: Option.none,
     Loading: Option.none,
@@ -211,7 +223,7 @@ export function getSuccess<A, E>(data: AsyncData<A, E>): Option.Option<A> {
 /**
  * @since 1.0.0
  */
-export function getCause<A, E>(data: AsyncData<A, E>): Option.Option<Cause.Cause<E>> {
+export function getCause<A, E = never>(data: AsyncData<A, E>): Option.Option<Cause.Cause<E>> {
   return match(data, {
     NoData: Option.none,
     Loading: Option.none,
@@ -224,7 +236,7 @@ export function getCause<A, E>(data: AsyncData<A, E>): Option.Option<Cause.Cause
 /**
  * @since 1.0.0
  */
-export function getError<A, E>(data: AsyncData<A, E>): Option.Option<E> {
+export function getError<A, E = never>(data: AsyncData<A, E>): Option.Option<E> {
   return match(data, {
     NoData: Option.none,
     Loading: Option.none,
@@ -235,7 +247,7 @@ export function getError<A, E>(data: AsyncData<A, E>): Option.Option<E> {
 }
 
 export const map: {
-  <A, B>(f: (a: A) => B): <E>(data: AsyncData<A, E>) => AsyncData<B, E>;
+  <A, B>(f: (a: A) => B): <E = never>(data: AsyncData<A, E>) => AsyncData<B, E>;
   <A, E, B>(data: AsyncData<A, E>, f: (a: A) => B): AsyncData<B, E>;
 } = dual(2, function map<A, E, B>(data: AsyncData<A, E>, f: (a: A) => B): AsyncData<B, E> {
   if (isSuccess(data)) {
@@ -284,8 +296,69 @@ export const mapError: {
   }
 });
 
-export const fromExit = <A, E>(exit: Exit.Exit<A, E>): AsyncData<A, E> =>
+export const fromExit = <A, E = never>(exit: Exit.Exit<A, E>): AsyncData<A, E> =>
   Exit.isSuccess(exit) ? success(exit.value) : failure(exit.cause);
 
-export const fromResult = <A, E>(result: Result.Result<A, E>): AsyncData<A, E> =>
+export const fromResult = <A, E = never>(result: Result.Result<A, E>): AsyncData<A, E> =>
   Result.isSuccess(result) ? success(result.success) : failure(Cause.fail(result.failure));
+
+const progressEquivalence: Equivalence<Progress | undefined> = (self, that) => {
+  if (self === that) {
+    return true;
+  }
+  if (self === undefined || that === undefined) {
+    return false;
+  }
+  return self.loaded === that.loaded && self.total === that.total;
+};
+
+/**
+ * Builds an equivalence for `AsyncData` from value and error equivalences.
+ * @since 1.0.0
+ */
+export const makeEquivalence = <A, E = never>(
+  valueEq: Equivalence<A>,
+  errorEq: Equivalence<E>,
+): Equivalence<AsyncData<A, E>> => {
+  const causeEquivalence: Equivalence<Cause.Cause<E>> = (self, that) => {
+    const left = Cause.findFail(self);
+    const right = Cause.findFail(that);
+    if (Result.isSuccess(left) && Result.isSuccess(right)) {
+      return errorEq(left.success.error, right.success.error);
+    }
+    return equals(self, that);
+  };
+
+  const eq: Equivalence<AsyncData<A, E>> = Equivalence_.make((self, that) => {
+    if (self._tag !== that._tag) {
+      return false;
+    }
+    switch (self._tag) {
+      case "NoData":
+        return true;
+      case "Loading": {
+        const other = that as Loading;
+        return progressEquivalence(self.progress, other.progress);
+      }
+      case "Success": {
+        const other = that as Success<A>;
+        return (
+          valueEq(self.value, other.value) && progressEquivalence(self.progress, other.progress)
+        );
+      }
+      case "Failure": {
+        const other = that as Failure<E>;
+        return (
+          causeEquivalence(self.cause, other.cause) &&
+          progressEquivalence(self.progress, other.progress)
+        );
+      }
+      case "Optimistic": {
+        const other = that as Optimistic<A, E>;
+        return valueEq(self.value, other.value) && eq(self.previous, other.previous);
+      }
+    }
+  });
+
+  return eq;
+};

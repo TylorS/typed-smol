@@ -51,7 +51,6 @@ export interface AuthStore {
     username: string,
     following: boolean,
   ) => Effect.Effect<ProfileResponse, AuthWorkflowError>;
-  readonly initialize: Effect.Effect<void>;
   readonly login: (input: LoginUserRequest) => Effect.Effect<UserResponse, ApiClientError>;
   readonly logout: Effect.Effect<void>;
   readonly register: (input: RegisterUserRequest) => Effect.Effect<UserResponse, ApiClientError>;
@@ -88,7 +87,7 @@ export const createAuthStore = (
       })
     );
 
-    return {
+    const store: AuthStore = {
       createArticle: Effect.fn(function* (input) {
         const token = yield* requireToken;
         return yield* client.articles.create({
@@ -139,30 +138,6 @@ export const createAuthStore = (
           : client.profiles.follow(requestInput);
         return yield* request;
       }),
-      initialize: Effect.gen(function* () {
-        yield* RefAsyncData.setLoading(ref);
-        const current = yield* readSnapshot;
-        const token = current.token;
-        if (!token) {
-          yield* setUnauthenticated();
-          return;
-        }
-
-        const result = yield* loadCurrentUser(client, token).pipe(
-          Effect.catch(() => Effect.succeed({ _tag: "Unavailable" as const })),
-        );
-        switch (result._tag) {
-          case "Authenticated":
-            yield* setAuthenticated(result.response);
-            return;
-          case "Unauthenticated":
-            yield* setUnauthenticated();
-            return;
-          case "Unavailable":
-            yield* setUnavailable(token);
-            return;
-        }
-      }),
       login: Effect.fn(function* (input) {
         yield* RefAsyncData.setLoading(ref);
         const response = yield* client.users.login({ params: {}, query: {}, payload: input });
@@ -209,6 +184,47 @@ export const createAuthStore = (
         return snapshot.currentUser;
       }),
     };
+
+    yield* restoreAuthState(client, readSnapshot, {
+      setAuthenticated,
+      setUnauthenticated,
+      setUnavailable,
+    });
+
+    return store;
+  });
+
+const restoreAuthState = (
+  client: RealWorldClient,
+  readSnapshot: Effect.Effect<AuthSnapshot>,
+  setters: {
+    readonly setAuthenticated: (response: UserResponse) => Effect.Effect<void>;
+    readonly setUnauthenticated: () => Effect.Effect<void>;
+    readonly setUnavailable: (token: string) => Effect.Effect<void>;
+  },
+): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    const current = yield* readSnapshot;
+    const token = current.token;
+    if (!token) {
+      yield* setters.setUnauthenticated();
+      return;
+    }
+
+    const result = yield* loadCurrentUser(client, token).pipe(
+      Effect.catch(() => Effect.succeed({ _tag: "Unavailable" as const })),
+    );
+    switch (result._tag) {
+      case "Authenticated":
+        yield* setters.setAuthenticated(result.response);
+        return;
+      case "Unauthenticated":
+        yield* setters.setUnauthenticated();
+        return;
+      case "Unavailable":
+        yield* setters.setUnavailable(token);
+        return;
+    }
   });
 
 type CurrentUserLoad =

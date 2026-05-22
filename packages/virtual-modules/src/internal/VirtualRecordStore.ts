@@ -268,7 +268,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
       if (cached.status === "error") {
         return cached;
       }
-      if (cached.status === "resolved") {
+      if (cached.status === "resolved" && !previous?.stale) {
         const record: MutableVirtualRecord = {
           key,
           id,

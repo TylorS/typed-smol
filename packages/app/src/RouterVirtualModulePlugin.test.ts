@@ -999,7 +999,7 @@ describe("RouterVirtualModulePlugin", () => {
 
   it("handler matrix: Fx function with RefSubject params is passed through", () => {
     const result = buildRouterFromFixture({
-      "src/routes/xf.ts": `import * as Fx from "@typed/fx/Fx"; import type { RefSubject } from "@typed/fx/RefSubject"; ${routeExportForPath("/users/:id")} export const handler = (p: RefSubject<{ readonly id: string }>): Fx.Fx<string> => Fx.map(p, ({ id }) => id);`,
+      "src/routes/xf.ts": `import * as Fx from "@typed/fx/Fx"; import type { RefSubject } from "@typed/fx/RefSubject/RefSubject"; ${routeExportForPath("/users/:id")} export const handler = (p: RefSubject<{ readonly id: string }>): Fx.Fx<string> => Fx.map(p, ({ id }) => id);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toContain("Router.match(Xf.route, Xf.handler)");
@@ -1544,6 +1544,14 @@ export const template = ((params: RefSubject<Params>) =>
     const page: number = value.page;
     return \`\${slug}:\${page}\`;
   })) satisfies Handler;
+
+export const fxTemplate = ((params) => Fx.gen(function* () {
+  type _params = Expect<Equals<typeof params, RefSubject<Params>>>;
+  const value = yield* params;
+  const slug: string = value.slug;
+  const page: number = value.page;
+  return Fx.succeed(\`\${slug}:\${page}\`);
+})) satisfies Handler;
 `,
     });
     const importer = join(fixture.root, "src/routes/articles/show.ts");

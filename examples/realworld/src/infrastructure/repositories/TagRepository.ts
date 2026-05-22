@@ -2,9 +2,8 @@ import { Context, Effect, Layer } from "effect";
 import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { TagName } from "../../domain/Ids.js";
-import { provideRepositorySql, type RepositoryPersistenceError } from "./Common.js";
-
-export type TagRepositoryError = RepositoryPersistenceError;
+import { type TagRepositoryError } from "../../domain/RepositoryErrors.js";
+import { provideRepositorySql } from "./Common.js";
 
 export interface TagRepositoryService {
   readonly list: () => Effect.Effect<readonly TagName[], TagRepositoryError>;

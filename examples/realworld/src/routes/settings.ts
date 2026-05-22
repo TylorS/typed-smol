@@ -1,20 +1,34 @@
-import { html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as Effect from "effect/Effect";
 import { UpdateUserRequest } from "../domain/RealWorldApi.js";
-import { BrowserAuth } from "../presentation/BrowserAuth.js";
+import { BrowserAuth } from "../common/BrowserAuth.js";
 import {
-  clickIntent,
   decodeForm,
-  formSubmit,
   nullableTextField,
   textField,
-} from "../presentation/FormEvents.js";
-import { SettingsRoute } from "../routing/Routes.js";
+} from "../common/formInput.js";
+import {
+  formFromSubmitEvent,
+  renderWorkflowFailure,
+  targetForm,
+} from "../common/workflowErrors.js";
+import { SettingsRoute } from "../common/routes.js";
 
 export const route = SettingsRoute;
 
-const submitSettings = formSubmit(
-  Effect.fn(function* (form: HTMLFormElement) {
+const submitSettings = EventHandler.make(
+  (event: SubmitEvent) =>
+    formFromSubmitEvent(event).pipe(
+      Effect.flatMap((form) =>
+        updateSettings(form).pipe(Effect.catch((error) => renderWorkflowFailure(form, error))),
+      ),
+      Effect.asVoid,
+      Effect.catch(() => Effect.void),
+    ),
+  { preventDefault: true },
+);
+
+const updateSettings = Effect.fn(function* (form: HTMLFormElement) {
     const input = yield* decodeForm(UpdateUserRequest, {
       user: {
         image: nullableTextField(form, "image"),
@@ -26,15 +40,21 @@ const submitSettings = formSubmit(
     });
     const auth = yield* BrowserAuth;
     return yield* auth.updateSettings(input);
-  }),
+});
+
+const logout = EventHandler.make(
+  (event: MouseEvent) =>
+    performLogout().pipe(
+      Effect.catch((error) => renderWorkflowFailure(targetForm(event), error)),
+      Effect.asVoid,
+    ),
+  { preventDefault: true },
 );
 
-const logout = clickIntent(
-  Effect.fn(function* () {
-    const auth = yield* BrowserAuth;
-    return yield* auth.logout;
-  }),
-);
+const performLogout = Effect.fn(function* () {
+  const auth = yield* BrowserAuth;
+  return yield* auth.logout;
+});
 
 export const template = html`<section class="settings-page">
   <div class="container page">

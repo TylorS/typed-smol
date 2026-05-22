@@ -1,3 +1,3 @@
-import { RequestHeaders } from "../../../api-support/Common.js";
+import { RequestHeaders } from "../../../common/http.js";
 
 export const headers = RequestHeaders;

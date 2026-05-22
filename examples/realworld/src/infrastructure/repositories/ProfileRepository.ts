@@ -2,15 +2,13 @@ import { Context, Effect, Layer, Option } from "effect";
 import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { UserId, Username } from "../../domain/Ids.js";
+import { type ProfileRepositoryError } from "../../domain/RepositoryErrors.js";
 import { Profile } from "../../domain/User.js";
 import {
   currentIsoTimestamp,
   first,
   provideRepositorySql,
-  type RepositoryPersistenceError,
 } from "./Common.js";
-
-export type ProfileRepositoryError = RepositoryPersistenceError;
 
 export interface ProfileRepositoryService {
   readonly findByUsername: (

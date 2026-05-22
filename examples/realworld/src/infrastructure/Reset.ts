@@ -1,17 +1,15 @@
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { Context, Effect, Layer } from "effect";
-import { Migrator, SqlError } from "effect/unstable/sql";
 import { RealWorldConfig } from "./Config.js";
-import { FileSystemError, formatThrown } from "./Errors.js";
+import {
+  FileSystemError,
+  formatThrown,
+  type DatabaseError,
+} from "../domain/RepositoryErrors.js";
 import { runMigrations } from "./Migrations.js";
 import { collectSeedCounts, seedDatabase, type SeedCounts } from "./Seed.js";
 import { ensureDatabaseDirectory, sqliteLayer, withSqlite } from "./Sql.js";
-
-export type DatabaseError =
-  | FileSystemError
-  | Migrator.MigrationError
-  | SqlError.SqlError;
 
 export interface DatabaseManagerService {
   readonly migrate: Effect.Effect<void, DatabaseError>;

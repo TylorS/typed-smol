@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
-import { makeBrowserClient } from "../../presentation/BrowserApiClient.js";
-import { BrowserAuthState, createAuthStore, type AuthStore } from "../../presentation/State.js";
+import { makeBrowserClient } from "../../common/BrowserApiClient.js";
+import { BrowserAuthState, createAuthStore, type AuthStore } from "../../common/State.js";
 
 const profile = {
   username: "reader",
@@ -44,7 +44,10 @@ describe("realworld browser mutation workflows", () => {
   it("updates settings through the local API client and stores the returned token", async () => {
     const win = windowWith({
       token: "old-token",
-      fetch: fetchSequence([{ status: 200, body: { user: { ...user, token: "new-token" } } }]),
+      fetch: fetchSequence([
+        { status: 200, body: { user: { ...user, token: "old-token" } } },
+        { status: 200, body: { user: { ...user, token: "new-token" } } },
+      ]),
     });
     const token = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
@@ -59,7 +62,7 @@ describe("realworld browser mutation workflows", () => {
         return yield* store.getToken;
       }));
 
-    expect(win.fetch.calls[0]).toMatchObject({
+    expect(win.fetch.calls[1]).toMatchObject({
       input: "/api/user",
       method: "PUT",
       authorization: "Token old-token",
@@ -79,6 +82,7 @@ describe("realworld browser mutation workflows", () => {
     const win = windowWith({
       token: "token-reader",
       fetch: fetchSequence([
+        { status: 200, body: { user } },
         { status: 201, body: { article } },
         { status: 200, body: { article: { ...article, title: "Typed Runtime Updated" } } },
       ]),
@@ -100,7 +104,7 @@ describe("realworld browser mutation workflows", () => {
         });
       }));
 
-    expect(win.fetch.calls).toMatchObject([
+    expect(win.fetch.calls.slice(1)).toMatchObject([
       {
         input: "/api/articles",
         method: "POST",
@@ -118,6 +122,7 @@ describe("realworld browser mutation workflows", () => {
     const win = windowWith({
       token: "token-reader",
       fetch: fetchSequence([
+        { status: 200, body: { user } },
         { status: 200, body: { article: { ...article, favorited: true, favoritesCount: 1 } } },
         { status: 200, body: { profile: { ...profile, following: true } } },
         { status: 201, body: { comment } },
@@ -134,7 +139,7 @@ describe("realworld browser mutation workflows", () => {
         yield* store.deleteArticle("typed-runtime");
       }));
 
-    expect(win.fetch.calls).toMatchObject([
+    expect(win.fetch.calls.slice(1)).toMatchObject([
       { input: "/api/articles/typed-runtime/favorite", method: "POST" },
       { input: "/api/profiles/reader/follow", method: "POST" },
       {
@@ -199,7 +204,7 @@ const withAuthStoreEffect = <A, E>(
     const store = yield* createAuthStore(client);
     return yield* useStore(store);
   }).pipe(
-    Effect.provide(BrowserAuthState.make(authSnapshotFor(win))),
+    Effect.provide(BrowserAuthState.make(Effect.succeed(authSnapshotFor(win)))),
     Effect.provide(FetchHttpClient.layer),
   );
 

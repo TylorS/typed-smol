@@ -10,8 +10,8 @@ import { withSqlite } from "../../infrastructure/Sql.js";
 import {
   DuplicateUserField,
   PasswordPolicyError,
-  UserRepository,
-} from "../../infrastructure/repositories/UserRepository.js";
+} from "../../domain/RepositoryErrors.js";
+import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
 import {
   defaultDataDirectory,
   exitWithLayer,

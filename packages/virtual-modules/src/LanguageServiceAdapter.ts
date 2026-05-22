@@ -187,6 +187,7 @@ export const attachLanguageServiceAdapter = (
     },
     onRecordResolved: (record) => {
       clearDiagnosticsForFile(record.importer);
+      options.onRecordResolved?.(record);
     },
     onEvictRecord: (record) => {
       clearDiagnosticsForFile(record.importer);

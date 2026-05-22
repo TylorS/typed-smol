@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -98,7 +98,7 @@ describe("typed-realworld package skeleton", () => {
     expect(readText("typed.config.ts")).not.toContain('from "@typed/app";');
 
     expect(existsSync(resolve(projectRoot, "index.html"))).toBe(true);
-    expect(existsSync(resolve(projectRoot, "src/main.ts"))).toBe(true);
+    expect(existsSync(resolve(projectRoot, "src/main.ts"))).toBe(false);
     expect(existsSync(resolve(projectRoot, "src/server.ts"))).toBe(true);
     expect(existsSync(resolve(projectRoot, "src/browser.ts"))).toBe(true);
     expect(existsSync(resolve(projectRoot, "src/ssr.ts"))).toBe(false);
@@ -110,9 +110,11 @@ describe("typed-realworld package skeleton", () => {
     const html = readText("index.html");
     const browserEntry = readText("src/browser.ts");
 
-    expect(html).toContain('<div id="realworld-root"><!--typed-ssr-outlet--></div>');
+    expect(html).toContain('<div id="typed-root"><!--typed-ssr-outlet--></div>');
     expect(html).not.toContain('<div id="app"></div>');
-    expect(browserEntry).toContain('root: "#realworld-root"');
+    expect(browserEntry).not.toContain("root:");
+    expect(existsSync(resolve(projectRoot, "src/.browser.dependencies.ts"))).toBe(true);
+    expect(readText("src/.browser.dependencies.ts")).toContain("BrowserAuth.WithState");
   });
 
   it("keeps route modules environment-agnostic with entrypoint-scoped dependencies", () => {
@@ -135,6 +137,15 @@ describe("typed-realworld package skeleton", () => {
 
       expect(source, path).not.toContain("RouteHandler");
       expect(source, path).not.toContain("@typed/app/RouteHandler");
+    }
+  });
+
+  it("lets satisfies Handler provide route template parameter types", () => {
+    for (const path of routeSourceFiles()) {
+      const source = readText(path);
+
+      expect(source, path).not.toContain("RefSubject.RefSubject<Params>");
+      expect(source, path).not.toMatch(/import type \{[^}]*\bParams\b/);
     }
   });
 
@@ -202,18 +213,54 @@ describe("typed-realworld package skeleton", () => {
   });
 
   it("uses the generated api virtual module instead of a hand-written client api", () => {
-    expect(existsSync(resolve(projectRoot, "src/presentation/ClientApi.ts"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, "src/common/ClientApi.ts"))).toBe(false);
 
     expect(readText("src/Api.ts")).toContain('from "typed:api?dir=./api&mode=client"');
     expect(readText("src/Api.ts")).not.toContain("OpenApi");
-    expect(readText("src/presentation/BrowserApiClient.ts")).toContain('from "../Api.js"');
-    expect(readText("src/page-data/BrowserPageData.ts")).toContain('from "../Api.js"');
-    expect(readText("src/presentation/State.ts")).toContain('from "../Api.js"');
+    expect(readText("src/common/BrowserApiClient.ts")).toContain('from "../Api.js"');
+    expect(readText("src/common/routeData.ts")).toContain('from "../Api.js"');
+    expect(readText("src/common/State.ts")).toContain('from "../Api.js"');
 
     for (const path of productionSourceFiles()) {
       expect(readText(path), path).not.toContain("ClientApi");
       expect(readText(path), path).not.toContain("createRealWorldClient");
     }
+  });
+
+  it("does not name empty request parameter shapes", () => {
+    expect(readText("src/common/routeData.ts")).not.toContain("EmptyQuery");
+  });
+
+  it("does not keep form workflow behavior in a catch-all FormEvents module", () => {
+    expect(existsSync(resolve(projectRoot, "src/common/FormEvents.ts"))).toBe(false);
+
+    for (const path of [...routeSourceFiles(), ...componentSourceFiles()]) {
+      expect(readText(path), path).not.toContain("FormEvents.js");
+    }
+  });
+
+  it("does not install a browser debug API for auth state", () => {
+    expect(existsSync(resolve(projectRoot, "src/common/Debug.ts"))).toBe(false);
+
+    for (const path of productionSourceFiles()) {
+      expect(readText(path), path).not.toContain("__conduit_debug__");
+      expect(readText(path), path).not.toContain("installConduitDebug");
+    }
+  });
+
+  it("does not expose explicit initialize effects on services", () => {
+    for (const path of productionSourceFiles()) {
+      expect(readText(path), path).not.toMatch(/\binitialize\s*:/);
+      expect(readText(path), path).not.toContain(".initialize");
+    }
+  });
+
+  it("keeps error type definitions out of infrastructure modules", () => {
+    const offenders = infrastructureSourceFiles()
+      .flatMap((path) =>
+        infrastructureErrorDefinitionLines(path).map((line) => `${path}:${line}`));
+
+    expect(offenders).toEqual([]);
   });
 
   it("does not use unknown as an Effect error channel in production source", () => {
@@ -244,6 +291,15 @@ describe("typed-realworld package skeleton", () => {
     }
   });
 
+  it("keeps UI render components to one Fx boundary per file", () => {
+    for (const path of componentSourceFiles()) {
+      const source = readText(path);
+      const components = source.match(/export const \w+ = Fx\.(?:fn|gen)\b/g) ?? [];
+
+      expect(components, path).toHaveLength(1);
+    }
+  });
+
   it("uses @typed/ui Link for internal navigation anchors", () => {
     const offenders = linkSourceFiles()
       .flatMap((path) =>
@@ -262,6 +318,16 @@ describe("typed-realworld package skeleton", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("reuses API dependencies for server route data instead of duplicating them", () => {
+    const dependencyLayer = readText("src/.server.dependencies.ts");
+
+    expect(dependencyLayer).toContain('from "typed:api?dir=./api"');
+    expect(dependencyLayer).toContain("ApiDependenciesLayer");
+    expect(dependencyLayer).not.toContain("ApplicationServices");
+    expect(dependencyLayer).not.toContain("UserRepository.Live");
+    expect(dependencyLayer).not.toContain("PasswordHasher.Live");
+  });
+
   it("uses composed Layer test harnesses instead of stacked Effect.provide", () => {
     const offenders = layerHarnessSourceFiles()
       .flatMap((path) =>
@@ -272,18 +338,20 @@ describe("typed-realworld package skeleton", () => {
 });
 
 const productionSourceFiles = (): readonly string[] => [
-  "src/api-support/Common.ts",
   "src/application/Articles.ts",
   "src/application/Comments.ts",
   "src/application/Profiles.ts",
   "src/application/Tags.ts",
   "src/application/Users.ts",
   "src/browser.ts",
-  "src/page-data/BrowserPageData.ts",
-  "src/page-data/PageData.ts",
-  "src/presentation/BrowserAuth.ts",
-  "src/presentation/FormEvents.ts",
-  "src/presentation/State.ts",
+  "src/common/http.ts",
+  "src/common/routes.ts",
+  "src/common/routeData.ts",
+  "src/common/serverApiClient.ts",
+  "src/common/BrowserAuth.ts",
+  "src/common/formInput.ts",
+  "src/common/workflowErrors.ts",
+  "src/common/State.ts",
 ];
 
 const routeSourceFiles = (): readonly string[] => [
@@ -308,9 +376,33 @@ const asyncRouteSourceFiles = (): readonly string[] => [
 ];
 
 const asyncPageSourceFiles = (): readonly string[] => [
-  "src/presentation/ArticlePage.ts",
-  "src/presentation/Feed.ts",
-  "src/presentation/ProfilePage.ts",
+  "src/common/components/AsyncDataView.ts",
+];
+
+const componentSourceFiles = (): readonly string[] => [
+  "src/common/components/ArticleContent.ts",
+  "src/common/components/ArticleList.ts",
+  "src/common/components/ArticleMeta.ts",
+  "src/common/components/ArticlePreviewCard.ts",
+  "src/common/components/ArticleTag.ts",
+  "src/common/components/AsyncDataView.ts",
+  "src/common/components/AuthorMeta.ts",
+  "src/common/components/Banner.ts",
+  "src/common/components/CommentCard.ts",
+  "src/common/components/CommentForm.ts",
+  "src/common/components/EmptyFeedMessage.ts",
+  "src/common/components/FeedContent.ts",
+  "src/common/components/FeedTag.ts",
+  "src/common/components/FeedToggle.ts",
+  "src/common/components/Message.ts",
+  "src/common/components/Navbar.ts",
+  "src/common/components/PageLink.ts",
+  "src/common/components/Pagination.ts",
+  "src/common/components/ProfileContent.ts",
+  "src/common/components/ProfileTab.ts",
+  "src/common/components/SelectedTagTab.ts",
+  "src/common/components/TagSidebar.ts",
+  "src/common/components/TagSidebarLink.ts",
 ];
 
 const apiEndpointSourceFiles = (): readonly string[] => [
@@ -344,6 +436,17 @@ const repositorySourceFiles = (): readonly string[] => [
   "src/infrastructure/SessionTokens.ts",
 ];
 
+const infrastructureSourceFiles = (): readonly string[] => sourceFilesUnder("src/infrastructure");
+
+const sourceFilesUnder = (dir: string): readonly string[] =>
+  readdirSync(resolve(projectRoot, dir), { withFileTypes: true })
+    .flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return [...sourceFilesUnder(path)];
+      return path.endsWith(".ts") ? [path] : [];
+    })
+    .sort();
+
 const layerHarnessSourceFiles = (): readonly string[] => [
   "src/tests/api/api.test.ts",
   "src/tests/application/articles.test.ts",
@@ -358,18 +461,24 @@ const layerHarnessSourceFiles = (): readonly string[] => [
 ];
 
 const genPreferredSourceFiles = (): readonly string[] => [
-  "src/page-data/BrowserPageData.ts",
-  "src/presentation/AuthSessionStorage.ts",
-  "src/presentation/BrowserApiClient.ts",
-  "src/presentation/BrowserAuth.ts",
-  "src/presentation/State.ts",
+  "src/common/routeData.ts",
+  "src/common/AuthSessionStorage.ts",
+  "src/common/BrowserApiClient.ts",
+  "src/common/BrowserAuth.ts",
+  "src/common/State.ts",
 ];
 
 const linkSourceFiles = (): readonly string[] => [
-  "src/presentation/ArticlePage.ts",
-  "src/presentation/Feed.ts",
-  "src/presentation/Layout.ts",
-  "src/presentation/ProfilePage.ts",
+  "src/common/components/ArticleMeta.ts",
+  "src/common/components/ArticlePreviewCard.ts",
+  "src/common/components/AuthorMeta.ts",
+  "src/common/components/CommentCard.ts",
+  "src/common/components/FeedToggle.ts",
+  "src/common/components/Navbar.ts",
+  "src/common/components/PageLink.ts",
+  "src/common/components/ProfileTab.ts",
+  "src/common/components/SelectedTagTab.ts",
+  "src/common/components/TagSidebarLink.ts",
   "src/routes/login.ts",
   "src/routes/register.ts",
 ];
@@ -393,6 +502,16 @@ const effectCombinatorLines = (path: string): readonly number[] =>
     .split("\n")
     .flatMap((line, index) =>
       /Effect\.(?:flatMap|map)\(/.test(line) ? [index + 1] : []);
+
+const infrastructureErrorDefinitionLines = (path: string): readonly number[] =>
+  readText(path)
+    .split("\n")
+    .flatMap((line, index) =>
+      /^\s*(?:export\s+)?(?:class|interface)\s+\w*Error\b/.test(line) ||
+      /^\s*(?:export\s+)?type\s+\w*Error\b\s*=/.test(line) ||
+      /\b(?:Data|Schema)\.TaggedError(?:Class)?\b/.test(line)
+        ? [index + 1]
+        : []);
 
 const rawAnchorHrefLines = (path: string): readonly number[] => {
   const lines = readText(path).split("\n");

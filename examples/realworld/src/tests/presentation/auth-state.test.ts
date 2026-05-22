@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import * as Logger from "effect/Logger";
-import { makeBrowserClient } from "../../presentation/BrowserApiClient.js";
-import { BrowserAuth } from "../../presentation/BrowserAuth.js";
-import { AuthSessionStorage } from "../../presentation/AuthSessionStorage.js";
-import { BrowserAuthState, createAuthStore, type AuthStore } from "../../presentation/State.js";
-import { installConduitDebug } from "../../presentation/Debug.js";
+import { makeBrowserClient } from "../../common/BrowserApiClient.js";
+import { BrowserAuth } from "../../common/BrowserAuth.js";
+import { AuthSessionStorage } from "../../common/AuthSessionStorage.js";
+import { BrowserAuthState, createAuthStore, type AuthStore } from "../../common/State.js";
 import { Email, Username } from "../../domain/Ids.js";
 import { Password } from "../../domain/RealWorldApi.js";
 
@@ -23,14 +22,10 @@ describe("realworld browser auth state", () => {
     const win = windowWith({ fetch: fetchJson({ user }, 200) });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
-        const debug = debugFor(win);
-
         return {
-          token: yield* debug.getToken,
-          authState: yield* debug.getAuthState,
-          currentUser: yield* debug.getCurrentUser,
+          token: yield* store.getToken,
+          authState: yield* store.getAuthState,
+          currentUser: yield* store.getCurrentUser,
         };
       }));
 
@@ -48,14 +43,10 @@ describe("realworld browser auth state", () => {
     });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
-        const debug = debugFor(win);
-
         return {
-          token: yield* debug.getToken,
-          authState: yield* debug.getAuthState,
-          currentUser: yield* debug.getCurrentUser,
+          token: yield* store.getToken,
+          authState: yield* store.getAuthState,
+          currentUser: yield* store.getCurrentUser,
         };
       }));
 
@@ -74,19 +65,17 @@ describe("realworld browser auth state", () => {
     const win = windowWith({ fetch: fetchJson({ user }, 200) });
     const result = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
         const response = yield* store.login({
           user: {
             email: Email.make("reader@example.com"),
             password: Password.make("password123"),
           },
         });
-        const debug = debugFor(win);
 
         return {
           response,
           token: yield* store.getToken,
-          authState: yield* debug.getAuthState,
+          authState: yield* store.getAuthState,
         };
       }));
 
@@ -109,7 +98,6 @@ describe("realworld browser auth state", () => {
     const win = windowWith({ fetch: fetchJson({ user }, 201) });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
         yield* store.register({
           user: {
             username: Username.make("reader"),
@@ -117,11 +105,10 @@ describe("realworld browser auth state", () => {
             password: Password.make("password123"),
           },
         });
-        const debug = debugFor(win);
 
         return {
           token: yield* store.getToken,
-          currentUser: yield* debug.getCurrentUser,
+          currentUser: yield* store.getCurrentUser,
         };
       }));
 
@@ -137,15 +124,12 @@ describe("realworld browser auth state", () => {
     const win = windowWith({ fetch: fetchJson({ user }, 200), token: "token-reader" });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
         yield* store.logout;
-        const debug = debugFor(win);
 
         return {
-          token: yield* debug.getToken,
-          authState: yield* debug.getAuthState,
-          currentUser: yield* debug.getCurrentUser,
+          token: yield* store.getToken,
+          authState: yield* store.getAuthState,
+          currentUser: yield* store.getCurrentUser,
         };
       }));
 
@@ -160,9 +144,7 @@ describe("realworld browser auth state", () => {
     const win = windowWith({ fetch: fetchJson({ user }, 200), token: "state-token" });
     const authState = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
-        return yield* debugFor(win).getAuthState;
+        return yield* store.getAuthState;
       }));
 
     expect(win.fetch.calls[0]).toMatchObject({
@@ -179,14 +161,10 @@ describe("realworld browser auth state", () => {
     });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
-        const debug = debugFor(win);
-
         return {
-          token: yield* debug.getToken,
-          authState: yield* debug.getAuthState,
-          currentUser: yield* debug.getCurrentUser,
+          token: yield* store.getToken,
+          authState: yield* store.getAuthState,
+          currentUser: yield* store.getCurrentUser,
         };
       }));
 
@@ -204,14 +182,10 @@ describe("realworld browser auth state", () => {
     });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
-        const debug = debugFor(win);
-
         return {
-          token: yield* debug.getToken,
-          authState: yield* debug.getAuthState,
-          currentUser: yield* debug.getCurrentUser,
+          token: yield* store.getToken,
+          authState: yield* store.getAuthState,
+          currentUser: yield* store.getCurrentUser,
         };
       }));
 
@@ -229,13 +203,9 @@ describe("realworld browser auth state", () => {
     });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
-        const debug = debugFor(win);
-
         return {
-          token: yield* debug.getToken,
-          authState: yield* debug.getAuthState,
+          token: yield* store.getToken,
+          authState: yield* store.getAuthState,
         };
       }));
 
@@ -250,14 +220,10 @@ describe("realworld browser auth state", () => {
     });
     const state = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
-        installConduitDebug(win, store);
-        yield* store.initialize;
-        const debug = debugFor(win);
-
         return {
-          token: yield* debug.getToken,
-          authState: yield* debug.getAuthState,
-          currentUser: yield* debug.getCurrentUser,
+          token: yield* store.getToken,
+          authState: yield* store.getAuthState,
+          currentUser: yield* store.getCurrentUser,
         };
       }));
 
@@ -337,7 +303,7 @@ describe("realworld browser auth state", () => {
 
     await withAuthStore(win, (store) => store.favoriteArticle("typed", false));
 
-    expect(win.fetch.calls[0]).toMatchObject({
+    expect(win.fetch.calls[1]).toMatchObject({
       input: "/api/articles/typed/favorite",
       method: "POST",
       authorization: "Token middleware-token",
@@ -348,11 +314,6 @@ describe("realworld browser auth state", () => {
 type TestWindow = {
   readonly fetch: TestFetch;
   readonly localStorage: Storage & { jwtToken?: string };
-  __conduit_debug__?: {
-    readonly getToken: Effect.Effect<string | null>;
-    readonly getAuthState: Effect.Effect<string>;
-    readonly getCurrentUser: Effect.Effect<unknown>;
-  };
 };
 
 type TestFetch = typeof globalThis.fetch & {
@@ -362,14 +323,6 @@ type TestFetch = typeof globalThis.fetch & {
     readonly body?: unknown;
     readonly method?: string;
   }>;
-};
-
-const debugFor = (win: TestWindow) => {
-  if (win.__conduit_debug__ === undefined) {
-    throw new Error("Conduit debug API is not installed");
-  }
-
-  return win.__conduit_debug__;
 };
 
 let currentFetch: typeof globalThis.fetch = globalThis.fetch;
@@ -402,7 +355,7 @@ const withAuthStore = <A, E>(
       const store = yield* createAuthStore(client);
       return yield* useStore(store);
     }).pipe(
-      Effect.provide(BrowserAuthState.make(authSnapshotFor(win))),
+      Effect.provide(BrowserAuthState.make(Effect.succeed(authSnapshotFor(win)))),
       Effect.provide(FetchHttpClient.layer),
     ),
   );

@@ -26,7 +26,7 @@ describe("realworld selector contract", () => {
     const html = await render("/");
     const indexHtml = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
 
-    expect(indexHtml).toContain("/src/presentation/styles.css");
+    expect(indexHtml).toContain("/src/common/styles.css");
     expect(html).toContain('class="navbar navbar-light"');
     expect(html).toContain('class="navbar-brand"');
     expect(html).toContain('class="feed-toggle"');

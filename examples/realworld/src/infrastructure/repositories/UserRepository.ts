@@ -1,20 +1,24 @@
-import { Context, Data, Effect, Layer, Option } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 import * as Schema from "effect/Schema";
 import { SqlClient } from "effect/unstable/sql";
 import { Email, OpaqueToken, UserId, Username } from "../../domain/Ids.js";
 import { normalizeNullableProfileField, User } from "../../domain/User.js";
 import {
+  DuplicateUserField,
+  PasswordPolicyError,
+  UserNotFound,
+  type UserRepositoryError,
+} from "../../domain/RepositoryErrors.js";
+import {
   PasswordHasher,
-  PasswordHashError,
   StoredPassword,
   type PasswordHasherService,
 } from "../PasswordHasher.js";
-import { SessionTokens, type SessionTokenError } from "../SessionTokens.js";
+import { SessionTokens } from "../SessionTokens.js";
 import {
   currentIsoTimestamp,
   first,
   provideRepositorySql,
-  type RepositoryPersistenceError,
 } from "./Common.js";
 
 const PasswordMinLength = 8;
@@ -50,26 +54,6 @@ const UpdateUserInputSchema = Schema.Struct({
 type DecodedCreateUserInput = Schema.Schema.Type<typeof CreateUserInputSchema>;
 type DecodedUpdateUserInput = Schema.Schema.Type<typeof UpdateUserInputSchema>;
 export type UserRecord = User;
-
-export class DuplicateUserField extends Data.TaggedError("DuplicateUserField")<{
-  readonly field: "username" | "email";
-}> {}
-
-export class PasswordPolicyError extends Data.TaggedError("PasswordPolicyError")<{
-  readonly reason: string;
-}> {}
-
-export class UserNotFound extends Data.TaggedError("UserNotFound")<{
-  readonly id: UserId;
-}> {}
-
-export type UserRepositoryError =
-  | DuplicateUserField
-  | PasswordHashError
-  | PasswordPolicyError
-  | RepositoryPersistenceError
-  | SessionTokenError
-  | UserNotFound;
 
 export interface UserRepositoryService {
   readonly create: (input: CreateUserInput) => Effect.Effect<UserRecord, UserRepositoryError>;
