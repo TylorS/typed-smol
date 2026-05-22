@@ -3,6 +3,7 @@
   "references": [
     { "path": "packages/app" },
     { "path": "packages/async-data" },
+    { "path": "packages/compiler" },
     { "path": "packages/fx" },
     { "path": "packages/guard" },
     { "path": "packages/id" },
