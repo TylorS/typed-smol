@@ -35,3 +35,9 @@
 - `analyzeComponentHmr` is descriptor-only. It does not rewrite source yet.
 - Plain template optimization is not stateful HMR. Only route/dependency/component boundaries should report service-backed HMR descriptors.
 - Inline `RefSubject.make(...)` descriptors use a generated service id of `${moduleId}#${localName}` until a later source rewrite or explicit user identity replaces it.
+
+## Task 11: Dependency HMR Analysis
+
+- Dependency participation is based on stable `RefSubject.Service(...)` identities unless an explicit opt-in is supplied.
+- Anonymous `RefSubject.make(...)` in dependency modules is rejected for preservation; route component inline refs are handled by Task 10 descriptors instead.
+- Dependency fingerprints currently combine module id with sorted service ids, or the explicit opt-in reason when no service id exists.

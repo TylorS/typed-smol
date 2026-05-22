@@ -71,7 +71,7 @@ Modify:
 | T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | completed in `feat(fx): add refsubject service identity` |
 | T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | completed in `feat(app): add typed hmr state registry` |
 | T10 | direct | T8, T9 | `pnpm --filter @typed/compiler test -- analyzeComponentHmr` | analysis only, no source rewrite | completed in `feat(compiler): analyze component hmr state` |
-| T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | revert dependency analyzer |
+| T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | completed in `feat(compiler): infer route hmr dependencies` |
 | T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | revert closure context files |
 | T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | revert browser emitter changes |
 | T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | revert server emitter changes |
@@ -525,12 +525,16 @@ Commit message: `feat(compiler): analyze component hmr state`.
 
 ### Task 11: Analyze Participating Dependencies
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Add dependency participation analysis that recognizes stable `RefSubject.Service(...)` identities in imported and route-companion modules, rejects anonymous dependency refs, and records explicit opt-in/opt-out overrides for cases inference misses or overreaches.
+
 **Files:**
 - Create: `packages/compiler/src/hmr/options.ts`
 - Create: `packages/compiler/src/hmr/dependencies.ts`
 - Create: `packages/compiler/src/hmr/dependencies.test.ts`
 
-- [ ] **Step 1: Write failing dependency tests**
+- [x] **Step 1: Write failing dependency tests**
 
 Tests:
 
@@ -544,17 +548,17 @@ Run: `pnpm --filter @typed/compiler test -- dependencyHmr`
 
 Expected: fails because dependency analyzer is missing.
 
-- [ ] **Step 2: Implement dependency analysis**
+- [x] **Step 2: Implement dependency analysis**
 
 Return descriptors with module id, service ids, fingerprints, and inference/override reason.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/compiler test -- dependencyHmr`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(compiler): infer route hmr dependencies`.
 
