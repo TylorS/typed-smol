@@ -1,8 +1,9 @@
 import type { CompiledDomTemplate, RuntimeTemplateFallback } from "@typed/compiler";
-import { Fx } from "@typed/fx";
+import { type Fx, Fx as FxRuntime } from "@typed/fx";
 import {
   DomRenderTemplate,
   render,
+  type RenderEvent,
   type Renderable,
 } from "@typed/template";
 import * as Effect from "effect/Effect";
@@ -15,16 +16,25 @@ import {
 import { isCompiledDomTemplate, isTemplateFallback } from "./internal.js";
 
 export function mount<Values extends ReadonlyArray<Renderable.Any>>(
-  template: DomRuntimeTemplate<Values>,
+  template: CompiledDomTemplate | RuntimeTemplateFallback<Values>,
   options: MountOptions<Values>,
 ): Effect.Effect<
   MountedApp,
   Renderable.Error<Values[number]>,
   Renderable.Services<Values[number]>
-> {
+>;
+export function mount<E, R>(
+  template: Fx.Fx<RenderEvent, E, R>,
+  options: MountOptions,
+): Effect.Effect<MountedApp, E, R>;
+export function mount<Values extends ReadonlyArray<Renderable.Any>, E, R>(
+  template: DomRuntimeTemplate<Values> | Fx.Fx<RenderEvent, E, R>,
+  options: MountOptions<Values>,
+): Effect.Effect<MountedApp, Renderable.Error<Values[number]> | E, Renderable.Services<Values[number]> | R> {
   if (isCompiledDomTemplate(template)) return mountCompiled(template, options);
   if (isTemplateFallback(template)) return mountFallback(template, options);
-  return Effect.die(new TypeError("Expected a compiled DOM template or runtime fallback template"));
+  if (FxRuntime.isFx(template)) return mountFx(template, options);
+  return Effect.die(new TypeError("Expected a DOM runtime template"));
 }
 
 function mountCompiled<Values extends ReadonlyArray<Renderable.Any>>(
@@ -47,9 +57,24 @@ function mountFallback<Values extends ReadonlyArray<Renderable.Any>>(
 > {
   return Effect.map(
     render(template.render(...(options.values ?? emptyValues())), options.root).pipe(
-      Fx.provide(DomRenderTemplate.using(options.root.ownerDocument)),
-      Fx.take(1),
-      Fx.collectAll,
+      FxRuntime.provide(DomRenderTemplate.using(options.root.ownerDocument)),
+      FxRuntime.take(1),
+      FxRuntime.collectAll,
+      Effect.scoped,
+    ),
+    () => mountedApp(options.root, Array.from(options.root.childNodes)),
+  );
+}
+
+function mountFx<E, R>(
+  fx: Fx.Fx<RenderEvent, E, R>,
+  options: MountOptions,
+): Effect.Effect<MountedApp, E, R> {
+  return Effect.map(
+    render(fx, options.root).pipe(
+      FxRuntime.provide(DomRenderTemplate.using(options.root.ownerDocument)),
+      FxRuntime.take(1),
+      FxRuntime.collectAll,
       Effect.scoped,
     ),
     () => mountedApp(options.root, Array.from(options.root.childNodes)),

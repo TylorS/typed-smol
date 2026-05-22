@@ -73,7 +73,7 @@ Modify:
 | T10 | direct | T8, T9 | `pnpm --filter @typed/compiler test -- analyzeComponentHmr` | analysis only, no source rewrite | completed in `feat(compiler): analyze component hmr state` |
 | T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | completed in `feat(compiler): infer route hmr dependencies` |
 | T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | completed in `feat(compiler): plan closure hmr contexts` |
-| T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | revert browser emitter changes |
+| T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | completed in `feat(app): wire browser runtime templates` |
 | T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | revert server emitter changes |
 | T15 | direct | T13, T14 | targeted Vite HMR fixture command created in task | isolated fixture | remove fixture and Vite wiring |
 | T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | revert artifact integration |
@@ -250,7 +250,7 @@ Run: `pnpm --filter @typed/compiler build`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat: analyze typed html templates into compiler ir`.
 
@@ -600,11 +600,15 @@ Commit message: `feat(compiler): plan closure hmr contexts`.
 
 ### Task 13: Wire Browser Virtual Module Runtime
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Simplify generated browser runtime handoff by delegating route rendering through `@typed/app` `mount`/`hydrate` runtime functions while preserving route matcher merging, companion layers, error handling, and `BrowserRouter` provisioning. Avoid direct `@typed/template` DOM renderer imports in generated browser source.
+
 **Files:**
 - Modify: `packages/app/src/internal/emitBrowserSource.ts`
 - Modify: `packages/app/src/BrowserVirtualModulePlugin.test.ts`
 
-- [ ] **Step 1: Write failing generated-source test**
+- [x] **Step 1: Write failing generated-source test**
 
 Assert browser generated source imports and uses `@typed/app` runtime functions and preserves route matcher semantics.
 
@@ -612,11 +616,11 @@ Run: `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin`
 
 Expected: fails before emitter update.
 
-- [ ] **Step 2: Update emitter**
+- [x] **Step 2: Update emitter**
 
 Use runtime functions without changing plugin ordering or route composition.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin`
 

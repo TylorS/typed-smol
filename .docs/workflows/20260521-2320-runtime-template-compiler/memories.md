@@ -47,3 +47,9 @@
 - Closure context work is still descriptor-only. It does not transform source.
 - Eligible captures become generated context fields with a deterministic `__typed_${closureName}_context` name.
 - Mutable captures are rejected with `unsupported-closure-capture`; arbitrary closure serialization remains out of scope.
+
+## Task 13: Browser Runtime Integration
+
+- Browser generated source now delegates route rendering to `@typed/app` runtime functions: `mountRuntime` for mount mode and `hydrateRuntime` otherwise.
+- Generated browser source no longer imports `drainLayer`, `render`, or `DomRenderTemplate`; `mount`/`hydrate` provide the DOM render template internally and the generated layer still provides `BrowserRouter(win)`.
+- `mount`/`hydrate` in `@typed/app` accept `Fx<RenderEvent>` values in addition to compiled/fallback templates so route matchers can use the same runtime handoff.

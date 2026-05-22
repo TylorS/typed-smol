@@ -3,7 +3,8 @@ import type {
   CompiledServerTemplate,
   RuntimeTemplateFallback,
 } from "@typed/compiler";
-import type { Renderable } from "@typed/template";
+import type { Fx } from "@typed/fx";
+import type { Renderable, RenderEvent } from "@typed/template";
 import * as Effect from "effect/Effect";
 
 export type RuntimeTemplate<
@@ -12,7 +13,7 @@ export type RuntimeTemplate<
 
 export type DomRuntimeTemplate<
   Values extends ReadonlyArray<Renderable.Any> = readonly Renderable.Any[],
-> = CompiledDomTemplate | RuntimeTemplateFallback<Values>;
+> = CompiledDomTemplate | RuntimeTemplateFallback<Values> | Fx.Fx<RenderEvent, any, any>;
 
 export type ServerRuntimeTemplate<
   Values extends ReadonlyArray<Renderable.Any> = readonly Renderable.Any[],
