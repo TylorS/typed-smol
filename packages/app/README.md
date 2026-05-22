@@ -2,16 +2,16 @@
 
 > **Beta:** This package is in beta; APIs may change.
 
-`@typed/app` provides **virtual module plugins** for the router and HttpApi stacks: `router:./path` and `api:./path` imports that generate typed route matchers and API clients from source. It also exports `createTypeInfoApiSessionForApp` for TypeInfo-backed type-checking and `defineApiHandler` for typed HttpApi endpoint contracts.
+`@typed/app` provides **virtual module plugins** for the router and HttpApi stacks: `typed:router?dir=./path` and `typed:api?dir=./path` imports that generate typed route matchers and API clients from source. It also exports `createTypeInfoApiSessionForApp` for TypeInfo-backed type-checking and `ApiHandler` for typed HttpApi endpoint contracts.
 
 ## Purpose
 
-Typed-smol apps get typed routes and APIs from convention-based source without manual wiring. You place route and endpoint files in directories, follow the file conventions, and import `router:./routes` or `api:./endpoints` to receive generated Matcher and Client modules. The plugins are configured in `vmc.config.ts` and consumed by `typedVitePlugin`, vmc (virtual-modules-compiler), or the TS plugin.
+Typed-smol apps get typed routes and APIs from convention-based source without manual wiring. You place route and endpoint files in directories, follow the file conventions, and import `typed:router?dir=./routes` or `typed:api?dir=./endpoints` to receive generated Matcher and Client modules. The plugins are configured in `vmc.config.ts` and consumed by `typedVitePlugin`, vmc (virtual-modules-compiler), or the TS plugin.
 
 ## How to use
 
 1. Add the plugins to `vmc.config.ts` (see Configuration below).
-2. Import `router:./routes` and `api:./endpoints` in your app code to use the generated Matcher and Client.
+2. Import `typed:router?dir=./routes` and `typed:api?dir=./endpoints` in your app code to use the generated Matcher and Client.
 3. (Optional) Provide `createTypeInfoApiSessionForApp` to `typedVitePlugin` for structural type-checking of route and endpoint contracts.
 
 ## Architecture
@@ -34,8 +34,8 @@ flowchart LR
   end
 
   subgraph imports [App imports]
-    RImport["router:./routes"]
-    ApiImport["api:./endpoints"]
+    RImport["typed:router?dir=./routes"]
+    ApiImport["typed:api?dir=./endpoints"]
   end
 
   subgraph output [Generated output]
@@ -143,27 +143,27 @@ export default {
 
 ```ts
 // Import generated router matcher
-import { Matcher } from "router:./routes";
+import { Matcher } from "typed:router?dir=./routes";
 
 // Import generated API client
-import { Client } from "api:./endpoints";
+import { Client } from "typed:api?dir=./endpoints";
 
 // Define typed handler
-import { defineApiHandler } from "@typed/app";
+import { ApiHandler } from "@typed/app";
 import { Route } from "@typed/router";
 import * as Schema from "effect/Schema";
 
-const handler = defineApiHandler(Route.Parse("/todos/:id"), "GET", {
+const handler = ApiHandler(Route.Parse("/todos/:id"), "GET", {
   success: Schema.Struct({ id: Schema.String }),
 })(({ path }) => Effect.succeed({ id: path.id }));
 ```
 
 ## API overview
 
-- **Router VM plugin** — `createRouterVirtualModulePlugin(options)` — virtual `router:./routes` imports; scans route files, emits typed Matcher source.
-- **HttpApi VM plugin** — `createHttpApiVirtualModulePlugin(options)` — virtual `api:./endpoints` imports; scans API files, emits typed Api + Client + OpenAPI.
+- **Router VM plugin** — `createRouterVirtualModulePlugin(options)` — virtual `typed:router?dir=./routes` imports; scans route files, emits typed Matcher source.
+- **HttpApi VM plugin** — `createHttpApiVirtualModulePlugin(options)` — virtual `typed:api?dir=./endpoints` imports; scans API files, emits typed Api + Client + OpenAPI.
 - **TypeInfo session** — `createTypeInfoApiSessionForApp({ ts, program })` — session with router + HttpApi type targets; use with `typedVitePlugin` or vmc.
-- **API handler helper** — `defineApiHandler(route, method, schemas?)(handler)` — typed handler with path/query/headers/body; success/error schemas for responses.
+- **API handler helper** — `ApiHandler(route, method, schemas?)(handler)` — typed handler with path/query/headers/body; success/error schemas for responses.
 - **Parsing helpers** — `parseRouterVirtualModuleId`, `parseHttpApiVirtualModuleId`; `resolveRouterTargetDirectory`, `resolveHttpApiTargetDirectory`.
 - **Type target specs** — `ROUTER_TYPE_TARGET_SPECS`, `HTTPAPI_TYPE_TARGET_SPECS`; `APP_TYPE_TARGET_BOOTSTRAP_CONTENT`.
 
@@ -173,14 +173,14 @@ const handler = defineApiHandler(Route.Parse("/todos/:id"), "GET", {
 
 | Property | Type     | Default                   | Description                  |
 | -------- | -------- | ------------------------- | ---------------------------- |
-| `prefix` | `string` | `"router:"`               | Virtual module ID prefix.    |
+| `prefix` | `string` | `"typed:router"`          | Virtual module ID prefix.    |
 | `name`   | `string` | `"router-virtual-module"` | Plugin name for diagnostics. |
 
 ### HttpApiVirtualModulePluginOptions
 
 | Property     | Type               | Default                    | Description                                                      |
 | ------------ | ------------------ | -------------------------- | ---------------------------------------------------------------- |
-| `prefix`     | `string`           | `"api:"`                   | Virtual module ID prefix.                                        |
+| `prefix`     | `string`           | `"typed:api"`              | Virtual module ID prefix.                                        |
 | `name`       | `string`           | `"httpapi-virtual-module"` | Plugin name for diagnostics.                                     |
 | `pathPrefix` | `` `/${string}` `` | —                          | HTTP path prefix (e.g. `"/api"`) when no convention defines one. |
 

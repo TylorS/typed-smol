@@ -44,7 +44,7 @@ export const build = Command.make("build", {
       const loaded = loadProjectConfig(projectRoot);
       const tc = loaded?.config;
 
-      const entry = yield* resolveServerEntry(flags.entry, projectRoot);
+      const entry = yield* resolveServerEntry(flags.entry, projectRoot, tc?.entry);
       const outDir = resolve(
         flags.outDir,
         tc?.build?.outDir,
@@ -82,12 +82,11 @@ export const build = Command.make("build", {
       if (clientHtml.entries.length > 0) {
         yield* runViteBuild({
           ...baseConfig,
-          root: clientHtml.root,
           build: {
             ...baseConfig.build,
             rollupOptions: {
               ...baseConfig.build?.rollupOptions,
-              input: toRollupInput(clientHtml.entries),
+              input: toRollupInput(path.dirname(entry), clientHtml.entries),
             },
             outDir: clientOutDir,
             emptyOutDir: true,
@@ -117,6 +116,11 @@ export const build = Command.make("build", {
   ),
 );
 
-function toRollupInput(entries: readonly ClientHtmlEntry[]): Record<string, string> {
-  return Object.fromEntries(entries.map((entry) => [entry.name, entry.html]));
+function toRollupInput(
+  entryDir: string,
+  entries: readonly ClientHtmlEntry[],
+): Record<string, string> {
+  return Object.fromEntries(
+    entries.map((entry) => [entry.name, path.resolve(entryDir, entry.html)]),
+  );
 }

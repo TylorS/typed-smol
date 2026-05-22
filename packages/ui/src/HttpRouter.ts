@@ -28,15 +28,33 @@ import { renderToHtmlString, type RenderEvent } from "@typed/template";
 
 type ProvidedForSsr = Scope.Scope | Router;
 
+export interface SsrDocumentInput {
+  readonly markup: string;
+  readonly request: HttpServerRequest.HttpServerRequest;
+  readonly url: string;
+}
+
+export interface SsrForHttpOptions<E = never, R = never> {
+  readonly renderDocument?: (input: SsrDocumentInput) => Effect.Effect<string, E, R>;
+}
+
 export const ssrForHttp: {
-  <E, R>(
+  <E, R, E2 = never, R2 = never>(
     input: Matcher<RenderEvent, E, R>,
-  ): (router: HttpRouter) => Effect.Effect<void, never, Exclude<R, ProvidedForSsr>>;
-  <E, R>(
+    options?: SsrForHttpOptions<E2, R2>,
+  ): (router: HttpRouter) => Effect.Effect<void, never, Exclude<R | R2, ProvidedForSsr>>;
+  <E, R, E2 = never, R2 = never>(
     router: HttpRouter,
     input: Matcher<RenderEvent, E, R>,
-  ): Effect.Effect<void, never, Exclude<R, ProvidedForSsr>>;
-} = dual(2, <E, R>(router: HttpRouter, input: Matcher<RenderEvent, E, R>) => {
+    options?: SsrForHttpOptions<E2, R2>,
+  ): Effect.Effect<void, never, Exclude<R | R2, ProvidedForSsr>>;
+} = dual(
+  (args) => isHttpRouter(args[0]),
+  <E, R, E2, R2>(
+    router: HttpRouter,
+    input: Matcher<RenderEvent, E, R>,
+    options?: SsrForHttpOptions<E2, R2>,
+  ) => {
   return Effect.gen(function* () {
     const matcher = Option.match(yield* Effect.serviceOption(CurrentRoute), {
       onNone: () => input,
@@ -45,7 +63,7 @@ export const ssrForHttp: {
     const entries = compile(matcher.cases);
     const currentServices = yield* Effect.context<R>();
 
-    yield* router.addAll(entries.map((e: CompiledEntry) => toRoute(e, currentServices)));
+    yield* router.addAll(entries.map((e: CompiledEntry) => toRoute(e, currentServices, options)));
   });
 });
 
@@ -71,7 +89,11 @@ function getStatus(error: HttpServerError.HttpServerError): number {
   }
 }
 
-function toRoute(entry: CompiledEntry, currentServices: Context.Context<never>): Route<any, any> {
+function toRoute<E2, R2>(
+  entry: CompiledEntry,
+  currentServices: Context.Context<never>,
+  options: SsrForHttpOptions<E2, R2> | undefined,
+): Route<any, any> {
   return {
     ["~effect/http/HttpRouter/Route"]: "~effect/http/HttpRouter/Route",
     method: "GET",
@@ -152,9 +174,14 @@ function toRoute(entry: CompiledEntry, currentServices: Context.Context<never>):
 
       const withCatches = yield* catchManager.apply(entry.catches, withLayouts, preparedServices);
 
-      const html = yield* renderToHtmlString(withCatches).pipe(
+      const markup = yield* renderToHtmlString(withCatches).pipe(
         Effect.provideContext(handlerServices),
       );
+      const html = options?.renderDocument
+        ? yield* options.renderDocument({ markup, request, url: request.url }).pipe(
+            Effect.provideContext(handlerServices),
+          )
+        : markup;
       return HttpServerResponse.text(html, {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
@@ -162,4 +189,8 @@ function toRoute(entry: CompiledEntry, currentServices: Context.Context<never>):
     uninterruptible: false,
     prefix: Option.none(),
   };
+}
+
+function isHttpRouter(value: object): value is HttpRouter {
+  return "addAll" in value;
 }

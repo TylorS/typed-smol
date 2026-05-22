@@ -2,7 +2,7 @@
 
 ## Intent
 
-`@typed/app` is the **app-level virtual-module integration layer** for typed-smol. It powers `router:./path` and `api:./path` imports that generate typed route matchers and HttpApi clients from convention-based source. It provides a TypeInfo session for structural type-checking (assignableTo) and `defineApiHandler` for typed endpoint contracts.
+`@typed/app` is the **app-level virtual-module integration layer** for typed-smol. It powers `router:./path` and `api:./path` imports that generate typed route matchers and HttpApi clients from convention-based source. It provides a TypeInfo session for structural type-checking (assignableTo) and `ApiHandler` for typed endpoint contracts.
 
 ## Key exports / surfaces
 
@@ -18,7 +18,7 @@
 
 ### API handler helper
 
-- **`defineApiHandler(route, method, schemas?)(handler)`** — Typed handler with path/query/headers/body decoding; success/error schemas for response encoding. Use `HttpApiSchema.status(code)` for status annotations.
+- **`ApiHandler(route, method, schemas?)(handler)`** — Typed handler with path/query/headers/body decoding; success/error schemas for response encoding. Use `HttpApiSchema.status(code)` for status annotations.
 
 ### Parsing / resolution
 

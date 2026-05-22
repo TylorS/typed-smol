@@ -1,5 +1,16 @@
 import type { CatchForm, DepsExportKind, RuntimeKind } from "./routeTypeNode.js";
 
+export interface RouterExpressionImports {
+  readonly router: () => string;
+  readonly fx: () => string;
+  readonly constant: () => string;
+  readonly refSubject: () => string;
+  readonly effect: () => string;
+  readonly cause: () => string;
+  readonly result: () => string;
+  readonly layer: () => string;
+}
+
 /**
  * Emit the handler expression that converts to a function returning Fx.
  * Router passes RefSubject<Params> (an Fx) to function handlers.
@@ -11,23 +22,35 @@ export function handlerExprFor(
   expectsRefSubject: boolean,
   varName: string,
   exportName: string,
+  imports: RouterExpressionImports,
 ): string {
   const ref = `${varName}.${exportName}`;
   if (runtimeKind === "plain") {
-    return isFn ? `(params) => Fx.map(params, ${ref})` : `constant(Fx.succeed(${ref}))`;
+    if (isFn) return `(params) => ${imports.fx()}.map(params, ${ref})`;
+    const fx = imports.fx();
+    const constant = imports.constant();
+    return `${constant}(${fx}.succeed(${ref}))`;
   }
   if (isFn && expectsRefSubject) {
-    return `(params) => ${ref}(params)`;
+    return ref;
   }
   switch (runtimeKind) {
     case "effect":
-      return isFn ? `(params) => Fx.mapEffect(params, ${ref})` : `constant(Fx.fromEffect(${ref}))`;
+      if (isFn) return `(params) => ${imports.fx()}.mapEffect(params, ${ref})`;
+      const effectFx = imports.fx();
+      const effectConstant = imports.constant();
+      return `${effectConstant}(${effectFx}.fromEffect(${ref}))`;
     case "stream":
-      return isFn
-        ? `(params) => Fx.switchMap(params, (p) => Fx.fromStream(${ref}(p)))`
-        : `constant(Fx.fromStream(${ref}))`;
+      if (isFn) {
+        const streamFx = imports.fx();
+        return `(params) => ${streamFx}.switchMap(params, (p) => ${streamFx}.fromStream(${ref}(p)))`;
+      }
+      const streamFx = imports.fx();
+      const streamConstant = imports.constant();
+      return `${streamConstant}(${streamFx}.fromStream(${ref}))`;
     case "fx":
-      return isFn ? ref : `constant(${ref})`;
+      if (isFn) return `(params) => ${imports.fx()}.switchMap(params, ${ref})`;
+      return ref;
     case "unknown":
       throw new Error(
         "RVM-KIND-001: runtime kind unknown (should have been caught in buildRouteDescriptors)",
@@ -36,14 +59,18 @@ export function handlerExprFor(
 }
 
 /** Lift a value or function result to Fx based on return kind (plain, effect, stream, fx). */
-export function liftToFx(expr: string, kind: RuntimeKind): string {
+export function liftToFx(
+  expr: string,
+  kind: RuntimeKind,
+  imports: RouterExpressionImports,
+): string {
   switch (kind) {
     case "plain":
-      return `Fx.succeed(${expr})`;
+      return `${imports.fx()}.succeed(${expr})`;
     case "effect":
-      return `Fx.fromEffect(${expr})`;
+      return `${imports.fx()}.fromEffect(${expr})`;
     case "stream":
-      return `Fx.fromStream(${expr})`;
+      return `${imports.fx()}.fromStream(${expr})`;
     case "fx":
       return expr;
     case "unknown":
@@ -57,38 +84,47 @@ export function liftToFx(expr: string, kind: RuntimeKind): string {
  * Emit the catch expression that converts to (causeRef) => Fx form.
  * Supports: value fallbacks, (Cause) => ..., (E) => ..., and native (causeRef) => Fx.
  */
-export function catchExprFor(catchForm: CatchForm, varName: string, exportName: string): string {
+export function catchExprFor(
+  catchForm: CatchForm,
+  varName: string,
+  exportName: string,
+  imports: RouterExpressionImports,
+): string {
   const ref = `${varName}.${exportName}`;
   const { form, returnKind } = catchForm;
-  const causeRef = `(causeRef: RefSubject<Cause.Cause<unknown>>)`;
+  const causeRef = `(causeRef: ${imports.refSubject()}<${imports.cause()}.Cause<any>>)`;
 
   if (form === "native") {
     return ref;
   }
 
   if (form === "value") {
-    const lifted = liftToFx(ref, returnKind);
-    return `(_causeRef: RefSubject<Cause.Cause<unknown>>) => ${lifted}`;
+    const lifted = liftToFx(ref, returnKind, imports);
+    return `(_causeRef: ${imports.refSubject()}<${imports.cause()}.Cause<any>>) => ${lifted}`;
   }
 
   if (form === "fn-cause") {
-    const lifted = liftToFx(`${ref}(cause)`, returnKind);
-    return `${causeRef} => Fx.flatMap(causeRef, (cause) => ${lifted})`;
+    const lifted = liftToFx(`${ref}(cause)`, returnKind, imports);
+    return `${causeRef} => ${imports.fx()}.flatMap(causeRef, (cause) => ${lifted})`;
   }
 
   // form === "fn-error": (e) => A | Effect | Stream | Fx — use Cause.findFail + Result.match
-  return `${causeRef} => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => ${liftToFx(`${ref}(e)`, returnKind)} }))`;
+  return `${causeRef} => ${imports.fx()}.flatMap(causeRef, (cause) => ${imports.result()}.match(${imports.cause()}.findFail(cause), { onFailure: (c) => ${imports.fx()}.fromEffect(${imports.effect()}.failCause(c)), onSuccess: ({ error: e }) => ${liftToFx(`${ref}(e)`, returnKind, imports)} }))`;
 }
 
 /** Targeted lift for .provide() based on dependency export kind (layer, servicemap, array). */
-export function depsExprFor(kind: DepsExportKind, varName: string): string {
+export function depsExprFor(
+  kind: DepsExportKind,
+  varName: string,
+  imports: RouterExpressionImports,
+): string {
   const ref = `${varName}.default`;
   switch (kind) {
     case "layer":
       return ref;
     case "servicemap":
-      return `Layer.succeedContext(${ref})`;
+      return `${imports.layer()}.succeedContext(${ref})`;
     case "array":
-      return `Router.normalizeDependencyInput(${ref})`;
+      return `${imports.router()}.normalizeDependencyInput(${ref})`;
   }
 }

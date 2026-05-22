@@ -10,12 +10,20 @@ export function emitHtmlSource(input: EmitHtmlSourceInput): string {
   return [
     'import { readFile } from "node:fs/promises";',
     'import * as TypedConfigModule from "typed:config";',
-    "type TypedBuildConfig = { readonly outDir?: string; readonly clientOutDir?: string };",
-    "type TypedConfigExports = Partial<{ readonly build: TypedBuildConfig }>;",
-    "type HtmlDevServer = { readonly transformIndexHtml: (url: string, html: string) => string | Promise<string> };",
-    "type LoadHtmlOptions = { readonly readFile?: typeof readFile; readonly dev?: boolean; readonly devServer?: HtmlDevServer; readonly url?: string };",
+    "interface LoadHtmlOptions {",
+    "  readonly readFile?: (path: string, encoding: \"utf8\") => Promise<string>;",
+    "  readonly dev?: boolean;",
+    "  readonly devServer?: { readonly transformIndexHtml: (url: string, html: string) => string | Promise<string> };",
+    "  readonly url?: string;",
+    "}",
+    "type TypedConfigBuildOptions = {",
+    "  readonly build?: {",
+    "    readonly outDir?: string;",
+    "    readonly clientOutDir?: string;",
+    "  };",
+    "};",
     `const sourceHtmlPath = ${JSON.stringify(input.sourcePath)};`,
-    "const typedConfig: TypedConfigExports = TypedConfigModule;",
+    "const typedConfig = TypedConfigModule as TypedConfigBuildOptions;",
     "const typedBuildConfig = typedConfig.build ?? {};",
     "const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);",
     `const outlet = ${JSON.stringify(outlet)};`,
@@ -38,6 +46,10 @@ export function applySsrOutlet(
   return `${template.slice(0, insertAt)}${markup}${template.slice(insertAt)}`;
 }
 
+export function normalizeClientHtmlPath(sourcePath: string): string {
+  return sourcePath.split("/").filter(isClientHtmlPathSegment).join("/");
+}
+
 function loadHtmlSource(): string {
   return [
     "export async function loadHtml(options: LoadHtmlOptions = {}) {",
@@ -55,12 +67,22 @@ function clientBuildPathSource(): string {
   return [
     "function joinClientBuildPath(sourcePath: string): string {",
     "  const clientOutDir = typedBuildConfig.clientOutDir ?? joinPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
-    "  return joinPath(clientOutDir, sourcePath.replace(/^\\.\\//, \"\"));",
+    "  return joinPath(clientOutDir, normalizeClientHtmlPath(sourcePath));",
+    "}",
+    "function normalizeClientHtmlPath(sourcePath: string): string {",
+    "  return sourcePath.split(\"/\").filter(isClientHtmlPathSegment).join(\"/\");",
+    "}",
+    "function isClientHtmlPathSegment(segment: string): boolean {",
+    "  return segment !== \"\" && segment !== \".\" && segment !== \"..\";",
     "}",
     "function joinPath(...parts: readonly string[]): string {",
     "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
     "}",
   ].join("\n");
+}
+
+function isClientHtmlPathSegment(segment: string): boolean {
+  return segment !== "" && segment !== "." && segment !== "..";
 }
 
 function renderHtmlSource(): string {

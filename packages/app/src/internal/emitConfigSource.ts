@@ -49,7 +49,7 @@ export function emitConfigSource(
     if (serialized === undefined) return unserializableConfigKey(key, pluginName);
     lines.push(`export const ${key} = ${serialized};`);
   }
-  return lines.join("\n");
+  return lines.length === 0 ? "export {};" : lines.join("\n");
 }
 
 function isValidExportName(name: string): boolean {

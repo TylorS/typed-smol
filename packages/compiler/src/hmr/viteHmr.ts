@@ -44,7 +44,7 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
   if (!plan.eligible) return "";
 
   return [
-    'import { getOrCreateHmrState, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app";',
+    'import { getOrCreateHmrState, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime";',
     "type __TypedHot = {",
     "  readonly data: Record<string, unknown>;",
     "  readonly accept: () => void;",

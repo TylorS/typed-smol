@@ -1,3 +1,3 @@
-import { defineConfig } from "@typed/app";
+import type { TypedConfig } from "@typed/app";
 
-export default defineConfig({});
+export default {} satisfies TypedConfig;

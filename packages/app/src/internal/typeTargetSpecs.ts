@@ -11,7 +11,7 @@ export const ROUTER_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = [
   { id: "Fx", module: "@typed/fx/Fx", exportName: "Fx" },
   { id: "Effect", module: "effect/Effect", exportName: "Effect" },
   { id: "Stream", module: "effect/Stream", exportName: "Stream" },
-  { id: "RefSubject", module: "@typed/fx/RefSubject", exportName: "RefSubject" },
+  { id: "RefSubject", module: "@typed/fx/RefSubject/RefSubject", exportName: "RefSubject" },
   { id: "Cause", module: "effect/Cause", exportName: "Cause" },
   { id: "Option", module: "effect/Option", exportName: "Option" },
   { id: "Layer", module: "effect/Layer", exportName: "Layer" },

@@ -65,7 +65,7 @@ export const queryParam = (name: string, value: PathAst): PathAst.QueryParam => 
   value,
 });
 
-export type RouteAst = RouteAst.Path | RouteAst.Transform | RouteAst.Join;
+export type RouteAst = RouteAst.Path | RouteAst.Transform | RouteAst.Join | RouteAst.Query;
 
 export declare namespace RouteAst {
   export interface Path {
@@ -84,6 +84,11 @@ export declare namespace RouteAst {
     type: "join";
     parts: ReadonlyArray<RouteAst>;
   }
+
+  export interface Query {
+    type: "query";
+    route: RouteAst;
+  }
 }
 
 export const path = (path: PathAst): RouteAst.Path => ({ type: "path", path });
@@ -98,6 +103,7 @@ export const transform = (
   transformation,
 });
 export const join = (parts: ReadonlyArray<RouteAst>): RouteAst.Join => ({ type: "join", parts });
+export const query = (route: RouteAst): RouteAst.Query => ({ type: "query", route });
 
 export type MatchAst =
   | MatchAst.Route

@@ -1,0 +1,18 @@
+{
+  "extends": "@typed/tsconfig/dom",
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "outDir": "./dist/types",
+    "rootDir": ".",
+    "types": ["node"],
+    "plugins": [
+      {
+        "name": "@typed/virtual-modules-ts-plugin",
+        "vmcConfigPath": "./vmc.config.ts"
+      }
+    ]
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["dist", "node_modules", "src/tests"]
+}

@@ -45,6 +45,7 @@ function createCompilerOptions(): ts.CompilerOptions {
     skipLibCheck: true,
     noEmit: true,
     allowJs: true,
+    checkJs: false,
     types: ["node"],
   };
 }

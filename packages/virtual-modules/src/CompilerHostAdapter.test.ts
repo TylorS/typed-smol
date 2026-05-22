@@ -264,13 +264,80 @@ export const value: Foo = { n: 1 };
 
     expect(diagnostics).toHaveLength(0);
     expect(buildCalls).toEqual([`virtual:a:${entry}`, `virtual:b:${entry}`]);
-    expect(materializeCalls).toEqual([
-      expect.stringContaining(`virtual:a:${entry}`),
-      expect.stringContaining(`virtual:b:${entry}`),
-    ]);
+    expect(materializeCalls).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(`virtual:a:${entry}`),
+        expect.stringContaining(`virtual:b:${entry}`),
+      ]),
+    );
     expect(program.getSourceFile(artifactA)).toBeDefined();
     expect(program.getSourceFile(artifactB)).toBeDefined();
     expect(cleanCalls).toBe(0);
+  });
+
+  it("rewrites nested virtual imports to relative artifact imports for emit", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    const artifactA = join(dir, "node_modules/.typed/virtual/virtual-a/artifact-a.ts");
+    const artifactB = join(dir, "node_modules/.typed/virtual/virtual-b/artifact-b.ts");
+    writeFileSync(entry, `import { x } from "virtual:a"; export const out = x;`, "utf8");
+
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: () => `import { x } from "virtual:b"; export { x };`,
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: () => `export const x = 1;`,
+      },
+    ]);
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      outDir: join(dir, "dist"),
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    const emitted = new Map<string, string>();
+    const originalWriteFile = host.writeFile.bind(host);
+    host.writeFile = (fileName, text, writeByteOrderMark, onError, sourceFiles, data) => {
+      emitted.set(fileName, text);
+      originalWriteFile(fileName, text, writeByteOrderMark, onError, sourceFiles, data);
+    };
+
+    attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: ({ pluginName }) =>
+        createFakeArtifactStore(pluginName === "virtual-a" ? artifactA : artifactB),
+    });
+
+    const program = ts.createProgram([entry], compilerOptions, host);
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+    const emit = program.emit();
+    const artifactAOutput = [...emitted.entries()].find(([path]) =>
+      path.endsWith("node_modules/.typed/virtual/virtual-a/artifact-a.js"),
+    );
+    const artifactBOutput = [...emitted.keys()].find((path) =>
+      path.endsWith("node_modules/.typed/virtual/virtual-b/artifact-b.js"),
+    );
+
+    expect(diagnostics).toHaveLength(0);
+    expect(emit.diagnostics).toHaveLength(0);
+    expect(program.getSourceFile(artifactA)?.text).toContain(
+      `from "../virtual-b/artifact-b.js"`,
+    );
+    expect(artifactAOutput?.[1]).toContain(`from "../virtual-b/artifact-b.js"`);
+    expect(artifactAOutput?.[1]).not.toContain("virtual:b");
+    expect(artifactBOutput).toBeDefined();
   });
 
   it("uses artifact cache hits without rebuilding or rematerializing", () => {

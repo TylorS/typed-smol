@@ -2,7 +2,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import type { createResolver } from "./resolver";
 
-/** Matches any virtual-style specifier (virtual:foo, router:./routes, etc.) in import/from. */
+/** Matches any virtual-style specifier (virtual:foo, typed:router?dir=./routes, etc.) in import/from. */
 const VIRTUAL_IMPORT_REGEX = /(?:from|import\s*\(?)\s*["']([^"']+:[^"']+)["']/g;
 
 export type VirtualModuleTreeItem = VirtualModuleFolderItem | VirtualModuleLeafItem;
@@ -26,7 +26,11 @@ export interface VirtualModulesTreeProviderOptions {
   /** Called when a virtual module is discovered; use to register for refresh. */
   onResolved?: (projectRoot: string, moduleId: string, importer: string) => void;
   /** Called when resolved; use to cache for path-based preview. */
-  onCache?: (result: { virtualFileName: string; sourceText: string }) => void;
+  onCache?: (
+    result: { virtualFileName: string; sourceText: string },
+    importer: string,
+    projectRoot: string,
+  ) => void;
 }
 
 export interface VirtualModulesTreeProvider extends vscode.TreeDataProvider<VirtualModuleTreeItem> {
@@ -82,7 +86,7 @@ async function discoverVirtualImports(
 export function createVirtualModulesTreeProvider(
   options: VirtualModulesTreeProviderOptions,
 ): VirtualModulesTreeProvider {
-  const { getResolver, onResolved, onCache } = options;
+  const { getResolver, getProjectRoot, onResolved, onCache } = options;
 
   const _onDidChangeTreeData = new vscode.EventEmitter<VirtualModuleTreeItem | undefined>();
   const cache = new Map<string, Array<{ moduleId: string; importer: string }>>();
@@ -151,10 +155,10 @@ export function createVirtualModulesTreeProvider(
         };
       }
 
-      const projectRoot = element.folder.uri.fsPath;
+      const projectRoot = getProjectRoot(element.importer) ?? element.folder.uri.fsPath;
       const resolver = getResolver(projectRoot);
       const result = resolver.resolve(element.moduleId, element.importer);
-      if (result) onCache?.(result);
+      if (result) onCache?.(result, element.importer, projectRoot);
       const importerBasename = path.basename(element.importer);
       return {
         collapsibleState: vscode.TreeItemCollapsibleState.None,

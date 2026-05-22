@@ -7,7 +7,7 @@
   - parenthesized pathless directory group planning.
   - precedence resolution (in-file > sibling > directory).
   - endpoint contract and `Schema.TaggedRequest` validation helpers.
-  - typed handler helper (`defineApiHandler`) context and return/error inference tests.
+  - typed handler helper (`ApiHandler`) context and return/error inference tests.
   - deterministic source generation ordering and naming from AST input only.
 - integration:
   - plugin-manager resolution (`resolved | unresolved | error`) with real `TypeInfoApi` session.
@@ -61,7 +61,7 @@
 | `effect/unstable/httpapi` type availability in compilation context       | ready   | generated-source fixtures compile against installed `packages/app` declarations |
 | `resolveHttpApiTypeTargets` helper implementation                        | missing | implement helper + tests before execution stage                                |
 | `typedVitePlugin` api VM option surface + registration wiring            | missing | add `apiVmOptions` contract and integration tests in `packages/vite-plugin`    |
-| typed handler helper runtime/type surface (`defineApiHandler`)           | missing | implement helper API and add compile-time positive/negative typing tests       |
+| typed handler helper runtime/type surface (`ApiHandler`)           | missing | implement helper API and add compile-time positive/negative typing tests       |
 | OpenAPI config mapper + exposure planner (Effect-backed option matrix)   | ready   | API-scope annotations, binary `additionalProperties`, json/swagger/scalar exposure, group annotations, endpoint annotations, and invalid scope diagnostics are covered |
 | fixture package for `api:` virtual module generation                     | partial | `packages/app` generated-source harness is the first proof path; broader sample-project CI remains deferred |
 | OpenAPI metadata control fixture + assertions                            | ready   | Generated-source tests cover root generation/exposure/annotations, group annotations, endpoint direct/companion/inherited annotations, precedence, and invalid scope diagnostics |

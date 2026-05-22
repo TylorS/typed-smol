@@ -8,9 +8,9 @@ import {
 } from "@typed/compiler";
 import { RefSubject } from "@typed/fx";
 import * as Effect from "effect/Effect";
-import { getOrCreateHmrState } from "./runtime/hmrRegistry.js";
-import { hydrate } from "./runtime/hydrate.js";
-import { renderServer } from "./runtime/renderServer.js";
+import { getOrCreateHmrState } from "./runtimeTemplates/hmrRegistry.js";
+import { hydrate } from "./runtimeTemplates/hydrate.js";
+import { renderServer } from "./runtimeTemplates/renderServer.js";
 
 export interface RuntimeTemplateCompilerExampleOptions {
   readonly globalObject?: Record<PropertyKey, unknown>;

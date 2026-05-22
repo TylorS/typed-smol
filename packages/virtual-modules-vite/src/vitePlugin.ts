@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
+import * as Vite from "vite";
 import type { Plugin, ResolvedConfig } from "vite";
 import {
   createPluginConfigFingerprint,
@@ -59,6 +60,16 @@ export interface VirtualModulesVitePluginOptions {
    * When true, resolution errors are logged with console.warn. Default true.
    */
   readonly warnOnError?: boolean;
+  /**
+   * Optional host hook for selecting an environment-specific virtual module id
+   * before resolution, e.g. client-only vs server-capable generated modules.
+   */
+  readonly mapId?: (input: {
+    readonly id: string;
+    readonly importer: string;
+    readonly consumer?: string;
+    readonly environmentName?: string;
+  }) => string;
 }
 
 /** Validate decoded id/importer before passing to resolver (defense in depth). */
@@ -86,21 +97,36 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       projectRoot ??= resolve(config.root);
     },
 
-    resolveId(id: string, importer: string | undefined): string | null | Promise<string | null> {
+    resolveId(
+      this: {
+        readonly environment?: Vite.Environment;
+        resolve(
+          id: string,
+          importer?: string,
+          options?: { readonly skipSelf?: boolean },
+        ): Promise<{ readonly id: string } | null>;
+      },
+      id: string,
+      importer: string | undefined,
+    ): string | null | Promise<string | null> {
       if (!importer) {
         return null;
       }
       const effectiveImporter = decodeEffectiveImporter(importer);
+      if (!effectiveImporter) {
+        return null;
+      }
       const relativeVirtualImport = resolveRelativeVirtualImport(id, importer, effectiveImporter);
       if (relativeVirtualImport) return relativeVirtualImport;
+      const mappedId = mapVirtualId(options, id, effectiveImporter, this?.environment);
       const resolveOptions = {
-        id,
+        id: mappedId,
         importer: effectiveImporter,
         createTypeInfoApiSession,
       };
       const pluginResolution = resolver.resolvePluginName?.(resolveOptions);
       if (pluginResolution?.status === "resolved") {
-        return encodeVirtualId(id, effectiveImporter);
+        return encodeVirtualId(mappedId, effectiveImporter);
       }
       if (pluginResolution?.status === "error") {
         warnDiagnostic(pluginResolution.diagnostic, warnOnError);
@@ -112,7 +138,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
 
       const result = resolver.resolveModule(resolveOptions);
       if (result.status === "resolved") {
-        return encodeVirtualId(id, effectiveImporter);
+        return encodeVirtualId(mappedId, effectiveImporter);
       }
       if (result.status === "error" && warnOnError) {
         warnDiagnostic(result.diagnostic, warnOnError);
@@ -125,7 +151,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       return null;
     },
 
-    load(resolvedId: string): string | { code: string } | null {
+    async load(resolvedId: string): Promise<{ code: string } | null> {
       if (!isVirtualId(resolvedId)) {
         return null;
       }
@@ -141,7 +167,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         importer,
       });
       if (cached.status === "hit") {
-        return { code: cached.sourceText };
+        return transformVirtualModuleSource(cached.sourceText, parsed.id);
       }
       if (cached.status === "error") {
         warnDiagnostic(cached.diagnostic, warnOnError, "load ");
@@ -162,7 +188,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
           resolution: result,
           warnOnError,
         });
-        return { code: sourceText };
+        return transformVirtualModuleSource(sourceText, id);
       }
       if (result.status === "error" && warnOnError) {
         warnDiagnostic(result.diagnostic, warnOnError, "load ");
@@ -207,6 +233,57 @@ const resolveCachedArtifact = (request: ArtifactRequest): CachedArtifactResult =
       diagnostic: createArtifactDiagnostic(pluginName.pluginName, "resolve", error),
     };
   }
+};
+
+const mapVirtualId = (
+  options: VirtualModulesVitePluginOptions,
+  id: string,
+  importer: string,
+  environment: Vite.Environment | undefined,
+): string =>
+  options.mapId?.({
+    id,
+    importer,
+    consumer: environment?.config.consumer,
+    environmentName: environment?.name,
+  }) ?? id;
+
+const transformVirtualModuleSource = async (
+  sourceText: string,
+  id: string,
+): Promise<{ readonly code: string }> => {
+  const filename = virtualTypeScriptFileName(id);
+  const transformed = await transformTypeScriptSource(sourceText, filename);
+  return { code: transformed.code };
+};
+
+type VirtualModuleTransformResult = { readonly code: string };
+type OxcTransform = (
+  code: string,
+  filename: string,
+  options: { readonly lang: "ts" },
+) => Promise<VirtualModuleTransformResult>;
+
+const transformTypeScriptSource = (
+  sourceText: string,
+  filename: string,
+): Promise<VirtualModuleTransformResult> => {
+  const transformWithOxc = (Vite as typeof Vite & { readonly transformWithOxc?: OxcTransform })
+    .transformWithOxc;
+  if (transformWithOxc) {
+    return transformWithOxc(sourceText, filename, { lang: "ts" });
+  }
+  return Vite.transformWithEsbuild(sourceText, filename, {
+    loader: "ts",
+    format: "esm",
+    sourcemap: false,
+    target: "esnext",
+  });
+};
+
+const virtualTypeScriptFileName = (id: string): string => {
+  const basename = id.replace(/[^a-zA-Z0-9._-]/g, "_") || "virtual-module";
+  return `${basename}.ts`;
 };
 
 const materializeArtifact = (
@@ -318,12 +395,14 @@ const getArtifactStoreFingerprints = (
 const artifactStoreEnabled = (options: VirtualModulesVitePluginOptions): boolean =>
   options.artifactStore !== false;
 
-const decodeEffectiveImporter = (importer: string): string => {
-  if (!isVirtualId(importer)) return importer;
+const decodeEffectiveImporter = (importer: string): string | undefined => {
+  if (!isVirtualId(importer)) {
+    return importer.includes("\0") ? undefined : importer;
+  }
   const decoded = decodeVirtualId(importer);
   return decoded && validateDecodedPayload(decoded.id, decoded.importer)
     ? decoded.importer
-    : importer;
+    : undefined;
 };
 
 const resolveOptionalProjectRoot = (projectRoot: string | undefined): string | undefined =>

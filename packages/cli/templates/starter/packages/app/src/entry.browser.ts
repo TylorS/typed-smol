@@ -1,5 +1,5 @@
-import { Effect } from "effect";
-import { run } from "typed:browser?routes=*";
+import * as Effect from "effect/Effect";
+import { run } from "typed:browser?routes=./routes";
 
 export const browserRuntime = run();
-void Effect.runPromise(browserRuntime);
+await Effect.runPromise(browserRuntime);

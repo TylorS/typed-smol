@@ -1,7 +1,7 @@
 import type { VirtualModuleBuildError } from "@typed/virtual-modules";
 import { describe, expect, it } from "vitest";
 import { createHtmlVirtualModulePlugin } from "./index.js";
-import { applySsrOutlet } from "./internal/emitHtmlSource.js";
+import { applySsrOutlet, normalizeClientHtmlPath } from "./internal/emitHtmlSource.js";
 
 const buildHtml = (id: string) =>
   createHtmlVirtualModulePlugin().build(id, "/project/src/entry.server.ts", {} as never);
@@ -19,6 +19,7 @@ describe("HtmlVirtualModulePlugin", () => {
     const source = buildHtml("typed:html?path=./index.html") as string;
 
     expect(source).toContain('import * as TypedConfigModule from "typed:config";');
+    expect(source).not.toContain("@ts-nocheck");
     expect(source).toContain('const sourceHtmlPath = "./index.html";');
     expect(source).toContain("const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);");
     expect(source).not.toContain('"dist/client');
@@ -48,6 +49,12 @@ describe("HtmlVirtualModulePlugin", () => {
     expect(source).not.toContain('"dist/client/pages/admin.html"');
   });
 
+  it("normalizes parent-relative source html paths into client build paths", () => {
+    expect(normalizeClientHtmlPath("../index.html")).toBe("index.html");
+    expect(normalizeClientHtmlPath("../pages/admin.html")).toBe("pages/admin.html");
+    expect(normalizeClientHtmlPath("./pages/admin.html")).toBe("pages/admin.html");
+  });
+
   it("replaces an existing SSR outlet", () => {
     expect(applySsrOutlet("<main><!--typed-ssr-outlet--></main>", "<p>SSR</p>")).toBe(
       "<main><p>SSR</p></main>",
@@ -57,6 +64,12 @@ describe("HtmlVirtualModulePlugin", () => {
   it("inserts SSR markup immediately after body when outlet is missing", () => {
     expect(applySsrOutlet("<html><body><main></main></body></html>", "<p>SSR</p>")).toBe(
       "<html><body><p>SSR</p><main></main></body></html>",
+    );
+  });
+
+  it("does not infer app roots when the SSR outlet is missing", () => {
+    expect(applySsrOutlet('<html><body><div id="app"></div></body></html>', "<p>SSR</p>")).toBe(
+      '<html><body><p>SSR</p><div id="app"></div></body></html>',
     );
   });
 

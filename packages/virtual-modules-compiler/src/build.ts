@@ -4,14 +4,15 @@ import type * as ts from "typescript";
 import type {
   LoadedVmcPluginModule,
   TypeTargetSpec,
+  VirtualModuleAdapterHandle,
   VirtualModuleResolver,
 } from "@typed/virtual-modules";
 import {
   attachCompilerHostAdapter,
-  createTypeInfoApiSessionFactory,
   ensureTypeTargetBootstrapFile,
 } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
+import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 
 function inferProjectRoot(
   sys: ts.System,
@@ -68,6 +69,7 @@ export function runBuild(params: BuildParams): number {
   }
 
   const projectRoot = sys.getCurrentDirectory();
+  const adapters: VirtualModuleAdapterHandle[] = [];
 
   const createProgramForSession = (
     rootNames: readonly string[],
@@ -99,10 +101,9 @@ export function runBuild(params: BuildParams): number {
         ? [...effectiveRootNames]
         : [...effectiveRootNames, bootstrapPath];
     }
-    const preliminaryProgram = createProgramForSession(effectiveRootNames, opts ?? {});
-    const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
+    const createTypeInfoApiSession = createLazyTypeInfoApiSession({
       ts,
-      program: preliminaryProgram,
+      createProgram: () => createProgramForSession(effectiveRootNames, opts ?? {}),
       ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
     });
     const artifactStoreFactory = createVmcArtifactStoreFactory({
@@ -125,18 +126,15 @@ export function runBuild(params: BuildParams): number {
       artifactStoreFactory,
       reportDiagnostic,
     });
-    try {
-      return ts.createEmitAndSemanticDiagnosticsBuilderProgram(
-        effectiveRootNames,
-        opts ?? {},
-        host,
-        oldProgram,
-        configFileParsingDiagnostics,
-        refs,
-      );
-    } finally {
-      adapter.dispose();
-    }
+    adapters.push(adapter);
+    return ts.createEmitAndSemanticDiagnosticsBuilderProgram(
+      effectiveRootNames,
+      opts ?? {},
+      host,
+      oldProgram,
+      configFileParsingDiagnostics,
+      refs,
+    );
   };
 
   const host = ts.createSolutionBuilderHost(
@@ -147,8 +145,14 @@ export function runBuild(params: BuildParams): number {
   );
 
   const builder = ts.createSolutionBuilder(host, projects, buildOptions);
-  const exitCode = builder.build();
-  return exitCode === ts.ExitStatus.Success ? 0 : 1;
+  try {
+    const exitCode = builder.build();
+    return exitCode === ts.ExitStatus.Success ? 0 : 1;
+  } finally {
+    for (const adapter of adapters.splice(0)) {
+      adapter.dispose();
+    }
+  }
 }
 
 function toParsedCommandLine(

@@ -61,10 +61,10 @@ Out of scope:
 
 ### Typed handler helper (concrete API)
 
-- Provide a helper (working name: `defineApiHandler`) with curried shape:
+- Provide a helper (working name: `ApiHandler`) with curried shape:
 
 ```ts
-export const handler = defineApiHandler(route, method, { headers?, body?, success?, error? })(
+export const handler = ApiHandler(route, method, { headers?, body?, success?, error? })(
   ({ path, query, headers, body }) => Effect.succeed(...),
 )
 ```
@@ -76,7 +76,7 @@ export const handler = defineApiHandler(route, method, { headers?, body?, succes
 - Handler receives decoded `{ path, query, headers, body }`; `error` / `success` schemas encode response payloads with annotated status codes via `HttpApiSchema.status(code)`.
 - Generated endpoint contracts may use either:
   - direct `handler` function export, or
-  - `handler` created via `defineApiHandler(...)`.
+  - `handler` created via `ApiHandler(...)`.
 
 ### OpenAPI configuration surface (Effect-backed)
 
@@ -279,7 +279,7 @@ src/apis/
 
 ### 12) Typed Handler Helper Surface
 
-- Provide a helper runtime export (working name: `defineApiHandler`) from the HttpApi plugin package surface.
+- Provide a helper runtime export (working name: `ApiHandler`) from the HttpApi plugin package surface.
 - Helper contract is curried: `(route, method, schemas?) -> (handler) -> typed handler`, where `schemas` is `{ headers?, body?, success?, error? }`.
 - Context: handler receives `{ path, query, headers, body }` with type-safe decoding from route/headers/body schemas.
 - Response: `error` / `success` schemas encode body payloads into `HttpServerResponse`; use `HttpApiSchema.status(code)` to annotate status codes.

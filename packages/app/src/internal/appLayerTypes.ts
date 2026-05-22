@@ -4,7 +4,7 @@
  */
 import * as Layer from "effect/Layer";
 
-export type LayerAny = Layer.Layer<any, any, any> | Layer.Layer<never, any, any>;
+export type LayerAny = Layer.Layer<never, unknown, unknown>;
 
 /** Single layer or non-empty array (uses Layer.mergeAll internally). */
 export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];
@@ -31,8 +31,12 @@ export function composeWithLayers<
 >(base: Base, layers: Layers): ComputeLayers<Layers, Base>;
 export function composeWithLayers<
   Base extends LayerAny,
+>(base: Base, layers?: undefined): Base;
+export function composeWithLayers<
+  Base extends LayerAny,
   const Layers extends ReadonlyArray<LayerOrGroup>,
->(base: Base, layers: Layers): LayerAny {
+>(base: Base, layers?: Layers): LayerAny {
+  if (layers === undefined) return base;
   if (layers.length === 0) return base;
   let out: LayerAny = base;
   for (const layer of layers) {
@@ -67,10 +71,10 @@ export type Provide<A extends LayerAny, B extends LayerAny> = Layer.Layer<
 >;
 
 type ComputeLayer<L extends LayerOrGroup> =
-  L extends Layer.Layer<infer A, infer E, infer R>
-    ? Layer.Layer<A, E, R>
-    : L extends ReadonlyArray<Layer.Layer<infer A, infer E, infer R>>
-      ? Layer.Layer<A, E, R>
+  L extends ReadonlyArray<LayerAny>
+    ? Layer.Layer<Layer.Success<L[number]>, Layer.Error<L[number]>, Layer.Services<L[number]>>
+    : L extends LayerAny
+      ? Layer.Layer<Layer.Success<L>, Layer.Error<L>, Layer.Services<L>>
       : never;
 
 /** Normalizes LayerOrGroup to a single Layer at runtime. Arrays use Layer.mergeAll. */

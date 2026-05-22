@@ -241,7 +241,7 @@ function unwrapDomRenderEvent(x: DomRenderEvent): Array<Node> {
 function unwrapHtmlRenderEvent(document: Document, x: HtmlRenderEvent): Array<Node> {
   const tmp = document.createElement("template");
   tmp.innerHTML = x.html;
-  return Array.from(tmp.childNodes);
+  return Array.from(tmp.content.childNodes);
 }
 
 export function diffChildren(

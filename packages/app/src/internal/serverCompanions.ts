@@ -34,11 +34,24 @@ export function resolveServerCompanion(importer: string): ServerCompanionResolut
   const importerDir = dirname(importer);
   return {
     imports: SERVER_COMPANIONS.flatMap((name) => {
-      const candidate = join(importerDir, `.${name}.ts`);
-      if (!existsSync(candidate)) return [];
-      return [{ name, binding: toBinding(name), importPath: `./.${name}` as const }];
+      const companion = resolveCompanion(importerDir, name);
+      return companion === undefined
+        ? []
+        : [{ name, binding: toBinding(name), importPath: companion }];
     }),
   };
+}
+
+function resolveCompanion(
+  importerDir: string,
+  name: ServerCompanionName,
+): `./${string}` | undefined {
+  const candidates =
+    name === "dependencies"
+      ? [".server.dependencies", ".dependencies"]
+      : [`.${name}`];
+  const found = candidates.find((candidate) => existsSync(join(importerDir, `${candidate}.ts`)));
+  return found === undefined ? undefined : `./${found}.js`;
 }
 
 function toBinding(name: ServerCompanionName): string {

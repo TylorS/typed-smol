@@ -5,7 +5,7 @@
  */
 import * as Effect from "effect/Effect";
 import * as Fx from "@typed/fx/Fx";
-import * as RefSubject from "@typed/fx/RefSubject";
+import * as RefSubject from "@typed/fx/RefSubject/RefSubject";
 import * as Stream from "effect/Stream";
 import * as Route from "@typed/router";
 import * as Option from "effect/Option";

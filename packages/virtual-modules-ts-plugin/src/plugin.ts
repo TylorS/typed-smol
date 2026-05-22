@@ -30,7 +30,6 @@ import {
   createPluginConfigFingerprint,
   createPluginModuleFingerprint,
   createPluginPackageFingerprint,
-  createSourceInputFingerprint,
   createTypeInfoApiSession,
   createTypeScriptFingerprint,
   createVirtualArtifactStore,
@@ -47,13 +46,17 @@ import {
   type VirtualModuleRecord,
   type VirtualModulePlugin,
   type VirtualModuleResolver,
-  VIRTUAL_NODE_MODULES_RELATIVE,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/virtual-modules";
 import {
   loadTypedConfig,
+  createBrowserVirtualModulePlugin,
+  createConfigVirtualModulePlugin,
+  createEnvVirtualModulePlugin,
+  createHtmlVirtualModulePlugin,
   createRouterVirtualModulePlugin,
   createHttpApiVirtualModulePlugin,
+  createServerVirtualModulePlugin,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/app";
 import { existsSync, readFileSync } from "node:fs";
@@ -165,8 +168,10 @@ function createTsPluginArtifactStoreFactory(options: {
 }): {
   readonly artifactStoreFactory: VirtualArtifactStoreFactory;
   readonly shouldReuseRecord: (record: VirtualModuleRecord) => boolean;
+  readonly onRecordResolved: (record: VirtualModuleRecord) => void;
 } {
   const tokenByVirtualKey = new Map<string, string>();
+  const dependencyTokenByVirtualKey = new Map<string, string>();
   const loadedTypedConfigToken = createTypedConfigComparisonToken(
     options.projectRoot,
     options.loadedConfig,
@@ -202,8 +207,24 @@ function createTsPluginArtifactStoreFactory(options: {
     },
     shouldReuseRecord: (record) => {
       const context = createArtifactStoreContext();
+      const dependencyToken = createDependencySnapshotToken(
+        options.languageServiceHost,
+        record.dependencies,
+      );
+      const previousDependencyToken = dependencyTokenByVirtualKey.get(record.key);
+      if (previousDependencyToken === undefined) {
+        dependencyTokenByVirtualKey.set(record.key, dependencyToken);
+      }
       return (
-        !context.resolverInputDriftReason && tokenByVirtualKey.get(record.key) === context.token
+        !context.resolverInputDriftReason &&
+        tokenByVirtualKey.get(record.key) === context.token &&
+        (previousDependencyToken === undefined || previousDependencyToken === dependencyToken)
+      );
+    },
+    onRecordResolved: (record) => {
+      dependencyTokenByVirtualKey.set(
+        record.key,
+        createDependencySnapshotToken(options.languageServiceHost, record.dependencies),
       );
     },
   };
@@ -255,7 +276,7 @@ function createTsPluginArtifactFingerprints(options: {
         : {}),
   });
   return {
-    sourceInputFingerprints: createSourceRootFingerprints(options, parsedTsconfig.fileNames),
+    sourceInputFingerprints: [createDependencyScopedSourceInputFingerprint()],
     pluginFingerprints: [
       ...createTypedConfigFingerprints(
         options.projectRoot,
@@ -283,12 +304,10 @@ function parseTsconfigForFingerprint(options: {
   readonly projectRoot: string;
   readonly tsconfigPath?: string;
 }): {
-  readonly fileNames: readonly string[];
   readonly fingerprint: VirtualArtifactFingerprint;
 } {
   if (!options.tsconfigPath) {
     return {
-      fileNames: [],
       fingerprint: createUnavailableFingerprint(
         "tsconfig",
         "parsed-tsconfig",
@@ -300,7 +319,6 @@ function parseTsconfigForFingerprint(options: {
   const configFile = options.ts.readConfigFile(options.tsconfigPath, options.ts.sys.readFile);
   if (configFile.error) {
     return {
-      fileNames: [],
       fingerprint: createUnavailableFingerprint(
         "tsconfig",
         "parsed-tsconfig",
@@ -318,7 +336,6 @@ function parseTsconfigForFingerprint(options: {
   );
   if (parsed.errors.length > 0) {
     return {
-      fileNames: [],
       fingerprint: createUnavailableFingerprint(
         "tsconfig",
         "parsed-tsconfig",
@@ -328,7 +345,6 @@ function parseTsconfigForFingerprint(options: {
   }
 
   return {
-    fileNames: parsed.fileNames,
     fingerprint: createParsedTsconfigFingerprint({
       fileNames: parsed.fileNames.map((file) => relative(options.projectRoot, file)).sort(),
       options: toJsonValue(parsed.options),
@@ -339,51 +355,41 @@ function parseTsconfigForFingerprint(options: {
   };
 }
 
-function createSourceRootFingerprints(
-  options: {
-    readonly projectRoot: string;
-    readonly languageServiceHost: import("typescript").LanguageServiceHost;
-    readonly typeTargetSpecs: ReadonlyArray<
-      import("@typed/virtual-modules", { with: { "resolution-mode": "import" } }).TypeTargetSpec
-    >;
-  },
-  parsedFileNames: readonly string[],
-): readonly VirtualArtifactFingerprint[] {
-  const hostFileNames = options.languageServiceHost.getScriptFileNames?.() ?? [];
-  const bootstrapPath =
-    options.typeTargetSpecs.length > 0 ? [getTypeTargetBootstrapPath(options.projectRoot)] : [];
-  const sourceRoots = [...new Set([...hostFileNames, ...parsedFileNames, ...bootstrapPath])]
-    .filter((sourceRoot) => !isGeneratedVirtualArtifactPath(sourceRoot))
-    .sort();
-  return sourceRoots.length > 0
-    ? sourceRoots.map((sourceRoot) =>
-        createLanguageServiceSourceInputFingerprint(options.languageServiceHost, sourceRoot),
-      )
-    : [
-        createUnavailableFingerprint(
-          "source",
-          "source-roots",
-          "Source input fingerprints are unavailable: TS project reported no root files",
-        ),
-      ];
-}
-
-function isGeneratedVirtualArtifactPath(filePath: string): boolean {
-  return filePath.includes(VIRTUAL_NODE_MODULES_RELATIVE);
-}
-
-function createLanguageServiceSourceInputFingerprint(
-  languageServiceHost: import("typescript").LanguageServiceHost,
-  sourcePath: string,
-): VirtualArtifactFingerprint {
-  const snapshot = languageServiceHost.getScriptSnapshot?.(sourcePath);
-  if (!snapshot) return createSourceInputFingerprint(sourcePath);
-
+function createDependencyScopedSourceInputFingerprint(): VirtualArtifactFingerprint {
   return {
-    kind: "file",
-    name: sourcePath,
-    hash: hashVirtualArtifactContent(snapshot.getText(0, snapshot.getLength())),
+    kind: "source",
+    name: "ts-plugin-source-inputs",
+    hash: hashVirtualArtifactContent("dependency-descriptor-scoped"),
   };
+}
+
+function createDependencySnapshotToken(
+  languageServiceHost: import("typescript").LanguageServiceHost,
+  dependencies: VirtualModuleRecord["dependencies"],
+): string {
+  return hashVirtualArtifactJson(
+    dependencies.map((dependency) => {
+      if (dependency.type !== "file") return dependency;
+      const snapshot = languageServiceHost.getScriptSnapshot?.(dependency.path);
+      if (snapshot) {
+        return {
+          ...dependency,
+          hash: hashVirtualArtifactContent(snapshot.getText(0, snapshot.getLength())),
+        };
+      }
+      try {
+        return {
+          ...dependency,
+          hash: hashVirtualArtifactContent(readFileSync(dependency.path)),
+        };
+      } catch {
+        return {
+          ...dependency,
+          unavailableReason: "dependency source unavailable",
+        };
+      }
+    }),
+  );
 }
 
 function createTypedConfigFingerprints(
@@ -629,6 +635,20 @@ function createTypedConfigSnapshot(typedConfig: unknown): JsonValue {
   };
 }
 
+function mergePluginsByName(
+  primary: readonly VirtualModulePlugin[],
+  fallback: readonly VirtualModulePlugin[],
+): readonly VirtualModulePlugin[] {
+  const seen = new Set<string>();
+  const result: VirtualModulePlugin[] = [];
+  for (const plugin of [...primary, ...fallback]) {
+    if (seen.has(plugin.name)) continue;
+    seen.add(plugin.name);
+    result.push(plugin);
+  }
+  return result;
+}
+
 function createVmcLoadSnapshot(vmcLoad: VmcLoadResult): JsonValue {
   if (vmcLoad.status !== "loaded") {
     return {
@@ -739,6 +759,13 @@ function init(modules: { typescript: typeof import("typescript") }): {
           ? { prefix: typedConfig.api.prefix, pathPrefix: typedConfig.api.pathPrefix }
           : {},
       ),
+      createEnvVirtualModulePlugin(),
+      createConfigVirtualModulePlugin({
+        loadConfig: () => loadedConfig,
+      }),
+      createHtmlVirtualModulePlugin(),
+      createServerVirtualModulePlugin(),
+      createBrowserVirtualModulePlugin(),
     ];
 
     const vmcConfigPathOpt =
@@ -763,7 +790,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
         ? [...vmcLoad.resolver.plugins]
         : [];
 
-    const mergedPlugins = [...vmcPlugins, ...builtInPlugins];
+    const mergedPlugins = mergePluginsByName(vmcPlugins, builtInPlugins);
     const resolver: LoadedVirtualResolver = new PluginManager(
       mergedPlugins,
     ) as unknown as LoadedVirtualResolver;
@@ -973,6 +1000,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
       createTypeInfoApiSession: createTypeInfoApiSessionFactory,
       artifactStoreFactory: artifactStore.artifactStoreFactory,
       shouldReuseRecord: artifactStore.shouldReuseRecord,
+      onRecordResolved: artifactStore.onRecordResolved,
       watchHost,
       debounceMs,
     });

@@ -1,4 +1,5 @@
 import type * as ts from "typescript";
+import { dirname, relative, resolve } from "node:path";
 import type {
   ResolveVirtualModuleOptions,
   VirtualArtifactStoreFactory,
@@ -267,7 +268,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
       if (cached.status === "error") {
         return cached;
       }
-      if (cached.status === "resolved") {
+      if (cached.status === "resolved" && !previous?.stale) {
         const record: MutableVirtualRecord = {
           key,
           id,
@@ -308,6 +309,10 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
         id,
         importer,
         virtualFileName,
+        (nestedId) => {
+          const nested = getOrBuildRecord(nestedId, importer);
+          return nested.status === "resolved" ? nested.record.virtualFileName : undefined;
+        },
       );
       if (materialized.status === "error") {
         return materialized;
@@ -409,6 +414,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     validateRecordForReuse,
     resolveRecord,
     getOrBuildRecord,
+    findRecordByVirtualFile,
     resolveEffectiveImporter,
     dispose,
   };
@@ -481,6 +487,7 @@ const materializeRecordSource = (
   id: string,
   importer: string,
   fallbackVirtualFileName: string,
+  resolveNestedVirtualModule?: (id: string) => string | undefined,
 ):
   | { readonly status: "resolved"; readonly virtualFileName: string; readonly sourceText: string }
   | ResolveRecordResultError => {
@@ -531,6 +538,12 @@ const materializeRecordSource = (
     resolution.sourceText,
     importer,
     resolvedArtifact.result.paths.sourcePath,
+    nestedVirtualModuleRewriter(
+      options,
+      importer,
+      resolvedArtifact.result.paths.sourcePath,
+      resolveNestedVirtualModule,
+    ),
   );
 
   try {
@@ -562,6 +575,48 @@ const materializeRecordSource = (
       },
     };
   }
+};
+
+const rewriteNestedVirtualModuleSpecifiers = (
+  options: VirtualRecordStoreOptions,
+  sourceText: string,
+  importer: string,
+  virtualFileName: string,
+  resolveNestedVirtualModule: ((id: string) => string | undefined) | undefined,
+): string =>
+  rewriteSourceForPreviewLocation(
+  sourceText,
+  importer,
+  virtualFileName,
+  nestedVirtualModuleRewriter(options, importer, virtualFileName, resolveNestedVirtualModule),
+  );
+
+const nestedVirtualModuleRewriter = (
+  options: VirtualRecordStoreOptions,
+  importer: string,
+  virtualFileName: string,
+  resolveNestedVirtualModule: ((id: string) => string | undefined) | undefined,
+): ((id: string) => string | undefined) | undefined => {
+  if (!resolveNestedVirtualModule) return undefined;
+  return (id) => {
+    const pluginResolution = options.resolver.resolvePluginName?.({
+      id,
+      importer,
+      createTypeInfoApiSession: options.createTypeInfoApiSession,
+    });
+    if (pluginResolution?.status !== "resolved") return undefined;
+    const nestedVirtualFileName = resolveNestedVirtualModule(id);
+    if (!nestedVirtualFileName) return undefined;
+    return toRelativeJavaScriptSpecifier(virtualFileName, nestedVirtualFileName);
+  };
+};
+
+const toRelativeJavaScriptSpecifier = (fromFile: string, toFile: string): string => {
+  const relativePath = toPosixPath(relative(dirname(fromFile), toFile));
+  const withJavaScriptExtension = relativePath.replace(/\.[cm]?tsx?$/, ".js");
+  return withJavaScriptExtension.startsWith(".")
+    ? withJavaScriptExtension
+    : `./${withJavaScriptExtension}`;
 };
 
 const resolveArtifactStoreEntry = (

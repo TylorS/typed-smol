@@ -1,0 +1,219 @@
+# RealWorld Workflow Memories
+
+## Task 0 - ApiHandler Canonicalization
+
+- `@typed/app` now uses route/method `ApiHandler(route, method, schemas?)(handler)` as the canonical public endpoint helper.
+- The historical helper alias was removed from the package-root export surface, tests, docs, starter template, virtual-module sample docs, and HttpApi virtual-module specs.
+- The old config-object `ApiHandler({ route, method, ... })(handler)` shape was removed from public tests to avoid two public helpers with the same name.
+- Verification required building local workspace dependencies in this worktree before app tests could import `@typed/router` and `@typed/virtual-modules`.
+- Dependency bootstrap used `pnpm install --no-frozen-lockfile --lockfile=false` so the unrelated dirty `pnpm-lock.yaml` was not modified by this task.
+
+## Task 1 - Package Skeleton
+
+- `examples/realworld` starts as the single package named `typed-realworld` with only approved runtime/dev dependencies.
+- The build script intentionally compiles only non-test `src/**/*.ts`; Vitest owns `src/tests/**`.
+- Database, Hurl, and Playwright scripts are present but fail loudly until their owning tasks wire real implementations.
+- `typed.config.ts` uses `defineConfig` and declares the intended `api:` and `router:` prefixes; the first browser build avoids virtual imports so package wiring can be verified before route/API files exist.
+- Local build verification in this worktree required building `@typed/virtual-modules-vite` and `@typed/vite-plugin` before Vite could load the workspace plugin package.
+
+## Task 2 - Schema Baseline
+
+- Response envelope schemas live in `src/domain/RealWorldApi.ts` and compose schemas from `Ids.ts`, `User.ts`, `Article.ts`, `Pagination.ts`, and `Errors.ts`.
+- Article list responses intentionally use `ArticlePreview`, whose struct strips `body` on decode/encode while single article responses use full `Article`.
+- Effect Schema `Struct` strips extra keys by default; the schema test locks this behavior for body-free article previews.
+- Timestamps are modeled as branded ISO UTC strings for API compatibility instead of decoded DateTime values.
+
+## Task 3 - Domain Invariants
+
+- Slug helpers are pure and deterministic: `toSlugBase` normalizes titles and `uniqueSlug` appends numeric suffixes starting at `-2`.
+- Tag updates distinguish `undefined` as preserve-existing and `[]` as remove-all, matching the RealWorld article update contract.
+- `parseAuthorizationHeader` returns Effect `Option` and only accepts exact `Token <opaque-token>` headers.
+- Markdown rendering goes through `src/domain/Markdown.ts`; raw dangerous nodes, event-handler attributes, and `javascript:` URLs are stripped or escaped at the boundary.
+
+## Task 4 - SQLite Storage
+
+- SQLite wiring uses `SqliteClient.layer({ filename })` and accesses SQL through `yield* SqlClient.SqlClient`.
+- `DatabaseManager` is a class-based `Context.Service`; `resetDatabase`, `migrateDatabase`, and `seedConfiguredDatabase` provide that service from `DatabaseManager.Live`, which depends on `RealWorldConfig`.
+- The compiled db CLI uses package `process.cwd()` as the example root so `db:reset` writes `examples/realworld/.data/realworld.sqlite`, not under `dist`.
+- The example avoids adding `@types/node`; `src/types/node-lite.d.ts` declares only the Node globals/modules used by this package.
+- Local setup required rebuilding `better-sqlite3` with `node-gyp rebuild --release` after the lockfile-only install left the native binding absent.
+
+## Task 5 - User Persistence Services
+
+- `PasswordHasher` is a class-based `Context.Service` backed by Node `crypto.scrypt`; stored password hashes and salts are modeled with Effect Schema.
+- `SessionTokens` creates opaque base64url tokens, persists them in SQLite, and remains replaceable through its service layer.
+- `UserRepository` composes `PasswordHasher`, `SessionTokens`, `RealWorldConfig`, and `effect/unstable/sql` through `Layer.effect`; it exposes create, lookup, token lookup, update, credential verification, and delegated session creation.
+- Repository inputs are decoded with Effect Schema at the boundary, and database rows are mapped back through the domain `User` schema using typed `Schema.SchemaError` failures rather than defects.
+- Infrastructure tests that mutate SQLite should use isolated database paths when they can run concurrently under Vitest.
+- Infrastructure service and repository method signatures must never use `unknown` error channels; use explicit unions such as `RepositoryPersistenceError`, `UserRepositoryError`, and `DatabaseError`.
+
+## Task 6 - Social and Content Repositories
+
+- `ProfileRepository`, `ArticleRepository`, `CommentRepository`, and `TagRepository` are all class-based `Context.Service` layers that acquire `RealWorldConfig` and SQL dependencies in `Layer.effect`.
+- Repository error channels are explicit; the infrastructure grep gate is `rg "Effect\\.Effect<[^\\n]*unknown|, unknown[>,)]|readonly .*unknown" examples/realworld/src/infrastructure -n`.
+- Article listing supports RealWorld global filters for tag, author, favorited username, limit, and offset; feed lists articles from followed authors only.
+- Article writes normalize tags, preserve tags when `tagList` is absent, remove all tags for an empty `tagList`, generate unique slugs, and maintain favorite counts through real SQLite rows.
+- Comment repository methods return `Option` for unknown article/comment targets, support selective owner deletion, and hydrate author profiles from real user rows.
+
+## Task 7 - Application Services
+
+- Application services now live in `src/application/{Users,Profiles,Articles,Comments,Tags}.ts` with `Context.Service` classes and `Layer.effect` constructors.
+- `src/application/Common.ts` owns token resolution, optional viewer lookup, RealWorld error helpers, blank-field validation, and `UserResponse` shaping.
+- `RealWorldError` is a tagged domain error with `{ status, errors }`, matching the API envelope and current service tests.
+- Protected workflows use `Option<OpaqueToken>`; missing tokens map to `401 errors.token[0] == "is missing"` before repository access.
+- Article and comment ownership checks happen in application services so repository `Option`/boolean results become `404` or `403` RealWorld errors.
+- Effect 4 uses `Effect.catch(...)`; `Effect.catchAll` is not available in this workspace.
+
+## Task 8 - API Endpoint Modules
+
+- RealWorld API helpers live under `src/api-support`, not `src/api`, because the HttpApi virtual-module scanner treats every non-reserved file in `src/api` as an endpoint primary module.
+- Endpoint primary modules export `route`, `method`, schemas, and raw `HttpServerResponse` handlers so application `RealWorldError` values can map to dynamic HTTP statuses and RealWorld error envelopes.
+- `_api.ts` owns the `/api` prefix and exposes JSON OpenAPI at `/api/docs/openapi.json`; Swagger and Scalar UI paths are intentionally disabled.
+- The generated `api:` source is tested through `createHttpApiVirtualModulePlugin` and direct endpoint handlers because Vite/Rolldown currently cannot runtime-import the TS-heavy generated virtual module without separate generator hardening.
+- Task 8 verification used `pnpm --filter typed-realworld test:integration -- src/tests/api` and `pnpm --filter typed-realworld build`.
+
+## Task 9 - SSR Route Modules
+
+- Subagent routing decision was direct execution: target route/presentation/test files were already known from the plan, and this Codex session only allows spawned agents when the user explicitly asks for them.
+- SSR tests import `src/ssr.ts` directly instead of `src/server.ts` because static `api:./api` imports still hit the Vite/Rolldown TS-virtual-module parse limitation during runtime tests.
+- `renderUrl(url)` renders the exported `Routes` matcher through `renderToHtmlString`, `ServerRouter`, and `StaticHtmlRenderTemplate`; it does not manually dispatch paths.
+- `src/routes/**` route modules use `Route.Parse`/`RouteHandler` and call application services directly for feeds, tag feeds, article detail, comments, profile articles, and profile favorites.
+- `src/routes/_layout.ts` owns the shared shell through router layout support; presentation modules return `@typed/template` `html` templates rather than manually wrapped strings.
+- `src/server.ts` is the active `typed:server?routes=./routes&api=./api&html=../index.html&client=./browser.ts` entry; `src/browser.ts` runs `typed:browser?routes=./browser-routes`, with source-level tests locking the generated `api:`, `router:`, `ssrForHttp`, and `DomRenderTemplate` usage.
+- `typed:browser` initially failed the RealWorld Vite build because the generator imported a non-existent named root export `drainLayer` from `@typed/fx`; the generator now emits the public `Fx.drainLayer(...)` API.
+- `typed:browser` generated code imports `composeWithLayers` from `@typed/app/runtime`, not the package root, so browser bundles do not traverse Node-heavy app virtual-module/server exports.
+- `src/browser-routes/**` is the browser-safe route tree for hydration and shares route declarations from `src/routing/Routes.ts`; keep server data-loading handlers in `src/routes/**` so SQLite/password/session dependencies stay out of the client bundle.
+- After the browser route split, the Vite client chunk dropped from roughly 3.8 MB to roughly 265 kB. One remaining Vite warning comes from Effect Schema pulling `effect/dist/testing/TestSchema.js` through router schema internals, not from RealWorld server dependencies.
+- Task 9 verification used `pnpm --filter typed-realworld test:ssr` and `pnpm --filter typed-realworld build`.
+
+## Task 10 - Browser Auth Runtime
+
+- `src/browser.ts` now runs both `typed:browser?routes=./browser-routes` and an auth initialization Effect that installs `window.__conduit_debug__`.
+- Browser auth state lives in `src/presentation/State.ts` and uses `@typed/fx` `RefSubject` with a synchronous snapshot for the RealWorld debug contract.
+- `src/presentation/ClientApi.ts` is the same-origin browser API boundary; it decodes `UserResponse` and RealWorld error envelopes with Effect Schema and distinguishes HTTP, network, and decode failures.
+- Auth initialization clears stale tokens on current-user 4xx responses, but keeps tokens and reports `unavailable` for network, 5xx, and decode failures so transient outages do not log the user out.
+- Login and register calls store the returned `jwtToken`; logout clears both `localStorage.getItem("jwtToken")` and the legacy `localStorage.jwtToken` property compatibility path.
+
+## Task 10 - Browser Form Workflows
+
+- Form pages follow the TodoMVC shape: `@typed/template` templates bind `EventHandler.make` intents, and mutation handlers stay as thin Effect workflows rather than manual DOM wrappers.
+- `BrowserAuth.Live` is provided through `typed:browser` `run({ layers })`, so route templates can depend on the auth store without manually wrapping route output.
+- Browser form inputs are decoded with the existing `RealWorldApi` Effect schemas before calling workflows, preserving branded request types instead of casting raw strings.
+- The same-origin client now covers settings, create/update/delete article, favorite/unfavorite, follow/unfollow, create/delete comment, plus no-content responses.
+- SSR routes and browser route modules now use real auth/settings/editor form templates instead of `PlaceholderPage`.
+- `FormEvents.formSubmit` catches the typed RealWorld workflow error union and renders visible `.error-messages` as text nodes; keep new form workflows inside that union instead of widening to arbitrary errors.
+- `ClientApiError` carries string `reason` values for network/decode cases, not raw thrown `unknown`, so the error channel remains explicit and display helpers do not need casts.
+
+## Task 11 - Typed Framework Surface Hardening
+
+- RealWorld now compiles through `vmc -p tsconfig.json`; do not reintroduce ambient `typed:browser` or `typed:server` declarations in the example.
+- Endpoint modules should use `ApiHandlerRaw({ route, method, body? })` and destructured inferred params. Avoid `RawApiContext`, `jsonBody`, path-param casts, and `method as const` in endpoint code.
+- `@typed/app` browser virtual modules preserve route and layer types through overloads for `hydrate` and `run`; `run({ layers })` should expose the computed program type rather than `unknown`/`any` requirements.
+- Router virtual-module emission must pass non-function `Fx` values directly to `Router.match(route, fx)` instead of wrapping them in `constant(fx)`, otherwise TypeScript selects a broader function-handler path and loses template types.
+- RealWorld route layouts should use router layout support with generic `LayoutParams<Params, A, E, R>` and typed `@typed/template` return channels; avoid manual `{ content: unknown }` wrappers.
+- `LayerAny` in `@typed/app` runtime is intentionally `Layer.Layer<never, unknown, unknown>` to avoid poisoning public generated program types with `any`.
+
+## Task 11 - UI Contract and XSS
+
+- The CSS contract is local to `src/presentation/styles.css` and is loaded from `index.html`; there are no external CSS packages.
+- `avatarSrc` only allows root-relative URLs and absolute `http:`/`https:` URLs; unsafe, empty, protocol-relative, `javascript:`, and `data:` values fall back to `/default-avatar.svg`.
+- Static `@typed/template` rendering currently inserts interpolated strings as HTML, so presentation code must pass untrusted text through `safeTextPreview` or sanitized Markdown before rendering.
+- Raw Vite dev serves the hydration entry without SSR content, so browser verification can confirm asset loading but not full page content until Task 12 wires a local SSR/server acceptance path.
+
+## Task 12 - Local Acceptance Wrappers
+
+- `scripts/run-hurl-local.ts` references `.temp/references/realworld/specs/api/hurl`, expands `.hurl` files from that checkout, passes `HOST` and `UID_VAL` through Hurl variables, and fails clearly when `hurl` is missing.
+- `scripts/run-e2e-local.ts` references `.temp/references/realworld/specs/e2e`, requires an already-running app at `APP_BASE`, passes `API_BASE` through to the upstream helpers, and rewrites missing-browser output into a Playwright install prerequisite.
+- `playwright.config.ts` imports the upstream `playwright.base.ts` and points `testDir` at the reference checkout rather than copying specs into `examples/realworld`.
+- In this worktree, `test:api:hurl:local` stops at missing `hurl`; `test:e2e:local` stops at missing local app server. Those are expected prerequisite failures, not code failures.
+
+## Task 13 - Final Verification Notes
+
+- README should distinguish plain Vite client development from the full local acceptance target. Vite dev serves the hydration entry and CSS, but Hurl/E2E need a full app server with SSR HTML and `/api` routes.
+- Keep final commits scoped around RealWorld docs/gates; this worktree currently has unrelated dirty VS Code packaging files under `packages/virtual-modules-vscode` and `.cursor/hooks`.
+- Final recursive tests required framework fixes from the other branch: `DateTimes.Fixed` must not follow `TestClock`, `DateTimes.Offset` is the elapsed-clock layer, empty `typed:config` must emit `export {};`, and the TS plugin sample project must bundle/register the config plugin.
+- Final verification passed with `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, `pnpm --filter @typed/app test`, `pnpm --filter @typed/app build`, `pnpm -r run test`, `pnpm -r build`, `pnpm build`, and `git diff --check`.
+
+## Declarative Route/Virtual Runtime Refactor
+
+- RealWorld no longer needs a separate `src/browser-routes/**` tree or sibling `*.handler.ts` router companions. Route modules in `src/routes/**` own the route declaration and render handler directly.
+- Router virtual modules are environment-agnostic. `typed:browser` and `typed:server` both import the same `router:./routes` graph; browser/server behavior comes from the provided Navigation/rendering layers (`render(..., root)` vs `ssrForHttp(router)`), not from `router:` targets.
+- `src/server.ts` exports `renderUrl` from the generated `typed:server` virtual module; `src/ssr.ts` was removed after Vite could import the generated server/API/HTML virtual modules directly.
+- Generated `typed:server`, `typed:browser`, `typed:html`, and `api:` runtime modules must remain JavaScript-parseable for Vite/Rolldown. They currently emit `// @ts-nocheck` because VMC writes them as `.ts` files; the durable fix is a separate declaration/type surface, not reintroducing TS-only runtime syntax.
+- `@typed/async-data` now exports `RefAsyncData.fromEffect` and `RefAsyncData.make`, backed by `@typed/fx`, so async lifecycle state can be bound declaratively instead of pre-resolving route snapshots.
+- `TypedHttpServer.toNodeHandler` must not use `Layer.Layer<never, unknown, unknown>`; keep broad layer plumbing on `Layer.Layer<never, any, any>`/generic layer parameters and preserve tests that reject generated `Effect<..., unknown>` channels.
+- Verification for this slice passed with `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, `pnpm --filter @typed/app test`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/async-data test`, `pnpm --filter @typed/async-data build`, and `git diff --check`. `typed-realworld build` still warns about a large client chunk and Node-heavy modules in the browser bundle, so browser/server split hygiene remains a follow-up.
+
+## Route Handler Overlay Boundary
+
+- `router:*` must stay environment-agnostic. Server data-loading handlers live in `*.handler.ts` and are overlaid by `route-handlers:*` inside `typed:server`, while browser imports only the template-bearing route modules.
+- Server-only route dependency layers belong in `src/routes/_handlers.dependencies.ts`; do not put RealWorld SQLite/password/session layers in `src/routes/_dependencies.ts`, because router virtual modules import route dependencies in browser and server.
+- Browser-safe route modules should import `RouteHandler` from `@typed/app/RouteHandler`, not the `@typed/app` barrel, so the client bundle does not traverse VM plugin/config/TypeScript compiler exports.
+- This boundary reduced the RealWorld production client chunk from roughly 3.8 MB to 281 kB and removed RealWorld infrastructure/application modules, handler dependencies, `route-handlers:`, and TypeScript compiler sources from the client sourcemap.
+
+## Generated Runtime Import Hygiene
+
+- Generated `typed:server` runtime should import `RouteHandlers`, `TypedHttpServer`, and `composeWithLayers` from narrow `@typed/app` subpaths, not from the package root barrel.
+- Generated `api:*` runtime should import `ApiHandlers`, `composeWithLayers`, `resolveConfig`, and `TypedHttpServer` from narrow subpaths, not from `@typed/app`.
+- Generated `typed:browser` runtime should import `composeWithLayers` directly from `@typed/app/runtime` instead of a namespace, keeping all generated runtime surfaces on narrow named imports.
+- Generated `api:*` runtime should register endpoint modules through `ApiHandlers` from `@typed/app/httpapi/Handlers`; keep request/header/body coercion in that shared helper instead of expanding handler-call plumbing inside the virtual module string.
+- RealWorld endpoint modules should import generated local `./$api-types` aliases, not `ApiHandlerRaw` from `@typed/app/httpapi/ApiHandler`; keep root-barrel imports and value-level wrappers out of route and API leaf modules.
+- RealWorld VM/config files and `@typed/vite-plugin` internals should import `@typed/app` helpers through narrow subpaths; the root barrel is only a convenience API, not a dependency path for generated-runtime tooling.
+- Generated router catch wrappers should never emit `Cause.Cause<unknown>`; when the catch error type cannot be preserved through broad generated glue, use `Cause.Cause<any>` so strict type checks pass without pretending the error channel is meaningful `unknown`.
+- After changing generated imports, rebuild `@typed/vite-plugin` before running Vite-backed RealWorld tests. Its built resolver imports `@typed/app` and can otherwise serve stale generated virtual module code.
+
+## Generated Local Route/API Type Modules
+
+- `createRouterVirtualModulePlugin()` now resolves `./$route-types` from a route leaf module and emits `Params`, `Template`, and `Handler` types derived from that file's `route` export. Route modules can use `export const template = Fx.fn(... ) satisfies Template` without importing `RouteHandler`.
+- `createHttpApiVirtualModulePlugin()` now resolves `./$api-types` from an endpoint leaf module and emits `Context`, `Handler`, and `RawHandler` types derived from the effective endpoint contract: local `route`/`method`/`body`/`success` plus local or nearest inherited `_headers.ts` and `_errors.ts` companions. Endpoint modules should use `Effect.fn("Span.name")(function* (...) { ... }) satisfies RawHandler<Service>`, not `RawHandler<never, Service>` annotations.
+- RealWorld package guards now reject `RouteHandler` imports in `src/routes/**` and `ApiHandlerRaw` imports in `src/api/**`, keeping the example declarative and pushing inference recovery into the framework.
+- For API request schemas, keep exported request TypeScript aliases decoded (`Schema.Schema.Type<typeof RequestSchema>`). Browser form code already uses `decodeForm(RequestSchema, rawInput)` before calling the generated client, and the generated Effect HttpApi client expects decoded schema payloads.
+- Test harnesses that need services from dependent layers should prefer a composed `Layer` graph and provide it once at the execution boundary. Layer composition is more idiomatic than stacked `Effect.provide(...)` calls because composed layers share the same `Scope` and `MemoMap`.
+- `Layer.mergeAll(...)` only merges sibling outputs; it does not provide sibling outputs to dependent layers like `ApplicationServices`. Compose dependent layers with `composeWithLayers(...)` or equivalent Layer APIs so dependencies are available in the layer graph.
+- Task 15 verification passed with focused harness tests, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `git diff --check`.
+- Task 16 verification passed with `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app test`, `pnpm --filter typed-realworld exec vitest run src/tests/package.test.ts`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `pnpm --filter @typed/app build`.
+- Verification for this slice passed with `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/HttpApiVirtualModulePlugin.test.ts`.
+- `$api-types` should expose both handler aliases and the full effective endpoint type surface. Keep `Config`, `Route`, `Method`, `Headers`, `Body`, `Success`, `Error`, `Dependencies`, `Middlewares`, `Prefixes`, `OpenApis`, `Name`, and `ApiTypes` generated from the endpoint module plus inherited and endpoint companion files.
+- `$route-types` should expose companion unions as local generated aliases. Keep `Dependencies`, `Guards`, `Layouts`, `Catches`, and `RouteTypes` generated beside `Params`, `Template`, and `Handler` so route leaves do not manually import companion modules for type recovery.
+- API companion unions collect inherited directory files first, endpoint companion second, and in-file endpoint export last. This mirrors OpenAPI inheritance/override order while still re-exposing every participating type.
+- Route companion unions collect in-file route exports plus the router composition order used by descriptor generation: directory companions from closest ancestor outward, then sibling companion files.
+- Task 17 direct verification passed with `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts src/RouterVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter typed-realworld exec vitest run src/tests/package.test.ts`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `git diff --check`.
+- Full `@typed/app test` and a single-worker retry hit unrelated Vitest timeout/date-duration anomalies across existing tests; isolated failing tests and the focused changed plugin tests passed, so this slice did not treat the full-suite timeout as a code regression.
+- Use `TypeModuleSource` for generated type modules when imports/helpers depend on discovered files. It keeps generated imports, helpers, and body sections separate and prevents dead helper aliases from being emitted when the resulting type surface does not need them.
+- `$api-types` and `$route-types` must register watched file dependencies for discovered inherited and companion type imports. Direct `existsSync` discovery without `api.file(..., { watch: true })` leaves TS server with stale generated type modules after companion edits.
+- Language-service diagnostics must not refresh every known virtual record. A single stale virtual record can otherwise force a full virtual-module rebuild storm on unrelated diagnostics requests after one file edit.
+- `getScriptVersion` must stay cheap for virtual records. Do not rebuild stale virtual modules from version queries; rebuild from targeted diagnostics/snapshot paths where the requested file is known.
+- Task 18 verification passed with `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts src/RouterVirtualModulePlugin.test.ts`, `pnpm --filter @typed/virtual-modules exec vitest run src/LanguageServiceAdapter.test.ts -t "does not rebuild stale records"`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/virtual-modules test`, `pnpm --filter @typed/virtual-modules build`, `pnpm --filter @typed/app test`, `pnpm --filter typed-realworld exec vitest run src/tests/package.test.ts`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `git diff --check`.
+- Dependency companion surfaces should expose the composed layer type, not the raw companion union: `Layer.Layer<Layer.Success<LayerUnion>, Layer.Error<LayerUnion>, Layer.Services<LayerUnion>>`. Keep array-valued sibling dependency exports flattened with `[number]` before deriving layer channels.
+- API `Middlewares` and `Prefixes` should stay ordered tuples because they represent composition order. API `OpenApi` is singular and selects the effective value: in-file endpoint export, then endpoint `.openapi`, then nearest inherited `_openapi.ts`.
+- Directory `_dependencies.ts` files for HttpApi should be applied to their owning generated `HttpApiGroup` layer with `Layer.provideMerge(...)`, keeping group-specific directory services inside the group layer rather than only re-exposing them in `$api-types`.
+- Task 19 verification passed with `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts -t "generated handler aliases|directory dependencies"`, `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts -t "decoded route types"`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/app test`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `git diff --check`.
+- Route guards should compile as a single effective guard from ancestor directories to the route-local guard. Generated `router:*` source should use `Router.composeGuards(rootGuard, nestedGuard, leafGuard)` when more than one guard applies.
+- `$route-types` should expose composed route concern aliases instead of raw unions for guards, layouts, and catches: `Guards`, `Layouts<A, E, R>`, and `Catches<A, E, R>`. The layout/catch aliases intentionally accept the inner content generics so route modules can ask for the effective wrapper type around their own handler/template output.
+- Layout and catch composition follows router runtime order: collect effective values ancestor-to-leaf, then apply leaf-to-ancestor around the inner content. Keep generated tuple order ancestor-to-leaf and let `@typed/router` composition helper types model the reverse application.
+- Task 20 verification passed with `pnpm --filter @typed/router build`, `pnpm --filter @typed/router exec vitest run src/Matcher.test.ts -t "composeGuards"`, `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts -t "composes route guards|decoded route types"`, `pnpm --filter @typed/router test`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/app test`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and `git diff --check`.
+- Router and HttpApi virtual module IDs are now query-shaped typed IDs: `typed:router?dir=...` and `typed:api?dir=...`. Keep `router:` and `api:` as rejected legacy IDs, not compatibility aliases.
+- `typed:router?dir=*` resolves to `./routes`; `typed:api?dir=*` resolves to `./api`. Generated `typed:browser` should preserve wildcard route input as `typed:router?dir=*`.
+- Router/HttpApi `shouldResolve` must stay parse-only by virtual module kind. Do not reintroduce directory existence checks or recursive script-file scans into `shouldResolve`; build-time diagnostics cover missing dirs, empty dirs, missing `dir`, unsupported options, and invalid `mode`.
+- The performance hypothesis for Task 21 was that tsserver repeatedly calling `shouldResolve` was doing recursive filesystem work after single-file edits. The optimization removes that work from the probe path and keeps watchable directory reads in `build`, where the resolver has committed to the plugin.
+- Task 21 verification passed with `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/HttpApiVirtualModulePlugin.test.ts src/BrowserVirtualModulePlugin.test.ts src/ServerVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/app test`, `pnpm --filter @typed/vite-plugin exec vitest run src/index.test.ts`, `pnpm --filter @typed/vite-plugin build`, `pnpm --filter @typed/virtual-modules-vscode exec vitest run src/virtualPreviewDisk.test.ts`, `pnpm --filter @typed/virtual-modules-vscode build`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld test`, `pnpm --filter typed-realworld build`, and scoped `git diff --check` excluding pre-existing dirty RealWorld route/API files.
+- RealWorld startup optimization baseline for `pnpm --filter typed-realworld typecheck` was `4.76s` real, `7.96s` user, and about `1.11GB` max RSS. After lazy TypeInfo sessions and corrected client-mode API generation, warm-cache runs passed at `2.14s`, `2.09s`, and `2.09s` real time with about `0.71GB` max RSS.
+- `vmc` should create the preliminary TypeInfo program lazily. Cache-hit startup should not build the TypeInfo program unless a plugin actually requests a TypeInfo session during virtual module build.
+- RealWorld `src/Api.ts` should import from `typed:api?dir=./api&mode=client` for browser/client helpers. The generated client API must still preserve endpoint `route` expressions instead of reconstructing every route with `Route.Parse(path)`, otherwise decoded params like `Route.Int("commentId")` degrade back to `string`.
+- Prefer `Route.Param("name").optional()`, `Route.Int("page").optional()`, and `Route.ParamWithSchema("limit", schema).optional()` over optional-specific constructors. The optional modifier works by reusing the original param route decoder/encoder when the value is present and accepting `{}` when omitted.
+- Task 23 verification passed with `pnpm --filter @typed/router exec vitest run src/Route.test.ts`, `pnpm --filter @typed/router build`, `pnpm --filter @typed/app exec vitest run src/ApiHandler.canonical.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld build`, `pnpm --filter typed-realworld test`, and scoped `git diff --check`. The RealWorld full test gate required rebuilding `better-sqlite3` via `npm run build-release` in its package directory for Node 24.11.1.
+- RealWorld API resource roots should live in shared recursive `_prefix.ts` files. Comments belong under `src/api/articles/comments` with `src/api/articles/_prefix.ts` and `src/api/articles/comments/_prefix.ts`, not under a top-level `src/api/comments` directory.
+- HttpApi generated endpoint schemas must compose API root, inherited directory prefixes, group prefixes, and the leaf route into an effective route for `params` and `query`. The endpoint path argument can remain the leaf route because `HttpApiGroup.prefix(...)` owns URL composition.
+- Task 24 verification passed with `pnpm --filter @typed/router exec vitest run src/Route.test.ts`, `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld build`, `pnpm --filter typed-realworld test`, and scoped `git diff --check`.
+- `_group.ts` is the explicit HttpApiGroup companion. It can export `name` to override the generated group name and `openapi.annotations` for group docs; keep prefixes in `_prefix.ts` unless a group-specific `prefix` export is intentionally needed.
+- Task 25 verification passed with `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld build`, `pnpm --filter typed-realworld test`, and scoped `git diff --check`.
+- `typed:browser` should not expose `mode=hydrate`. Hydration is the default generated browser behavior through `hydrate()` and `run()`, and explicit browser mode is only for non-default `"mount"` or `"mpa"` modes.
+- Task 26 verification passed with `pnpm --filter @typed/app exec vitest run src/internal/frameworkVirtualModuleId.test.ts src/BrowserVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld build`, `pnpm --filter typed-realworld test`, and scoped `git diff --check`.
+- Use `ModuleSource` for value virtual modules when imports or helpers depend on emitted expressions. It mirrors the old `TypeModuleSource` sectioning pattern but is not type-module-specific, so generators can request imports from the exact expression/helper that uses them and avoid static dead import blocks.
+- Router value generation should not emit `@typed/fx/Fx` or `effect/Function` unless the matched handler expression actually uses `Fx` or `constant`. Fx-valued and Fx-returning handlers pass through directly as `Router.match(Route.route, Route.handler)` with no helper imports.
+- Task 27 verification passed with `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts -t "does not emit unused"`, `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/app test`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld build`, `pnpm --filter typed-realworld test`, and scoped `git diff --check`.
+- `$route-types` now uses `Handler` as the single route entrypoint type alias. Do not reintroduce `Template` or `Handler = Template`; route files may still export a value named `template`, but it should satisfy `Handler`.
+- Route `Handler` should guide the canonical route-module authoring shape: `(params: RefSubject<Params>) => MatchHandlerReturnValue<A, E, R>`. The router compiler may still accept plain values, `Effect`, `Stream`, `Fx`, and decoded-param functions, but generated route type aliases should not model that as a broad union.
+- Router value emission must lift Fx-returning decoded-param functions with `Fx.switchMap(params, handler)` and pass RefSubject-param Fx functions directly to `Router.match`.
+- `$api-types` `Handler` and `RawHandler` are direct function shapes over generated `Context`, `HandlerSuccess`, and `HandlerError`; keep them distinct because RawHandler returns `HttpServerResponse`.
+- Task 28 verification passed with `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts -t "Fx function|decoded route types"`, `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts -t "handler aliases|decoded API types"`, `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts`, `pnpm --filter @typed/app build`, `pnpm --filter @typed/app test`, `pnpm --filter typed-realworld typecheck`, `pnpm --filter typed-realworld build`, `pnpm --filter typed-realworld test`, and scoped `git diff --check`.

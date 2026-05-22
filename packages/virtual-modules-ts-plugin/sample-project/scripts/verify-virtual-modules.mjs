@@ -46,6 +46,7 @@ function loadPlugins() {
     { specifier: "./plugin.mjs", baseDir: projectRoot },
     { specifier: "./plugins/router-plugin.mjs", baseDir: projectRoot },
     { specifier: "./plugins/httpapi-plugin.mjs", baseDir: projectRoot },
+    { specifier: "./plugins/config-plugin.mjs", baseDir: projectRoot },
   ]);
   const plugins = [];
   for (const r of results) {

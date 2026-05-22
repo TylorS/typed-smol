@@ -14,7 +14,18 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
 
   static readonly Default = Layer.effect(DateTimes, DateTimes.make);
 
-  static readonly Fixed = (baseDate: number | string | Date) =>
+  static readonly Fixed = (baseDate: number | string | Date) => {
+    const millis = new Date(baseDate).getTime();
+    return Layer.succeed(
+      DateTimes,
+      DateTimes.of({
+        now: Effect.succeed(millis),
+        date: Effect.sync(() => new Date(millis)),
+      }),
+    );
+  };
+
+  static readonly Offset = (baseDate: number | string | Date) =>
     Layer.effect(
       DateTimes,
       Effect.gen(function* () {
@@ -23,10 +34,7 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
         const baseN = BigInt(base.getTime());
         const startMillis = yield* clock.currentTimeMillis;
         const now = clock.currentTimeMillis.pipe(
-          Effect.map((millis) =>
-            // Use BigInt to avoid floating point precision issues which can break deterministic testing
-            Number(baseN + BigInt(millis) - BigInt(startMillis)),
-          ),
+          Effect.map((millis) => Number(baseN + BigInt(millis) - BigInt(startMillis))),
         );
         const date = now.pipe(Effect.map((millis) => new Date(millis)));
 

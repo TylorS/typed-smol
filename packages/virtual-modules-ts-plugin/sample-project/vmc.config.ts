@@ -1,3 +1,8 @@
 export default {
-  plugins: ["./plugin.mjs", "./plugins/router-plugin.mjs", "./plugins/httpapi-plugin.mjs"],
+  plugins: [
+    "./plugin.mjs",
+    "./plugins/router-plugin.mjs",
+    "./plugins/httpapi-plugin.mjs",
+    "./plugins/config-plugin.mjs",
+  ],
 };

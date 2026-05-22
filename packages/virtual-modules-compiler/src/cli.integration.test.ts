@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -203,6 +204,14 @@ function readArtifactManifests(dir: string): VirtualArtifactManifest[] {
   });
 }
 
+function findFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    return entry.isDirectory() ? findFiles(path) : [path];
+  });
+}
+
 describe("vmc CLI integration", () => {
   it("vmc init creates vmc.config.ts in project root", () => {
     const dir = createTempDir();
@@ -353,6 +362,66 @@ describe("vmc CLI integration", () => {
         }),
       ]),
     );
+  });
+
+  it("rewrites emitted virtual imports to compiled artifact paths", () => {
+    const dir = createTempDir();
+    const srcDir = join(dir, "src");
+    mkdirSync(srcDir, { recursive: true });
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "Bundler",
+          outDir: "dist",
+          rootDir: ".",
+          skipLibCheck: true,
+        },
+        include: ["src"],
+      }),
+      "utf8",
+    );
+    writeFileSync(
+      join(dir, "vmc.config.ts"),
+      `export default {
+  plugins: [
+    {
+      name: "virtual-a",
+      shouldResolve: (id) => id === "virtual:a",
+      build: () => "import { x } from \\"virtual:b\\"; export { x };",
+    },
+    {
+      name: "virtual-b",
+      shouldResolve: (id) => id === "virtual:b",
+      build: () => "export const x = 1;",
+    },
+  ],
+};
+`,
+      "utf8",
+    );
+    writeFileSync(
+      join(srcDir, "entry.ts"),
+      'import { x } from "virtual:a";\nexport const out = x;\n',
+      "utf8",
+    );
+
+    const { exitCode, stderr } = runVmc(dir);
+    const entryOutput = readFileSync(join(dir, "dist", "src", "entry.js"), "utf8");
+    const artifactOutputs = findFiles(join(dir, "dist", "node_modules", ".typed", "virtual"));
+    const virtualAOutput = artifactOutputs.find((path) => path.includes("virtual-a"));
+    const virtualBOutput = artifactOutputs.find((path) => path.includes("virtual-b"));
+
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
+    expect(entryOutput).toContain("../node_modules/.typed/virtual/virtual-a/");
+    expect(entryOutput).not.toContain("virtual:a");
+    expect(readFileSync(virtualAOutput!, "utf8")).toContain("../virtual-b/");
+    expect(readFileSync(virtualAOutput!, "utf8")).not.toContain("virtual:b");
+    expect(virtualBOutput).toBeDefined();
   });
 
   it("writes virtual module artifacts during build mode", () => {

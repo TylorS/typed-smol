@@ -1,0 +1,50 @@
+{
+  "name": "typed-realworld",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Full-stack RealWorld example for @typed/app.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vmc -p tsconfig.json && typed build",
+    "preview": "typed preview",
+    "typecheck": "vmc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run --passWithNoTests src/tests/package.test.ts src/tests/domain",
+    "test:integration": "vitest run --passWithNoTests src/tests/infrastructure src/tests/application src/tests/api",
+    "test:ssr": "vitest run --passWithNoTests src/tests/presentation",
+    "test:acceptance:local": "vmc -p tsconfig.json && node dist/types/scripts/run-acceptance-local.js",
+    "test:e2e:local": "vmc -p tsconfig.json && node dist/types/scripts/run-e2e-local.js",
+    "test:api:hurl:local": "vmc -p tsconfig.json && node dist/types/scripts/run-hurl-local.js",
+    "db:migrate": "vmc -p tsconfig.json && node dist/types/scripts/db.js migrate",
+    "db:seed": "vmc -p tsconfig.json && node dist/types/scripts/db.js seed",
+    "db:reset": "vmc -p tsconfig.json && node dist/types/scripts/db.js reset"
+  },
+  "dependencies": {
+    "@effect/sql-sqlite-node": "4.0.0-beta.66",
+    "@typed/app": "workspace:*",
+    "@typed/async-data": "workspace:*",
+    "@typed/fx": "workspace:*",
+    "@typed/guard": "workspace:*",
+    "@typed/navigation": "workspace:*",
+    "@typed/router": "workspace:*",
+    "@typed/template": "workspace:*",
+    "@typed/ui": "workspace:*",
+    "effect": "catalog:",
+    "micromark": "4.0.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.7.0",
+    "@typed/cli": "workspace:*",
+    "@typed/tsconfig": "workspace:*",
+    "@typed/virtual-modules-ts-plugin": "workspace:*",
+    "@typed/vite-plugin": "workspace:*",
+    "@typed/virtual-modules-compiler": "workspace:*",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "packageManager": "pnpm@10.17.1"
+}

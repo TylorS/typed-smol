@@ -28,7 +28,13 @@ export type ComposedConcerns = {
 export type InFileConcerns = Partial<Record<ConcernKind, true>>;
 
 const ENTRYPOINT_EXPORTS = ["handler", "template", "default"] as const;
-const COMPANION_SUFFIXES = [".guard.ts", ".dependencies.ts", ".layout.ts", ".catch.ts"] as const;
+const COMPANION_SUFFIXES = [
+  ".handler.ts",
+  ".guard.ts",
+  ".dependencies.ts",
+  ".layout.ts",
+  ".catch.ts",
+] as const;
 const DIRECTORY_COMPANIONS = new Set(["_guard.ts", "_dependencies.ts", "_layout.ts", "_catch.ts"]);
 
 const GUARD_EXPORT_NAMES = ["default", "guard"] as const;
@@ -66,6 +72,7 @@ const COMPANION_KIND_TO_DIRECTORY_FILE: Record<ConcernKind, string> = {
 
 export type RouteDescriptor = {
   readonly filePath: string;
+  readonly entrypointFilePath: string;
   readonly entrypointExport: EntryPointExport;
   readonly runtimeKind: RuntimeKind;
   readonly entrypointIsFunction: boolean;
@@ -205,17 +212,18 @@ export function buildRouteDescriptors(
   const descriptors: RouteDescriptor[] = [];
   const violations: RouteContractViolation[] = [];
   const existingPaths = new Set(snapshots.map((s) => toPosixPath(relative(baseDir, s.filePath))));
-
   for (const snapshot of snapshots) {
     if (isCompanionModulePath(snapshot.filePath)) continue;
+    const relPath = toPosixPath(relative(baseDir, snapshot.filePath));
     const entrypoints = listEntrypointExports(snapshot);
+    const entrypointRelPath = relPath;
     const routeExport = snapshot.exports.find((value) => value.name === "route");
 
     if (!routeExport) {
-      if (entrypoints.length > 0) {
+      if (listEntrypointExports(snapshot).length > 0) {
         violations.push({
           code: "RVM-ROUTE-001",
-          message: `missing "route" export in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+          message: `missing "route" export in ${relPath}`,
         });
       }
       continue;
@@ -224,7 +232,7 @@ export function buildRouteDescriptors(
     if (!isRouteExportCompatible(routeExport, api)) {
       violations.push({
         code: "RVM-ROUTE-002",
-        message: `route export is not structurally compatible with Route in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+        message: `route export is not structurally compatible with Route in ${relPath}`,
       });
       continue;
     }
@@ -232,7 +240,7 @@ export function buildRouteDescriptors(
     if (entrypoints.length === 0) {
       violations.push({
         code: "RVM-ENTRY-001",
-        message: `expected one of handler|template|default in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+        message: `expected one of handler|template|default in ${entrypointRelPath}`,
       });
       continue;
     }
@@ -240,14 +248,13 @@ export function buildRouteDescriptors(
     if (entrypoints.length > 1) {
       violations.push({
         code: "RVM-ENTRY-002",
-        message: `multiple entrypoint exports found in ${toPosixPath(relative(baseDir, snapshot.filePath))}`,
+        message: `multiple entrypoint exports found in ${entrypointRelPath}`,
       });
       continue;
     }
 
     const entrypoint = entrypoints[0]!;
-    const relPath = toPosixPath(relative(baseDir, snapshot.filePath));
-    const entrypointNameResult = getEntryPointName(entrypoint, relPath);
+    const entrypointNameResult = getEntryPointName(entrypoint, entrypointRelPath);
     if (!entrypointNameResult.ok) {
       violations.push(entrypointNameResult.violation);
       continue;
@@ -256,7 +263,7 @@ export function buildRouteDescriptors(
     if (runtimeKind === "unknown") {
       violations.push({
         code: "RVM-KIND-001",
-        message: `handler/template/default runtime kind could not be determined (type targets missing). Ensure route files import from @typed/fx, effect, etc. in ${relPath}`,
+        message: `handler/template/default runtime kind could not be determined (type targets missing). Ensure route files import from @typed/fx, effect, etc. in ${entrypointRelPath}`,
       });
       continue;
     }
@@ -270,6 +277,7 @@ export function buildRouteDescriptors(
     }
     descriptors.push({
       filePath: relPath,
+      entrypointFilePath: entrypointRelPath,
       entrypointExport: entrypointNameResult.value,
       runtimeKind,
       entrypointIsFunction,
@@ -311,38 +319,26 @@ export function buildRouteDescriptors(
   for (const relPath of guardPaths) {
     const snapshot = snapshots.find((s) => toPosixPath(relative(baseDir, s.filePath)) === relPath);
     if (!snapshot) continue;
-    const guardExport =
-      snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[0]) ??
-      snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[1]);
-    if (!guardExport) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard file must export "guard" or default: ${relPath}`,
-      });
+    const result = validateGuardExport(snapshot, relPath, api);
+    if (!result.ok) {
+      guardViolations.push(result.violation);
       continue;
     }
-    if (!isCallableNode(guardExport.type)) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard export must be a function (Effect<Option<*>, *, *>): ${relPath}`,
-      });
+    guardExportByPath[relPath] = result.name;
+  }
+
+  for (const d of dedupedDescriptors) {
+    if (!d.inFileConcerns.guard) continue;
+    const snapshot = snapshots.find(
+      (s) => toPosixPath(relative(baseDir, s.filePath)) === d.filePath,
+    );
+    if (!snapshot) continue;
+    const result = validateGuardExport(snapshot, d.filePath, api);
+    if (!result.ok) {
+      guardViolations.push(result.violation);
       continue;
     }
-    if (!typeNodeIsEffectOptionReturn(guardExport.type, api)) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard return type must be Effect<Option<*>, *, *>: ${relPath}`,
-      });
-      continue;
-    }
-    if (!isGuardExportName(guardExport.name)) {
-      guardViolations.push({
-        code: "RVM-GUARD-001",
-        message: `guard export name ${JSON.stringify(guardExport.name)} not in [guard, default]: ${relPath}`,
-      });
-      continue;
-    }
-    guardExportByPath[relPath] = guardExport.name;
+    guardExportByPath[d.filePath] = result.name;
   }
 
   const catchExportByPath: Record<string, "catch" | "catchFn"> = {};
@@ -475,4 +471,36 @@ export function buildRouteDescriptors(
     catchFormByPath,
     depsFormByPath,
   };
+}
+
+function validateGuardExport(
+  snapshot: TypeInfoFileSnapshot,
+  relPath: string,
+  api: TypeInfoApi,
+):
+  | { readonly ok: true; readonly name: GuardExportName }
+  | { readonly ok: false; readonly violation: RouteContractViolation } {
+  const guardExport =
+    snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[0]) ??
+    snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[1]);
+  if (!guardExport) return guardViolation(`guard file must export "guard" or default: ${relPath}`);
+  if (!isCallableNode(guardExport.type)) {
+    return guardViolation(
+      `guard export must be a function (Effect<Option<*>, *, *>): ${relPath}`,
+    );
+  }
+  if (!typeNodeIsEffectOptionReturn(guardExport.type, api)) {
+    return guardViolation(`guard return type must be Effect<Option<*>, *, *>: ${relPath}`);
+  }
+  return isGuardExportName(guardExport.name)
+    ? { ok: true, name: guardExport.name }
+    : guardViolation(
+        `guard export name ${JSON.stringify(guardExport.name)} not in [guard, default]: ${relPath}`,
+      );
+}
+
+function guardViolation(
+  message: string,
+): { readonly ok: false; readonly violation: RouteContractViolation } {
+  return { ok: false, violation: { code: "RVM-GUARD-001", message } };
 }

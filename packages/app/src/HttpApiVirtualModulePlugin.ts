@@ -1,5 +1,5 @@
-import { readdirSync, statSync } from "node:fs";
-import { dirname, extname, join, relative } from "node:path";
+import { existsSync, statSync } from "node:fs";
+import { basename, dirname, join, relative } from "node:path";
 import {
   pathIsUnderBase,
   resolvePathUnderBase,
@@ -12,10 +12,19 @@ import {
   type HttpApiTreeNode,
 } from "./internal/httpapiDescriptorTree.js";
 import { classifyHttpApiFileRole } from "./internal/httpapiFileRoles.js";
-import { emitHttpApiSource } from "./internal/emitHttpApiSource.js";
+import {
+  emitHttpApiSource,
+  type HttpApiExportExpression,
+  type HttpApiExportExpressionImport,
+} from "./internal/emitHttpApiSource.js";
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
 import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
 import { buildHttpApiOpenApiPlan } from "./internal/httpapiOpenApiPlan.js";
+import {
+  dependencyLayerType,
+  TypeModuleSource,
+  typeTuple,
+} from "./internal/typeModuleSource.js";
 import {
   getCallableReturnType,
   isCallableNode,
@@ -23,6 +32,7 @@ import {
 } from "./internal/routeTypeNode.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type {
+  ImportInfo,
   TypeInfoApi,
   TypeInfoFileSnapshot,
   VirtualModuleBuildError,
@@ -30,20 +40,9 @@ import type {
 } from "@typed/virtual-modules";
 import { HTTPAPI_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
-const DEFAULT_PREFIX = "api:";
+const DEFAULT_PREFIX = "typed:api";
 const DEFAULT_PLUGIN_NAME = "httpapi-virtual-module";
-
-/** Extensions that count as script files when checking if a directory should resolve. */
-const SCRIPT_EXTENSION_SET = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mts",
-  ".cts",
-  ".mjs",
-  ".cjs",
-]);
+const API_TYPES_MODULE_ID = "./$api-types";
 
 /** Glob patterns for discovering API source files. */
 const API_FILE_GLOBS: readonly string[] = [
@@ -66,23 +65,67 @@ export interface HttpApiVirtualModulePluginOptions {
   readonly pathPrefix?: `/${string}`;
 }
 
+export type HttpApiVirtualModuleMode = "full" | "client";
+
 export type ParseHttpApiVirtualModuleIdResult =
-  | { readonly ok: true; readonly relativeDirectory: string }
-  | { readonly ok: false; readonly reason: string };
+  | {
+      readonly ok: true;
+      readonly relativeDirectory: string;
+      readonly mode: HttpApiVirtualModuleMode;
+    }
+  | { readonly ok: false; readonly code: string; readonly reason: string };
+
+function isHttpApiVirtualModuleId(id: string, prefix: string): boolean {
+  return id === prefix || id.startsWith(`${prefix}?`);
+}
 
 export function parseHttpApiVirtualModuleId(
   id: string,
   prefix: string = DEFAULT_PREFIX,
 ): ParseHttpApiVirtualModuleIdResult {
   const idResult = validateNonEmptyString(id, "id");
-  if (!idResult.ok) return { ok: false, reason: idResult.reason };
+  if (!idResult.ok) return { ok: false, code: "AVM-ID-001", reason: idResult.reason };
   const prefixResult = validateNonEmptyString(prefix, "prefix");
-  if (!prefixResult.ok) return { ok: false, reason: prefixResult.reason };
-  if (!id.startsWith(prefix)) {
-    return { ok: false, reason: `id must start with "${prefix}"` };
+  if (!prefixResult.ok) return { ok: false, code: "AVM-ID-001", reason: prefixResult.reason };
+  if (!isHttpApiVirtualModuleId(id, prefix)) {
+    return { ok: false, code: "AVM-ID-001", reason: `id must be "${prefix}?dir=<path>"` };
   }
 
-  let relativeDirectory = id.slice(prefix.length);
+  const query = id === prefix ? "" : id.slice(prefix.length + 1);
+  const params = new URLSearchParams(query);
+  const unsupported = [...params.keys()].find((key) => key !== "dir" && key !== "mode");
+  if (unsupported !== undefined) {
+    return {
+      ok: false,
+      code: "AVM-ID-QUERY-001",
+      reason: `typed:api does not support query option "${unsupported}"`,
+    };
+  }
+  const dirValues = params.getAll("dir");
+  if (dirValues.length !== 1) {
+    return {
+      ok: false,
+      code: "AVM-ID-DIR-001",
+      reason: `typed:api requires exactly one "dir" query option`,
+    };
+  }
+  const modeValues = params.getAll("mode");
+  if (modeValues.length > 1) {
+    return {
+      ok: false,
+      code: "AVM-ID-MODE-001",
+      reason: `typed:api accepts at most one "mode" query option`,
+    };
+  }
+  const mode = modeValues[0] ?? "full";
+  if (mode !== "full" && mode !== "client") {
+    return {
+      ok: false,
+      code: "AVM-ID-MODE-001",
+      reason: 'typed:api mode must be one of "full" or "client"',
+    };
+  }
+  let relativeDirectory = dirValues[0] === "*" ? "./api" : dirValues[0];
   if (
     relativeDirectory.length > 0 &&
     relativeDirectory !== "." &&
@@ -94,14 +137,20 @@ export function parseHttpApiVirtualModuleId(
     relativeDirectory = `./${relativeDirectory}`;
   }
   const relativeResult = validatePathSegment(relativeDirectory, "relativeDirectory");
-  if (!relativeResult.ok) return { ok: false, reason: relativeResult.reason };
+  if (!relativeResult.ok) {
+    return { ok: false, code: "AVM-ID-DIR-002", reason: relativeResult.reason };
+  }
 
-  return { ok: true, relativeDirectory: relativeResult.value };
+  return { ok: true, relativeDirectory: relativeResult.value, mode };
 }
 
 export type ResolveHttpApiTargetDirectoryResult =
-  | { readonly ok: true; readonly targetDirectory: string }
-  | { readonly ok: false; readonly reason: string };
+  | {
+      readonly ok: true;
+      readonly targetDirectory: string;
+      readonly mode: HttpApiVirtualModuleMode;
+    }
+  | { readonly ok: false; readonly code: string; readonly reason: string };
 
 export function resolveHttpApiTargetDirectory(
   id: string,
@@ -112,41 +161,33 @@ export function resolveHttpApiTargetDirectory(
   if (!parsed.ok) return parsed;
 
   const importerResult = validatePathSegment(importer, "importer");
-  if (!importerResult.ok) return { ok: false, reason: importerResult.reason };
+  if (!importerResult.ok) {
+    return { ok: false, code: "AVM-ID-IMPORTER-001", reason: importerResult.reason };
+  }
 
   const importerDir = dirname(toPosixPath(importerResult.value));
   const resolved = resolvePathUnderBase(importerDir, parsed.relativeDirectory);
   if (!resolved.ok) {
-    return { ok: false, reason: "resolved target directory escapes importer base directory" };
+    return {
+      ok: false,
+      code: "AVM-ID-DIR-003",
+      reason: "resolved target directory escapes importer base directory",
+    };
   }
   if (!pathIsUnderBase(importerDir, resolved.path)) {
-    return { ok: false, reason: "resolved target directory is outside importer base directory" };
+    return {
+      ok: false,
+      code: "AVM-ID-DIR-003",
+      reason: "resolved target directory is outside importer base directory",
+    };
   }
 
-  return { ok: true, targetDirectory: toPosixPath(resolved.path) };
+  return { ok: true, targetDirectory: toPosixPath(resolved.path), mode: parsed.mode };
 }
 
 function isExistingDirectory(absolutePath: string): boolean {
   try {
     return statSync(absolutePath).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-function directoryHasScriptFiles(dir: string): boolean {
-  try {
-    const items = readdirSync(dir, { withFileTypes: true });
-    for (const e of items) {
-      if (
-        e.isFile() &&
-        SCRIPT_EXTENSION_SET.has(extname(e.name).toLowerCase()) &&
-        !e.name.toLowerCase().endsWith(".d.ts")
-      )
-        return true;
-      if (e.isDirectory() && directoryHasScriptFiles(join(dir, e.name))) return true;
-    }
-    return false;
   } catch {
     return false;
   }
@@ -240,6 +281,526 @@ function validateEndpointContracts(
   return violations.sort((a, b) => a.message.localeCompare(b.message, "en"));
 }
 
+function extractExportExpressionsByPath(
+  snapshotsByPath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+): ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>> {
+  return new Map(
+    [...snapshotsByPath].map(([path, snapshot]) => [
+      path,
+      new Map(
+        snapshot.exports.flatMap((exported) => {
+          const expression = extractConstExportExpression(exported.declarationText);
+          if (!expression) return [];
+          return [
+            [
+              exported.name,
+              {
+                expression,
+                imports: importsForExpression(expression, snapshot.imports ?? []),
+              } satisfies HttpApiExportExpression,
+            ],
+          ];
+        }),
+      ),
+    ]),
+  );
+}
+
+function extractConstExportExpression(declarationText: string | undefined): string | undefined {
+  if (!declarationText) return undefined;
+  const defaultMatch = declarationText.match(/^export\s+default\s+([\s\S]*?);?$/);
+  if (defaultMatch?.[1]) return defaultMatch[1].trim();
+  const match = declarationText.match(
+    /^(?:export\s+)?(?:const\s+)?\w+\s*(?::[^=]+)?=\s*([\s\S]*?);?$/,
+  );
+  return match?.[1]?.trim();
+}
+
+function extractStringLiteralExport(
+  snapshot: TypeInfoFileSnapshot,
+  exportName: string,
+): string | undefined {
+  const exported = snapshot.exports.find((value) => value.name === exportName);
+  if (exported?.type.kind !== "literal") return undefined;
+  return normalizeStringLiteralText((exported.type as { readonly text?: string }).text);
+}
+
+function normalizeStringLiteralText(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  const trimmed = text.trim();
+  if (trimmed.length < 2) return trimmed;
+  const quote = trimmed[0];
+  return (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote
+    ? trimmed.slice(1, -1)
+    : trimmed;
+}
+
+function extractGroupNamesByPath(
+  roles: readonly ReturnType<typeof classifyHttpApiFileRole>[],
+  snapshotsByPath: ReadonlyMap<string, TypeInfoFileSnapshot>,
+): ReadonlyMap<string, string> {
+  const groupNames = new Map<string, string>();
+  for (const role of roles) {
+    if (role.role !== "group_override") continue;
+    const snapshot = snapshotsByPath.get(role.path);
+    const name = snapshot ? extractStringLiteralExport(snapshot, "name") : undefined;
+    if (name) groupNames.set(dirname(role.path), name);
+  }
+  return groupNames;
+}
+
+function importsForExpression(
+  expression: string,
+  imports: readonly ImportInfo[],
+): readonly HttpApiExportExpressionImport[] {
+  const specs: HttpApiExportExpressionImport[] = [];
+  for (const imported of imports) {
+    for (const name of imported.importedNames ?? []) {
+      const [importedName, localName] = splitNamedImport(name);
+      if (!referencesIdentifier(expression, localName)) continue;
+      specs.push({
+        kind: "named",
+        moduleSpecifier: imported.moduleSpecifier,
+        importedName,
+        localName,
+      });
+    }
+    if (imported.namespaceImport && referencesIdentifier(expression, imported.namespaceImport)) {
+      specs.push({
+        kind: "namespace",
+        moduleSpecifier: imported.moduleSpecifier,
+        localName: imported.namespaceImport,
+      });
+    }
+    if (imported.defaultImport && referencesIdentifier(expression, imported.defaultImport)) {
+      specs.push({
+        kind: "default",
+        moduleSpecifier: imported.moduleSpecifier,
+        localName: imported.defaultImport,
+      });
+    }
+  }
+  return specs;
+}
+
+function splitNamedImport(name: string): readonly [importedName: string, localName: string] {
+  const match = name.match(/^(.+)\s+as\s+(.+)$/);
+  return match ? [match[1]!.trim(), match[2]!.trim()] : [name, name];
+}
+
+function referencesIdentifier(expression: string, identifier: string): boolean {
+  return new RegExp(`\\b${escapeRegExp(identifier)}\\b`).test(expression);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function emitApiTypesModule(
+  importer: string,
+  api: TypeInfoApi,
+  pluginName: string,
+): string | VirtualModuleBuildError {
+  const source = api.file(`./${basename(importer)}`, { baseDir: dirname(importer), watch: true });
+  if (!source.ok) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-001",
+          message: `could not inspect API source for ${API_TYPES_MODULE_ID}: ${source.error}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+
+  const routeExport = source.snapshot.exports.find((value) => value.name === "route");
+  if (!routeExport) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-002",
+          message: `API type module requires a "route" export in ${source.snapshot.filePath}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+  if (!typeNodeIsRouteCompatible(routeExport.type, api)) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-003",
+          message: `route export is not structurally compatible with Route in ${source.snapshot.filePath}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+  if (!source.snapshot.exports.some((value) => value.name === "method")) {
+    return {
+      errors: [
+        {
+          code: "AVM-TYPES-004",
+          message: `API type module requires a "method" export in ${source.snapshot.filePath}`,
+          pluginName,
+        },
+      ],
+    };
+  }
+
+  return emitApiTypesSource(
+    importer,
+    api,
+    new Set(source.snapshot.exports.map((value) => value.name)),
+  );
+}
+
+type ApiCompanionKind = "dependencies" | "headers" | "error" | "middlewares" | "prefix" | "openapi";
+
+type ApiCompanionImport = {
+  readonly alias: string;
+  readonly moduleSpecifier: string;
+};
+
+const API_DIRECTORY_COMPANION_BY_KIND = {
+  dependencies: "_dependencies.ts",
+  headers: "_headers.ts",
+  error: "_errors.ts",
+  middlewares: "_middlewares.ts",
+  prefix: "_prefix.ts",
+  openapi: "_openapi.ts",
+} as const satisfies Record<ApiCompanionKind, string>;
+
+const API_ENDPOINT_COMPANION_BY_KIND = {
+  dependencies: ".dependencies.ts",
+  middlewares: ".middlewares.ts",
+  prefix: ".prefix.ts",
+  openapi: ".openapi.ts",
+  name: ".name.ts",
+} as const;
+
+function emitApiTypesSource(
+  importer: string,
+  api: TypeInfoApi,
+  exportNames: ReadonlySet<string>,
+): string {
+  const moduleSpecifier = endpointModuleSpecifier(importer);
+  const dependencies = apiCompanionImports(api, importer, "dependencies", "InheritedDependencies");
+  const headers = apiCompanionImports(api, importer, "headers", "InheritedHeaders");
+  const errors = apiCompanionImports(api, importer, "error", "InheritedErrors");
+  const middlewares = apiCompanionImports(api, importer, "middlewares", "InheritedMiddlewares");
+  const prefixes = apiCompanionImports(api, importer, "prefix", "InheritedPrefixes");
+  const openApis = apiCompanionImports(api, importer, "openapi", "InheritedOpenApis");
+  const endpointDependencies = apiEndpointCompanionImport(
+    api,
+    importer,
+    "dependencies",
+    "EndpointDependencies",
+  );
+  const endpointMiddlewares = apiEndpointCompanionImport(
+    api,
+    importer,
+    "middlewares",
+    "EndpointMiddlewares",
+  );
+  const endpointPrefix = apiEndpointCompanionImport(api, importer, "prefix", "EndpointPrefix");
+  const endpointOpenApi = apiEndpointCompanionImport(api, importer, "openapi", "EndpointOpenApi");
+  const endpointName = apiEndpointNameImport(api, importer);
+  const importedCompanions = [
+    ...dependencies,
+    ...errors,
+    ...headers,
+    ...middlewares,
+    ...prefixes,
+    ...openApis,
+    endpointDependencies,
+    endpointMiddlewares,
+    endpointPrefix,
+    endpointOpenApi,
+    endpointName,
+  ].filter((value): value is ApiCompanionImport => value !== undefined);
+  const source = new TypeModuleSource();
+  source.importLine(
+    `import type { ApiHandlerErrorFromConfig, ApiHandlerParamsFromConfig, ApiHandlerSuccessFromConfig } from "@typed/app/httpapi/ApiHandler";`,
+  );
+  source.importTypeNamespace("Effect", "effect/Effect");
+  source.importTypeNamespace("HttpServerError", "effect/unstable/http/HttpServerError");
+  source.importTypeNamespace("HttpServerResponse", "effect/unstable/http/HttpServerResponse");
+  source.importTypeNamespace("Layer", "effect/Layer");
+  source.importTypeNamespace("RouterTypes", "@typed/router");
+  source.importTypeNamespace("EndpointModule", moduleSpecifier);
+  for (const value of importedCompanions) {
+    source.importTypeNamespace(value.alias, value.moduleSpecifier);
+  }
+  const inheritedHeadersType = last(headers)
+    ? `{ readonly headers: typeof ${last(headers)!.alias}.headers }`
+    : "{}";
+  const inheritedErrorType = last(errors)
+    ? `{ readonly error: typeof ${last(errors)!.alias}.error }`
+    : "{}";
+  const dependencyEntries = apiCompanionTypeEntries(
+    source,
+    "dependencies",
+    dependencies,
+    endpointDependencies,
+    exportNames,
+  );
+  const middlewareEntries = apiCompanionTypeEntries(
+    source,
+    "middlewares",
+    middlewares,
+    endpointMiddlewares,
+    exportNames,
+  );
+  const prefixEntries = apiCompanionTypeEntries(
+    source,
+    "prefix",
+    prefixes,
+    endpointPrefix,
+    exportNames,
+  );
+  const openApiType = apiCompanionSingleType(
+    source,
+    "openapi",
+    openApis,
+    endpointOpenApi,
+    exportNames,
+  );
+  const nameType = apiNameType(endpointName, exportNames);
+  const dependenciesType = dependencyLayerType(source, dependencyEntries);
+
+  source.add("type Endpoint = typeof EndpointModule;");
+  source.add(`type ExportValue<T, Name extends PropertyKey> = T extends { readonly [K in Name]: infer Value }
+  ? Value
+  : never;`);
+  source.add(`type OptionalHeaders<T> = T extends { readonly headers: infer Headers }
+  ? { readonly headers: Headers }
+  : ${inheritedHeadersType};
+
+type OptionalBody<T> = T extends { readonly body: infer Body }
+  ? { readonly body: Body }
+  : {};
+
+type OptionalSuccess<T> = T extends { readonly success: infer Success }
+  ? { readonly success: Success }
+  : {};
+
+type OptionalError<T> = T extends { readonly error: infer Error }
+  ? { readonly error: Error }
+  : ${inheritedErrorType};`);
+
+  source.add(`type EffectiveRoute = Prefixes extends readonly []
+  ? Endpoint["route"]
+  : RouterTypes.Join<[...Prefixes, Endpoint["route"]]>;
+
+export type Config = {
+  readonly route: EffectiveRoute;
+  readonly method: Endpoint["method"];
+} & OptionalHeaders<Endpoint> & OptionalBody<Endpoint> & OptionalSuccess<Endpoint> & OptionalError<Endpoint>;
+
+export type Route = Config["route"];
+
+export type Method = Config["method"];
+
+export type Headers = Config extends { readonly headers: infer Headers } ? Headers : never;
+
+export type Body = Config extends { readonly body: infer Body } ? Body : never;
+
+export type Success = Config extends { readonly success: infer Success } ? Success : never;
+
+export type Error = Config extends { readonly error: infer Error } ? Error : never;
+
+export type Dependencies = ${dependenciesType};
+
+export type Middlewares = ${typeTuple(middlewareEntries)};
+
+export type Prefixes = ${typeTuple(prefixEntries)};
+
+export type OpenApi = ${openApiType};
+
+export type Name = ${nameType};
+
+export type ApiTypes = {
+  readonly route: Route;
+  readonly method: Method;
+  readonly headers: Headers;
+  readonly body: Body;
+  readonly success: Success;
+  readonly error: Error;
+  readonly dependencies: Dependencies;
+  readonly middlewares: Middlewares;
+  readonly prefixes: Prefixes;
+  readonly openApi: OpenApi;
+  readonly name: Name;
+};
+
+export type Context = ApiHandlerParamsFromConfig<Config>;
+
+export type HandlerSuccess = ApiHandlerSuccessFromConfig<Config>;
+
+export type HandlerError = ApiHandlerErrorFromConfig<Config>;
+
+export type Handler<R = any> = (
+  params: Context,
+) => Effect.Effect<HandlerSuccess, HandlerError | HttpServerError.HttpServerError, R>;
+
+export type RawHandler<R = any> = (
+  params: Context,
+) => Effect.Effect<HttpServerResponse.HttpServerResponse, HandlerError, R>;`);
+
+  return source.emit();
+}
+
+function defaultOrExportHelper(source: TypeModuleSource): string {
+  source.helper(
+    "DefaultValue",
+    "type DefaultValue<T> = T extends { readonly default: infer Value } ? Value : never;",
+  );
+  return source.helper(
+    "DefaultOrExport",
+    `type DefaultOrExport<T, Name extends PropertyKey> = [DefaultValue<T>] extends [never]
+  ? ExportValue<T, Name>
+  : DefaultValue<T>;`,
+  );
+}
+
+function endpointModuleSpecifier(importer: string): string {
+  return `./${basename(importer).replace(/\.[cm]?[tj]sx?$/, ".js")}`;
+}
+
+function apiCompanionImports(
+  api: TypeInfoApi,
+  importer: string,
+  kind: ApiCompanionKind,
+  aliasPrefix: string,
+): readonly ApiCompanionImport[] {
+  const paths: string[] = [];
+  let current = dirname(importer);
+  while (true) {
+    const candidate = join(current, API_DIRECTORY_COMPANION_BY_KIND[kind]);
+    if (existsSync(candidate)) {
+      watchCompanion(api, importer, candidate);
+      paths.push(candidate);
+    }
+
+    const parent = dirname(current);
+    if (parent === current)
+      return paths
+        .reverse()
+        .map((path, index) => apiCompanionImport(importer, path, `${aliasPrefix}${index}`));
+    current = parent;
+  }
+}
+
+function apiEndpointCompanionImport(
+  api: TypeInfoApi,
+  importer: string,
+  kind: keyof typeof API_ENDPOINT_COMPANION_BY_KIND,
+  alias: string,
+): ApiCompanionImport | undefined {
+  const target = join(
+    dirname(importer),
+    `${basename(importer).replace(/\.[cm]?[tj]sx?$/, "")}${API_ENDPOINT_COMPANION_BY_KIND[kind]}`,
+  );
+  if (!existsSync(target)) return undefined;
+  watchCompanion(api, importer, target);
+  return apiCompanionImport(importer, target, alias);
+}
+
+function apiEndpointNameImport(api: TypeInfoApi, importer: string): ApiCompanionImport | undefined {
+  return apiEndpointCompanionImport(api, importer, "name", "EndpointName");
+}
+
+function apiCompanionImport(importer: string, target: string, alias: string): ApiCompanionImport {
+  return { alias, moduleSpecifier: moduleSpecifierFrom(dirname(importer), target) };
+}
+
+function apiCompanionTypeEntries(
+  source: TypeModuleSource,
+  kind: ApiCompanionKind,
+  inherited: readonly ApiCompanionImport[],
+  endpoint: ApiCompanionImport | undefined,
+  exportNames: ReadonlySet<string>,
+): readonly string[] {
+  const hasInFile = exportNames.has(kind);
+  if (!hasInFile && inherited.length === 0 && endpoint === undefined) return [];
+  const valueType = apiCompanionValueType(source, kind);
+  const inFile = hasInFile ? `${valueType}<Endpoint>` : undefined;
+  const imported = inherited.map(({ alias }) => `${valueType}<typeof ${alias}>`);
+  const endpointType = endpoint ? `${valueType}<typeof ${endpoint.alias}>` : undefined;
+  return [...imported, endpointType, inFile].filter(
+    (value): value is string => value !== undefined,
+  );
+}
+
+function apiCompanionSingleType(
+  source: TypeModuleSource,
+  kind: ApiCompanionKind,
+  inherited: readonly ApiCompanionImport[],
+  endpoint: ApiCompanionImport | undefined,
+  exportNames: ReadonlySet<string>,
+): string {
+  if (!exportNames.has(kind) && endpoint === undefined && inherited.length === 0) return "never";
+  const valueType = apiCompanionValueType(source, kind);
+  if (exportNames.has(kind)) return `${valueType}<Endpoint>`;
+  if (endpoint) return `${valueType}<typeof ${endpoint.alias}>`;
+  const inheritedValue = last(inherited);
+  return inheritedValue ? `${valueType}<typeof ${inheritedValue.alias}>` : "never";
+}
+
+function apiCompanionValueType(source: TypeModuleSource, kind: ApiCompanionKind): string {
+  if (kind === "dependencies") {
+    const helper = defaultOrExportHelper(source);
+    return source.helper(
+      "DependencyValue",
+      `type DependencyValue<T> = ${helper}<T, "dependencies">;`,
+    );
+  }
+  if (kind === "middlewares") {
+    const helper = defaultOrExportHelper(source);
+    return source.helper(
+      "MiddlewareValue",
+      `type MiddlewareValue<T> = [ExportValue<T, "middleware">] extends [never]
+  ? ${helper}<T, "middlewares">
+  : ExportValue<T, "middleware">;`,
+    );
+  }
+  if (kind === "prefix") {
+    const helper = defaultOrExportHelper(source);
+    return source.helper("PrefixValue", `type PrefixValue<T> = ${helper}<T, "prefix">;`);
+  }
+  const helper = defaultOrExportHelper(source);
+  return source.helper("OpenApiValue", `type OpenApiValue<T> = ${helper}<T, "openapi">;`);
+}
+
+function apiNameType(
+  endpointName: ApiCompanionImport | undefined,
+  exportNames: ReadonlySet<string>,
+): string {
+  if (exportNames.has("name")) return 'ExportValue<Endpoint, "name">';
+  return endpointName ? `ExportValue<typeof ${endpointName.alias}, "name">` : "never";
+}
+
+function last<A>(values: readonly A[]): A | undefined {
+  return values[values.length - 1];
+}
+
+function watchCompanion(api: TypeInfoApi, importer: string, target: string): void {
+  const relativePath = toPosixPath(relative(dirname(importer), target));
+  const withDot = relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+  api.file(withDot, {
+    baseDir: dirname(importer),
+    watch: true,
+  });
+}
+
+function moduleSpecifierFrom(fromDir: string, target: string): string {
+  const relativePath = toPosixPath(relative(fromDir, target));
+  const withDot = relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+  return withDot.replace(/\.[cm]?[tj]sx?$/, ".js");
+}
+
 /**
  * Creates the HttpApi virtual module plugin with sync shouldResolve and build behavior.
  */
@@ -253,16 +814,18 @@ export const createHttpApiVirtualModulePlugin = (
     name,
     typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
     shouldResolve(id, importer) {
-      const resolved = resolveHttpApiTargetDirectory(id, importer, prefix);
-      if (!resolved.ok) return false;
-      if (!isExistingDirectory(resolved.targetDirectory)) return false;
-      return directoryHasScriptFiles(resolved.targetDirectory);
+      if (id === API_TYPES_MODULE_ID && importer) return true;
+      return Boolean(importer) && isHttpApiVirtualModuleId(id, prefix);
     },
     build(id, importer, api) {
+      if (id === API_TYPES_MODULE_ID) {
+        return emitApiTypesModule(importer, api, name);
+      }
+
       const resolved = resolveHttpApiTargetDirectory(id, importer, prefix);
       if (!resolved.ok) {
         return {
-          errors: [{ code: "AVM-ID-001", message: resolved.reason, pluginName: name }],
+          errors: [{ code: resolved.code, message: resolved.reason, pluginName: name }],
         } satisfies VirtualModuleBuildError;
       }
       if (!isExistingDirectory(resolved.targetDirectory)) {
@@ -344,6 +907,8 @@ export const createHttpApiVirtualModulePlugin = (
         string,
         { path: string; method: string; name: string }
       >();
+      const exportExpressionsByPath = extractExportExpressionsByPath(snapshotsByRelativePath);
+      const groupNamesByPath = extractGroupNamesByPath(roles, snapshotsByRelativePath);
       const optionalExportsByPath = new Map<
         string,
         ReadonlySet<"headers" | "body" | "success" | "error">
@@ -383,6 +948,9 @@ export const createHttpApiVirtualModulePlugin = (
         prefixByScope,
         pathPrefix: options.pathPrefix,
         openapiPlan,
+        mode: resolved.mode === "client" ? "client" : "full",
+        groupNamesByPath,
+        exportExpressionsByPath,
       });
       if (tree.diagnostics.length > 0) {
         return {

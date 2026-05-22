@@ -1,4 +1,5 @@
 export * as RefArray from "./RefArray.js";
+export * as RefAsyncData from "./RefAsyncData.js";
 export * as RefBigDecimal from "./RefBigDecimal.js";
 export * as RefBigInt from "./RefBigInt.js";
 export * as RefBoolean from "./RefBoolean.js";

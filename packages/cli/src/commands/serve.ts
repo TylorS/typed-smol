@@ -36,7 +36,7 @@ export const serve = Command.make("serve", {
       const loaded = loadProjectConfig(projectRoot);
       const tc = loaded?.config;
 
-      const entry = yield* resolveServerEntry(flags.entry, projectRoot);
+      const entry = yield* resolveServerEntry(flags.entry, projectRoot, tc?.entry);
 
       const inlineConfig = resolveViteInlineConfig({
         projectRoot,

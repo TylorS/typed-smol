@@ -11,25 +11,33 @@ import * as Path from "./Path.js";
 
 export interface Route<
   P extends string,
-  S extends Schema.Codec<any, Path.Params<P>, any, any> = Schema.Codec<Path.Params<P>>,
+  S extends Schema.Codec<any, any, any, any> = Schema.Codec<Path.Params<P>>,
+  PathS extends Schema.Codec<any, any, any, any> = Schema.Codec<Path.PathParams<P>>,
+  QueryS extends Schema.Codec<any, any, any, any> = Schema.Codec<Path.QueryParams<P>>,
 > extends Pipeable {
   readonly ast: AST.RouteAst;
   readonly path: P;
 
   readonly paramsSchema: S;
-  readonly pathSchema: Schema.Codec<Path.PathParams<P>>;
-  readonly querySchema: Schema.Codec<Path.QueryParams<P>>;
+  readonly pathSchema: PathS;
+  readonly querySchema: QueryS;
+
+  optional(): Optional<this>;
 }
 
 export declare namespace Route {
-  export type Any = Route<any, any>;
+  export type Any = Route<any, any, any, any>;
 
-  export type Path<T> = T extends Route<infer P, any> ? P : never;
-  export type Schema<T> = T extends Route<any, infer S> ? S : never;
-  export type Type<T> = T extends Route<any, infer S> ? S["Type"] : never;
-  export type Params<T> = T extends Route<infer P, infer _S> ? Path.Params<P> : never;
-  export type DecodingServices<T> = T extends Route<any, infer S> ? S["DecodingServices"] : never;
-  export type EncodingServices<T> = T extends Route<any, infer S> ? S["EncodingServices"] : never;
+  export type Path<T> = T extends Route<infer P, any, any, any> ? P : never;
+  export type Schema<T> = T extends Route<any, infer S, any, any> ? S : never;
+  export type Type<T> = T extends Route<any, infer S, any, any> ? S["Type"] : never;
+  export type Params<T> = T extends Route<infer P, infer _S, any, any> ? Path.Params<P> : never;
+  export type DecodingServices<T> = T extends Route<any, infer S, any, any>
+    ? S["DecodingServices"]
+    : never;
+  export type EncodingServices<T> = T extends Route<any, infer S, any, any>
+    ? S["EncodingServices"]
+    : never;
 
   export type PathType<T extends Any> = T["pathSchema"]["Type"];
   export type QueryType<T extends Any> = T["querySchema"]["Type"];
@@ -40,16 +48,36 @@ export type Params<T> = Route.Params<T>;
 export type Type<T> = Route.Type<T>;
 export type PathType<T extends Any> = Route.PathType<T>;
 export type QueryType<T extends Any> = Route.QueryType<T>;
+type OptionalParamRecord<P extends string, A> = { readonly [K in P]?: A };
+type Optionalize<A> = Simplify<{ readonly [K in keyof A]?: A[K] }>;
+type OptionalSchema<S extends Schema.Codec<any, any, any, any>> = S extends Schema.Codec<
+  infer A,
+  infer I,
+  infer R,
+  infer R2
+>
+  ? Schema.Codec<Optionalize<A>, Optionalize<I>, R, R2>
+  : never;
+export type Optional<R extends Route<any, any, any, any>> = R extends Route<
+  `/:${infer P}`,
+  infer S,
+  infer PathS,
+  infer QueryS
+>
+  ? Route<`/:${P}?`, OptionalSchema<S>, OptionalSchema<PathS>, QueryS>
+  : never;
 
 export function make<
   const P extends string,
-  S extends Schema.Codec<any, Path.Params<P>, any, any> = Schema.Codec<Path.Params<P>>,
->(ast: AST.RouteAst): Route<P, S> {
+  S extends Schema.Codec<any, any, any, any> = Schema.Codec<Path.Params<P>>,
+  PathS extends Schema.Codec<any, any, any, any> = Schema.Codec<Path.PathParams<P>>,
+  QueryS extends Schema.Codec<any, any, any, any> = Schema.Codec<Path.QueryParams<P>>,
+>(ast: AST.RouteAst): Route<P, S, PathS, QueryS> {
   const getParts = once(() => getPathAst(ast));
   const path = once(() => Path.join(getParts()) as P);
   const paramsSchema = once(() => getParamsSchema(ast) as S);
-  const pathSchema = once(() => getPathSchema(ast) as Schema.Codec<Path.PathParams<P>>);
-  const querySchema = once(() => getQuerySchema(ast) as Schema.Codec<Path.QueryParams<P>>);
+  const pathSchema = once(() => getPathSchema(ast) as PathS);
+  const querySchema = once(() => getQuerySchema(ast) as QueryS);
 
   return {
     ast,
@@ -64,6 +92,9 @@ export function make<
     },
     get querySchema() {
       return querySchema();
+    },
+    optional() {
+      return Optional(this as Route.Any) as Optional<Route<P, S, PathS, QueryS>>;
     },
     pipe() {
       return pipeArguments(this, arguments);
@@ -84,18 +115,28 @@ function once<T>(fn: () => T): () => T {
 }
 
 function getPathAst(ast: AST.RouteAst): ReadonlyArray<AST.PathAst> {
+  return getAllPathAst(ast).filter((part) => part.type !== "query-params");
+}
+
+function getAllPathAst(ast: AST.RouteAst): ReadonlyArray<AST.PathAst> {
   switch (ast.type) {
     case "path":
       return [ast.path];
     case "transform":
-      return getPathAst(ast.from);
+      return getAllPathAst(ast.from);
+    case "query":
+      return [];
     case "join": {
       const result: Array<AST.PathAst> = [];
+      let hasPath = false;
       for (let i = 0; i < ast.parts.length; i++) {
-        if (i > 0) {
+        const parts = getAllPathAst(ast.parts[i]);
+        const pathParts = parts.filter((part) => part.type !== "query-params");
+        if (hasPath && pathParts.length > 0) {
           result.push(AST.slash());
         }
-        result.push(...getPathAst(ast.parts[i]));
+        result.push(...parts);
+        hasPath = hasPath || pathParts.length > 0;
       }
       return result;
     }
@@ -105,102 +146,87 @@ function getPathAst(ast: AST.RouteAst): ReadonlyArray<AST.PathAst> {
 function getParamsSchema(ast: AST.RouteAst): Schema.Top {
   switch (ast.type) {
     case "path": {
-      const { paramsSchema } = Path.getSchemas(getPathAst(ast));
+      const { paramsSchema } = Path.getSchemas(getAllPathAst(ast));
       return paramsSchema;
     }
     case "transform": {
-      const { paramsSchema } = Path.getSchemas(getPathAst(ast.from));
+      const { paramsSchema } = Path.getSchemas(getAllPathAst(ast.from));
       return paramsSchema.pipe(Schema.decodeTo(ast.to, ast.transformation));
     }
-    case "join": {
-      const parts = ast.parts.map((part) => Path.getSchemaFields(getPathAst(part)));
-      const requiredFields: Array<[string, Schema.Top]> = [];
-      const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];
-      const queryParams: Array<
-        [
-          string,
-          {
-            readonly requiredFields: Array<[string, Schema.Top]>;
-            readonly optionalFields: Array<[Schema.Record.Key, Schema.Top]>;
-          },
-        ]
-      > = [];
-
-      for (const part of parts) {
-        requiredFields.push(...part.requiredFields);
-        optionalFields.push(...part.optionalFields);
-        queryParams.push(...part.queryParams);
-      }
-
-      const pathFields = Object.fromEntries(requiredFields);
-      const queryFields = Object.fromEntries(
-        queryParams.map(([name, { optionalFields, requiredFields }]) => [
-          name,
-          Schema.StructWithRest(
-            Schema.Struct(Object.fromEntries(requiredFields)),
-            optionalFields.map(([key, value]) => Schema.Record(key, value)),
-          ),
-        ]),
-      );
-
-      const paramsSchema = Schema.StructWithRest(
-        Schema.Struct({ ...pathFields, ...queryFields }),
-        optionalFields.map(([key, value]) => Schema.Record(key, value)),
-      );
-
-      return paramsSchema;
-    }
+    case "query":
+      return getParamsSchema(ast.route);
+    case "join":
+      return mergeDecodedParts(ast.parts, getParamsSchema);
   }
 }
 
 function getPathSchema(ast: AST.RouteAst): Schema.Top {
-  if (ast.type !== "join") return Path.getSchemas(getPathAst(ast)).pathSchema;
-
-  const parts = ast.parts.map((part) => Path.getSchemaFields(getPathAst(part)));
-  const requiredFields: Array<[string, Schema.Top]> = [];
-  const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];
-
-  for (const part of parts) {
-    requiredFields.push(...part.requiredFields);
-    optionalFields.push(...part.optionalFields);
+  switch (ast.type) {
+    case "path":
+      return Path.getSchemas(getAllPathAst(ast)).pathSchema;
+    case "transform": {
+      const base = Path.getSchemas(getAllPathAst(ast.from)).pathSchema;
+      return hasPathFields(ast.from) ? base.pipe(Schema.decodeTo(ast.to, ast.transformation)) : base;
+    }
+    case "query":
+      return emptySchema;
+    case "join":
+      return mergeDecodedParts(ast.parts, getPathSchema);
   }
-
-  const pathFields = Object.fromEntries(requiredFields);
-  return Schema.StructWithRest(
-    Schema.Struct(pathFields),
-    optionalFields.map(([key, value]) => Schema.Record(key, value)),
-  );
 }
 
 function getQuerySchema(ast: AST.RouteAst): Schema.Top {
-  if (ast.type !== "join") return Path.getSchemas(getPathAst(ast)).querySchema;
-
-  const parts = ast.parts.map((part) => Path.getSchemaFields(getPathAst(part)));
-  const queryParams: Array<
-    [
-      string,
-      {
-        readonly requiredFields: Array<[string, Schema.Top]>;
-        readonly optionalFields: Array<[Schema.Record.Key, Schema.Top]>;
-      },
-    ]
-  > = [];
-
-  for (const part of parts) {
-    queryParams.push(...part.queryParams);
+  switch (ast.type) {
+    case "path":
+      return Path.getSchemas(getAllPathAst(ast)).querySchema;
+    case "transform": {
+      const base = Path.getSchemas(getAllPathAst(ast.from)).querySchema;
+      return hasQueryFields(ast.from) ? base.pipe(Schema.decodeTo(ast.to, ast.transformation)) : base;
+    }
+    case "query":
+      return getParamsSchema(ast.route);
+    case "join":
+      return mergeDecodedParts(ast.parts, getQuerySchema);
   }
+}
 
-  const queryFields = Object.fromEntries(
-    queryParams.map(([name, { optionalFields, requiredFields }]) => [
-      name,
-      Schema.StructWithRest(
-        Schema.Struct(Object.fromEntries(requiredFields)),
-        optionalFields.map(([key, value]) => Schema.Record(key, value)),
-      ),
-    ]),
+const emptySchema = Schema.Struct({});
+const anyRecordSchema = Schema.StructWithRest(
+  Schema.Struct({}),
+  [Schema.Record(Schema.String, Schema.Unknown)],
+);
+
+function hasPathFields(ast: AST.RouteAst): boolean {
+  const fields = Path.getSchemaFields(getAllPathAst(ast));
+  return fields.requiredFields.length > 0 || fields.optionalFields.length > 0;
+}
+
+function hasQueryFields(ast: AST.RouteAst): boolean {
+  return Path.getSchemaFields(getAllPathAst(ast)).queryParams.length > 0;
+}
+
+function mergeDecodedParts(
+  parts: ReadonlyArray<AST.RouteAst>,
+  schemaForPart: (ast: AST.RouteAst) => Schema.Top,
+): Schema.Top {
+  const schemas = parts.map(schemaForPart);
+  const decoders = schemas.map(Parser.decodeEffect);
+  const encoders = schemas.map(Parser.encodeEffect);
+  return anyRecordSchema.pipe(
+    Schema.decodeTo(
+      anyRecordSchema,
+      Transformation.transformOrFail({
+        decode: (input) =>
+          Effect.map(Effect.all(decoders.map((decode) => decode(input))), mergeRecords),
+        encode: (output) =>
+          Effect.map(Effect.all(encoders.map((encode) => encode(output))), mergeRecords),
+      }),
+    ),
   );
+}
 
-  return Schema.Struct(queryFields);
+function mergeRecords(records: ReadonlyArray<unknown>): Record<string, unknown> {
+  return Object.assign({}, ...records);
 }
 
 export const Parse = <const P extends string>(path: P): Route<Path.Join<Path.ParseAsts<P>>> => {
@@ -232,6 +258,12 @@ export const ParamWithSchema = <
     Path.Params<`/:${P}`>,
     S["DecodingServices"],
     S["EncodingServices"]
+  >,
+  Schema.Codec<
+    { readonly [K in P]: S["Type"] },
+    Path.Params<`/:${P}`>,
+    S["DecodingServices"],
+    S["EncodingServices"]
   >
 > => {
   const decode = Parser.decodeEffect(schema);
@@ -240,7 +272,7 @@ export const ParamWithSchema = <
   return make(
     AST.transform(
       AST.path(AST.parameter(paramName)),
-      Schema.Struct(singleton(paramName, schema.Type)),
+      Schema.Struct(singleton(paramName, decodedSchema(schema))),
       Transformation.transformOrFail({
         decode: (input: Record<P, S["Encoded"]>) =>
           Effect.map(decode(input[paramName]), (decoded) => singleton(paramName, decoded)),
@@ -251,17 +283,170 @@ export const ParamWithSchema = <
   );
 };
 
+export const OptionalParamWithSchema = <
+  const P extends string,
+  S extends Schema.Codec<any, string, any, any> = Schema.Codec<string>,
+>(
+  paramName: P,
+  schema: S,
+): Optional<ReturnType<typeof ParamWithSchema<P, S>>> => {
+  const decode = Parser.decodeEffect(schema);
+  const encode = Parser.encodeEffect(schema);
+  const emptyDecoded: OptionalParamRecord<P, S["Type"]> = {};
+  const emptyEncoded: OptionalParamRecord<P, S["Encoded"]> = {};
+  const to = Schema.StructWithRest(
+    Schema.Struct({}),
+    [
+      Schema.Record(
+        Schema.optionalKey(Schema.Literal(paramName)),
+        Schema.optional(decodedSchema(schema)),
+      ),
+    ],
+  );
+
+  return make(
+    AST.transform(
+      AST.path(AST.parameter(paramName, true)),
+      to,
+      Transformation.transformOrFail({
+        decode: (input: OptionalParamRecord<P, S["Encoded"]>) =>
+          input[paramName] === undefined
+            ? Effect.succeed(emptyDecoded)
+            : Effect.map(decode(input[paramName]), (decoded) => singleton(paramName, decoded)),
+        encode: (output: OptionalParamRecord<P, S["Type"]>) =>
+          output[paramName] === undefined
+            ? Effect.succeed(emptyEncoded)
+            : Effect.map(encode(output[paramName]), (encoded) => singleton(paramName, encoded)),
+      }),
+    ),
+  ) as Optional<ReturnType<typeof ParamWithSchema<P, S>>>;
+};
+
+export const Optional = <R extends Route<any, any, any, any>>(route: R): Optional<R> => {
+  const paramName = getSingleParameterName(route.ast);
+  const decode = Parser.decodeEffect(route.paramsSchema);
+  const encode = Parser.encodeEffect(route.paramsSchema);
+
+  return make(
+    AST.transform(
+      markParametersOptional(route.ast),
+      anyRecordSchema,
+      Transformation.transformOrFail({
+        decode: (input: Record<string, unknown>) =>
+          input[paramName] === undefined ? Effect.succeed({}) : decode(input),
+        encode: (output: Record<string, unknown>) =>
+          output[paramName] === undefined ? Effect.succeed({}) : encode(output),
+      }),
+    ),
+  ) as Optional<R>;
+};
+
+function getSingleParameterName(ast: AST.RouteAst): string {
+  const params = getAllPathAst(ast).filter((part): part is AST.PathAst.Parameter =>
+    part.type === "parameter",
+  );
+  if (params.length !== 1) {
+    throw new Error("Route.optional() requires a single parameter route");
+  }
+  return params[0].name;
+}
+
+function markParametersOptional(ast: AST.RouteAst): AST.RouteAst {
+  switch (ast.type) {
+    case "path":
+      return AST.path(markPathParameterOptional(ast.path));
+    case "transform":
+      return markParametersOptional(ast.from);
+    case "query":
+      return AST.query(markParametersOptional(ast.route));
+    case "join":
+      return AST.join(ast.parts.map(markParametersOptional));
+  }
+}
+
+function markPathParameterOptional(path: AST.PathAst): AST.PathAst {
+  if (path.type !== "parameter") return path;
+  return AST.parameter(path.name, true, path.regex);
+}
+
+function decodedSchema<S extends Schema.Top>(schema: S): Schema.Top {
+  return "to" in schema && Schema.isSchema(schema.to) ? schema.to : schema;
+}
+
 export const Number = <const P extends string>(
   paramName: P,
-): Route<`/:${P}`, Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>> =>
+): Route<
+  `/:${P}`,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>
+> =>
   ParamWithSchema(paramName, Schema.NumberFromString);
+
+export const OptionalParam = <const P extends string>(paramName: P) =>
+  OptionalParamWithSchema(paramName, Schema.String);
+
+export const OptionalNumber = <const P extends string>(
+  paramName: P,
+): Route<
+  `/:${P}?`,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+> =>
+  Number(paramName).optional() as Route<
+    `/:${P}?`,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+  >;
 
 export const Int = <const P extends string>(
   paramName: P,
-): Route<`/:${P}`, Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>> =>
+): Route<
+  `/:${P}`,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>
+> =>
   ParamWithSchema(paramName, Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)));
 
-export type Join<Routes extends ReadonlyArray<Route<any, any>>> = [
+export const OptionalInt = <const P extends string>(
+  paramName: P,
+): Route<
+  `/:${P}?`,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+> =>
+  Int(paramName).optional() as Route<
+    `/:${P}?`,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+  >;
+
+type QueryParamRoute = Route<`/:${string}`, Schema.Codec<any, any, any, any>, any, any>;
+
+export type QueryParams<Routes extends ReadonlyArray<QueryParamRoute>> = [
+  Route<
+    "",
+    Schema.Codec<
+      Simplify<UnionToIntersection<Routes[number]["paramsSchema"]["Type"]>>,
+      Simplify<UnionToIntersection<Routes[number]["paramsSchema"]["Encoded"]>>,
+      Routes[number]["paramsSchema"]["DecodingServices"],
+      Routes[number]["paramsSchema"]["EncodingServices"]
+    >,
+    Schema.Codec<{}>,
+    Schema.Codec<
+      Simplify<UnionToIntersection<Routes[number]["paramsSchema"]["Type"]>>,
+      Simplify<UnionToIntersection<Routes[number]["paramsSchema"]["Encoded"]>>,
+      Routes[number]["paramsSchema"]["DecodingServices"],
+      Routes[number]["paramsSchema"]["EncodingServices"]
+    >
+  >,
+] extends [infer R extends Route<any, any, any, any>] ? R : never;
+
+export const QueryParams = <const Routes extends ReadonlyArray<QueryParamRoute>>(
+  ...routes: Routes
+): QueryParams<Routes> =>
+  Join(...routes.map((route) => make(AST.query(route.ast)))) as unknown as QueryParams<Routes>;
+
+export type Join<Routes extends ReadonlyArray<Route<any, any, any, any>>> = [
   Route<
     RouteJoinPath<Routes>,
     Schema.Codec<
@@ -269,19 +454,21 @@ export type Join<Routes extends ReadonlyArray<Route<any, any>>> = [
       Path.Params<RouteJoinPath<Routes>>,
       Routes[number]["paramsSchema"]["DecodingServices"],
       Routes[number]["paramsSchema"]["EncodingServices"]
-    >
+    >,
+    Schema.Codec<Simplify<UnionToIntersection<Routes[number]["pathSchema"]["Type"]>>>,
+    Schema.Codec<Simplify<UnionToIntersection<Routes[number]["querySchema"]["Type"]>>>
   >,
-] extends [Route<infer Path, infer Schema>]
-  ? Route<Path, Schema>
+] extends [Route<infer Path, infer Schema, infer PathSchema, infer QuerySchema>]
+  ? Route<Path, Schema, PathSchema, QuerySchema>
   : never;
 
-type AnyRoutes = ReadonlyArray<Route<any, any> | ReadonlyArray<Route<any, any>>>;
+type AnyRoutes = ReadonlyArray<Route<any, any, any, any> | ReadonlyArray<Route<any, any, any, any>>>;
 type FlattenRoutes<T extends AnyRoutes> = T extends readonly [
-  infer Head extends Route<any, any> | ReadonlyArray<Route<any, any>>,
+  infer Head extends Route<any, any, any, any> | ReadonlyArray<Route<any, any, any, any>>,
   ...infer Tail extends AnyRoutes,
 ]
   ? readonly [
-      ...(Head extends ReadonlyArray<Route<any, any>> ? FlattenRoutes<Head> : [Head]),
+      ...(Head extends ReadonlyArray<Route<any, any, any, any>> ? FlattenRoutes<Head> : [Head]),
       ...FlattenRoutes<Tail>,
     ]
   : [];
@@ -307,14 +494,16 @@ type UnionToIntersection<T> = (T extends any ? (x: T) => any : never) extends (x
   ? R
   : never;
 type RouteJoinPath<
-  Routes extends ReadonlyArray<Route<any, any>>,
+  Routes extends ReadonlyArray<Route<any, any, any, any>>,
   R extends string = "",
 > = Routes extends readonly [
-  infer First extends Route<any, any>,
-  ...infer Rest extends ReadonlyArray<Route<any, any>>,
+  infer First extends Route<any, any, any, any>,
+  ...infer Rest extends ReadonlyArray<Route<any, any, any, any>>,
 ]
-  ? RouteJoinPath<Rest, `${R}/${StripSlashes<First["path"]>}`>
-  : R;
+  ? RouteJoinPath<Rest, AppendRoutePath<R, First["path"]>>
+  : R extends "" ? "/" : R;
+type AppendRoutePath<R extends string, P extends string> =
+  StripSlashes<P> extends "" ? R : `${R}/${StripSlashes<P>}`;
 type StripSlashes<T extends string> = StripTrailingSlash<StripLeadingSlash<T>>;
 type StripLeadingSlash<T extends string> = T extends `/${infer Rest}` ? StripLeadingSlash<Rest> : T;
 type StripTrailingSlash<T extends string> = T extends `/${infer Rest}`

@@ -11,6 +11,7 @@ import {
   renderToHtml,
   renderToHtmlString,
   StaticHtmlRenderTemplate,
+  unsafeHtml,
 } from "./index.js";
 import { escape } from "./internal/encoding.js";
 
@@ -261,6 +262,13 @@ describe("Html", () => {
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(html`<div>${HtmlRenderEvent("<p>Hello, world!</p>", true)}</div>`),
+      ).toMatchInlineSnapshot(`"<div><p>Hello, world!</p></div>"`);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("interpolates unsafe html", () =>
+    Effect.gen(function* () {
+      expect(
+        yield* getStaticHtml(html`<div>${unsafeHtml("<p>Hello, world!</p>")}</div>`),
       ).toMatchInlineSnapshot(`"<div><p>Hello, world!</p></div>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
 

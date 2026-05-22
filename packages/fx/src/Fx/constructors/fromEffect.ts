@@ -22,3 +22,11 @@ export const fromEffect = <A, E = never, R = never>(effect: Effect.Effect<A, E, 
  * @category constructors
  */
 export const never: Fx<never, never, never> = make<never, never, never>(() => Effect.never);
+
+
+/**
+ * Creates an Fx that emits a value from a synchronous function.
+ * @since 1.0.0
+ * @category constructors
+ */
+export const sync = <A>(f: () => A): Fx<A> => /*#__PURE__*/ make<A>((sink) => sink.onSuccess(f()));

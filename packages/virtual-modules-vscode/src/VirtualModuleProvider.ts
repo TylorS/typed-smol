@@ -10,6 +10,7 @@ export const EMPTY_AUTHORITY = "ts-nul-authority";
 
 export interface VirtualModuleProviderOptions {
   getResolver: (projectRoot: string) => ReturnType<typeof createResolver>;
+  getProjectRoot?: (filePath: string) => string | undefined;
   /** Emitter for onDidChange; extension owns it and fires when virtual module content may have changed. */
   onDidChangeEmitter?: vscode.EventEmitter<vscode.Uri>;
   /** Called when a virtual module is successfully resolved; use to register for refresh. */
@@ -47,7 +48,7 @@ function tryParsePathBasedUri(uri: vscode.Uri): { virtualPath: string } | undefi
 export function createVirtualModuleProvider(
   options: VirtualModuleProviderOptions,
 ): vscode.TextDocumentContentProvider {
-  const { getResolver, onDidChangeEmitter, onResolved } = options;
+  const { getResolver, getProjectRoot, onDidChangeEmitter, onResolved } = options;
 
   return {
     ...(onDidChangeEmitter && { onDidChange: onDidChangeEmitter.event }),
@@ -63,7 +64,7 @@ export function createVirtualModuleProvider(
       }
 
       const { moduleId, importer } = parsed;
-      const projectRoot = getProjectRootFromFile(importer);
+      const projectRoot = getProjectRootFromFile(importer, getProjectRoot);
       if (!projectRoot) return undefined;
 
       const resolver = getResolver(projectRoot);
@@ -74,10 +75,15 @@ export function createVirtualModuleProvider(
   };
 }
 
-function getProjectRootFromFile(filePathOrUri: string): string | undefined {
+function getProjectRootFromFile(
+  filePathOrUri: string,
+  getProjectRoot?: (filePath: string) => string | undefined,
+): string | undefined {
   const normalized = filePathOrUri.startsWith("file:")
     ? vscode.Uri.parse(filePathOrUri).fsPath
     : filePathOrUri;
+  const configuredRoot = getProjectRoot?.(normalized);
+  if (configuredRoot) return configuredRoot;
   const { workspaceFolders } = vscode.workspace;
   if (!workspaceFolders?.length) return undefined;
   for (const folder of workspaceFolders) {
