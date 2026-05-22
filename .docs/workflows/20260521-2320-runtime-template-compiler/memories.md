@@ -66,3 +66,10 @@
 - Compatible route source edits preserve inline route RefSubject state when service identity, initializer shape, version, and dependency fingerprints remain stable.
 - Dependency participant service ids get their own descriptors; dependency opt-out rejects preservation and removes dependency descriptors from the plan.
 - `emitViteHmrRuntime` emits the generated Vite `import.meta.hot.accept`/`dispose` handoff that keeps the app HMR registry available through hot data and prunes stale entries.
+
+## Task 16: Template Output Fingerprints
+
+- `createTemplateOutputFingerprints` produces artifact-store-compatible source, plugin/config, and compiler/package fingerprints for optimized template output.
+- Template source fingerprints use the source module id plus template hash; target/options changes are plugin config fingerprints; `@typed/compiler` version is a compiler fingerprint.
+- Empty compiler versions or non-hashable options produce unavailable reasons so artifact reuse fails closed.
+- No vmc/vite materialization hook was required in this slice; the existing virtual-modules-compiler artifact suite remains green.

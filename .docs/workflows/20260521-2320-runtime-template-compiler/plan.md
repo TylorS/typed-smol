@@ -76,7 +76,7 @@ Modify:
 | T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | completed in `feat(app): wire browser runtime templates` |
 | T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | completed in `feat(app): wire server runtime templates` |
 | T15 | direct | T13, T14 | `pnpm --filter @typed/compiler test -- viteHmrFixture` | isolated fixture | completed in `feat(compiler): prove route hmr state fixture` |
-| T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | revert artifact integration |
+| T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | completed in `feat(compiler): integrate template output fingerprints` |
 | T17 | direct | T15, T16 | server+DOM example command created in task | example only after package gates | remove example changes |
 | T18 | direct | T1 through T17 | package gates plus `pnpm build` | final audit before commit/PR | revert last hardening commit |
 
@@ -702,7 +702,7 @@ Commit message: `feat(compiler): prove route hmr state fixture`.
 - Modify: `packages/virtual-modules-vite/src/vitePlugin.ts` only if a compiler output materialization hook is needed
 - Modify: `packages/virtual-modules-compiler/src/cli.integration.test.ts` only if vmc fixture coverage is needed
 
-- [ ] **Step 1: Write failing fingerprint/materialization tests**
+- [x] **Step 1: Write failing fingerprint/materialization tests**
 
 Tests prove generated compiler output fingerprints include source/config/plugin/compiler inputs or explicitly remain in-memory for this slice.
 
@@ -710,17 +710,17 @@ Run: `pnpm --filter @typed/virtual-modules-compiler test`
 
 Expected: targeted failure if integration is missing.
 
-- [ ] **Step 2: Implement integration or documented in-memory bypass**
+- [x] **Step 2: Implement integration or documented in-memory bypass**
 
 Use existing artifact-store fingerprint model.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/virtual-modules-compiler test`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(compiler): integrate template output fingerprints`.
 

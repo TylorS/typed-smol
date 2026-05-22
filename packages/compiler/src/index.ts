@@ -8,4 +8,5 @@ export * from "./template/analyzeTemplate.js";
 export * from "./template/emitDomTemplate.js";
 export * from "./template/emitServerTemplate.js";
 export * from "./template/fallback.js";
+export * from "./template/fingerprints.js";
 export * from "./template/TemplatePlan.js";
