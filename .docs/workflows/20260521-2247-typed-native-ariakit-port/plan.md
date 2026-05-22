@@ -564,7 +564,7 @@ pnpm --filter @typed/ui test -- Disclosure
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/ui/src/Disclosure.ts packages/ui/src/Disclosure.test.ts

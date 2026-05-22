@@ -104,7 +104,7 @@
   - PACKAGE: `pnpm --filter @typed/ui test` passed with `6` files and `30` tests.
   - BUILD: `pnpm --filter @typed/ui build` passed.
 - commit:
-  - pending
+  - `bd66d9c feat(ui): add disclosure primitives`
 - deviations_or_replans:
   - The first return type annotation widened incorrectly around renderable services; the implementation now lets the template return type infer from generic content options.
   - Disclosure emits `data-open` through the shared `DataAttr` schema and keeps state as direct `RefSubject.RefSubject<State>`.
