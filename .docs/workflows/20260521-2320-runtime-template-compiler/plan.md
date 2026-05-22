@@ -65,7 +65,7 @@ Modify:
 | T2 | direct | T1 | `pnpm --filter @typed/compiler test -- TemplatePlan` | IR-only changes | revert compiler IR files |
 | T3 | direct | T2 | `pnpm --filter @typed/compiler test -- analyzeTemplate` | compare against current parser output | revert analyzer files |
 | T4 | direct | T3 | `pnpm --filter @typed/compiler test -- emitServerTemplate` | use current HTML renderer as oracle | revert server emitter |
-| T5 | direct | T3 | `pnpm --filter @typed/compiler test -- emitDomTemplate` | use current DOM/hydration tests as oracle | revert DOM emitter |
+| T5 | direct | T3 | `pnpm --filter @typed/compiler test -- emitDomTemplate` | use current DOM/hydration tests as oracle | completed in `feat: emit dom optimized templates` |
 | T6 | direct | T4, T5 | `pnpm --filter @typed/compiler test -- fallback` | unsupported shapes fallback only | revert fallback adapter |
 | T7 | direct | T4, T5 | `pnpm --filter @typed/app test -- runtime` | runtime accepts fallback and compiled templates | revert app runtime files |
 | T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | revert RefSubject service additions |
@@ -289,11 +289,15 @@ Commit message: `feat: emit server optimized templates`.
 
 ### Task 5: Emit DOM Optimized Templates
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Use `DomRenderTemplate` as the behavior oracle, first proving the missing emitter with red tests. Implement fresh DOM construction from `TemplatePlan`, then apply dynamic parts for node holes, sparse attrs/classes, boolean/data/property/properties parts, event handlers, refs, comments, text-only elements, and multi-root template boundaries.
+
 **Files:**
 - Create: `packages/compiler/src/template/emitDomTemplate.ts`
 - Create: `packages/compiler/src/template/emitDomTemplate.test.ts`
 
-- [ ] **Step 1: Write failing DOM equivalence tests**
+- [x] **Step 1: Write failing DOM equivalence tests**
 
 For each template form from Task 3, compare DOM output and hydration behavior against current `DomRenderTemplate` tests.
 
@@ -301,11 +305,11 @@ Run: `pnpm --filter @typed/compiler test -- emitDomTemplate`
 
 Expected: fails because DOM emitter is missing.
 
-- [ ] **Step 2: Implement DOM emitter**
+- [x] **Step 2: Implement DOM emitter**
 
 Emit static fragment construction, dynamic part descriptors, hydration metadata, event/ref setup instructions, and scope cleanup hooks.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/compiler test -- emitDomTemplate`
 
@@ -315,7 +319,7 @@ Run: `pnpm --filter @typed/compiler build`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat: emit dom optimized templates`.
 
