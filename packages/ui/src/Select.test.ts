@@ -96,6 +96,39 @@ describe("typed/ui/Select", () => {
       expect(option.getAttribute("data-selected")).toBe("true");
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("hydrates Fx-backed option id and value before selecting", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Select.makeState({
+        id: "status-select",
+        value: "draft",
+        activeId: "draft",
+        open: true,
+      });
+
+      yield* render(
+        Select.Option({
+          state,
+          id: Fx.succeed("published"),
+          value: Fx.succeed("published"),
+          content: "Published",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const option = window.document.getElementById("published");
+      assert(option instanceof window.HTMLElement);
+      option.click();
+      yield* Effect.sleep(10);
+
+      expect(yield* state).toMatchObject({
+        activeId: "published",
+        open: false,
+        value: "published",
+      });
+      expect(option.getAttribute("data-selected")).toBe("true");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("mirrors native toggle events into open state", () =>
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();

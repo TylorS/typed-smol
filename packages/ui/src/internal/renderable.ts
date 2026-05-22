@@ -1,6 +1,9 @@
-import * as Effect from "effect/Effect";
-import type { Renderable } from "@typed/template";
+import type * as Effect from "effect/Effect";
+import type * as Stream from "effect/Stream";
+import type { Fx } from "@typed/fx/Fx";
 
-export function toEffect<A, E, R>(value: Renderable<A, E, R>): Effect.Effect<A, E, R> {
-  return Effect.isEffect(value) ? value : Effect.succeed(value as A);
-}
+export type RenderableValue<A, E = never, R = never> =
+  | A
+  | Effect.Effect<A, E, R>
+  | Stream.Stream<A, E, R>
+  | Fx<A, E, R>;

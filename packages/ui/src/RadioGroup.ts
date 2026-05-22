@@ -1,13 +1,14 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
-import { toEffect } from "./internal/renderable.js";
+import type { RenderableValue } from "./internal/renderable.js";
 
 type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = Renderable<string, any, any>;
+type RequiredString = RenderableValue<string, any, any>;
 
 export interface State<Value extends string = string> {
   readonly value: Value;
@@ -98,39 +99,42 @@ export function Root<const Opts extends RootOptions>(options: Opts) {
 export interface ItemOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly id: RequiredString;
-  readonly value: Renderable<Value, any, any>;
+  readonly value: RenderableValue<Value, any, any>;
   readonly content: AnyContent;
 }
 
 export function Item<const Value extends string, const Opts extends ItemOptions<Value>>(
   options: Opts,
 ) {
-  const checked = isChecked(options.state, options.value);
-  const onClick = EventHandler.make((event: Event) =>
-    Effect.gen(function* () {
-      const value = yield* toEffect(options.value);
-      yield* selectItem(options.state, (event.currentTarget as HTMLElement).id, value);
-    }),
-  );
-  const props: Record<string, unknown> = {
-    id: options.id,
-    "data-value": options.value,
-    role: "radio",
-    "aria-checked": checked,
-    tabindex: RefSubject.map(checked, (value) => (value ? 0 : -1)),
-    "data-checked": checked,
-    onclick: onClick,
-  };
+  return gen(function* () {
+    const id = yield* RefSubject.make(options.id);
+    const value = yield* RefSubject.make(options.value);
+    const checked = isChecked(options.state, value);
+    const onClick = EventHandler.make(() =>
+      Effect.gen(function* () {
+        yield* selectItem(options.state, yield* id, yield* value);
+      }),
+    );
+    const props: Record<string, unknown> = {
+      id,
+      "data-value": value,
+      role: "radio",
+      "aria-checked": checked,
+      tabindex: RefSubject.map(checked, (value) => (value ? 0 : -1)),
+      "data-checked": checked,
+      onclick: onClick,
+    };
 
-  return html`<div ...${props}>${options.content}</div>`;
+    return html`<div ...${props}>${options.content}</div>`;
+  });
 }
 
 function isChecked<Value extends string>(
   state: RefSubject.RefSubject<State<Value>>,
-  value: Renderable<Value, any, any>,
+  value: RefSubject.Computed<Value, any, any>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.map(toEffect(value), (value) => current.value === value),
+    Effect.map(value, (value) => current.value === value),
   );
 }
 

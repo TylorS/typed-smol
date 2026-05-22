@@ -2,15 +2,16 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
-import { toEffect } from "./internal/renderable.js";
+import type { RenderableValue } from "./internal/renderable.js";
 
 type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = Renderable<string, any, any>;
-type OptionalBoolean = Renderable<boolean | undefined, any, any>;
+type RequiredString = RenderableValue<string, any, any>;
+type OptionalBoolean = RenderableValue<boolean | undefined, any, any>;
 
 export type Mode = "auto" | "hint" | "manual";
 
@@ -148,34 +149,36 @@ export interface ItemOptions {
 }
 
 export function Item<const Opts extends ItemOptions>(options: Opts) {
-  const active = isActive(options.state, options.id);
-  const disabled = isDisabled(options.disabled);
-  const props = {
-    id: options.id,
-    role: "menuitem",
-    "aria-disabled": boolString(disabled),
-    tabindex: RefSubject.mapEffect(options.state, (state) =>
-      Effect.gen(function* () {
-        const id = yield* toEffect(options.id);
-        const disabled = yield* isDisabled(options.disabled);
-        return state.activeId === id && !disabled ? 0 : -1;
-      }),
-    ),
-    "data-active": dataActive(options.state, options.id, options.disabled),
-    "data-disabled": boolString(disabled),
-  } as const;
+  return gen(function* () {
+    const id = yield* RefSubject.make(options.id);
+    const disabledValue = yield* RefSubject.make(options.disabled ?? false);
+    const active = isActive(options.state, id);
+    const disabled = isDisabled(disabledValue);
+    const props = {
+      id,
+      role: "menuitem",
+      "aria-disabled": boolString(disabled),
+      tabindex: RefSubject.mapEffect(options.state, (state) =>
+        Effect.gen(function* () {
+          const itemId = yield* id;
+          const itemDisabled = yield* disabled;
+          return state.activeId === itemId && !itemDisabled ? 0 : -1;
+        }),
+      ),
+      "data-active": dataActive(options.state, id, disabled),
+      "data-disabled": boolString(disabled),
+    } as const;
 
-  return html`<div ...${props}>${options.content}</div>`;
+    return html`<div ...${props}>${options.content}</div>`;
+  });
 }
 
 interface ToggleEventLike extends Event {
   readonly newState?: "open" | "closed";
 }
 
-function isActive(state: RefSubject.RefSubject<State>, id: RequiredString) {
-  return RefSubject.mapEffect(state, (current) =>
-    Effect.map(toEffect(id), (id) => current.activeId === id),
-  );
+function isActive(state: RefSubject.RefSubject<State>, id: RefSubject.Computed<string, any, any>) {
+  return RefSubject.mapEffect(state, (current) => Effect.map(id, (id) => current.activeId === id));
 }
 
 function dataOpen(state: RefSubject.RefSubject<State>) {
@@ -192,13 +195,13 @@ function dataMode(state: RefSubject.RefSubject<State>) {
 
 function dataActive(
   state: RefSubject.RefSubject<State>,
-  id: RequiredString,
-  disabled: OptionalBoolean | undefined,
+  id: RefSubject.Computed<string, any, any>,
+  disabled: RefSubject.Computed<boolean, any, any>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.gen(function* () {
-      const itemId = yield* toEffect(id);
-      const itemDisabled = yield* isDisabled(disabled);
+      const itemId = yield* id;
+      const itemDisabled = yield* disabled;
       const encoded = yield* DataAttr.encode(itemData, {
         active: current.activeId === itemId,
         disabled: itemDisabled,
@@ -208,12 +211,12 @@ function dataActive(
   );
 }
 
-function isDisabled(disabled: OptionalBoolean | undefined): Effect.Effect<boolean, any, any> {
-  return Effect.map(toEffect(disabled ?? false), (value) => value === true);
+function isDisabled(disabled: RefSubject.Computed<boolean | undefined, any, any>) {
+  return RefSubject.map(disabled, (value) => value === true);
 }
 
-function boolString(value: Effect.Effect<boolean, any, any>) {
-  return Effect.map(value, String);
+function boolString(value: RefSubject.Computed<boolean, any, any>) {
+  return RefSubject.map(value, String);
 }
 
 function nextActiveId<Value>(

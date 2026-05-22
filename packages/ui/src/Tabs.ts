@@ -1,11 +1,12 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
-import { toEffect } from "./internal/renderable.js";
+import type { RenderableValue } from "./internal/renderable.js";
 
 type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = Renderable<string, any, any>;
+type RequiredString = RenderableValue<string, any, any>;
 
 export type ActivationMode = "automatic" | "manual";
 export type Orientation = "horizontal" | "vertical";
@@ -66,22 +67,28 @@ export interface TabOptions {
 }
 
 export function Tab<const Opts extends TabOptions>(options: Opts) {
-  const selected = isSelected(options.state, options.id);
-  const onClick = EventHandler.make((event: Event) =>
-    select(options.state, (event.currentTarget as HTMLElement).id),
-  );
-  const props = {
-    id: options.id,
-    type: "button",
-    role: "tab",
-    "aria-controls": options.panelId,
-    "aria-selected": selected,
-    tabindex: RefSubject.map(selected, (value) => (value ? 0 : -1)),
-    "data-selected": selected,
-    onclick: onClick,
-  } as const;
+  return gen(function* () {
+    const id = yield* RefSubject.make(options.id);
+    const panelId = yield* RefSubject.make(options.panelId);
+    const selected = isSelected(options.state, id);
+    const onClick = EventHandler.make(() =>
+      Effect.gen(function* () {
+        yield* select(options.state, yield* id);
+      }),
+    );
+    const props = {
+      id,
+      type: "button",
+      role: "tab",
+      "aria-controls": panelId,
+      "aria-selected": selected,
+      tabindex: RefSubject.map(selected, (value) => (value ? 0 : -1)),
+      "data-selected": selected,
+      onclick: onClick,
+    } as const;
 
-  return html`<button ...${props}>${options.content}</button>`;
+    return html`<button ...${props}>${options.content}</button>`;
+  });
 }
 
 export interface PanelOptions {
@@ -92,20 +99,25 @@ export interface PanelOptions {
 }
 
 export function Panel<const Opts extends PanelOptions>(options: Opts) {
-  const selected = isSelected(options.state, options.tabId);
-  const props = {
-    id: options.id,
-    role: "tabpanel",
-    "aria-labelledby": options.tabId,
-    "data-selected": selected,
-  } as const;
-  const hidden = RefSubject.map(selected, (value) => !value);
+  return gen(function* () {
+    const id = yield* RefSubject.make(options.id);
+    const tabId = yield* RefSubject.make(options.tabId);
+    const selected = isSelected(options.state, tabId);
+    const props = {
+      id,
+      role: "tabpanel",
+      "aria-labelledby": tabId,
+      "data-selected": selected,
+    } as const;
+    const hidden = RefSubject.map(selected, (value) => !value);
 
-  return html`<div ...${props} ?hidden=${hidden}>${options.content}</div>`;
+    return html`<div ...${props} ?hidden=${hidden}>${options.content}</div>`;
+  });
 }
 
-function isSelected(state: RefSubject.RefSubject<State>, id: RequiredString) {
-  return RefSubject.mapEffect(state, (value) =>
-    Effect.map(toEffect(id), (id) => value.selectedId === id),
-  );
+function isSelected(
+  state: RefSubject.RefSubject<State>,
+  id: RefSubject.Computed<string, any, any>,
+) {
+  return RefSubject.mapEffect(state, (value) => Effect.map(id, (id) => value.selectedId === id));
 }

@@ -2,15 +2,16 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
-import { toEffect } from "./internal/renderable.js";
+import type { RenderableValue } from "./internal/renderable.js";
 
 type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = Renderable<string, any, any>;
-type OptionalBoolean = Renderable<boolean | undefined, any, any>;
+type RequiredString = RenderableValue<string, any, any>;
+type OptionalBoolean = RenderableValue<boolean | undefined, any, any>;
 
 export type Mode = "auto" | "hint" | "manual";
 
@@ -155,42 +156,45 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
 export interface OptionOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly id: RequiredString;
-  readonly value: Renderable<Value, any, any>;
+  readonly value: RenderableValue<Value, any, any>;
   readonly content: AnyContent;
   readonly disabled?: OptionalBoolean;
 }
 
 export function Option<const Opts extends OptionOptions>(options: Opts) {
-  const disabled = isDisabled(options.disabled);
-  const selected = isSelected(options.state, options.value);
-  const onClick = EventHandler.make(() =>
-    Effect.gen(function* () {
-      if (yield* isDisabled(options.disabled)) return;
-      const id = yield* toEffect(options.id);
-      const value = yield* toEffect(options.value);
-      yield* select(options.state, id, value);
-    }),
-  );
-  const props = {
-    id: options.id,
-    "data-value": options.value,
-    role: "option",
-    "aria-disabled": boolString(disabled),
-    "aria-selected": selected,
-    tabindex: RefSubject.mapEffect(options.state, (state) =>
+  return gen(function* () {
+    const id = yield* RefSubject.make(options.id);
+    const value = yield* RefSubject.make(options.value);
+    const disabledValue = yield* RefSubject.make(options.disabled ?? false);
+    const disabled = isDisabled(disabledValue);
+    const selected = isSelected(options.state, value);
+    const onClick = EventHandler.make(() =>
       Effect.gen(function* () {
-        const id = yield* toEffect(options.id);
-        const disabled = yield* isDisabled(options.disabled);
-        return state.virtualFocus || disabled ? -1 : state.activeId === id ? 0 : -1;
+        if (yield* disabled) return;
+        yield* select(options.state, yield* id, yield* value);
       }),
-    ),
-    "data-active": dataActive(options.state, options.id, disabled),
-    "data-disabled": boolString(disabled),
-    "data-selected": dataSelected(options.state, options.value, disabled),
-    onclick: onClick,
-  } as const;
+    );
+    const props = {
+      id,
+      "data-value": value,
+      role: "option",
+      "aria-disabled": boolString(disabled),
+      "aria-selected": selected,
+      tabindex: RefSubject.mapEffect(options.state, (state) =>
+        Effect.gen(function* () {
+          const itemId = yield* id;
+          const itemDisabled = yield* disabled;
+          return state.virtualFocus || itemDisabled ? -1 : state.activeId === itemId ? 0 : -1;
+        }),
+      ),
+      "data-active": dataActive(options.state, id, disabled),
+      "data-disabled": boolString(disabled),
+      "data-selected": dataSelected(options.state, value, disabled),
+      onclick: onClick,
+    } as const;
 
-  return html`<div ...${props}>${options.content}</div>`;
+    return html`<div ...${props}>${options.content}</div>`;
+  });
 }
 
 interface ToggleEventLike extends Event {
@@ -211,12 +215,12 @@ function dataMode<Value extends string>(state: RefSubject.RefSubject<State<Value
 
 function dataActive<Value extends string>(
   state: RefSubject.RefSubject<State<Value>>,
-  id: RequiredString,
-  disabled: Effect.Effect<boolean, any, any>,
+  id: RefSubject.Computed<string, any, any>,
+  disabled: RefSubject.Computed<boolean, any, any>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.gen(function* () {
-      const itemId = yield* toEffect(id);
+      const itemId = yield* id;
       const itemDisabled = yield* disabled;
       const encoded = yield* DataAttr.encode(optionData, {
         active: current.activeId === itemId,
@@ -230,21 +234,21 @@ function dataActive<Value extends string>(
 
 function isSelected<Value extends string>(
   state: RefSubject.RefSubject<State<Value>>,
-  value: Renderable<Value, any, any>,
+  value: RefSubject.Computed<Value, any, any>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.map(toEffect(value), (value) => current.value === value),
+    Effect.map(value, (value) => current.value === value),
   );
 }
 
 function dataSelected<Value extends string>(
   state: RefSubject.RefSubject<State<Value>>,
-  value: Renderable<Value, any, any>,
-  disabled: Effect.Effect<boolean, any, any>,
+  value: RefSubject.Computed<Value, any, any>,
+  disabled: RefSubject.Computed<boolean, any, any>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.gen(function* () {
-      const itemValue = yield* toEffect(value);
+      const itemValue = yield* value;
       const itemDisabled = yield* disabled;
       const encoded = yield* DataAttr.encode(optionData, {
         active: false,
@@ -256,12 +260,12 @@ function dataSelected<Value extends string>(
   );
 }
 
-function isDisabled(disabled: OptionalBoolean | undefined): Effect.Effect<boolean, any, any> {
-  return Effect.map(toEffect(disabled ?? false), (value) => value === true);
+function isDisabled(disabled: RefSubject.Computed<boolean | undefined, any, any>) {
+  return RefSubject.map(disabled, (value) => value === true);
 }
 
-function boolString(value: Effect.Effect<boolean, any, any>) {
-  return Effect.map(value, String);
+function boolString(value: RefSubject.Computed<boolean, any, any>) {
+  return RefSubject.map(value, String);
 }
 
 function nextActiveId<Value extends string>(
