@@ -461,7 +461,7 @@ pnpm --filter @typed/ui test -- StartupRef
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/ui/src/StartupRef.ts packages/ui/src/StartupRef.test.ts

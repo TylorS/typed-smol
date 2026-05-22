@@ -75,7 +75,7 @@
   - PACKAGE: `pnpm --filter @typed/ui test` passed with `5` files and `27` tests.
   - BUILD: `pnpm --filter @typed/ui build` passed.
 - commit:
-  - pending
+  - `2359be2 feat(ui): add startup data refs`
 - deviations_or_replans:
   - `StartupRef.fromData` merges decoded data fields into the existing state instead of replacing the full state so component-local state can survive startup hydration.
   - `StartupRef.compose` was added to support one template `ref` callback composed from multiple startup refs.
