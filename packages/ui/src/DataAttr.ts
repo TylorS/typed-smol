@@ -1,15 +1,13 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-export type DataFields = Readonly<Record<string, Schema.Codec<any, any, never, never>>>;
+export type DataFields = Schema.Struct.Fields;
 
 export interface DataAttr<Fields extends DataFields> {
   readonly fields: Fields;
 }
 
-export type Type<Fields extends DataFields> = {
-  readonly [K in keyof Fields]: Schema.Schema.Type<Fields[K]>;
-};
+export type Type<Fields extends DataFields> = Schema.Struct.Type<Fields>;
 
 export type Encoded<Fields extends DataFields> = Readonly<
   Partial<Record<keyof Fields & string, string>>
@@ -22,7 +20,7 @@ export function schema<const Fields extends DataFields>(fields: Fields): DataAtt
 export function encode<const Fields extends DataFields>(
   data: DataAttr<Fields>,
   value: Type<Fields>,
-): Effect.Effect<Encoded<Fields>, Schema.SchemaError> {
+): Effect.Effect<Encoded<Fields>, Schema.SchemaError, Schema.Struct.EncodingServices<Fields>> {
   return Effect.gen(function* () {
     const output: Record<string, string> = {};
 
@@ -41,7 +39,7 @@ export function encode<const Fields extends DataFields>(
 export function decode<const Fields extends DataFields>(
   data: DataAttr<Fields>,
   source: DatasetSource | Readonly<Record<string, string | undefined>>,
-): Effect.Effect<Type<Fields>, Schema.SchemaError> {
+): Effect.Effect<Type<Fields>, Schema.SchemaError, Schema.Struct.DecodingServices<Fields>> {
   return Effect.gen(function* () {
     const input = hasDataset(source) ? source.dataset : source;
     const output: Record<string, unknown> = {};
