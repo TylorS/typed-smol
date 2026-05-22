@@ -1,0 +1,58 @@
+import * as Effect from "effect/Effect";
+import type * as Scope from "effect/Scope";
+import { RefSubject } from "@typed/fx";
+import { type Renderable, html } from "@typed/template";
+import * as Collection from "./Collection.js";
+import * as Composite from "./Composite.js";
+
+export interface State extends Composite.State {}
+
+export function makeState(
+  initial: Composite.InitialState = {},
+): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
+  return Composite.makeState(initial);
+}
+
+export function move(
+  state: RefSubject.RefSubject<State>,
+  items: Collection.State,
+  direction: Composite.Move,
+): Effect.Effect<State> {
+  return Effect.gen(function* () {
+    const current = yield* state;
+    const enabled = Collection.enabledItems(Collection.byDomOrder(items));
+    const activeId = nextActiveId(enabled, current, direction);
+    return yield* RefSubject.update(state, (value) => ({ ...value, activeId }));
+  });
+}
+
+export function Root<const Content extends Renderable.Any>(options: {
+  readonly state: RefSubject.RefSubject<State>;
+  readonly content: Content;
+  readonly id?: Renderable<string, any, any>;
+  readonly label?: Renderable<string, any, any>;
+}) {
+  const orientation = RefSubject.map(options.state, (state) => state.orientation);
+  return html`<div
+    id=${options.id}
+    role="toolbar"
+    aria-label=${options.label}
+    aria-orientation=${orientation}
+  >${options.content}</div>`;
+}
+
+function nextActiveId(
+  items: Collection.State,
+  state: State,
+  direction: Composite.Move,
+): string | null {
+  if (items.length === 0) return null;
+  if (direction === "first") return items[0]?.id ?? null;
+  if (direction === "last") return items[items.length - 1]?.id ?? null;
+
+  const index = Math.max(0, items.findIndex((item) => item.id === state.activeId));
+  const delta = direction === "next" ? 1 : -1;
+  const next = index + delta;
+  if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;
+  return items[Math.min(Math.max(next, 0), items.length - 1)]?.id ?? null;
+}

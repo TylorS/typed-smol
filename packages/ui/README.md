@@ -2,12 +2,14 @@
 
 > **Beta:** This package is in beta; APIs may change.
 
-`@typed/ui` is the **web integration layer** for `@typed/router` and `@typed/template`. It bridges typed-smol's routing and template system with the browser and Effect's HTTP stack.
+`@typed/ui` is the **web integration and headless component layer** for `@typed/router` and `@typed/template`. It bridges typed-smol's routing and template system with the browser and Effect's HTTP stack, and provides Typed-native accessible UI substrates.
 
 ## Capabilities
 
 - **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics (href, target, keyboard, right-click).
 - **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for server-side rendering. Requests are parsed, matched, and the corresponding Fx is rendered to HTML. `handleHttpServerError` adds global middleware for 404/400/500.
+- **Headless state substrate** — `Dom`, `DataAttr`, `StartupRef`, `State`, `Collection`, and `Composite` support element-backed options, Schema-backed public `data-*` state, server-startup ref hydration, and APG-style composite navigation.
+- **Proof widgets** — `Tabs`, `RadioGroup`, and `Toolbar` compose the substrate into Ariakit-like Typed primitives.
 
 ## Dependencies
 
@@ -22,7 +24,16 @@
 ## API overview
 
 - **Link** — `Link(options)` renders an `<a href="...">` that intercepts same-origin, same-document clicks and calls `Navigation.navigate` instead of a full page load. Options include `href`, `content`, `replace`, and standard anchor props. Requires **Navigation** and **RenderTemplate** in context (e.g. browser router).
+- **DOM/data substrate:** `Dom.ElementOptions<Element>` maps writable DOM properties, event handlers, and refs; `DataAttr` encodes/decodes Schema-backed `.data={object}` values; `StartupRef` hydrates public state from server-rendered DOM attrs.
+- **Composite substrate:** `Collection` tracks registered items and DOM order; `Composite` owns active item movement, roving tabindex, virtual focus, orientation, loop, and RTL behavior.
+- **Widgets:** `Tabs`, `RadioGroup`, and `Toolbar` provide the first Ariakit-like component layer.
 - **SSR:** `ssrForHttp(router, matcher)` — registers route handlers on an Effect **HttpRouter** for server-side rendering; `handleHttpServerError(router)` — global middleware for HTTP server errors.
+
+## Layered component direction
+
+The component layer is native-platform-first. Modal behavior belongs to native `<dialog>`/`showModal()` and non-modal layered UI belongs to the HTML Popover API. Future Menu, Select/Listbox, and Combobox work should build on `Collection`, `Composite`, native Popover where appropriate, and public Schema-backed `data-*` state.
+
+CSS Anchor Positioning is an explicit goal for future Popover/Menu examples. `@typed/ui` should expose stable DOM attributes and state hooks that let users apply native `anchor-name`, `position-anchor`, and `position-area` CSS without requiring a custom JavaScript positioning engine.
 
 ## API reference
 
