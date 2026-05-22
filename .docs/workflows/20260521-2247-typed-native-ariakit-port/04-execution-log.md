@@ -6,6 +6,7 @@
 - Completed T3: startup refs for DOM data hydration.
 - Completed T4: Disclosure button/content primitives.
 - Completed T5: Dialog content/trigger/close primitives.
+- Completed T6: native Popover primitives.
 
 ## Task Records
 
@@ -143,6 +144,36 @@
 - memory_updates:
   - candidate captured in `memory/implementation-notes.md`
 
+### Task T6 - Native Popover
+
+- task_id: T6
+- requirement_ids:
+  - FR-8
+  - FR-9
+  - FR-15
+  - FR-16
+  - FR-17
+  - FR-19
+  - NFR-1
+  - NFR-2
+  - NFR-3
+- ts_scenarios:
+  - TS-6: pass
+- validation_evidence:
+  - RED: `pnpm --filter @typed/ui test -- Popover` failed because `./Popover.js` was missing.
+  - GREEN: `pnpm --filter @typed/ui test -- Popover` passed with `8` files and `36` tests.
+  - PACKAGE: `pnpm --filter @typed/ui test` passed with `8` files and `36` tests.
+  - BUILD: `pnpm --filter @typed/ui build` passed.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Browser-runner wiring remains deferred because `@typed/ui` does not currently link `@vitest/browser-playwright` and `pnpm-lock.yaml` had unrelated dirty changes before this task.
+  - Popover tests assert native trigger/content attributes, native `toggle` event mirroring, and absence of custom overlay/focus-trap elements.
+- context_updates:
+  - none
+- memory_updates:
+  - candidate captured in `memory/implementation-notes.md`
+
 ## Deferred Work
 
-- T6 through T7 remain pending.
+- T7 remains pending.

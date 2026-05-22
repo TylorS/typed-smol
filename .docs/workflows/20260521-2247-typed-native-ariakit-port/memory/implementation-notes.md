@@ -8,3 +8,4 @@
 - `StartupRef.compose` combines multiple startup ref callbacks for a single template `ref` attribute.
 - Disclosure uses `DataAttr.encode` through `RefSubject.mapEffect` to emit stable `data-open` while preserving direct `RefSubject` state and inferred template return types.
 - Dialog mirrors the Disclosure data-state pattern and stores the invoking element in a WeakMap keyed by the state ref so close controls can return focus without adding store objects.
+- Popover is native-only: trigger/content attributes plus native `toggle` event mirroring; no JS click toggle, overlay element, focus trap, or positioning fallback.

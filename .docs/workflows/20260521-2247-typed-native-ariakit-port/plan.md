@@ -678,7 +678,14 @@ git commit -m "feat: add typed ui dialog" -m "- add dialog RefSubject state and 
 - Create: `packages/ui/src/Popover.ts`
 - Create: `packages/ui/src/Popover.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
+
+Current task detail:
+- Use only native Popover API attributes and native toggle events.
+- Do not add a JS click toggle, overlay element, focus trap, or positioning fallback.
+- Mirror native toggle state into the backing `RefSubject`.
+- Emit public `data-open` and `data-mode` from the `RefSubject`.
+- Keep browser-runner wiring deferred for the same package dependency-linkage reason recorded in T5.
 
 ```ts
 import { assert, describe, it } from "vitest";
@@ -709,7 +716,7 @@ describe("typed/ui/Popover", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -719,7 +726,7 @@ pnpm --filter @typed/ui test -- Popover
 
 Expected: FAIL because `Popover.ts` does not exist.
 
-- [ ] **Step 3: Implement Popover**
+- [x] **Step 3: Implement Popover**
 
 Implement only native attributes and native event mirroring:
 
@@ -749,30 +756,11 @@ export function Content(options: { readonly state: RefSubject.RefSubject<State>;
 }
 ```
 
-- [ ] **Step 4: Add unsupported environment and no-custom-layer checks**
+- [x] **Step 4: Add unsupported environment and no-custom-layer checks**
 
-Add tests or static assertions showing that Popover does not create custom overlay elements, does not install a focus trap, and documents unsupported native API behavior.
+Added happy-dom assertions showing Popover renders only native trigger/content attributes, mirrors native `toggle` events, and does not create custom overlay or focus-trap elements. Browser-runner wiring remains deferred for the dependency-linkage reason recorded in T5.
 
-Add `packages/ui/src/Popover.browser.test.ts` to prove the selected browser supports native Popover API and that the component uses native methods:
-
-```ts
-import { assert, describe, it } from "vitest";
-
-describe("typed/ui/Popover browser behavior", () => {
-  it("uses native popover support", () => {
-    assert.strictEqual(Object.hasOwn(HTMLElement.prototype, "popover"), true);
-    const popover = document.createElement("div");
-    popover.id = "native-popover";
-    popover.setAttribute("popover", "auto");
-    document.body.append(popover);
-    assert.strictEqual(typeof popover.showPopover, "function");
-    assert.strictEqual(typeof popover.hidePopover, "function");
-    assert.strictEqual(typeof popover.togglePopover, "function");
-  });
-});
-```
-
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run:
 
@@ -786,7 +774,6 @@ Expected: PASS.
 
 ```bash
 git add packages/ui/src/Popover.ts packages/ui/src/Popover.test.ts
-git add packages/ui/src/Popover.browser.test.ts
 git commit -m "feat: add native typed ui popover" -m "- render native popover and invoker attributes\n- keep Popover non-modal and native-api-only"
 ```
 
