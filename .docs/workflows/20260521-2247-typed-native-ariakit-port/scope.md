@@ -65,6 +65,7 @@ Candidate slices:
 - Initial styling scope is headless behavior plus stable `data-*` state attributes. First-party CSS is out of scope.
 - Public styling/inspection `data-*` attributes should be easy to encode/decode through Effect Schema.
 - Internal hydration state is out of scope for `data-*` for now; refs should initialize backing `RefSubject`s from the DOM on startup.
+- Popover must be backed by the native HTML Popover API only. Custom overlay mechanics, custom popover focus trapping, and JS-only popover visibility are out of scope for Popover v1.
 
 ## Open Scope Questions
 

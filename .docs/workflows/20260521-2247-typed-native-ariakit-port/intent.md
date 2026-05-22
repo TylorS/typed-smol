@@ -46,6 +46,7 @@ This workflow begins with intent and scope, then proceeds through strict staged 
 - styling boundary: headless components with stable `data-*` state attributes; no first-party CSS in the initial scope.
 - data attribute boundary: make Schema-backed encoding/decoding of public `data-*` attributes easy, so styling/inspection state attrs are typed and validated rather than ad hoc strings.
 - hydration boundary: include a ref-based startup abstraction that initializes backing `RefSubject`s from DOM state emitted by the server.
+- popover boundary: `@typed/ui` Popover should use only the native HTML Popover API; it should not implement a custom overlay/popover mechanism.
 
 ## Open Intent Questions
 
