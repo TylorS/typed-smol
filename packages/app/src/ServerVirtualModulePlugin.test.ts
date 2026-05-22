@@ -49,7 +49,7 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import * as Layer from "effect/Layer";');
     expect(source).toContain('import * as HttpRouter from "effect/unstable/http/HttpRouter";');
     expect(source).toContain(
-      'import { composeWithLayers, TypedHttpServer, type LayerOrGroup } from "@typed/app";',
+      'import { composeWithLayers, renderServer, TypedHttpServer, type LayerOrGroup } from "@typed/app";',
     );
     expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
     expect(source).toContain('import * as Api0 from "api:./api";');
@@ -57,6 +57,8 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source).toContain('import * as Routes1 from "router:./routes2";');
     expect(source).toContain("export const AppLayer =");
     expect(source).toContain("export const ServerLayer =");
+    expect(source).toContain("export const ServerRuntime =");
+    expect(source).toContain("renderServer,");
     expect(source).toContain("export const handler =");
     expect(source).toContain("export default handler");
     expect(source).toContain("export function run");
@@ -128,6 +130,7 @@ describe("ServerVirtualModulePlugin", () => {
         "  export type LayerAny = Layer.Layer<any, any, any> | Layer.Layer<never, any, any>;",
         "  export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers: Layers): LayerAny;",
+        "  export const renderServer: unknown;",
         "  export const TypedHttpServer: {",
         "    readonly staticAssets: (options: { readonly projectRoot: string; readonly clientOutDir?: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
         "    readonly layer: (options: { readonly projectRoot: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",

@@ -53,3 +53,9 @@
 - Browser generated source now delegates route rendering to `@typed/app` runtime functions: `mountRuntime` for mount mode and `hydrateRuntime` otherwise.
 - Generated browser source no longer imports `drainLayer`, `render`, or `DomRenderTemplate`; `mount`/`hydrate` provide the DOM render template internally and the generated layer still provides `BrowserRouter(win)`.
 - `mount`/`hydrate` in `@typed/app` accept `Fx<RenderEvent>` values in addition to compiled/fallback templates so route matchers can use the same runtime handoff.
+
+## Task 14: Server Runtime Integration
+
+- Server generated source imports `renderServer` from `@typed/app` and exposes `ServerRuntime` with `apiModules`, `routeModules`, `pageEntries`, and `renderServer` for downstream compiler/runtime handoff.
+- `pageEntries` needs an explicit readonly array annotation in generated source; otherwise the server virtual module typecheck fixture reports implicit `any[]` diagnostics when no pages are present.
+- Server runtime wiring must leave `typed:config` output directory usage intact so generated server code continues to avoid hard-coded `dist/client` paths.

@@ -74,7 +74,7 @@ Modify:
 | T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | completed in `feat(compiler): infer route hmr dependencies` |
 | T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | completed in `feat(compiler): plan closure hmr contexts` |
 | T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | completed in `feat(app): wire browser runtime templates` |
-| T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | revert server emitter changes |
+| T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | completed in `feat(app): wire server runtime templates` |
 | T15 | direct | T13, T14 | targeted Vite HMR fixture command created in task | isolated fixture | remove fixture and Vite wiring |
 | T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | revert artifact integration |
 | T17 | direct | T15, T16 | server+DOM example command created in task | example only after package gates | remove example changes |
@@ -630,7 +630,7 @@ Run: `pnpm --filter @typed/app build`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(app): wire browser runtime templates`.
 
@@ -640,7 +640,7 @@ Commit message: `feat(app): wire browser runtime templates`.
 - Modify: `packages/app/src/internal/emitServerSource.ts`
 - Modify: `packages/app/src/ServerVirtualModulePlugin.test.ts`
 
-- [ ] **Step 1: Write failing generated-source test**
+- [x] **Step 1: Write failing generated-source test**
 
 Assert server generated source uses `renderServer`/runtime handoff where appropriate and continues reading build paths from `typed:config`.
 
@@ -648,17 +648,17 @@ Run: `pnpm --filter @typed/app test -- ServerVirtualModulePlugin`
 
 Expected: fails before emitter update.
 
-- [ ] **Step 2: Update emitter**
+- [x] **Step 2: Update emitter**
 
 Use runtime functions while preserving config-driven output dirs and existing API/router composition.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/app test -- ServerVirtualModulePlugin`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(app): wire server runtime templates`.
 
