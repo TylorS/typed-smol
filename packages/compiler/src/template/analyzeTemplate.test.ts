@@ -83,7 +83,7 @@ describe("analyzeTemplate", () => {
 
     expect(plan.nodes.map((node) => node.kind)).toEqual([
       "doctype",
-      "part",
+      "commentPart",
       "textOnlyElement",
       "element",
     ]);

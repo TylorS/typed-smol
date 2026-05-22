@@ -34,7 +34,7 @@ function convertNode(node: Template.Node): TemplatePlanNode {
     case "comment":
       return { kind: "comment", value: node.value };
     case "comment-part":
-      return { kind: "part", valueIndex: node.index };
+      return { kind: "commentPart", valueIndex: node.index };
     case "sparse-comment":
       return { kind: "sparseComment", nodes: node.nodes.map(convertSparsePart) };
     case "doctype":

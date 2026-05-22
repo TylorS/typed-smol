@@ -15,6 +15,7 @@ export type TemplatePlanNode =
   | TemplatePlanTextNode
   | TemplatePlanSparseTextNode
   | TemplatePlanPartNode
+  | TemplatePlanCommentPartNode
   | TemplatePlanCommentNode
   | TemplatePlanSparseCommentNode
   | TemplatePlanDocTypeNode;
@@ -56,6 +57,11 @@ export type TemplatePlanTextContent =
 
 export interface TemplatePlanPartNode {
   readonly kind: "part";
+  readonly valueIndex: number;
+}
+
+export interface TemplatePlanCommentPartNode {
+  readonly kind: "commentPart";
   readonly valueIndex: number;
 }
 
