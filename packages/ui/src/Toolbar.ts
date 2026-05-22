@@ -49,6 +49,27 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
   </div>`;
 }
 
+export interface ItemOptions {
+  readonly state: RefSubject.RefSubject<State>;
+  readonly id: RequiredString;
+  readonly content: AnyContent;
+}
+
+export function Item<const Opts extends ItemOptions>(options: Opts): Component<Opts> {
+  const tabIndex = Composite.tabIndex(options.state, String(options.id));
+  return html`<div id=${options.id} role="button" tabindex=${tabIndex}>${options.content}</div>`;
+}
+
+export function Container<const Opts extends { readonly content: AnyContent }>(
+  options: Opts,
+): Component<Opts> {
+  return html`<div role="presentation">${options.content}</div>`;
+}
+
+export function Separator(): Component<{}> {
+  return html`<div role="separator"></div>`;
+}
+
 function nextActiveId(
   items: Collection.State,
   state: State,

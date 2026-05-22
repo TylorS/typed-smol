@@ -92,6 +92,16 @@ export function Label<const Opts extends LabelOptions>(options: Opts): Component
   return html`<label for=${options.for}>${options.content}</label>`;
 }
 
+export interface CheckOptions {
+  readonly state: RefSubject.RefSubject<State>;
+  readonly content?: Content;
+}
+
+export function Check<const Opts extends CheckOptions>(options: Opts): Component<Opts> {
+  const hidden = RefSubject.map(options.state, (state) => state.checked !== true);
+  return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>`;
+}
+
 interface CheckboxChangeEvent extends Event {
   readonly currentTarget: HTMLInputElement;
 }

@@ -109,6 +109,8 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
   </button>`;
 }
 
+export const Button = Trigger;
+
 export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
@@ -141,6 +143,8 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   </div>`;
 }
 
+export const List = Content;
+
 export interface ItemOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly id: RequiredString;
@@ -172,6 +176,82 @@ export function Item<const Opts extends ItemOptions>(options: Opts): Component<O
 
     return html`<div ...${props}>${options.content}</div>`;
   });
+}
+
+export interface CheckedItemOptions extends ItemOptions {
+  readonly checked: ReactiveValue<boolean, any, any>;
+}
+
+export function ItemCheckbox<const Opts extends CheckedItemOptions>(
+  options: Opts,
+): Component<Opts> {
+  return html`<div
+    id=${options.id}
+    role="menuitemcheckbox"
+    aria-checked=${options.checked}
+    data-checked=${options.checked}
+  >
+    ${options.content}
+  </div>`;
+}
+
+export function ItemRadio<const Opts extends CheckedItemOptions>(options: Opts): Component<Opts> {
+  return html`<div
+    id=${options.id}
+    role="menuitemradio"
+    aria-checked=${options.checked}
+    data-checked=${options.checked}
+  >
+    ${options.content}
+  </div>`;
+}
+
+export function ItemCheck<
+  const Opts extends {
+    readonly checked: ReactiveValue<boolean, any, any>;
+    readonly content?: AnyContent;
+  },
+>(options: Opts): Component<Opts> {
+  return gen(function* () {
+    const checked = yield* makeRef(options.checked);
+    const hidden = RefSubject.map(checked, (value) => !value);
+    return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>`;
+  });
+}
+
+export function Separator(): Component<{}> {
+  return html`<div role="separator"></div>`;
+}
+
+export function Group<
+  const Opts extends { readonly content: AnyContent; readonly label?: RequiredString },
+>(options: Opts): Component<Opts> {
+  return html`<div role="group" aria-label=${options.label}>${options.content}</div>`;
+}
+
+export function GroupLabel<const Opts extends { readonly content: AnyContent }>(
+  options: Opts,
+): Component<Opts> {
+  return html`<span>${options.content}</span>`;
+}
+
+export function Heading<
+  const Opts extends { readonly content: AnyContent; readonly id?: RequiredString },
+>(options: Opts): Component<Opts> {
+  return html`<div id=${options.id} role="heading" aria-level="1">${options.content}</div>`;
+}
+
+export function Description<
+  const Opts extends { readonly content: AnyContent; readonly id?: RequiredString },
+>(options: Opts): Component<Opts> {
+  return html`<p id=${options.id}>${options.content}</p>`;
+}
+
+export function Dismiss<
+  const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
+>(options: Opts): Component<Opts> {
+  const onClick = EventHandler.make(() => setOpen(options.state, false));
+  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
 }
 
 interface ToggleEventLike extends Event {

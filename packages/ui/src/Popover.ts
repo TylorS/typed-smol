@@ -49,6 +49,18 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
   </button>`;
 }
 
+export const Disclosure = Trigger;
+
+export interface AnchorOptions {
+  readonly state: RefSubject.RefSubject<State>;
+  readonly content: AnyContent;
+}
+
+export function Anchor<const Opts extends AnchorOptions>(options: Opts): Component<Opts> {
+  const id = RefSubject.map(options.state, (current) => current.id);
+  return html`<span popovertarget=${id}>${options.content}</span>`;
+}
+
 export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
@@ -65,6 +77,31 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   return html`<div id=${id} popover=${mode} .data=${{ open, mode }} ontoggle=${onToggle}>
     ${options.content}
   </div>`;
+}
+
+export function Dismiss<
+  const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
+>(options: Opts): Component<Opts> {
+  const onClick = EventHandler.make(() => setOpen(options.state, false));
+  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
+}
+
+export function Arrow<const Opts extends { readonly content?: AnyContent }>(
+  options = {} as Opts,
+): Component<Opts> {
+  return html`<span aria-hidden="true">${options.content ?? ""}</span>`;
+}
+
+export function Heading<const Opts extends { readonly id?: string; readonly content: AnyContent }>(
+  options: Opts,
+): Component<Opts> {
+  return html`<div id=${options.id} role="heading" aria-level="1">${options.content}</div>`;
+}
+
+export function Description<
+  const Opts extends { readonly id?: string; readonly content: AnyContent },
+>(options: Opts): Component<Opts> {
+  return html`<p id=${options.id}>${options.content}</p>`;
 }
 
 interface ToggleEventLike extends Event {

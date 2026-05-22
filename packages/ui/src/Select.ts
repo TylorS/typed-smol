@@ -121,6 +121,8 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
   </button>`;
 }
 
+export const Select = Trigger;
+
 export interface ContentOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly content: AnyContent;
@@ -152,6 +154,9 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     ${options.content}
   </div>`;
 }
+
+export const Popover = Content;
+export const List = Content;
 
 export interface OptionOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
@@ -195,6 +200,74 @@ export function Option<const Opts extends OptionOptions>(options: Opts): Compone
 
     return html`<div ...${props}>${options.content}</div>`;
   });
+}
+
+export const Item = Option;
+
+export function Label<
+  const Opts extends { readonly for?: RequiredString; readonly content: AnyContent },
+>(options: Opts): Component<Opts> {
+  return html`<label for=${options.for}>${options.content}</label>`;
+}
+
+export function Value<const Opts extends { readonly state: RefSubject.RefSubject<State> }>(
+  options: Opts,
+): Component<Opts> {
+  return html`${RefSubject.map(options.state, (state) => state.value ?? "")}`;
+}
+
+export function Arrow<const Opts extends { readonly content?: AnyContent }>(
+  options = {} as Opts,
+): Component<Opts> {
+  return html`<span aria-hidden="true">${options.content ?? "▾"}</span>`;
+}
+
+export function Dismiss<
+  const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
+>(options: Opts): Component<Opts> {
+  const onClick = EventHandler.make(() => setOpen(options.state, false));
+  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
+}
+
+export function Group<
+  const Opts extends { readonly content: AnyContent; readonly label?: RequiredString },
+>(options: Opts): Component<Opts> {
+  return html`<div role="group" aria-label=${options.label}>${options.content}</div>`;
+}
+
+export function GroupLabel<const Opts extends { readonly content: AnyContent }>(
+  options: Opts,
+): Component<Opts> {
+  return html`<span>${options.content}</span>`;
+}
+
+export function Heading<
+  const Opts extends { readonly content: AnyContent; readonly id?: RequiredString },
+>(options: Opts): Component<Opts> {
+  return html`<div id=${options.id} role="heading" aria-level="1">${options.content}</div>`;
+}
+
+export function ItemCheck<
+  const Opts extends {
+    readonly selected: ReactiveValue<boolean, any, any>;
+    readonly content?: AnyContent;
+  },
+>(options: Opts): Component<Opts> {
+  return gen(function* () {
+    const selected = yield* makeRef(options.selected);
+    const hidden = RefSubject.map(selected, (value) => !value);
+    return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>`;
+  });
+}
+
+export function Row<const Opts extends { readonly content: AnyContent }>(
+  options: Opts,
+): Component<Opts> {
+  return html`<div role="row">${options.content}</div>`;
+}
+
+export function Separator(): Component<{}> {
+  return html`<div role="separator"></div>`;
 }
 
 interface ToggleEventLike extends Event {

@@ -76,6 +76,9 @@ export function Close<const Opts extends CloseOptions>(options: Opts): Component
   return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
 }
 
+export const Dismiss = Close;
+export const Disclosure = Trigger;
+
 export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly id?: OptionalString;
@@ -97,6 +100,18 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   >
     ${options.content}
   </div>`;
+}
+
+export function Heading<
+  const Opts extends { readonly id?: OptionalString; readonly content: AnyContent },
+>(options: Opts): Component<Opts> {
+  return html`<div id=${options.id} role="heading" aria-level="1">${options.content}</div>`;
+}
+
+export function Description<
+  const Opts extends { readonly id?: OptionalString; readonly content: AnyContent },
+>(options: Opts): Component<Opts> {
+  return html`<p id=${options.id}>${options.content}</p>`;
 }
 
 function dataOpen(state: RefSubject.RefSubject<State>) {
