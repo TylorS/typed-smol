@@ -79,3 +79,9 @@
 - The runnable example lives in `packages/app/src/runtimeTemplateCompilerExample.ts` to avoid adding a new workspace package or touching the dirty lockfile.
 - It exercises optimized server rendering through `renderServer(emitServerTemplate(plan))`, optimized DOM hydration through `hydrate(emitDomTemplate(plan))`, and route/dependency HMR planning through `planViteHmrBoundary`.
 - The example uses an actual `RefSubject.Service` id plus app HMR registry state to prove compatible route source edits reuse service-backed state.
+
+## Task 18: Final Hardening
+
+- Final package gates passed for `@typed/compiler`, `@typed/app`, `@typed/fx`, and `@typed/virtual-modules-compiler`, followed by a successful root `pnpm build`.
+- Root build produced only existing Vite/lightningcss warnings in examples; it did not add new tracked dirty files.
+- Pre-existing unrelated dirty changes remain in app/fx/virtual-modules/virtual-modules-vscode plus `pnpm-lock.yaml`; they were intentionally not staged.

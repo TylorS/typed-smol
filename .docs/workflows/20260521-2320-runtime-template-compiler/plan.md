@@ -78,7 +78,7 @@ Modify:
 | T15 | direct | T13, T14 | `pnpm --filter @typed/compiler test -- viteHmrFixture` | isolated fixture | completed in `feat(compiler): prove route hmr state fixture` |
 | T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | completed in `feat(compiler): integrate template output fingerprints` |
 | T17 | direct | T15, T16 | `pnpm --filter @typed/app exec vitest run src/runtimeTemplateCompilerExample.test.ts` | example only after package gates | completed in `test: add runtime template compiler example` |
-| T18 | direct | T1 through T17 | package gates plus `pnpm build` | final audit before commit/PR | revert last hardening commit |
+| T18 | direct | T1 through T17 | package gates plus `pnpm build` | final audit before commit/PR | completed in `chore: finalize runtime template compiler tranche` |
 
 ## Detailed Task Plan
 
@@ -763,7 +763,7 @@ Commit message: `test: add runtime template compiler example`.
 - Create/modify: `.docs/workflows/20260521-2320-runtime-template-compiler/memories.md`
 - Modify package docs only where new public APIs need usage notes.
 
-- [ ] **Step 1: Run package gates**
+- [x] **Step 1: Run package gates**
 
 Run:
 
@@ -780,17 +780,28 @@ pnpm build
 
 Expected: pass, except any unrelated pre-existing root flake must be isolated with package-level evidence.
 
-- [ ] **Step 2: Update traceability**
+- [x] **Step 2: Update traceability**
 
 Mark completed tasks and record verification evidence in `plan.md` or an execution log.
 
-- [ ] **Step 3: Update `memories.md`**
+- [x] **Step 3: Update `memories.md`**
 
 Capture only reusable lessons with evidence and promotion candidates.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `chore: finalize runtime template compiler tranche`.
+
+### Task 18 Verification Evidence
+
+- `pnpm --filter @typed/compiler test`: 11 files, 38 tests passed.
+- `pnpm --filter @typed/compiler build`: passed.
+- `pnpm --filter @typed/app test`: 19 files, 305 tests passed, no type errors.
+- `pnpm --filter @typed/app build`: passed.
+- `pnpm --filter @typed/fx test`: 37 files, 274 passed, 1 skipped.
+- `pnpm --filter @typed/fx build`: passed.
+- `pnpm --filter @typed/virtual-modules-compiler test`: 1 file, 16 tests passed.
+- `pnpm build`: passed.
 
 ## Tactical Replanning Triggers
 
