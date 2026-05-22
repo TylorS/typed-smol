@@ -44,12 +44,12 @@ describe("planCompileCapabilities", () => {
 
   it("plans HMR services for route components and compatible route dependencies", () => {
     const component = analyzeComponentHmr({
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       boundary: "route-component",
       sourceText: "const count = yield* RefSubject.make(0);",
     });
     const dependencies = analyzeDependencyHmr({
-      routeModuleId: "/src/routes/counter.tsx",
+      routeModuleId: "/src/routes/counter.ts",
       dependencies: [
         {
           moduleId: "/src/routes/counter/state.ts",
@@ -60,7 +60,7 @@ describe("planCompileCapabilities", () => {
     });
 
     const plan = planCompileCapabilities({
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       boundary: "route-component",
       templates: [template("counter")],
       component,
@@ -70,7 +70,7 @@ describe("planCompileCapabilities", () => {
 
     expect(plan.hmr.eligible).toBe(true);
     expect(plan.hmr.services.map((service) => service.serviceId)).toEqual([
-      "/src/routes/counter.tsx#count",
+      "/src/routes/counter.ts#count",
       "@app/Count",
     ]);
     expect(plan.hmr.dependencies).toEqual([
@@ -85,13 +85,13 @@ describe("planCompileCapabilities", () => {
 
   it("honors explicit HMR opt-out while preserving template optimization", () => {
     const component = analyzeComponentHmr({
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       boundary: "route-component",
       sourceText: "const count = yield* RefSubject.make(0);",
     });
 
     const plan = planCompileCapabilities({
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       boundary: "route-component",
       templates: [template("counter")],
       component,
@@ -103,7 +103,7 @@ describe("planCompileCapabilities", () => {
       eligible: false,
       services: [],
       dependencies: [],
-      rejected: [{ moduleId: "/src/routes/counter.tsx", reason: "explicit-opt-out" }],
+      rejected: [{ moduleId: "/src/routes/counter.ts", reason: "explicit-opt-out" }],
     });
   });
 });

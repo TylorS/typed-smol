@@ -4,7 +4,7 @@ import { analyzeDependencyHmr } from "./dependencies.js";
 describe("analyzeDependencyHmr", () => {
   it("marks imported dependencies with stable service identities as participating", () => {
     const result = analyzeDependencyHmr({
-      routeModuleId: "/src/routes/counter.tsx",
+      routeModuleId: "/src/routes/counter.ts",
       dependencies: [
         {
           moduleId: "/src/routes/counter/state.ts",
@@ -30,7 +30,7 @@ describe("analyzeDependencyHmr", () => {
 
   it("marks route companion dependencies as participating", () => {
     const result = analyzeDependencyHmr({
-      routeModuleId: "/src/routes/counter.tsx",
+      routeModuleId: "/src/routes/counter.ts",
       dependencies: [
         {
           moduleId: "/src/routes/counter.state.ts",
@@ -47,7 +47,7 @@ describe("analyzeDependencyHmr", () => {
 
   it("rejects anonymous dependency state", () => {
     const result = analyzeDependencyHmr({
-      routeModuleId: "/src/routes/counter.tsx",
+      routeModuleId: "/src/routes/counter.ts",
       dependencies: [
         {
           moduleId: "/src/routes/counter/anonymous.ts",
@@ -68,7 +68,7 @@ describe("analyzeDependencyHmr", () => {
 
   it("honors explicit opt-out", () => {
     const result = analyzeDependencyHmr({
-      routeModuleId: "/src/routes/counter.tsx",
+      routeModuleId: "/src/routes/counter.ts",
       dependencies: [
         {
           moduleId: "/src/routes/counter/state.ts",
@@ -92,7 +92,7 @@ describe("analyzeDependencyHmr", () => {
 
   it("allows explicit opt-in when inference misses a dependency", () => {
     const result = analyzeDependencyHmr({
-      routeModuleId: "/src/routes/counter.tsx",
+      routeModuleId: "/src/routes/counter.ts",
       dependencies: [
         {
           moduleId: "/src/routes/counter/external-store.ts",

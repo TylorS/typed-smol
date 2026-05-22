@@ -21,7 +21,7 @@ describe("template fallback", () => {
   it("keeps unsupported template sources on the runtime RenderTemplate path", async () => {
     const template = strings("<article>", "</article>");
     const fallback = createTemplateFallback<readonly [string]>({
-      moduleId: "/src/routes/home.tsx",
+      moduleId: "/src/routes/home.ts",
       reason: "unsupported expression source: computed tag binding",
       template,
     });
@@ -34,7 +34,7 @@ describe("template fallback", () => {
 
   it("records a structured diagnostic with module id and reason", () => {
     const fallback = createTemplateFallback({
-      moduleId: "/src/routes/admin.tsx",
+      moduleId: "/src/routes/admin.ts",
       reason: "unsupported expression source: dynamic spread",
       template: strings("<section></section>"),
     });
@@ -44,17 +44,17 @@ describe("template fallback", () => {
         kind: "template-compiler-diagnostic",
         code: "typed-template-fallback",
         severity: "warning",
-        moduleId: "/src/routes/admin.tsx",
+        moduleId: "/src/routes/admin.ts",
         reason: "unsupported expression source: dynamic spread",
         message:
-          "Fell back to runtime RenderTemplate for /src/routes/admin.tsx: unsupported expression source: dynamic spread",
+          "Fell back to runtime RenderTemplate for /src/routes/admin.ts: unsupported expression source: dynamic spread",
       },
     ]);
   });
 
   it("preserves the runtime type handoff for interpolated renderable values", () => {
     const fallback = createTemplateFallback<readonly [string, Effect.Effect<number>]>({
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       reason: "explicit opt-out",
       template: strings("<p>", ": ", "</p>"),
     });

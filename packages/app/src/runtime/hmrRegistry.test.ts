@@ -8,7 +8,7 @@ import {
 } from "./hmrRegistry.js";
 
 const descriptor = (overrides: Partial<HmrStateDescriptor> = {}): HmrStateDescriptor => ({
-  moduleId: "/src/routes/counter.tsx",
+  moduleId: "/src/routes/counter.ts",
   serviceId: "@app/routes/counter/Count",
   shapeFingerprint: "count:number",
   dependencyFingerprints: ["dep:a"],
@@ -73,13 +73,13 @@ describe("hmrRegistry", () => {
       onDispose: () => disposed.push("counter"),
     });
     getOrCreateHmrState(
-      descriptor({ moduleId: "/src/routes/other.tsx", serviceId: "@app/routes/other/Value" }),
+      descriptor({ moduleId: "/src/routes/other.ts", serviceId: "@app/routes/other/Value" }),
       () => ({ count: 2 }),
       { globalObject, onDispose: () => disposed.push("other") },
     );
 
     disposeHmrState(descriptor(), { globalObject });
-    pruneHmrState((entry) => entry.moduleId === "/src/routes/other.tsx", { globalObject });
+    pruneHmrState((entry) => entry.moduleId === "/src/routes/other.ts", { globalObject });
 
     expect(disposed).toEqual(["counter", "other"]);
     expect(

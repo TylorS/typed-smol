@@ -185,7 +185,7 @@ function resolveComposedConcernsForLeaf(
 }
 
 /**
- * Sibling companion path for a leaf file (e.g. "nested/Y.tsx" + "layout" → "nested/Y.layout.ts").
+ * Sibling companion path for a leaf file (e.g. "nested/Y.ts" + "layout" → "nested/Y.layout.ts").
  */
 export function siblingCompanionPath(leafFilePath: string, kind: ConcernKind): string {
   const dir = dirname(leafFilePath);

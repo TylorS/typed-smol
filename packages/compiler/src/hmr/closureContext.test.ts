@@ -5,7 +5,7 @@ describe("planClosureContext", () => {
   it("represents eligible closure captures as generated context fields", () => {
     const result = planClosureContext({
       closureName: "increment",
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       captures: [
         { name: "count", type: "RefSubject.RefSubject<number>" },
         { name: "step", type: "number" },
@@ -28,7 +28,7 @@ describe("planClosureContext", () => {
   it("preserves Fx.fn error and service type metadata", () => {
     const result = planClosureContext({
       closureName: "load",
-      moduleId: "/src/routes/profile.tsx",
+      moduleId: "/src/routes/profile.ts",
       captures: [{ name: "client", type: "ApiClient" }],
       typeParameters: {
         error: "ApiError",
@@ -45,7 +45,7 @@ describe("planClosureContext", () => {
   it("rejects unsupported captures with diagnostics", () => {
     const result = planClosureContext({
       closureName: "unstable",
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       captures: [{ mutable: true, name: "local", type: "unknown" }],
     });
 
@@ -53,8 +53,8 @@ describe("planClosureContext", () => {
     expect(result.diagnostics).toEqual([
       {
         code: "unsupported-closure-capture",
-        message: "Cannot rewrite closure unstable in /src/routes/counter.tsx: local is mutable",
-        moduleId: "/src/routes/counter.tsx",
+        message: "Cannot rewrite closure unstable in /src/routes/counter.ts: local is mutable",
+        moduleId: "/src/routes/counter.ts",
       },
     ]);
   });

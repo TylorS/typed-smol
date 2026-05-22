@@ -22,7 +22,7 @@ describe("Vite HMR fixture", () => {
     const boundary = planCounterBoundary({ optOutDependency: true });
 
     expect(boundary.services.map((service) => service.serviceId)).toEqual([
-      "/src/routes/counter.tsx#count",
+      "/src/routes/counter.ts#count",
     ]);
     expect(boundary.rejected).toEqual([
       { moduleId: "/src/routes/counter/state.ts", reason: "explicit-opt-out" },
@@ -69,7 +69,7 @@ function planCounterBoundary(options: CounterBoundaryOptions) {
   const dependencyServiceId = options.dependencyServiceId ?? "@app/routes/counter/Count";
   const route = analyzeComponentHmr({
     boundary: "route-component",
-    moduleId: "/src/routes/counter.tsx",
+    moduleId: "/src/routes/counter.ts",
     sourceText: `
       export const Counter = Fx.gen(function*() {
         const count = yield* RefSubject.make(0);
@@ -78,7 +78,7 @@ function planCounterBoundary(options: CounterBoundaryOptions) {
     `,
   });
   const dependencies = analyzeDependencyHmr({
-    routeModuleId: "/src/routes/counter.tsx",
+    routeModuleId: "/src/routes/counter.ts",
     dependencies: [
       {
         moduleId: "/src/routes/counter/state.ts",

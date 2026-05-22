@@ -62,7 +62,7 @@ function getExampleHmrState(
 function routeHmrPlan(routeText: string) {
   const route = analyzeComponentHmr({
     boundary: "route-component",
-    moduleId: "/examples/runtime-template-compiler/route.tsx",
+    moduleId: "/examples/runtime-template-compiler/route.ts",
     sourceText: `
       const Count = RefSubject.Service<number>()("${Count.id}");
       export const Counter = Fx.gen(function*() {
@@ -79,7 +79,7 @@ function routeHmrPlan(routeText: string) {
         sourceText: `export const Count = RefSubject.Service<number>()("${Count.id}");`,
       },
     ],
-    routeModuleId: "/examples/runtime-template-compiler/route.tsx",
+    routeModuleId: "/examples/runtime-template-compiler/route.ts",
   });
 
   return planViteHmrBoundary({ dependencies, route });

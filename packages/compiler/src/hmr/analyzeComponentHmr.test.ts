@@ -5,7 +5,7 @@ describe("analyzeComponentHmr", () => {
   it("finds inline RefSubject.make calls in route components", () => {
     const result = analyzeComponentHmr({
       boundary: "route-component",
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       sourceText: `
         import { RefSubject } from "@typed/fx";
         import { html } from "@typed/template";
@@ -20,12 +20,12 @@ describe("analyzeComponentHmr", () => {
     expect(result).toEqual({
       boundary: "route-component",
       eligible: true,
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       services: [
         {
           kind: "inline-refsubject",
           localName: "count",
-          serviceId: "/src/routes/counter.tsx#count",
+          serviceId: "/src/routes/counter.ts#count",
           initializerSource: "0",
         },
       ],
@@ -53,7 +53,7 @@ describe("analyzeComponentHmr", () => {
   it("recognizes existing RefSubject.Service identities", () => {
     const result = analyzeComponentHmr({
       boundary: "route-component",
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       sourceText: `
         import { RefSubject } from "@typed/fx";
         const Count = RefSubject.Service<number>()("@app/routes/counter/Count");

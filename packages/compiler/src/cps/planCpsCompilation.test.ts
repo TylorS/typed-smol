@@ -34,7 +34,7 @@ describe("planCpsCompilation", () => {
 
   it("lowers HMR state services after template continuations", () => {
     const plan = planCpsCompilation({
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       boundary: "route-component",
       templates: [
         { templateHash: "counter", targets: ["dom", "server"], strategy: "optimized-html" },
@@ -52,8 +52,8 @@ describe("planCpsCompilation", () => {
         rejected: [],
         services: [
           {
-            moduleId: "/src/routes/counter.tsx",
-            serviceId: "/src/routes/counter.tsx#count",
+            moduleId: "/src/routes/counter.ts",
+            serviceId: "/src/routes/counter.ts#count",
             shapeFingerprint: "inline-refsubject:count:0",
             dependencyFingerprints: ["/src/routes/counter/state.ts:@app/Count"],
             compatibilityFingerprint: "route",
@@ -79,10 +79,10 @@ describe("planCpsCompilation", () => {
     ]);
     expect(plan.continuations.slice(2)).toEqual([
       {
-        id: "/src/routes/counter.tsx#hmr:/src/routes/counter.tsx#count",
+        id: "/src/routes/counter.ts#hmr:/src/routes/counter.ts#count",
         kind: "hmr-state",
-        moduleId: "/src/routes/counter.tsx",
-        serviceId: "/src/routes/counter.tsx#count",
+        moduleId: "/src/routes/counter.ts",
+        serviceId: "/src/routes/counter.ts#count",
         shapeFingerprint: "inline-refsubject:count:0",
         dependencyFingerprints: ["/src/routes/counter/state.ts:@app/Count"],
         compatibilityFingerprint: "route",
@@ -103,14 +103,14 @@ describe("planCpsCompilation", () => {
 
   it("keeps HMR diagnostics without creating state continuations", () => {
     const plan = planCpsCompilation({
-      moduleId: "/src/routes/counter.tsx",
+      moduleId: "/src/routes/counter.ts",
       boundary: "route-component",
       templates: [],
       hmr: {
         eligible: false,
         services: [],
         dependencies: [],
-        rejected: [{ moduleId: "/src/routes/counter.tsx", reason: "explicit-opt-out" }],
+        rejected: [{ moduleId: "/src/routes/counter.ts", reason: "explicit-opt-out" }],
       },
     });
 
@@ -118,7 +118,7 @@ describe("planCpsCompilation", () => {
     expect(plan.diagnostics).toEqual([
       {
         code: "hmr-rejected",
-        moduleId: "/src/routes/counter.tsx",
+        moduleId: "/src/routes/counter.ts",
         reason: "explicit-opt-out",
       },
     ]);

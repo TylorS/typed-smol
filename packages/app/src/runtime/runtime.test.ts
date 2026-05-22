@@ -49,7 +49,7 @@ describe("@typed/app runtime templates", () => {
     const root = createRoot();
     const hydrateRoot = createRoot();
     const fallback = createTemplateFallback<readonly [string]>({
-      moduleId: "/src/routes/fallback.tsx",
+      moduleId: "/src/routes/fallback.ts",
       reason: "explicit opt-out",
       template: strings("<article>", "</article>"),
     });
@@ -68,7 +68,7 @@ describe("@typed/app runtime templates", () => {
   it("preserves Effect value types across runtime functions", () => {
     const root = createRoot();
     const fallback = createTemplateFallback<readonly [Effect.Effect<number>]>({
-      moduleId: "/src/routes/types.tsx",
+      moduleId: "/src/routes/types.ts",
       reason: "type test",
       template: strings("<span>", "</span>"),
     });

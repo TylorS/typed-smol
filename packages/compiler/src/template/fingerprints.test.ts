@@ -7,21 +7,21 @@ describe("createTemplateOutputFingerprints", () => {
     const first = createTemplateOutputFingerprints({
       compilerVersion: "1.0.0-beta.4",
       options: { minify: true, preserveWhitespace: false },
-      sourceModuleId: "/src/routes/counter.tsx",
+      sourceModuleId: "/src/routes/counter.ts",
       target: "dom",
       templateHash: "template:counter",
     });
     const next = createTemplateOutputFingerprints({
       compilerVersion: "1.0.0-beta.4",
       options: { preserveWhitespace: false, minify: true },
-      sourceModuleId: "/src/routes/counter.tsx",
+      sourceModuleId: "/src/routes/counter.ts",
       target: "dom",
       templateHash: "template:counter",
     });
 
     expect(next).toEqual(first);
     expect(first.sourceInputFingerprints).toEqual([
-      expect.objectContaining({ kind: "source", name: "/src/routes/counter.tsx" }),
+      expect.objectContaining({ kind: "source", name: "/src/routes/counter.ts" }),
     ]);
     expect(first.pluginFingerprints).toEqual([
       expect.objectContaining({ kind: "config", name: "@typed/compiler:template-output" }),
@@ -62,8 +62,8 @@ describe("createTemplateOutputFingerprints", () => {
     });
 
     const reasons = getNonReusableFingerprintReasons([
-      ...fingerprints.pluginFingerprints,
-      ...fingerprints.compilerFingerprints,
+      ...(fingerprints.pluginFingerprints ?? []),
+      ...(fingerprints.compilerFingerprints ?? []),
     ]);
 
     expect(reasons).toEqual([
@@ -77,7 +77,7 @@ function baseInput() {
   return {
     compilerVersion: "1.0.0-beta.4",
     options: { minify: true },
-    sourceModuleId: "/src/routes/counter.tsx",
+    sourceModuleId: "/src/routes/counter.ts",
     target: "dom" as const,
     templateHash: "template:counter",
   };

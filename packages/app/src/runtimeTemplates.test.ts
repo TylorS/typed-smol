@@ -30,7 +30,7 @@ describe("runtime template functions", () => {
     const template = strings("<p>", "</p>");
     const compiled = emitServerTemplate(analyzeTemplate(template));
     const fallback = createTemplateFallback<readonly [string]>({
-      moduleId: "/src/routes/fallback.tsx",
+      moduleId: "/src/routes/fallback.ts",
       reason: "test fallback",
       template,
     });

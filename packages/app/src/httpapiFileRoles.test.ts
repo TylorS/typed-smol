@@ -18,10 +18,12 @@ describe("httpapiFileRoles", () => {
   });
 
   describe("isHttpApiScriptExtension", () => {
-    it("accepts .ts, .tsx, .js, .jsx, .mts, .cts, .mjs, .cjs", () => {
+    it("accepts TypeScript and JavaScript source extensions", () => {
       expect(isHttpApiScriptExtension(".ts")).toBe(true);
       expect(isHttpApiScriptExtension(".TS")).toBe(true);
+      expect(isHttpApiScriptExtension(".tsx")).toBe(true);
       expect(isHttpApiScriptExtension(".js")).toBe(true);
+      expect(isHttpApiScriptExtension(".jsx")).toBe(true);
       expect(isHttpApiScriptExtension(".mts")).toBe(true);
       expect(isHttpApiScriptExtension(".cjs")).toBe(true);
     });
