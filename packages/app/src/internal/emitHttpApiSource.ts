@@ -844,7 +844,9 @@ function emitHttpApiClientSource(input: {
       const method = (literals?.method ?? "GET").toUpperCase();
       const name = literals?.name ?? endpoint.stem;
       const factory = METHOD_FACTORIES[method] ?? "get";
-      const routeExpr = `Route.Parse(${JSON.stringify(routePath)})`;
+      const routeExpr =
+        imports.expressionFor(endpoint.path, "route", input.exportExpressionsByPath) ??
+        `Route.Parse(${JSON.stringify(routePath)})`;
       const optsParts = [
         `params: ${routeExpr}.pathSchema`,
         `query: ${routeExpr}.querySchema`,
@@ -871,7 +873,7 @@ function emitHttpApiClientSource(input: {
       }
 
       return renderAnnotatedEndpointExpression(
-        `HttpApiEndpoint.${factory}(${JSON.stringify(name)}, ${JSON.stringify(routePath)}, { ${optsParts.join(", ")} })`,
+        `HttpApiEndpoint.${factory}(${JSON.stringify(name)}, ${routeExpr}.path, { ${optsParts.join(", ")} })`,
         input.openapiPlan?.endpointAnnotationsByPath.get(endpoint.path),
       );
     });

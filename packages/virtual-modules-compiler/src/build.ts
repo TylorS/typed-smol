@@ -9,10 +9,10 @@ import type {
 } from "@typed/virtual-modules";
 import {
   attachCompilerHostAdapter,
-  createTypeInfoApiSessionFactory,
   ensureTypeTargetBootstrapFile,
 } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
+import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 
 function inferProjectRoot(
   sys: ts.System,
@@ -101,10 +101,9 @@ export function runBuild(params: BuildParams): number {
         ? [...effectiveRootNames]
         : [...effectiveRootNames, bootstrapPath];
     }
-    const preliminaryProgram = createProgramForSession(effectiveRootNames, opts ?? {});
-    const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
+    const createTypeInfoApiSession = createLazyTypeInfoApiSession({
       ts,
-      program: preliminaryProgram,
+      createProgram: () => createProgramForSession(effectiveRootNames, opts ?? {}),
       ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
     });
     const artifactStoreFactory = createVmcArtifactStoreFactory({

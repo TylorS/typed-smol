@@ -1,6 +1,6 @@
 import * as Route from "@typed/router";
 
-const PageQuery = Route.QueryParams(Route.OptionalInt("page"));
+const PageQuery = Route.QueryParams(Route.Int("page").optional());
 
 export const HomeRoute = Route.Join(Route.Slash, PageQuery);
 export const ArticleRoute = Route.Parse("article/:slug");

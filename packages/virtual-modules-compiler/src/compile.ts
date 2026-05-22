@@ -7,10 +7,10 @@ import type {
 } from "@typed/virtual-modules";
 import {
   attachCompilerHostAdapter,
-  createTypeInfoApiSessionFactory,
   ensureTypeTargetBootstrapFile,
 } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
+import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 
 export interface CompileParams {
   readonly ts: typeof import("typescript");
@@ -94,17 +94,16 @@ export function compile(params: CompileParams): number {
 
   const host = ts.createCompilerHost(options);
 
-  // Preliminary program for TypeInfo API (plugins that use api.file()/api.directory() need it).
-  const preliminaryProgram = ts.createProgram({
-    rootNames: effectiveRootNames,
-    options,
-    host,
-    projectReferences,
-    configFileParsingDiagnostics: allConfigErrors,
-  });
-  const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
+  const createTypeInfoApiSession = createLazyTypeInfoApiSession({
     ts,
-    program: preliminaryProgram,
+    createProgram: () =>
+      ts.createProgram({
+        rootNames: effectiveRootNames,
+        options,
+        host: ts.createCompilerHost(options),
+        projectReferences,
+        configFileParsingDiagnostics: allConfigErrors,
+      }),
     ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
   });
   const artifactStoreFactory = createVmcArtifactStoreFactory({

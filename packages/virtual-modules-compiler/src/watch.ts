@@ -11,10 +11,10 @@ import type {
 } from "@typed/virtual-modules";
 import {
   attachCompilerHostAdapter,
-  createTypeInfoApiSessionFactory,
   ensureTypeTargetBootstrapFile,
 } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
+import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 
 export interface WatchParams {
   readonly ts: typeof import("typescript");
@@ -156,16 +156,15 @@ export function runWatch(params: WatchParams): void {
     syncInputWatchers();
     const currentRootNames = rootNames ?? effectiveFileNames;
     const currentOptions = opts ?? options;
-    const preliminaryHost = ts.createCompilerHost(currentOptions);
-    const preliminaryProgram = ts.createProgram({
-      rootNames: currentRootNames,
-      options: currentOptions,
-      host: preliminaryHost,
-      projectReferences: refs ?? projectReferences,
-    });
-    const createTypeInfoApiSession = createTypeInfoApiSessionFactory({
+    const createTypeInfoApiSession = createLazyTypeInfoApiSession({
       ts,
-      program: preliminaryProgram,
+      createProgram: () =>
+        ts.createProgram({
+          rootNames: currentRootNames,
+          options: currentOptions,
+          host: ts.createCompilerHost(currentOptions),
+          projectReferences: refs ?? projectReferences,
+        }),
       ...(currentTypeTargetSpecs?.length ? { typeTargetSpecs: currentTypeTargetSpecs } : {}),
     });
     currentTypeInfoFactory = createTypeInfoApiSession;

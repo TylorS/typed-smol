@@ -11,11 +11,11 @@ import type { RawHandler } from "./$api-types";
 export const route = Route.Join(
   Route.Parse("/articles"),
   Route.QueryParams(
-    Route.OptionalParam("author"),
-    Route.OptionalParam("favorited"),
-    Route.OptionalParamWithSchema("limit", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))),
-    Route.OptionalParamWithSchema("offset", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))),
-    Route.OptionalParam("tag"),
+    Route.Param("author").optional(),
+    Route.Param("favorited").optional(),
+    Route.ParamWithSchema("limit", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
+    Route.ParamWithSchema("offset", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
+    Route.Param("tag").optional(),
   ),
 );
 export const method = HttpMethod.Get;

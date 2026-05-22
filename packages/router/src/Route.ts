@@ -21,6 +21,8 @@ export interface Route<
   readonly paramsSchema: S;
   readonly pathSchema: PathS;
   readonly querySchema: QueryS;
+
+  optional(): Optional<this>;
 }
 
 export declare namespace Route {
@@ -47,6 +49,23 @@ export type Type<T> = Route.Type<T>;
 export type PathType<T extends Any> = Route.PathType<T>;
 export type QueryType<T extends Any> = Route.QueryType<T>;
 type OptionalParamRecord<P extends string, A> = { readonly [K in P]?: A };
+type Optionalize<A> = Simplify<{ readonly [K in keyof A]?: A[K] }>;
+type OptionalSchema<S extends Schema.Codec<any, any, any, any>> = S extends Schema.Codec<
+  infer A,
+  infer I,
+  infer R,
+  infer R2
+>
+  ? Schema.Codec<Optionalize<A>, Optionalize<I>, R, R2>
+  : never;
+export type Optional<R extends Route<any, any, any, any>> = R extends Route<
+  `/:${infer P}`,
+  infer S,
+  infer PathS,
+  infer QueryS
+>
+  ? Route<`/:${P}?`, OptionalSchema<S>, OptionalSchema<PathS>, QueryS>
+  : never;
 
 export function make<
   const P extends string,
@@ -73,6 +92,9 @@ export function make<
     },
     get querySchema() {
       return querySchema();
+    },
+    optional() {
+      return Optional(this as Route.Any) as Optional<Route<P, S, PathS, QueryS>>;
     },
     pipe() {
       return pipeArguments(this, arguments);
@@ -267,21 +289,7 @@ export const OptionalParamWithSchema = <
 >(
   paramName: P,
   schema: S,
-): Route<
-  `/:${P}?`,
-  Schema.Codec<
-    { readonly [K in P]?: S["Type"] },
-    { readonly [K in P]?: S["Encoded"] },
-    S["DecodingServices"],
-    S["EncodingServices"]
-  >,
-  Schema.Codec<
-    { readonly [K in P]?: S["Type"] },
-    { readonly [K in P]?: S["Encoded"] },
-    S["DecodingServices"],
-    S["EncodingServices"]
-  >
-> => {
+): Optional<ReturnType<typeof ParamWithSchema<P, S>>> => {
   const decode = Parser.decodeEffect(schema);
   const encode = Parser.encodeEffect(schema);
   const emptyDecoded: OptionalParamRecord<P, S["Type"]> = {};
@@ -311,8 +319,55 @@ export const OptionalParamWithSchema = <
             : Effect.map(encode(output[paramName]), (encoded) => singleton(paramName, encoded)),
       }),
     ),
-  );
+  ) as Optional<ReturnType<typeof ParamWithSchema<P, S>>>;
 };
+
+export const Optional = <R extends Route<any, any, any, any>>(route: R): Optional<R> => {
+  const paramName = getSingleParameterName(route.ast);
+  const decode = Parser.decodeEffect(route.paramsSchema);
+  const encode = Parser.encodeEffect(route.paramsSchema);
+
+  return make(
+    AST.transform(
+      markParametersOptional(route.ast),
+      anyRecordSchema,
+      Transformation.transformOrFail({
+        decode: (input: Record<string, unknown>) =>
+          input[paramName] === undefined ? Effect.succeed({}) : decode(input),
+        encode: (output: Record<string, unknown>) =>
+          output[paramName] === undefined ? Effect.succeed({}) : encode(output),
+      }),
+    ),
+  ) as Optional<R>;
+};
+
+function getSingleParameterName(ast: AST.RouteAst): string {
+  const params = getAllPathAst(ast).filter((part): part is AST.PathAst.Parameter =>
+    part.type === "parameter",
+  );
+  if (params.length !== 1) {
+    throw new Error("Route.optional() requires a single parameter route");
+  }
+  return params[0].name;
+}
+
+function markParametersOptional(ast: AST.RouteAst): AST.RouteAst {
+  switch (ast.type) {
+    case "path":
+      return AST.path(markPathParameterOptional(ast.path));
+    case "transform":
+      return markParametersOptional(ast.from);
+    case "query":
+      return AST.query(markParametersOptional(ast.route));
+    case "join":
+      return AST.join(ast.parts.map(markParametersOptional));
+  }
+}
+
+function markPathParameterOptional(path: AST.PathAst): AST.PathAst {
+  if (path.type !== "parameter") return path;
+  return AST.parameter(path.name, true, path.regex);
+}
 
 function decodedSchema<S extends Schema.Top>(schema: S): Schema.Top {
   return "to" in schema && Schema.isSchema(schema.to) ? schema.to : schema;
@@ -337,7 +392,11 @@ export const OptionalNumber = <const P extends string>(
   Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
   Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
 > =>
-  OptionalParamWithSchema(paramName, Schema.NumberFromString);
+  Number(paramName).optional() as Route<
+    `/:${P}?`,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+  >;
 
 export const Int = <const P extends string>(
   paramName: P,
@@ -355,7 +414,11 @@ export const OptionalInt = <const P extends string>(
   Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
   Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
 > =>
-  OptionalParamWithSchema(paramName, Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)));
+  Int(paramName).optional() as Route<
+    `/:${P}?`,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+  >;
 
 type QueryParamRoute = Route<`/:${string}`, Schema.Codec<any, any, any, any>, any, any>;
 

@@ -885,6 +885,49 @@ Execution refinements:
 - [x] Step 4: Update RealWorld, starter, sample, VS Code preview, and focused tests to the new IDs.
 - [x] Step 5: Run focused package tests, RealWorld tests, build checks, and scoped `git diff --check`.
 
+### Task 22: RealWorld Startup Performance Loop
+
+**Files:**
+- Modify: `packages/virtual-modules-compiler/src/compile.ts`
+- Modify: `packages/virtual-modules-compiler/src/build.ts`
+- Modify: `packages/virtual-modules-compiler/src/watch.ts`
+- Add: `packages/virtual-modules-compiler/src/typeInfoSession.ts`
+- Add: `packages/virtual-modules-compiler/src/typeInfoSession.test.ts`
+- Modify: `packages/app/src/internal/emitHttpApiSource.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: `examples/realworld/src/Api.ts`
+- Modify: `examples/realworld/src/tests/package.test.ts`
+
+**Progress notes:**
+- 2026-05-21: Baseline `pnpm --filter typed-realworld typecheck` was `4.76s` real, `7.96s` user, and about `1.11GB` max RSS. CPU profiling showed eager preliminary TypeInfo program creation in `vmc` plus normal TypeScript checking.
+- 2026-05-21: `vmc` now creates TypeInfo sessions lazily, so cache-hit startup does not pay for a preliminary TypeScript program when no plugin needs TypeInfo during rebuild.
+- 2026-05-21: RealWorld `src/Api.ts` now imports the generated API through `typed:api?dir=./api&mode=client`, avoiding a server-wiring API artifact for the browser client helper. Client-mode emission now preserves endpoint `route` expressions so decoded path schemas like `Route.Int("commentId")` remain type-safe.
+- 2026-05-21: Corrected warm-cache `typecheck` runs after the optimization passed at `2.14s`, `2.09s`, and `2.09s` real time with about `0.71GB` max RSS.
+
+- [x] Step 1: Measure RealWorld `vmc --noEmit` startup and capture a CPU profile before editing.
+- [x] Step 2: Add a failing compiler test proving TypeInfo program creation is deferred until a TypeInfo session is requested.
+- [x] Step 3: Implement lazy TypeInfo session creation across compile, build, and watch entrypoints.
+- [x] Step 4: Add a failing app generator test proving client-mode API generation preserves endpoint route schemas instead of reconstructing all paths with `Route.Parse`.
+- [x] Step 5: Update client-mode API emission and RealWorld `src/Api.ts` to use the client virtual module safely.
+- [x] Step 6: Run focused compiler/app/RealWorld gates, RealWorld build, and `git diff --check`.
+
+### Task 23: Route Optional Param Modifier
+
+**Files:**
+- Modify: `packages/router/src/Route.ts`
+- Modify: `packages/router/src/Route.test.ts`
+- Modify: `packages/app/src/ApiHandler.canonical.test.ts`
+- Modify: RealWorld route/API query param declarations
+
+**Progress notes:**
+- 2026-05-21: `Route` values now expose `.optional()` so any single schema-backed param route can become optional without separate optional constructors. This supports `Route.Int("page").optional()` and `Route.ParamWithSchema("limit", schema).optional()` for query params.
+- 2026-05-21: RealWorld no longer uses `Route.OptionalParam`, `Route.OptionalParamWithSchema`, or `Route.OptionalInt`; query optionality is expressed as a modifier on the param being made optional.
+
+- [x] Step 1: Add failing router tests for `.optional()` on typed and schema-backed query params.
+- [x] Step 2: Implement the route-level optional modifier and keep legacy optional helpers as thin aliases.
+- [x] Step 3: Update framework and RealWorld call sites to the modifier style.
+- [x] Step 4: Run router/app/RealWorld verification gates and scoped `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

@@ -527,6 +527,32 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).not.toContain("export const ApiLayer");
   });
 
+  it("emits client-only API modules with endpoint route schemas intact", () => {
+    const fixture = createApiFixture({
+      "src/domain.ts": `
+import * as Schema from "effect/Schema";
+export const Success = Schema.Struct({ ok: Schema.Boolean });
+`,
+      "src/apis/comments/delete.ts": `
+import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
+import { Success } from "../../domain.js";
+export const route = Route.Join(Route.Parse("/articles/:slug/comments"), Route.Int("commentId"));
+export const method = "DELETE";
+export const success = Success;
+export const handler = () => Effect.succeed({ ok: true });
+`,
+    });
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
+    );
+
+    expect(sourceText).toContain('Int("commentId")).pathSchema');
+    expect(sourceText).not.toContain(
+      'Route.Parse("/articles/:slug/comments/:commentId").pathSchema',
+    );
+  });
+
   it("delegates generated server wiring to TypedHttpServer", () => {
     const sourceText = getSourceText(
       buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE }),

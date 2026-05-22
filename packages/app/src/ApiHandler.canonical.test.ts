@@ -62,7 +62,7 @@ describe("ApiHandler canonical public API", () => {
   it("exposes decoded query values to raw handlers", () => {
     const route = Route.Join(
       Route.Parse("articles"),
-      Route.QueryParams(Route.OptionalInt("limit")),
+      Route.QueryParams(Route.Int("limit").optional()),
     );
 
     const handler = ApiHandlerRaw({ route, method: "GET" })(({ query }) =>

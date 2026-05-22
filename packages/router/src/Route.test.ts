@@ -183,12 +183,29 @@ describe("typed/router/Route", () => {
       Effect.gen(function* () {
         const route = Route.Join(
           Route.Parse("articles"),
-          Route.QueryParams(Route.OptionalInt("page")),
+          Route.QueryParams(Route.Int("page").optional()),
         );
         const decode = Schema.decodeEffect(route.querySchema);
 
         expect(yield* decode({})).toEqual({});
         expect(yield* decode({ page: "2" })).toEqual({ page: 2 });
+      }).pipe(Effect.scoped, Effect.runPromise));
+
+    it("makes any schema-backed query param optional", () =>
+      Effect.gen(function* () {
+        const route = Route.Join(
+          Route.Parse("articles"),
+          Route.QueryParams(
+            Route.ParamWithSchema(
+              "limit",
+              Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)),
+            ).optional(),
+          ),
+        );
+        const decode = Schema.decodeEffect(route.querySchema);
+
+        expect(yield* decode({})).toEqual({});
+        expect(yield* decode({ limit: "10" })).toEqual({ limit: 10 });
       }).pipe(Effect.scoped, Effect.runPromise));
   });
 

@@ -11,8 +11,8 @@ import type { RawHandler } from "./$api-types";
 export const route = Route.Join(
   Route.Parse("/articles/feed"),
   Route.QueryParams(
-    Route.OptionalParamWithSchema("limit", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))),
-    Route.OptionalParamWithSchema("offset", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))),
+    Route.ParamWithSchema("limit", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
+    Route.ParamWithSchema("offset", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
   ),
 );
 export const method = HttpMethod.Get;
