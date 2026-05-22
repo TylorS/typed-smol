@@ -48,7 +48,7 @@
   - PACKAGE: `pnpm --filter @typed/ui test` passed with `4` files and `24` tests.
   - BUILD: `pnpm --filter @typed/ui build` passed.
 - commit:
-  - pending
+  - `799a72e feat(ui): add refsubject state helpers`
 - deviations_or_replans:
   - Effect v4 does not expose `Context.GenericTag` at runtime; `State.tag` uses `Context.Service` to construct the provider key.
 - context_updates:

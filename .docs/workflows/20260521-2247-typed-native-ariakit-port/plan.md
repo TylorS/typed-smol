@@ -335,7 +335,7 @@ pnpm --filter @typed/ui test -- State
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/ui/src/State.ts packages/ui/src/State.test.ts
