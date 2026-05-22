@@ -1,12 +1,13 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
-import { type Renderable, html } from "@typed/template";
+import { html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = Renderable<string, any, any>;
+type AnyContent = Content;
+type RequiredString = ReactiveValue<string, any, any>;
 
 export interface State extends Composite.State {}
 
@@ -36,7 +37,7 @@ export interface RootOptions {
   readonly label?: RequiredString;
 }
 
-export function Root<const Opts extends RootOptions>(options: Opts) {
+export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   return html`<div
     id=${options.id}

@@ -3,15 +3,15 @@ import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
-import { EventHandler, type Renderable, html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
-import type { RenderableValue } from "./internal/renderable.js";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = RenderableValue<string, any, any>;
-type OptionalBoolean = RenderableValue<boolean | undefined, any, any>;
+type AnyContent = Content;
+type RequiredString = ReactiveValue<string, any, any>;
+type OptionalBoolean = ReactiveValue<boolean | undefined, any, any>;
 
 export interface State<Value extends string = string> {
   readonly value: Value | null;
@@ -84,7 +84,7 @@ export interface RootOptions<Value extends string = string> {
   readonly label?: RequiredString;
 }
 
-export function Root<const Opts extends RootOptions>(options: Opts) {
+export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (current) => current.orientation);
   const activeDescendant = RefSubject.map(options.state, (current) =>
     current.virtualFocus && current.activeId ? current.activeId : undefined,
@@ -104,12 +104,12 @@ export function Root<const Opts extends RootOptions>(options: Opts) {
 export interface OptionOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly id: RequiredString;
-  readonly value: RenderableValue<Value, any, any>;
+  readonly value: ReactiveValue<Value, any, any>;
   readonly content: AnyContent;
   readonly disabled?: OptionalBoolean;
 }
 
-export function Option<const Opts extends OptionOptions>(options: Opts) {
+export function Option<const Opts extends OptionOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
     const id = yield* RefSubject.make(options.id);
     const value = yield* RefSubject.make(options.value);

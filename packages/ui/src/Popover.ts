@@ -2,10 +2,11 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, type Renderable, html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import type { Component, Content } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
+type AnyContent = Content;
 
 export interface State {
   readonly id: string;
@@ -33,7 +34,7 @@ export interface TriggerOptions {
   readonly content: AnyContent;
 }
 
-export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
+export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
 
@@ -53,7 +54,7 @@ export interface ContentOptions {
   readonly content: AnyContent;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts) {
+export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);

@@ -2,13 +2,13 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
-import { EventHandler, type Renderable, html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
-import type { RenderableValue } from "./internal/renderable.js";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = RenderableValue<string, any, any>;
+type AnyContent = Content;
+type RequiredString = ReactiveValue<string, any, any>;
 
 export interface State<Value extends string = string> {
   readonly value: Value;
@@ -84,7 +84,7 @@ export interface RootOptions {
   readonly label?: RequiredString;
 }
 
-export function Root<const Opts extends RootOptions>(options: Opts) {
+export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   return html`<div
     id=${options.id}
@@ -99,13 +99,13 @@ export function Root<const Opts extends RootOptions>(options: Opts) {
 export interface ItemOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly id: RequiredString;
-  readonly value: RenderableValue<Value, any, any>;
+  readonly value: ReactiveValue<Value, any, any>;
   readonly content: AnyContent;
 }
 
 export function Item<const Value extends string, const Opts extends ItemOptions<Value>>(
   options: Opts,
-) {
+): Component<Opts> {
   return gen(function* () {
     const id = yield* RefSubject.make(options.id);
     const value = yield* RefSubject.make(options.value);

@@ -10,6 +10,7 @@ import * as Listbox from "./Listbox.js";
 import * as Menu from "./Menu.js";
 import * as Select from "./Select.js";
 import * as RadioGroup from "./RadioGroup.js";
+import type * as Reactive from "./Reactive.js";
 import * as Tabs from "./Tabs.js";
 import * as Toolbar from "./Toolbar.js";
 
@@ -138,6 +139,22 @@ describe("typed/ui component option inference", () => {
     expectTypeOf<Fx.Services<typeof tabsTab>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof tabsPanel>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof toolbarRoot>>().toExtend<OptionService | RenderTemplate>();
+  });
+
+  it("exposes ref-first component source and return types", () => {
+    const select = {} as RefSubject.RefSubject<Select.State<string>>;
+    const ref = {} as RefSubject.RefSubject<string, OptionError, OptionService>;
+    const options = {
+      state: select,
+      id: ref,
+      value: ref,
+      content: ref,
+    };
+
+    const option = Select.Option(options);
+
+    expectTypeOf<typeof ref>().toExtend<Reactive.Value<string, OptionError, OptionService>>();
+    expectTypeOf<typeof option>().toExtend<Reactive.Component<typeof options>>();
   });
 });
 

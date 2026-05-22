@@ -2,11 +2,12 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, type Renderable, html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
-type OptionalString = Renderable<string | undefined, any, any>;
+type AnyContent = Content;
+type OptionalString = ReactiveValue<string | undefined, any, any>;
 
 export interface State {
   readonly open: boolean;
@@ -36,7 +37,7 @@ export interface ButtonOptions {
   readonly content: AnyContent;
 }
 
-export function Button<const Opts extends ButtonOptions>(options: Opts) {
+export function Button<const Opts extends ButtonOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
   const onClick = EventHandler.make(() => toggle(options.state));
 
@@ -57,7 +58,7 @@ export interface ContentOptions {
   readonly content: AnyContent;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts) {
+export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
   const hidden = RefSubject.map(options.state, (current) => !current.open);
 

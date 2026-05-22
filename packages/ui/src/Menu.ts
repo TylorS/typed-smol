@@ -3,15 +3,15 @@ import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
-import { EventHandler, type Renderable, html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
-import type { RenderableValue } from "./internal/renderable.js";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = RenderableValue<string, any, any>;
-type OptionalBoolean = RenderableValue<boolean | undefined, any, any>;
+type AnyContent = Content;
+type RequiredString = ReactiveValue<string, any, any>;
+type OptionalBoolean = ReactiveValue<boolean | undefined, any, any>;
 
 export type Mode = "auto" | "hint" | "manual";
 
@@ -93,7 +93,7 @@ export interface TriggerOptions {
   readonly content: AnyContent;
 }
 
-export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
+export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
 
@@ -115,7 +115,7 @@ export interface ContentOptions {
   readonly label?: RequiredString;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts) {
+export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
@@ -148,12 +148,13 @@ export interface ItemOptions {
   readonly disabled?: OptionalBoolean;
 }
 
-export function Item<const Opts extends ItemOptions>(options: Opts) {
+export function Item<const Opts extends ItemOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
     const id = yield* RefSubject.make(options.id);
     const disabledValue = yield* RefSubject.make(options.disabled ?? false);
-    const active = isActive(options.state, id);
     const disabled = isDisabled(disabledValue);
+    const data = dataEncoded(options.state, id, disabled);
+
     const props = {
       id,
       role: "menuitem",
@@ -165,8 +166,8 @@ export function Item<const Opts extends ItemOptions>(options: Opts) {
           return state.activeId === itemId && !itemDisabled ? 0 : -1;
         }),
       ),
-      "data-active": dataActive(options.state, id, disabled),
-      "data-disabled": boolString(disabled),
+      "data-active": RefSubject.map(data, (value) => value.active ?? "false"),
+      "data-disabled": RefSubject.map(data, (value) => value.disabled ?? "false"),
     } as const;
 
     return html`<div ...${props}>${options.content}</div>`;
@@ -175,10 +176,6 @@ export function Item<const Opts extends ItemOptions>(options: Opts) {
 
 interface ToggleEventLike extends Event {
   readonly newState?: "open" | "closed";
-}
-
-function isActive(state: RefSubject.RefSubject<State>, id: RefSubject.Computed<string, any, any>) {
-  return RefSubject.mapEffect(state, (current) => Effect.map(id, (id) => current.activeId === id));
 }
 
 function dataOpen(state: RefSubject.RefSubject<State>) {
@@ -193,7 +190,7 @@ function dataMode(state: RefSubject.RefSubject<State>) {
   );
 }
 
-function dataActive(
+function dataEncoded(
   state: RefSubject.RefSubject<State>,
   id: RefSubject.Computed<string, any, any>,
   disabled: RefSubject.Computed<boolean, any, any>,
@@ -202,11 +199,10 @@ function dataActive(
     Effect.gen(function* () {
       const itemId = yield* id;
       const itemDisabled = yield* disabled;
-      const encoded = yield* DataAttr.encode(itemData, {
+      return yield* DataAttr.encode(itemData, {
         active: current.activeId === itemId,
         disabled: itemDisabled,
       });
-      return encoded.active ?? "false";
     }),
   );
 }

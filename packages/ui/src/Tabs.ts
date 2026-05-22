@@ -2,11 +2,11 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
-import { EventHandler, type Renderable, html } from "@typed/template";
-import type { RenderableValue } from "./internal/renderable.js";
+import { EventHandler, html } from "@typed/template";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
-type RequiredString = RenderableValue<string, any, any>;
+type AnyContent = Content;
+type RequiredString = ReactiveValue<string, any, any>;
 
 export type ActivationMode = "automatic" | "manual";
 export type Orientation = "horizontal" | "vertical";
@@ -47,7 +47,7 @@ export interface ListOptions {
   readonly label?: RequiredString;
 }
 
-export function List<const Opts extends ListOptions>(options: Opts) {
+export function List<const Opts extends ListOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   return html`<div
     id=${options.id}
@@ -66,7 +66,7 @@ export interface TabOptions {
   readonly content: AnyContent;
 }
 
-export function Tab<const Opts extends TabOptions>(options: Opts) {
+export function Tab<const Opts extends TabOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
     const id = yield* RefSubject.make(options.id);
     const panelId = yield* RefSubject.make(options.panelId);
@@ -98,7 +98,7 @@ export interface PanelOptions {
   readonly content: AnyContent;
 }
 
-export function Panel<const Opts extends PanelOptions>(options: Opts) {
+export function Panel<const Opts extends PanelOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
     const id = yield* RefSubject.make(options.id);
     const tabId = yield* RefSubject.make(options.tabId);

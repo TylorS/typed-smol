@@ -2,12 +2,13 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, type Renderable, html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Renderable<unknown, any, any>;
-type OptionalString = Renderable<string | undefined, any, any>;
-type RequiredString = Renderable<string, any, any>;
+type AnyContent = Content;
+type OptionalString = ReactiveValue<string | undefined, any, any>;
+type RequiredString = ReactiveValue<string, any, any>;
 
 export interface State {
   readonly open: boolean;
@@ -39,7 +40,7 @@ export interface TriggerOptions {
   readonly content: AnyContent;
 }
 
-export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
+export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
   const onClick = EventHandler.make((event: MouseEvent) => {
     const eventTarget = event.currentTarget ?? event.target;
@@ -69,7 +70,7 @@ export interface CloseOptions {
   readonly content: AnyContent;
 }
 
-export function Close<const Opts extends CloseOptions>(options: Opts) {
+export function Close<const Opts extends CloseOptions>(options: Opts): Component<Opts> {
   const onClick = EventHandler.make(() => close(options.state));
 
   return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
@@ -82,7 +83,7 @@ export interface ContentOptions {
   readonly content: AnyContent;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts) {
+export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
   const hidden = RefSubject.map(options.state, (current) => !current.open);
 
