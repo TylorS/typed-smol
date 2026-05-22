@@ -785,7 +785,7 @@ git commit -m "feat: add native typed ui popover" -m "- render native popover an
 - Modify: `packages/ui/README.md`
 - Create or modify: `.docs/workflows/20260521-2247-typed-native-ariakit-port/memory/implementation-notes.md`
 
-- [ ] **Step 1: Export public modules**
+- [x] **Step 1: Export public modules**
 
 Update `packages/ui/src/index.ts`:
 
@@ -800,7 +800,7 @@ export * from "./HttpRouter.js";
 export * from "./Link.js";
 ```
 
-- [ ] **Step 2: Update README**
+- [x] **Step 2: Update README**
 
 Document:
 
@@ -811,7 +811,7 @@ Document:
 - Disclosure/Dialog/Popover first slice.
 - Native Popover API only, with no custom fallback.
 
-- [ ] **Step 3: Record implementation notes**
+- [x] **Step 3: Record implementation notes**
 
 Create `memory/implementation-notes.md` with decisions that survived implementation:
 
@@ -823,7 +823,7 @@ Create `memory/implementation-notes.md` with decisions that survived implementat
 - Ref startup hydration initializes backing RefSubjects from DOM state.
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -834,7 +834,7 @@ pnpm --filter @typed/ui test:browser
 
 Expected: PASS.
 
-- [ ] **Step 5: Run build**
+- [x] **Step 5: Run build**
 
 Run:
 

@@ -7,6 +7,7 @@
 - Completed T4: Disclosure button/content primitives.
 - Completed T5: Dialog content/trigger/close primitives.
 - Completed T6: native Popover primitives.
+- Completed T7: exports, README, and full `@typed/ui` verification.
 
 ## Task Records
 
@@ -174,6 +175,27 @@
 - memory_updates:
   - candidate captured in `memory/implementation-notes.md`
 
+### Task T7 - Exports, Documentation, and Full Verification
+
+- task_id: T7
+- requirement_ids:
+  - FR-1
+  - FR-2
+  - FR-19
+  - FR-20
+  - NFR-7
+- validation_evidence:
+  - PACKAGE: `pnpm --filter @typed/ui test` passed with `8` files and `36` tests.
+  - BUILD: `pnpm --filter @typed/ui build` passed.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Browser verification remains documented as a limitation because `@typed/ui` does not currently link `@vitest/browser-playwright` and `pnpm-lock.yaml` had unrelated dirty changes before this workflow slice.
+- context_updates:
+  - none
+- memory_updates:
+  - implementation notes updated.
+
 ## Deferred Work
 
-- T7 remains pending.
+- Browser-runner wiring for `@typed/ui` remains deferred until dependency linkage can be changed without mixing unrelated lockfile changes.

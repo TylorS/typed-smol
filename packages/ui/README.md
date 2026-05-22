@@ -2,11 +2,15 @@
 
 > **Beta:** This package is in beta; APIs may change.
 
-`@typed/ui` is the **web integration layer** for `@typed/router` and `@typed/template`. It bridges typed-smol's routing and template system with the browser and Effect's HTTP stack.
+`@typed/ui` is the **web integration and headless component layer** for `@typed/router` and `@typed/template`. It bridges typed-smol's routing and template system with the browser, Effect's HTTP stack, and RefSubject-backed UI primitives.
 
 ## Capabilities
 
 - **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics (href, target, keyboard, right-click).
+- **Accessible primitives** — First tranche of Ariakit-style, Typed-native primitives: `Disclosure`, `Dialog`, and native `Popover`.
+- **State substrate** — Component state is a direct `RefSubject.RefSubject<State>`. There is no separate Store abstraction.
+- **Data attributes** — `DataAttr` encodes public `.data={object}` state through Effect Schema for stable styling and inspection attributes.
+- **Startup refs** — `StartupRef` hydrates backing `RefSubject`s from server-emitted DOM `data-*` state during startup.
 - **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for server-side rendering. Requests are parsed, matched, and the corresponding Fx is rendered to HTML. `handleHttpServerError` adds global middleware for 404/400/500.
 
 ## Dependencies
@@ -22,7 +26,15 @@
 ## API overview
 
 - **Link** — `Link(options)` renders an `<a href="...">` that intercepts same-origin, same-document clicks and calls `Navigation.navigate` instead of a full page load. Options include `href`, `content`, `replace`, and standard anchor props. Requires **Navigation** and **RenderTemplate** in context (e.g. browser router).
+- **DataAttr:** `DataAttr.schema(fields)` defines a whole `.data={object}` shape from string keys to Effect Schema fields; `encode` returns string data values and `decode` reads plain objects or DOM `dataset`.
+- **State:** `State.tag(id)` creates an Effect `Context.Service` key for passing the same `RefSubject` through context when provider lookup is useful.
+- **StartupRef:** `StartupRef.fromData(ref, data)` decodes DOM `data-*` state and merges it into an existing `RefSubject`; `StartupRef.compose(...)` combines multiple startup refs for one template `ref`.
+- **Disclosure:** `Disclosure.makeState`, `Disclosure.Button`, and `Disclosure.Content` provide headless disclosure state, APG button attributes, `hidden` content, and public `data-open`.
+- **Dialog:** `Dialog.makeState`, `Dialog.Trigger`, `Dialog.Content`, and `Dialog.Close` provide modal dialog semantics, open/close state, focus return to the invoker, and public `data-open`.
+- **Popover:** `Popover.makeState`, `Popover.Trigger`, and `Popover.Content` render native `popovertarget`, `popovertargetaction`, and `popover` attributes and mirror native `toggle` events into state.
 - **SSR:** `ssrForHttp(router, matcher)` — registers route handlers on an Effect **HttpRouter** for server-side rendering; `handleHttpServerError(router)` — global middleware for HTTP server errors.
+
+`Popover` intentionally uses only the native HTML Popover API. It does not add a custom overlay, custom focus trap, JS click toggle, positioning engine, or fallback implementation.
 
 ## API reference
 
