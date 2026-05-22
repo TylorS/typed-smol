@@ -99,7 +99,7 @@ flowchart TD
 - Create: `packages/ui/src/DataAttr.ts`
 - Create: `packages/ui/src/DataAttr.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add tests covering booleans, literal unions, optional values, whole-object data schemas, and invalid decode:
 
@@ -161,7 +161,7 @@ describe("typed/ui/DataAttr", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -171,7 +171,7 @@ pnpm --filter @typed/ui test -- DataAttr
 
 Expected: FAIL because `DataAttr.ts` does not exist.
 
-- [ ] **Step 3: Implement DataAttr**
+- [x] **Step 3: Implement DataAttr**
 
 Create `DataAttr.ts` with a whole-object data schema:
 
@@ -235,7 +235,7 @@ function coerceDatasetValue(value: string | undefined): unknown {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -245,7 +245,7 @@ pnpm --filter @typed/ui test -- DataAttr
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/ui/src/DataAttr.ts packages/ui/src/DataAttr.test.ts
@@ -258,7 +258,13 @@ git commit -m "feat: add typed ui data attributes" -m "- add Schema-backed publi
 - Create: `packages/ui/src/State.ts`
 - Create: `packages/ui/src/State.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
+
+Current task detail:
+- Prove component state is a direct `RefSubject.RefSubject<State>`.
+- Prove derived reads use `RefSubject.map` instead of store selectors.
+- Prove optional provider lookup is only an Effect `Context.Service` key for that same ref.
+- Keep `State.ts` limited to provider-tag construction unless later component tests require more.
 
 Add tests proving the state model is plain `RefSubject` plus optional provider lookup:
 
@@ -296,7 +302,7 @@ describe("typed/ui/State", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -306,7 +312,7 @@ pnpm --filter @typed/ui test -- State
 
 Expected: FAIL because `State.ts` does not exist.
 
-- [ ] **Step 3: Implement State**
+- [x] **Step 3: Implement State**
 
 Implement only provider helpers for `RefSubject`; do not wrap refs in a store object:
 
@@ -315,11 +321,11 @@ import * as Context from "effect/Context";
 import { RefSubject } from "@typed/fx";
 
 export function tag<State extends Record<string, unknown>>(id: string) {
-  return Context.GenericTag<RefSubject.RefSubject<State>>(`@typed/ui/${id}`);
+  return Context.Service<RefSubject.RefSubject<State>>(`@typed/ui/${id}`);
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
