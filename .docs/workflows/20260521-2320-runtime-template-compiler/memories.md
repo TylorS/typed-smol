@@ -59,3 +59,10 @@
 - Server generated source imports `renderServer` from `@typed/app` and exposes `ServerRuntime` with `apiModules`, `routeModules`, `pageEntries`, and `renderServer` for downstream compiler/runtime handoff.
 - `pageEntries` needs an explicit readonly array annotation in generated source; otherwise the server virtual module typecheck fixture reports implicit `any[]` diagnostics when no pages are present.
 - Server runtime wiring must leave `typed:config` output directory usage intact so generated server code continues to avoid hard-coded `dist/client` paths.
+
+## Task 15: Vite HMR Fixture
+
+- `planViteHmrBoundary` converts route component descriptors plus dependency participants into app-runtime-compatible HMR descriptors with compatibility fingerprints.
+- Compatible route source edits preserve inline route RefSubject state when service identity, initializer shape, version, and dependency fingerprints remain stable.
+- Dependency participant service ids get their own descriptors; dependency opt-out rejects preservation and removes dependency descriptors from the plan.
+- `emitViteHmrRuntime` emits the generated Vite `import.meta.hot.accept`/`dispose` handoff that keeps the app HMR registry available through hot data and prunes stale entries.

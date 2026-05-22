@@ -75,7 +75,7 @@ Modify:
 | T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | completed in `feat(compiler): plan closure hmr contexts` |
 | T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | completed in `feat(app): wire browser runtime templates` |
 | T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | completed in `feat(app): wire server runtime templates` |
-| T15 | direct | T13, T14 | targeted Vite HMR fixture command created in task | isolated fixture | remove fixture and Vite wiring |
+| T15 | direct | T13, T14 | `pnpm --filter @typed/compiler test -- viteHmrFixture` | isolated fixture | completed in `feat(compiler): prove route hmr state fixture` |
 | T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | revert artifact integration |
 | T17 | direct | T15, T16 | server+DOM example command created in task | example only after package gates | remove example changes |
 | T18 | direct | T1 through T17 | package gates plus `pnpm build` | final audit before commit/PR | revert last hardening commit |
@@ -668,7 +668,7 @@ Commit message: `feat(app): wire server runtime templates`.
 - Create: `packages/compiler/src/hmr/vite-hmr-fixture.test.ts` or package-local fixture under `packages/compiler/fixtures/vite-hmr/`
 - Modify: `packages/vite-plugin/src/index.ts` only if runtime integration requires plugin hook support
 
-- [ ] **Step 1: Write failing fixture**
+- [x] **Step 1: Write failing fixture**
 
 Fixture proves:
 
@@ -681,17 +681,17 @@ Run: command established by fixture, for example `pnpm --filter @typed/compiler 
 
 Expected: fails before Vite/HMR wiring.
 
-- [ ] **Step 2: Implement Vite HMR runtime hookup**
+- [x] **Step 2: Implement Vite HMR runtime hookup**
 
 Use `import.meta.hot.data`, dispose/prune hooks, and registry APIs.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run fixture command.
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(compiler): prove route hmr state fixture`.
 
