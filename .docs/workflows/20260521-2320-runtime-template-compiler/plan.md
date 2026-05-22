@@ -66,7 +66,7 @@ Modify:
 | T3 | direct | T2 | `pnpm --filter @typed/compiler test -- analyzeTemplate` | compare against current parser output | revert analyzer files |
 | T4 | direct | T3 | `pnpm --filter @typed/compiler test -- emitServerTemplate` | use current HTML renderer as oracle | revert server emitter |
 | T5 | direct | T3 | `pnpm --filter @typed/compiler test -- emitDomTemplate` | use current DOM/hydration tests as oracle | completed in `feat: emit dom optimized templates` |
-| T6 | direct | T4, T5 | `pnpm --filter @typed/compiler test -- fallback` | unsupported shapes fallback only | revert fallback adapter |
+| T6 | direct | T4, T5 | `pnpm --filter @typed/compiler test -- fallback` | unsupported shapes fallback only | completed in `feat: add template compiler fallback path` |
 | T7 | direct | T4, T5 | `pnpm --filter @typed/app test -- runtime` | runtime accepts fallback and compiled templates | revert app runtime files |
 | T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | revert RefSubject service additions |
 | T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | revert registry files |
@@ -325,11 +325,15 @@ Commit message: `feat: emit dom optimized templates`.
 
 ### Task 6: Add Fallback Compiler Path
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Model fallback as an explicit runtime-template handoff, not as an implicit failure. Preserve the original `TemplateStringsArray`, expose structured diagnostics with the source module and reason, and keep `Renderable`/`Effect`/`Fx` type flow by delegating to the existing `html(...)` runtime path.
+
 **Files:**
 - Create: `packages/compiler/src/template/fallback.ts`
 - Create: `packages/compiler/src/template/fallback.test.ts`
 
-- [ ] **Step 1: Write failing fallback tests**
+- [x] **Step 1: Write failing fallback tests**
 
 Cases:
 
@@ -341,17 +345,17 @@ Run: `pnpm --filter @typed/compiler test -- fallback`
 
 Expected: fails because fallback path is missing.
 
-- [ ] **Step 2: Implement fallback result**
+- [x] **Step 2: Implement fallback result**
 
 Return a structured fallback output instead of throwing for unsupported compiler shapes.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/compiler test -- fallback`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat: add template compiler fallback path`.
 

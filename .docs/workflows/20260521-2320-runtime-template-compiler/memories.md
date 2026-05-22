@@ -7,3 +7,8 @@
 - Multi-root DOM templates are bounded by `<!--t_hash-->` and `<!--/t_hash-->`, matching `persistent(document, template.hash, fragment)`.
 - Sparse class parts preserve each sparse segment as a class-list contribution. Joining the sparse text first incorrectly turns `["count-", "active"]` into `count-active`; runtime produces `count- active`.
 - `.data=${{ userId: "7" }}` currently maps through `data-${key}` attribute setup, so the DOM attribute is `data-userid`, not `data-user-id`.
+
+## Task 6: Fallback Path
+
+- Fallback is a runtime handoff, not an optimization result. It should preserve the original `TemplateStringsArray` and call `html(template, ...values)` so existing `RenderTemplate` semantics and renderable type propagation stay intact.
+- The diagnostic code for unsupported template/program shapes is `typed-template-fallback`; include `moduleId`, `reason`, and a human-readable message so generated virtual modules can surface precise fallback reasons later.
