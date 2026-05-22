@@ -188,7 +188,7 @@
   - PACKAGE: `pnpm --filter @typed/ui test` passed with `8` files and `36` tests.
   - BUILD: `pnpm --filter @typed/ui build` passed.
 - commit:
-  - pending
+  - `bbd99bc docs(ui): document component tranche`
 - deviations_or_replans:
   - Browser verification remains documented as a limitation because `@typed/ui` does not currently link `@vitest/browser-playwright` and `pnpm-lock.yaml` had unrelated dirty changes before this workflow slice.
 - context_updates:

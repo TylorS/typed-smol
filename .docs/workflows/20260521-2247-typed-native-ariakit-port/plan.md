@@ -844,7 +844,7 @@ pnpm --filter @typed/ui build
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/ui/src/index.ts packages/ui/README.md .docs/workflows/20260521-2247-typed-native-ariakit-port/memory/implementation-notes.md
