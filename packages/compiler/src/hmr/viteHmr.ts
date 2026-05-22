@@ -30,7 +30,9 @@ export function planViteHmrBoundary(input: ViteHmrBoundaryInput): ViteHmrBoundar
     routeService(input.route.moduleId, service, dependencyFingerprints, version),
   );
   const dependencyServices = dependencyServicePlans(input.dependencies, version);
-  const services = input.route.eligible ? [...routeServices, ...dependencyServices] : dependencyServices;
+  const services = input.route.eligible
+    ? [...routeServices, ...dependencyServices]
+    : dependencyServices;
 
   return {
     moduleId: input.route.moduleId,
@@ -70,8 +72,12 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
   ].join("\n");
 }
 
-function dependencyFingerprintSet(dependencies: DependencyHmrResult | undefined): readonly string[] {
-  return [...(dependencies?.participants ?? []).map((participant) => participant.fingerprint)].sort();
+function dependencyFingerprintSet(
+  dependencies: DependencyHmrResult | undefined,
+): readonly string[] {
+  return [
+    ...(dependencies?.participants ?? []).map((participant) => participant.fingerprint),
+  ].sort();
 }
 
 function routeService(

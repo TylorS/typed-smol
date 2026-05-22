@@ -30,12 +30,14 @@ describe("profile repository", () => {
   });
 
   it("loads public profiles and viewer-specific following state", async () => {
-    const anonymous = await run(ProfileRepository.use((profiles) =>
-      profiles.findByUsername("seed_author", Option.none()),
-    ));
-    const readerView = await run(ProfileRepository.use((profiles) =>
-      profiles.findByUsername("seed_author", Option.some(userId(1))),
-    ));
+    const anonymous = await run(
+      ProfileRepository.use((profiles) => profiles.findByUsername("seed_author", Option.none())),
+    );
+    const readerView = await run(
+      ProfileRepository.use((profiles) =>
+        profiles.findByUsername("seed_author", Option.some(userId(1))),
+      ),
+    );
 
     expect(Option.isSome(anonymous)).toBe(true);
     expect(Option.isSome(readerView)).toBe(true);
@@ -47,12 +49,12 @@ describe("profile repository", () => {
   });
 
   it("follows and unfollows profiles idempotently", async () => {
-    const unfollowed = await run(ProfileRepository.use((profiles) =>
-      profiles.unfollow(userId(1), "seed_author"),
-    ));
-    const followed = await run(ProfileRepository.use((profiles) =>
-      profiles.follow(userId(1), "seed_author"),
-    ));
+    const unfollowed = await run(
+      ProfileRepository.use((profiles) => profiles.unfollow(userId(1), "seed_author")),
+    );
+    const followed = await run(
+      ProfileRepository.use((profiles) => profiles.follow(userId(1), "seed_author")),
+    );
 
     expect(Option.isSome(unfollowed)).toBe(true);
     expect(Option.isSome(followed)).toBe(true);
@@ -61,12 +63,14 @@ describe("profile repository", () => {
   });
 
   it("returns none for unknown profiles and follow targets", async () => {
-    const profile = await run(ProfileRepository.use((profiles) =>
-      profiles.findByUsername("missing_user", Option.some(userId(1))),
-    ));
-    const followed = await run(ProfileRepository.use((profiles) =>
-      profiles.follow(userId(1), "missing_user"),
-    ));
+    const profile = await run(
+      ProfileRepository.use((profiles) =>
+        profiles.findByUsername("missing_user", Option.some(userId(1))),
+      ),
+    );
+    const followed = await run(
+      ProfileRepository.use((profiles) => profiles.follow(userId(1), "missing_user")),
+    );
 
     expect(Option.isNone(profile)).toBe(true);
     expect(Option.isNone(followed)).toBe(true);

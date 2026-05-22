@@ -24,14 +24,13 @@ describe("realworld auth route navigation", () => {
         setInput(window, form, "email", "reader@example.com");
         setInput(window, form, "password", "password123");
 
-        form.dispatchEvent(
-          new window.SubmitEvent("submit", { bubbles: true, cancelable: true }),
-        );
+        form.dispatchEvent(new window.SubmitEvent("submit", { bubbles: true, cancelable: true }));
         yield* Effect.sleep("50 millis");
 
         assert.equal(yield* CurrentPath, "/");
         assert.equal(window.document.querySelector("h1")?.textContent, "Home");
-      })));
+      }),
+    ));
 
   it("navigates home after successful login", () =>
     withRenderedAuthRoute("/login", (window) =>
@@ -40,14 +39,13 @@ describe("realworld auth route navigation", () => {
         setInput(window, form, "email", "reader@example.com");
         setInput(window, form, "password", "password123");
 
-        form.dispatchEvent(
-          new window.SubmitEvent("submit", { bubbles: true, cancelable: true }),
-        );
+        form.dispatchEvent(new window.SubmitEvent("submit", { bubbles: true, cancelable: true }));
         yield* Effect.sleep("50 millis");
 
         assert.equal(yield* CurrentPath, "/");
         assert.equal(window.document.querySelector("h1")?.textContent, "Home");
-      })));
+      }),
+    ));
 });
 
 const withRenderedAuthRoute = (

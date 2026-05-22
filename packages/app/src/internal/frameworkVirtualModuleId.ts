@@ -99,7 +99,8 @@ function parseHtml(params: URLSearchParams): ParseTypedVirtualModuleIdResult {
     return fail("TVM-HTML-005", `typed:html does not support query option "${unsupported}"`);
   }
   const path = singleParam(params, "path");
-  if (!path.ok) return fail(path.values.length === 0 ? "TVM-HTML-001" : "TVM-HTML-002", path.reason);
+  if (!path.ok)
+    return fail(path.values.length === 0 ? "TVM-HTML-001" : "TVM-HTML-002", path.reason);
   const validPath = validateTarget(path.value, "typed:html path");
   if (!validPath.ok) return fail("TVM-HTML-003", validPath.reason);
   if (extname(validPath.value) !== ".html") {
@@ -131,7 +132,10 @@ function parseServer(params: URLSearchParams): ParseTypedVirtualModuleIdResult {
   if (!client.ok) return client;
   if (pages.pages.length > 0 && (html.value || client.value)) return ambiguousServerPairing();
   if (apis.values.length + routes.values.length === 0 && !html.value && pages.pages.length === 0) {
-    return fail("TVM-SERVER-001", "typed:server requires at least one api, routes, html, or page option");
+    return fail(
+      "TVM-SERVER-001",
+      "typed:server requires at least one api, routes, html, or page option",
+    );
   }
   return serverOk(params, apis.values, routes.values, html.value, client.value, pages.pages);
 }
@@ -142,7 +146,8 @@ function parseBrowser(params: URLSearchParams): ParseTypedVirtualModuleIdResult 
     return fail("TVM-BROWSER-003", `typed:browser does not support query option "${unsupported}"`);
   }
   const routes = validateTargets(params.getAll("routes"), "typed:browser routes");
-  if (!routes.ok) return fail("TVM-BROWSER-001", "typed:browser requires at least one routes option");
+  if (!routes.ok)
+    return fail("TVM-BROWSER-001", "typed:browser requires at least one routes option");
   if (routes.values.length === 0) {
     return fail("TVM-BROWSER-001", "typed:browser requires at least one routes option");
   }
@@ -168,7 +173,9 @@ function firstUnsupportedOption(
 function singleParam(
   params: URLSearchParams,
   key: string,
-): { readonly ok: true; readonly value: string } | { readonly ok: false; readonly reason: string; readonly values: readonly string[] } {
+):
+  | { readonly ok: true; readonly value: string }
+  | { readonly ok: false; readonly reason: string; readonly values: readonly string[] } {
   const values = params.getAll(key);
   if (values.length === 1) return { ok: true, value: values[0] };
   return { ok: false, reason: `typed:html requires exactly one ${key} option`, values };
@@ -207,7 +214,8 @@ function parseServerPages(
   const pages: TypedServerPage[] = [];
   for (const value of values) {
     const parts = value.split(":");
-    if (parts.length !== 3) return fail("TVM-SERVER-002", 'typed:server page must use "name:html:client"');
+    if (parts.length !== 3)
+      return fail("TVM-SERVER-002", 'typed:server page must use "name:html:client"');
     const page = validatePageParts(parts);
     if (!page.ok) return page;
     pages.push(page.page);
@@ -225,7 +233,10 @@ function validatePageParts(
   if (!htmlResult.ok) return fail("TVM-SERVER-002", htmlResult.reason);
   const clientResult = validateTarget(client, "typed:server page client");
   if (!clientResult.ok) return fail("TVM-SERVER-002", clientResult.reason);
-  return { ok: true, page: { name: nameResult.value, html: htmlResult.value, client: clientResult.value } };
+  return {
+    ok: true,
+    page: { name: nameResult.value, html: htmlResult.value, client: clientResult.value },
+  };
 }
 
 function ambiguousServerPairing(): ParseFail {

@@ -32,7 +32,7 @@ describe("Markdown and preview sanitization", () => {
   });
 
   it("escapes plain-text previews used by descriptions", () => {
-    const preview = safeTextPreview('<img src=x onerror=alert(1)> javascript:alert(1)');
+    const preview = safeTextPreview("<img src=x onerror=alert(1)> javascript:alert(1)");
 
     expect(preview).not.toContain("<img");
     expect(preview).not.toContain("javascript:");

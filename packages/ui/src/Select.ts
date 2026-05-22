@@ -115,7 +115,9 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
     aria-haspopup="listbox"
     aria-expanded=${open}
     .data=${{ open }}
-  >${options.content}</button>`;
+  >
+    ${options.content}
+  </button>`;
 }
 
 export interface ContentOptions<Value extends string = string> {
@@ -130,7 +132,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
   const open = dataOpen(options.state);
   const orientation = RefSubject.map(options.state, (current) => current.orientation);
   const activeDescendant = RefSubject.map(options.state, (current) =>
-    current.virtualFocus && current.activeId ? current.activeId : undefined
+    current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     setOpen(options.state, event.newState === "open"),
@@ -145,7 +147,9 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
     aria-activedescendant=${activeDescendant}
     .data=${{ open }}
     ontoggle=${onToggle}
-  >${options.content}</div>`;
+  >
+    ${options.content}
+  </div>`;
 }
 
 export interface OptionOptions<Value extends string = string> {
@@ -178,7 +182,7 @@ export function Option<const Opts extends OptionOptions>(options: Opts) {
         const id = yield* toEffect(options.id);
         const disabled = yield* isDisabled(options.disabled);
         return state.virtualFocus || disabled ? -1 : state.activeId === id ? 0 : -1;
-      })
+      }),
     ),
     "data-active": dataActive(options.state, options.id, disabled),
     "data-disabled": boolString(disabled),
@@ -220,7 +224,7 @@ function dataActive<Value extends string>(
         selected: false,
       });
       return encoded.active ?? "false";
-    })
+    }),
   );
 }
 
@@ -229,7 +233,7 @@ function isSelected<Value extends string>(
   value: Renderable<Value, any, any>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.map(toEffect(value), (value) => current.value === value)
+    Effect.map(toEffect(value), (value) => current.value === value),
   );
 }
 
@@ -248,7 +252,7 @@ function dataSelected<Value extends string>(
         selected: current.value === itemValue,
       });
       return encoded.selected ?? "false";
-    })
+    }),
   );
 }
 
@@ -269,7 +273,10 @@ function nextActiveId<Value extends string>(
   if (direction === "first") return items[0]?.id ?? null;
   if (direction === "last") return items[items.length - 1]?.id ?? null;
 
-  const index = Math.max(0, items.findIndex((item) => item.id === state.activeId));
+  const index = Math.max(
+    0,
+    items.findIndex((item) => item.id === state.activeId),
+  );
   const delta = direction === "next" ? 1 : -1;
   const next = index + delta;
   if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;

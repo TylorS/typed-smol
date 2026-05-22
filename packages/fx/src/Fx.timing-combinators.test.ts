@@ -28,9 +28,7 @@ describe("Fx debounce", () => {
   it("emits only the latest value after the quiet window", () =>
     Effect.gen(function* () {
       const fiber = yield* Effect.forkScoped(
-        Fx.collectAll(
-          Fx.mergeAll(Fx.at(1, 0), Fx.at(2, 10), Fx.at(3, 30)).pipe(Fx.debounce(20)),
-        ),
+        Fx.collectAll(Fx.mergeAll(Fx.at(1, 0), Fx.at(2, 10), Fx.at(3, 30)).pipe(Fx.debounce(20))),
       );
       yield* TestClock.adjust(55);
       assert.deepStrictEqual(yield* Fiber.join(fiber), [3]);
@@ -41,9 +39,7 @@ describe("Fx throttle", () => {
   it("emits the leading value and suppresses values until the window ends", () =>
     Effect.gen(function* () {
       const fiber = yield* Effect.forkScoped(
-        Fx.collectAll(
-          Fx.mergeAll(Fx.at(1, 0), Fx.at(2, 40), Fx.at(3, 120)).pipe(Fx.throttle(100)),
-        ),
+        Fx.collectAll(Fx.mergeAll(Fx.at(1, 0), Fx.at(2, 40), Fx.at(3, 120)).pipe(Fx.throttle(100))),
       );
       yield* TestClock.adjust(250);
       assert.deepStrictEqual(yield* Fiber.join(fiber), [1, 3]);
@@ -63,9 +59,7 @@ describe("Fx since", () => {
   it("drops emissions that occur before the signal", () =>
     Effect.gen(function* () {
       const fiber = yield* Effect.forkScoped(
-        Fx.collectAll(
-          Fx.mergeAll(Fx.at(1, 0), Fx.at(2, 50)).pipe(Fx.since(Fx.at("go", 150))),
-        ),
+        Fx.collectAll(Fx.mergeAll(Fx.at(1, 0), Fx.at(2, 50)).pipe(Fx.since(Fx.at("go", 150)))),
       );
       yield* TestClock.adjust(200);
       assert.deepStrictEqual(yield* Fiber.join(fiber), []);

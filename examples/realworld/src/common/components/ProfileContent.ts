@@ -48,18 +48,19 @@ export const ProfileContent = Fx.fn("ProfileContent")(<E, R>(
   </section>`;
 });
 
-const profileTabs = (input: ProfilePageInput): readonly ProfileTabData[] => [
-  {
-    active: !input.favorites,
-    href: `/profile/${input.profile.username}`,
-    label: "My Articles",
-  },
-  {
-    active: input.favorites,
-    href: `/profile/${input.profile.username}/favorites`,
-    label: "Favorited Articles",
-  },
-] as const;
+const profileTabs = (input: ProfilePageInput): readonly ProfileTabData[] =>
+  [
+    {
+      active: !input.favorites,
+      href: `/profile/${input.profile.username}`,
+      label: "My Articles",
+    },
+    {
+      active: input.favorites,
+      href: `/profile/${input.profile.username}/favorites`,
+      label: "Favorited Articles",
+    },
+  ] as const;
 
 const followProfile = <E, R>(profile: RefSubject.Computed<Profile, E, R>) =>
   EventHandler.make(
@@ -72,9 +73,9 @@ const followProfile = <E, R>(profile: RefSubject.Computed<Profile, E, R>) =>
   );
 
 const toggleFollow = Effect.fn(function* <E, R>(profile: RefSubject.Computed<Profile, E, R>) {
-      const current = yield* profile.pipe(
-        Effect.mapError(() => new FormTargetError({ reason: "reactive value is unavailable" })),
-      );
-      const auth = yield* BrowserAuth;
-      return yield* auth.followProfile(current.username, current.following);
+  const current = yield* profile.pipe(
+    Effect.mapError(() => new FormTargetError({ reason: "reactive value is unavailable" })),
+  );
+  const auth = yield* BrowserAuth;
+  return yield* auth.followProfile(current.username, current.following);
 });

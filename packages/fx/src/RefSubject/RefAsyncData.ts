@@ -94,7 +94,7 @@ export function fromEffect<A, E, R>(
       Fx.succeed(AsyncData.NoData),
       Fx.sync(() => AsyncData.loading()),
       Fx.fromEffect(effect.pipe(Effect.exit, Effect.map(AsyncData.fromExit))),
-    )
+    ),
   );
 }
 
@@ -280,50 +280,36 @@ export function matchFx<
     readonly NoData: (data: AsyncData.NoData) => NoDataFx;
     readonly Loading: (data: AsyncData.Loading) => LoadingFx;
     readonly Failure: (cause: Cause.Cause<E>, data: AsyncData.Failure<E>) => FailureFx;
-    readonly Success: (
-      value: RefSubject.RefSubject<A>,
-      data: AsyncData.Success<A>,
-    ) => SuccessFx;
+    readonly Success: (value: RefSubject.RefSubject<A>, data: AsyncData.Success<A>) => SuccessFx;
     readonly Optimistic: (
       value: RefSubject.RefSubject<A>,
       data: AsyncData.Optimistic<A, E>,
     ) => OptimisticFx;
   },
-): RefAsyncDataMatchFxResult<
-  Err,
-  R,
-  NoDataFx,
-  LoadingFx,
-  FailureFx,
-  SuccessFx,
-  OptimisticFx
-> {
-  return Fx.switchMap(ref, (data): RefAsyncDataMatchFxBranch<
-    NoDataFx,
-    LoadingFx,
-    FailureFx,
-    SuccessFx,
-    OptimisticFx
-  > => {
-    switch (data._tag) {
-      case "NoData":
-        return matchers.NoData(data);
-      case "Loading":
-        return matchers.Loading(data);
-      case "Failure":
-        return matchers.Failure(data.cause, data);
-      case "Success":
-        return Fx.unwrap(
-          Effect.map(RefSubject.make(data.value), (valueRef) => matchers.Success(valueRef, data)),
-        );
-      case "Optimistic":
-        return Fx.unwrap(
-          Effect.map(RefSubject.make(data.value), (valueRef) =>
-            matchers.Optimistic(valueRef, data)
-          ),
-        );
-    }
-  });
+): RefAsyncDataMatchFxResult<Err, R, NoDataFx, LoadingFx, FailureFx, SuccessFx, OptimisticFx> {
+  return Fx.switchMap(
+    ref,
+    (data): RefAsyncDataMatchFxBranch<NoDataFx, LoadingFx, FailureFx, SuccessFx, OptimisticFx> => {
+      switch (data._tag) {
+        case "NoData":
+          return matchers.NoData(data);
+        case "Loading":
+          return matchers.Loading(data);
+        case "Failure":
+          return matchers.Failure(data.cause, data);
+        case "Success":
+          return Fx.unwrap(
+            Effect.map(RefSubject.make(data.value), (valueRef) => matchers.Success(valueRef, data)),
+          );
+        case "Optimistic":
+          return Fx.unwrap(
+            Effect.map(RefSubject.make(data.value), (valueRef) =>
+              matchers.Optimistic(valueRef, data),
+            ),
+          );
+      }
+    },
+  );
 }
 
 type RefAsyncDataMatchFxBranch<

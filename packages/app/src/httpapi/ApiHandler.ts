@@ -71,15 +71,17 @@ export type ApiEndpointConfig = {
 
 type SchemaTypeOr<T, Fallback> = T extends { readonly Type: infer A } ? A : Fallback;
 
-export type ApiHandlerSuccessFromConfig<C extends ApiEndpointConfig> =
-  C extends { readonly success: infer Success }
-    ? SchemaTypeOr<Success, unknown>
-    : unknown;
+export type ApiHandlerSuccessFromConfig<C extends ApiEndpointConfig> = C extends {
+  readonly success: infer Success;
+}
+  ? SchemaTypeOr<Success, unknown>
+  : unknown;
 
-export type ApiHandlerErrorFromConfig<C extends ApiEndpointConfig> =
-  C extends { readonly error: infer Error }
-    ? SchemaTypeOr<Error, never>
-    : never;
+export type ApiHandlerErrorFromConfig<C extends ApiEndpointConfig> = C extends {
+  readonly error: infer Error;
+}
+  ? SchemaTypeOr<Error, never>
+  : never;
 
 type HeadersOrDefault<T> = [T] extends [never]
   ? Record<string, string>
@@ -190,10 +192,7 @@ export type ApiHandlerRawConfig<
   readonly error?: TError;
 };
 
-export type ApiHandlerFromConfig<
-  C extends ApiEndpointConfig,
-  R = any,
-> = (
+export type ApiHandlerFromConfig<C extends ApiEndpointConfig, R = any> = (
   params: ApiHandlerParamsFromConfig<C>,
 ) => Effect.Effect<
   ApiHandlerSuccessFromConfig<C>,
@@ -201,17 +200,12 @@ export type ApiHandlerFromConfig<
   R
 >;
 
-export type ApiHandlerRawFromConfig<
-  C extends ApiEndpointConfig,
-  R = any,
-> = (
+export type ApiHandlerRawFromConfig<C extends ApiEndpointConfig, R = any> = (
   params: ApiHandlerParamsFromConfig<C>,
 ) => Effect.Effect<HttpServerResponse, ApiHandlerErrorFromConfig<C>, R>;
 
 export function ApiHandlerRaw<C extends ApiHandlerRawConfig<any, any, any, any, any, any>>(
   _config: C,
-): <R = any>(
-  handler: ApiHandlerRawFromConfig<C, R>,
-) => ApiHandlerRawFromConfig<C, R> {
+): <R = any>(handler: ApiHandlerRawFromConfig<C, R>) => ApiHandlerRawFromConfig<C, R> {
   return (handler) => handler;
 }

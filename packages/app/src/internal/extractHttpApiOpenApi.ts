@@ -71,7 +71,9 @@ function getObjectValue(node: TypeNode | undefined): Record<string, unknown> | u
   const out: Record<string, unknown> = {};
   for (const property of obj.properties) {
     const value =
-      property.type.kind === "object" ? getObjectValue(property.type) : getLiteralValue(property.type);
+      property.type.kind === "object"
+        ? getObjectValue(property.type)
+        : getLiteralValue(property.type);
     if (value !== undefined) out[property.name] = value;
   }
   return out;
@@ -98,7 +100,9 @@ export function extractOpenApiExposureConfig(
   return extractOpenApiConfig(snapshot)?.exposure ?? null;
 }
 
-export function extractOpenApiConfig(snapshot: TypeInfoFileSnapshot): ExtractedOpenApiConfig | null {
+export function extractOpenApiConfig(
+  snapshot: TypeInfoFileSnapshot,
+): ExtractedOpenApiConfig | null {
   return extractOpenApiConfigFromExport(snapshot, "openapi");
 }
 

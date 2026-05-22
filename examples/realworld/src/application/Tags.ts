@@ -7,9 +7,7 @@ export interface TagsService {
   readonly list: () => Effect.Effect<TagsResponse, TagRepositoryError>;
 }
 
-export class Tags extends Context.Service<Tags, TagsService>()(
-  "@typed/realworld/Tags",
-) {
+export class Tags extends Context.Service<Tags, TagsService>()("@typed/realworld/Tags") {
   static readonly Live = Layer.effect(
     Tags,
     Effect.gen(function* () {

@@ -4,6 +4,7 @@ objective: Continue the `@typed/ui` Ariakit-like component plan with a native-Po
 started_at: 2026-05-22 18:29 America/New_York
 started_by: Codex
 source_context_reviewed:
+
 - `.docs/workflows/20260522-1744-typed-ui-standards-research/plan.md`
 - `.docs/workflows/20260522-1744-typed-ui-standards-research/requirements.md`
 - `packages/ui/src/Popover.ts`
@@ -12,7 +13,7 @@ source_context_reviewed:
 - `packages/ui/src/Tabs.ts`
 - `packages/ui/src/RadioGroup.ts`
 - `packages/ui/src/Toolbar.ts`
-explicit_reuse_override: false
+  explicit_reuse_override: false
 
 ## Routing Decision
 

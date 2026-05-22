@@ -11,5 +11,7 @@ export const method = HttpMethod.Get;
 export const success = ProfileResponse;
 
 export const handler = Effect.fn("Profiles.get")(function* ({ headers, path }) {
-  return yield* respond(Profiles.use((profiles) => profiles.get(path.username, authToken(headers))));
+  return yield* respond(
+    Profiles.use((profiles) => profiles.get(path.username, authToken(headers))),
+  );
 }) satisfies RawHandler<Profiles>;

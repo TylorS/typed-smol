@@ -1,12 +1,5 @@
 import * as Schema from "effect/Schema";
-import {
-  ArticleId,
-  CommentId,
-  IsoDateTimeString,
-  NonNegativeInt,
-  Slug,
-  TagName,
-} from "./Ids.js";
+import { ArticleId, CommentId, IsoDateTimeString, NonNegativeInt, Slug, TagName } from "./Ids.js";
 import { Profile } from "./User.js";
 
 export const Tag = Schema.Struct({
@@ -71,7 +64,7 @@ export const normalizeTagList = (tags: readonly string[]): readonly string[] => 
 export const applyTagUpdate = (
   existing: readonly string[],
   update: readonly string[] | undefined,
-): readonly string[] => update === undefined ? [...existing] : normalizeTagList(update);
+): readonly string[] => (update === undefined ? [...existing] : normalizeTagList(update));
 
 export const canEditArticle = (
   currentUsername: string | null | undefined,

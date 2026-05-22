@@ -332,9 +332,7 @@ export const value: Foo = { n: 1 };
 
     expect(diagnostics).toHaveLength(0);
     expect(emit.diagnostics).toHaveLength(0);
-    expect(program.getSourceFile(artifactA)?.text).toContain(
-      `from "../virtual-b/artifact-b.js"`,
-    );
+    expect(program.getSourceFile(artifactA)?.text).toContain(`from "../virtual-b/artifact-b.js"`);
     expect(artifactAOutput?.[1]).toContain(`from "../virtual-b/artifact-b.js"`);
     expect(artifactAOutput?.[1]).not.toContain("virtual:b");
     expect(artifactBOutput).toBeDefined();

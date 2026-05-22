@@ -13,8 +13,14 @@ export const route = Route.Join(
   Route.QueryParams(
     Route.Param("author").optional(),
     Route.Param("favorited").optional(),
-    Route.ParamWithSchema("limit", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
-    Route.ParamWithSchema("offset", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
+    Route.ParamWithSchema(
+      "limit",
+      Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt)),
+    ).optional(),
+    Route.ParamWithSchema(
+      "offset",
+      Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt)),
+    ).optional(),
     Route.Param("tag").optional(),
   ),
 );
@@ -22,5 +28,7 @@ export const method = HttpMethod.Get;
 export const success = MultipleArticlesResponse;
 
 export const handler = Effect.fn("Articles.list")(function* ({ headers, query }) {
-  return yield* respond(Articles.use((articles) => articles.list(articleFilter(query), authToken(headers))));
+  return yield* respond(
+    Articles.use((articles) => articles.list(articleFilter(query), authToken(headers))),
+  );
 }) satisfies RawHandler<Articles>;

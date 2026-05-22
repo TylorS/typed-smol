@@ -1,0 +1,75 @@
+{
+  "name": "virtual-modules-vscode",
+  "displayName": "Typed Virtual Modules",
+  "version": "1.0.0-beta.4",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TylorS/typed-smol.git"
+  },
+  "publisher": "typed",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "typed.virtualModules.open",
+        "title": "Virtual Modules: Open virtual module"
+      },
+      {
+        "command": "typed.virtualModules.openFromImport",
+        "title": "Virtual Modules: Open virtual module from import"
+      },
+      {
+        "command": "typed.virtualModules.openFromTree",
+        "title": "Virtual Modules: Open virtual module from tree"
+      },
+      {
+        "command": "typed.virtualModules.refresh",
+        "title": "Refresh Virtual Modules"
+      },
+      {
+        "command": "typed.virtualModules.diagnoseDefinition",
+        "title": "Virtual Modules: Diagnose go-to-definition at cursor"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "typed.virtualModules.openFromImport",
+          "when": "editorTextFocus",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "typed.virtualModules.refresh",
+          "when": "view == typedVirtualModules",
+          "group": "navigation"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "typedVirtualModules",
+          "name": "Virtual Module Imports"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "typedVirtualModules",
+        "contents": "No virtual modules found. Add imports like `import x from 'virtual:foo'` in your TypeScript files."
+      }
+    ]
+  },
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "engines": {
+    "vscode": "^1.74.0"
+  }
+}

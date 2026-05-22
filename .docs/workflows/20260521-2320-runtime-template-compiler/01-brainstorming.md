@@ -34,11 +34,13 @@ Typed needs a first-class runtime/compiler story for app templates: public runti
 Create `@typed/compiler` as a focused template/app compiler that plugs into existing virtual-module hosts and Vite integration.
 
 Pros:
+
 - Clear public package name.
 - Keeps `vmc` as the host/compiler adapter.
 - Allows template optimization to evolve independently.
 
 Cons:
+
 - Adds a package and boundary decisions.
 - Requires careful integration with artifact-store and Vite paths.
 
@@ -47,11 +49,13 @@ Cons:
 Expose `@typed/compiler` as the public compiler package while internally reusing `@typed/virtual-modules-compiler` and compiler helpers.
 
 Pros:
+
 - Faster package story.
 - Preserves existing compiler investment.
 - Could reduce naming confusion for users.
 
 Cons:
+
 - Risks overloading one package with both host adapter and template optimizer concerns.
 - Could blur CLI/build versus template compile responsibilities.
 
@@ -60,10 +64,12 @@ Cons:
 Add runtime functions and compiler hooks to `@typed/app` first, deferring a separate `@typed/compiler` package until the optimized output contract is proven.
 
 Pros:
+
 - Smallest initial implementation.
 - Keeps public API close to generated app entrypoints.
 
 Cons:
+
 - Conflicts with the stated need for `@typed/compiler`.
 - Risks growing `@typed/app` into both runtime and compiler implementation.
 

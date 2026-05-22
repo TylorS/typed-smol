@@ -45,7 +45,7 @@ describe("inferClientHtmlEntries", () => {
       entry,
       [
         'import handler from "typed:server?',
-        'page=home:./index.html:./entry.browser.ts',
+        "page=home:./index.html:./entry.browser.ts",
         '&page=admin:./admin/index.html:./admin.ts";\n',
         "export default handler;\n",
       ].join(""),

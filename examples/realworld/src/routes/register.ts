@@ -23,17 +23,17 @@ export const submitRegister = EventHandler.make(
 );
 
 const register = Effect.fn(function* (form: HTMLFormElement) {
-    const input = yield* decodeForm(RegisterUserRequest, {
-      user: {
-        username: textField(form, "username"),
-        email: textField(form, "email"),
-        password: textField(form, "password"),
-      },
-    });
-    const auth = yield* BrowserAuth;
-    const response = yield* auth.register(input);
-    yield* Router.push("/");
-    return response;
+  const input = yield* decodeForm(RegisterUserRequest, {
+    user: {
+      username: textField(form, "username"),
+      email: textField(form, "email"),
+      password: textField(form, "password"),
+    },
+  });
+  const auth = yield* BrowserAuth;
+  const response = yield* auth.register(input);
+  yield* Router.push("/");
+  return response;
 });
 
 export const template = html`<section class="auth-page">

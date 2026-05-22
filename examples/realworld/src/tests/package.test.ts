@@ -179,9 +179,9 @@ describe("typed-realworld package skeleton", () => {
 
     expect(existsSync(resolve(projectRoot, "src/api/comments"))).toBe(false);
 
-    const repeatedRoots = apiEndpointSourceFiles()
-      .flatMap((path) =>
-        repeatedApiRoutePrefixLines(path).map((line) => `${path}:${line}`));
+    const repeatedRoots = apiEndpointSourceFiles().flatMap((path) =>
+      repeatedApiRoutePrefixLines(path).map((line) => `${path}:${line}`),
+    );
 
     expect(repeatedRoots).toEqual([]);
   });
@@ -257,25 +257,25 @@ describe("typed-realworld package skeleton", () => {
   });
 
   it("keeps error type definitions out of infrastructure modules", () => {
-    const offenders = infrastructureSourceFiles()
-      .flatMap((path) =>
-        infrastructureErrorDefinitionLines(path).map((line) => `${path}:${line}`));
+    const offenders = infrastructureSourceFiles().flatMap((path) =>
+      infrastructureErrorDefinitionLines(path).map((line) => `${path}:${line}`),
+    );
 
     expect(offenders).toEqual([]);
   });
 
   it("does not use unknown as an Effect error channel in production source", () => {
-    const offenders = productionSourceFiles()
-      .flatMap((path) =>
-        effectUnknownErrorChannelLines(path).map((line) => `${path}:${line}`));
+    const offenders = productionSourceFiles().flatMap((path) =>
+      effectUnknownErrorChannelLines(path).map((line) => `${path}:${line}`),
+    );
 
     expect(offenders).toEqual([]);
   });
 
   it("uses Effect.gen for sequential browser state effects", () => {
-    const offenders = genPreferredSourceFiles()
-      .flatMap((path) =>
-        effectCombinatorLines(path).map((line) => `${path}:${line}`));
+    const offenders = genPreferredSourceFiles().flatMap((path) =>
+      effectCombinatorLines(path).map((line) => `${path}:${line}`),
+    );
 
     expect(offenders).toEqual([]);
   });
@@ -302,18 +302,18 @@ describe("typed-realworld package skeleton", () => {
   });
 
   it("uses @typed/ui Link for internal navigation anchors", () => {
-    const offenders = linkSourceFiles()
-      .flatMap((path) =>
-        rawAnchorHrefLines(path).map((line) => `${path}:${line}`));
+    const offenders = linkSourceFiles().flatMap((path) =>
+      rawAnchorHrefLines(path).map((line) => `${path}:${line}`),
+    );
 
     expect(offenders).toEqual([]);
   });
 
   it("provides SqlClient through layers instead of rebuilding sqlite per repository call", () => {
     const dependencyLayer = readText("src/.server.dependencies.ts");
-    const offenders = repositorySourceFiles()
-      .flatMap((path) =>
-        readText(path).includes("runSql") ? [path] : []);
+    const offenders = repositorySourceFiles().flatMap((path) =>
+      readText(path).includes("runSql") ? [path] : [],
+    );
 
     expect(dependencyLayer).toContain("SqliteLive");
     expect(offenders).toEqual([]);
@@ -330,9 +330,9 @@ describe("typed-realworld package skeleton", () => {
   });
 
   it("uses composed Layer test harnesses instead of stacked Effect.provide", () => {
-    const offenders = layerHarnessSourceFiles()
-      .flatMap((path) =>
-        stackedProvideLines(path).map((line) => `${path}:${line}`));
+    const offenders = layerHarnessSourceFiles().flatMap((path) =>
+      stackedProvideLines(path).map((line) => `${path}:${line}`),
+    );
 
     expect(offenders).toEqual([]);
   });
@@ -376,9 +376,7 @@ const asyncRouteSourceFiles = (): readonly string[] => [
   "src/routes/tag.ts",
 ];
 
-const asyncPageSourceFiles = (): readonly string[] => [
-  "src/common/components/AsyncDataView.ts",
-];
+const asyncPageSourceFiles = (): readonly string[] => ["src/common/components/AsyncDataView.ts"];
 
 const componentSourceFiles = (): readonly string[] => [
   "src/common/components/ArticleContent.ts",
@@ -488,7 +486,8 @@ const effectUnknownErrorChannelLines = (path: string): readonly number[] =>
   readText(path)
     .split("\n")
     .flatMap((line, index) =>
-      /Effect(?:\.Effect)?<[^>\n,]+,\s*unknown(?:\s*[>,])/.test(line) ? [index + 1] : []);
+      /Effect(?:\.Effect)?<[^>\n,]+,\s*unknown(?:\s*[>,])/.test(line) ? [index + 1] : [],
+    );
 
 const repeatedApiRoutePrefixLines = (path: string): readonly number[] =>
   readText(path)
@@ -496,13 +495,13 @@ const repeatedApiRoutePrefixLines = (path: string): readonly number[] =>
     .flatMap((line, index) =>
       /Route\.(?:Parse|Join)\([^)]*"\/(?:articles|profiles|tags|user|users)(?:\/|")/.test(line)
         ? [index + 1]
-        : []);
+        : [],
+    );
 
 const effectCombinatorLines = (path: string): readonly number[] =>
   readText(path)
     .split("\n")
-    .flatMap((line, index) =>
-      /Effect\.(?:flatMap|map)\(/.test(line) ? [index + 1] : []);
+    .flatMap((line, index) => (/Effect\.(?:flatMap|map)\(/.test(line) ? [index + 1] : []));
 
 const infrastructureErrorDefinitionLines = (path: string): readonly number[] =>
   readText(path)
@@ -512,7 +511,8 @@ const infrastructureErrorDefinitionLines = (path: string): readonly number[] =>
       /^\s*(?:export\s+)?type\s+\w*Error\b\s*=/.test(line) ||
       /\b(?:Data|Schema)\.TaggedError(?:Class)?\b/.test(line)
         ? [index + 1]
-        : []);
+        : [],
+    );
 
 const rawAnchorHrefLines = (path: string): readonly number[] => {
   const lines = readText(path).split("\n");
@@ -538,6 +538,5 @@ const stackedProvideLines = (path: string): readonly number[] =>
   readText(path)
     .split("\n")
     .flatMap((line, index) =>
-      /ServiceLayers\.reduce|provideServices|Effect\.provide\(/.test(line)
-        ? [index + 1]
-        : []);
+      /ServiceLayers\.reduce|provideServices|Effect\.provide\(/.test(line) ? [index + 1] : [],
+    );

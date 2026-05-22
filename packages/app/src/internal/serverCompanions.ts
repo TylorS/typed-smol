@@ -47,9 +47,7 @@ function resolveCompanion(
   name: ServerCompanionName,
 ): `./${string}` | undefined {
   const candidates =
-    name === "dependencies"
-      ? [".server.dependencies", ".dependencies"]
-      : [`.${name}`];
+    name === "dependencies" ? [".server.dependencies", ".dependencies"] : [`.${name}`];
   const found = candidates.find((candidate) => existsSync(join(importerDir, `${candidate}.ts`)));
   return found === undefined ? undefined : `./${found}.js`;
 }

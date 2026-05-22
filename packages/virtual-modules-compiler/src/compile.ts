@@ -5,10 +5,7 @@ import type {
   TypeTargetSpec,
   VirtualModuleResolver,
 } from "@typed/virtual-modules";
-import {
-  attachCompilerHostAdapter,
-  ensureTypeTargetBootstrapFile,
-} from "@typed/virtual-modules";
+import { attachCompilerHostAdapter, ensureTypeTargetBootstrapFile } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
 import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 

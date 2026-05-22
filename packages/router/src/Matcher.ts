@@ -130,14 +130,16 @@ export type GuardChainError<Input, Guards extends readonly unknown[]> = Guards e
       : never
     : never;
 
-export type GuardChainServices<Input, Guards extends readonly unknown[]> =
-  Guards extends readonly []
-    ? never
-    : Guards extends readonly [infer First, ...infer Rest]
-      ? First extends GuardInput<Input, infer Output, any, infer R>
-        ? R | GuardChainServices<Output, Rest>
-        : never
-      : never;
+export type GuardChainServices<
+  Input,
+  Guards extends readonly unknown[],
+> = Guards extends readonly []
+  ? never
+  : Guards extends readonly [infer First, ...infer Rest]
+    ? First extends GuardInput<Input, infer Output, any, infer R>
+      ? R | GuardChainServices<Output, Rest>
+      : never
+    : never;
 
 export type ComposeGuards<Input, Guards extends readonly unknown[]> = GuardType<
   Input,
@@ -877,10 +879,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
 
             const preparedServices = matchedPrepared.services as Context.Context<any>;
             const routeServices = Context.merge(currentServices, preparedServices);
-            const handlerServices = Context.merge(
-              routeServices,
-              Context.make(Scope.Scope, scope),
-            );
+            const handlerServices = Context.merge(routeServices, Context.make(Scope.Scope, scope));
 
             const handlerFx = matchedEntry.handler(paramsRef).pipe(provideContext(handlerServices));
             const withLayouts = yield* layoutManager.apply(
@@ -1238,9 +1237,7 @@ export function composeGuards<
     GuardInput<any, any, any, any>,
     ...GuardInput<any, any, any, any>[],
   ],
->(
-  ...guards: Guards
-): ComposeGuards<GuardChainInput<Guards>, Guards> {
+>(...guards: Guards): ComposeGuards<GuardChainInput<Guards>, Guards> {
   const normalized = guards.map((guard) => getGuard(guard));
   return ((input: GuardChainInput<Guards>) =>
     Effect.gen(function* () {

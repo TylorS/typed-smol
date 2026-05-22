@@ -39,10 +39,7 @@ export const requireUser = (
   Option.match(token, {
     onNone: () => Effect.fail(tokenMissing()),
     onSome: (value) =>
-      users.findByToken(value).pipe(
-        Effect.flatMap(Effect.fromOption),
-        Effect.catch(tokenInvalid),
-      ),
+      users.findByToken(value).pipe(Effect.flatMap(Effect.fromOption), Effect.catch(tokenInvalid)),
   });
 
 export const optionalUserId = (

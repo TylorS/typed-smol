@@ -42,11 +42,13 @@ The central substrate problem is that virtual modules are not yet a single share
 Define and implement a shared generated artifact store before hardening router, HTTP API, env, config, or create-app work.
 
 Pros:
+
 - Fixes the foundation before multiplying virtual module surfaces.
 - Lets every plugin share the same artifact, invalidation, diagnostics, and VS Code story.
 - Aligns with the user's "rock-solid" requirement.
 
 Cons:
+
 - Delays visible framework features.
 - Requires an ADR/spec update before most implementation can safely begin.
 
@@ -55,10 +57,12 @@ Cons:
 Run compiler substrate, router/HTTP hardening, env/config plugins, and create-app planning in parallel.
 
 Pros:
+
 - Faster apparent framework progress.
 - Can expose cross-cutting requirements earlier.
 
 Cons:
+
 - High risk of building new plugin surfaces against a substrate contract that is about to change.
 - Likely creates rework in env/config/create-app generated module surfaces.
 
@@ -67,10 +71,12 @@ Cons:
 Ship an opinionated create-app path on top of current Vite/TS plugin behavior, then harden the compiler substrate later.
 
 Pros:
+
 - Produces a demoable framework quickly.
 - Useful for product feedback.
 
 Cons:
+
 - Contradicts the stated priority that the virtual module compiler must be productionized first.
 - Risks normalizing brittle generated-module behavior.
 

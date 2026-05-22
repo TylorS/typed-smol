@@ -84,7 +84,7 @@ export const createAuthStore = (
       Effect.gen(function* () {
         const snapshot = yield* readSnapshot;
         return snapshot.token;
-      })
+      }),
     );
 
     const store: AuthStore = {
@@ -235,27 +235,26 @@ type CurrentUserLoad =
 const loadCurrentUser: (
   client: RealWorldClient,
   token: string,
-) => Effect.Effect<CurrentUserLoad, ApiClientError> =
-  Effect.fn(function* (client, token) {
-    const response = yield* client.user.current({
-      params: {},
-      query: {},
-      headers: authHeaders(token),
-      responseMode: "response-only",
-    });
-
-    if (response.status >= 400 && response.status < 500) {
-      return { _tag: "Unauthenticated" };
-    }
-
-    if (response.status < 200 || response.status >= 300) {
-      return { _tag: "Unavailable" };
-    }
-
-    const body = yield* response.json;
-    const decoded: UserResponse = yield* Schema.decodeUnknownEffect(UserResponseSchema)(body);
-    return { _tag: "Authenticated" as const, response: decoded };
+) => Effect.Effect<CurrentUserLoad, ApiClientError> = Effect.fn(function* (client, token) {
+  const response = yield* client.user.current({
+    params: {},
+    query: {},
+    headers: authHeaders(token),
+    responseMode: "response-only",
   });
+
+  if (response.status >= 400 && response.status < 500) {
+    return { _tag: "Unauthenticated" };
+  }
+
+  if (response.status < 200 || response.status >= 300) {
+    return { _tag: "Unavailable" };
+  }
+
+  const body = yield* response.json;
+  const decoded: UserResponse = yield* Schema.decodeUnknownEffect(UserResponseSchema)(body);
+  return { _tag: "Authenticated" as const, response: decoded };
+});
 
 const snapshot = (
   state: AuthState,

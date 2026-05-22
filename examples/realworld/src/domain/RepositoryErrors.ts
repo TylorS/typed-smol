@@ -12,15 +12,9 @@ export class FileSystemError extends Data.TaggedError("FileSystemError")<{
 export const formatThrown = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause);
 
-export type RepositoryPersistenceError =
-  | FileSystemError
-  | Schema.SchemaError
-  | SqlError.SqlError;
+export type RepositoryPersistenceError = FileSystemError | Schema.SchemaError | SqlError.SqlError;
 
-export type DatabaseError =
-  | FileSystemError
-  | Migrator.MigrationError
-  | SqlError.SqlError;
+export type DatabaseError = FileSystemError | Migrator.MigrationError | SqlError.SqlError;
 
 export class PasswordHashError extends Data.TaggedError("PasswordHashError")<{
   readonly reason: string;
@@ -34,9 +28,7 @@ export class ArticleRepositoryInvariantError extends Data.TaggedError(
   readonly message: string;
 }> {}
 
-export type ArticleRepositoryError =
-  | ArticleRepositoryInvariantError
-  | RepositoryPersistenceError;
+export type ArticleRepositoryError = ArticleRepositoryInvariantError | RepositoryPersistenceError;
 
 export type CommentRepositoryError = RepositoryPersistenceError;
 

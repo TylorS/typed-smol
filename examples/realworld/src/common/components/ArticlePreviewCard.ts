@@ -16,14 +16,16 @@ export const ArticlePreviewCard = Fx.fn("ArticlePreviewCard")((
   const description = RefSubject.map(article.description, safeTextPreview);
 
   return html`<article class="article-preview">
-  <div class="article-meta">${AuthorMeta(articleRef)}</div>
-  ${Link({
-    class: "preview-link",
-    href,
-    content: html`<h1>${title}</h1>
-      <p>${description}</p>
-      <span>Read more...</span>
-      <ul class="tag-list">${many(article.tagList, (tag) => tag, FeedTag)}</ul>`,
-  })}
-</article>`;
+    <div class="article-meta">${AuthorMeta(articleRef)}</div>
+    ${Link({
+      class: "preview-link",
+      href,
+      content: html`<h1>${title}</h1>
+        <p>${description}</p>
+        <span>Read more...</span>
+        <ul class="tag-list">
+          ${many(article.tagList, (tag) => tag, FeedTag)}
+        </ul>`,
+    })}
+  </article>`;
 });

@@ -143,6 +143,6 @@ describe("typed/ui component option inference", () => {
 
 function maybeOptionError<A>(value: A): Effect.Effect<A, OptionError> {
   return Effect.suspend(() =>
-    Math.random() >= 0 ? Effect.succeed(value) : Effect.fail(new OptionError())
+    Math.random() >= 0 ? Effect.succeed(value) : Effect.fail(new OptionError()),
   );
 }

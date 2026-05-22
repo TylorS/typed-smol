@@ -27,7 +27,7 @@ export const openapi = {
     title: "My API",
     version: "1.0.0",
   },
-}
+};
 ```
 
 `additionalProperties` is binary only:
@@ -44,7 +44,7 @@ export const openapi = {
     title: "Users",
     description: "User management endpoints",
   },
-}
+};
 ```
 
 Endpoint primary modules may export:
@@ -55,7 +55,7 @@ export const openapi = {
     summary: "List users",
     description: "Returns visible users",
   },
-}
+};
 ```
 
 Endpoint companion `<endpoint>.openapi.ts` may default-export the same endpoint annotation shape. Directory `_openapi.ts` may default-export inherited endpoint annotation defaults.
@@ -100,4 +100,3 @@ Merged annotation objects should be deterministic. Later/higher-precedence layer
 ## Testing Standard
 
 Each implementation slice must start red and end green. Generated HttpApi source must be type-checked with the existing `packages/app` generated-source harness, not only snapshot-asserted.
-

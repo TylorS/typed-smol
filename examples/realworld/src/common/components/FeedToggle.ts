@@ -10,15 +10,15 @@ export const FeedToggle = Fx.fn("FeedToggle")(<E, R>(
   const input = RefSubject.proxy(inputRef);
   const selectedTag = input.selectedTag ?? RefSubject.map(input.page, () => undefined);
   const globalFeedClass = RefSubject.map(selectedTag, (tag) => `nav-link${tag ? "" : " active"}`);
-  const selectedTags = RefSubject.map(selectedTag, (tag) => tag ? [tag] : []);
+  const selectedTags = RefSubject.map(selectedTag, (tag) => (tag ? [tag] : []));
 
   return html`<div class="feed-toggle">
-  <ul class="nav nav-pills outline-active">
-    <li class="nav-item"><a class="nav-link disabled">Your Feed</a></li>
-    <li class="nav-item">
-      ${Link({ class: globalFeedClass, href: "/", content: "Global Feed" })}
-    </li>
-    ${many(selectedTags, (tag) => tag, SelectedTagTab)}
-  </ul>
-</div>`;
+    <ul class="nav nav-pills outline-active">
+      <li class="nav-item"><a class="nav-link disabled">Your Feed</a></li>
+      <li class="nav-item">
+        ${Link({ class: globalFeedClass, href: "/", content: "Global Feed" })}
+      </li>
+      ${many(selectedTags, (tag) => tag, SelectedTagTab)}
+    </ul>
+  </div>`;
 });

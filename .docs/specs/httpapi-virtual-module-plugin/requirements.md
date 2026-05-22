@@ -40,7 +40,7 @@
   - JSON spec route exposure equivalent to `HttpApiBuilder.layer({ openapiPath })`,
   - Swagger UI exposure equivalent to `HttpApiSwagger.layer({ path })`,
   - Scalar UI exposure equivalent to `HttpApiScalar.layer({ path, scalar })` and `HttpApiScalar.layerCdn({ path, scalar, version })`.
-  `_api.ts` `openapi.generation.additionalProperties` shall support only binary `true | false` and emit an installed-compatible OpenAPI transform annotation; object-shaped values shall be diagnosed. Generation options shall not be emitted as unsupported `OpenApi.fromApi(Api, ...)` options.
+    `_api.ts` `openapi.generation.additionalProperties` shall support only binary `true | false` and emit an installed-compatible OpenAPI transform annotation; object-shaped values shall be diagnosed. Generation options shall not be emitted as unsupported `OpenApi.fromApi(Api, ...)` options.
 
 ## Non-Functional Requirements
 

@@ -32,9 +32,11 @@ describe("comment repository", () => {
   });
 
   it("lists seeded comments with author profile data", async () => {
-    const comments = await run(CommentRepository.use((repository) =>
-      repository.listByArticle(seedSlug, Option.some(userId(1))),
-    ));
+    const comments = await run(
+      CommentRepository.use((repository) =>
+        repository.listByArticle(seedSlug, Option.some(userId(1))),
+      ),
+    );
 
     expect(Option.isSome(comments)).toBe(true);
     if (Option.isSome(comments)) {
@@ -45,15 +47,17 @@ describe("comment repository", () => {
   });
 
   it("creates comments and exposes owner lookup", async () => {
-    const created = await run(CommentRepository.use((repository) =>
-      repository.create(userId(2), seedSlug, "A new comment"),
-    ));
+    const created = await run(
+      CommentRepository.use((repository) =>
+        repository.create(userId(2), seedSlug, "A new comment"),
+      ),
+    );
 
     expect(Option.isSome(created)).toBe(true);
     if (Option.isSome(created)) {
-      const owner = await run(CommentRepository.use((repository) =>
-        repository.findOwnerId(created.value.id),
-      ));
+      const owner = await run(
+        CommentRepository.use((repository) => repository.findOwnerId(created.value.id)),
+      );
 
       expect(created.value.body).toBe("A new comment");
       expect(created.value.author.username).toBe("seed_author");
@@ -62,24 +66,28 @@ describe("comment repository", () => {
   });
 
   it("deletes one comment without deleting the rest", async () => {
-    const first = await run(CommentRepository.use((repository) =>
-      repository.create(userId(1), seedSlug, "First comment"),
-    ));
-    const second = await run(CommentRepository.use((repository) =>
-      repository.create(userId(1), seedSlug, "Second comment"),
-    ));
+    const first = await run(
+      CommentRepository.use((repository) =>
+        repository.create(userId(1), seedSlug, "First comment"),
+      ),
+    );
+    const second = await run(
+      CommentRepository.use((repository) =>
+        repository.create(userId(1), seedSlug, "Second comment"),
+      ),
+    );
 
     expect(Option.isSome(first)).toBe(true);
     expect(Option.isSome(second)).toBe(true);
     if (Option.isNone(first) || Option.isNone(second)) return;
 
-    await expect(run(CommentRepository.use((repository) =>
-      repository.delete(userId(1), first.value.id),
-    ))).resolves.toBe(true);
+    await expect(
+      run(CommentRepository.use((repository) => repository.delete(userId(1), first.value.id))),
+    ).resolves.toBe(true);
 
-    const comments = await run(CommentRepository.use((repository) =>
-      repository.listByArticle(seedSlug, Option.none()),
-    ));
+    const comments = await run(
+      CommentRepository.use((repository) => repository.listByArticle(seedSlug, Option.none())),
+    );
     expect(Option.isSome(comments)).toBe(true);
     if (Option.isNone(comments)) return;
 
@@ -87,11 +95,13 @@ describe("comment repository", () => {
 
     expect(bodies).toContain("Second comment");
     expect(bodies).not.toContain("First comment");
-    expect(await run(CommentRepository.use((repository) =>
-      repository.delete(userId(2), second.value.id),
-    ))).toBe(false);
-    expect(await run(CommentRepository.use((repository) =>
-      repository.findOwnerId(commentId(9999)),
-    ))).toEqual(Option.none());
+    expect(
+      await run(
+        CommentRepository.use((repository) => repository.delete(userId(2), second.value.id)),
+      ),
+    ).toBe(false);
+    expect(
+      await run(CommentRepository.use((repository) => repository.findOwnerId(commentId(9999)))),
+    ).toEqual(Option.none());
   });
 });

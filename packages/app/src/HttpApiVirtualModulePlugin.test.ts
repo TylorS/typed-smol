@@ -731,7 +731,11 @@ export const handler = () => Effect.succeed({ ok: true });
     const plugin = createHttpApiVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
     const session = createTypeInfoApiSession({ ts, program });
-    const result = plugin.build("typed:api?dir=./apis&target=server", fixture.importer, session.api);
+    const result = plugin.build(
+      "typed:api?dir=./apis&target=server",
+      fixture.importer,
+      session.api,
+    );
     expect(result).toHaveProperty("errors");
     const err = result as VirtualModuleBuildError;
     expect(err.errors[0].code).toBe("AVM-ID-QUERY-001");
@@ -922,7 +926,9 @@ export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body
     expect(source).toContain("export type HandlerSuccess = ApiHandlerSuccessFromConfig<Config>;");
     expect(source).toContain("export type HandlerError = ApiHandlerErrorFromConfig<Config>;");
     expect(source).toContain("export type Handler<R = any> = (");
-    expect(source).toContain("Effect.Effect<HandlerSuccess, HandlerError | HttpServerError.HttpServerError, R>");
+    expect(source).toContain(
+      "Effect.Effect<HandlerSuccess, HandlerError | HttpServerError.HttpServerError, R>",
+    );
     expect(source).toContain("export type RawHandler<R = any> = (");
     expect(source).toContain(
       "Effect.Effect<HttpServerResponse.HttpServerResponse, HandlerError, R>",
@@ -954,7 +960,9 @@ export default Layer.succeed(UsersService, { users: "users" });
     const result = buildApiFromExistingFixture(fixture);
     const sourceText = getSourceText(result);
 
-    expect(sourceText).toContain('import * as UsersDependencies from "./apis/users/_dependencies.js";');
+    expect(sourceText).toContain(
+      'import * as UsersDependencies from "./apis/users/_dependencies.js";',
+    );
     expect(sourceText).toContain(
       'HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", ApiHandlers.handler(UsersList))).pipe(Layer.provideMerge(Router.normalizeDependencyInput(UsersDependencies.default)))',
     );
@@ -1835,7 +1843,7 @@ export const handler = () => Effect.succeed({ ok: true });
         'const ArticlesCommentsRoute = Route.Join(ArticlesRoute, ArticlesCommentsPrefixDefaultRoute.Parse("/:slug/comments"));',
       );
       expect(sourceText).toContain(
-        "const ArticlesCommentsDeleteRoute = Route.Join(ArticlesCommentsRoute, ArticlesCommentsDeleteRouteRoute.Int(\"commentId\"));",
+        'const ArticlesCommentsDeleteRoute = Route.Join(ArticlesCommentsRoute, ArticlesCommentsDeleteRouteRoute.Int("commentId"));',
       );
       expect(sourceText).toContain("params: ArticlesCommentsDeleteRoute.pathSchema");
       expect(sourceText).toContain("query: ArticlesCommentsDeleteRoute.querySchema");

@@ -44,11 +44,13 @@ The problem is to design a Typed-native component system that preserves Ariakit-
 Build the foundation first: Role, Focusable, Collection, Composite, Portal, Group, Separator, and Command.
 
 Pros:
+
 - Matches Ariakit's abstract primitive layer.
 - Makes Menu, Select, Combobox, Tab, Toolbar, and Radio easier to implement correctly.
 - Best fit for property/state-machine tests.
 
 Cons:
+
 - Less immediately visible to application authors.
 - Requires careful design before demonstrating concrete value.
 
@@ -57,11 +59,13 @@ Cons:
 Build Button, Checkbox, Disclosure, Dialog, Popover, and Tooltip first.
 
 Pros:
+
 - Produces usable components quickly.
 - Exercises visibility state, focus restoration, portals, and event handlers.
 - Easier to document and demo early.
 
 Cons:
+
 - Risks ad hoc internals if the composite/collection substrate is deferred too far.
 - Does not prove Ariakit's hardest capability area.
 
@@ -70,11 +74,13 @@ Cons:
 Build Composite, Menu, Select, Combobox, and Tab early.
 
 Pros:
+
 - Tests the most important Ariakit differentiator.
 - Forces the store/provider/navigation architecture to be real.
 - Directly targets command palette and searchable select compositions.
 
 Cons:
+
 - Broadest and riskiest first slice.
 - Harder to stabilize without an already-approved substrate model.
 

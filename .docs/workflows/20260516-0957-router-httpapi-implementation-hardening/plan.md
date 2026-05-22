@@ -14,28 +14,28 @@ Status: approved.
 
 ## Subgoal DAG
 
-| subgoal_id | objective | prerequisites | risk | requirement_links | success_check |
-| ---------- | --------- | ------------- | ---- | ----------------- | ------------- |
-| SG-1 | Add reusable generated-source type-check harness in `packages/app` tests. | approved requirements/spec | high | FR-6, FR-11, NFR-6, AC-4, AC-8 | Harness can compile a generated `.ts` module with fixture source files and report diagnostics. |
-| SG-2 | Prove and harden Router generated-source correctness. | SG-1 | medium | FR-2, FR-7, NFR-1, NFR-2, AC-1, AC-5 | Router generated source type-checks for entrypoint and concern fixtures; user-reachable invalid concern paths return diagnostics. |
-| SG-3 | Prove current HttpApi generated-source failures against installed Effect declarations. | SG-1 | high | FR-3, FR-4, FR-6, NFR-5, AC-2, AC-4 | A failing fixture captures current generated-source mismatch before implementation changes. |
-| SG-4 | Introduce Effect HttpApi render helper boundary and fix baseline HttpApi source type-checking. | SG-3 | high | FR-3, FR-8, NFR-5, AC-2, AC-6 | Baseline HttpApi generated source compiles against `effect@4.0.0-beta.66`. |
-| SG-5 | Harden HttpApi convention parity and non-participating file behavior. | SG-4 | medium | FR-5, FR-7, FR-9, NFR-2, NFR-3, AC-3, AC-5 | Supported conventions are emitted/diagnosed/deferred; unrelated reserved-looking files do not warn or fail. |
-| SG-6 | Implement OpenAPI annotations/exposure correctness. | SG-4, SG-5 | high | FR-8, FR-10, NFR-5, AC-6, AC-7 | JSON, Swagger, Scalar inline/CDN, and supported annotations emit installed APIs and type-check. |
-| SG-7 | Sync durable docs and run final verification. | SG-2, SG-6 | medium | FR-4, NFR-6, AC-1 through AC-8 | Durable specs no longer conflict with approved decisions; `@typed/app` build/test pass. |
+| subgoal_id | objective                                                                                      | prerequisites              | risk   | requirement_links                          | success_check                                                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------------- | -------------------------- | ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| SG-1       | Add reusable generated-source type-check harness in `packages/app` tests.                      | approved requirements/spec | high   | FR-6, FR-11, NFR-6, AC-4, AC-8             | Harness can compile a generated `.ts` module with fixture source files and report diagnostics.                                    |
+| SG-2       | Prove and harden Router generated-source correctness.                                          | SG-1                       | medium | FR-2, FR-7, NFR-1, NFR-2, AC-1, AC-5       | Router generated source type-checks for entrypoint and concern fixtures; user-reachable invalid concern paths return diagnostics. |
+| SG-3       | Prove current HttpApi generated-source failures against installed Effect declarations.         | SG-1                       | high   | FR-3, FR-4, FR-6, NFR-5, AC-2, AC-4        | A failing fixture captures current generated-source mismatch before implementation changes.                                       |
+| SG-4       | Introduce Effect HttpApi render helper boundary and fix baseline HttpApi source type-checking. | SG-3                       | high   | FR-3, FR-8, NFR-5, AC-2, AC-6              | Baseline HttpApi generated source compiles against `effect@4.0.0-beta.66`.                                                        |
+| SG-5       | Harden HttpApi convention parity and non-participating file behavior.                          | SG-4                       | medium | FR-5, FR-7, FR-9, NFR-2, NFR-3, AC-3, AC-5 | Supported conventions are emitted/diagnosed/deferred; unrelated reserved-looking files do not warn or fail.                       |
+| SG-6       | Implement OpenAPI annotations/exposure correctness.                                            | SG-4, SG-5                 | high   | FR-8, FR-10, NFR-5, AC-6, AC-7             | JSON, Swagger, Scalar inline/CDN, and supported annotations emit installed APIs and type-check.                                   |
+| SG-7       | Sync durable docs and run final verification.                                                  | SG-2, SG-6                 | medium | FR-4, NFR-6, AC-1 through AC-8             | Durable specs no longer conflict with approved decisions; `@typed/app` build/test pass.                                           |
 
 ## Ordered Tasks
 
-| task_id | owner | prerequisites | validation | safeguards | rollback |
-| ------- | ----- | ------------- | ---------- | ---------- | -------- |
-| T1 | direct or test-strategist | approved plan | targeted Vitest for harness | add helper only; no plugin behavior changes | delete helper/tests if harness direction fails |
-| T2 | direct or execution-operator | T1 | Router generated-source tests | tests first; preserve current snapshots unless proof says stale | revert Router changes only |
-| T3 | direct or execution-operator | T1 | failing HttpApi generated-source fixture | failing test must fail for generated-source reason | remove failing fixture if harness invalid |
-| T4 | direct or execution-operator | T3 | HttpApi generated-source fixture passes | emit only installed Effect APIs | revert new helper boundary and emitter edits |
-| T5 | direct or execution-operator | T4 | convention parity tests | do not treat unrelated files as diagnostics | revert role-classifier/descriptor edits |
-| T6 | direct or execution-operator | T4, T5 | OpenAPI generated-source tests | no guessed/stale Effect options | revert OpenAPI extraction/emission edits |
-| T7 | docs-archivist or direct | T2, T6 | docs diff review + package gates | update canonical docs only for approved conflicts | revert docs-only changes |
-| T8 | release-finalizer or direct | T7 | `pnpm --filter @typed/app build` and `test` | inspect dirty state before final commit | leave branch unmerged if verification fails |
+| task_id | owner                        | prerequisites | validation                                  | safeguards                                                      | rollback                                       |
+| ------- | ---------------------------- | ------------- | ------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------- |
+| T1      | direct or test-strategist    | approved plan | targeted Vitest for harness                 | add helper only; no plugin behavior changes                     | delete helper/tests if harness direction fails |
+| T2      | direct or execution-operator | T1            | Router generated-source tests               | tests first; preserve current snapshots unless proof says stale | revert Router changes only                     |
+| T3      | direct or execution-operator | T1            | failing HttpApi generated-source fixture    | failing test must fail for generated-source reason              | remove failing fixture if harness invalid      |
+| T4      | direct or execution-operator | T3            | HttpApi generated-source fixture passes     | emit only installed Effect APIs                                 | revert new helper boundary and emitter edits   |
+| T5      | direct or execution-operator | T4            | convention parity tests                     | do not treat unrelated files as diagnostics                     | revert role-classifier/descriptor edits        |
+| T6      | direct or execution-operator | T4, T5        | OpenAPI generated-source tests              | no guessed/stale Effect options                                 | revert OpenAPI extraction/emission edits       |
+| T7      | docs-archivist or direct     | T2, T6        | docs diff review + package gates            | update canonical docs only for approved conflicts               | revert docs-only changes                       |
+| T8      | release-finalizer or direct  | T7            | `pnpm --filter @typed/app build` and `test` | inspect dirty state before final commit                         | leave branch unmerged if verification fails    |
 
 ## File Structure
 
@@ -67,11 +67,13 @@ Status: approved.
 Status: completed.
 
 Detailed execution notes:
+
 - Keep the helper behavior-only: write generated source into an existing fixture root, add it to the program root files, and return flattened diagnostics.
 - Use one fixture root for both plugin build and generated-source type-checking so relative generated imports resolve to the files that produced the source.
 - Add the first Router smoke as a red test for the missing helper before creating `packages/app/src/test-utils/generatedSourceHarness.ts`.
 
 **Files:**
+
 - Create: `packages/app/src/test-utils/generatedSourceHarness.ts`
 - Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
@@ -180,9 +182,9 @@ export function typeCheckGeneratedSource(
       }),
   };
   const program = ts.createProgram([...input.rootFiles, generatedAbs], options, host);
-  const diagnostics = ts.getPreEmitDiagnostics(program).map((diagnostic) =>
-    ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-  );
+  const diagnostics = ts
+    .getPreEmitDiagnostics(program)
+    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
   return { diagnostics };
 }
 ```
@@ -203,11 +205,13 @@ git commit -m "test(app): add generated source typecheck harness" -m "- add reus
 Status: completed.
 
 Detailed execution notes:
+
 - Reuse the Task 1 generated-source harness through focused Router test helpers.
 - First hardening fixtures cover handler-kind emission and participating concern composition.
 - Preserve existing snapshot assertions; add type-check proof alongside them rather than replacing snapshots.
 
 **Files:**
+
 - Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
 - Modify if needed: `packages/app/src/internal/routerDescriptorTree.ts`
 - Modify if needed: `packages/app/src/internal/buildRouteDescriptors.ts`
@@ -256,11 +260,13 @@ git commit -m "fix(app): harden router generated source" -m "- add generated-sou
 Status: completed.
 
 Detailed execution notes:
+
 - Reuse the generated-source harness against the existing `VALID_ENDPOINT_SOURCE` baseline.
 - Build the HttpApi virtual module from the same fixture root that is passed to the generated-source compiler.
 - Treat installed Effect declaration diagnostics as the red evidence for Task 4.
 
 **Files:**
+
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 
 - [x] **Step 1: Add failing HttpApi generated-source fixture**
@@ -294,11 +300,13 @@ If committing a red test is not acceptable, keep this as an uncommitted red phas
 Status: completed.
 
 Detailed execution notes:
+
 - Kept the helper boundary inside `emitHttpApiSource.ts` because the red failure was handler success/error channel typing, not layer construction.
 - Added schema-channel handler adaptation only for non-raw handlers with `success` or `error` exports.
 - Kept broader OpenAPI render helper extraction for Task 6, where Scalar/Swagger/OpenAPI exposure behavior is exercised directly.
 
 **Files:**
+
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
 - Create if helpful: `packages/app/src/internal/emitHttpApiEffect.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
@@ -313,7 +321,10 @@ export const renderHttpApiLayer = (apiName: string, openapiPath?: string): strin
     ? `HttpApiBuilder.layer(${apiName}, { openapiPath: ${JSON.stringify(openapiPath)} })`
     : `HttpApiBuilder.layer(${apiName})`;
 
-export const renderScalarLayer = (apiName: string, scalar: ScalarRenderConfig | undefined): string => {
+export const renderScalarLayer = (
+  apiName: string,
+  scalar: ScalarRenderConfig | undefined,
+): string => {
   if (!scalar) return `HttpApiScalar.layer(${apiName})`;
   const options = renderObjectLiteral({
     path: scalar.path,
@@ -354,10 +365,12 @@ git commit -m "fix(app): typecheck httpapi generated source" -m "- add generated
 Status: completed.
 
 Detailed execution notes:
+
 - Start by changing `_unknown.ts` from warning-producing to non-participating behavior.
 - Keep supported convention collision diagnostics intact; only unsupported reserved-looking files become inert.
 
 **Files:**
+
 - Modify: `packages/app/src/internal/httpapiFileRoles.ts`
 - Modify: `packages/app/src/internal/httpapiDescriptorTree.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
@@ -399,11 +412,13 @@ git commit -m "fix(app): ignore non participating httpapi files" -m "- stop warn
 Status: completed.
 
 Detailed execution notes:
+
 - Added generated-source proof for API-scope OpenAPI exposure and annotations.
 - Implemented installed Effect APIs: `HttpApiScalar.layerCdn`, `OpenApiModule.annotations`, and `.annotateMerge`.
 - Kept stale `additionalProperties` as a documented deferral for Task 7 spec sync; it is still not emitted into `OpenApi.fromApi`.
 
 **Files:**
+
 - Modify: `packages/app/src/internal/httpapiOpenApiConfig.ts`
 - Modify: `packages/app/src/internal/extractHttpApiOpenApi.ts`
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
@@ -452,6 +467,7 @@ git commit -m "fix(app): harden httpapi openapi generation" -m "- emit installed
 ### Task 7: Durable Spec Sync and Memory
 
 **Files:**
+
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/spec.md`
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/requirements.md`
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/testing-strategy.md`
@@ -491,6 +507,7 @@ git commit -m "docs(app): sync httpapi hardening specs" -m "- align durable Http
 ### Task 8: Final Verification and PR Prep
 
 **Files:**
+
 - Modify: `.docs/workflows/20260516-0957-router-httpapi-implementation-hardening/99-finalization.md`
 
 - [x] **Step 1: Run package verification**

@@ -418,7 +418,9 @@ function buildApiRenderSpec(
   };
 }
 
-function collectDirectoryOptionPaths(endpointSpecs: readonly EndpointRenderSpec[]): readonly string[] {
+function collectDirectoryOptionPaths(
+  endpointSpecs: readonly EndpointRenderSpec[],
+): readonly string[] {
   const paths: string[] = [];
   for (const endpoint of endpointSpecs) {
     for (const option of OPTIONAL_ENDPOINT_EXPORTS) {
@@ -591,9 +593,7 @@ function endpointPrefixRouteParts(
     (path) => {
       const moduleName = directoryOptionNameByPath.get(path);
       const exportName = prefixRouteExportName(expressionsByPath, path);
-      return moduleName && exportName
-        ? [{ path, expression: `${moduleName}.${exportName}` }]
-        : [];
+      return moduleName && exportName ? [{ path, expression: `${moduleName}.${exportName}` }] : [];
     },
   );
 }
@@ -676,7 +676,10 @@ const DIRECTORY_EXPORT_BY_OPTION = {
   headers: { companion: "_headers.ts", exportName: "headers" },
   error: { companion: "_errors.ts", exportName: "error" },
 } as const satisfies Partial<
-  Record<OptionalExport, { readonly companion: DirectoryConventionKind; readonly exportName: string }>
+  Record<
+    OptionalExport,
+    { readonly companion: DirectoryConventionKind; readonly exportName: string }
+  >
 >;
 
 export function emitHttpApiSource(input: {
@@ -925,7 +928,10 @@ export function emitHttpApiSource(input: {
           (acc, groupBlock) => `${acc}.pipe(Layer.provideMerge(${groupBlock}))`,
           baseApiLayer,
         );
-  const dependenciesLayer = renderDependenciesLayer(groupDependencyPaths, groupDependencyNameByPath);
+  const dependenciesLayer = renderDependenciesLayer(
+    groupDependencyPaths,
+    groupDependencyNameByPath,
+  );
 
   const middlewaresPath = apiSpec.directoryCompanions["_middlewares.ts"][0];
   const hasMiddlewares = Boolean(middlewaresPath);
@@ -1036,9 +1042,7 @@ function renderDependenciesLayer(
     })
     .filter((value): value is string => value !== undefined);
 
-  return layers.length === 0
-    ? "Layer.empty"
-    : `Layer.mergeAll(Layer.empty, ${layers.join(", ")})`;
+  return layers.length === 0 ? "Layer.empty" : `Layer.mergeAll(Layer.empty, ${layers.join(", ")})`;
 }
 
 function emitHttpApiClientSource(input: {
@@ -1117,7 +1121,11 @@ function emitHttpApiClientSource(input: {
       for (const option of OPTIONAL_ENDPOINT_EXPORTS) {
         const optionName = EXPORT_TO_OPTION[option];
         if (optionalPresent.has(option)) {
-          const expression = imports.expressionFor(endpoint.path, option, input.exportExpressionsByPath);
+          const expression = imports.expressionFor(
+            endpoint.path,
+            option,
+            input.exportExpressionsByPath,
+          );
           if (expression) optsParts.push(`${optionName}: ${expression}`);
           continue;
         }
@@ -1357,7 +1365,8 @@ const applyOpenApiAdditionalProperties = (
 }
 
 function renderScalarLayer(apiName: string, scalar: OpenApiExposureConfig["scalar"]): string {
-  if (!scalar || typeof scalar !== "object" || !scalar.path) return `HttpApiScalar.layer(${apiName})`;
+  if (!scalar || typeof scalar !== "object" || !scalar.path)
+    return `HttpApiScalar.layer(${apiName})`;
   const options = renderObjectLiteral({
     path: scalar.path,
     ...(scalar.config ? { scalar: scalar.config } : {}),

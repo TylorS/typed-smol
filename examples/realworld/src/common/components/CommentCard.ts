@@ -31,7 +31,10 @@ export const CommentCard = Fx.fn("CommentCard")(<E, R>(input: {
         content: html`<img class="comment-author-img" src=${avatar} /> ${displayName}`,
       })}
       <span class="mod-options">
-        <button class="btn btn-sm btn-outline-danger" onclick=${deleteComment(input.slug, comment.id)}>
+        <button
+          class="btn btn-sm btn-outline-danger"
+          onclick=${deleteComment(input.slug, comment.id)}
+        >
           <i class="ion-trash-a"></i>
         </button>
       </span>
@@ -56,10 +59,10 @@ const removeComment = Effect.fn(function* <A extends number, E, R>(
   slug: RefSubject.Computed<string, E, R>,
   id: RefSubject.Computed<A>,
 ) {
-      const currentSlug = yield* readActionValue(slug);
-      const commentId = yield* id;
-      const auth = yield* BrowserAuth;
-      return yield* auth.deleteComment(currentSlug, commentId);
+  const currentSlug = yield* readActionValue(slug);
+  const commentId = yield* id;
+  const auth = yield* BrowserAuth;
+  return yield* auth.deleteComment(currentSlug, commentId);
 });
 
 const readActionValue = <A, E, R>(

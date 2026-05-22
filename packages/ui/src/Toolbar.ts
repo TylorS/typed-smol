@@ -43,7 +43,9 @@ export function Root<const Opts extends RootOptions>(options: Opts) {
     role="toolbar"
     aria-label=${options.label}
     aria-orientation=${orientation}
-  >${options.content}</div>`;
+  >
+    ${options.content}
+  </div>`;
 }
 
 function nextActiveId(
@@ -55,7 +57,10 @@ function nextActiveId(
   if (direction === "first") return items[0]?.id ?? null;
   if (direction === "last") return items[items.length - 1]?.id ?? null;
 
-  const index = Math.max(0, items.findIndex((item) => item.id === state.activeId));
+  const index = Math.max(
+    0,
+    items.findIndex((item) => item.id === state.activeId),
+  );
   const delta = direction === "next" ? 1 : -1;
   const next = index + delta;
   if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;

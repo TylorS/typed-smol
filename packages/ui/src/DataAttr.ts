@@ -64,6 +64,8 @@ function coerceDatasetValue(value: string | undefined): unknown {
   return value;
 }
 
-function hasDataset(source: DatasetSource | Readonly<Record<string, string | undefined>>): source is DatasetSource {
+function hasDataset(
+  source: DatasetSource | Readonly<Record<string, string | undefined>>,
+): source is DatasetSource {
   return "dataset" in source && typeof source.dataset === "object";
 }

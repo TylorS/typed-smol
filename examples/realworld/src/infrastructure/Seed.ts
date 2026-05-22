@@ -30,14 +30,16 @@ export const collectSeedCounts = Effect.gen(function* () {
 export const seedDatabase = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
-  yield* sql.withTransaction(Effect.gen(function* () {
-    yield* clearSeedTables;
-    yield* insertUsers;
-    yield* insertTags;
-    yield* insertArticles;
-    yield* insertArticleTags;
-    yield* insertRelationships;
-  }));
+  yield* sql.withTransaction(
+    Effect.gen(function* () {
+      yield* clearSeedTables;
+      yield* insertUsers;
+      yield* insertTags;
+      yield* insertArticles;
+      yield* insertArticleTags;
+      yield* insertRelationships;
+    }),
+  );
 
   return yield* collectSeedCounts;
 });
@@ -53,44 +55,56 @@ const clearSeedTables = Effect.gen(function* () {
 const insertUsers = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
-  yield* Effect.forEach(seedUsers, (user) => sql`
+  yield* Effect.forEach(
+    seedUsers,
+    (user) => sql`
     INSERT INTO users
       (id, username, email, password_hash, password_salt, bio, image, created_at, updated_at)
     VALUES
       (${user.id}, ${user.username}, ${user.email}, ${user.passwordHash},
        ${user.passwordSalt}, ${user.bio}, ${user.image}, ${now}, ${now})
-  `);
+  `,
+  );
 });
 
 const insertTags = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
-  yield* Effect.forEach(seedTags, (name, index) => sql`
+  yield* Effect.forEach(
+    seedTags,
+    (name, index) => sql`
     INSERT INTO tags (id, name, created_at)
     VALUES (${index + 1}, ${name}, ${now})
-  `);
+  `,
+  );
 });
 
 const insertArticles = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
-  yield* Effect.forEach(seedArticles, (article) => sql`
+  yield* Effect.forEach(
+    seedArticles,
+    (article) => sql`
     INSERT INTO articles
       (id, author_id, slug, title, description, body, created_at, updated_at)
     VALUES
       (${article.id}, ${article.authorId}, ${article.slug}, ${article.title},
        ${article.description}, ${article.body}, ${article.createdAt}, ${article.createdAt})
-  `);
+  `,
+  );
 });
 
 const insertArticleTags = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
   yield* Effect.forEach(seedArticles, (article) =>
-    Effect.forEach(article.tagIds, (tagId, position) => sql`
+    Effect.forEach(
+      article.tagIds,
+      (tagId, position) => sql`
       INSERT INTO article_tags (article_id, tag_id, position)
       VALUES (${article.id}, ${tagId}, ${position})
-    `),
+    `,
+    ),
   );
 });
 

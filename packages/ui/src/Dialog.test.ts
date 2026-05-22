@@ -54,10 +54,11 @@ describe("typed/ui/Dialog", () => {
         Dialog.Trigger({ state, controls: "dialog", content: "Open" }),
         triggerRoot,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
-      const [close] = yield* render(
-        Dialog.Close({ state, content: "Close" }),
-        closeRoot,
-      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      const [close] = yield* render(Dialog.Close({ state, content: "Close" }), closeRoot).pipe(
+        Fx.provide(layer),
+        Fx.take(1),
+        Fx.collectAll,
+      );
 
       assert(trigger instanceof window.HTMLButtonElement);
       assert(close instanceof window.HTMLButtonElement);

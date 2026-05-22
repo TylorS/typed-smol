@@ -14,33 +14,33 @@ Status: approved.
 
 ## Subgoal DAG
 
-| subgoal_id | objective | prerequisites | risk | requirement_links | success_check |
-| ---------- | --------- | ------------- | ---- | ----------------- | ------------- |
-| SG-1 | Define artifact identity, path layout, manifests, index, fingerprints, atomic writes, and module-specifier rewriting in `@typed/virtual-modules`. | Approved spec. | high | FR-1..FR-8, FR-10..FR-11, NFR-1..NFR-4, NFR-7, AC-1..AC-7, AC-10..AC-11, AC-15 | Unit tests prove identity/path/manifest/fingerprint/atomic-write/import-rewrite behavior. |
-| SG-2 | Integrate artifact store into core record resolution without changing plugin-facing `build(id, importer, api)`. | SG-1 | high | FR-8, FR-12, FR-13, NFR-6, NFR-8, AC-1, AC-13, AC-14 | Core adapter tests pass and plugin `build()` still sees logical ids/effective real importers. |
-| SG-3 | Wire vmc/compiler-host and prove restart reuse plus diagnostics. | SG-1, SG-2 | high | FR-9, FR-13, NFR-5, NFR-8, AC-8, AC-10, AC-11, AC-14 | vmc fixture sees cache hit on unchanged inputs and fails clearly for corrupt/stale artifacts. |
-| SG-4 | Wire Vite and prove cross-surface reuse with vmc. | SG-3 | high | FR-9, NFR-5, AC-8 | Vite/vmc integration fixture observes cache hit on unchanged inputs. |
-| SG-5 | Wire TS plugin and VS Code normal materialization through shared core path. | SG-2, SG-3 | medium | FR-9, FR-11, NFR-6, AC-9, AC-11 | TS plugin tests pass; VS Code duplicate normal-case disk preview logic is removed or reduced to a wrapper. |
-| SG-6 | Add explicit clean/prune tooling and finalize docs/memory. | SG-1..SG-5 | medium | FR-14, NFR-9, AC-12 | Clean/prune test passes; docs and workflow memory capture implementation facts. |
+| subgoal_id | objective                                                                                                                                         | prerequisites  | risk   | requirement_links                                                              | success_check                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| SG-1       | Define artifact identity, path layout, manifests, index, fingerprints, atomic writes, and module-specifier rewriting in `@typed/virtual-modules`. | Approved spec. | high   | FR-1..FR-8, FR-10..FR-11, NFR-1..NFR-4, NFR-7, AC-1..AC-7, AC-10..AC-11, AC-15 | Unit tests prove identity/path/manifest/fingerprint/atomic-write/import-rewrite behavior.                  |
+| SG-2       | Integrate artifact store into core record resolution without changing plugin-facing `build(id, importer, api)`.                                   | SG-1           | high   | FR-8, FR-12, FR-13, NFR-6, NFR-8, AC-1, AC-13, AC-14                           | Core adapter tests pass and plugin `build()` still sees logical ids/effective real importers.              |
+| SG-3       | Wire vmc/compiler-host and prove restart reuse plus diagnostics.                                                                                  | SG-1, SG-2     | high   | FR-9, FR-13, NFR-5, NFR-8, AC-8, AC-10, AC-11, AC-14                           | vmc fixture sees cache hit on unchanged inputs and fails clearly for corrupt/stale artifacts.              |
+| SG-4       | Wire Vite and prove cross-surface reuse with vmc.                                                                                                 | SG-3           | high   | FR-9, NFR-5, AC-8                                                              | Vite/vmc integration fixture observes cache hit on unchanged inputs.                                       |
+| SG-5       | Wire TS plugin and VS Code normal materialization through shared core path.                                                                       | SG-2, SG-3     | medium | FR-9, FR-11, NFR-6, AC-9, AC-11                                                | TS plugin tests pass; VS Code duplicate normal-case disk preview logic is removed or reduced to a wrapper. |
+| SG-6       | Add explicit clean/prune tooling and finalize docs/memory.                                                                                        | SG-1..SG-5     | medium | FR-14, NFR-9, AC-12                                                            | Clean/prune test passes; docs and workflow memory capture implementation facts.                            |
 
 ## Ordered Tasks
 
-| task_id | owner | prerequisites | validation | safeguards | rollback |
-| ------- | ----- | ------------- | ---------- | ---------- | -------- |
-| T1 | core worker | SG-1 | `pnpm --filter @typed/virtual-modules test -- ArtifactIdentity` | Add tests before implementation; no adapter changes. | Revert new artifact identity files/tests. |
-| T2 | core worker | T1 | `pnpm --filter @typed/virtual-modules test -- ArtifactManifest` | Keep manifest schema versioned and JSON-serializable. | Revert manifest files/tests. |
-| T3 | core worker | T2 | `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint` | Fingerprints are deterministic; no timestamp-only validity. | Revert fingerprint helper files/tests. |
-| T4 | core worker | T2, T3 | `pnpm --filter @typed/virtual-modules test -- ArtifactStore` | Use temp dirs; atomic writes only. | Revert store implementation/tests. |
-| T5 | core worker | T4 | `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile` | Harden source correctness before adapter migration. | Revert import rewrite helpers/tests. |
-| T6 | core worker | T4, T5 | `pnpm --filter @typed/virtual-modules test -- CompilerHostAdapter LanguageServiceAdapter` | Preserve plugin API inputs; do not pass physical paths to plugins. | Revert adapter integration only. |
-| T7 | vmc worker | T6 | `pnpm --filter @typed/virtual-modules-compiler test` | Compiler host is the first adapter correctness gate. | Revert vmc changes. |
-| T8 | vite worker | T7 | `pnpm --filter @typed/virtual-modules-vite test` | Keep Vite encoded virtual ids; artifact store sits behind resolver/load. | Revert Vite changes. |
-| T9 | integration worker | T7, T8 | targeted Vite/vmc fixture tests | Fixture must prove reuse, not only successful compile. | Revert fixture and cache-hit instrumentation. |
-| T10 | ts-plugin worker | T6, T7 | `pnpm --filter @typed/virtual-modules-ts-plugin test` | Preserve current `typed.config.ts` and `vmc.config.ts` behavior unless explicitly changed later. | Revert TS plugin changes. |
-| T11 | vscode worker | T6, T10 | `pnpm --filter @typed/virtual-modules-vscode build` plus core materialization tests | Do not require a live VS Code host for core proof. | Revert VS Code wrapper changes. |
-| T12 | core worker | T4 | `pnpm --filter @typed/virtual-modules test -- clean` | Clean/prune only explicit API/CLI path; normal flows do not prune. | Revert clean/prune helpers/tests. |
-| T13 | integration worker | T1..T12 | `pnpm -r run test` and `pnpm -r build` | Record unrelated failures separately. | Revert latest failing integration slice. |
-| T14 | docs worker | T13 | `git diff --check`; docs review against spec/testing strategy | Docs reflect implementation, not speculative future app-plugin work. | Revert docs/memory updates only. |
+| task_id | owner              | prerequisites | validation                                                                                | safeguards                                                                                       | rollback                                      |
+| ------- | ------------------ | ------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| T1      | core worker        | SG-1          | `pnpm --filter @typed/virtual-modules test -- ArtifactIdentity`                           | Add tests before implementation; no adapter changes.                                             | Revert new artifact identity files/tests.     |
+| T2      | core worker        | T1            | `pnpm --filter @typed/virtual-modules test -- ArtifactManifest`                           | Keep manifest schema versioned and JSON-serializable.                                            | Revert manifest files/tests.                  |
+| T3      | core worker        | T2            | `pnpm --filter @typed/virtual-modules test -- ArtifactFingerprint`                        | Fingerprints are deterministic; no timestamp-only validity.                                      | Revert fingerprint helper files/tests.        |
+| T4      | core worker        | T2, T3        | `pnpm --filter @typed/virtual-modules test -- ArtifactStore`                              | Use temp dirs; atomic writes only.                                                               | Revert store implementation/tests.            |
+| T5      | core worker        | T4            | `pnpm --filter @typed/virtual-modules test -- materializeVirtualFile`                     | Harden source correctness before adapter migration.                                              | Revert import rewrite helpers/tests.          |
+| T6      | core worker        | T4, T5        | `pnpm --filter @typed/virtual-modules test -- CompilerHostAdapter LanguageServiceAdapter` | Preserve plugin API inputs; do not pass physical paths to plugins.                               | Revert adapter integration only.              |
+| T7      | vmc worker         | T6            | `pnpm --filter @typed/virtual-modules-compiler test`                                      | Compiler host is the first adapter correctness gate.                                             | Revert vmc changes.                           |
+| T8      | vite worker        | T7            | `pnpm --filter @typed/virtual-modules-vite test`                                          | Keep Vite encoded virtual ids; artifact store sits behind resolver/load.                         | Revert Vite changes.                          |
+| T9      | integration worker | T7, T8        | targeted Vite/vmc fixture tests                                                           | Fixture must prove reuse, not only successful compile.                                           | Revert fixture and cache-hit instrumentation. |
+| T10     | ts-plugin worker   | T6, T7        | `pnpm --filter @typed/virtual-modules-ts-plugin test`                                     | Preserve current `typed.config.ts` and `vmc.config.ts` behavior unless explicitly changed later. | Revert TS plugin changes.                     |
+| T11     | vscode worker      | T6, T10       | `pnpm --filter @typed/virtual-modules-vscode build` plus core materialization tests       | Do not require a live VS Code host for core proof.                                               | Revert VS Code wrapper changes.               |
+| T12     | core worker        | T4            | `pnpm --filter @typed/virtual-modules test -- clean`                                      | Clean/prune only explicit API/CLI path; normal flows do not prune.                               | Revert clean/prune helpers/tests.             |
+| T13     | integration worker | T1..T12       | `pnpm -r run test` and `pnpm -r build`                                                    | Record unrelated failures separately.                                                            | Revert latest failing integration slice.      |
+| T14     | docs worker        | T13           | `git diff --check`; docs review against spec/testing strategy                             | Docs reflect implementation, not speculative future app-plugin work.                             | Revert docs/memory updates only.              |
 
 ## First Execution Batch
 
@@ -51,6 +51,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T1: Artifact Identity and Paths
 
 **Files:**
+
 - Create: `packages/virtual-modules/src/internal/ArtifactIdentity.ts`
 - Create: `packages/virtual-modules/src/internal/ArtifactIdentity.test.ts`
 - Modify: `packages/virtual-modules/src/index.ts`
@@ -68,6 +69,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T2: Manifest and Project Index Types
 
 **Files:**
+
 - Create: `packages/virtual-modules/src/internal/ArtifactManifest.ts`
 - Create: `packages/virtual-modules/src/internal/ArtifactManifest.test.ts`
 - Modify: `packages/virtual-modules/src/index.ts`
@@ -82,6 +84,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T3: Fingerprints
 
 **Files:**
+
 - Create: `packages/virtual-modules/src/internal/ArtifactFingerprint.ts`
 - Create: `packages/virtual-modules/src/internal/ArtifactFingerprint.test.ts`
 - Modify: `packages/virtual-modules/src/index.ts`
@@ -96,6 +99,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T4: Artifact Store Core
 
 **Files:**
+
 - Create: `packages/virtual-modules/src/internal/ArtifactStore.ts`
 - Create: `packages/virtual-modules/src/internal/ArtifactStore.test.ts`
 - Modify: `packages/virtual-modules/src/index.ts`
@@ -110,6 +114,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T5: Module Specifier Handling
 
 **Files:**
+
 - Modify: `packages/virtual-modules/src/internal/materializeVirtualFile.ts`
 - Add or modify: `packages/virtual-modules/src/internal/materializeVirtualFile.test.ts`
 
@@ -122,6 +127,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T6: Core Adapter Integration
 
 **Files:**
+
 - Modify: `packages/virtual-modules/src/internal/VirtualRecordStore.ts`
 - Modify: `packages/virtual-modules/src/CompilerHostAdapter.ts`
 - Modify: `packages/virtual-modules/src/LanguageServiceAdapter.ts`
@@ -139,6 +145,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T7: vmc Compiler-Host Integration
 
 **Files:**
+
 - Modify: `packages/virtual-modules-compiler/src/compile.ts`
 - Modify: `packages/virtual-modules-compiler/src/watch.ts`
 - Modify: `packages/virtual-modules-compiler/src/cli.integration.test.ts`
@@ -154,6 +161,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T8: Vite Integration
 
 **Files:**
+
 - Modify: `packages/virtual-modules-vite/src/vitePlugin.ts`
 - Modify: `packages/virtual-modules-vite/src/vitePlugin.test.ts`
 - Modify: `packages/virtual-modules-vite/src/vitePlugin.integration.test.ts`
@@ -172,6 +180,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T9: Cross-Surface Reuse Fixture
 
 **Files:**
+
 - Modify or create fixture tests in `packages/virtual-modules-vite/src/vitePlugin.integration.test.ts`
 - Modify or create fixture tests in `packages/virtual-modules-compiler/src/cli.integration.test.ts`
 
@@ -188,6 +197,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T10: TypeScript Plugin Integration
 
 **Files:**
+
 - Modify: `packages/virtual-modules-ts-plugin/src/plugin.ts`
 - Modify: `packages/virtual-modules-ts-plugin/src/plugin.test.ts`
 - Modify: `packages/virtual-modules-ts-plugin/src/sample-project.integration.test.ts`
@@ -202,6 +212,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T11: VS Code Shared Materialization
 
 **Files:**
+
 - Modify: `packages/virtual-modules-vscode/src/virtualPreviewDisk.ts`
 - Modify: `packages/virtual-modules-vscode/src/resolver.ts`
 - Modify: `packages/virtual-modules-vscode/src/extension.ts`
@@ -217,6 +228,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T12: Explicit Clean/Prune
 
 **Files:**
+
 - Modify: `packages/virtual-modules/src/internal/ArtifactStore.ts`
 - Modify: `packages/virtual-modules/src/internal/ArtifactStore.test.ts`
 - Consider modify: `packages/virtual-modules-compiler/src/cli.ts` if clean belongs in vmc CLI for v1.
@@ -232,6 +244,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T13: Full Integration Verification
 
 **Files:**
+
 - No planned source files unless failures reveal missing integration.
 
 - [x] Run `pnpm --filter @typed/virtual-modules test`.
@@ -247,6 +260,7 @@ Phase 4 should start with T1 through T5 only. Those tasks create the core artifa
 ### T14: Docs and Memory Closeout
 
 **Files:**
+
 - Modify: `.docs/specs/virtual-module-artifact-store/spec.md`
 - Modify: `.docs/specs/virtual-module-artifact-store/testing-strategy.md`
 - Modify or create: `.docs/workflows/20260515-2018-typed-framework-evolution/memory/*`

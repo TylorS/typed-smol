@@ -12,7 +12,9 @@ describe("typed/ui/Collection", () => {
       const scopeA = yield* Scope.make();
       const scopeB = yield* Scope.make();
       yield* Collection.register(collection, { id: "a" }).pipe(Scope.provide(scopeA));
-      yield* Collection.register(collection, { id: "b", disabled: true }).pipe(Scope.provide(scopeB));
+      yield* Collection.register(collection, { id: "b", disabled: true }).pipe(
+        Scope.provide(scopeB),
+      );
 
       expect(Collection.enabledItems(yield* collection).map((item) => item.id)).toEqual(["a"]);
 

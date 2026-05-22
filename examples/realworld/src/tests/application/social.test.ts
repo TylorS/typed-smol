@@ -57,20 +57,18 @@ describe("profile, comment, and tag application services", () => {
 
   it("follows profiles, creates comments, deletes owned comments, and lists tags", async () => {
     const token = await run(registerToken("social_user", "social.user@example.com"));
-    const followed = await run(Profiles.use((profiles) =>
-      profiles.follow(token, "seed_author"),
-    ));
-    const profile = await run(Profiles.use((profiles) =>
-      profiles.get("seed_author", token),
-    ));
-    const comment = await run(Comments.use((comments) =>
-      comments.create(token, "seeded-typed-realworld-1", {
-        comment: { body: "Application comment" },
-      }),
-    ));
-    const comments = await run(Comments.use((service) =>
-      service.list("seeded-typed-realworld-1", token),
-    ));
+    const followed = await run(Profiles.use((profiles) => profiles.follow(token, "seed_author")));
+    const profile = await run(Profiles.use((profiles) => profiles.get("seed_author", token)));
+    const comment = await run(
+      Comments.use((comments) =>
+        comments.create(token, "seeded-typed-realworld-1", {
+          comment: { body: "Application comment" },
+        }),
+      ),
+    );
+    const comments = await run(
+      Comments.use((service) => service.list("seeded-typed-realworld-1", token)),
+    );
     const tags = await run(Tags.use((service) => service.list()));
 
     expect(followed.profile.following).toBe(true);
@@ -79,40 +77,50 @@ describe("profile, comment, and tag application services", () => {
     expect(comments.comments.map((item) => item.body)).toContain("Application comment");
     expect(tags.tags).toEqual(expect.arrayContaining(["typed", "effect"]));
 
-    await expect(run(Comments.use((service) =>
-      service.delete(token, "seeded-typed-realworld-1", comment.comment.id),
-    ))).resolves.toBeUndefined();
+    await expect(
+      run(
+        Comments.use((service) =>
+          service.delete(token, "seeded-typed-realworld-1", comment.comment.id),
+        ),
+      ),
+    ).resolves.toBeUndefined();
   });
 
   it("maps profile, comment, and authorization errors", async () => {
     const owner = await run(registerToken("comment_owner", "comment.owner@example.com"));
     const other = await run(registerToken("comment_other", "comment.other@example.com"));
-    const missingProfile = await expectRealWorldError(Profiles.use((profiles) =>
-      profiles.get("missing_user", Option.none()),
-    ));
+    const missingProfile = await expectRealWorldError(
+      Profiles.use((profiles) => profiles.get("missing_user", Option.none())),
+    );
     expect(missingProfile.status).toBe(404);
     expect(missingProfile.errors.profile).toEqual(["not found"]);
 
-    const missingToken = await expectRealWorldError(Profiles.use((profiles) =>
-      profiles.follow(Option.none(), "seed_author"),
-    ));
+    const missingToken = await expectRealWorldError(
+      Profiles.use((profiles) => profiles.follow(Option.none(), "seed_author")),
+    );
     expect(missingToken.status).toBe(401);
     expect(missingToken.errors.token).toEqual(["is missing"]);
 
-    const blankComment = await expectRealWorldError(Comments.use((comments) =>
-      comments.create(owner, "seeded-typed-realworld-1", { comment: { body: "" } }),
-    ));
+    const blankComment = await expectRealWorldError(
+      Comments.use((comments) =>
+        comments.create(owner, "seeded-typed-realworld-1", { comment: { body: "" } }),
+      ),
+    );
     expect(blankComment.status).toBe(422);
     expect(blankComment.errors.body).toEqual(["can't be blank"]);
 
-    const created = await run(Comments.use((comments) =>
-      comments.create(owner, "seeded-typed-realworld-1", {
-        comment: { body: "Owned comment" },
-      }),
-    ));
-    const forbidden = await expectRealWorldError(Comments.use((comments) =>
-      comments.delete(other, "seeded-typed-realworld-1", created.comment.id),
-    ));
+    const created = await run(
+      Comments.use((comments) =>
+        comments.create(owner, "seeded-typed-realworld-1", {
+          comment: { body: "Owned comment" },
+        }),
+      ),
+    );
+    const forbidden = await expectRealWorldError(
+      Comments.use((comments) =>
+        comments.delete(other, "seeded-typed-realworld-1", created.comment.id),
+      ),
+    );
     expect(forbidden.status).toBe(403);
     expect(forbidden.errors.comment).toEqual(["forbidden"]);
   });

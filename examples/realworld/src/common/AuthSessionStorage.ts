@@ -18,26 +18,28 @@ export class AuthSessionStorage extends Context.Service<AuthSessionStorage>()(
     }),
   },
 ) {
-  static readonly getToken: Effect.Effect<string | null, never, AuthSessionStorage> =
-    Effect.gen(function* () {
+  static readonly getToken: Effect.Effect<string | null, never, AuthSessionStorage> = Effect.gen(
+    function* () {
       const store = yield* AuthSessionStorage;
       const token = yield* store.get(authTokenKey);
       return Option.getOrElse(token, () => null);
-    }).pipe(
-      Effect.catchCause(() => Effect.succeed(null)),
-    );
+    },
+  ).pipe(Effect.catchCause(() => Effect.succeed(null)));
 
-  static readonly authSnapshot: Effect.Effect<AuthSnapshot, never, AuthSessionStorage> =
-    Effect.gen(function* () {
+  static readonly authSnapshot: Effect.Effect<AuthSnapshot, never, AuthSessionStorage> = Effect.gen(
+    function* () {
       const token = yield* AuthSessionStorage.getToken;
       return {
         state: "loading" as const,
         token,
         currentUser: null,
       };
-    });
+    },
+  );
 
-  static readonly persist = (snapshot: AuthSnapshot | undefined): Effect.Effect<void, never, AuthSessionStorage> =>
+  static readonly persist = (
+    snapshot: AuthSnapshot | undefined,
+  ): Effect.Effect<void, never, AuthSessionStorage> =>
     Effect.gen(function* () {
       if (snapshot === undefined) return;
 
@@ -48,15 +50,9 @@ export class AuthSessionStorage extends Context.Service<AuthSessionStorage>()(
       }
 
       yield* store.set(authTokenKey, snapshot.token);
-    }).pipe(
-      Effect.catchCause((cause) =>
-        Effect.logError("Failed to persist auth token", cause),
-      ),
-    );
+    }).pipe(Effect.catchCause((cause) => Effect.logError("Failed to persist auth token", cause)));
 
-  static readonly local = (
-    storage: () => Storage,
-  ): Layer.Layer<AuthSessionStorage> =>
+  static readonly local = (storage: () => Storage): Layer.Layer<AuthSessionStorage> =>
     Layer.effect(AuthSessionStorage, AuthSessionStorage.make).pipe(
       Layer.provide(KeyValueStore.layerStorage(storage)),
     );

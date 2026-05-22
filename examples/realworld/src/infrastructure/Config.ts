@@ -9,10 +9,9 @@ export interface RealWorldConfigService {
   readonly databasePath: string;
 }
 
-export class RealWorldConfig extends Context.Service<
-  RealWorldConfig,
-  RealWorldConfigService
->()("@typed/realworld/RealWorldConfig") {
+export class RealWorldConfig extends Context.Service<RealWorldConfig, RealWorldConfigService>()(
+  "@typed/realworld/RealWorldConfig",
+) {
   static readonly make = (
     overrides: Partial<RealWorldConfigService> = {},
   ): RealWorldConfigService => ({

@@ -40,7 +40,7 @@ Conceptual responsibilities:
 Conceptual interface:
 
 ```ts
-const disclosure = yield* RefSubject.make({ open: false });
+const disclosure = yield * RefSubject.make({ open: false });
 
 const view = Disclosure({
   state: disclosure,
@@ -78,7 +78,7 @@ const DisclosureData = DataAttr.schema({
   placement: Schema.Literal("top", "right", "bottom", "left"),
 });
 
-const data = yield* DataAttr.encode(DisclosureData, { open: true, placement: "bottom" });
+const data = yield * DataAttr.encode(DisclosureData, { open: true, placement: "bottom" });
 // data is { open: "true", placement: "bottom" }
 ```
 
@@ -103,7 +103,7 @@ Responsibilities:
 Conceptual shape:
 
 ```ts
-const state = yield* RefSubject.make({ open: false, placement: "bottom" as const });
+const state = yield * RefSubject.make({ open: false, placement: "bottom" as const });
 const ref = hydrateRefFromData(state, DisclosureData);
 ```
 
@@ -192,31 +192,31 @@ sequenceDiagram
 
 ## Failure Modes and Mitigations
 
-| failure | mitigation |
-| ------- | ---------- |
-| Popover silently behaves as custom overlay | Require native API only and test absence of custom visibility/focus trap layer. |
-| `data-*` becomes internal hydration channel | Limit helpers to public styling/inspection state and route startup through ref helpers. |
-| Schema decoding accepts invalid public state | Use Schema decode failures in tests and expose typed failure paths. |
-| Dialog marks `aria-modal` without true modal behavior | Acceptance tests must cover modal behavior before `aria-modal="true"` is emitted. |
-| State APIs drift into React-like hook assumptions | Model state as explicit `RefSubject` values, with providers as Context/Layer or `RefSubject.Service` helpers. |
-| Focus behavior differs between DOM implementations and browsers | Browser-level checks are required for Dialog and native Popover behavior. |
+| failure                                                         | mitigation                                                                                                    |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Popover silently behaves as custom overlay                      | Require native API only and test absence of custom visibility/focus trap layer.                               |
+| `data-*` becomes internal hydration channel                     | Limit helpers to public styling/inspection state and route startup through ref helpers.                       |
+| Schema decoding accepts invalid public state                    | Use Schema decode failures in tests and expose typed failure paths.                                           |
+| Dialog marks `aria-modal` without true modal behavior           | Acceptance tests must cover modal behavior before `aria-modal="true"` is emitted.                             |
+| State APIs drift into React-like hook assumptions               | Model state as explicit `RefSubject` values, with providers as Context/Layer or `RefSubject.Service` helpers. |
+| Focus behavior differs between DOM implementations and browsers | Browser-level checks are required for Dialog and native Popover behavior.                                     |
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1, NFR-5 | `@typed/ui` package scope | No new package or framework changes. |
-| FR-2 | API naming policy | Ariakit-similar names where practical. |
-| FR-3, FR-4 | tranche scope | Substrate plus Disclosure/Dialog/Popover. |
-| FR-5, FR-6, FR-7 | RefSubject state model | Explicit refs plus Effect provider helpers. |
-| FR-8, FR-9, FR-10, FR-20 | DataAttr helpers | Public state only, whole-object Schema-backed encode/decode. |
-| FR-11, NFR-7 | ref startup hydration | Shared ref path initializes `RefSubject`s from DOM. |
-| FR-12 | Disclosure | APG disclosure behavior. |
-| FR-13, NFR-1, NFR-3 | Dialog | APG modal dialog behavior and browser verification. |
-| FR-14, FR-15, FR-16, FR-17, FR-18, NFR-6 | Popover | Native Popover API only, non-modal. |
-| FR-19 | headless styling | Stable public `data-*`, no CSS. |
-| NFR-2 | test strategy | Property/state-machine tests for RefSubject-backed state and data attrs. |
-| NFR-4 | implementation style | Small composable Effect-native APIs. |
+| requirement_id                           | design_element            | notes                                                                    |
+| ---------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
+| FR-1, NFR-5                              | `@typed/ui` package scope | No new package or framework changes.                                     |
+| FR-2                                     | API naming policy         | Ariakit-similar names where practical.                                   |
+| FR-3, FR-4                               | tranche scope             | Substrate plus Disclosure/Dialog/Popover.                                |
+| FR-5, FR-6, FR-7                         | RefSubject state model    | Explicit refs plus Effect provider helpers.                              |
+| FR-8, FR-9, FR-10, FR-20                 | DataAttr helpers          | Public state only, whole-object Schema-backed encode/decode.             |
+| FR-11, NFR-7                             | ref startup hydration     | Shared ref path initializes `RefSubject`s from DOM.                      |
+| FR-12                                    | Disclosure                | APG disclosure behavior.                                                 |
+| FR-13, NFR-1, NFR-3                      | Dialog                    | APG modal dialog behavior and browser verification.                      |
+| FR-14, FR-15, FR-16, FR-17, FR-18, NFR-6 | Popover                   | Native Popover API only, non-modal.                                      |
+| FR-19                                    | headless styling          | Stable public `data-*`, no CSS.                                          |
+| NFR-2                                    | test strategy             | Property/state-machine tests for RefSubject-backed state and data attrs. |
+| NFR-4                                    | implementation style      | Small composable Effect-native APIs.                                     |
 
 ## References Consulted
 

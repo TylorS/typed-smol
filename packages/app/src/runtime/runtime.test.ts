@@ -42,7 +42,9 @@ describe("@typed/app runtime templates", () => {
 
     const result = await Effect.runPromise(renderServer(compiled, { values: ["Ada"] }));
 
-    expect(result.html).toBe("<!--t_KwZ/fKKViAs=--><p><!--n_0-->Ada<!--/n_0--></p><!--/t_KwZ/fKKViAs=-->");
+    expect(result.html).toBe(
+      "<!--t_KwZ/fKKViAs=--><p><!--n_0-->Ada<!--/n_0--></p><!--/t_KwZ/fKKViAs=-->",
+    );
   });
 
   it("mounts, hydrates, and server-renders fallback runtime templates", async () => {

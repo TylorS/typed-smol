@@ -74,7 +74,7 @@ export const preview = Command.make("preview", {
 function importBuiltServer(path: string): Effect.Effect<BuiltServerModule, Error> {
   return Effect.tryPromise({
     try: () => import(pathToFileURL(path).href) as Promise<BuiltServerModule>,
-    catch: (error) => error instanceof Error ? error : new Error(String(error)),
+    catch: (error) => (error instanceof Error ? error : new Error(String(error))),
   });
 }
 
@@ -90,11 +90,8 @@ function getRunExport(
 
 function openUrl(url: string): Effect.Effect<void> {
   return Effect.sync(() => {
-    const command = process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "cmd"
-        : "xdg-open";
+    const command =
+      process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
     const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
     const child = spawn(command, args, { detached: true, stdio: "ignore" });
     child.unref();

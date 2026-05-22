@@ -60,7 +60,8 @@ describe("realworld browser mutation workflows", () => {
           },
         });
         return yield* store.getToken;
-      }));
+      }),
+    );
 
     expect(win.fetch.calls[1]).toMatchObject({
       input: "/api/user",
@@ -102,7 +103,8 @@ describe("realworld browser mutation workflows", () => {
             title: "Typed Runtime Updated",
           },
         });
-      }));
+      }),
+    );
 
     expect(win.fetch.calls.slice(1)).toMatchObject([
       {
@@ -137,7 +139,8 @@ describe("realworld browser mutation workflows", () => {
         yield* store.createComment("typed-runtime", { comment: { body: "Nice workflow." } });
         yield* store.deleteComment("typed-runtime", 1);
         yield* store.deleteArticle("typed-runtime");
-      }));
+      }),
+    );
 
     expect(win.fetch.calls.slice(1)).toMatchObject([
       { input: "/api/articles/typed-runtime/favorite", method: "POST" },
@@ -154,14 +157,17 @@ describe("realworld browser mutation workflows", () => {
 
   it("fails protected workflows before fetch when jwtToken is absent", async () => {
     const win = windowWith({ fetch: fetchSequence([]) });
-    const exit = await Effect.runPromiseExit(withAuthStoreEffect(win, (store) =>
-      store.createArticle({
-        article: {
-          title: "Typed Runtime",
-          description: "Runtime workflows",
-          body: "Typed template workflows.",
-        },
-      })));
+    const exit = await Effect.runPromiseExit(
+      withAuthStoreEffect(win, (store) =>
+        store.createArticle({
+          article: {
+            title: "Typed Runtime",
+            description: "Runtime workflows",
+            body: "Typed template workflows.",
+          },
+        }),
+      ),
+    );
 
     expect(exit._tag).toBe("Failure");
     expect(win.fetch.calls).toEqual([]);
@@ -251,16 +257,16 @@ const fetchSequence = (
     });
     const response = responses[index++];
     if (!response) throw new Error(`unexpected fetch call: ${input}`);
-    return new Response(
-      response.body === undefined ? undefined : JSON.stringify(response.body),
-      { status: response.status, headers: { "content-type": "application/json" } },
-    );
+    return new Response(response.body === undefined ? undefined : JSON.stringify(response.body), {
+      status: response.status,
+      headers: { "content-type": "application/json" },
+    });
   };
   return Object.assign(fetch, { calls });
 };
 
 const authorization = (headers: HeadersInit | undefined): string | undefined =>
-  headers === undefined ? undefined : new Headers(headers).get("authorization") ?? undefined;
+  headers === undefined ? undefined : (new Headers(headers).get("authorization") ?? undefined);
 
 const urlPath = (input: RequestInfo | URL): string => {
   const url = input instanceof Request ? input.url : String(input);
@@ -271,4 +277,8 @@ const jsonBody = (body: BodyInit | null | undefined): unknown =>
   body === undefined || body === null ? undefined : JSON.parse(bodyText(body));
 
 const bodyText = (body: BodyInit): string =>
-  typeof body === "string" ? body : body instanceof Uint8Array ? new TextDecoder().decode(body) : "";
+  typeof body === "string"
+    ? body
+    : body instanceof Uint8Array
+      ? new TextDecoder().decode(body)
+      : "";

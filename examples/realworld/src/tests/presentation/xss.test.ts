@@ -3,7 +3,13 @@ import { Window } from "happy-dom";
 import * as AsyncData from "@typed/async-data";
 import { Fx, RefAsyncData } from "@typed/fx";
 import { Effect } from "effect";
-import { DomRenderTemplate, html, render as renderDom, renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+import {
+  DomRenderTemplate,
+  html,
+  render as renderDom,
+  renderToHtmlString,
+  StaticHtmlRenderTemplate,
+} from "@typed/template";
 import { ArticleContent } from "../../common/components/ArticleContent.js";
 import { AsyncDataView } from "../../common/components/AsyncDataView.js";
 import { Banner } from "../../common/components/Banner.js";
@@ -43,20 +49,26 @@ describe("realworld presentation XSS hardening", () => {
   });
 
   it("escapes article body Markdown, comments, avatars, and author text contexts", async () => {
-    const markup = await render(Effect.gen(function* () {
-      const input = yield* RefAsyncData.make(AsyncData.success({
-        article,
-        comments: [{
-          id: 1,
-          createdAt: article.createdAt,
-          updatedAt: article.updatedAt,
-          body: "<script>alert(1)</script> javascript:alert(1)",
-          author: profile,
-        }],
-      }));
+    const markup = await render(
+      Effect.gen(function* () {
+        const input = yield* RefAsyncData.make(
+          AsyncData.success({
+            article,
+            comments: [
+              {
+                id: 1,
+                createdAt: article.createdAt,
+                updatedAt: article.updatedAt,
+                body: "<script>alert(1)</script> javascript:alert(1)",
+                author: profile,
+              },
+            ],
+          }),
+        );
 
-      return html`${AsyncDataView(input, ArticleContent)}`;
-    }));
+        return html`${AsyncDataView(input, ArticleContent)}`;
+      }),
+    );
 
     expect(markup).not.toContain("<script");
     expect(markup).not.toContain("<img src=x");
@@ -73,15 +85,14 @@ describe("realworld presentation XSS hardening", () => {
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const input = yield* RefAsyncData.make(AsyncData.success({
-          article,
-          comments: [],
-        }));
+        const input = yield* RefAsyncData.make(
+          AsyncData.success({
+            article,
+            comments: [],
+          }),
+        );
 
-        yield* renderDom(
-          html`${AsyncDataView(input, ArticleContent)}`,
-          root,
-        ).pipe(
+        yield* renderDom(html`${AsyncDataView(input, ArticleContent)}`, root).pipe(
           Fx.provide(DomRenderTemplate.using(window.document)),
           Fx.drain,
           Effect.forkScoped,
@@ -95,31 +106,37 @@ describe("realworld presentation XSS hardening", () => {
   });
 
   it("escapes feed descriptions and profile bio contexts", async () => {
-    const feed = await render(Effect.gen(function* () {
-      const input = yield* RefAsyncData.make(AsyncData.success({
-        articles: [article],
-        articlesCount: 1,
-        page: 1,
-        tags: ["typed"],
-      }));
+    const feed = await render(
+      Effect.gen(function* () {
+        const input = yield* RefAsyncData.make(
+          AsyncData.success({
+            articles: [article],
+            articlesCount: 1,
+            page: 1,
+            tags: ["typed"],
+          }),
+        );
 
-      return html`<section class="home-page">
-        ${Banner}
-        <div class="container page">
-          ${AsyncDataView(input, FeedContent)}
-        </div>
-      </section>`;
-    }));
-    const page = await render(Effect.gen(function* () {
-      const input = yield* RefAsyncData.make(AsyncData.success({
-        articles: [article],
-        articlesCount: 1,
-        favorites: false,
-        profile,
-      }));
+        return html`<section class="home-page">
+          ${Banner}
+          <div class="container page">${AsyncDataView(input, FeedContent)}</div>
+        </section>`;
+      }),
+    );
+    const page = await render(
+      Effect.gen(function* () {
+        const input = yield* RefAsyncData.make(
+          AsyncData.success({
+            articles: [article],
+            articlesCount: 1,
+            favorites: false,
+            profile,
+          }),
+        );
 
-      return html`${AsyncDataView(input, ProfileContent)}`;
-    }));
+        return html`${AsyncDataView(input, ProfileContent)}`;
+      }),
+    );
 
     expect(feed).not.toContain("<img src=x");
     expect(feed).not.toContain("javascript:");

@@ -19,7 +19,7 @@ describe("typed/ui/Tabs", () => {
             state,
             label: "Sections",
             content: html`${Tabs.Tab({ state, id: "tab-a", panelId: "panel-a", content: "A" })}
-              ${Tabs.Tab({ state, id: "tab-b", panelId: "panel-b", content: "B" })}`,
+            ${Tabs.Tab({ state, id: "tab-b", panelId: "panel-b", content: "B" })}`,
           })}
           ${Tabs.Panel({ state, id: "panel-a", tabId: "tab-a", content: "Panel A" })}
           ${Tabs.Panel({ state, id: "panel-b", tabId: "tab-b", content: "Panel B" })}

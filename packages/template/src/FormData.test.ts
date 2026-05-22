@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import * as FormData from "./FormData.js";
 
 type Equals<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
 
 describe("FormData", () => {

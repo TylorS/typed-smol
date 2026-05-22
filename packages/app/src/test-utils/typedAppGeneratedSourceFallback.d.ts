@@ -3,7 +3,9 @@ declare module "@typed/app" {
   import type * as Layer from "effect/Layer";
 
   export const emptyRecordString: Readonly<Record<string, string>>;
-  export const emptyRecordStringArray: Readonly<Record<string, string | readonly string[] | undefined>>;
+  export const emptyRecordStringArray: Readonly<
+    Record<string, string | readonly string[] | undefined>
+  >;
 
   export interface AppConfig {
     readonly disableListenLog?: boolean;
@@ -80,7 +82,9 @@ declare module "@typed/app/httpapi/ApiHandler" {
   import type * as Route from "@typed/router";
 
   export const emptyRecordString: Readonly<Record<string, string>>;
-  export const emptyRecordStringArray: Readonly<Record<string, string | readonly string[] | undefined>>;
+  export const emptyRecordStringArray: Readonly<
+    Record<string, string | readonly string[] | undefined>
+  >;
 
   export type ApiRoute = Route.Route.Any;
   export type ApiEndpointConfig = {
@@ -94,21 +98,25 @@ declare module "@typed/app/httpapi/ApiHandler" {
   export type ApiHandlerParamsFromConfig<C extends ApiEndpointConfig> = {
     readonly path: Route.Route.PathType<C["route"]>;
     readonly query: Route.Route.QueryType<C["route"]>;
-    readonly headers: C["headers"] extends Schema.Top ? C["headers"]["Type"] : Record<string, string>;
+    readonly headers: C["headers"] extends Schema.Top
+      ? C["headers"]["Type"]
+      : Record<string, string>;
     readonly body: C["body"] extends Schema.Top ? C["body"]["Type"] : unknown;
   };
-  export type ApiHandlerSuccessFromConfig<C extends ApiEndpointConfig> =
-    C extends { readonly success: infer Success }
-      ? Success extends { readonly Type: infer A }
-        ? A
-        : unknown
-      : unknown;
-  export type ApiHandlerErrorFromConfig<C extends ApiEndpointConfig> =
-    C extends { readonly error: infer Error }
-      ? Error extends { readonly Type: infer A }
-        ? A
-        : never
-      : never;
+  export type ApiHandlerSuccessFromConfig<C extends ApiEndpointConfig> = C extends {
+    readonly success: infer Success;
+  }
+    ? Success extends { readonly Type: infer A }
+      ? A
+      : unknown
+    : unknown;
+  export type ApiHandlerErrorFromConfig<C extends ApiEndpointConfig> = C extends {
+    readonly error: infer Error;
+  }
+    ? Error extends { readonly Type: infer A }
+      ? A
+      : never
+    : never;
   export type ApiHandlerFromConfig<C extends ApiEndpointConfig, R = any> = (
     params: ApiHandlerParamsFromConfig<C>,
   ) => Effect.Effect<ApiHandlerSuccessFromConfig<C>, ApiHandlerErrorFromConfig<C>, R>;
@@ -132,10 +140,10 @@ declare module "@typed/app/runtime" {
   export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];
   export const Ids: { readonly Default: Layer.Layer<never, never, never> };
 
-  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(
-    base: Base,
-    layers: Layers,
-  ): LayerAny;
+  export function composeWithLayers<
+    Base extends LayerAny,
+    const Layers extends ReadonlyArray<LayerOrGroup>,
+  >(base: Base, layers: Layers): LayerAny;
 }
 
 declare module "@typed/app/internal/resolveConfig" {

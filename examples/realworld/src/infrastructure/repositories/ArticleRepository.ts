@@ -17,11 +17,7 @@ import {
   ArticleRepositoryInvariantError,
   type ArticleRepositoryError,
 } from "../../domain/RepositoryErrors.js";
-import {
-  currentIsoTimestamp,
-  first,
-  provideRepositorySql,
-} from "./Common.js";
+import { currentIsoTimestamp, first, provideRepositorySql } from "./Common.js";
 
 export interface ArticleListResult {
   readonly articles: readonly ArticlePreview[];
@@ -205,12 +201,14 @@ const createArticle = (
     const input = yield* decodeCreateInput(rawInput);
     const sql = yield* SqlClient.SqlClient;
 
-    return yield* sql.withTransaction(Effect.gen(function* () {
-      const slug = yield* makeUniqueSlug(input.title);
-      const articleId = yield* insertArticle(authorId, slug, input);
-      yield* replaceArticleTags(articleId, input.tagList ?? []);
-      return yield* requireArticle(slug, Option.some(authorId));
-    }));
+    return yield* sql.withTransaction(
+      Effect.gen(function* () {
+        const slug = yield* makeUniqueSlug(input.title);
+        const articleId = yield* insertArticle(authorId, slug, input);
+        yield* replaceArticleTags(articleId, input.tagList ?? []);
+        return yield* requireArticle(slug, Option.some(authorId));
+      }),
+    );
   });
 
 const updateArticle = (
@@ -225,12 +223,14 @@ const updateArticle = (
     if (Option.isNone(current)) return Option.none();
 
     const sql = yield* SqlClient.SqlClient;
-    return yield* sql.withTransaction(Effect.gen(function* () {
-      const articleId = yield* Schema.decodeUnknownEffect(ArticleId)(current.value.id);
-      yield* updateArticleRow(current.value, input);
-      if (input.tagList !== undefined) yield* replaceArticleTags(articleId, input.tagList);
-      return yield* findBySlug(slug, Option.some(authorId));
-    }));
+    return yield* sql.withTransaction(
+      Effect.gen(function* () {
+        const articleId = yield* Schema.decodeUnknownEffect(ArticleId)(current.value.id);
+        yield* updateArticleRow(current.value, input);
+        if (input.tagList !== undefined) yield* replaceArticleTags(articleId, input.tagList);
+        return yield* findBySlug(slug, Option.some(authorId));
+      }),
+    );
   });
 
 const deleteArticle = (
@@ -431,7 +431,10 @@ const makeUniqueSlug = (
     const sql = yield* SqlClient.SqlClient;
     const rows = yield* sql<{ readonly slug: string }>`SELECT slug FROM articles`;
     return yield* Schema.decodeUnknownEffect(Slug)(
-      uniqueSlug(title, rows.map((row) => row.slug)),
+      uniqueSlug(
+        title,
+        rows.map((row) => row.slug),
+      ),
     );
   });
 

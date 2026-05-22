@@ -71,8 +71,9 @@ describe("RealWorld API response schemas", () => {
     expect(roundTrip(UserResponse, { user })).toEqual({ user });
     expect(roundTrip(ProfileResponse, { profile })).toEqual({ profile });
     expect(roundTrip(SingleArticleResponse, { article })).toEqual({ article });
-    expect(roundTrip(MultipleArticlesResponse, { articles: [articlePreview], articlesCount: 1 }))
-      .toEqual({ articles: [articlePreview], articlesCount: 1 });
+    expect(
+      roundTrip(MultipleArticlesResponse, { articles: [articlePreview], articlesCount: 1 }),
+    ).toEqual({ articles: [articlePreview], articlesCount: 1 });
     expect(roundTrip(SingleCommentResponse, { comment })).toEqual({ comment });
     expect(roundTrip(MultipleCommentsResponse, { comments: [comment] })).toEqual({
       comments: [comment],
@@ -95,8 +96,9 @@ describe("RealWorld API response schemas", () => {
   });
 
   it("rejects malformed response payloads", () => {
-    expect(() => Schema.decodeUnknownSync(UserResponse)({ user: { ...user, token: null } }))
-      .toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(UserResponse)({ user: { ...user, token: null } }),
+    ).toThrow();
     expect(() =>
       Schema.decodeUnknownSync(MultipleArticlesResponse)({
         articles: [articlePreview],

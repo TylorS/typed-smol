@@ -63,10 +63,7 @@ export function makeState(
   });
 }
 
-export function setOpen(
-  state: RefSubject.RefSubject<State>,
-  open: boolean,
-): Effect.Effect<State> {
+export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
@@ -106,7 +103,9 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
     aria-haspopup="menu"
     aria-expanded=${open}
     .data=${{ open }}
-  >${options.content}</button>`;
+  >
+    ${options.content}
+  </button>`;
 }
 
 export interface ContentOptions {
@@ -121,7 +120,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
   const open = dataOpen(options.state);
   const orientation = RefSubject.map(options.state, (current) => current.orientation);
   const activeDescendant = RefSubject.map(options.state, (current) =>
-    current.virtualFocus && current.activeId ? current.activeId : undefined
+    current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     setOpen(options.state, event.newState === "open"),
@@ -136,7 +135,9 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
     aria-activedescendant=${activeDescendant}
     .data=${{ open }}
     ontoggle=${onToggle}
-  >${options.content}</div>`;
+  >
+    ${options.content}
+  </div>`;
 }
 
 export interface ItemOptions {
@@ -158,7 +159,7 @@ export function Item<const Opts extends ItemOptions>(options: Opts) {
         const id = yield* toEffect(options.id);
         const disabled = yield* isDisabled(options.disabled);
         return state.activeId === id && !disabled ? 0 : -1;
-      })
+      }),
     ),
     "data-active": dataActive(options.state, options.id, options.disabled),
     "data-disabled": boolString(disabled),
@@ -173,7 +174,7 @@ interface ToggleEventLike extends Event {
 
 function isActive(state: RefSubject.RefSubject<State>, id: RequiredString) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.map(toEffect(id), (id) => current.activeId === id)
+    Effect.map(toEffect(id), (id) => current.activeId === id),
   );
 }
 
@@ -203,7 +204,7 @@ function dataActive(
         disabled: itemDisabled,
       });
       return encoded.active ?? "false";
-    })
+    }),
   );
 }
 
@@ -224,7 +225,10 @@ function nextActiveId<Value>(
   if (direction === "first") return items[0]?.id ?? null;
   if (direction === "last") return items[items.length - 1]?.id ?? null;
 
-  const index = Math.max(0, items.findIndex((item) => item.id === state.activeId));
+  const index = Math.max(
+    0,
+    items.findIndex((item) => item.id === state.activeId),
+  );
   const delta = direction === "next" ? 1 : -1;
   const next = index + delta;
   if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;

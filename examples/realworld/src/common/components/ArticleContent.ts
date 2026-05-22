@@ -30,7 +30,9 @@ export const ArticleContent = Fx.fn("ArticleContent")(<E, R>(
     </div>
     <div class="container page">
       <div class="article-content">${body}</div>
-      <ul class="tag-list">${many(articleFields.tagList, (tag) => tag, ArticleTag)}</ul>
+      <ul class="tag-list">
+        ${many(articleFields.tagList, (tag) => tag, ArticleTag)}
+      </ul>
       <hr />
       <div class="article-actions">
         <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(article)}>
@@ -41,8 +43,11 @@ export const ArticleContent = Fx.fn("ArticleContent")(<E, R>(
         </button>
       </div>
       ${CommentForm(articleFields.slug)}
-      ${many(comments, (comment) => comment.id, (comment) =>
-        CommentCard({ slug: articleFields.slug, comment }))}
+      ${many(
+        comments,
+        (comment) => comment.id,
+        (comment) => CommentCard({ slug: articleFields.slug, comment }),
+      )}
     </div>
   </section>`;
 });
@@ -58,9 +63,9 @@ const favoriteArticle = <E, R>(article: RefSubject.Computed<Article, E, R>) =>
   );
 
 const toggleFavorite = Effect.fn(function* <E, R>(article: RefSubject.Computed<Article, E, R>) {
-      const current = yield* readActionValue(article);
-      const auth = yield* BrowserAuth;
-      return yield* auth.favoriteArticle(current.slug, current.favorited);
+  const current = yield* readActionValue(article);
+  const auth = yield* BrowserAuth;
+  return yield* auth.favoriteArticle(current.slug, current.favorited);
 });
 
 const followAuthor = <E, R>(article: RefSubject.Computed<Article, E, R>) =>
@@ -74,9 +79,9 @@ const followAuthor = <E, R>(article: RefSubject.Computed<Article, E, R>) =>
   );
 
 const toggleFollow = Effect.fn(function* <E, R>(article: RefSubject.Computed<Article, E, R>) {
-      const current = yield* readActionValue(article);
-      const auth = yield* BrowserAuth;
-      return yield* auth.followProfile(current.author.username, current.author.following);
+  const current = yield* readActionValue(article);
+  const auth = yield* BrowserAuth;
+  return yield* auth.followProfile(current.author.username, current.author.following);
 });
 
 const readActionValue = <A, E, R>(

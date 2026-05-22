@@ -28,18 +28,22 @@ console.log(`Running RealWorld Hurl specs from ${apiSpecPath}`);
 console.log(`HOST=${host}`);
 console.log(`UID_VAL=${uid}`);
 
-const result = spawnSync("hurl", [
-  "--test",
-  "--jobs",
-  "1",
-  "--variable",
-  `host=${host}`,
-  "--variable",
-  `uid=${uid}`,
-  ...selectedFiles,
-], {
-  stdio: "inherit",
-});
+const result = spawnSync(
+  "hurl",
+  [
+    "--test",
+    "--jobs",
+    "1",
+    "--variable",
+    `host=${host}`,
+    "--variable",
+    `uid=${uid}`,
+    ...selectedFiles,
+  ],
+  {
+    stdio: "inherit",
+  },
+);
 
 process.exitCode = result.status ?? 1;
 

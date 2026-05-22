@@ -26,7 +26,11 @@ export function resolveBuiltServerEntry(options: ResolveBuiltServerEntryOptions)
   return join(serverOutDir, `${entryName}.js`);
 }
 
-function resolveOutputDir(projectRoot: string, configured: string | undefined, fallback: string): string {
+function resolveOutputDir(
+  projectRoot: string,
+  configured: string | undefined,
+  fallback: string,
+): string {
   const value = configured ?? fallback;
   return isAbsolute(value) ? value : resolve(projectRoot, value);
 }

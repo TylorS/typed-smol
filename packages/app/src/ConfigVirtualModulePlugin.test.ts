@@ -87,7 +87,9 @@ describe("ConfigVirtualModulePlugin", () => {
   });
 
   it("rejects non-serializable config values", () => {
-    const result = buildConfig("typed:config", { entry: () => "server.ts" }) as VirtualModuleBuildError;
+    const result = buildConfig("typed:config", {
+      entry: () => "server.ts",
+    }) as VirtualModuleBuildError;
 
     expect(result.errors[0]).toEqual({
       code: "TVM-CONFIG-002",
@@ -112,7 +114,9 @@ describe("ConfigVirtualModulePlugin", () => {
   });
 
   it("rejects unsupported query options", () => {
-    const result = buildConfig("typed:config?raw=true", { entry: "server.ts" }) as VirtualModuleBuildError;
+    const result = buildConfig("typed:config?raw=true", {
+      entry: "server.ts",
+    }) as VirtualModuleBuildError;
 
     expect(result.errors).toEqual([
       {

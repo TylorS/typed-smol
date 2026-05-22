@@ -35,7 +35,7 @@ describe("Versioned filterMap / filterMapEffect", () => {
           Versioned.filterMap({
             onFx: evenOption,
             onEffect: evenOption,
-          })
+          }),
         );
         expect(yield* filtered).toEqual(Option.some(10));
         expect(yield* Fx.collectAll(filtered)).toEqual([10]);

@@ -2,11 +2,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { Context, Effect, Layer } from "effect";
 import { RealWorldConfig } from "./Config.js";
-import {
-  FileSystemError,
-  formatThrown,
-  type DatabaseError,
-} from "../domain/RepositoryErrors.js";
+import { FileSystemError, formatThrown, type DatabaseError } from "../domain/RepositoryErrors.js";
 import { runMigrations } from "./Migrations.js";
 import { collectSeedCounts, seedDatabase, type SeedCounts } from "./Seed.js";
 import { ensureDatabaseDirectory, sqliteLayer, withSqlite } from "./Sql.js";
@@ -18,10 +14,9 @@ export interface DatabaseManagerService {
   readonly counts: Effect.Effect<SeedCounts, DatabaseError>;
 }
 
-export class DatabaseManager extends Context.Service<
-  DatabaseManager,
-  DatabaseManagerService
->()("@typed/realworld/DatabaseManager") {
+export class DatabaseManager extends Context.Service<DatabaseManager, DatabaseManagerService>()(
+  "@typed/realworld/DatabaseManager",
+) {
   static readonly Live = Layer.effect(
     DatabaseManager,
     Effect.gen(function* () {
@@ -62,10 +57,7 @@ const resetWithConfig = (
   migrate: Effect.Effect<void, DatabaseError>,
   seed: Effect.Effect<SeedCounts, DatabaseError>,
 ): Effect.Effect<SeedCounts, DatabaseError> =>
-  removeDatabase(databasePath).pipe(
-    Effect.andThen(migrate),
-    Effect.andThen(seed),
-  );
+  removeDatabase(databasePath).pipe(Effect.andThen(migrate), Effect.andThen(seed));
 
 const removeDatabase = (databasePath: string): Effect.Effect<void, FileSystemError> =>
   Effect.try({

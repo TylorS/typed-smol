@@ -30,10 +30,12 @@ try {
 
 function runPreflight(): void {
   if (!commandExists("hurl")) {
-    throw new Error([
-      "hurl is required for `pnpm --filter typed-realworld test:acceptance:local`.",
-      "Install Hurl before running the full local acceptance gate.",
-    ].join("\n"));
+    throw new Error(
+      [
+        "hurl is required for `pnpm --filter typed-realworld test:acceptance:local`.",
+        "Install Hurl before running the full local acceptance gate.",
+      ].join("\n"),
+    );
   }
 }
 
@@ -42,22 +44,18 @@ function runDbReset(): void {
 }
 
 function startAppServer(): ServerProcess {
-  const child = spawn("pnpm", [
-    "exec",
-    "vite",
-    "--host",
-    appHost,
-    "--port",
-    String(appPort),
-    "--strictPort",
-  ], {
-    env: {
-      ...process.env,
-      API_BASE: apiBase,
-      APP_BASE: appBase,
+  const child = spawn(
+    "pnpm",
+    ["exec", "vite", "--host", appHost, "--port", String(appPort), "--strictPort"],
+    {
+      env: {
+        ...process.env,
+        API_BASE: apiBase,
+        APP_BASE: appBase,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
     },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  );
   const server = { child, logs: [] };
   pipeServerLogs(server);
   return server;
@@ -71,10 +69,11 @@ async function waitForServer(server: ServerProcess): Promise<void> {
     await delay(250);
   }
 
-  throw new Error([
-    `Timed out waiting for RealWorld app server at ${appBase}.`,
-    ...server.logs.slice(-40),
-  ].join("\n"));
+  throw new Error(
+    [`Timed out waiting for RealWorld app server at ${appBase}.`, ...server.logs.slice(-40)].join(
+      "\n",
+    ),
+  );
 }
 
 function runHurl(): void {
@@ -85,9 +84,7 @@ function runHurl(): void {
 }
 
 function runE2e(): void {
-  runCommand("Playwright acceptance", nodeExecutable, [
-    "dist/types/scripts/run-e2e-local.js",
-  ], {
+  runCommand("Playwright acceptance", nodeExecutable, ["dist/types/scripts/run-e2e-local.js"], {
     API_BASE: apiBase,
     APP_BASE: appBase,
   });

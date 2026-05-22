@@ -33,10 +33,12 @@ The Router and HttpApi virtual-module plugins in `@typed/app` need implementatio
 Focus first on turning invalid plugin inputs and internal renderer invariants into structured diagnostics.
 
 Pros:
+
 - Reduces host-crash risk quickly.
 - Gives clear failure behavior for editor/compiler workflows.
 
 Cons:
+
 - Can still leave generated TypeScript semantically wrong if the renderer itself has stale assumptions.
 
 ### Approach B: Generated-Source Correctness First
@@ -44,10 +46,12 @@ Cons:
 Focus first on emitted source: type-check fixtures, deterministic snapshots, Router matcher semantics, HttpApi assembly, handler wiring, prefixes, OpenAPI routes, and imports.
 
 Pros:
+
 - Directly targets the most user-visible risk.
 - Proves framework behavior from the generated artifact, not only internal helpers.
 
 Cons:
+
 - Some invalid-input handling may remain weak until the second hardening pass.
 
 ### Approach C: Full Production Pass With Generated-Source Bias
@@ -55,11 +59,13 @@ Cons:
 Research both correctness lanes, then plan small red-green slices that prioritize generated-source correctness while pulling in fail-closed diagnostics where needed.
 
 Pros:
+
 - Matches the user's selected scope.
 - Avoids optimizing tests around a stale implementation contract.
 - Keeps Router and HttpApi production readiness in one coherent tranche.
 
 Cons:
+
 - Requires a heavier research and requirements phase before implementation.
 
 ## Recommendation

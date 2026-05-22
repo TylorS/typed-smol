@@ -47,12 +47,14 @@ describe("typed create", () => {
     const tsconfig = readFileSync(join(target, "tsconfig.json"), "utf8");
 
     expect(appPackage).toContain('"name": "@demo-app/app"');
-    expect(serverEntry).toContain('typed:server?routes=./routes&api=./api&html=./index.html&client=./entry.browser.ts');
-    expect(serverEntry).toContain('typed:env');
-    expect(serverEntry).toContain('typed:config');
+    expect(serverEntry).toContain(
+      "typed:server?routes=./routes&api=./api&html=./index.html&client=./entry.browser.ts",
+    );
+    expect(serverEntry).toContain("typed:env");
+    expect(serverEntry).toContain("typed:config");
     expect(serverEntry).toContain("export default handler");
     expect(serverEntry).toContain("export { run }");
-    expect(browserEntry).toContain('typed:browser?routes=./routes');
+    expect(browserEntry).toContain("typed:browser?routes=./routes");
     expect(browserEntry).toContain("Effect.runPromise");
     expect(browserEntry).toContain('from "effect/Effect"');
     expect(indexHtml).toContain('id="typed-root"');
@@ -113,9 +115,7 @@ describe("typed create", () => {
     expect(appPackage).not.toContain('"@typed/ui"');
     expect(appPackage).not.toContain('"@typed/vite-plugin"');
     expect(appPackage).not.toContain('"vite"');
-    expect(appPackage).toContain(
-      '"build": "cd ../.. && pnpm build"',
-    );
+    expect(appPackage).toContain('"build": "cd ../.. && pnpm build"');
   });
 
   it("uses the RealWorld-proven build commands", () => {

@@ -37,7 +37,9 @@ export function unregister<Value>(
   );
 }
 
-export function enabledItems<ItemType extends Item>(items: readonly ItemType[]): readonly ItemType[] {
+export function enabledItems<ItemType extends Item>(
+  items: readonly ItemType[],
+): readonly ItemType[] {
   return items.filter((item) => item.disabled !== true);
 }
 

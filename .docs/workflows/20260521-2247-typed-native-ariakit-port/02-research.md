@@ -7,30 +7,30 @@
 
 ## Source Table
 
-| source | year | type | confidence | notes |
-| ------ | ---- | ---- | ---------- | ----- |
-| Ariakit Component Stores, `https://ariakit.com/guide/component-stores` | 2026 current docs | official docs | high | Stores expose default, controlled, setter, read, and write semantics; providers usually supply stores automatically. |
-| Ariakit `useDialogStore`, `https://ariakit.com/reference/use-dialog-store` | 2026 current docs | official docs | high | Dialog store extends disclosure concepts, supports open/defaultOpen and disclosure-store synchronization. |
-| WAI-ARIA APG Dialog Modal Pattern, `https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/` | current APG | W3C official docs | high | Defines modal dialog roles, focus entry/return expectations, close affordance, and modal behavior constraints. |
-| WAI-ARIA APG Disclosure Pattern, `https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/` | current APG | W3C official docs | high | Defines disclosure as button + controlled content with Enter/Space toggle and `aria-expanded`. |
-| MDN `HTMLElement.dataset`, `https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/dataset` | updated 2025 | MDN reference | high | `dataset` values are string-backed and name-converted, supporting the need for explicit Schema encode/decode. |
-| MDN Popover API, `https://developer.mozilla.org/en-US/docs/Web/API/Popover_API` | Baseline 2025 | MDN reference | high | Native popovers are non-modal, support declarative and JS control, and expose `auto`, `hint`, and `manual` states. |
-| MDN Using the Popover API, `https://developer.mozilla.org/en-US/docs/Web/API/Popover_API/Using` | current docs | MDN guide | high | `popovertarget` creates invoker relationships with focus-order and implicit ARIA benefits; `auto` supports light dismiss and Esc close. |
-| WHATWG HTML Popover section, `https://html.spec.whatwg.org/multipage/popover.html` | living standard | standard | high | Defines show/hide algorithms, toggle events, focus restoration, and validity checks. |
-| `packages/template/src/Render.ts` | current repo | local code | high | Existing renderer already converts sync object interpolation into `data-*` attributes. |
-| `packages/template/src/Hydration.test.ts` | current repo | local tests | high | Existing hydration tests cover static, primitive, Effect, and Fx `data-*` attributes. |
-| `examples/todomvc/src/domain.ts` | current repo | local code | high | Existing app code uses Effect Schema for branded and encoded domain values. |
+| source                                                                                            | year              | type              | confidence | notes                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------- | ----------------- | ----------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Ariakit Component Stores, `https://ariakit.com/guide/component-stores`                            | 2026 current docs | official docs     | high       | Stores expose default, controlled, setter, read, and write semantics; providers usually supply stores automatically.                    |
+| Ariakit `useDialogStore`, `https://ariakit.com/reference/use-dialog-store`                        | 2026 current docs | official docs     | high       | Dialog store extends disclosure concepts, supports open/defaultOpen and disclosure-store synchronization.                               |
+| WAI-ARIA APG Dialog Modal Pattern, `https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/`       | current APG       | W3C official docs | high       | Defines modal dialog roles, focus entry/return expectations, close affordance, and modal behavior constraints.                          |
+| WAI-ARIA APG Disclosure Pattern, `https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/`           | current APG       | W3C official docs | high       | Defines disclosure as button + controlled content with Enter/Space toggle and `aria-expanded`.                                          |
+| MDN `HTMLElement.dataset`, `https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/dataset` | updated 2025      | MDN reference     | high       | `dataset` values are string-backed and name-converted, supporting the need for explicit Schema encode/decode.                           |
+| MDN Popover API, `https://developer.mozilla.org/en-US/docs/Web/API/Popover_API`                   | Baseline 2025     | MDN reference     | high       | Native popovers are non-modal, support declarative and JS control, and expose `auto`, `hint`, and `manual` states.                      |
+| MDN Using the Popover API, `https://developer.mozilla.org/en-US/docs/Web/API/Popover_API/Using`   | current docs      | MDN guide         | high       | `popovertarget` creates invoker relationships with focus-order and implicit ARIA benefits; `auto` supports light dismiss and Esc close. |
+| WHATWG HTML Popover section, `https://html.spec.whatwg.org/multipage/popover.html`                | living standard   | standard          | high       | Defines show/hide algorithms, toggle events, focus restoration, and validity checks.                                                    |
+| `packages/template/src/Render.ts`                                                                 | current repo      | local code        | high       | Existing renderer already converts sync object interpolation into `data-*` attributes.                                                  |
+| `packages/template/src/Hydration.test.ts`                                                         | current repo      | local tests       | high       | Existing hydration tests cover static, primitive, Effect, and Fx `data-*` attributes.                                                   |
+| `examples/todomvc/src/domain.ts`                                                                  | current repo      | local code        | high       | Existing app code uses Effect Schema for branded and encoded domain values.                                                             |
 
 ## WebSearch Query Log
 
-| query | rationale | selected_sources |
-| ----- | --------- | ---------------- |
-| `Ariakit v0.4.26 components stores providers official docs DialogStore PopoverStore DisclosureStore` | verify current Ariakit store/provider model | Ariakit Component Stores; Ariakit `useDialogStore` |
-| `WAI ARIA Authoring Practices Guide Dialog Modal Disclosure Popover pattern keyboard interaction` | source first-slice accessibility behavior | WAI-ARIA APG Dialog Modal Pattern; WAI-ARIA APG Disclosure Pattern |
-| `WAI ARIA APG Disclosure Dialog Popover Menu Button keyboard interaction 2025` | confirm newer APG pages and related patterns | WAI-ARIA APG pattern pages |
-| `accessible UI component library research keyboard navigation focus management WAI ARIA composite widgets paper` | paper discovery for broader accessibility evidence | found older keyboard navigation paper; not yet selected as core evidence because official APG is more directly normative for first requirements |
-| `MDN Popover API HTMLElement showPopover hidePopover togglePopover browser support 2026` | verify current native Popover API maturity and behavior | MDN Popover API; MDN popover property; web.dev baseline note |
-| `WHATWG HTML popover attribute showPopover hidePopover togglePopover` | verify normative native popover semantics | WHATWG HTML Popover section |
+| query                                                                                                            | rationale                                               | selected_sources                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Ariakit v0.4.26 components stores providers official docs DialogStore PopoverStore DisclosureStore`             | verify current Ariakit store/provider model             | Ariakit Component Stores; Ariakit `useDialogStore`                                                                                              |
+| `WAI ARIA Authoring Practices Guide Dialog Modal Disclosure Popover pattern keyboard interaction`                | source first-slice accessibility behavior               | WAI-ARIA APG Dialog Modal Pattern; WAI-ARIA APG Disclosure Pattern                                                                              |
+| `WAI ARIA APG Disclosure Dialog Popover Menu Button keyboard interaction 2025`                                   | confirm newer APG pages and related patterns            | WAI-ARIA APG pattern pages                                                                                                                      |
+| `accessible UI component library research keyboard navigation focus management WAI ARIA composite widgets paper` | paper discovery for broader accessibility evidence      | found older keyboard navigation paper; not yet selected as core evidence because official APG is more directly normative for first requirements |
+| `MDN Popover API HTMLElement showPopover hidePopover togglePopover browser support 2026`                         | verify current native Popover API maturity and behavior | MDN Popover API; MDN popover property; web.dev baseline note                                                                                    |
+| `WHATWG HTML popover attribute showPopover hidePopover togglePopover`                                            | verify normative native popover semantics               | WHATWG HTML Popover section                                                                                                                     |
 
 ## Key Findings
 

@@ -8,7 +8,12 @@ import {
   type RenderTemplate,
 } from "@typed/template";
 import * as Effect from "effect/Effect";
-import { emptyValues, type DomRuntimeTemplate, type MountedApp, type MountOptions } from "./RuntimeTemplate.js";
+import {
+  emptyValues,
+  type DomRuntimeTemplate,
+  type MountedApp,
+  type MountOptions,
+} from "./RuntimeTemplate.js";
 import { isCompiledDomTemplate, isTemplateFallback } from "./internal.js";
 
 export function mount<Values extends ReadonlyArray<Renderable.Any>>(

@@ -1,6 +1,10 @@
 import { readdirSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
-import type { TypeInfoFileSnapshot, VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
+import type {
+  TypeInfoFileSnapshot,
+  VirtualModuleBuildError,
+  VirtualModulePlugin,
+} from "@typed/virtual-modules";
 import {
   pathIsUnderBase,
   resolvePathUnderBase,
@@ -13,8 +17,26 @@ import { validateNonEmptyString, validatePathSegment } from "./internal/validati
 
 const DEFAULT_PREFIX = "route-handlers:";
 const DEFAULT_PLUGIN_NAME = "route-handlers-virtual-module";
-const ROUTE_HANDLER_GLOBS = ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.mts", "**/*.cts", "**/*.mjs", "**/*.cjs"];
-const SCRIPT_EXTENSION_SET = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"]);
+const ROUTE_HANDLER_GLOBS = [
+  "**/*.ts",
+  "**/*.tsx",
+  "**/*.js",
+  "**/*.jsx",
+  "**/*.mts",
+  "**/*.cts",
+  "**/*.mjs",
+  "**/*.cjs",
+];
+const SCRIPT_EXTENSION_SET = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mts",
+  ".cts",
+  ".mjs",
+  ".cjs",
+]);
 
 export interface RouteHandlersVirtualModulePluginOptions {
   readonly prefix?: string;

@@ -54,76 +54,88 @@ describe("article application service", () => {
 
   it("lists, creates, gets, feeds, favorites, updates, and deletes articles", async () => {
     const token = await run(registerToken("article_user", "article.user@example.com"));
-    const created = await run(Articles.use((articles) =>
-      articles.create(token, {
-        article: {
-          title: "Application Article",
-          description: "Created through the application layer",
-          body: "Article body",
-          tagList: ["typed", "app"],
-        },
-      }),
-    ));
-    const fetched = await run(Articles.use((articles) =>
-      articles.get(token, created.article.slug),
-    ));
-    const global = await run(Articles.use((articles) =>
-      articles.list({ tag: "typed", limit: 5, offset: 0 }, Option.none()),
-    ));
-    const favorited = await run(Articles.use((articles) =>
-      articles.favorite(token, created.article.slug),
-    ));
-    const updated = await run(Articles.use((articles) =>
-      articles.update(token, created.article.slug, { article: { body: "Updated" } }),
-    ));
+    const created = await run(
+      Articles.use((articles) =>
+        articles.create(token, {
+          article: {
+            title: "Application Article",
+            description: "Created through the application layer",
+            body: "Article body",
+            tagList: ["typed", "app"],
+          },
+        }),
+      ),
+    );
+    const fetched = await run(
+      Articles.use((articles) => articles.get(token, created.article.slug)),
+    );
+    const global = await run(
+      Articles.use((articles) =>
+        articles.list({ tag: "typed", limit: 5, offset: 0 }, Option.none()),
+      ),
+    );
+    const favorited = await run(
+      Articles.use((articles) => articles.favorite(token, created.article.slug)),
+    );
+    const updated = await run(
+      Articles.use((articles) =>
+        articles.update(token, created.article.slug, { article: { body: "Updated" } }),
+      ),
+    );
 
     expect(created.article.slug).toBe("application-article");
     expect(fetched.article.body).toBe("Article body");
     expect(global.articles.length).toBeGreaterThan(0);
     expect(favorited.article.favorited).toBe(true);
     expect(updated.article.body).toBe("Updated");
-    await expect(run(Articles.use((articles) =>
-      articles.delete(token, created.article.slug),
-    ))).resolves.toBeUndefined();
+    await expect(
+      run(Articles.use((articles) => articles.delete(token, created.article.slug))),
+    ).resolves.toBeUndefined();
   });
 
   it("maps missing token, validation, not found, and forbidden article errors", async () => {
     const owner = await run(registerToken("owner_user", "owner.user@example.com"));
     const other = await run(registerToken("other_user", "other.user@example.com"));
-    const missingToken = await expectRealWorldError(Articles.use((articles) =>
-      articles.create(Option.none(), {
-        article: { title: "No Auth", description: "test", body: "test" },
-      }),
-    ));
+    const missingToken = await expectRealWorldError(
+      Articles.use((articles) =>
+        articles.create(Option.none(), {
+          article: { title: "No Auth", description: "test", body: "test" },
+        }),
+      ),
+    );
     expect(missingToken.status).toBe(401);
     expect(missingToken.errors.token).toEqual(["is missing"]);
 
-    const blankTitle = await expectRealWorldError(Articles.use((articles) =>
-      articles.create(owner, {
-        article: { title: "", description: "test", body: "test" },
-      }),
-    ));
+    const blankTitle = await expectRealWorldError(
+      Articles.use((articles) =>
+        articles.create(owner, {
+          article: { title: "", description: "test", body: "test" },
+        }),
+      ),
+    );
     expect(blankTitle.status).toBe(422);
     expect(blankTitle.errors.title).toEqual(["can't be blank"]);
 
-    const missing = await expectRealWorldError(Articles.use((articles) =>
-      articles.get(Option.none(), "missing-article"),
-    ));
+    const missing = await expectRealWorldError(
+      Articles.use((articles) => articles.get(Option.none(), "missing-article")),
+    );
     expect(missing.status).toBe(404);
     expect(missing.errors.article).toEqual(["not found"]);
 
-    const created = await run(Articles.use((articles) =>
-      articles.create(owner, {
-        article: {
-          title: "Owned Article",
-          description: "test",
-          body: "test",
-        },
-      }),
-    ));
-    const forbidden = await expectRealWorldError(Articles.use((articles) =>
-      articles.delete(other, created.article.slug),
-    ));
+    const created = await run(
+      Articles.use((articles) =>
+        articles.create(owner, {
+          article: {
+            title: "Owned Article",
+            description: "test",
+            body: "test",
+          },
+        }),
+      ),
+    );
+    const forbidden = await expectRealWorldError(
+      Articles.use((articles) => articles.delete(other, created.article.slug)),
+    );
     expect(forbidden.status).toBe(403);
     expect(forbidden.errors.article).toEqual(["forbidden"]);
   });

@@ -2,11 +2,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Effect from "effect/Effect";
 import { UpdateUserRequest } from "../domain/RealWorldApi.js";
 import { BrowserAuth } from "../common/BrowserAuth.js";
-import {
-  decodeForm,
-  nullableTextField,
-  textField,
-} from "../common/formInput.js";
+import { decodeForm, nullableTextField, textField } from "../common/formInput.js";
 import {
   formFromSubmitEvent,
   renderWorkflowFailure,
@@ -29,17 +25,17 @@ const submitSettings = EventHandler.make(
 );
 
 const updateSettings = Effect.fn(function* (form: HTMLFormElement) {
-    const input = yield* decodeForm(UpdateUserRequest, {
-      user: {
-        image: nullableTextField(form, "image"),
-        username: textField(form, "username"),
-        bio: nullableTextField(form, "bio"),
-        email: textField(form, "email"),
-        password: nullableTextField(form, "password") ?? undefined,
-      },
-    });
-    const auth = yield* BrowserAuth;
-    return yield* auth.updateSettings(input);
+  const input = yield* decodeForm(UpdateUserRequest, {
+    user: {
+      image: nullableTextField(form, "image"),
+      username: textField(form, "username"),
+      bio: nullableTextField(form, "bio"),
+      email: textField(form, "email"),
+      password: nullableTextField(form, "password") ?? undefined,
+    },
+  });
+  const auth = yield* BrowserAuth;
+  return yield* auth.updateSettings(input);
 });
 
 const logout = EventHandler.make(
@@ -65,11 +61,7 @@ export const template = html`<section class="settings-page">
         <form onsubmit=${submitSettings}>
           <fieldset>
             <fieldset class="form-group">
-              <input
-                class="form-control"
-                name="image"
-                placeholder="URL of profile picture"
-              />
+              <input class="form-control" name="image" placeholder="URL of profile picture" />
             </fieldset>
             <fieldset class="form-group">
               <input class="form-control form-control-lg" name="username" placeholder="Username" />
@@ -97,9 +89,7 @@ export const template = html`<section class="settings-page">
           </fieldset>
         </form>
         <hr />
-        <button class="btn btn-outline-danger" onclick=${logout}>
-          Or click here to logout.
-        </button>
+        <button class="btn btn-outline-danger" onclick=${logout}>Or click here to logout.</button>
       </div>
     </div>
   </div>

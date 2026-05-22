@@ -11,5 +11,7 @@ export const method = HttpMethod.Post;
 export const success = ProfileResponse;
 
 export const handler = Effect.fn("Profiles.follow")(function* ({ headers, path }) {
-  return yield* respond(Profiles.use((profiles) => profiles.follow(authToken(headers), path.username)));
+  return yield* respond(
+    Profiles.use((profiles) => profiles.follow(authToken(headers), path.username)),
+  );
 }) satisfies RawHandler<Profiles>;

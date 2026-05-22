@@ -12,8 +12,6 @@ export const success = HttpApiSchema.NoContent;
 
 export const handler = Effect.fn("Comments.delete")(function* ({ headers, path }) {
   return yield* respondNoContent(
-    Comments.use((comments) =>
-      comments.delete(authToken(headers), path.slug, path.commentId),
-    ),
+    Comments.use((comments) => comments.delete(authToken(headers), path.slug, path.commentId)),
   );
 }) satisfies RawHandler<Comments>;

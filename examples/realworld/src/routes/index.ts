@@ -8,16 +8,15 @@ import { HomeRoute } from "../common/routes.js";
 import type { Handler } from "./$route-types";
 
 export const route = HomeRoute;
-export const template = ((params) => Fx.gen(function* () {
+export const template = Fx.fn("Home")(function* (params) {
   const client = yield* ApiClient;
   const page = RefSubject.map(params, ({ page }) => page ?? 1);
   const data = yield* RefAsyncData.fromComputedEffect(page, (currentPage) =>
-    home(client, { page: currentPage }));
+    home(client, { page: currentPage }),
+  );
 
   return html`<section class="home-page">
     ${Banner}
-    <div class="container page">
-      ${AsyncDataView(data, FeedContent)}
-    </div>
+    <div class="container page">${AsyncDataView(data, FeedContent)}</div>
   </section>`;
-})) satisfies Handler;
+}) satisfies Handler;

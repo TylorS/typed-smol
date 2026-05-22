@@ -11,5 +11,7 @@ export const method = HttpMethod.Post;
 export const success = SingleArticleResponse;
 
 export const handler = Effect.fn("Articles.favorite")(function* ({ headers, path }) {
-  return yield* respond(Articles.use((articles) => articles.favorite(authToken(headers), path.slug)));
+  return yield* respond(
+    Articles.use((articles) => articles.favorite(authToken(headers), path.slug)),
+  );
 }) satisfies RawHandler<Articles>;

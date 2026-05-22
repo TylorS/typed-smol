@@ -55,17 +55,18 @@ export const ssrForHttp: {
     input: Matcher<RenderEvent, E, R>,
     options?: SsrForHttpOptions<E2, R2>,
   ) => {
-  return Effect.gen(function* () {
-    const matcher = Option.match(yield* Effect.serviceOption(CurrentRoute), {
-      onNone: () => input,
-      onSome: (parent: CurrentRouteTree) => input.prefix(parent.route),
-    });
-    const entries = compile(matcher.cases);
-    const currentServices = yield* Effect.context<R>();
+    return Effect.gen(function* () {
+      const matcher = Option.match(yield* Effect.serviceOption(CurrentRoute), {
+        onNone: () => input,
+        onSome: (parent: CurrentRouteTree) => input.prefix(parent.route),
+      });
+      const entries = compile(matcher.cases);
+      const currentServices = yield* Effect.context<R>();
 
-    yield* router.addAll(entries.map((e: CompiledEntry) => toRoute(e, currentServices, options)));
-  });
-});
+      yield* router.addAll(entries.map((e: CompiledEntry) => toRoute(e, currentServices, options)));
+    });
+  },
+);
 
 export function handleHttpServerError(router: HttpRouter) {
   return router.addGlobalMiddleware(
@@ -178,9 +179,9 @@ function toRoute<E2, R2>(
         Effect.provideContext(handlerServices),
       );
       const html = options?.renderDocument
-        ? yield* options.renderDocument({ markup, request, url: request.url }).pipe(
-            Effect.provideContext(handlerServices),
-          )
+        ? yield* options
+            .renderDocument({ markup, request, url: request.url })
+            .pipe(Effect.provideContext(handlerServices))
         : markup;
       return HttpServerResponse.text(html, {
         headers: { "content-type": "text/html; charset=utf-8" },

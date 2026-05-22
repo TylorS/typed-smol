@@ -27,9 +27,7 @@ export type SingleArticleResponse = Schema.Schema.Type<typeof SingleArticleRespo
 
 export const MultipleArticlesResponse = Schema.Struct({
   articles: Schema.Array(ArticlePreview),
-  articlesCount: Schema.Number.pipe(
-    Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
-  ),
+  articlesCount: Schema.Number.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
 });
 export type MultipleArticlesResponse = Schema.Schema.Type<typeof MultipleArticlesResponse>;
 

@@ -9,17 +9,9 @@ import {
   UserNotFound,
   type UserRepositoryError,
 } from "../../domain/RepositoryErrors.js";
-import {
-  PasswordHasher,
-  StoredPassword,
-  type PasswordHasherService,
-} from "../PasswordHasher.js";
+import { PasswordHasher, StoredPassword, type PasswordHasherService } from "../PasswordHasher.js";
 import { SessionTokens } from "../SessionTokens.js";
-import {
-  currentIsoTimestamp,
-  first,
-  provideRepositorySql,
-} from "./Common.js";
+import { currentIsoTimestamp, first, provideRepositorySql } from "./Common.js";
 
 const PasswordMinLength = 8;
 
@@ -61,9 +53,7 @@ export interface UserRepositoryService {
   readonly findByEmail: (
     email: string,
   ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
-  readonly findById: (
-    id: UserId,
-  ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
+  readonly findById: (id: UserId) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
   readonly findByToken: (
     token: string,
   ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
@@ -80,10 +70,9 @@ export interface UserRepositoryService {
   ) => Effect.Effect<Option.Option<UserRecord>, UserRepositoryError>;
 }
 
-export class UserRepository extends Context.Service<
-  UserRepository,
-  UserRepositoryService
->()("@typed/realworld/UserRepository") {
+export class UserRepository extends Context.Service<UserRepository, UserRepositoryService>()(
+  "@typed/realworld/UserRepository",
+) {
   static readonly Live = Layer.effect(
     UserRepository,
     Effect.gen(function* () {
@@ -128,11 +117,13 @@ const createUser = (
     const stored = yield* passwords.hash(input.password);
     const sql = yield* SqlClient.SqlClient;
 
-    return yield* sql.withTransaction(Effect.gen(function* () {
-      yield* assertUniqueUsername(input.username, 0);
-      yield* assertUniqueEmail(input.email, 0);
-      return yield* insertUser(input, stored);
-    }));
+    return yield* sql.withTransaction(
+      Effect.gen(function* () {
+        yield* assertUniqueUsername(input.username, 0);
+        yield* assertUniqueEmail(input.email, 0);
+        return yield* insertUser(input, stored);
+      }),
+    );
   });
 
 const updateUser = (
@@ -264,9 +255,7 @@ const assertUniqueUsername = (
 ): Effect.Effect<void, UserRepositoryError, SqlClient.SqlClient> =>
   selectUserRowByUsername(username, excludingId).pipe(
     Effect.flatMap((row) =>
-      Option.isSome(row)
-        ? Effect.fail(new DuplicateUserField({ field: "username" }))
-        : Effect.void,
+      Option.isSome(row) ? Effect.fail(new DuplicateUserField({ field: "username" })) : Effect.void,
     ),
   );
 
@@ -276,9 +265,7 @@ const assertUniqueEmail = (
 ): Effect.Effect<void, UserRepositoryError, SqlClient.SqlClient> =>
   selectUserRowByEmail(email, excludingId).pipe(
     Effect.flatMap((row) =>
-      Option.isSome(row)
-        ? Effect.fail(new DuplicateUserField({ field: "email" }))
-        : Effect.void,
+      Option.isSome(row) ? Effect.fail(new DuplicateUserField({ field: "email" })) : Effect.void,
     ),
   );
 
@@ -333,18 +320,14 @@ const resolveUpdatedPassword = (
   input: DecodedUpdateUserInput,
   passwords: PasswordHasherService,
 ): Effect.Effect<StoredPassword, UserRepositoryError> =>
-  input.password === undefined
-    ? toStoredPassword(current)
-    : passwords.hash(input.password);
+  input.password === undefined ? toStoredPassword(current) : passwords.hash(input.password);
 
 const assertOptionalPasswordAllowed = (
   password: string | undefined,
 ): Effect.Effect<void, PasswordPolicyError> =>
   password === undefined ? Effect.void : assertPasswordAllowed(password);
 
-const assertPasswordAllowed = (
-  password: string,
-): Effect.Effect<void, PasswordPolicyError> =>
+const assertPasswordAllowed = (password: string): Effect.Effect<void, PasswordPolicyError> =>
   password.length >= PasswordMinLength
     ? Effect.void
     : Effect.fail(new PasswordPolicyError({ reason: "Password must be at least 8 characters" }));

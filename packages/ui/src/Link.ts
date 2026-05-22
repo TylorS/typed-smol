@@ -44,7 +44,7 @@ function makeLinkClickHandler(
       if (target.origin !== nav.origin) return;
       ev.preventDefault();
       const replace = yield* replace$;
-      yield* (replace ? Router.replace(href) : Router.push(href));
+      yield* replace ? Router.replace(href) : Router.push(href);
     }),
   );
 }

@@ -96,6 +96,7 @@ flowchart TD
 ## Task T1: Schema-Backed Public Data Attributes
 
 **Files:**
+
 - Create: `packages/ui/src/DataAttr.ts`
 - Create: `packages/ui/src/DataAttr.test.ts`
 
@@ -146,10 +147,10 @@ describe("typed/ui/DataAttr", () => {
         open: "true",
         placement: "bottom",
       });
-      assert.deepStrictEqual(
-        yield* DataAttr.decode(data, { open: "false", placement: "top" }),
-        { open: false, placement: "top" },
-      );
+      assert.deepStrictEqual(yield* DataAttr.decode(data, { open: "false", placement: "top" }), {
+        open: false,
+        placement: "top",
+      });
     }).pipe(Effect.runPromise));
 
   it("fails invalid decodes", () =>
@@ -189,7 +190,9 @@ export type Type<Fields extends DataFields> = {
   readonly [K in keyof Fields]: Schema.Schema.Type<Fields[K]>;
 };
 
-export type Encoded<Fields extends DataFields> = Readonly<Partial<Record<keyof Fields & string, string>>>;
+export type Encoded<Fields extends DataFields> = Readonly<
+  Partial<Record<keyof Fields & string, string>>
+>;
 
 export function schema<const Fields extends DataFields>(fields: Fields): DataAttr<Fields> {
   return { fields };
@@ -219,9 +222,7 @@ export function decode<const Fields extends DataFields>(
     const input = "dataset" in source ? source.dataset : source;
     const output: Record<string, unknown> = {};
     for (const [key, fieldSchema] of Object.entries(data.fields)) {
-      output[key] = yield* Schema.decodeUnknownEffect(fieldSchema)(
-        coerceDatasetValue(input[key]),
-      );
+      output[key] = yield* Schema.decodeUnknownEffect(fieldSchema)(coerceDatasetValue(input[key]));
     }
     return output as Type<Fields>;
   });
@@ -255,12 +256,14 @@ git commit -m "feat: add typed ui data attributes" -m "- add Schema-backed publi
 ## Task T2: RefSubject State Providers
 
 **Files:**
+
 - Create: `packages/ui/src/State.ts`
 - Create: `packages/ui/src/State.test.ts`
 
 - [x] **Step 1: Write failing tests**
 
 Current task detail:
+
 - Prove component state is a direct `RefSubject.RefSubject<State>`.
 - Prove derived reads use `RefSubject.map` instead of store selectors.
 - Prove optional provider lookup is only an Effect `Context.Service` key for that same ref.
@@ -345,12 +348,14 @@ git commit -m "feat: add typed ui refsubject state helpers" -m "- use RefSubject
 ## Task T3: Ref Startup Hydration
 
 **Files:**
+
 - Create: `packages/ui/src/StartupRef.ts`
 - Create: `packages/ui/src/StartupRef.test.ts`
 
 - [x] **Step 1: Write failing tests**
 
 Current task detail:
+
 - Decode a whole `.data={object}` shape from `element.dataset`.
 - Merge decoded startup fields into the existing `RefSubject` state so non-data state survives.
 - Support one template ref that composes multiple startup refs.
@@ -471,12 +476,14 @@ git commit -m "feat: add typed ui startup refs" -m "- initialize RefSubject stat
 ## Task T4: Disclosure
 
 **Files:**
+
 - Create: `packages/ui/src/Disclosure.ts`
 - Create: `packages/ui/src/Disclosure.test.ts`
 
 - [x] **Step 1: Write failing tests**
 
 Current task detail:
+
 - Keep Disclosure state as `RefSubject.RefSubject<{ open: boolean }>` with no store wrapper.
 - Emit stable public `data-open` through the DataAttr schema conventions.
 - Render APG-compatible button attributes: `type`, `aria-expanded`, optional `aria-controls`.
@@ -547,7 +554,9 @@ export function Button(options: {
       aria-controls=${options.controls}
       data-open=${RefSubject.map(open, String)}
       onclick=${onClick}
-    >${options.content}</button>`;
+    >
+      ${options.content}
+    </button>`;
   });
 }
 ```
@@ -574,12 +583,14 @@ git commit -m "feat: add typed ui disclosure" -m "- add disclosure RefSubject st
 ## Task T5: Dialog
 
 **Files:**
+
 - Create: `packages/ui/src/Dialog.ts`
 - Create: `packages/ui/src/Dialog.test.ts`
 
 - [x] **Step 1: Write failing tests**
 
 Current task detail:
+
 - Keep Dialog state as `RefSubject.RefSubject<{ open: boolean }>` with no store wrapper.
 - Emit stable public `data-open` through the DataAttr schema conventions.
 - Render modal dialog semantics in `Content`: `role="dialog"`, `aria-modal="true"`, label, `hidden`.
@@ -647,7 +658,9 @@ export function Content(options: {
     aria-label=${options.label}
     data-open=${RefSubject.map(open, String)}
     ?hidden=${RefSubject.map(open, (value) => !value)}
-  >${options.content}</div>`;
+  >
+    ${options.content}
+  </div>`;
 }
 ```
 
@@ -675,12 +688,14 @@ git commit -m "feat: add typed ui dialog" -m "- add dialog RefSubject state and 
 ## Task T6: Native Popover
 
 **Files:**
+
 - Create: `packages/ui/src/Popover.ts`
 - Create: `packages/ui/src/Popover.test.ts`
 
 - [x] **Step 1: Write failing tests**
 
 Current task detail:
+
 - Use only native Popover API attributes and native toggle events.
 - Do not add a JS click toggle, overlay element, focus trap, or positioning fallback.
 - Mirror native toggle state into the backing `RefSubject`.
@@ -741,14 +756,22 @@ export function makeState(initial: State): Effect.Effect<RefSubject.RefSubject<S
   return RefSubject.make(initial);
 }
 
-export function Trigger(options: { readonly state: RefSubject.RefSubject<State>; readonly content: Renderable<unknown, any, any> }) {
+export function Trigger(options: {
+  readonly state: RefSubject.RefSubject<State>;
+  readonly content: Renderable<unknown, any, any>;
+}) {
   return Fx.gen(function* () {
     const state = yield* options.state;
-    return html`<button type="button" popovertarget=${state.id} popovertargetaction="toggle">${options.content}</button>`;
+    return html`<button type="button" popovertarget=${state.id} popovertargetaction="toggle">
+      ${options.content}
+    </button>`;
   });
 }
 
-export function Content(options: { readonly state: RefSubject.RefSubject<State>; readonly content: Renderable<unknown, any, any> }) {
+export function Content(options: {
+  readonly state: RefSubject.RefSubject<State>;
+  readonly content: Renderable<unknown, any, any>;
+}) {
   return Fx.gen(function* () {
     const state = yield* options.state;
     return html`<div id=${state.id} popover=${state.mode}>${options.content}</div>`;
@@ -780,6 +803,7 @@ git commit -m "feat: add native typed ui popover" -m "- render native popover an
 ## Task T7: Exports, Documentation, and Full Verification
 
 **Files:**
+
 - Modify: `packages/ui/src/index.ts`
 - Modify: `packages/ui/package.json`
 - Modify: `packages/ui/README.md`

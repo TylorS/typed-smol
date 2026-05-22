@@ -45,7 +45,9 @@ export function planCpsCompilation(capabilities: CompileCapabilitiesPlan): CpsCo
     moduleId: capabilities.moduleId,
     continuations: [
       ...capabilities.templates.flatMap((template) =>
-        template.targets.map((target) => templateContinuation(capabilities.moduleId, template, target)),
+        template.targets.map((target) =>
+          templateContinuation(capabilities.moduleId, template, target),
+        ),
       ),
       ...capabilities.hmr.services.map(hmrContinuation),
     ],

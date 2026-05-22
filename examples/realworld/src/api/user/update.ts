@@ -12,7 +12,5 @@ export const body = UpdateUserRequest;
 export const success = UserResponse;
 
 export const handler = Effect.fn("Users.update")(function* ({ body, headers }) {
-  return yield* respond(
-    Users.use((users) => users.update(authToken(headers), body)),
-  );
+  return yield* respond(Users.use((users) => users.update(authToken(headers), body)));
 }) satisfies RawHandler<Users>;

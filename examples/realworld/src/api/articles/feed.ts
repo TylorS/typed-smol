@@ -11,13 +11,21 @@ import type { RawHandler } from "./$api-types";
 export const route = Route.Join(
   Route.Parse("/feed"),
   Route.QueryParams(
-    Route.ParamWithSchema("limit", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
-    Route.ParamWithSchema("offset", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
+    Route.ParamWithSchema(
+      "limit",
+      Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt)),
+    ).optional(),
+    Route.ParamWithSchema(
+      "offset",
+      Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt)),
+    ).optional(),
   ),
 );
 export const method = HttpMethod.Get;
 export const success = MultipleArticlesResponse;
 
 export const handler = Effect.fn("Articles.feed")(function* ({ headers, query }) {
-  return yield* respond(Articles.use((articles) => articles.feed(authToken(headers), feedFilter(query))));
+  return yield* respond(
+    Articles.use((articles) => articles.feed(authToken(headers), feedFilter(query))),
+  );
 }) satisfies RawHandler<Articles>;

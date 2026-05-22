@@ -17,15 +17,13 @@ import { ArticleRepository } from "../infrastructure/repositories/ArticleReposit
 import type { ArticleRepositoryService } from "../infrastructure/repositories/ArticleRepository.js";
 import { CommentRepository } from "../infrastructure/repositories/CommentRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
-import {
-  forbidden,
-  notFound,
-  optionalUserId,
-  requireNonBlank,
-  requireUser,
-} from "./Common.js";
+import { forbidden, notFound, optionalUserId, requireNonBlank, requireUser } from "./Common.js";
 
-type CommentsError = RealWorldError | ArticleRepositoryError | CommentRepositoryError | UserRepositoryError;
+type CommentsError =
+  | RealWorldError
+  | ArticleRepositoryError
+  | CommentRepositoryError
+  | UserRepositoryError;
 
 export interface CommentsService {
   readonly create: (
@@ -55,62 +53,57 @@ export class Comments extends Context.Service<Comments, CommentsService>()(
       const users = yield* UserRepository;
 
       return {
-        create: (token, slug, input) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) =>
-              requireNonBlank("body", input.comment.body).pipe(
-                Effect.flatMap((body) => comments.create(user.id, slug, body)),
-                Effect.flatMap(commentResponse),
-              ),
-            ),
-          ),
-        delete: (token, slug, commentId) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) =>
-              decodeCommentId(commentId).pipe(
-                Effect.flatMap((id) =>
-                  requireArticle(slug, articles).pipe(
-                    Effect.flatMap(() => comments.findOwnerId(id)),
-                    Effect.flatMap((owner) => {
-                      if (Option.isNone(owner)) return Effect.fail(notFound("comment"));
-                      if (owner.value !== user.id) return Effect.fail(forbidden("comment"));
-                      return comments.delete(user.id, id).pipe(
-                        Effect.catch(() => Effect.fail(notFound("comment"))),
-                        Effect.asVoid,
-                      );
-                    }),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        list: (slug, token) =>
-          optionalUserId(token, users).pipe(
-            Effect.flatMap((viewer) => comments.listByArticle(slug, viewer)),
-            Effect.flatMap((comments) =>
-              Option.isSome(comments)
-                ? Effect.succeed({ comments: comments.value })
-                : Effect.fail(notFound("article")),
-            ),
-          ),
+        create: Effect.fn(function* (
+          token: Option.Option<OpaqueToken>,
+          slug: string,
+          input: CreateCommentRequest,
+        ) {
+          const user = yield* requireUser(token, users);
+          const body = yield* requireNonBlank("body", input.comment.body);
+          const comment = yield* comments.create(user.id, slug, body);
+          return yield* toCommentResponse(comment);
+        }),
+        delete: Effect.fn(function* (
+          token: Option.Option<OpaqueToken>,
+          slug: string,
+          commentId: number,
+        ) {
+          const user = yield* requireUser(token, users);
+          const id = yield* decodeCommentId(commentId);
+          yield* requireArticle(slug, articles);
+          const owner = yield* comments.findOwnerId(id);
+          if (Option.isNone(owner)) return yield* Effect.fail(notFound("comment"));
+          if (owner.value !== user.id) return yield* Effect.fail(forbidden("comment"));
+          yield* comments
+            .delete(user.id, id)
+            .pipe(Effect.catch(() => Effect.fail(notFound("comment"))));
+        }),
+        list: Effect.fn(function* (slug: string, token: Option.Option<OpaqueToken>) {
+          const viewer = yield* optionalUserId(token, users);
+          const articleComments = yield* comments.listByArticle(slug, viewer);
+          if (Option.isNone(articleComments)) return yield* Effect.fail(notFound("article"));
+          return { comments: articleComments.value };
+        }),
       };
     }),
   );
 }
 
-const decodeCommentId = (id: number) =>
-  Schema.decodeUnknownEffect(CommentId)(id).pipe(
-    Effect.catch(() => Effect.fail(notFound("comment"))),
-  );
+const decodeCommentId = (id: number): Effect.Effect<CommentId, RealWorldError> =>
+  Effect.gen(function* () {
+    const decoded = yield* Schema.decodeUnknownEffect(CommentId)(id).pipe(Effect.option);
+    if (Option.isNone(decoded)) return yield* Effect.fail(notFound("comment"));
+    return decoded.value;
+  });
 
-const commentResponse = (comment: Option.Option<Comment>) =>
-  Option.isSome(comment)
-    ? Effect.succeed({ comment: comment.value })
-    : Effect.fail(notFound("article"));
+const toCommentResponse = (comment: Option.Option<Comment>) =>
+  Effect.gen(function* () {
+    if (Option.isNone(comment)) return yield* Effect.fail(notFound("article"));
+    return { comment: comment.value };
+  });
 
 const requireArticle = (slug: string, articles: ArticleRepositoryService) =>
-  articles.findBySlug(slug, Option.none()).pipe(
-    Effect.flatMap((article) =>
-      Option.isSome(article) ? Effect.void : Effect.fail(notFound("article")),
-    ),
-  );
+  Effect.gen(function* () {
+    const article = yield* articles.findBySlug(slug, Option.none());
+    if (Option.isNone(article)) return yield* Effect.fail(notFound("article"));
+  });

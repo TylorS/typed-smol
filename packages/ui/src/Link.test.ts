@@ -99,21 +99,17 @@ describe("typed/ui/Link", () => {
     return Promise.race([
       program,
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Reactive Link did not render or navigate")), 500)
+        setTimeout(() => reject(new Error("Reactive Link did not render or navigate")), 500),
       ),
     ]);
   });
 
   it("rematches rendered browser routes after internal link clicks", () => {
-    const window = new Window({ url: "http://localhost/login" }) as unknown as
-      & globalThis.Window
-      & typeof globalThis;
+    const window = new Window({ url: "http://localhost/login" }) as unknown as globalThis.Window &
+      typeof globalThis;
     const layer = DomRenderTemplate.using(window.document).pipe(Layer.merge(BrowserRouter(window)));
     const routes = Matcher.empty
-      .match(
-        Route.Parse("login"),
-        Link({ href: "/register", content: "Need an account?" }),
-      )
+      .match(Route.Parse("login"), Link({ href: "/register", content: "Need an account?" }))
       .match(Route.Parse("register"), html`<h1>Register</h1>`);
 
     return Effect.gen(function* () {
@@ -137,9 +133,9 @@ describe("typed/ui/Link", () => {
   });
 
   it("intercepts nested links rendered from keyed lists", () => {
-    const window = new Window({ url: "http://localhost/profile/seed_author" }) as unknown as
-      & globalThis.Window
-      & typeof globalThis;
+    const window = new Window({
+      url: "http://localhost/profile/seed_author",
+    }) as unknown as globalThis.Window & typeof globalThis;
     const layer = DomRenderTemplate.using(window.document).pipe(Layer.merge(BrowserRouter(window)));
     return Effect.gen(function* () {
       const articles = yield* RefSubject.make([
@@ -158,7 +154,8 @@ describe("typed/ui/Link", () => {
                 ${Link({
                   class: "preview-link",
                   href,
-                  content: html`<h1>${article.title}</h1><span>Read more...</span>`,
+                  content: html`<h1>${article.title}</h1>
+                    <span>Read more...</span>`,
                 })}
               </article>`;
             },

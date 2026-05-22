@@ -90,7 +90,9 @@ export function Root<const Opts extends RootOptions>(options: Opts) {
     role="radiogroup"
     aria-label=${options.label}
     aria-orientation=${orientation}
-  >${options.content}</div>`;
+  >
+    ${options.content}
+  </div>`;
 }
 
 export interface ItemOptions<Value extends string = string> {
@@ -100,20 +102,22 @@ export interface ItemOptions<Value extends string = string> {
   readonly content: AnyContent;
 }
 
-export function Item<const Value extends string, const Opts extends ItemOptions<Value>>(options: Opts) {
+export function Item<const Value extends string, const Opts extends ItemOptions<Value>>(
+  options: Opts,
+) {
   const checked = isChecked(options.state, options.value);
   const onClick = EventHandler.make((event: Event) =>
     Effect.gen(function* () {
       const value = yield* toEffect(options.value);
       yield* selectItem(options.state, (event.currentTarget as HTMLElement).id, value);
-    })
+    }),
   );
   const props: Record<string, unknown> = {
     id: options.id,
     "data-value": options.value,
     role: "radio",
     "aria-checked": checked,
-    tabindex: RefSubject.map(checked, (value) => value ? 0 : -1),
+    tabindex: RefSubject.map(checked, (value) => (value ? 0 : -1)),
     "data-checked": checked,
     onclick: onClick,
   };
@@ -126,7 +130,7 @@ function isChecked<Value extends string>(
   value: Renderable<Value, any, any>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.map(toEffect(value), (value) => current.value === value)
+    Effect.map(toEffect(value), (value) => current.value === value),
   );
 }
 
@@ -140,7 +144,10 @@ function nextActiveId<Value>(
   if (direction === "first") return items[0]?.id;
   if (direction === "last") return items[items.length - 1]?.id;
 
-  const index = Math.max(0, items.findIndex((item) => item.id === activeId));
+  const index = Math.max(
+    0,
+    items.findIndex((item) => item.id === activeId),
+  );
   const delta = direction === "next" ? 1 : -1;
   const next = index + delta;
   if (loop) return items[(next + items.length) % items.length]?.id;

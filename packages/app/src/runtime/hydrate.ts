@@ -1,10 +1,6 @@
 import type { Renderable } from "@typed/template";
 import * as Effect from "effect/Effect";
-import type {
-  DomRuntimeTemplate,
-  HydrateOptions,
-  MountedApp,
-} from "./RuntimeTemplate.js";
+import type { DomRuntimeTemplate, HydrateOptions, MountedApp } from "./RuntimeTemplate.js";
 import { mount } from "./mount.js";
 import type { Fx } from "@typed/fx";
 import type { RenderEvent } from "@typed/template";
@@ -13,11 +9,7 @@ import type { CompiledDomTemplate, RuntimeTemplateFallback } from "@typed/compil
 export function hydrate<Values extends ReadonlyArray<Renderable.Any>>(
   template: CompiledDomTemplate | RuntimeTemplateFallback<Values>,
   options: HydrateOptions<Values>,
-): Effect.Effect<
-  MountedApp,
-  Renderable.Error<Values[number]>,
-  Renderable.Services<Values[number]>
->;
+): Effect.Effect<MountedApp, Renderable.Error<Values[number]>, Renderable.Services<Values[number]>>;
 export function hydrate<E, R>(
   template: Fx.Fx<RenderEvent, E, R>,
   options: HydrateOptions,

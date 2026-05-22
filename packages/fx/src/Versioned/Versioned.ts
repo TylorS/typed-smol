@@ -589,7 +589,7 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
         const v = yield* service;
         return yield* v;
       };
-    
+
       constructor() {
         return VersionedService;
       }

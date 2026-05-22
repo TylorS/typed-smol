@@ -5,11 +5,7 @@ import { Comment } from "../../domain/Article.js";
 import { CommentId, Slug, UserId } from "../../domain/Ids.js";
 import { type CommentRepositoryError } from "../../domain/RepositoryErrors.js";
 import { Profile } from "../../domain/User.js";
-import {
-  currentIsoTimestamp,
-  first,
-  provideRepositorySql,
-} from "./Common.js";
+import { currentIsoTimestamp, first, provideRepositorySql } from "./Common.js";
 
 export interface CommentRepositoryService {
   readonly create: (

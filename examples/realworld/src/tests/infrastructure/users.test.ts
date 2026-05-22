@@ -7,10 +7,7 @@ import { PasswordHasher } from "../../infrastructure/PasswordHasher.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
 import { SessionTokens } from "../../infrastructure/SessionTokens.js";
 import { withSqlite } from "../../infrastructure/Sql.js";
-import {
-  DuplicateUserField,
-  PasswordPolicyError,
-} from "../../domain/RepositoryErrors.js";
+import { DuplicateUserField, PasswordPolicyError } from "../../domain/RepositoryErrors.js";
 import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
 import {
   defaultDataDirectory,
@@ -34,19 +31,19 @@ const createUser = UserRepository.use((repo) =>
 );
 
 const readPasswordRow = (email: string) =>
-  withSqlite(Effect.gen(function* () {
-    const sql = yield* SqlClient.SqlClient;
-    const [row] = yield* sql<{
-      readonly password_hash: string;
-      readonly password_salt: string;
-    }>`SELECT password_hash, password_salt FROM users WHERE email = ${email}`;
+  withSqlite(
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const [row] = yield* sql<{
+        readonly password_hash: string;
+        readonly password_salt: string;
+      }>`SELECT password_hash, password_salt FROM users WHERE email = ${email}`;
 
-    return row;
-  }));
+      return row;
+    }),
+  );
 
-const expectFailure = async <A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-): Promise<E> => {
+const expectFailure = async <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<E> => {
   const exit = await exitWithLayer(effect, TestLayer);
 
   if (Exit.isFailure(exit)) {
@@ -86,13 +83,15 @@ describe("user persistence services", () => {
     await run(createUser);
 
     const usernameError = await expectFailure(createUser);
-    const emailError = await expectFailure(UserRepository.use((repo) =>
-      repo.create({
-        username: "other_user",
-        email: "new.user@example.com",
-        password: "correct-password",
-      }),
-    ));
+    const emailError = await expectFailure(
+      UserRepository.use((repo) =>
+        repo.create({
+          username: "other_user",
+          email: "new.user@example.com",
+          password: "correct-password",
+        }),
+      ),
+    );
 
     expect(usernameError).toBeInstanceOf(DuplicateUserField);
     expect(emailError).toBeInstanceOf(DuplicateUserField);
@@ -115,23 +114,29 @@ describe("user persistence services", () => {
   it("normalizes user updates and enforces password policy", async () => {
     const user = await run(createUser);
 
-    const shortPassword = await expectFailure(UserRepository.use((repo) =>
-      repo.update(user.id, { password: "short" }),
-    ));
+    const shortPassword = await expectFailure(
+      UserRepository.use((repo) => repo.update(user.id, { password: "short" })),
+    );
     expect(shortPassword).toBeInstanceOf(PasswordPolicyError);
 
-    const updated = await run(UserRepository.use((repo) =>
-      repo.update(user.id, {
-        bio: "",
-        image: "   ",
-        password: "updated-password",
-      }),
-    ));
+    const updated = await run(
+      UserRepository.use((repo) =>
+        repo.update(user.id, {
+          bio: "",
+          image: "   ",
+          password: "updated-password",
+        }),
+      ),
+    );
 
     expect(updated.bio).toBeNull();
     expect(updated.image).toBeNull();
-    await expect(run(UserRepository.use((repo) =>
-      repo.verifyCredentials("new.user@example.com", "updated-password"),
-    ))).resolves.toEqual(expect.objectContaining({ _tag: "Some" }));
+    await expect(
+      run(
+        UserRepository.use((repo) =>
+          repo.verifyCredentials("new.user@example.com", "updated-password"),
+        ),
+      ),
+    ).resolves.toEqual(expect.objectContaining({ _tag: "Some" }));
   });
 });

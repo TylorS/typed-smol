@@ -271,40 +271,40 @@ sequenceDiagram
 
 ## Failure Modes and Mitigations
 
-| failure | mitigation |
-| ------- | ---------- |
-| Template shape unsupported by compiler | Emit fallback to existing `RenderTemplate` runtime path with a diagnostic. |
-| Generated output loses `Effect` or `Fx` typing | Compile-time positive/negative tests block the task. |
-| HMR restores incompatible state | Compare service id, state shape/version, and dependency fingerprints before reuse. |
-| Dependency inference preserves too much | Provide explicit opt-out and diagnostics explaining inferred participation. |
-| Dependency inference misses eligible state | Provide explicit opt-in. |
-| Closure capture cannot be proven stable | Do not rewrite; keep original closure or invalidate HMR. |
-| Registry leaks state/listeners | Register dispose/prune cleanup and scope finalizers. |
-| Artifact cache returns stale compiled output | Use existing source/config/plugin/compiler fingerprint model and fail closed. |
-| `@typed/compiler` overlaps with `vmc` | Keep `vmc` as host adapter; `@typed/compiler` owns template/app compilation only. |
+| failure                                        | mitigation                                                                         |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Template shape unsupported by compiler         | Emit fallback to existing `RenderTemplate` runtime path with a diagnostic.         |
+| Generated output loses `Effect` or `Fx` typing | Compile-time positive/negative tests block the task.                               |
+| HMR restores incompatible state                | Compare service id, state shape/version, and dependency fingerprints before reuse. |
+| Dependency inference preserves too much        | Provide explicit opt-out and diagnostics explaining inferred participation.        |
+| Dependency inference misses eligible state     | Provide explicit opt-in.                                                           |
+| Closure capture cannot be proven stable        | Do not rewrite; keep original closure or invalidate HMR.                           |
+| Registry leaks state/listeners                 | Register dispose/prune cleanup and scope finalizers.                               |
+| Artifact cache returns stale compiled output   | Use existing source/config/plugin/compiler fingerprint model and fail closed.      |
+| `@typed/compiler` overlaps with `vmc`          | Keep `vmc` as host adapter; `@typed/compiler` owns template/app compilation only.  |
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1, FR-10, FR-20 | `@typed/app` runtime functions | Mount/hydrate/server render consume compiled and fallback templates. |
-| FR-2, FR-17, FR-19 | virtual-module architecture | No filesystem routing; existing plugin ordering preserved. |
-| FR-3, FR-16 | `@typed/compiler` boundary | New focused package, not `vmc`. |
-| FR-4, FR-5, FR-6 | TemplatePlan + emitters | All `html` templates compile to server and DOM target outputs. |
-| FR-7, FR-8 | typed compiler metadata | Preserve `Renderable`, `Effect`, and `Fx` types. |
-| FR-9 | fallback path | Unsupported shapes use existing runtime renderer. |
-| FR-11 through FR-15 | HMR lifecycle | Vite HMR data, compatibility checks, cleanup. |
-| FR-18, NFR-1, NFR-2 | artifact integration | Fingerprinted materialization where required. |
-| FR-23 through FR-26 | `RefSubject.Service` | Service-first state identity and dev registry. |
-| FR-27 through FR-29 | closure context rewriting | Specified now, implemented after service-backed HMR. |
-| FR-30 through FR-36 | route/dependency HMR boundary | HMR state limited to route components and participating dependencies with overrides. |
-| NFR-3, NFR-4 | implementation discipline | Small runtime functions; no broad TypeScript optimizer. |
-| NFR-5, NFR-6, NFR-8, NFR-13 | dev-only registry safety | Inspectable, namespaced, versioned, omitted in production. |
-| NFR-7 | lifecycle safety | Scope/fiber/event cleanup preserved. |
-| NFR-9, NFR-12 | workflow traceability | Plan/execution links back to requirements and memories. |
-| NFR-10 | host compatibility | Vite, vmc, LS plugin, VS Code remain compatible. |
-| NFR-11 | test design | Property and compile-time tests preferred. |
-| NFR-14 | closure safety | No arbitrary closure serialization. |
+| requirement_id              | design_element                 | notes                                                                                |
+| --------------------------- | ------------------------------ | ------------------------------------------------------------------------------------ |
+| FR-1, FR-10, FR-20          | `@typed/app` runtime functions | Mount/hydrate/server render consume compiled and fallback templates.                 |
+| FR-2, FR-17, FR-19          | virtual-module architecture    | No filesystem routing; existing plugin ordering preserved.                           |
+| FR-3, FR-16                 | `@typed/compiler` boundary     | New focused package, not `vmc`.                                                      |
+| FR-4, FR-5, FR-6            | TemplatePlan + emitters        | All `html` templates compile to server and DOM target outputs.                       |
+| FR-7, FR-8                  | typed compiler metadata        | Preserve `Renderable`, `Effect`, and `Fx` types.                                     |
+| FR-9                        | fallback path                  | Unsupported shapes use existing runtime renderer.                                    |
+| FR-11 through FR-15         | HMR lifecycle                  | Vite HMR data, compatibility checks, cleanup.                                        |
+| FR-18, NFR-1, NFR-2         | artifact integration           | Fingerprinted materialization where required.                                        |
+| FR-23 through FR-26         | `RefSubject.Service`           | Service-first state identity and dev registry.                                       |
+| FR-27 through FR-29         | closure context rewriting      | Specified now, implemented after service-backed HMR.                                 |
+| FR-30 through FR-36         | route/dependency HMR boundary  | HMR state limited to route components and participating dependencies with overrides. |
+| NFR-3, NFR-4                | implementation discipline      | Small runtime functions; no broad TypeScript optimizer.                              |
+| NFR-5, NFR-6, NFR-8, NFR-13 | dev-only registry safety       | Inspectable, namespaced, versioned, omitted in production.                           |
+| NFR-7                       | lifecycle safety               | Scope/fiber/event cleanup preserved.                                                 |
+| NFR-9, NFR-12               | workflow traceability          | Plan/execution links back to requirements and memories.                              |
+| NFR-10                      | host compatibility             | Vite, vmc, LS plugin, VS Code remain compatible.                                     |
+| NFR-11                      | test design                    | Property and compile-time tests preferred.                                           |
+| NFR-14                      | closure safety                 | No arbitrary closure serialization.                                                  |
 
 ## References Consulted
 

@@ -1,11 +1,6 @@
 import type { CompiledDomTemplate, RuntimeTemplateFallback } from "@typed/compiler";
 import { type Fx, Fx as FxRuntime } from "@typed/fx";
-import {
-  DomRenderTemplate,
-  render,
-  type RenderEvent,
-  type Renderable,
-} from "@typed/template";
+import { DomRenderTemplate, render, type RenderEvent, type Renderable } from "@typed/template";
 import * as Effect from "effect/Effect";
 import {
   emptyValues,
@@ -18,11 +13,7 @@ import { isCompiledDomTemplate, isTemplateFallback } from "./internal.js";
 export function mount<Values extends ReadonlyArray<Renderable.Any>>(
   template: CompiledDomTemplate | RuntimeTemplateFallback<Values>,
   options: MountOptions<Values>,
-): Effect.Effect<
-  MountedApp,
-  Renderable.Error<Values[number]>,
-  Renderable.Services<Values[number]>
->;
+): Effect.Effect<MountedApp, Renderable.Error<Values[number]>, Renderable.Services<Values[number]>>;
 export function mount<E, R>(
   template: Fx.Fx<RenderEvent, E, R>,
   options: MountOptions,
@@ -30,7 +21,11 @@ export function mount<E, R>(
 export function mount<Values extends ReadonlyArray<Renderable.Any>, E, R>(
   template: DomRuntimeTemplate<Values> | Fx.Fx<RenderEvent, E, R>,
   options: MountOptions<Values>,
-): Effect.Effect<MountedApp, Renderable.Error<Values[number]> | E, Renderable.Services<Values[number]> | R> {
+): Effect.Effect<
+  MountedApp,
+  Renderable.Error<Values[number]> | E,
+  Renderable.Services<Values[number]> | R
+> {
   if (isCompiledDomTemplate(template)) return mountCompiled(template, options);
   if (isTemplateFallback(template)) return mountFallback(template, options);
   if (FxRuntime.isFx(template)) return mountFx(template, options);

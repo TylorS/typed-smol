@@ -13,7 +13,7 @@ export const HttpMethod = {
   Put: "PUT",
 } as const;
 
-export type HttpMethod = typeof HttpMethod[keyof typeof HttpMethod];
+export type HttpMethod = (typeof HttpMethod)[keyof typeof HttpMethod];
 
 export const authToken = (headers?: Record<string, string>): Option.Option<OpaqueToken> =>
   parseAuthorizationHeader(headers?.authorization ?? headers?.Authorization);
@@ -49,7 +49,9 @@ type FeedQuery = {
 const compactFilter = (filter: ArticleListFilter): ArticleListFilter => ({
   ...(filter.tag !== undefined && filter.tag !== "" ? { tag: filter.tag } : {}),
   ...(filter.author !== undefined && filter.author !== "" ? { author: filter.author } : {}),
-  ...(filter.favorited !== undefined && filter.favorited !== "" ? { favorited: filter.favorited } : {}),
+  ...(filter.favorited !== undefined && filter.favorited !== ""
+    ? { favorited: filter.favorited }
+    : {}),
   ...(filter.limit !== undefined ? { limit: filter.limit } : {}),
   ...(filter.offset !== undefined ? { offset: filter.offset } : {}),
 });

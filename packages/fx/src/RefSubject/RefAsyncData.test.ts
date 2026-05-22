@@ -37,10 +37,9 @@ describe("RefAsyncData", () => {
       yield* Effect.yieldNow;
       expect(yield* ref).toEqual(AsyncData.success(0, progress));
 
-      const refresh2 = yield* Effect.forkChild(
-        RefAsyncData.refresh(ref, Effect.succeed(2)),
-        { startImmediately: true },
-      );
+      const refresh2 = yield* Effect.forkChild(RefAsyncData.refresh(ref, Effect.succeed(2)), {
+        startImmediately: true,
+      });
 
       yield* Effect.yieldNow;
       expect(yield* ref).toEqual(AsyncData.success(0, progress));
@@ -88,7 +87,8 @@ describe("RefAsyncData", () => {
     Effect.gen(function* () {
       const page = yield* RefSubject.make(1);
       const ref = yield* RefAsyncData.fromComputedEffect(page, (value) =>
-        Effect.succeed(`page-${value}`));
+        Effect.succeed(`page-${value}`),
+      );
 
       expect(yield* ref).toEqual(AsyncData.success("page-1"));
 

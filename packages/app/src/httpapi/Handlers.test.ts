@@ -21,7 +21,9 @@ describe("ApiHandlers", () => {
     }).pipe(Effect.runPromise));
 });
 
-function makeRequest(headers: Record<string, string>): HttpIncomingMessage.HttpIncomingMessage<never> {
+function makeRequest(
+  headers: Record<string, string>,
+): HttpIncomingMessage.HttpIncomingMessage<never> {
   return {
     [HttpIncomingMessage.TypeId]: HttpIncomingMessage.TypeId,
     headers,

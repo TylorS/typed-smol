@@ -1,9 +1,10 @@
 import type { ComponentHmrBoundary, ComponentHmrResult } from "../hmr/analyzeComponentHmr.js";
-import type { DependencyHmrParticipant, DependencyHmrRejected, DependencyHmrResult } from "../hmr/dependencies.js";
-import {
-  planViteHmrBoundary,
-  type ViteHmrServicePlan,
-} from "../hmr/viteHmr.js";
+import type {
+  DependencyHmrParticipant,
+  DependencyHmrRejected,
+  DependencyHmrResult,
+} from "../hmr/dependencies.js";
+import { planViteHmrBoundary, type ViteHmrServicePlan } from "../hmr/viteHmr.js";
 import type { TemplatePlan } from "../template/TemplatePlan.js";
 import type { TemplateOutputTarget } from "../template/fingerprints.js";
 

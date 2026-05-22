@@ -10,10 +10,9 @@ export interface SessionTokensService {
   readonly create: (userId: UserId) => Effect.Effect<OpaqueToken, SessionTokenError>;
 }
 
-export class SessionTokens extends Context.Service<
-  SessionTokens,
-  SessionTokensService
->()("@typed/realworld/SessionTokens") {
+export class SessionTokens extends Context.Service<SessionTokens, SessionTokensService>()(
+  "@typed/realworld/SessionTokens",
+) {
   static readonly Live = Layer.effect(
     SessionTokens,
     Effect.gen(function* () {
@@ -21,20 +20,23 @@ export class SessionTokens extends Context.Service<
 
       return {
         create: (userId) =>
-          provideRepositorySql(Effect.gen(function* () {
-            const sql = yield* SqlClient.SqlClient;
-            const token = yield* Schema.decodeUnknownEffect(OpaqueToken)(
-              randomBytes(32).toString("base64url"),
-            );
-            const now = currentIsoTimestamp();
+          provideRepositorySql(
+            Effect.gen(function* () {
+              const sql = yield* SqlClient.SqlClient;
+              const token = yield* Schema.decodeUnknownEffect(OpaqueToken)(
+                randomBytes(32).toString("base64url"),
+              );
+              const now = currentIsoTimestamp();
 
-            yield* sql`
+              yield* sql`
               INSERT INTO sessions (user_id, token, created_at, last_seen_at)
               VALUES (${userId}, ${token}, ${now}, ${now})
             `;
 
-            return token;
-          }), sql),
+              return token;
+            }),
+            sql,
+          ),
       };
     }),
   );

@@ -5,13 +5,12 @@ import type { EventHandler, Renderable } from "@typed/template";
 
 export type EventHandlerProperty = `on${string}`;
 
-export type EventOf<Handler> = NonNullable<Handler> extends (
-  this: any,
-  event: infer Event,
-  ...args: ReadonlyArray<any>
-) => any
-  ? Event extends globalThis.Event ? Event : globalThis.Event
-  : globalThis.Event;
+export type EventOf<Handler> =
+  NonNullable<Handler> extends (this: any, event: infer Event, ...args: ReadonlyArray<any>) => any
+    ? Event extends globalThis.Event
+      ? Event
+      : globalThis.Event
+    : globalThis.Event;
 
 export type ElementEventHandlers<Element extends globalThis.Element> = {
   readonly [K in keyof Element as K extends EventHandlerProperty ? K : never]?:
@@ -23,7 +22,11 @@ export type ElementEventHandlers<Element extends globalThis.Element> = {
 export type ElementRef<Element extends globalThis.Element> = {
   readonly ref?: (
     element: Element,
-  ) => void | Effect.Effect<unknown, any, any> | Stream.Stream<unknown, any, any> | Fx<unknown, any, any>;
+  ) =>
+    | void
+    | Effect.Effect<unknown, any, any>
+    | Stream.Stream<unknown, any, any>
+    | Fx<unknown, any, any>;
 };
 
 export type IfEquals<X, Y, Output> =
@@ -39,15 +42,13 @@ export type ElementProperties<Element extends globalThis.Element> = {
     : K]?: Renderable<Element[K], any, any>;
 };
 
-export type ElementOptions<Element extends globalThis.Element> =
-  & ElementEventHandlers<Element>
-  & ElementRef<Element>
-  & ElementProperties<Element>;
+export type ElementOptions<Element extends globalThis.Element> = ElementEventHandlers<Element> &
+  ElementRef<Element> &
+  ElementProperties<Element>;
 
-export type ElementByTagName =
-  & HTMLElementTagNameMap
-  & SVGElementTagNameMap
-  & MathMLElementTagNameMap;
+export type ElementByTagName = HTMLElementTagNameMap &
+  SVGElementTagNameMap &
+  MathMLElementTagNameMap;
 
 export type OptionsByTagName = {
   readonly [Tag in keyof ElementByTagName]: ElementOptions<ElementByTagName[Tag]>;

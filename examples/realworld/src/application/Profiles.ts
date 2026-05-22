@@ -2,10 +2,7 @@ import { Context, Effect, Layer, Option } from "effect";
 import type { OpaqueToken } from "../domain/Ids.js";
 import type { ProfileResponse } from "../domain/RealWorldApi.js";
 import type { RealWorldError } from "../domain/Errors.js";
-import type {
-  ProfileRepositoryError,
-  UserRepositoryError,
-} from "../domain/RepositoryErrors.js";
+import type { ProfileRepositoryError, UserRepositoryError } from "../domain/RepositoryErrors.js";
 import { ProfileRepository } from "../infrastructure/repositories/ProfileRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
 import { notFound, optionalUserId, requireUser } from "./Common.js";
@@ -37,27 +34,28 @@ export class Profiles extends Context.Service<Profiles, ProfilesService>()(
       const users = yield* UserRepository;
 
       return {
-        follow: (token, username) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) => profiles.follow(user.id, username)),
-            Effect.flatMap(profileResponse),
-          ),
-        get: (username, token) =>
-          optionalUserId(token, users).pipe(
-            Effect.flatMap((viewer) => profiles.findByUsername(username, viewer)),
-            Effect.flatMap(profileResponse),
-          ),
-        unfollow: (token, username) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) => profiles.unfollow(user.id, username)),
-            Effect.flatMap(profileResponse),
-          ),
+        follow: Effect.fn(function* (token: Option.Option<OpaqueToken>, username: string) {
+          const user = yield* requireUser(token, users);
+          const profile = yield* profiles.follow(user.id, username);
+          return yield* toProfileResponse(profile);
+        }),
+        get: Effect.fn(function* (username: string, token: Option.Option<OpaqueToken>) {
+          const viewer = yield* optionalUserId(token, users);
+          const profile = yield* profiles.findByUsername(username, viewer);
+          return yield* toProfileResponse(profile);
+        }),
+        unfollow: Effect.fn(function* (token: Option.Option<OpaqueToken>, username: string) {
+          const user = yield* requireUser(token, users);
+          const profile = yield* profiles.unfollow(user.id, username);
+          return yield* toProfileResponse(profile);
+        }),
       };
     }),
   );
 }
 
-const profileResponse = (profile: Option.Option<ProfileResponse["profile"]>) =>
-  Option.isSome(profile)
-    ? Effect.succeed({ profile: profile.value })
-    : Effect.fail(notFound("profile"));
+const toProfileResponse = (profile: Option.Option<ProfileResponse["profile"]>) =>
+  Effect.gen(function* () {
+    if (Option.isNone(profile)) return yield* Effect.fail(notFound("profile"));
+    return { profile: profile.value };
+  });

@@ -23,9 +23,9 @@
     "@typed/virtual-modules": "workspace:*"
   },
   "devDependencies": {
-    "@vscode/vsce": "^3.7.0",
     "@types/node": "^25.7.0",
     "@types/vscode": "^1.118.0",
+    "@vscode/vsce": "^3.7.0",
     "esbuild": "^0.28.0",
     "typescript": "catalog:",
     "vitest": "catalog:"

@@ -73,8 +73,7 @@ describe("realworld local acceptance gates", () => {
   });
 });
 
-const readText = (path: string): string =>
-  readFileSync(resolve(projectRoot, path), "utf8");
+const readText = (path: string): string => readFileSync(resolve(projectRoot, path), "utf8");
 
 const readJson = <A>(path: string): A => JSON.parse(readText(path));
 

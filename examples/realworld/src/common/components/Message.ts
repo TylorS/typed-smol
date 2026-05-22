@@ -10,7 +10,5 @@ export interface AsyncDataMessage {
 export const Message = Fx.fn("Message")((messageRef: RefSubjectType<AsyncDataMessage>) => {
   const message = RefSubject.proxy(messageRef);
   const className = RefSubject.map(message.kind, (kind) => `async-data async-data-${kind}`);
-  return html`<p class=${className}>
-    ${message.text}
-  </p>`;
+  return html`<p class=${className}>${message.text}</p>`;
 });

@@ -31,12 +31,14 @@ describe("article and tag repositories", () => {
   });
 
   it("lists global articles with pagination, viewer favorite state, and no body", async () => {
-    const anonymous = await run(ArticleRepository.use((articles) =>
-      articles.list({}, Option.none()),
-    ));
-    const reader = await run(ArticleRepository.use((articles) =>
-      articles.list({ limit: 1, offset: 0 }, Option.some(userId(1))),
-    ));
+    const anonymous = await run(
+      ArticleRepository.use((articles) => articles.list({}, Option.none())),
+    );
+    const reader = await run(
+      ArticleRepository.use((articles) =>
+        articles.list({ limit: 1, offset: 0 }, Option.some(userId(1))),
+      ),
+    );
 
     expect(anonymous.articlesCount).toBe(15);
     expect(anonymous.articles).toHaveLength(10);
@@ -47,22 +49,27 @@ describe("article and tag repositories", () => {
   });
 
   it("filters articles by tag, author, favorited username, and offset", async () => {
-    const byTag = await run(ArticleRepository.use((articles) =>
-      articles.list({ tag: "typed" }, Option.none()),
-    ));
-    const byAuthor = await run(ArticleRepository.use((articles) =>
-      articles.list({ author: "seed_secondary" }, Option.none()),
-    ));
-    const byFavorited = await run(ArticleRepository.use((articles) =>
-      articles.list({ favorited: "seed_reader" }, Option.some(userId(1))),
-    ));
-    const secondPage = await run(ArticleRepository.use((articles) =>
-      articles.list({ limit: 1, offset: 1 }, Option.none()),
-    ));
+    const byTag = await run(
+      ArticleRepository.use((articles) => articles.list({ tag: "typed" }, Option.none())),
+    );
+    const byAuthor = await run(
+      ArticleRepository.use((articles) =>
+        articles.list({ author: "seed_secondary" }, Option.none()),
+      ),
+    );
+    const byFavorited = await run(
+      ArticleRepository.use((articles) =>
+        articles.list({ favorited: "seed_reader" }, Option.some(userId(1))),
+      ),
+    );
+    const secondPage = await run(
+      ArticleRepository.use((articles) => articles.list({ limit: 1, offset: 1 }, Option.none())),
+    );
 
     expect(byTag.articles.every((article) => article.tagList.includes("typed"))).toBe(true);
-    expect(byAuthor.articles.every((article) => article.author.username === "seed_secondary"))
-      .toBe(true);
+    expect(byAuthor.articles.every((article) => article.author.username === "seed_secondary")).toBe(
+      true,
+    );
     expect(byFavorited.articles.map((article) => article.slug)).toEqual([
       "seeded-typed-realworld-1",
     ]);
@@ -72,82 +79,91 @@ describe("article and tag repositories", () => {
   });
 
   it("returns feed articles from followed authors only", async () => {
-    const feed = await run(ArticleRepository.use((articles) =>
-      articles.feed(userId(1), { limit: 20, offset: 0 }),
-    ));
+    const feed = await run(
+      ArticleRepository.use((articles) => articles.feed(userId(1), { limit: 20, offset: 0 })),
+    );
 
     expect(feed.articlesCount).toBe(10);
-    expect(feed.articles.every((article) => article.author.username === "seed_author"))
-      .toBe(true);
+    expect(feed.articles.every((article) => article.author.username === "seed_author")).toBe(true);
   });
 
   it("creates unique slugs, updates tag semantics, favorites, and deletes articles", async () => {
-    const created = await run(ArticleRepository.use((articles) =>
-      articles.create(userId(1), {
-        title: "Hello Typed",
-        description: "A created article",
-        body: "Real repository data.",
-        tagList: [" typed ", "effect", "typed", ""],
-      }),
-    ));
-    const duplicate = await run(ArticleRepository.use((articles) =>
-      articles.create(userId(1), {
-        title: "Hello Typed",
-        description: "Another article",
-        body: "Unique slugs are required.",
-        tagList: [],
-      }),
-    ));
+    const created = await run(
+      ArticleRepository.use((articles) =>
+        articles.create(userId(1), {
+          title: "Hello Typed",
+          description: "A created article",
+          body: "Real repository data.",
+          tagList: [" typed ", "effect", "typed", ""],
+        }),
+      ),
+    );
+    const duplicate = await run(
+      ArticleRepository.use((articles) =>
+        articles.create(userId(1), {
+          title: "Hello Typed",
+          description: "Another article",
+          body: "Unique slugs are required.",
+          tagList: [],
+        }),
+      ),
+    );
 
     expect(created.slug).toBe("hello-typed");
     expect(created.tagList).toEqual(["typed", "effect"]);
     expect(duplicate.slug).toBe("hello-typed-2");
 
-    const preserved = await run(ArticleRepository.use((articles) =>
-      articles.update(userId(1), created.slug, { body: "Updated body" }),
-    ));
+    const preserved = await run(
+      ArticleRepository.use((articles) =>
+        articles.update(userId(1), created.slug, { body: "Updated body" }),
+      ),
+    );
     expect(Option.isSome(preserved)).toBe(true);
     if (Option.isSome(preserved)) expect(preserved.value.tagList).toEqual(["typed", "effect"]);
 
-    const removed = await run(ArticleRepository.use((articles) =>
-      articles.update(userId(1), created.slug, { tagList: [] }),
-    ));
+    const removed = await run(
+      ArticleRepository.use((articles) =>
+        articles.update(userId(1), created.slug, { tagList: [] }),
+      ),
+    );
     expect(Option.isSome(removed)).toBe(true);
     if (Option.isSome(removed)) expect(removed.value.tagList).toEqual([]);
 
-    const favorited = await run(ArticleRepository.use((articles) =>
-      articles.favorite(userId(2), created.slug),
-    ));
+    const favorited = await run(
+      ArticleRepository.use((articles) => articles.favorite(userId(2), created.slug)),
+    );
     expect(Option.isSome(favorited)).toBe(true);
     if (Option.isSome(favorited)) {
       expect(favorited.value.favorited).toBe(true);
       expect(favorited.value.favoritesCount).toBe(1);
     }
 
-    const unfavorited = await run(ArticleRepository.use((articles) =>
-      articles.unfavorite(userId(2), created.slug),
-    ));
+    const unfavorited = await run(
+      ArticleRepository.use((articles) => articles.unfavorite(userId(2), created.slug)),
+    );
     expect(Option.isSome(unfavorited)).toBe(true);
     if (Option.isSome(unfavorited)) expect(unfavorited.value.favorited).toBe(false);
 
-    await expect(run(ArticleRepository.use((articles) =>
-      articles.delete(userId(1), created.slug),
-    ))).resolves.toBe(true);
-    const deleted = await run(ArticleRepository.use((articles) =>
-      articles.findBySlug(created.slug, Option.none()),
-    ));
+    await expect(
+      run(ArticleRepository.use((articles) => articles.delete(userId(1), created.slug))),
+    ).resolves.toBe(true);
+    const deleted = await run(
+      ArticleRepository.use((articles) => articles.findBySlug(created.slug, Option.none())),
+    );
     expect(Option.isNone(deleted)).toBe(true);
   });
 
   it("lists tags from seed data and created articles", async () => {
-    await run(ArticleRepository.use((articles) =>
-      articles.create(userId(1), {
-        title: "Tag Repository",
-        description: "Adds a new tag",
-        body: "Tag data should be real.",
-        tagList: ["newtag"],
-      }),
-    ));
+    await run(
+      ArticleRepository.use((articles) =>
+        articles.create(userId(1), {
+          title: "Tag Repository",
+          description: "Adds a new tag",
+          body: "Tag data should be real.",
+          tagList: ["newtag"],
+        }),
+      ),
+    );
     const tags = await run(TagRepository.use((tagRepository) => tagRepository.list()));
 
     expect(tags).toEqual(expect.arrayContaining(["typed", "effect", "newtag"]));

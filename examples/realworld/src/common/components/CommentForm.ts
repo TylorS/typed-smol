@@ -3,22 +3,26 @@ import { EventHandler, html } from "@typed/template";
 import * as Effect from "effect/Effect";
 import { BrowserAuth } from "../BrowserAuth.js";
 import { textField } from "../formInput.js";
-import {
-  FormTargetError,
-  formFromSubmitEvent,
-  renderWorkflowFailure,
-} from "../workflowErrors.js";
+import { FormTargetError, formFromSubmitEvent, renderWorkflowFailure } from "../workflowErrors.js";
 
-export const CommentForm = Fx.fn("CommentForm")(<E, R>(
-  slug: RefSubject.Computed<string, E, R>,
-) => html`<form class="card comment-form" onsubmit=${postComment(slug)}>
-  <div class="card-block">
-    <textarea class="form-control" name="body" placeholder="Write a comment..." rows="3"></textarea>
-  </div>
-  <div class="card-footer">
-    <button class="btn btn-sm btn-primary">Post Comment</button>
-  </div>
-</form>`);
+export const CommentForm = Fx.fn("CommentForm")(
+  <E, R>(slug: RefSubject.Computed<string, E, R>) => html`<form
+    class="card comment-form"
+    onsubmit=${postComment(slug)}
+  >
+    <div class="card-block">
+      <textarea
+        class="form-control"
+        name="body"
+        placeholder="Write a comment..."
+        rows="3"
+      ></textarea>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-sm btn-primary">Post Comment</button>
+    </div>
+  </form>`,
+);
 
 const postComment = <E, R>(slug: RefSubject.Computed<string, E, R>) =>
   EventHandler.make(

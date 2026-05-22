@@ -35,10 +35,7 @@ export const RepositoryTestLayer = Layer.mergeAll(
 );
 
 export const ApplicationTestLayer = (overrides: ConfigOverrides) =>
-  composeWithLayers(ApplicationServices, [
-    RepositoryTestLayer,
-    InfrastructureTestLayer(overrides),
-  ]);
+  composeWithLayers(ApplicationServices, [RepositoryTestLayer, InfrastructureTestLayer(overrides)]);
 
 export const ServerPageTestLayer = (overrides: ConfigOverrides) =>
   composeWithLayers(ServerApiClient, [

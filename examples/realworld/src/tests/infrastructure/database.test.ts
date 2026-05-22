@@ -2,10 +2,7 @@ import { existsSync, rmSync } from "node:fs";
 import { Effect } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  RealWorldConfig,
-  defaultDatabasePath,
-} from "../../infrastructure/Config.js";
+import { RealWorldConfig, defaultDatabasePath } from "../../infrastructure/Config.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
 import { withSqlite } from "../../infrastructure/Sql.js";
 
@@ -49,31 +46,33 @@ describe("SQLite migration, reset, and seed", () => {
 
     const objects = await run(withSqlite(listSqliteObjects));
 
-    expect(objects).toEqual(expect.arrayContaining([
-      "users",
-      "sessions",
-      "follows",
-      "articles",
-      "tags",
-      "article_tags",
-      "favorites",
-      "comments",
-      "idx_users_username",
-      "idx_users_email",
-      "idx_sessions_token",
-      "idx_follows_follower_id",
-      "idx_follows_followed_id",
-      "idx_articles_author_id",
-      "idx_articles_created_at",
-      "idx_tags_name",
-      "idx_article_tags_article_id",
-      "idx_article_tags_tag_id",
-      "idx_favorites_user_id",
-      "idx_favorites_article_id",
-      "idx_comments_article_id",
-      "idx_comments_author_id",
-      "idx_comments_created_at",
-    ]));
+    expect(objects).toEqual(
+      expect.arrayContaining([
+        "users",
+        "sessions",
+        "follows",
+        "articles",
+        "tags",
+        "article_tags",
+        "favorites",
+        "comments",
+        "idx_users_username",
+        "idx_users_email",
+        "idx_sessions_token",
+        "idx_follows_follower_id",
+        "idx_follows_followed_id",
+        "idx_articles_author_id",
+        "idx_articles_created_at",
+        "idx_tags_name",
+        "idx_article_tags_article_id",
+        "idx_article_tags_tag_id",
+        "idx_favorites_user_id",
+        "idx_favorites_article_id",
+        "idx_comments_article_id",
+        "idx_comments_author_id",
+        "idx_comments_created_at",
+      ]),
+    );
   });
 
   it("second reset returns identical deterministic seed counts", async () => {

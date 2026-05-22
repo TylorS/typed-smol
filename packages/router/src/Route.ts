@@ -32,12 +32,10 @@ export declare namespace Route {
   export type Schema<T> = T extends Route<any, infer S, any, any> ? S : never;
   export type Type<T> = T extends Route<any, infer S, any, any> ? S["Type"] : never;
   export type Params<T> = T extends Route<infer P, infer _S, any, any> ? Path.Params<P> : never;
-  export type DecodingServices<T> = T extends Route<any, infer S, any, any>
-    ? S["DecodingServices"]
-    : never;
-  export type EncodingServices<T> = T extends Route<any, infer S, any, any>
-    ? S["EncodingServices"]
-    : never;
+  export type DecodingServices<T> =
+    T extends Route<any, infer S, any, any> ? S["DecodingServices"] : never;
+  export type EncodingServices<T> =
+    T extends Route<any, infer S, any, any> ? S["EncodingServices"] : never;
 
   export type PathType<T extends Any> = T["pathSchema"]["Type"];
   export type QueryType<T extends Any> = T["querySchema"]["Type"];
@@ -50,22 +48,14 @@ export type PathType<T extends Any> = Route.PathType<T>;
 export type QueryType<T extends Any> = Route.QueryType<T>;
 type OptionalParamRecord<P extends string, A> = { readonly [K in P]?: A };
 type Optionalize<A> = Simplify<{ readonly [K in keyof A]?: A[K] }>;
-type OptionalSchema<S extends Schema.Codec<any, any, any, any>> = S extends Schema.Codec<
-  infer A,
-  infer I,
-  infer R,
-  infer R2
->
-  ? Schema.Codec<Optionalize<A>, Optionalize<I>, R, R2>
-  : never;
-export type Optional<R extends Route<any, any, any, any>> = R extends Route<
-  `/:${infer P}`,
-  infer S,
-  infer PathS,
-  infer QueryS
->
-  ? Route<`/:${P}?`, OptionalSchema<S>, OptionalSchema<PathS>, QueryS>
-  : never;
+type OptionalSchema<S extends Schema.Codec<any, any, any, any>> =
+  S extends Schema.Codec<infer A, infer I, infer R, infer R2>
+    ? Schema.Codec<Optionalize<A>, Optionalize<I>, R, R2>
+    : never;
+export type Optional<R extends Route<any, any, any, any>> =
+  R extends Route<`/:${infer P}`, infer S, infer PathS, infer QueryS>
+    ? Route<`/:${P}?`, OptionalSchema<S>, OptionalSchema<PathS>, QueryS>
+    : never;
 
 export function make<
   const P extends string,
@@ -166,7 +156,9 @@ function getPathSchema(ast: AST.RouteAst): Schema.Top {
       return Path.getSchemas(getAllPathAst(ast)).pathSchema;
     case "transform": {
       const base = Path.getSchemas(getAllPathAst(ast.from)).pathSchema;
-      return hasPathFields(ast.from) ? base.pipe(Schema.decodeTo(ast.to, ast.transformation)) : base;
+      return hasPathFields(ast.from)
+        ? base.pipe(Schema.decodeTo(ast.to, ast.transformation))
+        : base;
     }
     case "query":
       return emptySchema;
@@ -181,7 +173,9 @@ function getQuerySchema(ast: AST.RouteAst): Schema.Top {
       return Path.getSchemas(getAllPathAst(ast)).querySchema;
     case "transform": {
       const base = Path.getSchemas(getAllPathAst(ast.from)).querySchema;
-      return hasQueryFields(ast.from) ? base.pipe(Schema.decodeTo(ast.to, ast.transformation)) : base;
+      return hasQueryFields(ast.from)
+        ? base.pipe(Schema.decodeTo(ast.to, ast.transformation))
+        : base;
     }
     case "query":
       return getParamsSchema(ast.route);
@@ -191,10 +185,9 @@ function getQuerySchema(ast: AST.RouteAst): Schema.Top {
 }
 
 const emptySchema = Schema.Struct({});
-const anyRecordSchema = Schema.StructWithRest(
-  Schema.Struct({}),
-  [Schema.Record(Schema.String, Schema.Unknown)],
-);
+const anyRecordSchema = Schema.StructWithRest(Schema.Struct({}), [
+  Schema.Record(Schema.String, Schema.Unknown),
+]);
 
 function hasPathFields(ast: AST.RouteAst): boolean {
   const fields = Path.getSchemaFields(getAllPathAst(ast));
@@ -294,15 +287,12 @@ export const OptionalParamWithSchema = <
   const encode = Parser.encodeEffect(schema);
   const emptyDecoded: OptionalParamRecord<P, S["Type"]> = {};
   const emptyEncoded: OptionalParamRecord<P, S["Encoded"]> = {};
-  const to = Schema.StructWithRest(
-    Schema.Struct({}),
-    [
-      Schema.Record(
-        Schema.optionalKey(Schema.Literal(paramName)),
-        Schema.optional(decodedSchema(schema)),
-      ),
-    ],
-  );
+  const to = Schema.StructWithRest(Schema.Struct({}), [
+    Schema.Record(
+      Schema.optionalKey(Schema.Literal(paramName)),
+      Schema.optional(decodedSchema(schema)),
+    ),
+  ]);
 
   return make(
     AST.transform(
@@ -342,8 +332,8 @@ export const Optional = <R extends Route<any, any, any, any>>(route: R): Optiona
 };
 
 function getSingleParameterName(ast: AST.RouteAst): string {
-  const params = getAllPathAst(ast).filter((part): part is AST.PathAst.Parameter =>
-    part.type === "parameter",
+  const params = getAllPathAst(ast).filter(
+    (part): part is AST.PathAst.Parameter => part.type === "parameter",
   );
   if (params.length !== 1) {
     throw new Error("Route.optional() requires a single parameter route");
@@ -373,14 +363,23 @@ function decodedSchema<S extends Schema.Top>(schema: S): Schema.Top {
   return "to" in schema && Schema.isSchema(schema.to) ? schema.to : schema;
 }
 
+const intFromString = Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int));
+const nonNegativeIntFromString = Schema.NumberFromString.pipe(
+  Schema.decodeTo(
+    Schema.Number.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
+  ),
+);
+const positiveIntFromString = Schema.NumberFromString.pipe(
+  Schema.decodeTo(Schema.Number.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThan(0)))),
+);
+
 export const Number = <const P extends string>(
   paramName: P,
 ): Route<
   `/:${P}`,
   Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>,
   Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>
-> =>
-  ParamWithSchema(paramName, Schema.NumberFromString);
+> => ParamWithSchema(paramName, Schema.NumberFromString);
 
 export const OptionalParam = <const P extends string>(paramName: P) =>
   OptionalParamWithSchema(paramName, Schema.String);
@@ -404,8 +403,7 @@ export const Int = <const P extends string>(
   `/:${P}`,
   Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>,
   Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>
-> =>
-  ParamWithSchema(paramName, Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)));
+> => ParamWithSchema(paramName, intFromString);
 
 export const OptionalInt = <const P extends string>(
   paramName: P,
@@ -415,6 +413,48 @@ export const OptionalInt = <const P extends string>(
   Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
 > =>
   Int(paramName).optional() as Route<
+    `/:${P}?`,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+  >;
+
+export const NonNegativeInt = <const P extends string>(
+  paramName: P,
+): Route<
+  `/:${P}`,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>
+> => ParamWithSchema(paramName, nonNegativeIntFromString);
+
+export const OptionalNonNegativeInt = <const P extends string>(
+  paramName: P,
+): Route<
+  `/:${P}?`,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+> =>
+  NonNegativeInt(paramName).optional() as Route<
+    `/:${P}?`,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+    Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+  >;
+
+export const PositiveInt = <const P extends string>(
+  paramName: P,
+): Route<
+  `/:${P}`,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>,
+  Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>
+> => ParamWithSchema(paramName, positiveIntFromString);
+
+export const OptionalPositiveInt = <const P extends string>(
+  paramName: P,
+): Route<
+  `/:${P}?`,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
+  Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
+> =>
+  PositiveInt(paramName).optional() as Route<
     `/:${P}?`,
     Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>,
     Schema.Codec<{ readonly [K in P]?: number }, { readonly [K in P]?: string }>
@@ -439,7 +479,9 @@ export type QueryParams<Routes extends ReadonlyArray<QueryParamRoute>> = [
       Routes[number]["paramsSchema"]["EncodingServices"]
     >
   >,
-] extends [infer R extends Route<any, any, any, any>] ? R : never;
+] extends [infer R extends Route<any, any, any, any>]
+  ? R
+  : never;
 
 export const QueryParams = <const Routes extends ReadonlyArray<QueryParamRoute>>(
   ...routes: Routes
@@ -462,7 +504,9 @@ export type Join<Routes extends ReadonlyArray<Route<any, any, any, any>>> = [
   ? Route<Path, Schema, PathSchema, QuerySchema>
   : never;
 
-type AnyRoutes = ReadonlyArray<Route<any, any, any, any> | ReadonlyArray<Route<any, any, any, any>>>;
+type AnyRoutes = ReadonlyArray<
+  Route<any, any, any, any> | ReadonlyArray<Route<any, any, any, any>>
+>;
 type FlattenRoutes<T extends AnyRoutes> = T extends readonly [
   infer Head extends Route<any, any, any, any> | ReadonlyArray<Route<any, any, any, any>>,
   ...infer Tail extends AnyRoutes,
@@ -501,7 +545,9 @@ type RouteJoinPath<
   ...infer Rest extends ReadonlyArray<Route<any, any, any, any>>,
 ]
   ? RouteJoinPath<Rest, AppendRoutePath<R, First["path"]>>
-  : R extends "" ? "/" : R;
+  : R extends ""
+    ? "/"
+    : R;
 type AppendRoutePath<R extends string, P extends string> =
   StripSlashes<P> extends "" ? R : `${R}/${StripSlashes<P>}`;
 type StripSlashes<T extends string> = StripTrailingSlash<StripLeadingSlash<T>>;

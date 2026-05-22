@@ -1,9 +1,5 @@
 import type { CompiledServerTemplate, RuntimeTemplateFallback } from "@typed/compiler";
-import {
-  HtmlRenderTemplate,
-  renderToHtmlString,
-  type Renderable,
-} from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString, type Renderable } from "@typed/template";
 import * as Effect from "effect/Effect";
 import {
   emptyValues,
@@ -23,7 +19,9 @@ export function renderServer<Values extends ReadonlyArray<Renderable.Any>>(
 > {
   if (isCompiledServerTemplate(template)) return renderCompiled(template, options);
   if (isTemplateFallback(template)) return renderFallback(template, options);
-  return Effect.die(new TypeError("Expected a compiled server template or runtime fallback template"));
+  return Effect.die(
+    new TypeError("Expected a compiled server template or runtime fallback template"),
+  );
 }
 
 function renderCompiled<Values extends ReadonlyArray<Renderable.Any>>(

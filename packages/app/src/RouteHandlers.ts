@@ -41,13 +41,15 @@ export function apply<A, E, R>(
 ): Matcher.Matcher<A, E, R> {
   const handlerByRoute = collectHandlersByRoute(handlers.matcher.cases);
   if (handlerByRoute.size === 0) return matcher;
-  const combined = makeMatcher(matcher.cases.map((match) => overlayHandlers(match, handlerByRoute)));
+  const combined = makeMatcher(
+    matcher.cases.map((match) => overlayHandlers(match, handlerByRoute)),
+  );
   const dependencies = collectDependencies(handlers.matcher.cases);
-  return (dependencies.length === 0
-    ? combined
-    : combined.provide(
-        ...(dependencies as readonly [AnyLayer, ...AnyLayer[]])
-      )) as Matcher.Matcher<A, E, R>;
+  return (
+    dependencies.length === 0
+      ? combined
+      : combined.provide(...(dependencies as readonly [AnyLayer, ...AnyLayer[]]))
+  ) as Matcher.Matcher<A, E, R>;
 }
 
 export function merge(...handlers: readonly RouteHandlers[]): RouteHandlers {

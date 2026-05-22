@@ -51,13 +51,11 @@ describe("Html", () => {
       const events = Fx.mergeAll(
         Fx.succeed(HtmlRenderEvent("Typ", false)),
         Fx.succeed(HtmlRenderEvent("ed", true)),
-      )
+      );
 
-      expect(
-        yield* getStaticHtml(
-          html`<div>Hello, ${events}!</div>`,
-        ),
-      ).toMatchInlineSnapshot(`"<div>Hello, Typed!</div>"`);
+      expect(yield* getStaticHtml(html`<div>Hello, ${events}!</div>`)).toMatchInlineSnapshot(
+        `"<div>Hello, Typed!</div>"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders template with static attribute", () =>
@@ -211,7 +209,9 @@ describe("Html", () => {
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(
-          html`<script>console.log("${"Hello, world!"}");</script>`,
+          html`<script>
+            console.log("${"Hello, world!"}");
+          </script>`,
         ),
       ).toMatchInlineSnapshot(`"<script>console.log("Hello, world!");</script>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
@@ -220,7 +220,9 @@ describe("Html", () => {
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(
-          html`<script>console.log("${"Hello"}, ${Effect.succeed("world")}${Fx.succeed("!")}");</script>`,
+          html`<script>
+            console.log("${"Hello"}, ${Effect.succeed("world")}${Fx.succeed("!")}");
+          </script>`,
         ),
       ).toMatchInlineSnapshot(`
         "<script>console.log("Hello, world!");</script>"

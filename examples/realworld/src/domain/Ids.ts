@@ -71,10 +71,7 @@ export const toSlugBase = (title: string): string => {
   return slug.length > 0 ? slug : "article";
 };
 
-export const uniqueSlug = (
-  title: string,
-  existingSlugs: Iterable<string>,
-): string => {
+export const uniqueSlug = (title: string, existingSlugs: Iterable<string>): string => {
   const base = toSlugBase(title);
   const existing = new Set(existingSlugs);
   if (!existing.has(base)) return base;

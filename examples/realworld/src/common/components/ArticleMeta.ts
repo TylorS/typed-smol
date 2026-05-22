@@ -18,6 +18,5 @@ export const ArticleMeta = Fx.fn("ArticleMeta")(<E, R>(
     <div class="info">
       ${Link({ class: "author", href: profileHref, content: displayName })}
       <span class="date">${article.createdAt}</span>
-    </div>
-  `;
+    </div> `;
 });

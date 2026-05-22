@@ -29,9 +29,7 @@ export function composeWithLayers<
   Base extends LayerAny,
   const Layers extends ReadonlyArray<LayerOrGroup>,
 >(base: Base, layers: Layers): ComputeLayers<Layers, Base>;
-export function composeWithLayers<
-  Base extends LayerAny,
->(base: Base, layers?: undefined): Base;
+export function composeWithLayers<Base extends LayerAny>(base: Base, layers?: undefined): Base;
 export function composeWithLayers<
   Base extends LayerAny,
   const Layers extends ReadonlyArray<LayerOrGroup>,

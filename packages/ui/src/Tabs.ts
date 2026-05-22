@@ -53,7 +53,9 @@ export function List<const Opts extends ListOptions>(options: Opts) {
     role="tablist"
     aria-label=${options.label}
     aria-orientation=${orientation}
-  >${options.content}</div>`;
+  >
+    ${options.content}
+  </div>`;
 }
 
 export interface TabOptions {
@@ -66,7 +68,7 @@ export interface TabOptions {
 export function Tab<const Opts extends TabOptions>(options: Opts) {
   const selected = isSelected(options.state, options.id);
   const onClick = EventHandler.make((event: Event) =>
-    select(options.state, (event.currentTarget as HTMLElement).id)
+    select(options.state, (event.currentTarget as HTMLElement).id),
   );
   const props = {
     id: options.id,
@@ -74,7 +76,7 @@ export function Tab<const Opts extends TabOptions>(options: Opts) {
     role: "tab",
     "aria-controls": options.panelId,
     "aria-selected": selected,
-    tabindex: RefSubject.map(selected, (value) => value ? 0 : -1),
+    tabindex: RefSubject.map(selected, (value) => (value ? 0 : -1)),
     "data-selected": selected,
     onclick: onClick,
   } as const;
@@ -104,6 +106,6 @@ export function Panel<const Opts extends PanelOptions>(options: Opts) {
 
 function isSelected(state: RefSubject.RefSubject<State>, id: RequiredString) {
   return RefSubject.mapEffect(state, (value) =>
-    Effect.map(toEffect(id), (id) => value.selectedId === id)
+    Effect.map(toEffect(id), (id) => value.selectedId === id),
   );
 }

@@ -8,18 +8,15 @@ import { TagRoute } from "../common/routes.js";
 import type { Handler } from "./$route-types";
 
 export const route = TagRoute;
-export const template = ((params) => Fx.gen(function* () {
+export const template = Fx.fn("Tag")(function* (params) {
   const client = yield* ApiClient;
   const input = RefSubject.map(params, ({ page, tag }) => ({ page: page ?? 1, tag }));
-  const data = yield* RefAsyncData.fromComputedEffect(
-    input,
-    (input) => tagRouteData(client, input),
+  const data = yield* RefAsyncData.fromComputedEffect(input, (input) =>
+    tagRouteData(client, input),
   );
 
   return html`<section class="home-page">
     ${Banner}
-    <div class="container page">
-      ${AsyncDataView(data, FeedContent)}
-    </div>
+    <div class="container page">${AsyncDataView(data, FeedContent)}</div>
   </section>`;
-})) satisfies Handler;
+}) satisfies Handler;

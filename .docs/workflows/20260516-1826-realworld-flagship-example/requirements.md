@@ -78,28 +78,28 @@ The first PR must not vendor the upstream RealWorld spec snapshot and must not w
 
 ### Endpoint Matrix
 
-| ID | Method | Path | Auth | Success | Required behavior |
-| -- | ------ | ---- | ---- | ------- | ----------------- |
-| EP-1 | POST | `/api/users` | no | `201 { user }` | Register user; reject blank username/email/password; reject duplicate username/email. |
-| EP-2 | POST | `/api/users/login` | no | `200 { user }` | Login user; reject blank email/password; reject invalid credentials. |
-| EP-3 | GET | `/api/user` | yes | `200 { user }` | Return current user from session token. |
-| EP-4 | PUT | `/api/user` | yes | `200 { user }` | Update username/email/password/bio/image; reject blank/null username/email; reject blank/null/short password; normalize blank bio/image to null. |
-| EP-5 | GET | `/api/profiles/:username` | optional | `200 { profile }` | Return profile and viewer-specific `following`. |
-| EP-6 | POST | `/api/profiles/:username/follow` | yes | `200 { profile }` | Follow profile idempotently enough for local tests. |
-| EP-7 | DELETE | `/api/profiles/:username/follow` | yes | `200 { profile }` | Unfollow profile idempotently enough for local tests. |
-| EP-8 | GET | `/api/articles` | optional | `200 { articles, articlesCount }` | Support `tag`, `author`, `favorited`, `limit`, `offset`; omit `body`. |
-| EP-9 | GET | `/api/articles/feed` | yes | `200 { articles, articlesCount }` | Support `limit`, `offset`; followed authors only; omit `body`. |
-| EP-10 | POST | `/api/articles` | yes | `201 { article }` | Create article with title/description/body/tagList; generate unique slug. |
-| EP-11 | GET | `/api/articles/:slug` | optional | `200 { article }` | Return full article with `body`. |
-| EP-12 | PUT | `/api/articles/:slug` | yes, author | `200 { article }` | Update title/description/body/tagList with preservation/removal/null rules. |
-| EP-13 | DELETE | `/api/articles/:slug` | yes, author | `204` | Delete article plus dependent comments, favorites, and `article_tags` rows by foreign-key cascade; keep standalone `tags` rows. |
-| EP-14 | POST | `/api/articles/:slug/favorite` | yes | `200 { article }` | Favorite article and return updated article. |
-| EP-15 | DELETE | `/api/articles/:slug/favorite` | yes | `200 { article }` | Unfavorite article and return updated article. |
-| EP-16 | GET | `/api/articles/:slug/comments` | optional | `200 { comments }` | Return comments with authors. |
-| EP-17 | POST | `/api/articles/:slug/comments` | yes | `201 { comment }` | Create comment; reject blank body. |
-| EP-18 | DELETE | `/api/articles/:slug/comments/:id` | yes, comment author | `204` | Delete comment or return forbidden/not-found. |
-| EP-19 | GET | `/api/tags` | no | `200 { tags }` | Return known tags. |
-| EP-20 | GET | OpenAPI JSON path from `_api.ts` | no | `200 OpenAPI JSON` | Generated through HttpApi integration, not handcrafted. |
+| ID    | Method | Path                               | Auth                | Success                           | Required behavior                                                                                                                                |
+| ----- | ------ | ---------------------------------- | ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EP-1  | POST   | `/api/users`                       | no                  | `201 { user }`                    | Register user; reject blank username/email/password; reject duplicate username/email.                                                            |
+| EP-2  | POST   | `/api/users/login`                 | no                  | `200 { user }`                    | Login user; reject blank email/password; reject invalid credentials.                                                                             |
+| EP-3  | GET    | `/api/user`                        | yes                 | `200 { user }`                    | Return current user from session token.                                                                                                          |
+| EP-4  | PUT    | `/api/user`                        | yes                 | `200 { user }`                    | Update username/email/password/bio/image; reject blank/null username/email; reject blank/null/short password; normalize blank bio/image to null. |
+| EP-5  | GET    | `/api/profiles/:username`          | optional            | `200 { profile }`                 | Return profile and viewer-specific `following`.                                                                                                  |
+| EP-6  | POST   | `/api/profiles/:username/follow`   | yes                 | `200 { profile }`                 | Follow profile idempotently enough for local tests.                                                                                              |
+| EP-7  | DELETE | `/api/profiles/:username/follow`   | yes                 | `200 { profile }`                 | Unfollow profile idempotently enough for local tests.                                                                                            |
+| EP-8  | GET    | `/api/articles`                    | optional            | `200 { articles, articlesCount }` | Support `tag`, `author`, `favorited`, `limit`, `offset`; omit `body`.                                                                            |
+| EP-9  | GET    | `/api/articles/feed`               | yes                 | `200 { articles, articlesCount }` | Support `limit`, `offset`; followed authors only; omit `body`.                                                                                   |
+| EP-10 | POST   | `/api/articles`                    | yes                 | `201 { article }`                 | Create article with title/description/body/tagList; generate unique slug.                                                                        |
+| EP-11 | GET    | `/api/articles/:slug`              | optional            | `200 { article }`                 | Return full article with `body`.                                                                                                                 |
+| EP-12 | PUT    | `/api/articles/:slug`              | yes, author         | `200 { article }`                 | Update title/description/body/tagList with preservation/removal/null rules.                                                                      |
+| EP-13 | DELETE | `/api/articles/:slug`              | yes, author         | `204`                             | Delete article plus dependent comments, favorites, and `article_tags` rows by foreign-key cascade; keep standalone `tags` rows.                  |
+| EP-14 | POST   | `/api/articles/:slug/favorite`     | yes                 | `200 { article }`                 | Favorite article and return updated article.                                                                                                     |
+| EP-15 | DELETE | `/api/articles/:slug/favorite`     | yes                 | `200 { article }`                 | Unfavorite article and return updated article.                                                                                                   |
+| EP-16 | GET    | `/api/articles/:slug/comments`     | optional            | `200 { comments }`                | Return comments with authors.                                                                                                                    |
+| EP-17 | POST   | `/api/articles/:slug/comments`     | yes                 | `201 { comment }`                 | Create comment; reject blank body.                                                                                                               |
+| EP-18 | DELETE | `/api/articles/:slug/comments/:id` | yes, comment author | `204`                             | Delete comment or return forbidden/not-found.                                                                                                    |
+| EP-19 | GET    | `/api/tags`                        | no                  | `200 { tags }`                    | Return known tags.                                                                                                                               |
+| EP-20 | GET    | OpenAPI JSON path from `_api.ts`   | no                  | `200 OpenAPI JSON`                | Generated through HttpApi integration, not handcrafted.                                                                                          |
 
 ### Auth and User Rules
 
@@ -125,16 +125,16 @@ The first PR must not vendor the upstream RealWorld spec snapshot and must not w
 
 ### Required Schema Export Detail
 
-| module | required exports | required proof |
-| ------ | ---------------- | -------------- |
-| `src/domain/Ids.ts` | `UserId`, `ArticleId`, `CommentId`, `SessionId`, `Slug`, `Username`, `Email`, `TagName`, constructors/refinements for each. | Unit tests decode valid values, reject blank/invalid values, and preserve opaque/branded typing at call sites. |
-| `src/domain/User.ts` | `User`, `PublicUser`, `Profile`, `Session`, `normalizeNullableProfileField`, `toProfile`, `toUserResponseUser`. | Unit tests prove null/empty-string handling, profile shape, user response shape, and missing-avatar behavior. |
-| `src/domain/Article.ts` | `Article`, `ArticlePreview`, `Comment`, `Tag`, `ArticleFilter`, tag-list helpers, article response mappers. | Unit tests prove body omission for previews, tag order, counts, author shape, and timestamp serialization. |
-| `src/domain/Auth.ts` | `AuthHeader`, `BearerToken`, `parseAuthorizationHeader`, `requireToken`. | Unit tests prove only `Token <token>` is accepted and missing/malformed tokens map to RealWorld token errors. |
-| `src/domain/Pagination.ts` | `Limit`, `Offset`, `Page`, `defaultLimit`, `toOffset`, `decodeListQuery`. | Unit tests prove default limit/offset and page 2 to offset 10 behavior. |
-| `src/domain/Markdown.ts` | `renderMarkdown`, `stripUnsafeHtml`, `safeTextPreview`. | Unit tests prove raw HTML is escaped and unsafe URI/event-handler payloads do not enter rendered markup. |
-| `src/domain/RealWorldApi.ts` | all request, response, query, path, local-storage, and error envelope schemas. | Round-trip schema tests cover every RealWorld request/response envelope and reject malformed payloads. |
-| `src/domain/Errors.ts` | tagged domain/application errors and RealWorld error envelope builders. | Unit tests prove status/key/message mapping before endpoint modules use the errors. |
+| module                       | required exports                                                                                                            | required proof                                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `src/domain/Ids.ts`          | `UserId`, `ArticleId`, `CommentId`, `SessionId`, `Slug`, `Username`, `Email`, `TagName`, constructors/refinements for each. | Unit tests decode valid values, reject blank/invalid values, and preserve opaque/branded typing at call sites. |
+| `src/domain/User.ts`         | `User`, `PublicUser`, `Profile`, `Session`, `normalizeNullableProfileField`, `toProfile`, `toUserResponseUser`.             | Unit tests prove null/empty-string handling, profile shape, user response shape, and missing-avatar behavior.  |
+| `src/domain/Article.ts`      | `Article`, `ArticlePreview`, `Comment`, `Tag`, `ArticleFilter`, tag-list helpers, article response mappers.                 | Unit tests prove body omission for previews, tag order, counts, author shape, and timestamp serialization.     |
+| `src/domain/Auth.ts`         | `AuthHeader`, `BearerToken`, `parseAuthorizationHeader`, `requireToken`.                                                    | Unit tests prove only `Token <token>` is accepted and missing/malformed tokens map to RealWorld token errors.  |
+| `src/domain/Pagination.ts`   | `Limit`, `Offset`, `Page`, `defaultLimit`, `toOffset`, `decodeListQuery`.                                                   | Unit tests prove default limit/offset and page 2 to offset 10 behavior.                                        |
+| `src/domain/Markdown.ts`     | `renderMarkdown`, `stripUnsafeHtml`, `safeTextPreview`.                                                                     | Unit tests prove raw HTML is escaped and unsafe URI/event-handler payloads do not enter rendered markup.       |
+| `src/domain/RealWorldApi.ts` | all request, response, query, path, local-storage, and error envelope schemas.                                              | Round-trip schema tests cover every RealWorld request/response envelope and reject malformed payloads.         |
+| `src/domain/Errors.ts`       | tagged domain/application errors and RealWorld error envelope builders.                                                     | Unit tests prove status/key/message mapping before endpoint modules use the errors.                            |
 
 ### Persistence and Local Data
 
@@ -150,36 +150,36 @@ The first PR must not vendor the upstream RealWorld spec snapshot and must not w
 
 ### Database Schema Contract
 
-| table | required columns | required constraints/indexes |
-| ----- | ---------------- | ---------------------------- |
-| `users` | `id`, `username`, `email`, `password_hash`, `password_salt`, `bio`, `image`, `created_at`, `updated_at` | unique `username`, unique `email`; indexes on `username` and `email`. |
-| `sessions` | `id`, `user_id`, `token`, `created_at`, `last_seen_at` | unique `token`; foreign key to `users(id)` with cascade delete. |
-| `follows` | `follower_id`, `followed_id`, `created_at` | unique `(follower_id, followed_id)`; indexes on both columns; foreign keys to `users(id)` with cascade delete. |
-| `articles` | `id`, `author_id`, `slug`, `title`, `description`, `body`, `created_at`, `updated_at` | unique `slug`; index on `author_id`; index on `created_at`; foreign key to `users(id)` with cascade delete. |
-| `tags` | `id`, `name`, `created_at` | unique `name`; index on `name`. |
-| `article_tags` | `article_id`, `tag_id`, `position` | unique `(article_id, tag_id)`; unique `(article_id, position)`; foreign keys to `articles(id)` and `tags(id)` with cascade delete. |
-| `favorites` | `user_id`, `article_id`, `created_at` | unique `(user_id, article_id)`; indexes on both columns; foreign keys to `users(id)` and `articles(id)` with cascade delete. |
-| `comments` | `id`, `article_id`, `author_id`, `body`, `created_at`, `updated_at` | indexes on `article_id`, `author_id`, `created_at`; foreign keys to `articles(id)` and `users(id)` with cascade delete. |
+| table          | required columns                                                                                        | required constraints/indexes                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `users`        | `id`, `username`, `email`, `password_hash`, `password_salt`, `bio`, `image`, `created_at`, `updated_at` | unique `username`, unique `email`; indexes on `username` and `email`.                                                              |
+| `sessions`     | `id`, `user_id`, `token`, `created_at`, `last_seen_at`                                                  | unique `token`; foreign key to `users(id)` with cascade delete.                                                                    |
+| `follows`      | `follower_id`, `followed_id`, `created_at`                                                              | unique `(follower_id, followed_id)`; indexes on both columns; foreign keys to `users(id)` with cascade delete.                     |
+| `articles`     | `id`, `author_id`, `slug`, `title`, `description`, `body`, `created_at`, `updated_at`                   | unique `slug`; index on `author_id`; index on `created_at`; foreign key to `users(id)` with cascade delete.                        |
+| `tags`         | `id`, `name`, `created_at`                                                                              | unique `name`; index on `name`.                                                                                                    |
+| `article_tags` | `article_id`, `tag_id`, `position`                                                                      | unique `(article_id, tag_id)`; unique `(article_id, position)`; foreign keys to `articles(id)` and `tags(id)` with cascade delete. |
+| `favorites`    | `user_id`, `article_id`, `created_at`                                                                   | unique `(user_id, article_id)`; indexes on both columns; foreign keys to `users(id)` and `articles(id)` with cascade delete.       |
+| `comments`     | `id`, `article_id`, `author_id`, `body`, `created_at`, `updated_at`                                     | indexes on `article_id`, `author_id`, `created_at`; foreign keys to `articles(id)` and `users(id)` with cascade delete.            |
 
 ### Repository Contract Detail
 
-| service | required operations | transaction requirements |
-| ------- | ------------------- | ------------------------ |
-| `UserRepository` | Export `class UserRepository extends Context.Service<...>()(...)` with create user, find by id, find by email, find by username, find by token, create session, update user fields, update password hash, record session last seen. | The `Layer.effect(UserRepository, Effect.gen(...))` constructor acquires SQL dependencies. Registration and update must be atomic across user/session/password fields. |
-| `ProfileRepository` | Export `class ProfileRepository extends Context.Service<...>()(...)` with get profile by username for optional viewer, follow, unfollow, list followed author ids. | The layer constructor acquires `SqlClient`/transaction support. Follow/unfollow must be idempotent from the API caller's perspective. |
-| `ArticleRepository` | Export `class ArticleRepository extends Context.Service<...>()(...)` with create article, allocate unique slug, get full article, list article previews, list feed previews, update article fields, replace/remove tags, delete article, count favorites, check ownership. | The layer constructor acquires SQL dependencies. Create/update/favorite/delete must be atomic across article rows, tag rows, joins, favorites, and counts. |
-| `CommentRepository` | Export `class CommentRepository extends Context.Service<...>()(...)` with list comments for article, create comment, get comment author, delete comment, check ownership. | The layer constructor acquires SQL dependencies. Create/delete must validate article existence and ownership in one workflow. |
-| `TagRepository` | Export `class TagRepository extends Context.Service<...>()(...)` with list deterministic tags and ensure tags exist for article operations. | The layer constructor acquires SQL dependencies. Tag insertion plus article-tag joins must preserve article tag positions. |
+| service             | required operations                                                                                                                                                                                                                                                        | transaction requirements                                                                                                                                               |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UserRepository`    | Export `class UserRepository extends Context.Service<...>()(...)` with create user, find by id, find by email, find by username, find by token, create session, update user fields, update password hash, record session last seen.                                        | The `Layer.effect(UserRepository, Effect.gen(...))` constructor acquires SQL dependencies. Registration and update must be atomic across user/session/password fields. |
+| `ProfileRepository` | Export `class ProfileRepository extends Context.Service<...>()(...)` with get profile by username for optional viewer, follow, unfollow, list followed author ids.                                                                                                         | The layer constructor acquires `SqlClient`/transaction support. Follow/unfollow must be idempotent from the API caller's perspective.                                  |
+| `ArticleRepository` | Export `class ArticleRepository extends Context.Service<...>()(...)` with create article, allocate unique slug, get full article, list article previews, list feed previews, update article fields, replace/remove tags, delete article, count favorites, check ownership. | The layer constructor acquires SQL dependencies. Create/update/favorite/delete must be atomic across article rows, tag rows, joins, favorites, and counts.             |
+| `CommentRepository` | Export `class CommentRepository extends Context.Service<...>()(...)` with list comments for article, create comment, get comment author, delete comment, check ownership.                                                                                                  | The layer constructor acquires SQL dependencies. Create/delete must validate article existence and ownership in one workflow.                                          |
+| `TagRepository`     | Export `class TagRepository extends Context.Service<...>()(...)` with list deterministic tags and ensure tags exist for article operations.                                                                                                                                | The layer constructor acquires SQL dependencies. Tag insertion plus article-tag joins must preserve article tag positions.                                             |
 
 ### Application Service Contract Detail
 
-| service | required workflows | required effects |
-| ------- | ------------------ | ---------------- |
-| `Users` | Export `class Users extends Context.Service<...>()(...)` with register, login, current user, update current user. | Its layer constructor acquires `PasswordHasher`, `SessionTokens`, and `UserRepository`; workflows use Schema decoding, duplicate checks, and RealWorld error mapping. |
-| `Profiles` | Export `class Profiles extends Context.Service<...>()(...)` with get profile, follow, unfollow. | Its layer constructor acquires `ProfileRepository` and optional viewer helpers; workflows return viewer-specific `following`. |
+| service    | required workflows                                                                                                                          | required effects                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Users`    | Export `class Users extends Context.Service<...>()(...)` with register, login, current user, update current user.                           | Its layer constructor acquires `PasswordHasher`, `SessionTokens`, and `UserRepository`; workflows use Schema decoding, duplicate checks, and RealWorld error mapping.                                       |
+| `Profiles` | Export `class Profiles extends Context.Service<...>()(...)` with get profile, follow, unfollow.                                             | Its layer constructor acquires `ProfileRepository` and optional viewer helpers; workflows return viewer-specific `following`.                                                                               |
 | `Articles` | Export `class Articles extends Context.Service<...>()(...)` with global list, feed list, create, get, update, delete, favorite, unfavorite. | Its layer constructor acquires repositories and transaction helpers; workflows apply slug generation, ownership checks, filter decoding, tag preservation/removal rules, and preview/full response mapping. |
-| `Comments` | Export `class Comments extends Context.Service<...>()(...)` with list, create, delete. | Its layer constructor acquires `CommentRepository` and `ArticleRepository`; workflows enforce article existence, auth, blank-body validation, ownership checks, and integer IDs. |
-| `Tags` | Export `class Tags extends Context.Service<...>()(...)` with list tags. | Its layer constructor acquires `TagRepository`; workflows use deterministic repository order and response schema encoding. |
+| `Comments` | Export `class Comments extends Context.Service<...>()(...)` with list, create, delete.                                                      | Its layer constructor acquires `CommentRepository` and `ArticleRepository`; workflows enforce article existence, auth, blank-body validation, ownership checks, and integer IDs.                            |
+| `Tags`     | Export `class Tags extends Context.Service<...>()(...)` with list tags.                                                                     | Its layer constructor acquires `TagRepository`; workflows use deterministic repository order and response schema encoding.                                                                                  |
 
 ### Seed Data Contract
 
@@ -207,25 +207,25 @@ The first PR must not vendor the upstream RealWorld spec snapshot and must not w
 
 ### Route Data Contract Detail
 
-| route | SSR data source | required initial HTML evidence |
-| ----- | --------------- | ------------------------------ |
-| `/` | `Articles.list` and `Tags.list` application services. | At least one seeded article title, one author username, global feed tab, tag sidebar, and pagination when more than 10 articles exist. |
-| `/?feed=following` | `Articles.feed` when authenticated; unauthenticated fallback otherwise. | Your Feed tab and a non-crashing auth/empty state. |
-| `/?page=N` | `Articles.list` with decoded pagination. | Active page class on `N`, page-size 10 behavior, and no duplicate article previews across page 1/page 2 seed data. |
-| `/tag/:tag` | `Articles.list` filtered by tag plus `Tags.list`. | Tag feed tab, selected tag text, and only matching tagged articles. |
-| `/article/:slug` | `Articles.get` plus `Comments.list`. | Full body HTML, article meta, favorite/follow controls, comments, and comment form state. |
-| `/profile/:username` | `Profiles.get` plus authored `Articles.list`. | Profile username, avatar/default avatar, follow/settings control, and authored article previews. |
-| `/profile/:username/favorites` | `Profiles.get` plus favorited `Articles.list`. | Favorited tab and only articles favorited by that profile. |
+| route                          | SSR data source                                                         | required initial HTML evidence                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                            | `Articles.list` and `Tags.list` application services.                   | At least one seeded article title, one author username, global feed tab, tag sidebar, and pagination when more than 10 articles exist. |
+| `/?feed=following`             | `Articles.feed` when authenticated; unauthenticated fallback otherwise. | Your Feed tab and a non-crashing auth/empty state.                                                                                     |
+| `/?page=N`                     | `Articles.list` with decoded pagination.                                | Active page class on `N`, page-size 10 behavior, and no duplicate article previews across page 1/page 2 seed data.                     |
+| `/tag/:tag`                    | `Articles.list` filtered by tag plus `Tags.list`.                       | Tag feed tab, selected tag text, and only matching tagged articles.                                                                    |
+| `/article/:slug`               | `Articles.get` plus `Comments.list`.                                    | Full body HTML, article meta, favorite/follow controls, comments, and comment form state.                                              |
+| `/profile/:username`           | `Profiles.get` plus authored `Articles.list`.                           | Profile username, avatar/default avatar, follow/settings control, and authored article previews.                                       |
+| `/profile/:username/favorites` | `Profiles.get` plus favorited `Articles.list`.                          | Favorited tab and only articles favorited by that profile.                                                                             |
 
 ### Client State Contract Detail
 
-| state area | required primitive | required transitions |
-| ---------- | ------------------ | -------------------- |
-| Auth | `RefSubject` plus local-storage schema. | `loading -> authenticated`, `loading -> unauthenticated`, `loading -> unavailable`, logout to unauthenticated, 4xx `/api/user` clears token. |
-| Feed | `RefSubject` plus `AsyncData`. | SSR seed data hydrates as success, filter/page changes refresh from local API, mutation refresh preserves visible navigation. |
-| Article detail | `RefSubject` plus `AsyncData`. | Favorite/unfavorite and comment create/delete update the article/comment state without full page reload. |
-| Profile | `RefSubject` plus `AsyncData`. | Follow/unfollow updates profile `following` and profile article controls. |
-| Editor/settings/forms | `RefSubject` for field state and errors. | Submit success navigates/updates state; validation/network/API errors render `.error-messages`. |
+| state area            | required primitive                       | required transitions                                                                                                                         |
+| --------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth                  | `RefSubject` plus local-storage schema.  | `loading -> authenticated`, `loading -> unauthenticated`, `loading -> unavailable`, logout to unauthenticated, 4xx `/api/user` clears token. |
+| Feed                  | `RefSubject` plus `AsyncData`.           | SSR seed data hydrates as success, filter/page changes refresh from local API, mutation refresh preserves visible navigation.                |
+| Article detail        | `RefSubject` plus `AsyncData`.           | Favorite/unfavorite and comment create/delete update the article/comment state without full page reload.                                     |
+| Profile               | `RefSubject` plus `AsyncData`.           | Follow/unfollow updates profile `following` and profile article controls.                                                                    |
+| Editor/settings/forms | `RefSubject` for field state and errors. | Submit success navigates/updates state; validation/network/API errors render `.error-messages`.                                              |
 
 ### UI Selector and Compatibility Contract
 
@@ -285,16 +285,16 @@ The first PR must not vendor the upstream RealWorld spec snapshot and must not w
 
 ### Verification Gate Matrix
 
-| gate | command | first PR CI | release meaning |
-| ---- | ------- | ------------ | --------------- |
-| Unit/domain | `pnpm --filter typed-realworld test:unit` | yes | Schema and pure invariants are correct. |
-| Integration | `pnpm --filter typed-realworld test:integration` | yes | SQLite repositories, services, and API contracts are correct. |
-| SSR | `pnpm --filter typed-realworld test:ssr` | yes | Real-data server rendering works. |
-| Build | `pnpm --filter typed-realworld build` | yes | Example compiles and bundles. |
-| Hurl local | `pnpm --filter typed-realworld test:api:hurl:local` | no | Local API is compatible with upstream Hurl specs. |
-| E2E local | `pnpm --filter typed-realworld test:e2e:local` | no | Local UI is compatible with upstream shared E2E specs. |
-| Framework focused | `pnpm --filter @typed/app test && pnpm --filter @typed/app build` | yes where current CI permits | App virtual module changes remain healthy. |
-| Root final | `pnpm -r run test && pnpm -r build && pnpm build && git diff --check` | yes where current CI permits | Repo-wide health before PR finalization. |
+| gate              | command                                                               | first PR CI                  | release meaning                                               |
+| ----------------- | --------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------- |
+| Unit/domain       | `pnpm --filter typed-realworld test:unit`                             | yes                          | Schema and pure invariants are correct.                       |
+| Integration       | `pnpm --filter typed-realworld test:integration`                      | yes                          | SQLite repositories, services, and API contracts are correct. |
+| SSR               | `pnpm --filter typed-realworld test:ssr`                              | yes                          | Real-data server rendering works.                             |
+| Build             | `pnpm --filter typed-realworld build`                                 | yes                          | Example compiles and bundles.                                 |
+| Hurl local        | `pnpm --filter typed-realworld test:api:hurl:local`                   | no                           | Local API is compatible with upstream Hurl specs.             |
+| E2E local         | `pnpm --filter typed-realworld test:e2e:local`                        | no                           | Local UI is compatible with upstream shared E2E specs.        |
+| Framework focused | `pnpm --filter @typed/app test && pnpm --filter @typed/app build`     | yes where current CI permits | App virtual module changes remain healthy.                    |
+| Root final        | `pnpm -r run test && pnpm -r build && pnpm build && git diff --check` | yes where current CI permits | Repo-wide health before PR finalization.                      |
 
 ## Non-Functional Requirements
 

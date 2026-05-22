@@ -648,7 +648,11 @@ describe("RouterVirtualModulePlugin", () => {
     const plugin = createRouterVirtualModulePlugin();
     const program = makeProgram(fixture.paths);
     const session = createTypeInfoApiSession({ ts, program });
-    const result = plugin.build("typed:router?dir=./routes&target=browser", fixture.importer, session.api);
+    const result = plugin.build(
+      "typed:router?dir=./routes&target=browser",
+      fixture.importer,
+      session.api,
+    );
     expect(result).toMatchObject({ errors: expect.any(Array) });
     expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-ID-QUERY-001");
   });
@@ -788,7 +792,9 @@ describe("RouterVirtualModulePlugin", () => {
 
     expect(source).toContain('import * as Fx from "@typed/fx/Fx";');
     expect(source).not.toContain('import { constant } from "effect/Function";');
-    expect(source).toContain("Router.match(Function.route, (params) => Fx.map(params, Function.handler))");
+    expect(source).toContain(
+      "Router.match(Function.route, (params) => Fx.map(params, Function.handler))",
+    );
   });
 
   it("stream-valued handler is classified as stream (fromStream) (T-07, TS-5)", () => {

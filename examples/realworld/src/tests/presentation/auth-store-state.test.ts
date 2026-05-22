@@ -26,11 +26,15 @@ describe("realworld auth store state", () => {
           currentUser: yield* store.getCurrentUser,
         };
       }).pipe(
-        Effect.provide(BrowserAuthState.make(Effect.succeed({
-          state: "loading",
-          token: null,
-          currentUser: null,
-        }))),
+        Effect.provide(
+          BrowserAuthState.make(
+            Effect.succeed({
+              state: "loading",
+              token: null,
+              currentUser: null,
+            }),
+          ),
+        ),
       ),
     );
 
@@ -44,11 +48,13 @@ describe("realworld auth store state", () => {
   it("creates the generated browser API client with auth state available", async () => {
     const client = await Effect.runPromise(
       makeBrowserClient({ baseUrl: "http://typed.test" }).pipe(
-        Effect.provide(BrowserAuthState.make({
-          state: "loading",
-          token: null,
-          currentUser: null,
-        })),
+        Effect.provide(
+          BrowserAuthState.make({
+            state: "loading",
+            token: null,
+            currentUser: null,
+          }),
+        ),
         Effect.provide(FetchHttpClient.layer),
       ),
     );
@@ -61,11 +67,13 @@ describe("realworld auth store state", () => {
     const client = await Effect.runPromise(
       Effect.provideService(
         makeBrowserClient({ baseUrl: "http://typed.test" }).pipe(
-          Effect.provide(BrowserAuthState.make({
-            state: "loading",
-            token: null,
-            currentUser: null,
-          })),
+          Effect.provide(
+            BrowserAuthState.make({
+              state: "loading",
+              token: null,
+              currentUser: null,
+            }),
+          ),
           Effect.provide(FetchHttpClient.layer),
         ),
         FetchHttpClient.Fetch,
@@ -94,11 +102,15 @@ describe("realworld auth store state", () => {
           currentUser: yield* store.getCurrentUser,
         };
       }).pipe(
-        Effect.provide(BrowserAuthState.make(Effect.succeed({
-          state: "loading",
-          token: null,
-          currentUser: null,
-        }))),
+        Effect.provide(
+          BrowserAuthState.make(
+            Effect.succeed({
+              state: "loading",
+              token: null,
+              currentUser: null,
+            }),
+          ),
+        ),
       ),
     );
 

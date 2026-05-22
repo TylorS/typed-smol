@@ -14,4 +14,3 @@
   - `packages/app/node_modules/effect/dist/unstable/httpapi/HttpApiEndpoint.d.ts`
   - official Effect OpenApi and HttpApiBuilder generated docs
 - explicit_reuse_override: false
-

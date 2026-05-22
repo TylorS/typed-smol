@@ -485,9 +485,7 @@ function validateGuardExport(
     snapshot.exports.find((e) => e.name === GUARD_EXPORT_NAMES[1]);
   if (!guardExport) return guardViolation(`guard file must export "guard" or default: ${relPath}`);
   if (!isCallableNode(guardExport.type)) {
-    return guardViolation(
-      `guard export must be a function (Effect<Option<*>, *, *>): ${relPath}`,
-    );
+    return guardViolation(`guard export must be a function (Effect<Option<*>, *, *>): ${relPath}`);
   }
   if (!typeNodeIsEffectOptionReturn(guardExport.type, api)) {
     return guardViolation(`guard return type must be Effect<Option<*>, *, *>: ${relPath}`);
@@ -499,8 +497,9 @@ function validateGuardExport(
       );
 }
 
-function guardViolation(
-  message: string,
-): { readonly ok: false; readonly violation: RouteContractViolation } {
+function guardViolation(message: string): {
+  readonly ok: false;
+  readonly violation: RouteContractViolation;
+} {
   return { ok: false, violation: { code: "RVM-GUARD-001", message } };
 }

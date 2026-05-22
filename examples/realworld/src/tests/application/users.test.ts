@@ -6,7 +6,11 @@ import { parseAuthorizationHeader } from "../../domain/Auth.js";
 import { RealWorldError } from "../../domain/Errors.js";
 import { Users } from "../../application/Users.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
-import { email as emailValue, password as passwordValue, username as usernameValue } from "../helpers/domain.js";
+import {
+  email as emailValue,
+  password as passwordValue,
+  username as usernameValue,
+} from "../helpers/domain.js";
 import {
   ApplicationTestLayer,
   defaultDataDirectory,
@@ -55,23 +59,27 @@ describe("user application service", () => {
   it("registers, logs in, reads current user, and updates nullable fields", async () => {
     const registered = await run(register());
     const token = parseAuthorizationHeader(`Token ${registered.user.token}`);
-    const loggedIn = await run(Users.use((users) =>
-      users.login({
-        user: {
-          email: emailValue("app.user@example.com"),
-          password: passwordValue("password123"),
-        },
-      }),
-    ));
+    const loggedIn = await run(
+      Users.use((users) =>
+        users.login({
+          user: {
+            email: emailValue("app.user@example.com"),
+            password: passwordValue("password123"),
+          },
+        }),
+      ),
+    );
     const current = await run(Users.use((users) => users.current(token)));
-    const updated = await run(Users.use((users) =>
-      users.update(token, {
-        user: {
-          bio: "",
-          image: "   ",
-        },
-      }),
-    ));
+    const updated = await run(
+      Users.use((users) =>
+        users.update(token, {
+          user: {
+            bio: "",
+            image: "   ",
+          },
+        }),
+      ),
+    );
 
     expect(loggedIn.user.username).toBe("app_user");
     expect(current.user.email).toBe("app.user@example.com");
@@ -80,15 +88,17 @@ describe("user application service", () => {
   });
 
   it("maps validation, duplicate, missing token, and invalid credentials errors", async () => {
-    const blank = await expectRealWorldError(Users.use((users) =>
-      users.register({
-        user: {
-          username: "",
-          email: emailValue("blank@example.com"),
-          password: passwordValue("password123"),
-        },
-      }),
-    ));
+    const blank = await expectRealWorldError(
+      Users.use((users) =>
+        users.register({
+          user: {
+            username: "",
+            email: emailValue("blank@example.com"),
+            password: passwordValue("password123"),
+          },
+        }),
+      ),
+    );
     expect(blank.status).toBe(422);
     expect(blank.errors.username).toEqual(["can't be blank"]);
 
@@ -97,20 +107,22 @@ describe("user application service", () => {
     expect(duplicate.status).toBe(409);
     expect(duplicate.errors.username).toEqual(["has already been taken"]);
 
-    const missingToken = await expectRealWorldError(Users.use((users) =>
-      users.current(Option.none()),
-    ));
+    const missingToken = await expectRealWorldError(
+      Users.use((users) => users.current(Option.none())),
+    );
     expect(missingToken.status).toBe(401);
     expect(missingToken.errors.token).toEqual(["is missing"]);
 
-    const credentials = await expectRealWorldError(Users.use((users) =>
-      users.login({
-        user: {
-          email: emailValue("app.user@example.com"),
-          password: passwordValue("wrong-password"),
-        },
-      }),
-    ));
+    const credentials = await expectRealWorldError(
+      Users.use((users) =>
+        users.login({
+          user: {
+            email: emailValue("app.user@example.com"),
+            password: passwordValue("wrong-password"),
+          },
+        }),
+      ),
+    );
     expect(credentials.status).toBe(401);
     expect(credentials.errors.credentials).toEqual(["invalid"]);
   });

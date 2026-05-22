@@ -12,11 +12,11 @@ Status: completed and published to PR #3 on 2026-05-16.
 
 ## Routing Decision
 
-| decision | result | rationale |
-| -------- | ------ | --------- |
-| task shape | multi-stream framework implementation | each virtual module, Vite integration, CLI scaffold, and e2e validation are separable workstreams |
-| subagent policy | deferred until explicit human authorization | current tool policy only permits spawning subagents when the user explicitly asks for delegation |
-| execution mode until then | direct sequential execution | preserves the strict stage gate and avoids unapproved parallel mutation |
+| decision                  | result                                      | rationale                                                                                         |
+| ------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| task shape                | multi-stream framework implementation       | each virtual module, Vite integration, CLI scaffold, and e2e validation are separable workstreams |
+| subagent policy           | deferred until explicit human authorization | current tool policy only permits spawning subagents when the user explicitly asks for delegation  |
+| execution mode until then | direct sequential execution                 | preserves the strict stage gate and avoids unapproved parallel mutation                           |
 
 ## External References
 
@@ -28,176 +28,177 @@ Status: completed and published to PR #3 on 2026-05-16.
 
 ### Existing `router:` Contract
 
-| field | contract |
-| ----- | -------- |
-| owned_by | existing `createRouterVirtualModulePlugin` |
-| accepted_id | `router:<relative-directory>` |
-| current_behavior | discovers route modules from the referenced explicit directory and emits a typed Matcher |
-| planning_scope | no route tree or filesystem router inversion; only integration tests that `typed:server` and `typed:browser` can consume router outputs |
-| options | existing plugin prefix option remains owned by router VM config |
-| diagnostics | preserve existing `RVM-*` diagnostics |
+| field            | contract                                                                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| owned_by         | existing `createRouterVirtualModulePlugin`                                                                                              |
+| accepted_id      | `router:<relative-directory>`                                                                                                           |
+| current_behavior | discovers route modules from the referenced explicit directory and emits a typed Matcher                                                |
+| planning_scope   | no route tree or filesystem router inversion; only integration tests that `typed:server` and `typed:browser` can consume router outputs |
+| options          | existing plugin prefix option remains owned by router VM config                                                                         |
+| diagnostics      | preserve existing `RVM-*` diagnostics                                                                                                   |
 
 ### Existing `api:` Contract
 
-| field | contract |
-| ----- | -------- |
-| owned_by | existing `createHttpApiVirtualModulePlugin` |
-| accepted_id | `api:<relative-directory>` |
+| field            | contract                                                                                                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| owned_by         | existing `createHttpApiVirtualModulePlugin`                                                                                |
+| accepted_id      | `api:<relative-directory>`                                                                                                 |
 | current_behavior | discovers endpoint modules from the referenced explicit directory and emits Api, Client, OpenAPI, and server helper source |
-| planning_scope | update generated final server helper to delegate to `TypedHttpServer.layer(...)` |
-| options | existing plugin prefix and `pathPrefix` options remain owned by HttpApi VM config |
-| diagnostics | preserve existing HttpApi diagnostics |
+| planning_scope   | update generated final server helper to delegate to `TypedHttpServer.layer(...)`                                           |
+| options          | existing plugin prefix and `pathPrefix` options remain owned by HttpApi VM config                                          |
+| diagnostics      | preserve existing HttpApi diagnostics                                                                                      |
 
 ### New `typed:env` Contract
 
-| field | contract |
-| ----- | -------- |
-| accepted_id | exactly `typed:env` |
-| query_options | none in this tranche |
-| source_of_truth | `process.env` entries observed by the virtual module build |
-| generated_exports | one named `export const <ENV_KEY> = <JSON value>;` per environment entry |
-| invalid_keys | fail clearly; do not normalize names in this tranche |
-| valid_key_rule | key must be a valid JavaScript binding identifier and not a reserved word |
-| value_rule | values are JSON stringified exactly as provided by `process.env` |
-| diagnostics | `TVM-ENV-001` invalid export name, `TVM-ENV-002` unsupported query option |
-| tests | source emission, reserved word rejection, punctuation rejection, unsupported query rejection |
+| field             | contract                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| accepted_id       | exactly `typed:env`                                                                          |
+| query_options     | none in this tranche                                                                         |
+| source_of_truth   | `process.env` entries observed by the virtual module build                                   |
+| generated_exports | one named `export const <ENV_KEY> = <JSON value>;` per environment entry                     |
+| invalid_keys      | fail clearly; do not normalize names in this tranche                                         |
+| valid_key_rule    | key must be a valid JavaScript binding identifier and not a reserved word                    |
+| value_rule        | values are JSON stringified exactly as provided by `process.env`                             |
+| diagnostics       | `TVM-ENV-001` invalid export name, `TVM-ENV-002` unsupported query option                    |
+| tests             | source emission, reserved word rejection, punctuation rejection, unsupported query rejection |
 
 ### New `typed:config` Contract
 
-| field | contract |
-| ----- | -------- |
-| accepted_id | exactly `typed:config` |
-| query_options | none in this tranche |
-| source_of_truth | existing shared `loadTypedConfig({ projectRoot, ts })` behavior |
-| generated_exports | `Object.entries(config).map(toExportString).join("\n")`; one named `export const <CONFIG_KEY> = <JSON value>;` per top-level computed config entry and no default export |
-| serialization_rule | computed config must be JSON-serializable; non-serializable values fail clearly |
-| invalid_keys | fail clearly; do not normalize names in this tranche |
-| valid_key_rule | key must be a valid JavaScript binding identifier and not a reserved word |
-| diagnostics | `TVM-CONFIG-001` config load failed, `TVM-CONFIG-002` config cannot be serialized, `TVM-CONFIG-003` unsupported query option, `TVM-CONFIG-004` invalid export name |
-| tests | named export emission, empty computed config behavior, load failure diagnostic, invalid key rejection, unsupported query rejection |
+| field              | contract                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| accepted_id        | exactly `typed:config`                                                                                                                                                   |
+| query_options      | none in this tranche                                                                                                                                                     |
+| source_of_truth    | existing shared `loadTypedConfig({ projectRoot, ts })` behavior                                                                                                          |
+| generated_exports  | `Object.entries(config).map(toExportString).join("\n")`; one named `export const <CONFIG_KEY> = <JSON value>;` per top-level computed config entry and no default export |
+| serialization_rule | computed config must be JSON-serializable; non-serializable values fail clearly                                                                                          |
+| invalid_keys       | fail clearly; do not normalize names in this tranche                                                                                                                     |
+| valid_key_rule     | key must be a valid JavaScript binding identifier and not a reserved word                                                                                                |
+| diagnostics        | `TVM-CONFIG-001` config load failed, `TVM-CONFIG-002` config cannot be serialized, `TVM-CONFIG-003` unsupported query option, `TVM-CONFIG-004` invalid export name       |
+| tests              | named export emission, empty computed config behavior, load failure diagnostic, invalid key rejection, unsupported query rejection                                       |
 
 ### New `typed:html` Contract
 
-| field | contract |
-| ----- | -------- |
-| accepted_id | `typed:html?path=<relative-html-path>` |
-| required_options | `path` exactly once |
-| optional_options | `outlet`, default `<!--typed-ssr-outlet-->` |
-| generated_exports | `html`, `loadHtml`, and `renderHtml` |
-| dev_behavior | read the source HTML and apply Vite-compatible HTML transforms through the dev server path |
-| non_dev_behavior | read the built client HTML from inferred build output; never require Vite dev middleware |
-| render_behavior | replace the configured outlet when present; if missing, insert SSR markup immediately after `<body>`; if `<body>` is missing, append SSR markup to the end of the file |
-| mpa_behavior | reusable per page; each page entry owns its own HTML path and client entry relationship |
-| diagnostics | `TVM-HTML-001` missing path, `TVM-HTML-002` duplicate path, `TVM-HTML-003` invalid extension, `TVM-HTML-005` unsupported query option |
-| tests | path parsing, outlet option, dev transform delegation, production asset reference, outlet replacement, body insertion fallback, end-of-file insertion fallback |
+| field             | contract                                                                                                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| accepted_id       | `typed:html?path=<relative-html-path>`                                                                                                                                 |
+| required_options  | `path` exactly once                                                                                                                                                    |
+| optional_options  | `outlet`, default `<!--typed-ssr-outlet-->`                                                                                                                            |
+| generated_exports | `html`, `loadHtml`, and `renderHtml`                                                                                                                                   |
+| dev_behavior      | read the source HTML and apply Vite-compatible HTML transforms through the dev server path                                                                             |
+| non_dev_behavior  | read the built client HTML from inferred build output; never require Vite dev middleware                                                                               |
+| render_behavior   | replace the configured outlet when present; if missing, insert SSR markup immediately after `<body>`; if `<body>` is missing, append SSR markup to the end of the file |
+| mpa_behavior      | reusable per page; each page entry owns its own HTML path and client entry relationship                                                                                |
+| diagnostics       | `TVM-HTML-001` missing path, `TVM-HTML-002` duplicate path, `TVM-HTML-003` invalid extension, `TVM-HTML-005` unsupported query option                                  |
+| tests             | path parsing, outlet option, dev transform delegation, production asset reference, outlet replacement, body insertion fallback, end-of-file insertion fallback         |
 
 ### New `typed:server` Contract
 
-| field | contract |
-| ----- | -------- |
-| accepted_id | `typed:server?<query>` |
-| required_options | at least one `api` or `routes` parameter |
-| repeatable_options | `api`, `routes` |
-| optional_options | `html`, `client`, `page`, `base`, `name` |
-| generated_exports | `run`, `handler`, and `ServerLayer`; `run` returns an `Effect` for user composition |
-| api_behavior | imports each `api` target through the configured HttpApi VM prefix and composes all APIs into one server path |
-| routes_behavior | imports each `routes` target through the configured router VM prefix and composes all routers after API handling |
-| html_behavior | if one `html` is provided, imports `typed:html?path=<html>` for the default SSR fallback rendering |
-| mpa_behavior | repeated `page` parameters declare multiple HTML/client pairings; each `page` value uses `name:html:client` and creates a separate SSR fallback entry |
-| client_behavior | `client` identifies the browser entry paired with the default `html`; when `page` is used, `client` is disallowed to avoid ambiguous pairing |
-| order_rule | repeated query parameters are processed in source order; generated imports use stable deterministic names |
-| companion_files | optional named companion modules next to the importer, not inside route/API directories |
-| companion_names | `.layout.ts`, `.dependencies.ts`, `.middleware.ts`, `.html.ts`, `.server.ts`, `.config.ts`, `.errors.ts` |
-| companion_behavior | companion files layer environment-specific dependencies, layouts, middleware, HTML/page configuration, server options, config, and error handling over the explicit virtual module query |
-| companion_rule | companion files are optional, deterministic, and entry-scoped; invalid shapes fail clearly |
-| diagnostics | `TVM-SERVER-001` no api/routes/html/pages, `TVM-SERVER-002` invalid target, `TVM-SERVER-003` unsupported option, `TVM-SERVER-004` invalid companion export, `TVM-SERVER-005` ambiguous html/client/page pairing |
-| tests | multi-api/multi-route source, default html/client pairing, repeated page pairings, query order, named companion imports, ambiguous pairing diagnostic |
+| field              | contract                                                                                                                                                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| accepted_id        | `typed:server?<query>`                                                                                                                                                                                          |
+| required_options   | at least one `api` or `routes` parameter                                                                                                                                                                        |
+| repeatable_options | `api`, `routes`                                                                                                                                                                                                 |
+| optional_options   | `html`, `client`, `page`, `base`, `name`                                                                                                                                                                        |
+| generated_exports  | `run`, `handler`, and `ServerLayer`; `run` returns an `Effect` for user composition                                                                                                                             |
+| api_behavior       | imports each `api` target through the configured HttpApi VM prefix and composes all APIs into one server path                                                                                                   |
+| routes_behavior    | imports each `routes` target through the configured router VM prefix and composes all routers after API handling                                                                                                |
+| html_behavior      | if one `html` is provided, imports `typed:html?path=<html>` for the default SSR fallback rendering                                                                                                              |
+| mpa_behavior       | repeated `page` parameters declare multiple HTML/client pairings; each `page` value uses `name:html:client` and creates a separate SSR fallback entry                                                           |
+| client_behavior    | `client` identifies the browser entry paired with the default `html`; when `page` is used, `client` is disallowed to avoid ambiguous pairing                                                                    |
+| order_rule         | repeated query parameters are processed in source order; generated imports use stable deterministic names                                                                                                       |
+| companion_files    | optional named companion modules next to the importer, not inside route/API directories                                                                                                                         |
+| companion_names    | `.layout.ts`, `.dependencies.ts`, `.middleware.ts`, `.html.ts`, `.server.ts`, `.config.ts`, `.errors.ts`                                                                                                        |
+| companion_behavior | companion files layer environment-specific dependencies, layouts, middleware, HTML/page configuration, server options, config, and error handling over the explicit virtual module query                        |
+| companion_rule     | companion files are optional, deterministic, and entry-scoped; invalid shapes fail clearly                                                                                                                      |
+| diagnostics        | `TVM-SERVER-001` no api/routes/html/pages, `TVM-SERVER-002` invalid target, `TVM-SERVER-003` unsupported option, `TVM-SERVER-004` invalid companion export, `TVM-SERVER-005` ambiguous html/client/page pairing |
+| tests              | multi-api/multi-route source, default html/client pairing, repeated page pairings, query order, named companion imports, ambiguous pairing diagnostic                                                           |
 
 ### New `typed:browser` Contract
 
-| field | contract |
-| ----- | -------- |
-| accepted_id | `typed:browser?<query>` |
-| required_options | at least one `routes` parameter |
-| repeatable_options | `routes` |
-| optional_options | `root`, `base`, `mode`, `name` |
-| option_defaults | `root="#app"`, `base="/"`, `mode="hydrate"` |
-| generated_exports | `run`, `hydrate`, and `BrowserRuntime`; `run` and `hydrate` return `Effect`s for user composition |
-| routes_behavior | `routes=*` resolves by convention from the importing entry; explicit `routes=./dir` imports that router VM target |
-| mode_behavior | `hydrate` hydrates SSR markup; `mount` performs CSR mount; `mpa` prepares per-entry bootstrap without changing router ownership |
-| mpa_behavior | a browser entry may be paired with exactly one HTML page by `typed:server`; multiple pages use multiple browser entries |
-| companion_files | optional named companion modules next to the importer, not inside route directories |
-| companion_names | `.layout.ts`, `.dependencies.ts`, `.browser.ts`, `.navigation.ts`, `.config.ts`, `.errors.ts` |
+| field              | contract                                                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| accepted_id        | `typed:browser?<query>`                                                                                                                                  |
+| required_options   | at least one `routes` parameter                                                                                                                          |
+| repeatable_options | `routes`                                                                                                                                                 |
+| optional_options   | `root`, `base`, `mode`, `name`                                                                                                                           |
+| option_defaults    | `root="#app"`, `base="/"`, `mode="hydrate"`                                                                                                              |
+| generated_exports  | `run`, `hydrate`, and `BrowserRuntime`; `run` and `hydrate` return `Effect`s for user composition                                                        |
+| routes_behavior    | `routes=*` resolves by convention from the importing entry; explicit `routes=./dir` imports that router VM target                                        |
+| mode_behavior      | `hydrate` hydrates SSR markup; `mount` performs CSR mount; `mpa` prepares per-entry bootstrap without changing router ownership                          |
+| mpa_behavior       | a browser entry may be paired with exactly one HTML page by `typed:server`; multiple pages use multiple browser entries                                  |
+| companion_files    | optional named companion modules next to the importer, not inside route directories                                                                      |
+| companion_names    | `.layout.ts`, `.dependencies.ts`, `.browser.ts`, `.navigation.ts`, `.config.ts`, `.errors.ts`                                                            |
 | companion_behavior | companion files layer browser-specific layout, dependencies, runtime config, navigation hooks, and error handling over the explicit virtual module query |
-| companion_rule | companion files are optional, deterministic, and entry-scoped; invalid shapes fail clearly |
-| diagnostics | `TVM-BROWSER-001` no routes, `TVM-BROWSER-002` invalid mode, `TVM-BROWSER-003` unsupported option, `TVM-BROWSER-004` invalid companion export |
-| tests | wildcard route convention, explicit routes, mode defaults, named companion imports, invalid mode diagnostic |
+| companion_rule     | companion files are optional, deterministic, and entry-scoped; invalid shapes fail clearly                                                               |
+| diagnostics        | `TVM-BROWSER-001` no routes, `TVM-BROWSER-002` invalid mode, `TVM-BROWSER-003` unsupported option, `TVM-BROWSER-004` invalid companion export            |
+| tests              | wildcard route convention, explicit routes, mode defaults, named companion imports, invalid mode diagnostic                                              |
 
 ## File Structure
 
-| path | responsibility |
-| ---- | -------------- |
-| `packages/app/src/internal/frameworkVirtualModuleId.ts` | parse `typed:*` virtual module IDs and strict query parameters |
-| `packages/app/src/internal/frameworkDiagnostics.ts` | shared diagnostic constructors for env/config/server/browser/html VMs |
-| `packages/app/src/internal/emitEnvSource.ts` | emit `typed:env` source from validated `process.env` keys |
-| `packages/app/src/internal/emitConfigSource.ts` | emit `typed:config` source from resolved `TypedConfig` |
-| `packages/app/src/internal/emitHtmlSource.ts` | emit `typed:html` source for dev transform and production artifact references |
-| `packages/app/src/internal/emitServerSource.ts` | emit `typed:server` `run`, `handler`, and `ServerLayer` helper source |
-| `packages/app/src/internal/emitBrowserSource.ts` | emit `typed:browser` `run`, `hydrate`, and `BrowserRuntime` helper source |
-| `packages/app/src/internal/serverCompanions.ts` | discover and validate entry-adjacent server companion modules |
-| `packages/app/src/internal/browserCompanions.ts` | discover and validate entry-adjacent browser companion modules |
-| `packages/app/src/EnvVirtualModulePlugin.ts` | `typed:env` plugin |
-| `packages/app/src/ConfigVirtualModulePlugin.ts` | `typed:config` plugin |
-| `packages/app/src/HtmlVirtualModulePlugin.ts` | `typed:html` plugin |
-| `packages/app/src/ServerVirtualModulePlugin.ts` | `typed:server` plugin |
-| `packages/app/src/BrowserVirtualModulePlugin.ts` | `typed:browser` plugin |
-| `packages/app/src/TypedHttpServer.ts` | public `TypedHttpServer.layer(...)`, handler construction, static serving, SSL |
-| `packages/app/src/index.ts` | exports new plugins and server helper |
-| `packages/vite-plugin/src/index.ts` | register all app VMs and append vavite when server entry exists |
-| `packages/vite-plugin/src/vaviteIntegration.ts` | isolate vavite import/options/discovery logic |
-| `packages/cli/src/commands/create.ts` | `typed create <name>` command |
-| `packages/cli/src/create/scaffold.ts` | copy template and substitute package names |
-| `packages/cli/templates/starter/` | maintained pnpm starter workspace |
-| `.docs/workflows/20260516-1600-typed-framework-starter/memory/` | short-term execution notes for follow-on tasks |
+| path                                                            | responsibility                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `packages/app/src/internal/frameworkVirtualModuleId.ts`         | parse `typed:*` virtual module IDs and strict query parameters                 |
+| `packages/app/src/internal/frameworkDiagnostics.ts`             | shared diagnostic constructors for env/config/server/browser/html VMs          |
+| `packages/app/src/internal/emitEnvSource.ts`                    | emit `typed:env` source from validated `process.env` keys                      |
+| `packages/app/src/internal/emitConfigSource.ts`                 | emit `typed:config` source from resolved `TypedConfig`                         |
+| `packages/app/src/internal/emitHtmlSource.ts`                   | emit `typed:html` source for dev transform and production artifact references  |
+| `packages/app/src/internal/emitServerSource.ts`                 | emit `typed:server` `run`, `handler`, and `ServerLayer` helper source          |
+| `packages/app/src/internal/emitBrowserSource.ts`                | emit `typed:browser` `run`, `hydrate`, and `BrowserRuntime` helper source      |
+| `packages/app/src/internal/serverCompanions.ts`                 | discover and validate entry-adjacent server companion modules                  |
+| `packages/app/src/internal/browserCompanions.ts`                | discover and validate entry-adjacent browser companion modules                 |
+| `packages/app/src/EnvVirtualModulePlugin.ts`                    | `typed:env` plugin                                                             |
+| `packages/app/src/ConfigVirtualModulePlugin.ts`                 | `typed:config` plugin                                                          |
+| `packages/app/src/HtmlVirtualModulePlugin.ts`                   | `typed:html` plugin                                                            |
+| `packages/app/src/ServerVirtualModulePlugin.ts`                 | `typed:server` plugin                                                          |
+| `packages/app/src/BrowserVirtualModulePlugin.ts`                | `typed:browser` plugin                                                         |
+| `packages/app/src/TypedHttpServer.ts`                           | public `TypedHttpServer.layer(...)`, handler construction, static serving, SSL |
+| `packages/app/src/index.ts`                                     | exports new plugins and server helper                                          |
+| `packages/vite-plugin/src/index.ts`                             | register all app VMs and append vavite when server entry exists                |
+| `packages/vite-plugin/src/vaviteIntegration.ts`                 | isolate vavite import/options/discovery logic                                  |
+| `packages/cli/src/commands/create.ts`                           | `typed create <name>` command                                                  |
+| `packages/cli/src/create/scaffold.ts`                           | copy template and substitute package names                                     |
+| `packages/cli/templates/starter/`                               | maintained pnpm starter workspace                                              |
+| `.docs/workflows/20260516-1600-typed-framework-starter/memory/` | short-term execution notes for follow-on tasks                                 |
 
 ## Subgoal DAG
 
-| subgoal_id | objective | prerequisites | risk | requirement_links | success_check |
-| ---------- | --------- | ------------- | ---- | ----------------- | ------------- |
-| SG-1 | shared framework VM parser/diagnostic foundation | approved spec | medium | FR-6, NFR-1, NFR-7, AC-5, AC-18 | parser tests fail then pass for all `typed:*` IDs and option contracts |
-| SG-2 | `typed:env` virtual module | SG-1 | medium | FR-7, FR-8, AC-4, AC-18 | generated env source and invalid key diagnostics pass |
-| SG-3 | `typed:config` virtual module | SG-1 | medium | FR-9, FR-10, AC-4, AC-18 | generated config source uses shared computed config loader |
-| SG-4 | `typed:html` virtual module | SG-1 | high | FR-18, FR-19, AC-10, AC-18 | dev transform, non-dev built HTML references, and outlet insertion fallbacks pass |
-| SG-5 | `typed:server` virtual module | SG-1, SG-2, SG-3, SG-4 | high | FR-11-FR-14, AC-6, AC-7, AC-18 | multi-api/multi-route source, MPA page pairings, and entry-adjacent companion tests pass |
-| SG-6 | `typed:browser` virtual module | SG-1, SG-2, SG-3 | high | FR-15-FR-17, AC-8, AC-9, AC-18 | wildcard/explicit routes, MPA browser entry behavior, and entry-adjacent companion tests pass |
-| SG-7 | `TypedHttpServer.layer(...)` | SG-4, SG-5 | high | FR-23-FR-31, AC-12-AC-16 | mode split, static serving, and SSL tests pass |
-| SG-8 | vavite integration in `@typed/vite-plugin` | SG-2-SG-7 | high | FR-20-FR-22, NFR-2, AC-11 | discovered server entry adds vavite runnable handler and preserves VM order |
-| SG-9 | generated `api:` server helper delegation | SG-7 | high | FR-32, NFR-4, AC-17 | generated API source no longer hard-codes `NodeHttpServer.layer(http.createServer, ...)` |
-| SG-10 | `typed create` starter workspace | SG-2-SG-9 | high | FR-1-FR-5, FR-33-FR-34, AC-1-AC-4, AC-19 | scaffolded workspace installs, tests, builds, and runs SSR/hydration/HttpApi smoke |
-| SG-11 | final docs, memory, verification, PR readiness | SG-10 | medium | NFR-8, AC-20 | traceability table complete and final verification commands pass or have documented blockers |
+| subgoal_id | objective                                        | prerequisites          | risk   | requirement_links                        | success_check                                                                                 |
+| ---------- | ------------------------------------------------ | ---------------------- | ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
+| SG-1       | shared framework VM parser/diagnostic foundation | approved spec          | medium | FR-6, NFR-1, NFR-7, AC-5, AC-18          | parser tests fail then pass for all `typed:*` IDs and option contracts                        |
+| SG-2       | `typed:env` virtual module                       | SG-1                   | medium | FR-7, FR-8, AC-4, AC-18                  | generated env source and invalid key diagnostics pass                                         |
+| SG-3       | `typed:config` virtual module                    | SG-1                   | medium | FR-9, FR-10, AC-4, AC-18                 | generated config source uses shared computed config loader                                    |
+| SG-4       | `typed:html` virtual module                      | SG-1                   | high   | FR-18, FR-19, AC-10, AC-18               | dev transform, non-dev built HTML references, and outlet insertion fallbacks pass             |
+| SG-5       | `typed:server` virtual module                    | SG-1, SG-2, SG-3, SG-4 | high   | FR-11-FR-14, AC-6, AC-7, AC-18           | multi-api/multi-route source, MPA page pairings, and entry-adjacent companion tests pass      |
+| SG-6       | `typed:browser` virtual module                   | SG-1, SG-2, SG-3       | high   | FR-15-FR-17, AC-8, AC-9, AC-18           | wildcard/explicit routes, MPA browser entry behavior, and entry-adjacent companion tests pass |
+| SG-7       | `TypedHttpServer.layer(...)`                     | SG-4, SG-5             | high   | FR-23-FR-31, AC-12-AC-16                 | mode split, static serving, and SSL tests pass                                                |
+| SG-8       | vavite integration in `@typed/vite-plugin`       | SG-2-SG-7              | high   | FR-20-FR-22, NFR-2, AC-11                | discovered server entry adds vavite runnable handler and preserves VM order                   |
+| SG-9       | generated `api:` server helper delegation        | SG-7                   | high   | FR-32, NFR-4, AC-17                      | generated API source no longer hard-codes `NodeHttpServer.layer(http.createServer, ...)`      |
+| SG-10      | `typed create` starter workspace                 | SG-2-SG-9              | high   | FR-1-FR-5, FR-33-FR-34, AC-1-AC-4, AC-19 | scaffolded workspace installs, tests, builds, and runs SSR/hydration/HttpApi smoke            |
+| SG-11      | final docs, memory, verification, PR readiness   | SG-10                  | medium | NFR-8, AC-20                             | traceability table complete and final verification commands pass or have documented blockers  |
 
 ## Ordered Tasks
 
-| task_id | owner | prerequisites | validation | safeguards | rollback |
-| ------- | ----- | ------------- | ---------- | ---------- | -------- |
-| T1 | framework VM foundation | approved plan | `pnpm --filter @typed/app test -- frameworkVirtualModuleId` | only add internal helpers and tests | revert helper/test files |
-| T2 | `typed:env` VM | T1 | `pnpm --filter @typed/app test -- EnvVirtualModulePlugin` | no key normalization; fail on invalid export names | revert env VM files and export |
-| T3 | `typed:config` VM | T1 | `pnpm --filter @typed/app test -- ConfigVirtualModulePlugin` | use shared config loader; no second config semantics | revert config VM files and export |
-| T4 | `typed:html` VM | T1 | `pnpm --filter @typed/app test -- HtmlVirtualModulePlugin` | non-dev never depends on Vite middleware | revert html VM files and export |
-| T5 | `typed:server` VM | T1-T4 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | page pairings explicit; query order deterministic; no filesystem routing | revert server VM files and companion helper |
-| T6 | `typed:browser` VM | T1-T3 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | browser entries stay pairable by server pages; wildcard conventions do not create route ownership | revert browser VM files and companion helper |
-| T7 | `TypedHttpServer.layer(...)` | T4, T5 | `pnpm --filter @typed/app test -- TypedHttpServer` | generated certs stay under `node_modules/.typed/certs/` | revert server helper and tests |
-| T8 | vavite plugin integration | T2-T7 | `pnpm --filter @typed/vite-plugin test` | choose `runnable-handler`; keep `vavite` isolated | revert vavite integration and package metadata |
-| T9 | `api:` helper delegation | T7 | `pnpm --filter @typed/app test -- HttpApiVirtualModulePlugin` | preserve existing Api/Client/OpenAPI exports | revert focused `emitHttpApiSource.ts` changes |
-| T10 | `typed create` command | T2-T9 | `pnpm --filter @typed/cli test -- create` | template copy ignores generated install artifacts | revert create command/template files |
-| T11 | starter e2e fixture | T10 | scaffold temp workspace, then run `pnpm install`, `pnpm test`, `pnpm build` | run in temp dir; do not mutate repository root | delete temp fixture and revert template updates |
-| T12 | docs/memory/final gates | T11 | `pnpm -r run test`, `pnpm -r build`, `pnpm build`, `git diff --check` | record environment failures separately from code failures | revert docs-only updates if inaccurate |
+| task_id | owner                        | prerequisites | validation                                                                  | safeguards                                                                                        | rollback                                        |
+| ------- | ---------------------------- | ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| T1      | framework VM foundation      | approved plan | `pnpm --filter @typed/app test -- frameworkVirtualModuleId`                 | only add internal helpers and tests                                                               | revert helper/test files                        |
+| T2      | `typed:env` VM               | T1            | `pnpm --filter @typed/app test -- EnvVirtualModulePlugin`                   | no key normalization; fail on invalid export names                                                | revert env VM files and export                  |
+| T3      | `typed:config` VM            | T1            | `pnpm --filter @typed/app test -- ConfigVirtualModulePlugin`                | use shared config loader; no second config semantics                                              | revert config VM files and export               |
+| T4      | `typed:html` VM              | T1            | `pnpm --filter @typed/app test -- HtmlVirtualModulePlugin`                  | non-dev never depends on Vite middleware                                                          | revert html VM files and export                 |
+| T5      | `typed:server` VM            | T1-T4         | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin`                | page pairings explicit; query order deterministic; no filesystem routing                          | revert server VM files and companion helper     |
+| T6      | `typed:browser` VM           | T1-T3         | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin`               | browser entries stay pairable by server pages; wildcard conventions do not create route ownership | revert browser VM files and companion helper    |
+| T7      | `TypedHttpServer.layer(...)` | T4, T5        | `pnpm --filter @typed/app test -- TypedHttpServer`                          | generated certs stay under `node_modules/.typed/certs/`                                           | revert server helper and tests                  |
+| T8      | vavite plugin integration    | T2-T7         | `pnpm --filter @typed/vite-plugin test`                                     | choose `runnable-handler`; keep `vavite` isolated                                                 | revert vavite integration and package metadata  |
+| T9      | `api:` helper delegation     | T7            | `pnpm --filter @typed/app test -- HttpApiVirtualModulePlugin`               | preserve existing Api/Client/OpenAPI exports                                                      | revert focused `emitHttpApiSource.ts` changes   |
+| T10     | `typed create` command       | T2-T9         | `pnpm --filter @typed/cli test -- create`                                   | template copy ignores generated install artifacts                                                 | revert create command/template files            |
+| T11     | starter e2e fixture          | T10           | scaffold temp workspace, then run `pnpm install`, `pnpm test`, `pnpm build` | run in temp dir; do not mutate repository root                                                    | delete temp fixture and revert template updates |
+| T12     | docs/memory/final gates      | T11           | `pnpm -r run test`, `pnpm -r build`, `pnpm build`, `git diff --check`       | record environment failures separately from code failures                                         | revert docs-only updates if inaccurate          |
 
 ## Detailed Task Steps
 
 ### T1: Framework VM Foundation
 
 **Files:**
+
 - Create: `packages/app/src/internal/frameworkVirtualModuleId.ts`
 - Create: `packages/app/src/internal/frameworkVirtualModuleId.test.ts`
 - Create: `packages/app/src/internal/frameworkDiagnostics.ts`
@@ -214,6 +215,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T2: `typed:env`
 
 **Files:**
+
 - Create: `packages/app/src/EnvVirtualModulePlugin.ts`
 - Create: `packages/app/src/EnvVirtualModulePlugin.test.ts`
 - Create: `packages/app/src/internal/emitEnvSource.ts`
@@ -233,6 +235,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T3: `typed:config`
 
 **Files:**
+
 - Create: `packages/app/src/ConfigVirtualModulePlugin.ts`
 - Create: `packages/app/src/ConfigVirtualModulePlugin.test.ts`
 - Create: `packages/app/src/internal/emitConfigSource.ts`
@@ -253,6 +256,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T4: `typed:html`
 
 **Files:**
+
 - Create: `packages/app/src/HtmlVirtualModulePlugin.ts`
 - Create: `packages/app/src/HtmlVirtualModulePlugin.test.ts`
 - Create: `packages/app/src/internal/emitHtmlSource.ts`
@@ -275,6 +279,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T5: `typed:server`
 
 **Files:**
+
 - Create: `packages/app/src/ServerVirtualModulePlugin.ts`
 - Create: `packages/app/src/ServerVirtualModulePlugin.test.ts`
 - Create: `packages/app/src/internal/emitServerSource.ts`
@@ -299,6 +304,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T6: `typed:browser`
 
 **Files:**
+
 - Create: `packages/app/src/BrowserVirtualModulePlugin.ts`
 - Create: `packages/app/src/BrowserVirtualModulePlugin.test.ts`
 - Create: `packages/app/src/internal/emitBrowserSource.ts`
@@ -321,6 +327,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T7: Typed HTTP Server Layer
 
 **Files:**
+
 - Create: `packages/app/src/TypedHttpServer.ts`
 - Create: `packages/app/src/TypedHttpServer.test.ts`
 - Create: `packages/app/src/internal/staticAssets.ts`
@@ -343,6 +350,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T8: Vavite Integration
 
 **Files:**
+
 - Create: `packages/vite-plugin/src/vaviteIntegration.ts`
 - Modify: `packages/vite-plugin/src/index.ts`
 - Modify: `packages/vite-plugin/src/index.test.ts`
@@ -363,6 +371,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T9: Generated `api:` Server Delegation
 
 **Files:**
+
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 
@@ -377,6 +386,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T10: `typed create` Command And Template
 
 **Files:**
+
 - Create: `packages/cli/src/commands/create.ts`
 - Create: `packages/cli/src/commands/create.integration.test.ts`
 - Create: `packages/cli/src/create/scaffold.ts`
@@ -408,6 +418,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T11: Starter E2E Fixture
 
 **Files:**
+
 - Create: `packages/cli/src/commands/create.e2e.test.ts`
 - Modify: `packages/cli/templates/starter/packages/app/src/entry.server.ts`
 - Modify: `packages/cli/templates/starter/packages/app/src/entry.browser.ts`
@@ -427,6 +438,7 @@ Status: completed and published to PR #3 on 2026-05-16.
 ### T12: Documentation, Memory, And Final Gates
 
 **Files:**
+
 - Create: `.docs/workflows/20260516-1600-typed-framework-starter/memory/execution-notes.md`
 - Modify: `.docs/specs/typed-framework-starter/spec.md`
 - Modify: `.docs/specs/typed-framework-starter/testing-strategy.md`
@@ -479,20 +491,20 @@ Status: completed and published to PR #3 on 2026-05-16.
 
 ## Traceability
 
-| task_id | requirement_links | acceptance_links |
-| ------- | ----------------- | ---------------- |
-| T1 | FR-6, NFR-1, NFR-7 | AC-5, AC-18, AC-20 |
-| T2 | FR-7, FR-8 | AC-4, AC-18 |
-| T3 | FR-9, FR-10 | AC-4, AC-18 |
-| T4 | FR-18, FR-19 | AC-10, AC-18 |
-| T5 | FR-11-FR-14 | AC-6, AC-7, AC-18 |
-| T6 | FR-15-FR-17 | AC-8, AC-9, AC-18 |
-| T7 | FR-23-FR-31, NFR-3, NFR-4, NFR-5 | AC-12, AC-13, AC-14, AC-15, AC-16 |
-| T8 | FR-20-FR-22, NFR-2 | AC-11 |
-| T9 | FR-32, NFR-4 | AC-17 |
-| T10 | FR-1-FR-5, FR-33-FR-34, NFR-6, NFR-9 | AC-1, AC-2, AC-3, AC-4, AC-19 |
-| T11 | FR-1-FR-5, FR-20-FR-32, FR-34 | AC-1-AC-18 |
-| T12 | NFR-8 | AC-20 |
+| task_id | requirement_links                    | acceptance_links                  |
+| ------- | ------------------------------------ | --------------------------------- |
+| T1      | FR-6, NFR-1, NFR-7                   | AC-5, AC-18, AC-20                |
+| T2      | FR-7, FR-8                           | AC-4, AC-18                       |
+| T3      | FR-9, FR-10                          | AC-4, AC-18                       |
+| T4      | FR-18, FR-19                         | AC-10, AC-18                      |
+| T5      | FR-11-FR-14                          | AC-6, AC-7, AC-18                 |
+| T6      | FR-15-FR-17                          | AC-8, AC-9, AC-18                 |
+| T7      | FR-23-FR-31, NFR-3, NFR-4, NFR-5     | AC-12, AC-13, AC-14, AC-15, AC-16 |
+| T8      | FR-20-FR-22, NFR-2                   | AC-11                             |
+| T9      | FR-32, NFR-4                         | AC-17                             |
+| T10     | FR-1-FR-5, FR-33-FR-34, NFR-6, NFR-9 | AC-1, AC-2, AC-3, AC-4, AC-19     |
+| T11     | FR-1-FR-5, FR-20-FR-32, FR-34        | AC-1-AC-18                        |
+| T12     | NFR-8                                | AC-20                             |
 
 ## Approval Gate
 

@@ -23,8 +23,7 @@ export const targetForm = (event: MouseEvent): HTMLFormElement | null =>
 export const renderWorkflowFailure = (
   form: HTMLFormElement | null,
   error: WorkflowError,
-): Effect.Effect<void> =>
-  Effect.sync(() => renderFormErrors(form, workflowErrorMessages(error)));
+): Effect.Effect<void> => Effect.sync(() => renderFormErrors(form, workflowErrorMessages(error)));
 
 export const workflowErrorMessages = (error: WorkflowError): readonly string[] => {
   if (isErrorResponse(error)) return formatApiErrors(error);

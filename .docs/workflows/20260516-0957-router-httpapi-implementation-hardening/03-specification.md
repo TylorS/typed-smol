@@ -69,17 +69,17 @@ Responsibilities:
 - diagnose duplicate/colliding supported conventions, not unrelated files;
 - maintain a convention-to-rendering parity matrix:
 
-| convention/source | behavior |
-| ----------------- | -------- |
-| endpoint primary files | emitted as `HttpApiEndpoint.*` and builder handlers |
-| pathless directories | structural only, no group name |
-| `_group.ts` name/prefix/openapi | emitted or explicitly deferred with diagnostic/spec note |
-| `_api.ts` OpenAPI | emitted for supported annotations/exposure; unsupported generation options deferred |
-| `_prefix.ts` and `.prefix.ts` | emitted where supported by current implementation plan |
-| `.name.ts` / in-file name | emitted or diagnosed if conflicting |
-| `_middlewares.ts` / `.middlewares.ts` | emitted where supported; otherwise deferred explicitly |
-| `_dependencies.ts` / `.dependencies.ts` | emitted where supported; otherwise deferred explicitly |
-| unknown underscore/reserved-looking files | ignored as non-participating unless colliding with a supported role |
+| convention/source                         | behavior                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| endpoint primary files                    | emitted as `HttpApiEndpoint.*` and builder handlers                                 |
+| pathless directories                      | structural only, no group name                                                      |
+| `_group.ts` name/prefix/openapi           | emitted or explicitly deferred with diagnostic/spec note                            |
+| `_api.ts` OpenAPI                         | emitted for supported annotations/exposure; unsupported generation options deferred |
+| `_prefix.ts` and `.prefix.ts`             | emitted where supported by current implementation plan                              |
+| `.name.ts` / in-file name                 | emitted or diagnosed if conflicting                                                 |
+| `_middlewares.ts` / `.middlewares.ts`     | emitted where supported; otherwise deferred explicitly                              |
+| `_dependencies.ts` / `.dependencies.ts`   | emitted where supported; otherwise deferred explicitly                              |
+| unknown underscore/reserved-looking files | ignored as non-participating unless colliding with a supported role                 |
 
 ### 4. Effect HttpApi Adapter Boundary
 
@@ -183,25 +183,25 @@ sequenceDiagram
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1 | all boundaries | Implementation hardening is proven through generated-source behavior. |
-| FR-2 | Router Hardening Boundary; Generated Source Type-Check Harness | Router emitted source is deterministic and type-checked. |
-| FR-3 | Effect HttpApi Adapter Boundary; Generated Source Type-Check Harness | HttpApi emitted source targets installed Effect declarations. |
-| FR-4 | Effect HttpApi Adapter Boundary; ADR | Unsupported stale Effect API references are deferred or diagnosed. |
-| FR-5 | HttpApi Convention Parity Boundary | Every parsed convention gets emitted, diagnosed, ignored, or deferred explicitly. |
-| FR-6 | Generated Source Type-Check Harness | Fixture-level emitted-source compilation is required. |
-| FR-7 | Router/HttpApi validation boundaries | User-reachable invalid contracts return structured diagnostics. |
-| FR-8 | OpenAPI Mapping Boundary | Exposure uses installed Effect APIs only. |
-| FR-9 | HttpApi Convention Parity Boundary | Reserved-looking unrelated files are non-participating. |
-| FR-10 | OpenAPI Mapping Boundary | OpenAPI annotations and exposure are in scope. |
-| FR-11 | Generated Source Type-Check Harness | Canonical proof lives in `packages/app` Vitest fixtures. |
-| NFR-1 | source emitters | Stable output for unchanged inputs. |
-| NFR-2 | validation and diagnostics | Stable codes/messages and paths. |
-| NFR-3 | parse/normalize/validate/render boundaries | Focused red-green slices. |
-| NFR-4 | scope boundary | No unrelated framework feature expansion. |
-| NFR-5 | Effect HttpApi Adapter Boundary | Localizes unstable Effect API drift. |
-| NFR-6 | testing strategy | Package compilation and generated fixture compilation are separate gates. |
+| requirement_id | design_element                                                       | notes                                                                             |
+| -------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| FR-1           | all boundaries                                                       | Implementation hardening is proven through generated-source behavior.             |
+| FR-2           | Router Hardening Boundary; Generated Source Type-Check Harness       | Router emitted source is deterministic and type-checked.                          |
+| FR-3           | Effect HttpApi Adapter Boundary; Generated Source Type-Check Harness | HttpApi emitted source targets installed Effect declarations.                     |
+| FR-4           | Effect HttpApi Adapter Boundary; ADR                                 | Unsupported stale Effect API references are deferred or diagnosed.                |
+| FR-5           | HttpApi Convention Parity Boundary                                   | Every parsed convention gets emitted, diagnosed, ignored, or deferred explicitly. |
+| FR-6           | Generated Source Type-Check Harness                                  | Fixture-level emitted-source compilation is required.                             |
+| FR-7           | Router/HttpApi validation boundaries                                 | User-reachable invalid contracts return structured diagnostics.                   |
+| FR-8           | OpenAPI Mapping Boundary                                             | Exposure uses installed Effect APIs only.                                         |
+| FR-9           | HttpApi Convention Parity Boundary                                   | Reserved-looking unrelated files are non-participating.                           |
+| FR-10          | OpenAPI Mapping Boundary                                             | OpenAPI annotations and exposure are in scope.                                    |
+| FR-11          | Generated Source Type-Check Harness                                  | Canonical proof lives in `packages/app` Vitest fixtures.                          |
+| NFR-1          | source emitters                                                      | Stable output for unchanged inputs.                                               |
+| NFR-2          | validation and diagnostics                                           | Stable codes/messages and paths.                                                  |
+| NFR-3          | parse/normalize/validate/render boundaries                           | Focused red-green slices.                                                         |
+| NFR-4          | scope boundary                                                       | No unrelated framework feature expansion.                                         |
+| NFR-5          | Effect HttpApi Adapter Boundary                                      | Localizes unstable Effect API drift.                                              |
+| NFR-6          | testing strategy                                                     | Package compilation and generated fixture compilation are separate gates.         |
 
 ## References Consulted
 

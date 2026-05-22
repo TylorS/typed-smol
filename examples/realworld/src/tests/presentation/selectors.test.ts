@@ -4,11 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Effect } from "effect";
 import { resetDatabase } from "../../infrastructure/Reset.js";
 import { renderUrl } from "../../server.js";
-import {
-  defaultDataDirectory,
-  runWithLayer,
-  ServerPageTestLayer,
-} from "../helpers/layers.js";
+import { defaultDataDirectory, runWithLayer, ServerPageTestLayer } from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "selectors-test.sqlite");
 const TestLayer = ServerPageTestLayer({ databasePath: testDatabasePath });

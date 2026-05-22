@@ -21,18 +21,18 @@ describe("typed/ui/Listbox", () => {
           id: "status-listbox",
           label: "Status",
           content: html`${Listbox.Option({
-              state,
-              id: "draft",
-              value: "draft",
-              content: "Draft",
-            })}
-            ${Listbox.Option({
-              state,
-              id: "published",
-              value: "published",
-              disabled: true,
-              content: "Published",
-            })}`,
+            state,
+            id: "draft",
+            value: "draft",
+            content: "Draft",
+          })}
+          ${Listbox.Option({
+            state,
+            id: "published",
+            value: "published",
+            disabled: true,
+            content: "Published",
+          })}`,
         }),
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
@@ -94,7 +94,14 @@ describe("typed/ui/Listbox", () => {
       );
       expect(yield* state).toMatchObject({ activeId: "last", value: "first" });
 
-      yield* Listbox.move(state, [{ id: "first", value: "first", element: first }, { id: "last", value: "last", element: last }], "next");
+      yield* Listbox.move(
+        state,
+        [
+          { id: "first", value: "first", element: first },
+          { id: "last", value: "last", element: last },
+        ],
+        "next",
+      );
       expect(yield* state).toMatchObject({ activeId: "first", value: "first" });
     }).pipe(Effect.scoped, Effect.runPromise));
 });

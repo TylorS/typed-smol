@@ -40,9 +40,7 @@ export type RouteApiClient = {
   };
 };
 
-export class ApiClient extends Context.Service<ApiClient, RouteApiClient>()(
-  "RealWorld/ApiClient",
-) {
+export class ApiClient extends Context.Service<ApiClient, RouteApiClient>()("RealWorld/ApiClient") {
   static readonly layer = <R>(
     client: Effect.Effect<RouteApiClient, never, R>,
   ): Layer.Layer<ApiClient, never, R> => Layer.effect(ApiClient, client);
@@ -88,14 +86,17 @@ export const home = Effect.fn(function* (
   client: RouteApiClient,
   { page }: { readonly page: number },
 ) {
-  const { response, tagList } = yield* Effect.all({
-    response: client.articles.list({
-      params: {},
-      query: pageFilter(page),
-      headers: {},
-    }),
-    tagList: client.tags.list({ params: {}, query: {}, headers: {} }),
-  }, { concurrency: "unbounded" });
+  const { response, tagList } = yield* Effect.all(
+    {
+      response: client.articles.list({
+        params: {},
+        query: pageFilter(page),
+        headers: {},
+      }),
+      tagList: client.tags.list({ params: {}, query: {}, headers: {} }),
+    },
+    { concurrency: "unbounded" },
+  );
   const data: FeedViewData = { ...response, tags: tagList.tags, page };
   return data;
 });
@@ -104,14 +105,17 @@ export const tag = Effect.fn(function* (
   client: RouteApiClient,
   { page, tag }: { readonly page: number; readonly tag: string },
 ) {
-  const { response, tagList } = yield* Effect.all({
-    response: client.articles.list({
-      params: {},
-      query: { ...pageFilter(page), tag },
-      headers: {},
-    }),
-    tagList: client.tags.list({ params: {}, query: {}, headers: {} }),
-  }, { concurrency: "unbounded" });
+  const { response, tagList } = yield* Effect.all(
+    {
+      response: client.articles.list({
+        params: {},
+        query: { ...pageFilter(page), tag },
+        headers: {},
+      }),
+      tagList: client.tags.list({ params: {}, query: {}, headers: {} }),
+    },
+    { concurrency: "unbounded" },
+  );
   const data: FeedViewData = { ...response, tags: tagList.tags, page, selectedTag: tag };
   return data;
 });
@@ -120,10 +124,13 @@ export const article = Effect.fn(function* (
   client: RouteApiClient,
   { slug }: { readonly slug: string },
 ) {
-  const { article, commentList } = yield* Effect.all({
-    article: client.articles.get({ params: { slug }, query: {}, headers: {} }),
-    commentList: client.comments.list({ params: { slug }, query: {}, headers: {} }),
-  }, { concurrency: "unbounded" });
+  const { article, commentList } = yield* Effect.all(
+    {
+      article: client.articles.get({ params: { slug }, query: {}, headers: {} }),
+      commentList: client.comments.list({ params: { slug }, query: {}, headers: {} }),
+    },
+    { concurrency: "unbounded" },
+  );
   return { article: article.article, comments: commentList.comments };
 });
 
@@ -131,16 +138,19 @@ export const profile = Effect.fn(function* (
   client: RouteApiClient,
   { favorites, username }: { readonly favorites: boolean; readonly username: string },
 ) {
-  const { profile, feed } = yield* Effect.all({
-    profile: client.profiles.get({ params: { username }, query: {}, headers: {} }),
-    feed: client.articles.list({
-      params: {},
-      query: favorites
-        ? { favorited: username, limit: pageSize }
-        : { author: username, limit: pageSize },
-      headers: {},
-    }),
-  }, { concurrency: "unbounded" });
+  const { profile, feed } = yield* Effect.all(
+    {
+      profile: client.profiles.get({ params: { username }, query: {}, headers: {} }),
+      feed: client.articles.list({
+        params: {},
+        query: favorites
+          ? { favorited: username, limit: pageSize }
+          : { author: username, limit: pageSize },
+        headers: {},
+      }),
+    },
+    { concurrency: "unbounded" },
+  );
   return { profile: profile.profile, ...feed, favorites };
 });
 
@@ -165,7 +175,9 @@ type RouteApiError =
 
 type ApiEffect<A> = Effect.Effect<A, RouteApiError, never>;
 
-type MethodError<Method> = Method extends (...args: ReadonlyArray<any>) => Effect.Effect<any, infer Error, any>
+type MethodError<Method> = Method extends (
+  ...args: ReadonlyArray<any>
+) => Effect.Effect<any, infer Error, any>
   ? Error
   : never;
 

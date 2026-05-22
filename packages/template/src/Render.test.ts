@@ -239,7 +239,8 @@ describe("Render", () => {
           onclick=${EventHandler.make(() =>
             Effect.gen(function* () {
               observedScope = yield* Scope.Scope;
-            }))}
+            }),
+          )}
         >
           Save
         </button>`,

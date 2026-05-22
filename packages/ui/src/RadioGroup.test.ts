@@ -18,7 +18,7 @@ describe("typed/ui/RadioGroup", () => {
           state,
           label: "Choices",
           content: html`${RadioGroup.Item({ state, id: "one", value: "one", content: "One" })}
-            ${RadioGroup.Item({ state, id: "two", value: "two", content: "Two" })}`,
+          ${RadioGroup.Item({ state, id: "two", value: "two", content: "Two" })}`,
         }),
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
@@ -37,11 +37,25 @@ describe("typed/ui/RadioGroup", () => {
   it("changes value on arrow movement unless nested in a toolbar", () =>
     Effect.gen(function* () {
       const normal = yield* RadioGroup.makeState({ value: "one", activeId: "one" });
-      yield* RadioGroup.move(normal, [{ id: "one", value: "one" }, { id: "two", value: "two" }], "next");
+      yield* RadioGroup.move(
+        normal,
+        [
+          { id: "one", value: "one" },
+          { id: "two", value: "two" },
+        ],
+        "next",
+      );
       expect(yield* normal).toMatchObject({ activeId: "two", value: "two" });
 
       const toolbar = yield* RadioGroup.makeState({ value: "one", activeId: "one", toolbar: true });
-      yield* RadioGroup.move(toolbar, [{ id: "one", value: "one" }, { id: "two", value: "two" }], "next");
+      yield* RadioGroup.move(
+        toolbar,
+        [
+          { id: "one", value: "one" },
+          { id: "two", value: "two" },
+        ],
+        "next",
+      );
       expect(yield* toolbar).toMatchObject({ activeId: "two", value: "one" });
     }).pipe(Effect.scoped, Effect.runPromise));
 });

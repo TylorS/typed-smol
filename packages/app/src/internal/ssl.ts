@@ -25,7 +25,8 @@ export function resolveTypedHttpServerSsl(
 ): TypedHttpServerSsl {
   if (!options.ssl) return { kind: "disabled" };
   if (options.ssl === true) return ensureGeneratedCerts(options.projectRoot);
-  if (!existsSync(options.ssl.key)) throw new Error(`SSL key file does not exist: ${options.ssl.key}`);
+  if (!existsSync(options.ssl.key))
+    throw new Error(`SSL key file does not exist: ${options.ssl.key}`);
   if (!existsSync(options.ssl.cert)) {
     throw new Error(`SSL certificate file does not exist: ${options.ssl.cert}`);
   }

@@ -12,7 +12,7 @@ export interface CurrentRouteTree {
 export class CurrentRoute extends Context.Service<CurrentRoute, CurrentRouteTree>()(
   "@typed/router/CurrentRoute",
   {
-    make: Effect.map(Navigation.base, (base) => ({ route: Parse(base) } )),
+    make: Effect.map(Navigation.base, (base) => ({ route: Parse(base) })),
   },
 ) {
   static readonly Default = Layer.effect(CurrentRoute, CurrentRoute.make);

@@ -22,10 +22,7 @@ export function makeState(
   return RefSubject.make(initial);
 }
 
-export function setOpen(
-  state: RefSubject.RefSubject<State>,
-  open: boolean,
-): Effect.Effect<State> {
+export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
@@ -49,7 +46,9 @@ export function Button<const Opts extends ButtonOptions>(options: Opts) {
     aria-controls=${options.controls}
     .data=${{ open }}
     onclick=${onClick}
-  >${options.content}</button>`;
+  >
+    ${options.content}
+  </button>`;
 }
 
 export interface ContentOptions {

@@ -39,10 +39,7 @@ export function makeState(
   });
 }
 
-export function move<Value>(
-  options: MoveOptions<Value>,
-  direction: Move,
-): Effect.Effect<State> {
+export function move<Value>(options: MoveOptions<Value>, direction: Move): Effect.Effect<State> {
   return Effect.gen(function* () {
     const items = Collection.enabledItems(Collection.byDomOrder(yield* options.collection));
     const current = yield* options.state;
@@ -51,18 +48,17 @@ export function move<Value>(
   });
 }
 
-export function tabIndex(
-  state: RefSubject.RefSubject<State>,
-  id: string,
-): Effect.Effect<0 | -1> {
-  return Effect.map(state, (current) => current.virtualFocus ? -1 : current.activeId === id ? 0 : -1);
+export function tabIndex(state: RefSubject.RefSubject<State>, id: string): Effect.Effect<0 | -1> {
+  return Effect.map(state, (current) =>
+    current.virtualFocus ? -1 : current.activeId === id ? 0 : -1,
+  );
 }
 
 export function activeDescendant(
   state: RefSubject.RefSubject<State>,
 ): Effect.Effect<string | undefined> {
   return Effect.map(state, (current) =>
-    current.virtualFocus && current.activeId ? current.activeId : undefined
+    current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
 }
 
@@ -94,7 +90,10 @@ function nextActiveId<Value>(
   if (direction === "first") return items[0]?.id ?? null;
   if (direction === "last") return items[items.length - 1]?.id ?? null;
 
-  const index = Math.max(0, items.findIndex((item) => item.id === state.activeId));
+  const index = Math.max(
+    0,
+    items.findIndex((item) => item.id === state.activeId),
+  );
   const delta = direction === "next" ? 1 : -1;
   const next = index + delta;
 

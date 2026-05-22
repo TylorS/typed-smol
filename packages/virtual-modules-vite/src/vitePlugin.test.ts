@@ -110,7 +110,7 @@ describe("virtualModulesVitePlugin", () => {
     ]);
     const plugin = virtualModulesVitePlugin({
       resolver: manager,
-      mapId: ({ id, consumer }) => consumer === "client" ? `${id}?mode=client` : id,
+      mapId: ({ id, consumer }) => (consumer === "client" ? `${id}?mode=client` : id),
     });
     const resolveId = plugin.resolveId! as ResolveId;
     const out = resolveId.call(

@@ -17,13 +17,13 @@ export const AuthorMeta = Fx.fn("AuthorMeta")((articleRef: RefSubjectType<Articl
   const displayName = RefSubject.map(username, safeTextPreview);
 
   return html`${Link({ href: profileHref, content: html`<img src=${avatar} />` })}
-<div class="info">
-  ${Link({ class: "author", href: profileHref, content: displayName })}
-  <span class="date">${RefSubject.proxy(articleRef).createdAt}</span>
-</div>
-<button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(articleRef)}>
-  Favorite ${favoritesCount}
-</button>`;
+    <div class="info">
+      ${Link({ class: "author", href: profileHref, content: displayName })}
+      <span class="date">${RefSubject.proxy(articleRef).createdAt}</span>
+    </div>
+    <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(articleRef)}>
+      Favorite ${favoritesCount}
+    </button>`;
 });
 
 const favoriteArticle = (article: RefSubjectType<ArticlePreview>) =>
@@ -37,7 +37,7 @@ const favoriteArticle = (article: RefSubjectType<ArticlePreview>) =>
   );
 
 const toggleFavorite = Effect.fn(function* (article: RefSubjectType<ArticlePreview>) {
-      const { favorited, slug } = yield* article;
-      const auth = yield* BrowserAuth;
-      return yield* auth.favoriteArticle(slug, favorited);
+  const { favorited, slug } = yield* article;
+  const auth = yield* BrowserAuth;
+  return yield* auth.favoriteArticle(slug, favorited);
 });

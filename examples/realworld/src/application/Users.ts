@@ -33,52 +33,40 @@ export interface UsersService {
   ) => Effect.Effect<UserResponse, UsersError>;
 }
 
-export class Users extends Context.Service<Users, UsersService>()(
-  "@typed/realworld/Users",
-) {
+export class Users extends Context.Service<Users, UsersService>()("@typed/realworld/Users") {
   static readonly Live = Layer.effect(
     Users,
     Effect.gen(function* () {
       const repository = yield* UserRepository;
 
       return {
-        current: (token) =>
-          requireUser(token, repository).pipe(
-            Effect.map((user) => userResponse(user, Option.getOrThrow(token))),
-          ),
-        login: (input) =>
-          validateLogin(input).pipe(
-            Effect.flatMap(({ email, password }) =>
-              repository.verifyCredentials(email, password).pipe(
-                Effect.catch(() => Effect.fail(invalidCredentials())),
-              ),
-            ),
-            Effect.flatMap((user) =>
-              Option.isSome(user) ? loginResponse(user.value, repository) : Effect.fail(invalidCredentials()),
-            ),
-          ),
-        register: (input) =>
-          validateRegister(input).pipe(
-            Effect.flatMap((user) =>
-              repository.create(user).pipe(
-                Effect.catch((error) => Effect.fail(mapUserError(error))),
-              ),
-            ),
-            Effect.flatMap((user) => loginResponse(user, repository)),
-          ),
-        update: (token, input) =>
-          requireUser(token, repository).pipe(
-            Effect.flatMap((user) =>
-              validateUpdate(input).pipe(
-                Effect.flatMap((update) =>
-                  repository.update(user.id, update).pipe(
-                    Effect.catch((error) => Effect.fail(mapUserError(error))),
-                  ),
-                ),
-                Effect.map((updated) => userResponse(updated, Option.getOrThrow(token))),
-              ),
-            ),
-          ),
+        current: Effect.fn(function* (token: Option.Option<OpaqueToken>) {
+          const user = yield* requireUser(token, repository);
+          return userResponse(user, Option.getOrThrow(token));
+        }),
+        login: Effect.fn(function* (input: LoginUserRequest) {
+          const { email, password } = yield* validateLogin(input);
+          const user = yield* repository
+            .verifyCredentials(email, password)
+            .pipe(Effect.catch(() => Effect.fail(invalidCredentials())));
+          if (Option.isNone(user)) return yield* Effect.fail(invalidCredentials());
+          return yield* loginResponse(user.value, repository);
+        }),
+        register: Effect.fn(function* (input: RegisterUserRequest) {
+          const user = yield* validateRegister(input);
+          const created = yield* repository
+            .create(user)
+            .pipe(Effect.catch((error) => Effect.fail(mapUserError(error))));
+          return yield* loginResponse(created, repository);
+        }),
+        update: Effect.fn(function* (token: Option.Option<OpaqueToken>, input: UpdateUserRequest) {
+          const user = yield* requireUser(token, repository);
+          const update = yield* validateUpdate(input);
+          const updated = yield* repository
+            .update(user.id, update)
+            .pipe(Effect.catch((error) => Effect.fail(mapUserError(error))));
+          return userResponse(updated, Option.getOrThrow(token));
+        }),
       };
     }),
   );
@@ -88,34 +76,41 @@ const loginResponse = (
   user: User,
   repository: UserRepositoryService,
 ): Effect.Effect<UserResponse, UsersError> =>
-  repository.createSession(user.id).pipe(
-    Effect.catch(() => Effect.fail(tokenInvalid())),
-    Effect.map((token) => userResponse(user, token)),
-  );
+  Effect.gen(function* () {
+    const token = yield* repository
+      .createSession(user.id)
+      .pipe(Effect.catch(() => Effect.fail(tokenInvalid())));
+    return userResponse(user, token);
+  });
 
 const validateRegister = (
   input: RegisterUserRequest,
 ): Effect.Effect<RegisterUserRequest["user"], RealWorldError> =>
-  Effect.all([
-    requireNonBlank("username", input.user.username),
-    requireNonBlank("email", input.user.email),
-    requireNonBlank("password", input.user.password),
-  ], { concurrency: "unbounded" }).pipe(Effect.as(input.user));
+  Effect.gen(function* () {
+    yield* requireNonBlank("username", input.user.username);
+    yield* requireNonBlank("email", input.user.email);
+    yield* requireNonBlank("password", input.user.password);
+    return input.user;
+  });
 
 const validateLogin = (
   input: LoginUserRequest,
 ): Effect.Effect<LoginUserRequest["user"], RealWorldError> =>
-  Effect.all([
-    requireNonBlank("email", input.user.email),
-    requireNonBlank("password", input.user.password),
-  ], { concurrency: "unbounded" }).pipe(Effect.as(input.user));
+  Effect.gen(function* () {
+    yield* requireNonBlank("email", input.user.email);
+    yield* requireNonBlank("password", input.user.password);
+    return input.user;
+  });
 
 const validateUpdate = (
   input: UpdateUserRequest,
 ): Effect.Effect<UpdateUserRequest["user"], RealWorldError> =>
-  input.user.password !== undefined && input.user.password.length < 8
-    ? Effect.fail(validationError("password"))
-    : Effect.succeed(input.user);
+  Effect.gen(function* () {
+    if (input.user.password !== undefined && input.user.password.length < 8) {
+      return yield* Effect.fail(validationError("password"));
+    }
+    return input.user;
+  });
 
 const mapUserError = (error: UserRepositoryError): RealWorldError => {
   if (isTagged(error, "DuplicateUserField")) return duplicate(error.field);

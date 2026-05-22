@@ -28,18 +28,18 @@ describe("typed/ui/Select", () => {
           state,
           label: "Status",
           content: html`${Select.Option({
-              state,
-              id: "draft",
-              value: "draft",
-              content: "Draft",
-            })}
-            ${Select.Option({
-              state,
-              id: "published",
-              value: "published",
-              disabled: true,
-              content: "Published",
-            })}`,
+            state,
+            id: "draft",
+            value: "draft",
+            content: "Draft",
+          })}
+          ${Select.Option({
+            state,
+            id: "published",
+            value: "published",
+            disabled: true,
+            content: "Published",
+          })}`,
         }),
         contentRoot,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);

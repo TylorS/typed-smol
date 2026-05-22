@@ -8,10 +8,7 @@ import type {
   UpdateArticleRequest,
 } from "../domain/RealWorldApi.js";
 import type { RealWorldError } from "../domain/Errors.js";
-import type {
-  ArticleRepositoryError,
-  UserRepositoryError,
-} from "../domain/RepositoryErrors.js";
+import type { ArticleRepositoryError, UserRepositoryError } from "../domain/RepositoryErrors.js";
 import { ArticleRepository } from "../infrastructure/repositories/ArticleRepository.js";
 import type {
   ArticleListFilter,
@@ -19,13 +16,7 @@ import type {
 } from "../infrastructure/repositories/ArticleRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
 import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
-import {
-  forbidden,
-  notFound,
-  optionalUserId,
-  requireNonBlank,
-  requireUser,
-} from "./Common.js";
+import { forbidden, notFound, optionalUserId, requireNonBlank, requireUser } from "./Common.js";
 
 type ArticlesError = RealWorldError | ArticleRepositoryError | UserRepositoryError;
 
@@ -34,7 +25,10 @@ export interface ArticlesService {
     token: Option.Option<OpaqueToken>,
     input: CreateArticleRequest,
   ) => Effect.Effect<SingleArticleResponse, ArticlesError>;
-  readonly delete: (token: Option.Option<OpaqueToken>, slug: string) => Effect.Effect<void, ArticlesError>;
+  readonly delete: (
+    token: Option.Option<OpaqueToken>,
+    slug: string,
+  ) => Effect.Effect<void, ArticlesError>;
   readonly favorite: (
     token: Option.Option<OpaqueToken>,
     slug: string,
@@ -72,63 +66,63 @@ export class Articles extends Context.Service<Articles, ArticlesService>()(
       const users = yield* UserRepository;
 
       return {
-        create: (token, input) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) =>
-              validateCreate(input).pipe(
-                Effect.flatMap((article) => articles.create(user.id, article)),
-                Effect.map((article) => ({ article })),
-              ),
-            ),
-          ),
-        delete: (token, slug) =>
-          requireAuthor(token, slug, users, articles).pipe(
-            Effect.flatMap((user) => articles.delete(user.id, slug)),
-            Effect.flatMap((deleted) =>
-              deleted ? Effect.void : Effect.fail(notFound("article")),
-            ),
-          ),
-        favorite: (token, slug) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) => articles.favorite(user.id, slug)),
-            Effect.flatMap(articleResponse("article")),
-          ),
-        feed: (token, filter) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) => articles.feed(user.id, filter)),
-          ),
-        get: (token, slug) =>
-          optionalUserId(token, users).pipe(
-            Effect.flatMap((viewer) => articles.findBySlug(slug, viewer)),
-            Effect.flatMap(articleResponse("article")),
-          ),
-        list: (filter, token) =>
-          optionalUserId(token, users).pipe(
-            Effect.flatMap((viewer) => articles.list(filter, viewer)),
-          ),
-        unfavorite: (token, slug) =>
-          requireUser(token, users).pipe(
-            Effect.flatMap((user) => articles.unfavorite(user.id, slug)),
-            Effect.flatMap(articleResponse("article")),
-          ),
-        update: (token, slug, input) =>
-          requireAuthor(token, slug, users, articles).pipe(
-            Effect.flatMap((user) =>
-              validateUpdate(input).pipe(
-                Effect.flatMap((article) => articles.update(user.id, slug, article)),
-                Effect.flatMap(articleResponse("article")),
-              ),
-            ),
-          ),
+        create: Effect.fn(function* (
+          token: Option.Option<OpaqueToken>,
+          input: CreateArticleRequest,
+        ) {
+          const user = yield* requireUser(token, users);
+          const article = yield* validateCreate(input);
+          const created = yield* articles.create(user.id, article);
+          return { article: created };
+        }),
+        delete: Effect.fn(function* (token: Option.Option<OpaqueToken>, slug: string) {
+          const user = yield* requireAuthor(token, slug, users, articles);
+          const deleted = yield* articles.delete(user.id, slug);
+          if (!deleted) return yield* Effect.fail(notFound("article"));
+        }),
+        favorite: Effect.fn(function* (token: Option.Option<OpaqueToken>, slug: string) {
+          const user = yield* requireUser(token, users);
+          const article = yield* articles.favorite(user.id, slug);
+          return yield* toArticleResponse("article", article);
+        }),
+        feed: Effect.fn(function* (token: Option.Option<OpaqueToken>, filter: ArticleListFilter) {
+          const user = yield* requireUser(token, users);
+          return yield* articles.feed(user.id, filter);
+        }),
+        get: Effect.fn(function* (token: Option.Option<OpaqueToken>, slug: string) {
+          const viewer = yield* optionalUserId(token, users);
+          const article = yield* articles.findBySlug(slug, viewer);
+          return yield* toArticleResponse("article", article);
+        }),
+        list: Effect.fn(function* (filter: ArticleListFilter, token: Option.Option<OpaqueToken>) {
+          const viewer = yield* optionalUserId(token, users);
+          return yield* articles.list(filter, viewer);
+        }),
+        unfavorite: Effect.fn(function* (token: Option.Option<OpaqueToken>, slug: string) {
+          const user = yield* requireUser(token, users);
+          const article = yield* articles.unfavorite(user.id, slug);
+          return yield* toArticleResponse("article", article);
+        }),
+        update: Effect.fn(function* (
+          token: Option.Option<OpaqueToken>,
+          slug: string,
+          input: UpdateArticleRequest,
+        ) {
+          const user = yield* requireAuthor(token, slug, users, articles);
+          const article = yield* validateUpdate(input);
+          const updated = yield* articles.update(user.id, slug, article);
+          return yield* toArticleResponse("article", updated);
+        }),
       };
     }),
   );
 }
 
-const articleResponse = (field: string) => (article: Option.Option<Article>) =>
-  Option.isSome(article)
-    ? Effect.succeed({ article: article.value })
-    : Effect.fail(notFound(field));
+const toArticleResponse = (field: string, article: Option.Option<Article>) =>
+  Effect.gen(function* () {
+    if (Option.isNone(article)) return yield* Effect.fail(notFound(field));
+    return { article: article.value };
+  });
 
 const requireAuthor = (
   token: Option.Option<OpaqueToken>,
@@ -136,29 +130,30 @@ const requireAuthor = (
   users: UserRepositoryService,
   articles: ArticleRepositoryService,
 ) =>
-  requireUser(token, users).pipe(
-    Effect.flatMap((user) =>
-      articles.findOwnerIdBySlug(slug).pipe(
-        Effect.flatMap((owner) => {
-          if (Option.isNone(owner)) return Effect.fail(notFound("article"));
-          return owner.value === user.id ? Effect.succeed(user) : Effect.fail(forbidden("article"));
-        }),
-      ),
-    ),
-  );
+  Effect.gen(function* () {
+    const user = yield* requireUser(token, users);
+    const owner = yield* articles.findOwnerIdBySlug(slug);
+    if (Option.isNone(owner)) return yield* Effect.fail(notFound("article"));
+    if (owner.value !== user.id) return yield* Effect.fail(forbidden("article"));
+    return user;
+  });
 
 const validateCreate = (
   input: CreateArticleRequest,
 ): Effect.Effect<CreateArticleRequest["article"], RealWorldError> =>
-  Effect.all([
-    requireNonBlank("title", input.article.title),
-    requireNonBlank("description", input.article.description),
-    requireNonBlank("body", input.article.body),
-  ], { concurrency: "unbounded" }).pipe(Effect.as(input.article));
+  Effect.gen(function* () {
+    yield* requireNonBlank("title", input.article.title);
+    yield* requireNonBlank("description", input.article.description);
+    yield* requireNonBlank("body", input.article.body);
+    return input.article;
+  });
 
 const validateUpdate = (
   input: UpdateArticleRequest,
 ): Effect.Effect<UpdateArticleRequest["article"], RealWorldError> =>
-  input.article.title !== undefined
-    ? requireNonBlank("title", input.article.title).pipe(Effect.as(input.article))
-    : Effect.succeed(input.article);
+  Effect.gen(function* () {
+    if (input.article.title !== undefined) {
+      yield* requireNonBlank("title", input.article.title);
+    }
+    return input.article;
+  });

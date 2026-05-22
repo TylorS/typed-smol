@@ -219,42 +219,42 @@ sequenceDiagram
 
 ## Failure Modes and Mitigations
 
-| Failure | Impact | Mitigation |
-| ------- | ------ | ---------- |
-| server entry not discovered | vavite not installed; SSR/API dev path unavailable | fail clearly in `typed serve` when framework app mode requires a server entry |
-| vavite incompatible with current Vite/Node baseline | dev server path broken | research before implementation; isolate vavite behind `@typed/vite-plugin` |
-| non-dev static assets missing | production-like server returns missing files | infer paths from build output and fail clearly with checked diagnostics |
-| generated cert cannot be written | HTTPS dev startup fails | write under `node_modules/.typed/certs/`; surface permission/path errors |
-| provided SSL paths invalid | HTTPS startup fails | validate `key` and `cert` before server launch |
-| env virtual module receives invalid env key names | invalid generated JavaScript | validate export identifiers and fail clearly or use a documented normalization policy |
-| server/browser/html virtual module query is invalid | generated entrypoint cannot be constructed | parse query parameters strictly and emit clear diagnostics |
-| companion file collision or invalid shape | nondeterministic entrypoint assembly | reuse router/HttpApi-style convention diagnostics and stable ordering |
-| Vite HTML transform cannot be reproduced in non-dev | SSR output diverges between dev and production | use Vite build artifacts or a recorded transform plan rather than dev middleware |
-| env/config virtual modules drift from runtime config | inconsistent behavior | source both from shared typed config/env resolution helpers |
-| filesystem routing sneaks in | framework loses composability | enforce via spec/ADR and tests/docs reviews |
+| Failure                                              | Impact                                             | Mitigation                                                                            |
+| ---------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| server entry not discovered                          | vavite not installed; SSR/API dev path unavailable | fail clearly in `typed serve` when framework app mode requires a server entry         |
+| vavite incompatible with current Vite/Node baseline  | dev server path broken                             | research before implementation; isolate vavite behind `@typed/vite-plugin`            |
+| non-dev static assets missing                        | production-like server returns missing files       | infer paths from build output and fail clearly with checked diagnostics               |
+| generated cert cannot be written                     | HTTPS dev startup fails                            | write under `node_modules/.typed/certs/`; surface permission/path errors              |
+| provided SSL paths invalid                           | HTTPS startup fails                                | validate `key` and `cert` before server launch                                        |
+| env virtual module receives invalid env key names    | invalid generated JavaScript                       | validate export identifiers and fail clearly or use a documented normalization policy |
+| server/browser/html virtual module query is invalid  | generated entrypoint cannot be constructed         | parse query parameters strictly and emit clear diagnostics                            |
+| companion file collision or invalid shape            | nondeterministic entrypoint assembly               | reuse router/HttpApi-style convention diagnostics and stable ordering                 |
+| Vite HTML transform cannot be reproduced in non-dev  | SSR output diverges between dev and production     | use Vite build artifacts or a recorded transform plan rather than dev middleware      |
+| env/config virtual modules drift from runtime config | inconsistent behavior                              | source both from shared typed config/env resolution helpers                           |
+| filesystem routing sneaks in                         | framework loses composability                      | enforce via spec/ADR and tests/docs reviews                                           |
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1, FR-2, FR-34 | `@typed/cli`, Starter Workspace | `typed create` produces the minimal multi-package starter. |
-| FR-3, FR-4, FR-33 | App Modes | SSR is primary; CSR/MPA supported by shape; SSG future extension. |
-| FR-5 | Starter Workspace | Starter exercises all required framework surfaces. |
-| FR-6, NFR-1 | ADR: virtual-module first | No actual filesystem routing. |
-| FR-7, FR-8, FR-9, FR-10 | `@typed/app` Virtual Modules | Defines `typed:env` and `typed:config`. |
-| FR-11, FR-12, FR-13, FR-14 | `typed:server` | Server entrypoint generation from APIs, routes, and companions. |
-| FR-15, FR-16, FR-17 | `typed:browser` | Browser entrypoint generation from routes and companions. |
-| FR-18, FR-19 | `typed:html` | Vite-aligned HTML references for SSR production builds. |
-| FR-20, FR-21, FR-22, NFR-2 | `@typed/vite-plugin`, vavite | One Vite-backed dev server. |
-| FR-23, FR-24, FR-25 | `TypedHttpServer.layer(...)` | Dev/non-dev split and static replacement. |
-| FR-26, FR-27, FR-28, NFR-4, NFR-5 | `TypedHttpServer.layer(...)` | Server helper API and inferred static serving. |
-| FR-29, FR-30, FR-31 | SSL handling | Provided and generated certs. |
-| FR-32 | Generated `api:` modules | Generated modules delegate server choice. |
-| NFR-3 | Non-dev server flow | No Vite middleware dependency outside dev. |
-| NFR-6 | Starter Workspace | Keep starter minimal. |
-| NFR-7 | Virtual modules | Artifact-model participation and clear diagnostics. |
-| NFR-8 | Planning traceability | Requirements map to plan tasks before execution. |
-| NFR-9 | App Modes | Minimal config but inspectable mode behavior. |
+| requirement_id                    | design_element                  | notes                                                             |
+| --------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
+| FR-1, FR-2, FR-34                 | `@typed/cli`, Starter Workspace | `typed create` produces the minimal multi-package starter.        |
+| FR-3, FR-4, FR-33                 | App Modes                       | SSR is primary; CSR/MPA supported by shape; SSG future extension. |
+| FR-5                              | Starter Workspace               | Starter exercises all required framework surfaces.                |
+| FR-6, NFR-1                       | ADR: virtual-module first       | No actual filesystem routing.                                     |
+| FR-7, FR-8, FR-9, FR-10           | `@typed/app` Virtual Modules    | Defines `typed:env` and `typed:config`.                           |
+| FR-11, FR-12, FR-13, FR-14        | `typed:server`                  | Server entrypoint generation from APIs, routes, and companions.   |
+| FR-15, FR-16, FR-17               | `typed:browser`                 | Browser entrypoint generation from routes and companions.         |
+| FR-18, FR-19                      | `typed:html`                    | Vite-aligned HTML references for SSR production builds.           |
+| FR-20, FR-21, FR-22, NFR-2        | `@typed/vite-plugin`, vavite    | One Vite-backed dev server.                                       |
+| FR-23, FR-24, FR-25               | `TypedHttpServer.layer(...)`    | Dev/non-dev split and static replacement.                         |
+| FR-26, FR-27, FR-28, NFR-4, NFR-5 | `TypedHttpServer.layer(...)`    | Server helper API and inferred static serving.                    |
+| FR-29, FR-30, FR-31               | SSL handling                    | Provided and generated certs.                                     |
+| FR-32                             | Generated `api:` modules        | Generated modules delegate server choice.                         |
+| NFR-3                             | Non-dev server flow             | No Vite middleware dependency outside dev.                        |
+| NFR-6                             | Starter Workspace               | Keep starter minimal.                                             |
+| NFR-7                             | Virtual modules                 | Artifact-model participation and clear diagnostics.               |
+| NFR-8                             | Planning traceability           | Requirements map to plan tasks before execution.                  |
+| NFR-9                             | App Modes                       | Minimal config but inspectable mode behavior.                     |
 
 ## References Consulted
 

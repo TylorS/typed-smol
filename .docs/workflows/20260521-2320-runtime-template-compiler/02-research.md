@@ -8,30 +8,30 @@
 
 ## Source Table
 
-| source | year | type | confidence | notes |
-| ------ | ---- | ---- | ---------- | ----- |
-| `packages/template/src/RenderTemplate.ts` | 2026 | repo code | high | Current `html` tag delegates to the `RenderTemplate` service and preserves renderable error/service types. |
-| `packages/template/src/Render.ts` | 2026 | repo code | high | DOM rendering currently parses/caches templates, hydrates when possible, sets up dynamic parts/events, and manages scope cleanup. |
-| `packages/template/src/Html.ts` | 2026 | repo code | high | Server/HTML rendering currently parses/caches templates and emits HTML render events/strings. |
-| `packages/fx/src/Fx/constructors/fn.ts` | 2026 | repo code | high | `Fx.fn` already exists and wraps `Effect.fn` while unwrapping returned `Fx`. |
-| `packages/fx/src/RefSubject/RefSubject.ts` | 2026 | repo code | high | `RefSubject` is observable mutable state and already has service-like/current-behavior patterns. |
-| `packages/app/src/internal/emitBrowserSource.ts` | 2026 | repo code | high | Browser virtual-module runtime composes route matchers, browser router, DOM render template, and companion layers. |
-| `packages/app/src/internal/emitServerSource.ts` | 2026 | repo code | high | Server virtual-module runtime composes API/route layers, HTML pages, config-derived build paths, and static assets. |
-| `packages/virtual-modules-compiler/src/compile.ts` | 2026 | repo code | high | `vmc` is the TypeScript compiler-host adapter and uses virtual-module resolver plus artifact-store integration. |
-| `packages/virtual-modules-vite/src/vitePlugin.ts` | 2026 | repo code | high | Vite virtual-module integration resolves/loads generated modules and can use the artifact store. |
-| `.docs/adrs/20260516-1643-typed-framework-virtual-module-first.md` | 2026 | accepted ADR | high | Framework features must stay explicit virtual modules and avoid filesystem routing. |
-| `.docs/adrs/20260515-2018-virtual-module-artifact-store.md` | 2026 | accepted ADR | high | Generated artifact correctness depends on source/config/plugin/compiler fingerprints. |
-| `.docs/specs/virtual-modules/spec.md` | 2026 | durable spec | high | Defines virtual module plugin, TypeInfo API, compiler-host adapter, and language-service adapter behavior. |
-| Vite HMR API docs: `https://vite.dev/guide/api-hmr` | 2026 | official docs | high | `import.meta.hot.data` persists per-module data; `accept`, `dispose`, `prune`, and `invalidate` define HMR lifecycle. |
-| Vite plugin API docs: `https://vite.dev/guide/api-plugin` | 2026 | official docs | high | `handleHotUpdate` can filter modules, invalidate, trigger reloads, and send custom HMR events. |
-| TypeScript Compiler API wiki: `https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API` | current | official vendor docs | high | `createProgram`, compiler hosts, emit, diagnostics, and type checker APIs support type-directed analysis/code generation. |
+| source                                                                                              | year    | type                 | confidence | notes                                                                                                                             |
+| --------------------------------------------------------------------------------------------------- | ------- | -------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/template/src/RenderTemplate.ts`                                                           | 2026    | repo code            | high       | Current `html` tag delegates to the `RenderTemplate` service and preserves renderable error/service types.                        |
+| `packages/template/src/Render.ts`                                                                   | 2026    | repo code            | high       | DOM rendering currently parses/caches templates, hydrates when possible, sets up dynamic parts/events, and manages scope cleanup. |
+| `packages/template/src/Html.ts`                                                                     | 2026    | repo code            | high       | Server/HTML rendering currently parses/caches templates and emits HTML render events/strings.                                     |
+| `packages/fx/src/Fx/constructors/fn.ts`                                                             | 2026    | repo code            | high       | `Fx.fn` already exists and wraps `Effect.fn` while unwrapping returned `Fx`.                                                      |
+| `packages/fx/src/RefSubject/RefSubject.ts`                                                          | 2026    | repo code            | high       | `RefSubject` is observable mutable state and already has service-like/current-behavior patterns.                                  |
+| `packages/app/src/internal/emitBrowserSource.ts`                                                    | 2026    | repo code            | high       | Browser virtual-module runtime composes route matchers, browser router, DOM render template, and companion layers.                |
+| `packages/app/src/internal/emitServerSource.ts`                                                     | 2026    | repo code            | high       | Server virtual-module runtime composes API/route layers, HTML pages, config-derived build paths, and static assets.               |
+| `packages/virtual-modules-compiler/src/compile.ts`                                                  | 2026    | repo code            | high       | `vmc` is the TypeScript compiler-host adapter and uses virtual-module resolver plus artifact-store integration.                   |
+| `packages/virtual-modules-vite/src/vitePlugin.ts`                                                   | 2026    | repo code            | high       | Vite virtual-module integration resolves/loads generated modules and can use the artifact store.                                  |
+| `.docs/adrs/20260516-1643-typed-framework-virtual-module-first.md`                                  | 2026    | accepted ADR         | high       | Framework features must stay explicit virtual modules and avoid filesystem routing.                                               |
+| `.docs/adrs/20260515-2018-virtual-module-artifact-store.md`                                         | 2026    | accepted ADR         | high       | Generated artifact correctness depends on source/config/plugin/compiler fingerprints.                                             |
+| `.docs/specs/virtual-modules/spec.md`                                                               | 2026    | durable spec         | high       | Defines virtual module plugin, TypeInfo API, compiler-host adapter, and language-service adapter behavior.                        |
+| Vite HMR API docs: `https://vite.dev/guide/api-hmr`                                                 | 2026    | official docs        | high       | `import.meta.hot.data` persists per-module data; `accept`, `dispose`, `prune`, and `invalidate` define HMR lifecycle.             |
+| Vite plugin API docs: `https://vite.dev/guide/api-plugin`                                           | 2026    | official docs        | high       | `handleHotUpdate` can filter modules, invalidate, trigger reloads, and send custom HMR events.                                    |
+| TypeScript Compiler API wiki: `https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API` | current | official vendor docs | high       | `createProgram`, compiler hosts, emit, diagnostics, and type checker APIs support type-directed analysis/code generation.         |
 
 ## WebSearch Query Log
 
-| query | rationale | selected_sources |
-| ----- | --------- | ---------------- |
-| `Vite HMR API import.meta.hot data dispose accept invalidate official docs` | Verify current HMR lifecycle and state persistence substrate. | `https://vite.dev/guide/api-hmr` |
-| `TypeScript Compiler API using the compiler API official wiki createProgram typeChecker emit` | Verify official TypeScript compiler/type checker APIs. | `https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API` |
+| query                                                                                         | rationale                                                     | selected_sources                                                      |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `Vite HMR API import.meta.hot data dispose accept invalidate official docs`                   | Verify current HMR lifecycle and state persistence substrate. | `https://vite.dev/guide/api-hmr`                                      |
+| `TypeScript Compiler API using the compiler API official wiki createProgram typeChecker emit` | Verify official TypeScript compiler/type checker APIs.        | `https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API` |
 
 ## Key Findings
 

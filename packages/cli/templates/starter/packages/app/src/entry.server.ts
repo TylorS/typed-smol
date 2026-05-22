@@ -1,4 +1,6 @@
-import handler, { run } from "typed:server?routes=./routes&api=./api&html=./index.html&client=./entry.browser.ts";
+import handler, {
+  run,
+} from "typed:server?routes=./routes&api=./api&html=./index.html&client=./entry.browser.ts";
 import { entry } from "typed:config";
 import { NODE_ENV } from "typed:env";
 

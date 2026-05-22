@@ -585,10 +585,10 @@ const rewriteNestedVirtualModuleSpecifiers = (
   resolveNestedVirtualModule: ((id: string) => string | undefined) | undefined,
 ): string =>
   rewriteSourceForPreviewLocation(
-  sourceText,
-  importer,
-  virtualFileName,
-  nestedVirtualModuleRewriter(options, importer, virtualFileName, resolveNestedVirtualModule),
+    sourceText,
+    importer,
+    virtualFileName,
+    nestedVirtualModuleRewriter(options, importer, virtualFileName, resolveNestedVirtualModule),
   );
 
 const nestedVirtualModuleRewriter = (

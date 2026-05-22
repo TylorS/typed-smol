@@ -124,12 +124,27 @@ function emitConstants(
   pages: readonly TypedServerPage[],
 ): string {
   return [
-    `const apiModules = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}`).join(", ")}];`,
-    `const routeModules = [${imports.filter((i) => i.kind === "routes").map((i) => `Routes${i.index}`).join(", ")}];`,
+    `const apiModules = [${imports
+      .filter((i) => i.kind === "api")
+      .map((i) => `Api${i.index}`)
+      .join(", ")}];`,
+    `const routeModules = [${imports
+      .filter((i) => i.kind === "routes")
+      .map((i) => `Routes${i.index}`)
+      .join(", ")}];`,
     "const primaryRoutes = routeModules[0];",
     `const pageEntries: readonly ServerPageEntry[] = [${pages.map(pageEntrySource).join(", ")}];`,
-    `const apiLayers = [${imports.filter((i) => i.kind === "api").map((i) => `Api${i.index}.ApiLayer`).join(", ")}];`,
-    `const routeLayers = [${imports.filter((i) => i.kind === "routes").map((_, index) => `HttpRouter.use(ssrForHttp(routeModules[${index}], documentOptions(${index})))`).join(", ")}];`,
+    `const apiLayers = [${imports
+      .filter((i) => i.kind === "api")
+      .map((i) => `Api${i.index}.ApiLayer`)
+      .join(", ")}];`,
+    `const routeLayers = [${imports
+      .filter((i) => i.kind === "routes")
+      .map(
+        (_, index) =>
+          `HttpRouter.use(ssrForHttp(routeModules[${index}], documentOptions(${index})))`,
+      )
+      .join(", ")}];`,
   ].join("\n");
 }
 
@@ -148,9 +163,7 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
   const dependenciesCompanion = companions.find((companion) => companion.name === "dependencies");
   const errorsCompanion = companions.find((companion) => companion.name === "errors");
   const companionPages = pagesCompanion ? `${pagesCompanion.binding}.pages ?? []` : "[]";
-  const companionLayers = dependenciesCompanion
-    ? `${dependenciesCompanion.binding}.layers`
-    : "[]";
+  const companionLayers = dependenciesCompanion ? `${dependenciesCompanion.binding}.layers` : "[]";
   const companionLayersDeclaration = dependenciesCompanion
     ? `const companionLayers = ${companionLayers};`
     : "const companionLayers: readonly [] = [];";
@@ -163,7 +176,7 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     `const companionOnError = ${companionOnError};`,
     "const typedConfig = TypedConfigModule as TypedConfigWithServerOptions;",
     "const typedBuildConfig = typedConfig.build ?? {};",
-    "const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
+    'const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");',
     "const dev = (import.meta as { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;",
     "const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);",
     "const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: process.cwd(), clientOutDir, dev });",
@@ -188,7 +201,7 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     "  );",
     "}",
     "export function renderUrl(input: string | URL) {",
-    "  if (primaryRoutes === undefined) throw new Error(\"typed:server renderUrl requires at least one routes option\");",
+    '  if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");',
     "  return renderToHtmlString(primaryRoutes).pipe(",
     "    Effect.provide(TypedRouter.ServerRouter({ url: input })),",
     "    Effect.provide(StaticHtmlRenderTemplate),",
@@ -227,10 +240,10 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     "}",
     "function isMainModule(meta: ImportMeta): boolean {",
     "  const entry = process.argv[1];",
-    "  return typeof entry === \"string\" && meta.url === pathToFileURL(entry).href;",
+    '  return typeof entry === "string" && meta.url === pathToFileURL(entry).href;',
     "}",
     "function joinBuildPath(...parts: readonly string[]) {",
-    "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
+    '  return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");',
     "}",
     "function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig {",
     "  return isDev ? config.server ?? {} : config.preview ?? config.server ?? {};",

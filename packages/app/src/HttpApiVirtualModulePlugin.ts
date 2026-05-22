@@ -20,11 +20,7 @@ import {
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
 import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
 import { buildHttpApiOpenApiPlan } from "./internal/httpapiOpenApiPlan.js";
-import {
-  dependencyLayerType,
-  TypeModuleSource,
-  typeTuple,
-} from "./internal/typeModuleSource.js";
+import { dependencyLayerType, TypeModuleSource, typeTuple } from "./internal/typeModuleSource.js";
 import {
   getCallableReturnType,
   isCallableNode,

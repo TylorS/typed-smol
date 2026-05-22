@@ -21,9 +21,9 @@ const createArticle = EventHandler.make(
 );
 
 const publishArticle = Effect.fn(function* (form: HTMLFormElement) {
-    const input = yield* decodeForm(CreateArticleRequest, { article: articleForm(form) });
-    const auth = yield* BrowserAuth;
-    return yield* auth.createArticle(input);
+  const input = yield* decodeForm(CreateArticleRequest, { article: articleForm(form) });
+  const auth = yield* BrowserAuth;
+  return yield* auth.createArticle(input);
 });
 
 const articleForm = (form: HTMLFormElement) => ({
@@ -66,9 +66,7 @@ export const template = html`<section class="editor-page">
             <fieldset class="form-group">
               <input class="form-control" name="tagList" placeholder="Enter tags" />
             </fieldset>
-            <button class="btn btn-lg pull-xs-right btn-primary">
-              Publish Article
-            </button>
+            <button class="btn btn-lg pull-xs-right btn-primary">Publish Article</button>
           </fieldset>
         </form>
       </div>

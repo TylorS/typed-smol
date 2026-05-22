@@ -27,7 +27,7 @@ describe("typed/ui/Menu", () => {
           state,
           label: "Actions",
           content: html`${Menu.Item({ state, id: "rename", content: "Rename" })}
-            ${Menu.Item({ state, id: "archive", disabled: true, content: "Archive" })}`,
+          ${Menu.Item({ state, id: "archive", disabled: true, content: "Archive" })}`,
         }),
         contentRoot,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
@@ -93,7 +93,14 @@ describe("typed/ui/Menu", () => {
       );
       expect((yield* state).activeId).toBe("last");
 
-      yield* Menu.move(state, [{ id: "first", element: first }, { id: "last", element: last }], "next");
+      yield* Menu.move(
+        state,
+        [
+          { id: "first", element: first },
+          { id: "last", element: last },
+        ],
+        "next",
+      );
       expect((yield* state).activeId).toBe("first");
     }).pipe(Effect.scoped, Effect.runPromise));
 });

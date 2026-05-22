@@ -27,7 +27,8 @@ describe("realworld browser auth state", () => {
           authState: yield* store.getAuthState,
           currentUser: yield* store.getCurrentUser,
         };
-      }));
+      }),
+    );
 
     expect(state).toEqual({
       token: null,
@@ -48,7 +49,8 @@ describe("realworld browser auth state", () => {
           authState: yield* store.getAuthState,
           currentUser: yield* store.getCurrentUser,
         };
-      }));
+      }),
+    );
 
     expect(win.fetch.calls[0]).toMatchObject({
       input: "/api/user",
@@ -77,7 +79,8 @@ describe("realworld browser auth state", () => {
           token: yield* store.getToken,
           authState: yield* store.getAuthState,
         };
-      }));
+      }),
+    );
 
     expect(win.fetch.calls[0]).toMatchObject({
       input: "/api/users/login",
@@ -110,7 +113,8 @@ describe("realworld browser auth state", () => {
           token: yield* store.getToken,
           currentUser: yield* store.getCurrentUser,
         };
-      }));
+      }),
+    );
 
     expect(win.fetch.calls[0]).toMatchObject({
       input: "/api/users",
@@ -131,7 +135,8 @@ describe("realworld browser auth state", () => {
           authState: yield* store.getAuthState,
           currentUser: yield* store.getCurrentUser,
         };
-      }));
+      }),
+    );
 
     expect(state).toEqual({
       token: null,
@@ -145,7 +150,8 @@ describe("realworld browser auth state", () => {
     const authState = await withAuthStore(win, (store) =>
       Effect.gen(function* () {
         return yield* store.getAuthState;
-      }));
+      }),
+    );
 
     expect(win.fetch.calls[0]).toMatchObject({
       input: "/api/user",
@@ -166,7 +172,8 @@ describe("realworld browser auth state", () => {
           authState: yield* store.getAuthState,
           currentUser: yield* store.getCurrentUser,
         };
-      }));
+      }),
+    );
 
     expect(state).toEqual({
       token: null,
@@ -187,7 +194,8 @@ describe("realworld browser auth state", () => {
           authState: yield* store.getAuthState,
           currentUser: yield* store.getCurrentUser,
         };
-      }));
+      }),
+    );
 
     expect(state).toEqual({
       token: "offline-token",
@@ -207,7 +215,8 @@ describe("realworld browser auth state", () => {
           token: yield* store.getToken,
           authState: yield* store.getAuthState,
         };
-      }));
+      }),
+    );
 
     expect(state.token).toBe("server-error-token");
     expect(state.authState).toBe("unavailable");
@@ -225,7 +234,8 @@ describe("realworld browser auth state", () => {
           authState: yield* store.getAuthState,
           currentUser: yield* store.getCurrentUser,
         };
-      }));
+      }),
+    );
 
     expect(state).toEqual({
       token: "decode-error-token",
@@ -244,11 +254,10 @@ describe("realworld browser auth state", () => {
             email: Email.make("reader@example.com"),
             password: Password.make("password123"),
           },
-        })).pipe(
-        Effect.andThen(waitForPersistedToken("token-reader")),
-      ).pipe(
-        Effect.provide(BrowserAuth.Live(win, clientEffectFor(win.fetch))),
-      ),
+        }),
+      )
+        .pipe(Effect.andThen(waitForPersistedToken("token-reader")))
+        .pipe(Effect.provide(BrowserAuth.Live(win, clientEffectFor(win.fetch)))),
     );
 
     const persisted = await run(
@@ -279,25 +288,28 @@ describe("realworld browser auth state", () => {
 
   it("adds authorization through an HttpClient middleware backed by BrowserAuthState", async () => {
     const win = windowWith({
-      fetch: fetchJson({
-        article: {
-          slug: "typed",
-          title: "Typed",
-          description: "Declarative apps",
-          body: "Hello",
-          tagList: [],
-          createdAt: "2026-05-18T00:00:00.000Z",
-          updatedAt: "2026-05-18T00:00:00.000Z",
-          favorited: false,
-          favoritesCount: 0,
-          author: {
-            username: "reader",
-            bio: null,
-            image: null,
-            following: false,
+      fetch: fetchJson(
+        {
+          article: {
+            slug: "typed",
+            title: "Typed",
+            description: "Declarative apps",
+            body: "Hello",
+            tagList: [],
+            createdAt: "2026-05-18T00:00:00.000Z",
+            updatedAt: "2026-05-18T00:00:00.000Z",
+            favorited: false,
+            favoritesCount: 0,
+            author: {
+              username: "reader",
+              bio: null,
+              image: null,
+              following: false,
+            },
           },
         },
-      }, 200),
+        200,
+      ),
       token: "middleware-token",
     });
 
@@ -332,7 +344,9 @@ const run = <A, E>(effect: Effect.Effect<A, E, never>): Promise<A> =>
 
 const clientEffectFor = (fetch: TestFetch) => {
   currentFetch = fetch;
-  return makeBrowserClient({ baseUrl: "http://typed.test" }).pipe(Effect.provide(FetchHttpClient.layer));
+  return makeBrowserClient({ baseUrl: "http://typed.test" }).pipe(
+    Effect.provide(FetchHttpClient.layer),
+  );
 };
 
 const waitForPersistedToken = (expected: string): Effect.Effect<void, never, AuthSessionStorage> =>
@@ -416,7 +430,7 @@ const failingFetch: TestFetch = Object.assign(
 );
 
 const authorization = (headers: HeadersInit | undefined): string | undefined =>
-  headers === undefined ? undefined : new Headers(headers).get("authorization") ?? undefined;
+  headers === undefined ? undefined : (new Headers(headers).get("authorization") ?? undefined);
 
 const urlPath = (input: RequestInfo | URL): string => {
   const url = input instanceof Request ? input.url : String(input);
@@ -427,4 +441,8 @@ const jsonBody = (body: BodyInit | null | undefined): unknown =>
   body === undefined || body === null ? undefined : JSON.parse(bodyText(body));
 
 const bodyText = (body: BodyInit): string =>
-  typeof body === "string" ? body : body instanceof Uint8Array ? new TextDecoder().decode(body) : "";
+  typeof body === "string"
+    ? body
+    : body instanceof Uint8Array
+      ? new TextDecoder().decode(body)
+      : "";

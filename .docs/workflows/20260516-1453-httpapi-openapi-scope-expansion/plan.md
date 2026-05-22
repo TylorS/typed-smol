@@ -42,6 +42,7 @@
 ## Task 1: Root Binary `additionalProperties` Generation
 
 **Files:**
+
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 - Modify: `packages/app/src/internal/extractHttpApiOpenApi.ts`
 - Modify: `packages/app/src/internal/httpapiOpenApiConfig.ts`
@@ -147,7 +148,10 @@ function getGenerationConfig(node: TypeNode | undefined): OpenApiGenerationConfi
   return undefined;
 }
 
-function getPropertyFromOptionalObject(node: TypeNode | undefined, name: string): TypeNode | undefined {
+function getPropertyFromOptionalObject(
+  node: TypeNode | undefined,
+  name: string,
+): TypeNode | undefined {
   if (!node) return undefined;
   return getProperty(node, name);
 }
@@ -263,9 +267,10 @@ if (value === "applyOpenApiAdditionalProperties") return value;
 Emit helper only when generation is present:
 
 ```ts
-const openApiHelpers = input.openapiPlan?.api.generation.additionalProperties === undefined
-  ? ""
-  : `
+const openApiHelpers =
+  input.openapiPlan?.api.generation.additionalProperties === undefined
+    ? ""
+    : `
 const applyOpenApiAdditionalProperties = (spec: Record<string, any>): Record<string, any> => {
   const visit = (value: unknown): unknown => {
     if (!value || typeof value !== "object") return value;
@@ -307,6 +312,7 @@ git commit -m "fix(app): support httpapi openapi generation config" -m "- normal
 ## Task 2: Root Exposure Through the OpenAPI Plan
 
 **Files:**
+
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 - Modify: `packages/app/src/internal/httpapiOpenApiPlan.ts`
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
@@ -388,6 +394,7 @@ git commit -m "fix(app): route httpapi openapi exposure through plan" -m "- comp
 ## Task 3: Group OpenAPI Annotations
 
 **Files:**
+
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 - Modify: `packages/app/src/internal/httpapiOpenApiPlan.ts`
 - Modify: `packages/app/src/internal/emitHttpApiSource.ts`
@@ -491,6 +498,7 @@ git commit -m "fix(app): emit httpapi group openapi annotations" -m "- plan _gro
 ## Task 4: Endpoint OpenAPI Annotations and Precedence
 
 **Files:**
+
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 - Modify: `packages/app/src/internal/extractHttpApiOpenApi.ts`
 - Modify: `packages/app/src/internal/httpapiOpenApiPlan.ts`
@@ -623,8 +631,9 @@ In `httpapiOpenApiPlan.ts`, for each endpoint:
 Use deterministic object merging:
 
 ```ts
-const mergeAnnotations = (...configs: readonly OpenApiAnnotationsConfig[]): OpenApiAnnotationsConfig =>
-  Object.assign({}, ...configs);
+const mergeAnnotations = (
+  ...configs: readonly OpenApiAnnotationsConfig[]
+): OpenApiAnnotationsConfig => Object.assign({}, ...configs);
 ```
 
 - [x] **Step 6: Emit endpoint annotations**
@@ -669,6 +678,7 @@ git commit -m "fix(app): emit httpapi endpoint openapi annotations" -m "- suppor
 ## Task 5: Scope Diagnostics
 
 **Files:**
+
 - Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
 - Modify: `packages/app/src/internal/httpapiOpenApiPlan.ts`
 - Modify: `packages/app/src/internal/httpapiOpenApiConfig.ts`
@@ -761,6 +771,7 @@ git commit -m "fix(app): diagnose invalid httpapi openapi scopes" -m "- reject g
 ## Task 6: Durable Spec Sync and Final Verification
 
 **Files:**
+
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/spec.md`
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/requirements.md`
 - Modify: `.docs/specs/httpapi-virtual-module-plugin/testing-strategy.md`

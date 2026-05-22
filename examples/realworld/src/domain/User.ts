@@ -46,9 +46,7 @@ export const Session = Schema.Struct({
 });
 export type Session = Schema.Schema.Type<typeof Session>;
 
-export const normalizeNullableProfileField = (
-  value: string | null | undefined,
-): string | null => {
+export const normalizeNullableProfileField = (value: string | null | undefined): string | null => {
   if (value == null) return null;
 
   const trimmed = value.trim();

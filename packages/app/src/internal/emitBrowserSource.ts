@@ -63,9 +63,7 @@ function emitRuntime(
 ): string {
   const dependenciesCompanion = companions.find((companion) => companion.name === "dependencies");
   const errorsCompanion = companions.find((companion) => companion.name === "errors");
-  const companionLayers = dependenciesCompanion
-    ? `${dependenciesCompanion.binding}.layers`
-    : "[]";
+  const companionLayers = dependenciesCompanion ? `${dependenciesCompanion.binding}.layers` : "[]";
   const companionLayersDeclaration = dependenciesCompanion
     ? `const companionLayers = ${companionLayers};`
     : "const companionLayers = [] as const;";
@@ -111,7 +109,7 @@ function emitRuntime(
     "  return program;",
     "}",
     "function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {",
-    "  if (typeof root !== \"string\") return root;",
+    '  if (typeof root !== "string") return root;',
     "  const element = document.querySelector(root);",
     "  if (element instanceof HTMLElement) return element;",
     "  throw new Error(`typed:browser root not found: ${root}`);",

@@ -7,11 +7,12 @@ import { ProfileFavoritesRoute } from "../common/routes.js";
 import type { Handler } from "./$route-types";
 
 export const route = ProfileFavoritesRoute;
-export const template = ((params) => Fx.gen(function* () {
+export const template = Fx.fn("ProfileFavorites")(function* (params) {
   const client = yield* ApiClient;
   const { username } = RefSubject.proxy(params);
   const data = yield* RefAsyncData.fromComputedEffect(username, (value) =>
-    profileRouteData(client, { favorites: true, username: value }));
+    profileRouteData(client, { favorites: true, username: value }),
+  );
 
   return html`${AsyncDataView(data, ProfileContent)}`;
-})) satisfies Handler;
+}) satisfies Handler;

@@ -41,7 +41,12 @@ export function getOrCreateHmrState<A>(
   if (entry) disposeEntry(entry);
 
   const value = create();
-  registry.entries.set(key, { ...descriptor, value, compatibilityFingerprint: fingerprint, dispose: options.onDispose });
+  registry.entries.set(key, {
+    ...descriptor,
+    value,
+    compatibilityFingerprint: fingerprint,
+    dispose: options.onDispose,
+  });
   return value;
 }
 
@@ -114,5 +119,7 @@ function getGlobalObject(options: HmrRegistryOptions): Record<PropertyKey, unkno
 }
 
 function isRegistry(value: unknown): value is HmrRegistry {
-  return typeof value === "object" && value !== null && value instanceof Object && "entries" in value;
+  return (
+    typeof value === "object" && value !== null && value instanceof Object && "entries" in value
+  );
 }

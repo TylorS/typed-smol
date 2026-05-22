@@ -10,7 +10,12 @@ export interface ApiHandlerBindingOptions {
   readonly body?: ApiHandlerBodyMode;
 }
 
-export interface ApiEndpointModule<A = unknown, E = never, R = never, Body extends Schema.Top = Schema.Top> {
+export interface ApiEndpointModule<
+  A = unknown,
+  E = never,
+  R = never,
+  Body extends Schema.Top = Schema.Top,
+> {
   readonly body?: Body;
   readonly handler: (params: any) => Effect.Effect<A, E, R>;
 }

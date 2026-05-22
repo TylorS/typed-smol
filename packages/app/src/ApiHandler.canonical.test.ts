@@ -18,9 +18,7 @@ describe("ApiHandler canonical public API", () => {
     expectTypeOf(handler).parameter(0).toExtend<{
       path: { slug: string };
     }>();
-    expectTypeOf(handler).returns.toExtend<
-      Effect.Effect<{ slug: string }, never, never>
-    >();
+    expectTypeOf(handler).returns.toExtend<Effect.Effect<{ slug: string }, never, never>>();
 
     return Effect.runPromise(
       handler({

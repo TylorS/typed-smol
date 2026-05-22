@@ -40,9 +40,7 @@ describe("parseTypedVirtualModuleId", () => {
 
   it("parses typed:html custom outlet", () => {
     expect(
-      parseTypedVirtualModuleId(
-        "typed:html?path=./index.html&outlet=%3C%21--app-outlet--%3E",
-      ),
+      parseTypedVirtualModuleId("typed:html?path=./index.html&outlet=%3C%21--app-outlet--%3E"),
     ).toEqual({
       ok: true,
       kind: "html",
@@ -84,33 +82,37 @@ describe("parseTypedVirtualModuleId", () => {
   });
 
   it("parses typed:server api and route targets in source order", () => {
-    expect(parseTypedVirtualModuleId("typed:server?api=./api&routes=./routes1&routes=./routes2"))
-      .toEqual({
-        ok: true,
-        kind: "server",
-        apis: ["./api"],
-        routes: ["./routes1", "./routes2"],
-        html: undefined,
-        client: undefined,
-        pages: [],
-        base: undefined,
-        name: undefined,
-      });
+    expect(
+      parseTypedVirtualModuleId("typed:server?api=./api&routes=./routes1&routes=./routes2"),
+    ).toEqual({
+      ok: true,
+      kind: "server",
+      apis: ["./api"],
+      routes: ["./routes1", "./routes2"],
+      html: undefined,
+      client: undefined,
+      pages: [],
+      base: undefined,
+      name: undefined,
+    });
   });
 
   it("parses typed:server default html and client pairing", () => {
-    expect(parseTypedVirtualModuleId("typed:server?routes=./routes&html=./index.html&client=./client.ts"))
-      .toEqual({
-        ok: true,
-        kind: "server",
-        apis: [],
-        routes: ["./routes"],
-        html: "./index.html",
-        client: "./client.ts",
-        pages: [],
-        base: undefined,
-        name: undefined,
-      });
+    expect(
+      parseTypedVirtualModuleId(
+        "typed:server?routes=./routes&html=./index.html&client=./client.ts",
+      ),
+    ).toEqual({
+      ok: true,
+      kind: "server",
+      apis: [],
+      routes: ["./routes"],
+      html: "./index.html",
+      client: "./client.ts",
+      pages: [],
+      base: undefined,
+      name: undefined,
+    });
   });
 
   it("parses typed:server repeated page pairings", () => {
@@ -151,21 +153,25 @@ describe("parseTypedVirtualModuleId", () => {
   });
 
   it("rejects typed:server ambiguous html and page pairing", () => {
-    expect(parseTypedVirtualModuleId("typed:server?routes=./routes&html=./index.html&page=home:./home.html:./home.ts"))
-      .toEqual({
-        ok: false,
-        code: "TVM-SERVER-005",
-        reason: "typed:server cannot combine page pairings with top-level html or client options",
-      });
+    expect(
+      parseTypedVirtualModuleId(
+        "typed:server?routes=./routes&html=./index.html&page=home:./home.html:./home.ts",
+      ),
+    ).toEqual({
+      ok: false,
+      code: "TVM-SERVER-005",
+      reason: "typed:server cannot combine page pairings with top-level html or client options",
+    });
   });
 
   it("rejects typed:server malformed page pairings", () => {
-    expect(parseTypedVirtualModuleId("typed:server?routes=./routes&page=home:./home.html"))
-      .toEqual({
+    expect(parseTypedVirtualModuleId("typed:server?routes=./routes&page=home:./home.html")).toEqual(
+      {
         ok: false,
         code: "TVM-SERVER-002",
         reason: 'typed:server page must use "name:html:client"',
-      });
+      },
+    );
   });
 
   it("parses typed:browser route defaults", () => {
@@ -181,16 +187,19 @@ describe("parseTypedVirtualModuleId", () => {
   });
 
   it("parses typed:browser repeated explicit routes and options", () => {
-    expect(parseTypedVirtualModuleId("typed:browser?routes=./main&routes=./admin&root=%23shell&base=/admin&mode=mpa&name=admin"))
-      .toEqual({
-        ok: true,
-        kind: "browser",
-        routes: ["./main", "./admin"],
-        root: "#shell",
-        base: "/admin",
-        mode: "mpa",
-        name: "admin",
-      });
+    expect(
+      parseTypedVirtualModuleId(
+        "typed:browser?routes=./main&routes=./admin&root=%23shell&base=/admin&mode=mpa&name=admin",
+      ),
+    ).toEqual({
+      ok: true,
+      kind: "browser",
+      routes: ["./main", "./admin"],
+      root: "#shell",
+      base: "/admin",
+      mode: "mpa",
+      name: "admin",
+    });
   });
 
   it("rejects typed:browser hydrate mode because hydration is the default behavior", () => {

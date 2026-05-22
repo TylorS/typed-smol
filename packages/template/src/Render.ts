@@ -235,7 +235,7 @@ export const DomRenderTemplate = Object.assign(
                       Effect.provideContext(ctx.services),
                       Effect.catchCause(ctx.onCause),
                       Effect.forkIn(ctx.scope),
-                    )
+                    ),
                   ),
                 );
 
@@ -722,8 +722,8 @@ const makeTemplateContext = Effect.fn(function* <
     yield* Effect.context<Renderable.Services<Values[number]> | RSink | Scope.Scope>();
   const refCounter: IndexRefCounter = yield* makeRefCounter;
   const parentScope = Context.get(services, Scope.Scope);
-  const eventHandlerScope = Context.getOrUndefined(services, CurrentEventHandlerScope)
-    ?? parentScope;
+  const eventHandlerScope =
+    Context.getOrUndefined(services, CurrentEventHandlerScope) ?? parentScope;
   const scope: Scope.Closeable = yield* Scope.fork(parentScope);
   const eventSource: EventSource = makeEventSource();
   const servicesWithScope = Context.add(

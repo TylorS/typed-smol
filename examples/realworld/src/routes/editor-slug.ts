@@ -10,7 +10,7 @@ import { EditorSlugRoute } from "../common/routes.js";
 import type { Handler } from "./$route-types";
 
 export const route = EditorSlugRoute;
-export const template = ((params) => Fx.gen(function* () {
+export const template = Fx.fn("EditorSlug")(function* (params) {
   const { slug } = RefSubject.proxy(params);
 
   return html`<section class="editor-page">
@@ -53,7 +53,7 @@ export const template = ((params) => Fx.gen(function* () {
       </div>
     </div>
   </section>`;
-})) satisfies Handler;
+}) satisfies Handler;
 
 const updateArticle = (slug: RefSubject.Computed<string>) =>
   EventHandler.make(

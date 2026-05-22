@@ -233,12 +233,7 @@ const ksuidAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 
 function ksuidTimestamp(value: string): number {
   const bytes = base62Decode(value);
-  return (
-    bytes[0] * 2 ** 24 +
-    bytes[1] * 2 ** 16 +
-    bytes[2] * 2 ** 8 +
-    bytes[3]
-  );
+  return bytes[0] * 2 ** 24 + bytes[1] * 2 ** 16 + bytes[2] * 2 ** 8 + bytes[3];
 }
 
 function base62Decode(value: string): Uint8Array {

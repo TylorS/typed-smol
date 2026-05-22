@@ -13,9 +13,7 @@ export interface VirtualPreviewResolverResult {
   readonly sourceText: string;
 }
 
-export type VirtualPreviewResolver = (
-  moduleId: string,
-) => VirtualPreviewResolverResult | undefined;
+export type VirtualPreviewResolver = (moduleId: string) => VirtualPreviewResolverResult | undefined;
 
 /**
  * Absolute path for a virtual preview file under projectRoot/node_modules/.typed/virtual/.
@@ -74,24 +72,19 @@ export function getVirtualPreviewSource(
   const nextVisited = new Set(visitedVirtualFiles);
   nextVisited.add(previewPath);
 
-  return rewriteSourceForPreviewLocation(
-    sourceText,
-    importer,
-    previewPath,
-    (moduleId) => {
-      const nested = resolveNestedVirtualModule?.(moduleId);
-      if (!nested) return undefined;
-      const nestedPreviewPath = writeNestedVirtualPreview(
-        projectRoot,
-        importer,
-        nested,
-        resolveNestedVirtualModule,
-        nextVisited,
-      );
-      if (!nestedPreviewPath) return undefined;
-      return toRelativeSpecifier(previewPath, nestedPreviewPath);
-    },
-  );
+  return rewriteSourceForPreviewLocation(sourceText, importer, previewPath, (moduleId) => {
+    const nested = resolveNestedVirtualModule?.(moduleId);
+    if (!nested) return undefined;
+    const nestedPreviewPath = writeNestedVirtualPreview(
+      projectRoot,
+      importer,
+      nested,
+      resolveNestedVirtualModule,
+      nextVisited,
+    );
+    if (!nestedPreviewPath) return undefined;
+    return toRelativeSpecifier(previewPath, nestedPreviewPath);
+  });
 }
 
 function writeNestedVirtualPreview(
@@ -119,7 +112,9 @@ function writeNestedVirtualPreview(
 }
 
 function toRelativeSpecifier(fromFile: string, toFile: string): string {
-  const relativePath = relative(dirname(fromFile), toFile).split(/[/\\]+/).join("/");
+  const relativePath = relative(dirname(fromFile), toFile)
+    .split(/[/\\]+/)
+    .join("/");
   const withJavaScriptExtension = relativePath.replace(/\.[cm]?tsx?$/, ".js");
   return withJavaScriptExtension.startsWith(".")
     ? withJavaScriptExtension

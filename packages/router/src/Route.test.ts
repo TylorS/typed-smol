@@ -207,6 +207,34 @@ describe("typed/router/Route", () => {
         expect(yield* decode({})).toEqual({});
         expect(yield* decode({ limit: "10" })).toEqual({ limit: 10 });
       }).pipe(Effect.scoped, Effect.runPromise));
+
+    it("decodes optional non-negative integer query params", () =>
+      Effect.gen(function* () {
+        const route = Route.Join(
+          Route.Parse("articles"),
+          Route.QueryParams(Route.NonNegativeInt("limit").optional()),
+        );
+        const decode = Schema.decodeEffect(route.querySchema);
+        const negative = yield* decode({ limit: "-1" }).pipe(Effect.flip);
+
+        expect(yield* decode({})).toEqual({});
+        expect(yield* decode({ limit: "10" })).toEqual({ limit: 10 });
+        expect(negative).toBeDefined();
+      }).pipe(Effect.scoped, Effect.runPromise));
+
+    it("decodes optional positive integer query params", () =>
+      Effect.gen(function* () {
+        const route = Route.Join(
+          Route.Parse("articles"),
+          Route.QueryParams(Route.PositiveInt("page").optional()),
+        );
+        const decode = Schema.decodeEffect(route.querySchema);
+        const zero = yield* decode({ page: "0" }).pipe(Effect.flip);
+
+        expect(yield* decode({})).toEqual({});
+        expect(yield* decode({ page: "2" })).toEqual({ page: 2 });
+        expect(zero).toBeDefined();
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 
   describe("pipe", () => {

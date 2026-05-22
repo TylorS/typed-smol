@@ -40,7 +40,11 @@ describe("realworld framework entrypoints", () => {
     const browserSource = readSource("browser.ts");
     const moduleId = extractTypedModuleId(browserSource, "browser");
     const generated = generatedSource(
-      createBrowserVirtualModulePlugin().build(moduleId, resolve(srcRoot, "browser.ts"), {} as never),
+      createBrowserVirtualModulePlugin().build(
+        moduleId,
+        resolve(srcRoot, "browser.ts"),
+        {} as never,
+      ),
     );
 
     expect(moduleId).toBe("typed:browser?routes=./routes");
@@ -61,7 +65,9 @@ describe("realworld framework entrypoints", () => {
     expect(generated).not.toContain("readonly run?");
     expect(browserSource).not.toContain("as Effect.Effect");
     expect(browserSource).not.toContain("root:");
-    expect(generated).toContain('import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";');
+    expect(generated).toContain(
+      'import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";',
+    );
   });
 
   it("keeps server and browser entrypoints on one route directory", () => {

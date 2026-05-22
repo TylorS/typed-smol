@@ -50,6 +50,7 @@ Typed needs a first-class application framework entrypoint. The repo already has
 Build a maintained starter template around current `@typed/app` and `@typed/vite-plugin` surfaces, add required env/config virtual plugins, expose `TypedHttpServer.layer(...)`, integrate `vavite` into `@typed/vite-plugin` for the HttpApi/SSR dev server path, then add `typed create` to copy it.
 
 Pros:
+
 - Fastest route to a working user experience with the required bells and whistles.
 - Uses current canonical specs directly.
 - Preserves the intentional virtual-module codegen architecture.
@@ -58,6 +59,7 @@ Pros:
 - Starter doubles as integration fixture.
 
 Cons:
+
 - Does not yet feel as convention-rich as SvelteKit/Next.js.
 - May expose current lower-level route/API file shape unless the template gives good examples.
 
@@ -66,10 +68,12 @@ Cons:
 Design a new app-directory convention in `@typed/app` that generates lower-level router/API modules, then scaffold against that.
 
 Pros:
+
 - Strongest "framework" feel.
 - Can hide low-level virtual imports from user code.
 
 Cons:
+
 - Higher risk and broader spec surface.
 - More likely to churn existing router/API contracts.
 - Rejected for this tranche because actual filesystem routing conflicts with the virtual-module-first direction.
@@ -79,10 +83,12 @@ Cons:
 Ship template-first scaffold now, include env/config virtual plugins, `TypedHttpServer.layer(...)`, and the one-server `vavite` dev path, and explicitly reserve extension points for future virtual-module convention layers.
 
 Pros:
+
 - Useful first deliverable with a clear runway.
 - Lets real starter friction guide deeper framework design.
 
 Cons:
+
 - Requires discipline to keep deferred features visible without implementing them prematurely.
 
 ## Recommendation

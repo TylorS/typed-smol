@@ -82,9 +82,7 @@ describe("hmrRegistry", () => {
     pruneHmrState((entry) => entry.moduleId === "/src/routes/other.ts", { globalObject });
 
     expect(disposed).toEqual(["counter", "other"]);
-    expect(
-      getOrCreateHmrState(descriptor(), () => ({ count: 3 }), { globalObject }).count,
-    ).toBe(3);
+    expect(getOrCreateHmrState(descriptor(), () => ({ count: 3 }), { globalObject }).count).toBe(3);
   });
 
   it("returns fresh state and avoids globals when disabled", () => {

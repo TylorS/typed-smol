@@ -375,14 +375,7 @@ export const attachCompilerHostAdapter = (
   };
 
   if (originalWriteFile) {
-    host.writeFile = (
-      fileName,
-      text,
-      writeByteOrderMark,
-      onError,
-      sourceFiles,
-      data,
-    ): void => {
+    host.writeFile = (fileName, text, writeByteOrderMark, onError, sourceFiles, data): void => {
       originalWriteFile(
         fileName,
         rewriteEmittedVirtualImports(text, fileName, sourceFiles),

@@ -11,7 +11,7 @@ export function emitHtmlSource(input: EmitHtmlSourceInput): string {
     'import { readFile } from "node:fs/promises";',
     'import * as TypedConfigModule from "typed:config";',
     "interface LoadHtmlOptions {",
-    "  readonly readFile?: (path: string, encoding: \"utf8\") => Promise<string>;",
+    '  readonly readFile?: (path: string, encoding: "utf8") => Promise<string>;',
     "  readonly dev?: boolean;",
     "  readonly devServer?: { readonly transformIndexHtml: (url: string, html: string) => string | Promise<string> };",
     "  readonly url?: string;",
@@ -55,10 +55,10 @@ function loadHtmlSource(): string {
     "export async function loadHtml(options: LoadHtmlOptions = {}) {",
     "  const read = options.readFile ?? readFile;",
     "  if (options.dev && options.devServer) {",
-    "    const source = await read(sourceHtmlPath, \"utf8\");",
-    "    return options.devServer.transformIndexHtml(options.url ?? \"/\", source);",
+    '    const source = await read(sourceHtmlPath, "utf8");',
+    '    return options.devServer.transformIndexHtml(options.url ?? "/", source);',
     "  }",
-    "  return read(builtHtmlPath, \"utf8\");",
+    '  return read(builtHtmlPath, "utf8");',
     "}",
   ].join("\n");
 }
@@ -66,17 +66,17 @@ function loadHtmlSource(): string {
 function clientBuildPathSource(): string {
   return [
     "function joinClientBuildPath(sourcePath: string): string {",
-    "  const clientOutDir = typedBuildConfig.clientOutDir ?? joinPath(typedBuildConfig.outDir ?? \"dist\", \"client\");",
+    '  const clientOutDir = typedBuildConfig.clientOutDir ?? joinPath(typedBuildConfig.outDir ?? "dist", "client");',
     "  return joinPath(clientOutDir, normalizeClientHtmlPath(sourcePath));",
     "}",
     "function normalizeClientHtmlPath(sourcePath: string): string {",
-    "  return sourcePath.split(\"/\").filter(isClientHtmlPathSegment).join(\"/\");",
+    '  return sourcePath.split("/").filter(isClientHtmlPathSegment).join("/");',
     "}",
     "function isClientHtmlPathSegment(segment: string): boolean {",
-    "  return segment !== \"\" && segment !== \".\" && segment !== \"..\";",
+    '  return segment !== "" && segment !== "." && segment !== "..";',
     "}",
     "function joinPath(...parts: readonly string[]): string {",
-    "  return parts.flatMap((part) => part.split(\"/\")).filter(Boolean).join(\"/\");",
+    '  return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");',
     "}",
   ].join("\n");
 }

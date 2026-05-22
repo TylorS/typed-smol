@@ -32,7 +32,4 @@ export const map: {
 export const as: {
   <B>(b: B): <A, E, R>(self: Fx<A, E, R>) => Fx<B, E, R>;
   <A, E, R, B>(self: Fx<A, E, R>, b: B): Fx<B, E, R>;
-} = dual(
-  2,
-  <A, E, R, B>(self: Fx<A, E, R>, b: B): Fx<B, E, R> => map(self, () => b)
-);
+} = dual(2, <A, E, R, B>(self: Fx<A, E, R>, b: B): Fx<B, E, R> => map(self, () => b));

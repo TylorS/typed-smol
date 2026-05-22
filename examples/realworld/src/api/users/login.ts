@@ -12,7 +12,5 @@ export const body = LoginUserRequest;
 export const success = UserResponse;
 
 export const handler = Effect.fn("Users.login")(function* ({ body }) {
-  return yield* respond(
-    Users.use((users) => users.login(body)),
-  );
+  return yield* respond(Users.use((users) => users.login(body)));
 }) satisfies RawHandler<Users>;

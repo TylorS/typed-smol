@@ -205,45 +205,45 @@ Explicit cleanup flow:
 
 ## Failure Modes and Mitigations
 
-| failure | impact | mitigation |
-| ------- | ------ | ---------- |
-| Corrupt per-artifact manifest | Cache entry cannot be trusted | Treat as cache miss, rebuild, emit clear diagnostic if rebuild fails. |
-| Corrupt project-level index | Discovery/cleanup degraded | Rebuild index from per-artifact manifests or continue without index; do not invalidate valid artifacts. |
-| Missing generated source | Manifest cannot be used | Treat as cache miss and rebuild. |
-| Generated source hash mismatch | Possible partial write or external edit | Treat as invalid; rebuild with atomic write. |
-| Plugin fingerprint unavailable | Unsafe cache reuse | Mark entry non-reusable unless explicitly allowed by a future compatibility rule. |
-| Concurrent writers | Last write wins could overwrite another valid artifact | Atomic writes and manifest validation ensure readers only observe complete valid entries. |
+| failure                              | impact                                                                  | mitigation                                                                                                                              |
+| ------------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Corrupt per-artifact manifest        | Cache entry cannot be trusted                                           | Treat as cache miss, rebuild, emit clear diagnostic if rebuild fails.                                                                   |
+| Corrupt project-level index          | Discovery/cleanup degraded                                              | Rebuild index from per-artifact manifests or continue without index; do not invalidate valid artifacts.                                 |
+| Missing generated source             | Manifest cannot be used                                                 | Treat as cache miss and rebuild.                                                                                                        |
+| Generated source hash mismatch       | Possible partial write or external edit                                 | Treat as invalid; rebuild with atomic write.                                                                                            |
+| Plugin fingerprint unavailable       | Unsafe cache reuse                                                      | Mark entry non-reusable unless explicitly allowed by a future compatibility rule.                                                       |
+| Concurrent writers                   | Last write wins could overwrite another valid artifact                  | Atomic writes and manifest validation ensure readers only observe complete valid entries.                                               |
 | Cleanup races active materialization | Generated source, manifests, or writer locks could be deleted mid-write | Serialize `clean()` and `materialize()` through `node_modules/.typed/virtual.cleanup.lock`, which is outside the deleted artifact root. |
-| Watch event missed | Stale cache risk | Fingerprint validation on read remains authoritative. |
-| Regex import rewrite misses syntax | Broken generated source | Replace regex-only behavior with robust module-specifier handling or explicitly documented unsupported syntax. |
+| Watch event missed                   | Stale cache risk                                                        | Fingerprint validation on read remains authoritative.                                                                                   |
+| Regex import rewrite misses syntax   | Broken generated source                                                 | Replace regex-only behavior with robust module-specifier handling or explicitly documented unsupported syntax.                          |
 
 ## Requirement Traceability
 
-| requirement_id | design_element | notes |
-| -------------- | -------------- | ----- |
-| FR-1 | Logical Identity | Keeps `typed-virtual://` stable. |
-| FR-2 | Physical Artifact Root | Defaults to `node_modules/.typed/virtual`. |
-| FR-3 | Per-Artifact Manifest, Project-Level Index | Manifest/cache protocol. |
-| FR-4 | Project-Level Index | Both manifest layers. |
-| FR-5 | Per-Artifact Manifest | Diagnostics and warnings stored in manifest. |
-| FR-6 | Fingerprints | Cache reuse validity. |
-| FR-7 | Fingerprints | Plugin implementation/config/package identity. |
-| FR-8 | Fingerprints | TypeScript version and parsed tsconfig. |
-| FR-9 | Adapter Integration | Shared contract for Vite, vmc, TS plugin, VS Code. |
-| FR-10 | Artifact Store API | Atomic writes and last-valid-writer-wins. |
-| FR-11 | Physical Artifact Root | Persistent cache behavior. |
-| FR-12 | Data and Control Flow | Virtual-to-virtual import handling. |
-| FR-13 | Adapter Integration, Failure Modes | Consistent diagnostics. |
-| FR-14 | Artifact Store API, Project-Level Index | Explicit clean/prune tooling. |
-| NFR-1 | Fingerprints | Content-addressed correctness. |
-| NFR-2 | Per-Artifact Manifest, Project-Level Index | Deterministic and inspectable metadata. |
-| NFR-3 | Artifact Store API | Atomic disk writes. |
-| NFR-4 | Artifact Store API | Cross-process local development safety. |
-| NFR-5 | Adapter Integration | Reduced recomputation across surfaces. |
-| NFR-6 | Logical Identity | Avoid physical path dependency in plugin APIs. |
-| NFR-7 | Failure Modes | Robust module specifier handling. |
-| NFR-8 | Failure Modes | Fail clearly on corrupt/stale/missing artifacts. |
-| NFR-9 | Testing Strategy | Regression coverage before higher-level plugin work. |
+| requirement_id | design_element                             | notes                                                |
+| -------------- | ------------------------------------------ | ---------------------------------------------------- |
+| FR-1           | Logical Identity                           | Keeps `typed-virtual://` stable.                     |
+| FR-2           | Physical Artifact Root                     | Defaults to `node_modules/.typed/virtual`.           |
+| FR-3           | Per-Artifact Manifest, Project-Level Index | Manifest/cache protocol.                             |
+| FR-4           | Project-Level Index                        | Both manifest layers.                                |
+| FR-5           | Per-Artifact Manifest                      | Diagnostics and warnings stored in manifest.         |
+| FR-6           | Fingerprints                               | Cache reuse validity.                                |
+| FR-7           | Fingerprints                               | Plugin implementation/config/package identity.       |
+| FR-8           | Fingerprints                               | TypeScript version and parsed tsconfig.              |
+| FR-9           | Adapter Integration                        | Shared contract for Vite, vmc, TS plugin, VS Code.   |
+| FR-10          | Artifact Store API                         | Atomic writes and last-valid-writer-wins.            |
+| FR-11          | Physical Artifact Root                     | Persistent cache behavior.                           |
+| FR-12          | Data and Control Flow                      | Virtual-to-virtual import handling.                  |
+| FR-13          | Adapter Integration, Failure Modes         | Consistent diagnostics.                              |
+| FR-14          | Artifact Store API, Project-Level Index    | Explicit clean/prune tooling.                        |
+| NFR-1          | Fingerprints                               | Content-addressed correctness.                       |
+| NFR-2          | Per-Artifact Manifest, Project-Level Index | Deterministic and inspectable metadata.              |
+| NFR-3          | Artifact Store API                         | Atomic disk writes.                                  |
+| NFR-4          | Artifact Store API                         | Cross-process local development safety.              |
+| NFR-5          | Adapter Integration                        | Reduced recomputation across surfaces.               |
+| NFR-6          | Logical Identity                           | Avoid physical path dependency in plugin APIs.       |
+| NFR-7          | Failure Modes                              | Robust module specifier handling.                    |
+| NFR-8          | Failure Modes                              | Fail clearly on corrupt/stale/missing artifacts.     |
+| NFR-9          | Testing Strategy                           | Regression coverage before higher-level plugin work. |
 
 ## References Consulted
 

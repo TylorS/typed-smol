@@ -38,7 +38,9 @@ describe("BrowserVirtualModulePlugin", () => {
 
     expect(plugin.shouldResolve("typed:browser?routes=*", "/project/src/entry.ts")).toBe(true);
     expect(plugin.shouldResolve("typed:browser?mode=hydrate", "/project/src/entry.ts")).toBe(false);
-    expect(plugin.shouldResolve("typed:server?routes=./routes", "/project/src/entry.ts")).toBe(false);
+    expect(plugin.shouldResolve("typed:server?routes=./routes", "/project/src/entry.ts")).toBe(
+      false,
+    );
   });
 
   it("emits composable run, hydrate, and BrowserRuntime exports for wildcard routes", () => {
@@ -152,7 +154,9 @@ describe("BrowserVirtualModulePlugin", () => {
     });
     const source = buildBrowser("typed:browser?routes=./routes", fixture.importer) as string;
 
-    expect(source).toContain('import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";');
+    expect(source).toContain(
+      'import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";',
+    );
     expect(source).toContain('import * as BrowserNavigationCompanion from "./.navigation.js";');
     expect(source).toContain('import * as BrowserErrorsCompanion from "./.errors.js";');
     expect(source).toContain("BrowserDependenciesCompanion.layers");

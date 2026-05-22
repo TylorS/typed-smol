@@ -24,10 +24,7 @@ export function makeState(
   return RefSubject.make(initial);
 }
 
-export function setOpen(
-  state: RefSubject.RefSubject<State>,
-  open: boolean,
-): Effect.Effect<State> {
+export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
@@ -46,7 +43,9 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
     popovertargetaction="toggle"
     aria-expanded=${open}
     .data=${{ open }}
-  >${options.content}</button>`;
+  >
+    ${options.content}
+  </button>`;
 }
 
 export interface ContentOptions {
@@ -62,12 +61,9 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
     setOpen(options.state, event.newState === "open"),
   );
 
-  return html`<div
-    id=${id}
-    popover=${mode}
-    .data=${{ open, mode }}
-    ontoggle=${onToggle}
-  >${options.content}</div>`;
+  return html`<div id=${id} popover=${mode} .data=${{ open, mode }} ontoggle=${onToggle}>
+    ${options.content}
+  </div>`;
 }
 
 interface ToggleEventLike extends Event {

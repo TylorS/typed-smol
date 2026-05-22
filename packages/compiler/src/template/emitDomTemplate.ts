@@ -10,10 +10,7 @@ import type {
 
 export interface CompiledDomTemplate {
   readonly plan: TemplatePlan;
-  readonly renderInto: (
-    root: HTMLElement,
-    values?: ArrayLike<unknown>,
-  ) => Promise<readonly Node[]>;
+  readonly renderInto: (root: HTMLElement, values?: ArrayLike<unknown>) => Promise<readonly Node[]>;
 }
 
 export function emitDomTemplate(plan: TemplatePlan): CompiledDomTemplate {
@@ -75,7 +72,13 @@ async function renderNode(
     case "sparseComment":
       return [document.createComment(await renderSparse(node.nodes, values))];
     case "doctype":
-      return [document.implementation.createDocumentType(node.name, node.publicId ?? "", node.systemId ?? "")];
+      return [
+        document.implementation.createDocumentType(
+          node.name,
+          node.publicId ?? "",
+          node.systemId ?? "",
+        ),
+      ];
   }
 }
 
@@ -144,7 +147,11 @@ async function applyAttribute(
     case "attribute":
       return setStaticAttribute(element, attribute.name, attribute.value);
     case "dynamicAttribute":
-      return setAttribute(element, attribute.name, await resolveValue(values[attribute.valueIndex]));
+      return setAttribute(
+        element,
+        attribute.name,
+        await resolveValue(values[attribute.valueIndex]),
+      );
     case "boolean": {
       element.toggleAttribute(attribute.name, !!(await resolveValue(values[attribute.valueIndex])));
       return;
@@ -200,7 +207,11 @@ async function applyProperties(element: HTMLElement, value: unknown): Promise<vo
   }
 }
 
-async function applyPropertyEntry(element: HTMLElement, key: string, value: unknown): Promise<void> {
+async function applyPropertyEntry(
+  element: HTMLElement,
+  key: string,
+  value: unknown,
+): Promise<void> {
   if (key === "class" || key === "className" || key === "classname") {
     setClassList(element, await resolveValue(value));
   } else if (key === ".data") {
@@ -238,7 +249,8 @@ async function setupRef(element: HTMLElement, value: unknown): Promise<void> {
   if (value === null || value === undefined) return;
   if (typeof value !== "function") throw new Error("Invalid value provided to ref part");
   const result = value(element);
-  if (Effect.isEffect(result)) await Effect.runPromise(result as Effect.Effect<unknown, never, never>);
+  if (Effect.isEffect(result))
+    await Effect.runPromise(result as Effect.Effect<unknown, never, never>);
 }
 
 async function renderSparse(
@@ -257,7 +269,9 @@ async function setSparseClassList(
   values: ArrayLike<unknown>,
 ): Promise<void> {
   const parts = await Promise.all(
-    nodes.map((node) => (node.kind === "text" ? node.value : resolveValue(values[node.valueIndex]))),
+    nodes.map((node) =>
+      node.kind === "text" ? node.value : resolveValue(values[node.valueIndex]),
+    ),
   );
   element.className = parts.flatMap(getClassList).join(" ");
 }
@@ -267,7 +281,8 @@ async function renderValue(value: unknown): Promise<string> {
 }
 
 async function resolveValue(value: unknown): Promise<unknown> {
-  if (Effect.isEffect(value)) return Effect.runPromise(value as Effect.Effect<unknown, never, never>);
+  if (Effect.isEffect(value))
+    return Effect.runPromise(value as Effect.Effect<unknown, never, never>);
   return value;
 }
 

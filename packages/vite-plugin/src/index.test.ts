@@ -97,13 +97,14 @@ describe("typedVitePlugin", () => {
 
   it("enables Vite-native tsconfig path resolution without vite-tsconfig-paths", () => {
     const plugins = typedVitePlugin({ compression: false });
-    const tsconfigPlugin = plugins.find((plugin) =>
-      (plugin as { name?: string }).name === "typed-vite:native-tsconfig-paths"
+    const tsconfigPlugin = plugins.find(
+      (plugin) => (plugin as { name?: string }).name === "typed-vite:native-tsconfig-paths",
     );
     const config = {};
 
-    expect(plugins.some((plugin) => (plugin as { name?: string }).name === "vite-tsconfig-paths"))
-      .toBe(false);
+    expect(
+      plugins.some((plugin) => (plugin as { name?: string }).name === "vite-tsconfig-paths"),
+    ).toBe(false);
     expect(tsconfigPlugin).toBeDefined();
     (tsconfigPlugin as { config: (config: Record<string, any>) => void }).config(config);
     expect(config).toEqual({ resolve: { tsconfigPaths: true } });
@@ -112,9 +113,11 @@ describe("typedVitePlugin", () => {
   it("does not configure native tsconfig path resolution when disabled", () => {
     const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
 
-    expect(plugins.some((plugin) =>
-      (plugin as { name?: string }).name === "typed-vite:native-tsconfig-paths"
-    )).toBe(false);
+    expect(
+      plugins.some(
+        (plugin) => (plugin as { name?: string }).name === "typed-vite:native-tsconfig-paths",
+      ),
+    ).toBe(false);
   });
 
   it("returns virtual-modules plugin with resolveId and load", () => {
@@ -165,8 +168,8 @@ describe("typedVitePlugin", () => {
       compression: false,
       serverEntry: "/src/entry.server.ts",
     });
-    const runnablePlugin = plugins.find((plugin) =>
-      (plugin as { name?: string }).name === "typed-vavite:ssr-runnable-environment"
+    const runnablePlugin = plugins.find(
+      (plugin) => (plugin as { name?: string }).name === "typed-vavite:ssr-runnable-environment",
     );
     const config = {};
 
@@ -195,10 +198,7 @@ describe("typedVitePlugin", () => {
 
     expect(typeof apply).toBe("function");
     expect(
-      (apply as (config: unknown, env: { readonly mode: string }) => boolean)(
-        {},
-        { mode: "test" },
-      ),
+      (apply as (config: unknown, env: { readonly mode: string }) => boolean)({}, { mode: "test" }),
     ).toBe(false);
     expect(
       (apply as (config: unknown, env: { readonly mode: string }) => boolean)(

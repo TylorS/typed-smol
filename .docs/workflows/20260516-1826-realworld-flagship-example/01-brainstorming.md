@@ -51,49 +51,49 @@ Build the flagship `@typed/app` example application using the RealWorld specific
 
 ## Typed Module Inventory
 
-| module | likely role |
-| ------ | ----------- |
-| `@typed/app` | `typed:*`, `router:`, and `api:` virtual module plugin surface; typed config; API handler helper. |
-| `@typed/router` | Route schemas, matchers, route guards/layouts/catches, browser/server router layers. |
-| `@typed/template` | HTML templates, event handlers, SSR string rendering, DOM rendering, hydration. |
-| `@typed/ui` | `Link` and Effect HTTP router SSR bridge. |
-| `@typed/fx` | `Fx`, `RefSubject`, `RefArray`, `RefRecord`, `Subject`, and reactive UI state. |
-| `@typed/navigation` | Browser and memory navigation layers, route transition hooks, blocking navigation. |
-| `@typed/async-data` | Remote-data UI state, refresh/loading/error/optimistic states with Schema codec support. |
-| `@typed/guard` | Schema-backed route/request guards and composable validation. |
-| `@typed/id` | Branded IDs, UUID/ULID helpers if the example needs local-generated IDs. |
-| `@typed/vite-plugin` | Vite integration and virtual module resolver. |
+| module                    | likely role                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| `@typed/app`              | `typed:*`, `router:`, and `api:` virtual module plugin surface; typed config; API handler helper.  |
+| `@typed/router`           | Route schemas, matchers, route guards/layouts/catches, browser/server router layers.               |
+| `@typed/template`         | HTML templates, event handlers, SSR string rendering, DOM rendering, hydration.                    |
+| `@typed/ui`               | `Link` and Effect HTTP router SSR bridge.                                                          |
+| `@typed/fx`               | `Fx`, `RefSubject`, `RefArray`, `RefRecord`, `Subject`, and reactive UI state.                     |
+| `@typed/navigation`       | Browser and memory navigation layers, route transition hooks, blocking navigation.                 |
+| `@typed/async-data`       | Remote-data UI state, refresh/loading/error/optimistic states with Schema codec support.           |
+| `@typed/guard`            | Schema-backed route/request guards and composable validation.                                      |
+| `@typed/id`               | Branded IDs, UUID/ULID helpers if the example needs local-generated IDs.                           |
+| `@typed/vite-plugin`      | Vite integration and virtual module resolver.                                                      |
 | `@typed/virtual-modules*` | Generated source, TypeScript plugin, Vite resolver, and compiler support for example verification. |
-| `@typed/tsconfig` | Example tsconfig presets. |
-| `@typed/threads` | Not currently useful for RealWorld; scaffold-only. |
+| `@typed/tsconfig`         | Example tsconfig presets.                                                                          |
+| `@typed/threads`          | Not currently useful for RealWorld; scaffold-only.                                                 |
 
 ## Effect Module Inventory
 
-| module/facet | likely role |
-| ------------ | ----------- |
-| `effect/Schema` | All RealWorld domain entities, request payloads, response payloads, URL/query codecs, local storage codecs. |
-| `effect/Effect` | Business workflows, API calls, SSR/browser runtime boundaries, typed errors. |
-| `effect/Context` | Domain/application/infrastructure service tags. |
-| `effect/Layer` | Runtime composition for API client, auth/session, state stores, browser/server layers. |
-| `effect/Option` | Optional current user, optional profile fields, optional query filters, maybe-auth flows. |
-| `effect/Result`, `effect/Exit`, `effect/Cause` | Remote call conversion, AsyncData failure modeling, test assertions. |
-| `effect/Data` | Tagged domain errors where structural equality and pattern matching help. |
-| `effect/Match` | Domain UI state and error presentation matching. |
-| `effect/Array`, `effect/Record`, `effect/String`, `effect/Boolean`, `effect/Predicate` | Pure domain transformations without ad-hoc utility dependencies. |
-| `effect/Redacted` | Candidate for tokens/passwords if compatible with current installed Effect version and UX requirements. |
-| `effect/Clock`, `effect/DateTime`, `effect/Duration`, `effect/Schedule` | Cache freshness, optimistic timestamps, retries/backoff, refresh cadence if needed. |
-| `effect/Ref` | Internal non-reactive mutable state when `RefSubject` is not appropriate. |
-| `effect/Fiber`, `effect/Scope` | Browser runtime lifecycle, background refresh, SSR render scoping. |
-| `effect/Stream` | Interop with `Fx` or streaming render/server APIs when useful. |
-| `effect/Config` | Runtime configuration for API base URL and server options via `typed:config` / `typed:env`. |
-| `effect/unstable/http/HttpClient` and related facets | RealWorld HTTP API client implementation without adding a separate fetch/client library. |
-| `effect/unstable/httpapi/*` | Generated `api:` module integration, HttpApi client/server contracts, and OpenAPI JSON exposure. |
-| `effect/unstable/sql/SqlClient` | Backend SQLite persistence boundary through Effect SQL. |
-| `effect/unstable/sql/SqlSchema` | Schema-driven SQL result decoding and repository query helpers. |
-| `effect/unstable/sql/Migrator` | Local schema migrations for the RealWorld SQLite database. |
-| `effect/unstable/sql/SqlError` | Typed persistence failures surfaced through repositories and endpoint errors. |
-| `effect/unstable/persistence/KeyValueStore` | Browser token/session storage using existing pattern from TodoMVC. |
-| `effect/testing/FastCheck`, `effect/testing/TestSchema`, `effect/testing/TestClock` | Property/schema tests and deterministic state/refresh tests. |
+| module/facet                                                                           | likely role                                                                                                 |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `effect/Schema`                                                                        | All RealWorld domain entities, request payloads, response payloads, URL/query codecs, local storage codecs. |
+| `effect/Effect`                                                                        | Business workflows, API calls, SSR/browser runtime boundaries, typed errors.                                |
+| `effect/Context`                                                                       | Domain/application/infrastructure service tags.                                                             |
+| `effect/Layer`                                                                         | Runtime composition for API client, auth/session, state stores, browser/server layers.                      |
+| `effect/Option`                                                                        | Optional current user, optional profile fields, optional query filters, maybe-auth flows.                   |
+| `effect/Result`, `effect/Exit`, `effect/Cause`                                         | Remote call conversion, AsyncData failure modeling, test assertions.                                        |
+| `effect/Data`                                                                          | Tagged domain errors where structural equality and pattern matching help.                                   |
+| `effect/Match`                                                                         | Domain UI state and error presentation matching.                                                            |
+| `effect/Array`, `effect/Record`, `effect/String`, `effect/Boolean`, `effect/Predicate` | Pure domain transformations without ad-hoc utility dependencies.                                            |
+| `effect/Redacted`                                                                      | Candidate for tokens/passwords if compatible with current installed Effect version and UX requirements.     |
+| `effect/Clock`, `effect/DateTime`, `effect/Duration`, `effect/Schedule`                | Cache freshness, optimistic timestamps, retries/backoff, refresh cadence if needed.                         |
+| `effect/Ref`                                                                           | Internal non-reactive mutable state when `RefSubject` is not appropriate.                                   |
+| `effect/Fiber`, `effect/Scope`                                                         | Browser runtime lifecycle, background refresh, SSR render scoping.                                          |
+| `effect/Stream`                                                                        | Interop with `Fx` or streaming render/server APIs when useful.                                              |
+| `effect/Config`                                                                        | Runtime configuration for API base URL and server options via `typed:config` / `typed:env`.                 |
+| `effect/unstable/http/HttpClient` and related facets                                   | RealWorld HTTP API client implementation without adding a separate fetch/client library.                    |
+| `effect/unstable/httpapi/*`                                                            | Generated `api:` module integration, HttpApi client/server contracts, and OpenAPI JSON exposure.            |
+| `effect/unstable/sql/SqlClient`                                                        | Backend SQLite persistence boundary through Effect SQL.                                                     |
+| `effect/unstable/sql/SqlSchema`                                                        | Schema-driven SQL result decoding and repository query helpers.                                             |
+| `effect/unstable/sql/Migrator`                                                         | Local schema migrations for the RealWorld SQLite database.                                                  |
+| `effect/unstable/sql/SqlError`                                                         | Typed persistence failures surfaced through repositories and endpoint errors.                               |
+| `effect/unstable/persistence/KeyValueStore`                                            | Browser token/session storage using existing pattern from TodoMVC.                                          |
+| `effect/testing/FastCheck`, `effect/testing/TestSchema`, `effect/testing/TestClock`    | Property/schema tests and deterministic state/refresh tests.                                                |
 
 ## Dependency Guardrail
 

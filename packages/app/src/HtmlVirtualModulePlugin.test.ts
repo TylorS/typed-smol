@@ -10,7 +10,9 @@ describe("HtmlVirtualModulePlugin", () => {
   it("resolves valid typed:html ids", () => {
     const plugin = createHtmlVirtualModulePlugin();
 
-    expect(plugin.shouldResolve("typed:html?path=./index.html", "/project/src/entry.ts")).toBe(true);
+    expect(plugin.shouldResolve("typed:html?path=./index.html", "/project/src/entry.ts")).toBe(
+      true,
+    );
     expect(plugin.shouldResolve("typed:html", "/project/src/entry.ts")).toBe(false);
     expect(plugin.shouldResolve("typed:env", "/project/src/entry.ts")).toBe(false);
   });

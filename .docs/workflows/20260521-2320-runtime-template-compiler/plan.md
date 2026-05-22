@@ -12,18 +12,18 @@
 
 ## Subgoal DAG
 
-| subgoal_id | objective | prerequisites | risk | requirement_links | success_check |
-| ---------- | --------- | ------------- | ---- | ----------------- | ------------- |
-| SG-1 | Scaffold `@typed/compiler` and lock public contracts. | approved spec | medium | FR-3, FR-16, FR-17, AC-2 | `pnpm --filter @typed/compiler build` and package import tests pass. |
-| SG-2 | Build complete template IR for all `html` template forms. | SG-1 | high | FR-4, FR-7, FR-20, AC-3, AC-4 | IR tests cover static, dynamic, sparse, event, ref, nested, class/data/property/boolean parts. |
-| SG-3 | Emit server-optimized template output. | SG-2 | high | FR-5, FR-7, FR-20, AC-3, AC-4 | Server emitter fixtures match current `HtmlRenderTemplate` output. |
-| SG-4 | Emit DOM-optimized template output. | SG-2 | high | FR-6, FR-7, FR-20, AC-3, AC-4 | DOM emitter fixtures match current `DomRenderTemplate`/hydration behavior. |
-| SG-5 | Add `@typed/app` runtime functions. | SG-3, SG-4 | medium | FR-1, FR-10, AC-1 | Runtime API tests mount, hydrate, and render compiled/fallback templates. |
-| SG-6 | Add `RefSubject.Service` and dev HMR registry. | SG-1 | high | FR-11 through FR-15, FR-23 through FR-26, NFR-5, NFR-6, NFR-8, NFR-13, AC-6, AC-7 | HMR registry unit tests preserve compatible state and reject incompatible state. |
-| SG-7 | Compile route/dependency HMR boundaries. | SG-2, SG-6 | high | FR-30 through FR-36, AC-6 | Route/dependency fixture preserves service-backed state and honors opt-out. |
-| SG-8 | Add closure-to-context rewriting. | SG-6, SG-7 | high | FR-27 through FR-29, NFR-14, AC-12 | Positive and negative closure rewrite fixtures pass. |
-| SG-9 | Integrate Vite/vmc/artifact behavior and examples. | SG-3, SG-4, SG-5, SG-7 | high | FR-18, FR-19, FR-21, FR-22, NFR-1, NFR-2, NFR-10, AC-8, AC-9, AC-10 | Vite HMR fixture, vmc typecheck fixture, and server+DOM example pass. |
-| SG-10 | Final hardening and traceability. | SG-1 through SG-9 | medium | NFR-9, NFR-11, NFR-12, AC-11 | Full package gates pass; `memories.md` and plan statuses are updated. |
+| subgoal_id | objective                                                 | prerequisites          | risk   | requirement_links                                                                 | success_check                                                                                  |
+| ---------- | --------------------------------------------------------- | ---------------------- | ------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| SG-1       | Scaffold `@typed/compiler` and lock public contracts.     | approved spec          | medium | FR-3, FR-16, FR-17, AC-2                                                          | `pnpm --filter @typed/compiler build` and package import tests pass.                           |
+| SG-2       | Build complete template IR for all `html` template forms. | SG-1                   | high   | FR-4, FR-7, FR-20, AC-3, AC-4                                                     | IR tests cover static, dynamic, sparse, event, ref, nested, class/data/property/boolean parts. |
+| SG-3       | Emit server-optimized template output.                    | SG-2                   | high   | FR-5, FR-7, FR-20, AC-3, AC-4                                                     | Server emitter fixtures match current `HtmlRenderTemplate` output.                             |
+| SG-4       | Emit DOM-optimized template output.                       | SG-2                   | high   | FR-6, FR-7, FR-20, AC-3, AC-4                                                     | DOM emitter fixtures match current `DomRenderTemplate`/hydration behavior.                     |
+| SG-5       | Add `@typed/app` runtime functions.                       | SG-3, SG-4             | medium | FR-1, FR-10, AC-1                                                                 | Runtime API tests mount, hydrate, and render compiled/fallback templates.                      |
+| SG-6       | Add `RefSubject.Service` and dev HMR registry.            | SG-1                   | high   | FR-11 through FR-15, FR-23 through FR-26, NFR-5, NFR-6, NFR-8, NFR-13, AC-6, AC-7 | HMR registry unit tests preserve compatible state and reject incompatible state.               |
+| SG-7       | Compile route/dependency HMR boundaries.                  | SG-2, SG-6             | high   | FR-30 through FR-36, AC-6                                                         | Route/dependency fixture preserves service-backed state and honors opt-out.                    |
+| SG-8       | Add closure-to-context rewriting.                         | SG-6, SG-7             | high   | FR-27 through FR-29, NFR-14, AC-12                                                | Positive and negative closure rewrite fixtures pass.                                           |
+| SG-9       | Integrate Vite/vmc/artifact behavior and examples.        | SG-3, SG-4, SG-5, SG-7 | high   | FR-18, FR-19, FR-21, FR-22, NFR-1, NFR-2, NFR-10, AC-8, AC-9, AC-10               | Vite HMR fixture, vmc typecheck fixture, and server+DOM example pass.                          |
+| SG-10      | Final hardening and traceability.                         | SG-1 through SG-9      | medium | NFR-9, NFR-11, NFR-12, AC-11                                                      | Full package gates pass; `memories.md` and plan statuses are updated.                          |
 
 ## File Structure
 
@@ -59,32 +59,33 @@ Modify:
 
 ## Ordered Tasks
 
-| task_id | owner | prerequisites | validation | safeguards | rollback |
-| ------- | ----- | ------------- | ---------- | ---------- | -------- |
-| T1 | direct | approved plan | `pnpm --filter @typed/compiler build` | scaffold only, no runtime behavior | delete `packages/compiler` scaffold |
-| T2 | direct | T1 | `pnpm --filter @typed/compiler test -- TemplatePlan` | IR-only changes | revert compiler IR files |
-| T3 | direct | T2 | `pnpm --filter @typed/compiler test -- analyzeTemplate` | compare against current parser output | revert analyzer files |
-| T4 | direct | T3 | `pnpm --filter @typed/compiler test -- emitServerTemplate` | use current HTML renderer as oracle | revert server emitter |
-| T5 | direct | T3 | `pnpm --filter @typed/compiler test -- emitDomTemplate` | use current DOM/hydration tests as oracle | completed in `feat: emit dom optimized templates` |
-| T6 | direct | T4, T5 | `pnpm --filter @typed/compiler test -- fallback` | unsupported shapes fallback only | completed in `feat: add template compiler fallback path` |
-| T7 | direct | T4, T5 | `pnpm --filter @typed/app test -- runtime` | runtime accepts fallback and compiled templates | completed in `feat(app): add typed runtime template functions` |
-| T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | completed in `feat(fx): add refsubject service identity` |
-| T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | completed in `feat(app): add typed hmr state registry` |
-| T10 | direct | T8, T9 | `pnpm --filter @typed/compiler test -- analyzeComponentHmr` | analysis only, no source rewrite | completed in `feat(compiler): analyze component hmr state` |
-| T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | completed in `feat(compiler): infer route hmr dependencies` |
-| T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | completed in `feat(compiler): plan closure hmr contexts` |
-| T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | completed in `feat(app): wire browser runtime templates` |
-| T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | completed in `feat(app): wire server runtime templates` |
-| T15 | direct | T13, T14 | `pnpm --filter @typed/compiler test -- viteHmrFixture` | isolated fixture | completed in `feat(compiler): prove route hmr state fixture` |
-| T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | completed in `feat(compiler): integrate template output fingerprints` |
-| T17 | direct | T15, T16 | `pnpm --filter @typed/app exec vitest run src/runtimeTemplateCompilerExample.test.ts` | example only after package gates | completed in `test: add runtime template compiler example` |
-| T18 | direct | T1 through T17 | package gates plus `pnpm build` | final audit before commit/PR | completed in `chore: finalize runtime template compiler tranche` |
+| task_id | owner  | prerequisites    | validation                                                                            | safeguards                                      | rollback                                                              |
+| ------- | ------ | ---------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
+| T1      | direct | approved plan    | `pnpm --filter @typed/compiler build`                                                 | scaffold only, no runtime behavior              | delete `packages/compiler` scaffold                                   |
+| T2      | direct | T1               | `pnpm --filter @typed/compiler test -- TemplatePlan`                                  | IR-only changes                                 | revert compiler IR files                                              |
+| T3      | direct | T2               | `pnpm --filter @typed/compiler test -- analyzeTemplate`                               | compare against current parser output           | revert analyzer files                                                 |
+| T4      | direct | T3               | `pnpm --filter @typed/compiler test -- emitServerTemplate`                            | use current HTML renderer as oracle             | revert server emitter                                                 |
+| T5      | direct | T3               | `pnpm --filter @typed/compiler test -- emitDomTemplate`                               | use current DOM/hydration tests as oracle       | completed in `feat: emit dom optimized templates`                     |
+| T6      | direct | T4, T5           | `pnpm --filter @typed/compiler test -- fallback`                                      | unsupported shapes fallback only                | completed in `feat: add template compiler fallback path`              |
+| T7      | direct | T4, T5           | `pnpm --filter @typed/app test -- runtime`                                            | runtime accepts fallback and compiled templates | completed in `feat(app): add typed runtime template functions`        |
+| T8      | direct | T1               | `pnpm --filter @typed/fx test -- RefSubject`                                          | no HMR yet; service API only                    | completed in `feat(fx): add refsubject service identity`              |
+| T9      | direct | T8               | `pnpm --filter @typed/app test -- hmrRegistry`                                        | dev-only registry, no Vite wiring yet           | completed in `feat(app): add typed hmr state registry`                |
+| T10     | direct | T8, T9           | `pnpm --filter @typed/compiler test -- analyzeComponentHmr`                           | analysis only, no source rewrite                | completed in `feat(compiler): analyze component hmr state`            |
+| T11     | direct | T10              | `pnpm --filter @typed/compiler test -- dependencyHmr`                                 | opt-out proves no preservation                  | completed in `feat(compiler): infer route hmr dependencies`           |
+| T12     | direct | T10, T11         | `pnpm --filter @typed/compiler test -- closureContext`                                | no arbitrary closure serialization              | completed in `feat(compiler): plan closure hmr contexts`              |
+| T13     | direct | T7, T10          | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin`                         | preserve VM plugin ordering                     | completed in `feat(app): wire browser runtime templates`              |
+| T14     | direct | T7               | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin`                          | preserve config-driven build paths              | completed in `feat(app): wire server runtime templates`               |
+| T15     | direct | T13, T14         | `pnpm --filter @typed/compiler test -- viteHmrFixture`                                | isolated fixture                                | completed in `feat(compiler): prove route hmr state fixture`          |
+| T16     | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test`                                  | artifact-store fail-closed semantics            | completed in `feat(compiler): integrate template output fingerprints` |
+| T17     | direct | T15, T16         | `pnpm --filter @typed/app exec vitest run src/runtimeTemplateCompilerExample.test.ts` | example only after package gates                | completed in `test: add runtime template compiler example`            |
+| T18     | direct | T1 through T17   | package gates plus `pnpm build`                                                       | final audit before commit/PR                    | completed in `chore: finalize runtime template compiler tranche`      |
 
 ## Detailed Task Plan
 
 ### Task 1: Scaffold `@typed/compiler`
 
 **Files:**
+
 - Create: `packages/compiler/package.json`
 - Create: `packages/compiler/tsconfig.json`
 - Create: `packages/compiler/AGENTS.md`
@@ -166,6 +167,7 @@ Commit message: `feat: scaffold typed compiler package`.
 ### Task 2: Define `TemplatePlan` IR
 
 **Files:**
+
 - Create: `packages/compiler/src/template/TemplatePlan.ts`
 - Create: `packages/compiler/src/template/TemplatePlan.test.ts`
 - Modify: `packages/compiler/src/index.ts`
@@ -213,6 +215,7 @@ Commit message: `feat: define typed template compiler ir`.
 ### Task 3: Analyze All `html` Template Forms Into IR
 
 **Files:**
+
 - Create: `packages/compiler/src/template/analyzeTemplate.ts`
 - Create: `packages/compiler/src/template/analyzeTemplate.test.ts`
 - Modify: `packages/compiler/src/index.ts`
@@ -257,6 +260,7 @@ Commit message: `feat: analyze typed html templates into compiler ir`.
 ### Task 4: Emit Server Optimized Templates
 
 **Files:**
+
 - Create: `packages/compiler/src/template/emitServerTemplate.ts`
 - Create: `packages/compiler/src/template/emitServerTemplate.test.ts`
 - Create: `packages/compiler/src/test-utils/renderEquivalence.ts`
@@ -294,6 +298,7 @@ Commit message: `feat: emit server optimized templates`.
 **Focused task plan:** Use `DomRenderTemplate` as the behavior oracle, first proving the missing emitter with red tests. Implement fresh DOM construction from `TemplatePlan`, then apply dynamic parts for node holes, sparse attrs/classes, boolean/data/property/properties parts, event handlers, refs, comments, text-only elements, and multi-root template boundaries.
 
 **Files:**
+
 - Create: `packages/compiler/src/template/emitDomTemplate.ts`
 - Create: `packages/compiler/src/template/emitDomTemplate.test.ts`
 
@@ -330,6 +335,7 @@ Commit message: `feat: emit dom optimized templates`.
 **Focused task plan:** Model fallback as an explicit runtime-template handoff, not as an implicit failure. Preserve the original `TemplateStringsArray`, expose structured diagnostics with the source module and reason, and keep `Renderable`/`Effect`/`Fx` type flow by delegating to the existing `html(...)` runtime path.
 
 **Files:**
+
 - Create: `packages/compiler/src/template/fallback.ts`
 - Create: `packages/compiler/src/template/fallback.test.ts`
 
@@ -366,6 +372,7 @@ Commit message: `feat: add template compiler fallback path`.
 **Focused task plan:** Add a small public runtime contract in `@typed/app` that consumes compiled DOM templates, compiled server templates, and runtime fallback templates. Keep target wrappers narrow: DOM mount/hydrate delegate compiled templates to `renderInto` and fallback templates to `DomRenderTemplate`; server render delegates compiled templates to `renderToString` and fallback templates to `HtmlRenderTemplate`.
 
 **Files:**
+
 - Create: `packages/app/src/runtime/RuntimeTemplate.ts`
 - Create: `packages/app/src/runtime/mount.ts`
 - Create: `packages/app/src/runtime/hydrate.ts`
@@ -413,6 +420,7 @@ Commit message: `feat(app): add typed runtime template functions`.
 **Focused task plan:** Lock down the existing `RefSubject.Service` implementation with behavior tests before HMR wiring consumes it. Verify stable service ids, explicit `Layer` provisioning, initial/effectful initializer support, and the distinction between `Count.service` yielding the underlying `RefSubject` and `Count` sampling the current value as a ref-like `Fx`/`Effect`.
 
 **Files:**
+
 - Modify: `packages/fx/src/RefSubject/RefSubject.ts`
 - Modify: `packages/fx/src/RefSubject/index.ts`
 - Modify: `packages/fx/src/index.ts`
@@ -456,6 +464,7 @@ Commit message: `feat(fx): add refsubject service identity`.
 **Focused task plan:** Add an app-runtime registry that can reuse service-backed state across reloads without Vite wiring yet. Store state behind a namespaced global key, mirror it into `import.meta.hot.data`-style objects when supplied, compare shape/version/dependency fingerprints before reuse, and expose explicit dispose/prune helpers for future HMR lifecycle hooks.
 
 **Files:**
+
 - Create: `packages/app/src/runtime/hmrRegistry.ts`
 - Create: `packages/app/src/runtime/hmrRegistry.test.ts`
 
@@ -494,6 +503,7 @@ Commit message: `feat(app): add typed hmr state registry`.
 **Focused task plan:** Add a descriptor-only analyzer that separates template optimization from stateful HMR eligibility. Route/component boundaries can report inline `RefSubject.make(...)` replacements and existing `RefSubject.Service(...)` identities; plain `html` template optimization remains non-stateful.
 
 **Files:**
+
 - Create: `packages/compiler/src/hmr/analyzeComponentHmr.ts`
 - Create: `packages/compiler/src/hmr/analyzeComponentHmr.test.ts`
 
@@ -530,6 +540,7 @@ Commit message: `feat(compiler): analyze component hmr state`.
 **Focused task plan:** Add dependency participation analysis that recognizes stable `RefSubject.Service(...)` identities in imported and route-companion modules, rejects anonymous dependency refs, and records explicit opt-in/opt-out overrides for cases inference misses or overreaches.
 
 **Files:**
+
 - Create: `packages/compiler/src/hmr/options.ts`
 - Create: `packages/compiler/src/hmr/dependencies.ts`
 - Create: `packages/compiler/src/hmr/dependencies.test.ts`
@@ -569,6 +580,7 @@ Commit message: `feat(compiler): infer route hmr dependencies`.
 **Focused task plan:** Add planning-only closure context descriptors. Eligible captures become generated context fields, `Fx.fn`-style error/service metadata is preserved in the descriptor, and unsupported mutable captures are rejected with diagnostics instead of attempting arbitrary closure serialization.
 
 **Files:**
+
 - Create: `packages/compiler/src/hmr/closureContext.ts`
 - Create: `packages/compiler/src/hmr/closureContext.test.ts`
 
@@ -605,6 +617,7 @@ Commit message: `feat(compiler): plan closure hmr contexts`.
 **Focused task plan:** Simplify generated browser runtime handoff by delegating route rendering through `@typed/app` `mount`/`hydrate` runtime functions while preserving route matcher merging, companion layers, error handling, and `BrowserRouter` provisioning. Avoid direct `@typed/template` DOM renderer imports in generated browser source.
 
 **Files:**
+
 - Modify: `packages/app/src/internal/emitBrowserSource.ts`
 - Modify: `packages/app/src/BrowserVirtualModulePlugin.test.ts`
 
@@ -637,6 +650,7 @@ Commit message: `feat(app): wire browser runtime templates`.
 ### Task 14: Wire Server Virtual Module Runtime
 
 **Files:**
+
 - Modify: `packages/app/src/internal/emitServerSource.ts`
 - Modify: `packages/app/src/ServerVirtualModulePlugin.test.ts`
 
@@ -665,6 +679,7 @@ Commit message: `feat(app): wire server runtime templates`.
 ### Task 15: Add Vite HMR Fixture
 
 **Files:**
+
 - Create: `packages/compiler/src/hmr/vite-hmr-fixture.test.ts` or package-local fixture under `packages/compiler/fixtures/vite-hmr/`
 - Modify: `packages/vite-plugin/src/index.ts` only if runtime integration requires plugin hook support
 
@@ -698,6 +713,7 @@ Commit message: `feat(compiler): prove route hmr state fixture`.
 ### Task 16: Integrate Artifact Store Where Required
 
 **Files:**
+
 - Modify: `packages/compiler/src/template/fingerprints.ts`
 - Modify: `packages/virtual-modules-vite/src/vitePlugin.ts` only if a compiler output materialization hook is needed
 - Modify: `packages/virtual-modules-compiler/src/cli.integration.test.ts` only if vmc fixture coverage is needed
@@ -727,6 +743,7 @@ Commit message: `feat(compiler): integrate template output fingerprints`.
 ### Task 17: Add Runnable Server + DOM Example
 
 **Files:**
+
 - Create or modify a focused fixture/example selected during execution after package surfaces exist.
 - Update example package scripts if needed.
 
@@ -759,6 +776,7 @@ Commit message: `test: add runtime template compiler example`.
 ### Task 18: Final Hardening And Traceability
 
 **Files:**
+
 - Modify: `.docs/workflows/20260521-2320-runtime-template-compiler/plan.md`
 - Create/modify: `.docs/workflows/20260521-2320-runtime-template-compiler/memories.md`
 - Modify package docs only where new public APIs need usage notes.

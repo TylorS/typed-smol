@@ -31,7 +31,5 @@ const listTags: Effect.Effect<readonly TagName[], TagRepositoryError, SqlClient.
       SELECT name FROM tags ORDER BY name ASC
     `;
 
-    return yield* Effect.forEach(rows, (row) =>
-      Schema.decodeUnknownEffect(TagName)(row.name),
-    );
+    return yield* Effect.forEach(rows, (row) => Schema.decodeUnknownEffect(TagName)(row.name));
   });

@@ -25,10 +25,7 @@ export function makeState(
   return RefSubject.make(initial);
 }
 
-export function setOpen(
-  state: RefSubject.RefSubject<State>,
-  open: boolean,
-): Effect.Effect<State> {
+export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
@@ -62,7 +59,9 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
     aria-controls=${options.controls}
     .data=${{ open }}
     onclick=${onClick}
-  >${options.content}</button>`;
+  >
+    ${options.content}
+  </button>`;
 }
 
 export interface CloseOptions {
@@ -94,7 +93,9 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
     aria-label=${options.label}
     ?hidden=${hidden}
     .data=${{ open }}
-  >${options.content}</div>`;
+  >
+    ${options.content}
+  </div>`;
 }
 
 function dataOpen(state: RefSubject.RefSubject<State>) {
@@ -112,9 +113,10 @@ function isFocusableElement(value: EventTarget | null): value is HTMLElement {
 }
 
 function getActiveElement(value: EventTarget | null): HTMLElement | undefined {
-  const document = typeof value === "object" && value !== null && "ownerDocument" in value
-    ? (value as { readonly ownerDocument?: Document }).ownerDocument
-    : undefined;
+  const document =
+    typeof value === "object" && value !== null && "ownerDocument" in value
+      ? (value as { readonly ownerDocument?: Document }).ownerDocument
+      : undefined;
   const activeElement = document?.activeElement ?? null;
   return isFocusableElement(activeElement) ? activeElement : undefined;
 }

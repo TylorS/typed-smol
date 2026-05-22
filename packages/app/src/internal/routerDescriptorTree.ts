@@ -371,10 +371,7 @@ function emitRoute(match: RouteMatchDescriptor, ctx: RenderContext): string {
   return `Router.match(${routeRef}, { ${opts.join(", ")} })`;
 }
 
-function guardExpression(
-  guardPaths: readonly string[],
-  ctx: RenderContext,
-): string | undefined {
+function guardExpression(guardPaths: readonly string[], ctx: RenderContext): string | undefined {
   const guardExprs = guardPaths
     .map((guardPath) => {
       const guardExport = ctx.guardExportByPath[guardPath];

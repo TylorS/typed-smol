@@ -36,8 +36,12 @@ describe("emitDomTemplate", () => {
     const runtimeButton = runtime.body.querySelector("button")!;
 
     expect(compiledButton.className).toBe(runtimeButton.className);
-    expect(compiledButton.getAttribute("data-label")).toBe(runtimeButton.getAttribute("data-label"));
-    expect(compiledButton.getAttribute("aria-label")).toBe(runtimeButton.getAttribute("aria-label"));
+    expect(compiledButton.getAttribute("data-label")).toBe(
+      runtimeButton.getAttribute("data-label"),
+    );
+    expect(compiledButton.getAttribute("aria-label")).toBe(
+      runtimeButton.getAttribute("aria-label"),
+    );
     expect(compiledButton.textContent).toBe(runtimeButton.textContent);
     expect(compiledButton.lastChild?.nodeValue).toBe(runtimeButton.lastChild?.nodeValue);
   });
@@ -52,8 +56,12 @@ describe("emitDomTemplate", () => {
     const runtimeInput = runtime.body.querySelector("input")!;
 
     expect(compiled.body.innerHTML).toBe(runtime.body.innerHTML);
-    expect(compiledInput.getAttribute("data-userid")).toBe(runtimeInput.getAttribute("data-userid"));
-    expect((compiledInput as HTMLInputElement).value).toBe((runtimeInput as HTMLInputElement).value);
+    expect(compiledInput.getAttribute("data-userid")).toBe(
+      runtimeInput.getAttribute("data-userid"),
+    );
+    expect((compiledInput as HTMLInputElement).value).toBe(
+      (runtimeInput as HTMLInputElement).value,
+    );
     expect((compiledInput as any).customValue).toBe((runtimeInput as any).customValue);
   });
 
@@ -109,7 +117,7 @@ describe("emitDomTemplate", () => {
   });
 
   it("renders comments and text-only elements like DomRenderTemplate", async () => {
-    const template = strings('<!--', '--><script type="module">console.log("', '")</script>');
+    const template = strings("<!--", '--><script type="module">console.log("', '")</script>');
 
     const compiled = await compiledDom(template, "ready", "Ada");
     const runtime = await runtimeDom(template, "ready", "Ada");
@@ -152,9 +160,7 @@ async function runtimeDomWithInteraction(
         Fx.collectAll,
       );
       interact(window.document.body);
-    }).pipe(
-      Effect.scoped,
-    ),
+    }).pipe(Effect.scoped),
   );
   return { body: window.document.body, window } as const;
 }

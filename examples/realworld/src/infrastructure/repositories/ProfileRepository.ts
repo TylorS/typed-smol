@@ -4,11 +4,7 @@ import { SqlClient } from "effect/unstable/sql";
 import { UserId, Username } from "../../domain/Ids.js";
 import { type ProfileRepositoryError } from "../../domain/RepositoryErrors.js";
 import { Profile } from "../../domain/User.js";
-import {
-  currentIsoTimestamp,
-  first,
-  provideRepositorySql,
-} from "./Common.js";
+import { currentIsoTimestamp, first, provideRepositorySql } from "./Common.js";
 
 export interface ProfileRepositoryService {
   readonly findByUsername: (
