@@ -1008,6 +1008,29 @@ Execution refinements:
 - [x] Step 4: Update router source snapshots to encode the reduced import surface.
 - [x] Step 5: Run app and RealWorld verification gates and scoped `git diff --check`.
 
+### Task 28: Route/API Handler Type Parity
+
+**Files:**
+- Modify: `packages/app/src/RouterVirtualModulePlugin.ts`
+- Modify: `packages/app/src/internal/emitRouterHelpers.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: RealWorld route modules importing generated route entrypoint types
+
+**Progress notes:**
+- 2026-05-22: `$route-types` now emits a single route entrypoint alias, `Handler`, instead of `Template` plus `Handler = Template`.
+- 2026-05-22: Route `Handler` accepts the same broad values the router compiler supports: plain values, `Effect`, `Stream`, `Fx`, decoded-param functions returning those values, and `RefSubject<Params>` functions returning those values.
+- 2026-05-22: Router value emission now lifts Fx-returning decoded-param functions with `Fx.switchMap(params, handler)`, while RefSubject-param Fx functions pass through directly.
+- 2026-05-22: `$api-types` now emits direct `Handler` and `RawHandler` function shapes from `Context`, `HandlerSuccess`, and `HandlerError` instead of aliasing imported helper aliases.
+
+- [x] Step 1: Add failing router tests for Fx-returning decoded-param functions and route `Handler` union parity.
+- [x] Step 2: Replace generated route `Template` alias with one canonical `Handler` alias.
+- [x] Step 3: Update router value emission for Fx-returning decoded-param functions.
+- [x] Step 4: Make `$api-types` handler aliases direct config-derived function shapes.
+- [x] Step 5: Update RealWorld route modules to use `Handler` and explicit generated `Params` annotations where needed.
+- [x] Step 6: Run app and RealWorld verification gates and scoped `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

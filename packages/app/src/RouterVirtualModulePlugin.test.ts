@@ -830,9 +830,10 @@ describe("RouterVirtualModulePlugin", () => {
     const source = result as string;
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as Fx from "@typed/fx/Fx";
       import * as Async from "./routes/async.js";
 
-      const router = Router.match(Async.route, Async.handler);
+      const router = Router.match(Async.route, (params) => Fx.switchMap(params, Async.handler));
       export default router;
       "
     `);
@@ -980,19 +981,29 @@ describe("RouterVirtualModulePlugin", () => {
     `);
   });
 
-  it("handler matrix: Fx function pass-through when return type resolves as Fx", () => {
+  it("handler matrix: Fx function with decoded params is lifted with switchMap", () => {
     const result = buildRouterFromFixture({
-      "src/routes/xf.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler = (_p: unknown): Fx.Fx<number> => Fx.succeed(1);`,
+      "src/routes/xf.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/users/:id")} export const handler = (p: { readonly id: string }): Fx.Fx<string> => Fx.succeed(p.id);`,
     });
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as Fx from "@typed/fx/Fx";
       import * as Xf from "./routes/xf.js";
 
-      const router = Router.match(Xf.route, Xf.handler);
+      const router = Router.match(Xf.route, (params) => Fx.switchMap(params, Xf.handler));
       export default router;
       "
     `);
+  });
+
+  it("handler matrix: Fx function with RefSubject params is passed through", () => {
+    const result = buildRouterFromFixture({
+      "src/routes/xf.ts": `import * as Fx from "@typed/fx/Fx"; import type { RefSubject } from "@typed/fx/RefSubject"; ${routeExportForPath("/users/:id")} export const handler = (p: RefSubject<{ readonly id: string }>): Fx.Fx<string> => Fx.map(p, ({ id }) => id);`,
+    });
+    expect(typeof result).toBe("string");
+    expect(result as string).toContain("Router.match(Xf.route, Xf.handler)");
+    expect(result as string).not.toContain("Fx.switchMap(params, Xf.handler)");
   });
 
   it("build returns source string", () => {
@@ -1450,9 +1461,12 @@ export const layout = null as never as Router.Layout<
 >;
 `,
       "src/routes/articles/show.ts": `
+import * as Effect from "effect/Effect";
 import * as Fx from "@typed/fx/Fx";
 import * as Route from "@typed/router";
-import type { Catches, Dependencies, Guards, Layouts, Params, RouteTypes, Template } from "./$route-types";
+import * as Stream from "effect/Stream";
+import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";
+import type { Catches, Dependencies, Guards, Handler, Layouts, Params, RouteTypes } from "./$route-types";
 import type * as Layer from "effect/Layer";
 import type * as RouterTypes from "@typed/router";
 
@@ -1523,12 +1537,23 @@ type _catches = Expect<Equals<
 >>;
 type _routeTypes = Expect<Equals<RouteTypes["dependencies"], Dependencies>>;
 
-export const template = ((params) =>
+const plainValue = "plain" satisfies Handler;
+const effectValue = Effect.succeed("effect") satisfies Handler;
+const streamValue = Stream.succeed("stream") satisfies Handler;
+const fxValue = Fx.succeed("fx") satisfies Handler;
+const plainFn = ((params: Params) => params.slug) satisfies Handler;
+const effectFn = ((params: Params) => Effect.succeed(params.page)) satisfies Handler;
+const streamFn = ((params: Params) => Stream.succeed(params.slug)) satisfies Handler;
+const fxFn = ((params: Params) => Fx.succeed(params.slug)) satisfies Handler;
+const nativeFxFn = ((params: RefSubject<Params>) =>
+  Fx.map(params, ({ slug }) => slug)) satisfies Handler;
+
+export const template = ((params: RefSubject<Params>) =>
   Fx.map(params, (value) => {
     const slug: string = value.slug;
     const page: number = value.page;
     return \`\${slug}:\${page}\`;
-  })) satisfies Template;
+  })) satisfies Handler;
 `,
     });
     const importer = join(fixture.root, "src/routes/articles/show.ts");
@@ -1551,6 +1576,8 @@ export const template = ((params) =>
     expect(result).toContain("export type Layouts<A = any, E = any, R = any> =");
     expect(result).toContain("export type Catches<A = any, E = any, R = any> =");
     expect(result).toContain("export type RouteTypes = {");
+    expect(result).toContain("export type Handler<A = any, E = any, R = any> =");
+    expect(result).not.toContain("export type Template");
 
     const typeCheck = typeCheckGeneratedSource({
       rootDir: fixture.root,

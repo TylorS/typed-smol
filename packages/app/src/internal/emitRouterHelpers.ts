@@ -32,7 +32,7 @@ export function handlerExprFor(
     return `${constant}(${fx}.succeed(${ref}))`;
   }
   if (isFn && expectsRefSubject) {
-    return `(params) => ${ref}(params)`;
+    return ref;
   }
   switch (runtimeKind) {
     case "effect":
@@ -49,6 +49,7 @@ export function handlerExprFor(
       const streamConstant = imports.constant();
       return `${streamConstant}(${streamFx}.fromStream(${ref}))`;
     case "fx":
+      if (isFn) return `(params) => ${imports.fx()}.switchMap(params, ${ref})`;
       return ref;
     case "unknown":
       throw new Error(

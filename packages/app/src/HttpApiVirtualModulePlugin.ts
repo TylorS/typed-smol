@@ -522,8 +522,11 @@ function emitApiTypesSource(
   ].filter((value): value is ApiCompanionImport => value !== undefined);
   const source = new TypeModuleSource();
   source.importLine(
-    `import type { ApiHandlerFromConfig, ApiHandlerParamsFromConfig, ApiHandlerRawFromConfig } from "@typed/app/httpapi/ApiHandler";`,
+    `import type { ApiHandlerErrorFromConfig, ApiHandlerParamsFromConfig, ApiHandlerSuccessFromConfig } from "@typed/app/httpapi/ApiHandler";`,
   );
+  source.importTypeNamespace("Effect", "effect/Effect");
+  source.importTypeNamespace("HttpServerError", "effect/unstable/http/HttpServerError");
+  source.importTypeNamespace("HttpServerResponse", "effect/unstable/http/HttpServerResponse");
   source.importTypeNamespace("Layer", "effect/Layer");
   source.importTypeNamespace("RouterTypes", "@typed/router");
   source.importTypeNamespace("EndpointModule", moduleSpecifier);
@@ -634,9 +637,17 @@ export type ApiTypes = {
 
 export type Context = ApiHandlerParamsFromConfig<Config>;
 
-export type Handler<R = any> = ApiHandlerFromConfig<Config, R>;
+export type HandlerSuccess = ApiHandlerSuccessFromConfig<Config>;
 
-export type RawHandler<R = any> = ApiHandlerRawFromConfig<Config, R>;`);
+export type HandlerError = ApiHandlerErrorFromConfig<Config>;
+
+export type Handler<R = any> = (
+  params: Context,
+) => Effect.Effect<HandlerSuccess, HandlerError | HttpServerError.HttpServerError, R>;
+
+export type RawHandler<R = any> = (
+  params: Context,
+) => Effect.Effect<HttpServerResponse.HttpServerResponse, HandlerError, R>;`);
 
   return source.emit();
 }

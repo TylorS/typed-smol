@@ -901,8 +901,8 @@ export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body
     const result = createHttpApiVirtualModulePlugin().build("./$api-types", importer, session.api);
     const source = getSourceText(result);
 
-    expect(source).toContain("ApiHandlerFromConfig");
-    expect(source).toContain("ApiHandlerRawFromConfig");
+    expect(source).toContain("ApiHandlerSuccessFromConfig");
+    expect(source).toContain("ApiHandlerErrorFromConfig");
     expect(source).toContain('import type * as InheritedErrors0 from "../_errors.js";');
     expect(source).toContain('import type * as InheritedHeaders0 from "./_headers.js";');
     expect(source).toContain("export type Dependencies =");
@@ -911,9 +911,13 @@ export const typedHandler = Effect.fn("Articles.create.typed")(function* ({ body
     expect(source).toContain("export type OpenApi =");
     expect(source).not.toContain("export type OpenApis");
     expect(source).toContain("export type ApiTypes = {");
-    expect(source).toContain("export type Handler<R = any> = ApiHandlerFromConfig<Config, R>;");
+    expect(source).toContain("export type HandlerSuccess = ApiHandlerSuccessFromConfig<Config>;");
+    expect(source).toContain("export type HandlerError = ApiHandlerErrorFromConfig<Config>;");
+    expect(source).toContain("export type Handler<R = any> = (");
+    expect(source).toContain("Effect.Effect<HandlerSuccess, HandlerError | HttpServerError.HttpServerError, R>");
+    expect(source).toContain("export type RawHandler<R = any> = (");
     expect(source).toContain(
-      "export type RawHandler<R = any> = ApiHandlerRawFromConfig<Config, R>;",
+      "Effect.Effect<HttpServerResponse.HttpServerResponse, HandlerError, R>",
     );
     expect(source).not.toContain("RawHandler<E");
     expect(source).not.toContain("Effect.Effect<Success");
