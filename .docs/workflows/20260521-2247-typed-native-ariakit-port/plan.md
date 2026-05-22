@@ -348,7 +348,13 @@ git commit -m "feat: add typed ui refsubject state helpers" -m "- use RefSubject
 - Create: `packages/ui/src/StartupRef.ts`
 - Create: `packages/ui/src/StartupRef.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
+
+Current task detail:
+- Decode a whole `.data={object}` shape from `element.dataset`.
+- Merge decoded startup fields into the existing `RefSubject` state so non-data state survives.
+- Support one template ref that composes multiple startup refs.
+- Use `Schema.Literals([...])` for literal unions in this Effect version.
 
 ```ts
 import { assert, describe, it } from "vitest";
@@ -385,7 +391,7 @@ describe("typed/ui/StartupRef", () => {
         state,
         DataAttr.schema({
           open: Schema.Boolean,
-          placement: Schema.Literal("top", "bottom"),
+          placement: Schema.Literals(["top", "bottom"]),
         }),
       );
       yield* ref(el);
@@ -394,7 +400,7 @@ describe("typed/ui/StartupRef", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -404,30 +410,48 @@ pnpm --filter @typed/ui test -- StartupRef
 
 Expected: FAIL because `StartupRef.ts` does not exist.
 
-- [ ] **Step 3: Implement StartupRef**
+- [x] **Step 3: Implement StartupRef**
 
 ```ts
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
-import * as DataAttrApi from "./DataAttr.js";
+import * as DataAttr from "./DataAttr.js";
 
 export type RefCallback<E = never, R = never> = (
   element: HTMLElement,
 ) => void | Effect.Effect<void, E, R>;
 
-export function fromData<Fields extends DataAttrApi.DataFields>(
-  ref: RefSubject.RefSubject<DataAttrApi.Type<Fields>>,
-  data: DataAttrApi.DataAttr<Fields>,
+type RefError<Ref> = Ref extends RefCallback<infer E, any> ? E : never;
+type RefServices<Ref> = Ref extends RefCallback<any, infer R> ? R : never;
+
+export function fromData<State extends Record<string, unknown>, Fields extends DataAttr.DataFields>(
+  ref: RefSubject.RefSubject<State>,
+  data: DataAttr.DataAttr<Fields>,
 ): RefCallback<Schema.SchemaError> {
   return (element) =>
-    DataAttrApi.decode(data, element).pipe(
-      Effect.flatMap((value) => RefSubject.set(ref, value)),
+    DataAttr.decode(data, element).pipe(
+      Effect.flatMap((value) =>
+        RefSubject.update(ref, (current) => ({ ...current, ...value }) as State),
+      ),
+      Effect.asVoid,
     );
+}
+
+export function compose<const Refs extends ReadonlyArray<RefCallback<any, any>>>(
+  ...refs: Refs
+): RefCallback<RefError<Refs[number]>, RefServices<Refs[number]>> {
+  return (element) =>
+    Effect.gen(function* () {
+      for (const ref of refs) {
+        const result = ref(element);
+        if (Effect.isEffect(result)) yield* result;
+      }
+    });
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 

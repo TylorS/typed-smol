@@ -3,6 +3,7 @@
 - Active execution approved on 2026-05-22.
 - Completed T1: Schema-backed public `.data={object}` attributes.
 - Completed T2: RefSubject state provider key.
+- Completed T3: startup refs for DOM data hydration.
 
 ## Task Records
 
@@ -56,6 +57,33 @@
 - memory_updates:
   - candidate captured in `memory/implementation-notes.md`
 
+### Task T3 - Ref Startup Hydration
+
+- task_id: T3
+- requirement_ids:
+  - FR-5
+  - FR-8
+  - FR-9
+  - FR-11
+  - FR-20
+  - NFR-2
+- ts_scenarios:
+  - TS-3: pass
+- validation_evidence:
+  - RED: `pnpm --filter @typed/ui test -- StartupRef` failed because `./StartupRef.js` was missing.
+  - GREEN: `pnpm --filter @typed/ui test -- StartupRef` passed with `5` files and `27` tests.
+  - PACKAGE: `pnpm --filter @typed/ui test` passed with `5` files and `27` tests.
+  - BUILD: `pnpm --filter @typed/ui build` passed.
+- commit:
+  - pending
+- deviations_or_replans:
+  - `StartupRef.fromData` merges decoded data fields into the existing state instead of replacing the full state so component-local state can survive startup hydration.
+  - `StartupRef.compose` was added to support one template `ref` callback composed from multiple startup refs.
+- context_updates:
+  - none
+- memory_updates:
+  - candidate captured in `memory/implementation-notes.md`
+
 ## Deferred Work
 
-- T3 through T7 remain pending.
+- T4 through T7 remain pending.
