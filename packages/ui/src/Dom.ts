@@ -16,7 +16,8 @@ export type EventOf<Handler> = NonNullable<Handler> extends (
 export type ElementEventHandlers<Element extends globalThis.Element> = {
   readonly [K in keyof Element as K extends EventHandlerProperty ? K : never]?:
     | Effect.Effect<unknown, any, any>
-    | EventHandler.EventHandler<EventOf<Element[K]>, any, any>;
+    | EventHandler.EventHandler<EventOf<Element[K]>, any, any>
+    | null;
 };
 
 export type ElementRef<Element extends globalThis.Element> = {

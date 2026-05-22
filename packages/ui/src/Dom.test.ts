@@ -21,9 +21,11 @@ describe("typed/ui/Dom", () => {
       null as unknown as EventHandler.EventHandler<MouseEvent, any, any>;
     const clickEffect: Dom.ElementOptions<HTMLAnchorElement>["onclick"] =
       null as unknown as Effect.Effect<unknown, any, any>;
+    const absentClickHandler: Dom.ElementOptions<HTMLAnchorElement>["onclick"] = null;
 
     expectTypeOf(clickHandler).toExtend<Dom.ElementOptions<HTMLAnchorElement>["onclick"]>();
     expectTypeOf(clickEffect).toExtend<Dom.ElementOptions<HTMLAnchorElement>["onclick"]>();
+    expectTypeOf(absentClickHandler).toExtend<Dom.ElementOptions<HTMLAnchorElement>["onclick"]>();
     expectTypeOf<Dom.ElementOptions<HTMLAnchorElement>["ref"]>().toExtend<
       ((element: HTMLAnchorElement) => unknown) | undefined
     >();
