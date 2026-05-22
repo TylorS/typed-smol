@@ -5,9 +5,9 @@ import { RefSubject } from "@typed/fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
 
-type AnyContent = Renderable<unknown, unknown, unknown>;
-type OptionalString = Renderable<string | undefined, unknown, unknown>;
-type RequiredString = Renderable<string, unknown, unknown>;
+type AnyContent = Renderable<unknown, any, any>;
+type OptionalString = Renderable<string | undefined, any, any>;
+type RequiredString = Renderable<string, any, any>;
 
 export interface State {
   readonly open: boolean;

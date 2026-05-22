@@ -4,9 +4,10 @@ import { RefSubject } from "@typed/fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import { toEffect } from "./internal/renderable.js";
 
-type AnyContent = Renderable<unknown, unknown, unknown>;
-type RequiredString = Renderable<string, unknown, unknown>;
+type AnyContent = Renderable<unknown, any, any>;
+type RequiredString = Renderable<string, any, any>;
 
 export interface State<Value extends string = string> {
   readonly value: Value;
@@ -45,6 +46,14 @@ export function setValue<Value extends string>(
   value: Value,
 ): Effect.Effect<State<Value>> {
   return RefSubject.update(state, (current) => ({ ...current, activeId: value, value }));
+}
+
+export function selectItem<Value extends string>(
+  state: RefSubject.RefSubject<State<Value>>,
+  activeId: string,
+  value: Value,
+): Effect.Effect<State<Value>> {
+  return RefSubject.update(state, (current) => ({ ...current, activeId, value }));
 }
 
 export function move<Value extends string>(
@@ -86,16 +95,22 @@ export function Root<const Opts extends RootOptions>(options: Opts) {
 
 export interface ItemOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
-  readonly id: string;
-  readonly value: Value;
+  readonly id: RequiredString;
+  readonly value: Renderable<Value, any, any>;
   readonly content: AnyContent;
 }
 
 export function Item<const Value extends string, const Opts extends ItemOptions<Value>>(options: Opts) {
   const checked = isChecked(options.state, options.value);
-  const onClick = EventHandler.make(() => setValue(options.state, options.value));
+  const onClick = EventHandler.make((event: Event) =>
+    Effect.gen(function* () {
+      const value = yield* toEffect(options.value);
+      yield* selectItem(options.state, (event.currentTarget as HTMLElement).id, value);
+    })
+  );
   const props: Record<string, unknown> = {
     id: options.id,
+    "data-value": options.value,
     role: "radio",
     "aria-checked": checked,
     tabindex: RefSubject.map(checked, (value) => value ? 0 : -1),
@@ -108,9 +123,11 @@ export function Item<const Value extends string, const Opts extends ItemOptions<
 
 function isChecked<Value extends string>(
   state: RefSubject.RefSubject<State<Value>>,
-  value: Value,
+  value: Renderable<Value, any, any>,
 ) {
-  return RefSubject.map(state, (current) => current.value === value);
+  return RefSubject.mapEffect(state, (current) =>
+    Effect.map(toEffect(value), (value) => current.value === value)
+  );
 }
 
 function nextActiveId<Value>(

@@ -5,8 +5,8 @@ import { type Renderable, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 
-type AnyContent = Renderable<unknown, unknown, unknown>;
-type RequiredString = Renderable<string, unknown, unknown>;
+type AnyContent = Renderable<unknown, any, any>;
+type RequiredString = Renderable<string, any, any>;
 
 export interface State extends Composite.State {}
 

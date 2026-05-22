@@ -9,6 +9,7 @@ import * as Disclosure from "./Disclosure.js";
 import * as Listbox from "./Listbox.js";
 import * as Menu from "./Menu.js";
 import * as Select from "./Select.js";
+import * as RadioGroup from "./RadioGroup.js";
 import * as Tabs from "./Tabs.js";
 import * as Toolbar from "./Toolbar.js";
 
@@ -26,10 +27,13 @@ describe("typed/ui component option inference", () => {
     const dialog = {} as RefSubject.RefSubject<Dialog.State>;
     const listbox = {} as RefSubject.RefSubject<Listbox.State<string>>;
     const menu = {} as RefSubject.RefSubject<Menu.State>;
+    const radioGroup = {} as RefSubject.RefSubject<RadioGroup.State<string>>;
     const select = {} as RefSubject.RefSubject<Select.State<string>>;
     const tabs = {} as RefSubject.RefSubject<Tabs.State>;
     const toolbar = {} as RefSubject.RefSubject<Toolbar.State>;
-    const label = Effect.flatMap(OptionService, () => Effect.fail(new OptionError()));
+    const label = Effect.flatMap(OptionService, () => maybeOptionError("option"));
+    const value = Effect.flatMap(OptionService, () => maybeOptionError("value"));
+    const disabled = Effect.flatMap(OptionService, () => maybeOptionError(false));
 
     const disclosureContent = Disclosure.Content({
       state: disclosure,
@@ -56,10 +60,48 @@ describe("typed/ui component option inference", () => {
       label,
       content: "Select",
     });
+    const listboxOption = Listbox.Option({
+      state: listbox,
+      id: label,
+      value,
+      disabled,
+      content: "Option",
+    });
+    const menuItem = Menu.Item({
+      state: menu,
+      id: label,
+      disabled,
+      content: "Item",
+    });
+    const selectOption = Select.Option({
+      state: select,
+      id: label,
+      value,
+      disabled,
+      content: "Option",
+    });
+    const radioItem = RadioGroup.Item({
+      state: radioGroup,
+      id: label,
+      value,
+      content: "Radio",
+    });
     const tabsList = Tabs.List({
       state: tabs,
       label,
       content: "Tabs",
+    });
+    const tabsTab = Tabs.Tab({
+      state: tabs,
+      id: label,
+      panelId: label,
+      content: "Tab",
+    });
+    const tabsPanel = Tabs.Panel({
+      state: tabs,
+      id: label,
+      tabId: label,
+      content: "Panel",
     });
     const toolbarRoot = Toolbar.Root({
       state: toolbar,
@@ -70,9 +112,15 @@ describe("typed/ui component option inference", () => {
     expectTypeOf<Fx.Error<typeof disclosureContent>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof dialogContent>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof listboxRoot>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Error<typeof listboxOption>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof menuContent>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Error<typeof menuItem>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof selectContent>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Error<typeof selectOption>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Error<typeof radioItem>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof tabsList>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Error<typeof tabsTab>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Error<typeof tabsPanel>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof toolbarRoot>>().toEqualTypeOf<OptionError>();
 
     expectTypeOf<Fx.Services<typeof disclosureContent>>().toExtend<
@@ -80,9 +128,21 @@ describe("typed/ui component option inference", () => {
     >();
     expectTypeOf<Fx.Services<typeof dialogContent>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof listboxRoot>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof listboxOption>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof menuContent>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof menuItem>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof selectContent>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof selectOption>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof radioItem>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof tabsList>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof tabsTab>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof tabsPanel>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof toolbarRoot>>().toExtend<OptionService | RenderTemplate>();
   });
 });
+
+function maybeOptionError<A>(value: A): Effect.Effect<A, OptionError> {
+  return Effect.suspend(() =>
+    Math.random() >= 0 ? Effect.succeed(value) : Effect.fail(new OptionError())
+  );
+}

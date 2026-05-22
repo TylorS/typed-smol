@@ -6,9 +6,11 @@ import { EventHandler, type Renderable, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
+import { toEffect } from "./internal/renderable.js";
 
-type AnyContent = Renderable<unknown, unknown, unknown>;
-type RequiredString = Renderable<string, unknown, unknown>;
+type AnyContent = Renderable<unknown, any, any>;
+type RequiredString = Renderable<string, any, any>;
+type OptionalBoolean = Renderable<boolean | undefined, any, any>;
 
 export type Mode = "auto" | "hint" | "manual";
 
@@ -139,25 +141,27 @@ export function Content<const Opts extends ContentOptions>(options: Opts) {
 
 export interface ItemOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly id: string;
+  readonly id: RequiredString;
   readonly content: AnyContent;
-  readonly disabled?: boolean;
+  readonly disabled?: OptionalBoolean;
 }
 
 export function Item<const Opts extends ItemOptions>(options: Opts) {
   const active = isActive(options.state, options.id);
-  const disabled = options.disabled === true;
+  const disabled = isDisabled(options.disabled);
   const props = {
     id: options.id,
     role: "menuitem",
-    "aria-disabled": String(disabled),
-    tabindex: RefSubject.map(active, (value) => value && !disabled ? 0 : -1),
-    "data-active": RefSubject.mapEffect(active, (value) =>
-      DataAttr.encode(itemData, { active: value, disabled }).pipe(
-        Effect.map((encoded) => encoded.active ?? "false"),
-      )
+    "aria-disabled": boolString(disabled),
+    tabindex: RefSubject.mapEffect(options.state, (state) =>
+      Effect.gen(function* () {
+        const id = yield* toEffect(options.id);
+        const disabled = yield* isDisabled(options.disabled);
+        return state.activeId === id && !disabled ? 0 : -1;
+      })
     ),
-    "data-disabled": String(disabled),
+    "data-active": dataActive(options.state, options.id, options.disabled),
+    "data-disabled": boolString(disabled),
   } as const;
 
   return html`<div ...${props}>${options.content}</div>`;
@@ -167,8 +171,10 @@ interface ToggleEventLike extends Event {
   readonly newState?: "open" | "closed";
 }
 
-function isActive(state: RefSubject.RefSubject<State>, id: string) {
-  return RefSubject.map(state, (current) => current.activeId === id);
+function isActive(state: RefSubject.RefSubject<State>, id: RequiredString) {
+  return RefSubject.mapEffect(state, (current) =>
+    Effect.map(toEffect(id), (id) => current.activeId === id)
+  );
 }
 
 function dataOpen(state: RefSubject.RefSubject<State>) {
@@ -181,6 +187,32 @@ function dataMode(state: RefSubject.RefSubject<State>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.mode ?? "auto")),
   );
+}
+
+function dataActive(
+  state: RefSubject.RefSubject<State>,
+  id: RequiredString,
+  disabled: OptionalBoolean | undefined,
+) {
+  return RefSubject.mapEffect(state, (current) =>
+    Effect.gen(function* () {
+      const itemId = yield* toEffect(id);
+      const itemDisabled = yield* isDisabled(disabled);
+      const encoded = yield* DataAttr.encode(itemData, {
+        active: current.activeId === itemId,
+        disabled: itemDisabled,
+      });
+      return encoded.active ?? "false";
+    })
+  );
+}
+
+function isDisabled(disabled: OptionalBoolean | undefined): Effect.Effect<boolean, any, any> {
+  return Effect.map(toEffect(disabled ?? false), (value) => value === true);
+}
+
+function boolString(value: Effect.Effect<boolean, any, any>) {
+  return Effect.map(value, String);
 }
 
 function nextActiveId<Value>(

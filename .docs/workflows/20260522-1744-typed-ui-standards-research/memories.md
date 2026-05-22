@@ -8,3 +8,4 @@
 - Component APIs should use `function Name<const Opts extends NameOptions>(options: Opts)` so non-content renderables like `id`, `label`, and `controls` preserve concrete error/service inference.
 - Keep future Menu, Select/Listbox, and Combobox work separate. The current slice intentionally stops at Collection, Composite, Tabs, RadioGroup, and Toolbar.
 - Finalization verification on `codex/typed-beta` passed with `pnpm --filter @typed/ui test` and `pnpm --filter @typed/ui build`. Browser-specific native popover/focus behavior remains covered only by happy-dom package tests until browser-runner wiring is added.
+- Public component option props should be Renderable-first like `Link`, including `id`, relationship ids, option values, and disabled flags. Keep concrete values in backing state/helper APIs, but do not expose static-only component option props.

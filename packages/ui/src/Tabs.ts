@@ -2,9 +2,10 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
+import { toEffect } from "./internal/renderable.js";
 
-type AnyContent = Renderable<unknown, unknown, unknown>;
-type RequiredString = Renderable<string, unknown, unknown>;
+type AnyContent = Renderable<unknown, any, any>;
+type RequiredString = Renderable<string, any, any>;
 
 export type ActivationMode = "automatic" | "manual";
 export type Orientation = "horizontal" | "vertical";
@@ -57,14 +58,16 @@ export function List<const Opts extends ListOptions>(options: Opts) {
 
 export interface TabOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly id: string;
-  readonly panelId: string;
+  readonly id: RequiredString;
+  readonly panelId: RequiredString;
   readonly content: AnyContent;
 }
 
 export function Tab<const Opts extends TabOptions>(options: Opts) {
   const selected = isSelected(options.state, options.id);
-  const onClick = EventHandler.make(() => select(options.state, options.id));
+  const onClick = EventHandler.make((event: Event) =>
+    select(options.state, (event.currentTarget as HTMLElement).id)
+  );
   const props = {
     id: options.id,
     type: "button",
@@ -81,8 +84,8 @@ export function Tab<const Opts extends TabOptions>(options: Opts) {
 
 export interface PanelOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly id: string;
-  readonly tabId: string;
+  readonly id: RequiredString;
+  readonly tabId: RequiredString;
   readonly content: AnyContent;
 }
 
@@ -99,6 +102,8 @@ export function Panel<const Opts extends PanelOptions>(options: Opts) {
   return html`<div ...${props} ?hidden=${hidden}>${options.content}</div>`;
 }
 
-function isSelected(state: RefSubject.RefSubject<State>, id: string) {
-  return RefSubject.map(state, (value) => value.selectedId === id);
+function isSelected(state: RefSubject.RefSubject<State>, id: RequiredString) {
+  return RefSubject.mapEffect(state, (value) =>
+    Effect.map(toEffect(id), (id) => value.selectedId === id)
+  );
 }
