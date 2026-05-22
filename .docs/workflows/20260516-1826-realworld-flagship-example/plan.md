@@ -1020,12 +1020,12 @@ Execution refinements:
 
 **Progress notes:**
 - 2026-05-22: `$route-types` now emits a single route entrypoint alias, `Handler`, instead of `Template` plus `Handler = Template`.
-- 2026-05-22: Route `Handler` accepts the same broad values the router compiler supports: plain values, `Effect`, `Stream`, `Fx`, decoded-param functions returning those values, and `RefSubject<Params>` functions returning those values.
+- 2026-05-22: Route `Handler` is the canonical guided shape: a `RefSubject<Params>` function returning any router match return value. The router compiler still accepts broader value forms, but the generated alias intentionally guides route modules toward the direct function form.
 - 2026-05-22: Router value emission now lifts Fx-returning decoded-param functions with `Fx.switchMap(params, handler)`, while RefSubject-param Fx functions pass through directly.
 - 2026-05-22: `$api-types` now emits direct `Handler` and `RawHandler` function shapes from `Context`, `HandlerSuccess`, and `HandlerError` instead of aliasing imported helper aliases.
 
-- [x] Step 1: Add failing router tests for Fx-returning decoded-param functions and route `Handler` union parity.
-- [x] Step 2: Replace generated route `Template` alias with one canonical `Handler` alias.
+- [x] Step 1: Add failing router tests for Fx-returning decoded-param functions and the canonical route `Handler` shape.
+- [x] Step 2: Replace generated route `Template` alias with one direct function-shaped `Handler` alias.
 - [x] Step 3: Update router value emission for Fx-returning decoded-param functions.
 - [x] Step 4: Make `$api-types` handler aliases direct config-derived function shapes.
 - [x] Step 5: Update RealWorld route modules to use `Handler` and explicit generated `Params` annotations where needed.

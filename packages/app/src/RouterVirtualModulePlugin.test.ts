@@ -1461,10 +1461,8 @@ export const layout = null as never as Router.Layout<
 >;
 `,
       "src/routes/articles/show.ts": `
-import * as Effect from "effect/Effect";
 import * as Fx from "@typed/fx/Fx";
 import * as Route from "@typed/router";
-import * as Stream from "effect/Stream";
 import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";
 import type { Catches, Dependencies, Guards, Handler, Layouts, Params, RouteTypes } from "./$route-types";
 import type * as Layer from "effect/Layer";
@@ -1537,14 +1535,6 @@ type _catches = Expect<Equals<
 >>;
 type _routeTypes = Expect<Equals<RouteTypes["dependencies"], Dependencies>>;
 
-const plainValue = "plain" satisfies Handler;
-const effectValue = Effect.succeed("effect") satisfies Handler;
-const streamValue = Stream.succeed("stream") satisfies Handler;
-const fxValue = Fx.succeed("fx") satisfies Handler;
-const plainFn = ((params: Params) => params.slug) satisfies Handler;
-const effectFn = ((params: Params) => Effect.succeed(params.page)) satisfies Handler;
-const streamFn = ((params: Params) => Stream.succeed(params.slug)) satisfies Handler;
-const fxFn = ((params: Params) => Fx.succeed(params.slug)) satisfies Handler;
 const nativeFxFn = ((params: RefSubject<Params>) =>
   Fx.map(params, ({ slug }) => slug)) satisfies Handler;
 
@@ -1577,7 +1567,9 @@ export const template = ((params: RefSubject<Params>) =>
     expect(result).toContain("export type Catches<A = any, E = any, R = any> =");
     expect(result).toContain("export type RouteTypes = {");
     expect(result).toContain("export type Handler<A = any, E = any, R = any> =");
+    expect(result).toContain("params: RefSubject<Params>");
     expect(result).not.toContain("export type Template");
+    expect(result).not.toContain("| HandlerReturn");
 
     const typeCheck = typeCheckGeneratedSource({
       rootDir: fixture.root,

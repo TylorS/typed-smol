@@ -389,12 +389,9 @@ export type RouteTypes = {
   readonly catches: Catches;
 };
 
-export type HandlerReturn<A = any, E = any, R = any> = MatchHandlerReturnValue<A, E, R>;
-
-export type Handler<A = any, E = any, R = any> =
-  | HandlerReturn<A, E, R>
-  | ((params: Params) => HandlerReturn<A, E, R>)
-  | ((params: RefSubject<Params>) => HandlerReturn<A, E, R>);`);
+export type Handler<A = any, E = any, R = any> = (
+  params: RefSubject<Params>,
+) => MatchHandlerReturnValue<A, E, R>;`);
 
   return source.emit();
 }
