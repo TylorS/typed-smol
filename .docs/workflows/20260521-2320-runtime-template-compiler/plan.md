@@ -72,7 +72,7 @@ Modify:
 | T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | completed in `feat(app): add typed hmr state registry` |
 | T10 | direct | T8, T9 | `pnpm --filter @typed/compiler test -- analyzeComponentHmr` | analysis only, no source rewrite | completed in `feat(compiler): analyze component hmr state` |
 | T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | completed in `feat(compiler): infer route hmr dependencies` |
-| T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | revert closure context files |
+| T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | completed in `feat(compiler): plan closure hmr contexts` |
 | T13 | direct | T7, T10 | `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin` | preserve VM plugin ordering | revert browser emitter changes |
 | T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | revert server emitter changes |
 | T15 | direct | T13, T14 | targeted Vite HMR fixture command created in task | isolated fixture | remove fixture and Vite wiring |
@@ -564,11 +564,15 @@ Commit message: `feat(compiler): infer route hmr dependencies`.
 
 ### Task 12: Add Closure Context Rewrite Planning
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Add planning-only closure context descriptors. Eligible captures become generated context fields, `Fx.fn`-style error/service metadata is preserved in the descriptor, and unsupported mutable captures are rejected with diagnostics instead of attempting arbitrary closure serialization.
+
 **Files:**
 - Create: `packages/compiler/src/hmr/closureContext.ts`
 - Create: `packages/compiler/src/hmr/closureContext.test.ts`
 
-- [ ] **Step 1: Write failing closure tests**
+- [x] **Step 1: Write failing closure tests**
 
 Tests:
 
@@ -580,17 +584,17 @@ Run: `pnpm --filter @typed/compiler test -- closureContext`
 
 Expected: fails because closure context planner is missing.
 
-- [ ] **Step 2: Implement planning-only transform**
+- [x] **Step 2: Implement planning-only transform**
 
 Produce a context descriptor and diagnostics. Keep source rewriting minimal until later execution task proves service-backed HMR.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/compiler test -- closureContext`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(compiler): plan closure hmr contexts`.
 

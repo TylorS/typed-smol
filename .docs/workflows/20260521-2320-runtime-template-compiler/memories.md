@@ -41,3 +41,9 @@
 - Dependency participation is based on stable `RefSubject.Service(...)` identities unless an explicit opt-in is supplied.
 - Anonymous `RefSubject.make(...)` in dependency modules is rejected for preservation; route component inline refs are handled by Task 10 descriptors instead.
 - Dependency fingerprints currently combine module id with sorted service ids, or the explicit opt-in reason when no service id exists.
+
+## Task 12: Closure Context Planning
+
+- Closure context work is still descriptor-only. It does not transform source.
+- Eligible captures become generated context fields with a deterministic `__typed_${closureName}_context` name.
+- Mutable captures are rejected with `unsupported-closure-capture`; arbitrary closure serialization remains out of scope.
