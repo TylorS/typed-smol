@@ -5,6 +5,10 @@ import { RefSubject } from "@typed/fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
 
+type AnyContent = Renderable<unknown, unknown, unknown>;
+type OptionalString = Renderable<string | undefined, unknown, unknown>;
+type RequiredString = Renderable<string, unknown, unknown>;
+
 export interface State {
   readonly open: boolean;
 }
@@ -32,11 +36,13 @@ export function close(state: RefSubject.RefSubject<State>): Effect.Effect<State>
   return setOpen(state, false).pipe(Effect.tap(() => focusInvoker(state)));
 }
 
-export function Trigger<const Content extends Renderable.Any>(options: {
+export interface TriggerOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly controls?: string;
-  readonly content: Content;
-}) {
+  readonly controls?: OptionalString;
+  readonly content: AnyContent;
+}
+
+export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
   const open = dataOpen(options.state);
   const onClick = EventHandler.make((event: MouseEvent) => {
     const eventTarget = event.currentTarget ?? event.target;
@@ -59,21 +65,25 @@ export function Trigger<const Content extends Renderable.Any>(options: {
   >${options.content}</button>`;
 }
 
-export function Close<const Content extends Renderable.Any>(options: {
+export interface CloseOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly content: Content;
-}) {
+  readonly content: AnyContent;
+}
+
+export function Close<const Opts extends CloseOptions>(options: Opts) {
   const onClick = EventHandler.make(() => close(options.state));
 
   return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
 }
 
-export function Content<const Content extends Renderable.Any>(options: {
+export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly id?: string;
-  readonly label: string;
-  readonly content: Content;
-}) {
+  readonly id?: OptionalString;
+  readonly label: RequiredString;
+  readonly content: AnyContent;
+}
+
+export function Content<const Opts extends ContentOptions>(options: Opts) {
   const open = dataOpen(options.state);
   const hidden = RefSubject.map(options.state, (current) => !current.open);
 

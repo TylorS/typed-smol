@@ -30,6 +30,20 @@ describe("typed/ui/DataAttr", () => {
       assert.deepStrictEqual(yield* DataAttr.encode(data, { label: undefined }), {});
     }).pipe(Effect.runPromise));
 
+  it("decodes optional fields as whole data objects", () =>
+    Effect.gen(function* () {
+      const data = DataAttr.schema({
+        open: Schema.Boolean,
+        mode: Schema.Literals(["auto", "manual"]),
+        label: Schema.optionalKey(Schema.String),
+      });
+
+      assert.deepStrictEqual(yield* DataAttr.decode(data, { open: "false", mode: "auto" }), {
+        open: false,
+        mode: "auto",
+      });
+    }).pipe(Effect.runPromise));
+
   it("encodes and decodes whole data objects", () =>
     Effect.gen(function* () {
       const data = DataAttr.schema({

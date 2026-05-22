@@ -5,6 +5,8 @@ import { RefSubject } from "@typed/fx";
 import { EventHandler, type Renderable, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
 
+type AnyContent = Renderable<unknown, unknown, unknown>;
+
 export interface State {
   readonly id: string;
   readonly open: boolean;
@@ -29,10 +31,12 @@ export function setOpen(
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
-export function Trigger<const Content extends Renderable.Any>(options: {
+export interface TriggerOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly content: Content;
-}) {
+  readonly content: AnyContent;
+}
+
+export function Trigger<const Opts extends TriggerOptions>(options: Opts) {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
 
@@ -45,10 +49,12 @@ export function Trigger<const Content extends Renderable.Any>(options: {
   >${options.content}</button>`;
 }
 
-export function Content<const Content extends Renderable.Any>(options: {
+export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
-  readonly content: Content;
-}) {
+  readonly content: AnyContent;
+}
+
+export function Content<const Opts extends ContentOptions>(options: Opts) {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);

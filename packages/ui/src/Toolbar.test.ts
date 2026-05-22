@@ -1,0 +1,37 @@
+import { describe, expect, it } from "vitest";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { Fx } from "@typed/fx";
+import { DomRenderTemplate, html, render } from "@typed/template";
+import { Window } from "happy-dom";
+import * as Toolbar from "./Toolbar.js";
+
+describe("typed/ui/Toolbar", () => {
+  it("renders toolbar role, label, orientation, and content", () =>
+    Effect.gen(function* () {
+      const window = new Window();
+      const layer = DomRenderTemplate.using(window.document);
+      const state = yield* Toolbar.makeState({ activeId: "bold", orientation: "horizontal" });
+
+      yield* render(
+        Toolbar.Root({
+          state,
+          label: "Editor",
+          content: html`<button id="bold">B</button><button id="italic">I</button>`,
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const root = window.document.querySelector("[role=toolbar]");
+      expect(root?.getAttribute("aria-label")).toBe("Editor");
+      expect(root?.getAttribute("aria-orientation")).toBe("horizontal");
+      expect(window.document.getElementById("bold")?.textContent).toBe("B");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves focus state through toolbar controls as one composite stop", () =>
+    Effect.gen(function* () {
+      const state = yield* Toolbar.makeState({ activeId: "bold" });
+      yield* Toolbar.move(state, [{ id: "bold" }, { id: "italic" }], "next");
+      expect((yield* state).activeId).toBe("italic");
+    }).pipe(Effect.scoped, Effect.runPromise));
+});

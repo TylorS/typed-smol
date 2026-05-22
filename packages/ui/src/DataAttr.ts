@@ -44,11 +44,12 @@ export function decode<const Fields extends DataFields>(
     const input = hasDataset(source) ? source.dataset : source;
     const output: Record<string, unknown> = {};
 
-    for (const [key, fieldSchema] of Object.entries(data.fields)) {
-      output[key] = yield* Schema.decodeEffect(fieldSchema)(coerceDatasetValue(input[key]));
+    for (const key of Object.keys(data.fields)) {
+      const value = input[key];
+      if (value !== undefined) output[key] = coerceDatasetValue(value);
     }
 
-    return output as Type<Fields>;
+    return yield* Schema.decodeUnknownEffect(Schema.Struct(data.fields))(output);
   });
 }
 

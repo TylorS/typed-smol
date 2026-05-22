@@ -6,12 +6,12 @@
 
 ## Capabilities
 
-- **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics (href, target, keyboard, right-click).
-- **Accessible primitives** — First tranche of Ariakit-style, Typed-native primitives: `Disclosure`, `Dialog`, and native `Popover`.
-- **State substrate** — Component state is a direct `RefSubject.RefSubject<State>`. There is no separate Store abstraction.
-- **Data attributes** — `DataAttr` encodes public `.data={object}` state through Effect Schema for stable styling and inspection attributes.
-- **Startup refs** — `StartupRef` hydrates backing `RefSubject`s from server-emitted DOM `data-*` state during startup.
-- **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for server-side rendering. Requests are parsed, matched, and the corresponding Fx is rendered to HTML. `handleHttpServerError` adds global middleware for 404/400/500.
+- **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics.
+- **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for server-side rendering. `handleHttpServerError` adds global middleware for 404/400/500.
+- **State substrate** — Component state is direct `RefSubject.RefSubject<State>`. There is no separate Store abstraction.
+- **DOM/data substrate** — `Dom`, `DataAttr`, `StartupRef`, `State`, `Collection`, and `Composite` support element-backed options, Schema-backed public `data-*` state, server-startup ref hydration, scope-owned registration, and APG-style composite navigation.
+- **Accessible primitives** — `Disclosure`, `Dialog`, and native `Popover`.
+- **Proof widgets** — `Tabs`, `RadioGroup`, and `Toolbar` compose the substrate into Ariakit-like Typed primitives.
 
 ## Dependencies
 
@@ -25,22 +25,31 @@
 
 ## API overview
 
-- **Link** — `Link(options)` renders an `<a href="...">` that intercepts same-origin, same-document clicks and calls `Navigation.navigate` instead of a full page load. Options include `href`, `content`, `replace`, and standard anchor props. Requires **Navigation** and **RenderTemplate** in context (e.g. browser router).
+- **Link:** `Link(options)` renders an `<a href="...">` that intercepts same-origin, same-document clicks and calls `Navigation.navigate` instead of a full page load.
 - **DataAttr:** `DataAttr.schema(fields)` defines a whole `.data={object}` shape from string keys to Effect Schema fields; `encode` returns string data values and `decode` reads plain objects or DOM `dataset`.
 - **State:** `State.tag(id)` creates an Effect `Context.Service` key for passing the same `RefSubject` through context when provider lookup is useful.
 - **StartupRef:** `StartupRef.fromData(ref, data)` decodes DOM `data-*` state and merges it into an existing `RefSubject`; `StartupRef.compose(...)` combines multiple startup refs for one template `ref`.
+- **Collection:** `Collection.makeState` and `Collection.register` track item metadata. Registration is scoped and unregisters when the owning `Scope` closes.
+- **Composite:** `Composite.makeState`, movement helpers, roving tabindex helpers, and virtual-focus helpers provide reusable APG-style active item behavior.
 - **Disclosure:** `Disclosure.makeState`, `Disclosure.Button`, and `Disclosure.Content` provide headless disclosure state, APG button attributes, `hidden` content, and public `data-open`.
 - **Dialog:** `Dialog.makeState`, `Dialog.Trigger`, `Dialog.Content`, and `Dialog.Close` provide modal dialog semantics, open/close state, focus return to the invoker, and public `data-open`.
 - **Popover:** `Popover.makeState`, `Popover.Trigger`, and `Popover.Content` render native `popovertarget`, `popovertargetaction`, and `popover` attributes and mirror native `toggle` events into state.
-- **SSR:** `ssrForHttp(router, matcher)` — registers route handlers on an Effect **HttpRouter** for server-side rendering; `handleHttpServerError(router)` — global middleware for HTTP server errors.
+- **Tabs / RadioGroup / Toolbar:** First composite-backed proof widgets.
+- **SSR:** `ssrForHttp(router, matcher)` registers route handlers on an Effect **HttpRouter** for server-side rendering; `handleHttpServerError(router)` handles HTTP server errors.
 
 `Popover` intentionally uses only the native HTML Popover API. It does not add a custom overlay, custom focus trap, JS click toggle, positioning engine, or fallback implementation.
+
+## Layered component direction
+
+The component layer is native-platform-first. Modal behavior belongs to native `<dialog>`/`showModal()` and non-modal layered UI belongs to the HTML Popover API. Future Menu, Select/Listbox, and Combobox work should build on `Collection`, `Composite`, native Popover where appropriate, and public Schema-backed `data-*` state.
+
+CSS Anchor Positioning is an explicit goal for future Popover/Menu examples. `@typed/ui` should expose stable DOM attributes and state hooks that let users apply native `anchor-name`, `position-anchor`, and `position-area` CSS without requiring a custom JavaScript positioning engine.
 
 ## API reference
 
 ### `Link`
 
-Renders an `<a href="...">` that intercepts same-origin, same-document clicks and navigates via `Navigation.navigate` instead of a full page load. Requires **Navigation** and **RenderTemplate** in the Effect context (e.g. `BrowserRouter`).
+Renders an `<a href="...">` that intercepts same-origin, same-document clicks and navigates via `Navigation.navigate` instead of a full page load. Requires **Navigation** and **RenderTemplate** in the Effect context.
 
 ```ts
 function Link<const Opts extends LinkOptions>(
@@ -57,36 +66,14 @@ function Link<const Opts extends LinkOptions>(
 | Property  | Type                                                                                            | Required | Description                                                       |
 | --------- | ----------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- |
 | `href`    | `Renderable<string, any, any>`                                                                  | Yes      | Target URL.                                                       |
-| `content` | `Renderable<string \| number \| boolean \| null \| undefined \| void \| RenderEvent, any, any>` | Yes      | Link body (text or template content).                             |
+| `content` | `Renderable<string \| number \| boolean \| null \| undefined \| void \| RenderEvent, any, any>` | Yes      | Link body.                                                        |
 | `replace` | `boolean`                                                                                       | No       | If `true`, use history replace instead of push. Default: `false`. |
 
-In addition, `LinkOptions` accepts standard anchor event handlers (e.g. `onclick`), `ref`, and other writable `HTMLAnchorElement` properties. Custom `onclick` runs first; if the event is not `preventDefault`'d, the built-in navigation handler runs.
-
----
+In addition, `LinkOptions` accepts standard anchor event handlers, `ref`, and other writable `HTMLAnchorElement` properties. Custom `onclick` runs first; if the event is not `preventDefault`'d, the built-in navigation handler runs.
 
 ### `ssrForHttp`
 
-Registers route handlers on an Effect **HttpRouter** for server-side rendering. The matcher's routes are compiled and each case is exposed as a GET route; requests are parsed, matched, and the corresponding Fx is rendered to HTML. Requires **Router** and **Scope** to be provided elsewhere; other matcher services remain in the effect requirement.
-
-**Overloads:**
-
-```ts
-// (router, matcher)
-function ssrForHttp<E, R>(
-  router: HttpRouter,
-  input: Matcher<RenderEvent, E, R>,
-): Effect.Effect<void, never, Exclude<R, Scope | Router>>;
-
-// (matcher)(router) — curried
-function ssrForHttp<E, R>(
-  input: Matcher<RenderEvent, E, R>,
-): (router: HttpRouter) => Effect.Effect<void, never, Exclude<R, Scope | Router>>;
-```
-
-- **`router`** — Effect `HttpRouter` to attach GET handlers to.
-- **`input`** — A **Matcher** from `@typed/router` whose cases produce `RenderEvent` Fx (e.g. templates). Route path and query params are decoded and passed to the handler; `Scope` and `Router` are provided by the SSR pipeline.
-
----
+Registers route handlers on an Effect **HttpRouter** for server-side rendering. The matcher's routes are compiled and each case is exposed as a GET route; requests are parsed, matched, and the corresponding Fx is rendered to HTML.
 
 ### `handleHttpServerError`
 
@@ -98,22 +85,13 @@ Adds global middleware to an **HttpRouter** that catches `HttpServerError` and r
 | `RequestParseError`               | 400    |
 | `InternalError` / `ResponseError` | 500    |
 
-```ts
-function handleHttpServerError(router: HttpRouter): Effect.Effect<void, never, HttpRouter>;
-```
-
-Use after registering routes (e.g. after `ssrForHttp`) so unhandled route and parse errors are converted to 404/400/500 instead of failing the server.
-
 ## Example
 
 ```ts
 import { Link } from "@typed/ui";
 import { html } from "@typed/template";
 
-// In a template: link that navigates via Navigation (no full reload)
 const nav = html`<nav>
   ${Link({ href: "/", content: "Home" })} ${Link({ href: "/todos", content: "Todos" })}
 </nav>`;
 ```
-
-For SSR, provide the router and matcher to `ssrForHttp` when setting up the HTTP server; see Effect's `HttpRouter` and the TodoMVC example structure.

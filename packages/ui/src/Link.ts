@@ -1,6 +1,5 @@
 import * as Effect from "effect/Effect";
 import type { Scope } from "effect/Scope";
-import type { Stream } from "effect/Stream";
 import { type Fx, gen } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx/RefSubject";
 import { getUrl } from "@typed/navigation/_core";
@@ -13,35 +12,13 @@ import {
   type RenderTemplate,
   html,
 } from "@typed/template";
+import type * as Dom from "./Dom.js";
 
-type EventHandlerProperty = `on${string}`;
-
-type AnchorEventHandlers = {
-  readonly [K in keyof HTMLAnchorElement as K extends EventHandlerProperty ? K : never]?:
-    | Effect.Effect<unknown, any, any>
-    | EventHandler.EventHandler<Event, any, any>;
+type AnchorClickEvent = Dom.EventOf<HTMLAnchorElement["onclick"]> & {
+  readonly currentTarget: HTMLAnchorElement;
 };
 
-type AnchorRef = {
-  readonly ref?: (
-    element: HTMLAnchorElement,
-  ) => void | Effect.Effect<unknown, any, any> | Stream<unknown, any, any> | Fx<unknown, any, any>;
-};
-
-type IfEquals<X, Y, Output> =
-  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? Output : never;
-
-type WritableKeys<T> = {
-  [P in keyof T]-?: IfEquals<{ [Q in P]: T[P] }, { -readonly [Q in P]: T[P] }, P>;
-}[keyof T];
-
-type AnchorProperties = {
-  readonly [K in WritableKeys<HTMLAnchorElement> as K extends EventHandlerProperty | "ref"
-    ? never
-    : K]?: Renderable<HTMLAnchorElement[K], any, any>;
-};
-
-export interface LinkOptions extends AnchorEventHandlers, AnchorRef, AnchorProperties {
+export interface LinkOptions extends Dom.ElementOptions<HTMLAnchorElement> {
   readonly "aria-current"?: Renderable<string | null | undefined, any, any>;
   readonly class?: Renderable<string | null | undefined, any, any>;
   readonly href: Renderable<string, any, any>;
@@ -55,12 +32,8 @@ export interface LinkOptions extends AnchorEventHandlers, AnchorRef, AnchorPrope
 
 function makeLinkClickHandler(
   replace$: RefSubject.RefSubject<boolean>,
-): EventHandler.EventHandler<
-  MouseEvent & { readonly currentTarget: HTMLAnchorElement },
-  never,
-  Router.Router | Scope
-> {
-  return EventHandler.make((ev: MouseEvent & { readonly currentTarget: HTMLAnchorElement }) =>
+): EventHandler.EventHandler<AnchorClickEvent, never, Router.Router | Scope> {
+  return EventHandler.make((ev: AnchorClickEvent) =>
     Effect.gen(function* () {
       const href = ev.currentTarget.href;
       if (ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
@@ -95,7 +68,7 @@ export function Link<const Opts extends LinkOptions>(
     const userHandler = onclick ? EventHandler.fromEffectOrEventHandler(onclick) : undefined;
     const clickHandler = userHandler
       ? EventHandler.make(
-          Effect.fn(function* (ev: MouseEvent & { readonly currentTarget: HTMLAnchorElement }) {
+          Effect.fn(function* (ev: AnchorClickEvent) {
             yield* userHandler.handler(ev);
             if (ev.defaultPrevented) return;
             yield* navigationHandler.handler(ev);
@@ -104,7 +77,7 @@ export function Link<const Opts extends LinkOptions>(
         )
       : navigationHandler;
 
-    const props: Record<string, unknown> = { ...rest, onclick: clickHandler };
+    const props = { ...rest, onclick: clickHandler };
 
     return html`<a ...${props}>${children}</a>`;
   });
