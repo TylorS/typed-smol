@@ -11,7 +11,7 @@
 - **State substrate** — Component state is direct `RefSubject.RefSubject<State>`. There is no separate Store abstraction.
 - **DOM/data substrate** — `Dom`, `DataAttr`, `StartupRef`, `State`, `Collection`, and `Composite` support element-backed options, Schema-backed public `data-*` state, server-startup ref hydration, scope-owned registration, and APG-style composite navigation.
 - **Accessible primitives** — `Disclosure`, `Dialog`, and native `Popover`.
-- **Layered and proof widgets** — `Menu`, `Listbox`, `Tabs`, `RadioGroup`, and `Toolbar` compose the substrate into Ariakit-like Typed primitives.
+- **Layered and proof widgets** — `Menu`, `Listbox`, `Select`, `Tabs`, `RadioGroup`, and `Toolbar` compose the substrate into Ariakit-like Typed primitives.
 
 ## Dependencies
 
@@ -36,6 +36,7 @@
 - **Popover:** `Popover.makeState`, `Popover.Trigger`, and `Popover.Content` render native `popovertarget`, `popovertargetaction`, and `popover` attributes and mirror native `toggle` events into state.
 - **Menu:** `Menu.makeState`, `Menu.Trigger`, `Menu.Content`, and `Menu.Item` provide a native-Popover-backed menu layer with APG menu roles, active item state, disabled item data, and composite movement helpers.
 - **Listbox:** `Listbox.makeState`, `Listbox.Root`, and `Listbox.Option` provide single-select listbox semantics with active item movement, selected value state, virtual-focus active descendant support, and public option data attrs.
+- **Select:** `Select.makeState`, `Select.Trigger`, `Select.Content`, and `Select.Option` compose native Popover layering with listbox option semantics; selecting an option updates value state and closes the popup.
 - **Tabs / RadioGroup / Toolbar:** First composite-backed proof widgets.
 - **SSR:** `ssrForHttp(router, matcher)` registers route handlers on an Effect **HttpRouter** for server-side rendering; `handleHttpServerError(router)` handles HTTP server errors.
 
@@ -43,7 +44,7 @@
 
 ## Layered component direction
 
-The component layer is native-platform-first. Modal behavior belongs to native `<dialog>`/`showModal()` and non-modal layered UI belongs to the HTML Popover API. Future Select and Combobox work should build on `Collection`, `Composite`, `Menu`, `Listbox`, native Popover where appropriate, and public Schema-backed `data-*` state.
+The component layer is native-platform-first. Modal behavior belongs to native `<dialog>`/`showModal()` and non-modal layered UI belongs to the HTML Popover API. Future Combobox work should build on `Collection`, `Composite`, `Menu`, `Listbox`, `Select`, native Popover where appropriate, and public Schema-backed `data-*` state.
 
 CSS Anchor Positioning is an explicit goal for future Popover/Menu examples. `@typed/ui` should expose stable DOM attributes and state hooks that let users apply native `anchor-name`, `position-anchor`, and `position-area` CSS without requiring a custom JavaScript positioning engine.
 

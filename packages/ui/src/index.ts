@@ -10,6 +10,7 @@ export * as Listbox from "./Listbox.js";
 export * as Menu from "./Menu.js";
 export * as Popover from "./Popover.js";
 export * as RadioGroup from "./RadioGroup.js";
+export * as Select from "./Select.js";
 export * as StartupRef from "./StartupRef.js";
 export * as State from "./State.js";
 export * as Tabs from "./Tabs.js";
