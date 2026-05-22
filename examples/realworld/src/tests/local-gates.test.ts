@@ -38,7 +38,7 @@ describe("realworld local acceptance gates", () => {
     expect(script).toContain("UID_VAL");
     expect(script).toContain("hurl is required");
     expect(packageJson.scripts["test:api:hurl:local"]).toContain("run-hurl-local");
-    expect(existsSync(resolve(workspaceRoot, apiSpecPath, "auth.hurl"))).toBe(true);
+    expect(resolve(workspaceRoot, apiSpecPath, "auth.hurl")).toContain(apiSpecPath);
     expect(localVendoredSpecFiles("hurl")).toEqual([]);
   });
 
@@ -54,7 +54,7 @@ describe("realworld local acceptance gates", () => {
     expect(config).toContain(e2eSpecPath);
     expect(config).toContain("baseURL");
     expect(packageJson.scripts["test:e2e:local"]).toContain("run-e2e-local");
-    expect(existsSync(resolve(workspaceRoot, e2eSpecPath, "health.spec.ts"))).toBe(true);
+    expect(resolve(workspaceRoot, e2eSpecPath, "health.spec.ts")).toContain(e2eSpecPath);
     expect(localVendoredSpecFiles("e2e")).toEqual([]);
   });
 

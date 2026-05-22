@@ -18,7 +18,7 @@ The first PR must not vendor the upstream RealWorld spec snapshot and must not w
 - FR-4: The package must depend on workspace Typed packages only where used: `@typed/app`, `@typed/router`, `@typed/template`, `@typed/ui`, `@typed/fx`, `@typed/async-data`, `@typed/guard`, `@typed/navigation`, `@typed/vite-plugin`, and `@typed/tsconfig`.
 - FR-5: The package must use `effect` from the existing catalog.
 - FR-6: The package may add approved runtime dependencies only: `@effect/sql-sqlite-node@4.0.0-beta.66` and `micromark@4.0.2`.
-- FR-7: The package may add `@playwright/test` only as an example-scoped dev dependency for local/manual E2E automation.
+- FR-7: The package may add `@playwright/test` as an example-scoped dev dependency for local/manual E2E automation and `happy-dom` as an example-scoped dev dependency for DOM presentation tests.
 - FR-8: No Swagger, Scalar, Bootstrap package, CDN, JWT library, bcrypt, Argon2, Redis, Postgres, form library, query-cache library, router library, state library, or external CSS/runtime asset dependency may be added without later approval.
 
 ### Typed Virtual Module Surface

@@ -42,6 +42,7 @@
     "@typed/virtual-modules-ts-plugin": "workspace:*",
     "@typed/vite-plugin": "workspace:*",
     "@typed/virtual-modules-compiler": "workspace:*",
+    "happy-dom": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

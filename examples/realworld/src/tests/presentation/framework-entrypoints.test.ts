@@ -25,9 +25,8 @@ describe("realworld framework entrypoints", () => {
     expect(generated).toContain('import * as Api0 from "typed:api?dir=./api";');
     expect(generated).toContain('import * as Html0 from "typed:html?path=../index.html";');
     expect(generated).toContain('import { ssrForHttp } from "@typed/ui";');
-    expect(generated).toContain(
-      'import { composeWithLayers, Ids, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
-    );
+    expect(generated).toContain('from "@typed/app/runtime";');
+    expect(generated).toContain("composeWithLayers");
     expect(generated).toContain("HttpRouter.use(ssrForHttp");
     expect(generated).toContain("Ids.Default");
     expect(generated).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
@@ -47,17 +46,14 @@ describe("realworld framework entrypoints", () => {
     expect(moduleId).toBe("typed:browser?routes=./routes");
     expect(generated).toContain('import Routes0 from "typed:router?dir=./routes";');
     expect(generated).not.toContain("route-handlers:");
-    expect(generated).toContain(
-      'import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
-    );
+    expect(generated).toContain('from "@typed/app/runtime";');
+    expect(generated).toContain("composeWithLayers");
     expect(generated).toContain("type BrowserLayer<ROut, E, RIn>");
     expect(generated).toContain("function withErrorHandling<A, E, R>");
     expect(generated).not.toContain("Effect.Effect<void, any");
     expect(generated).not.toContain("Cause.Cause<any>");
     expect(generated).not.toContain("TypedAppRuntime");
-    expect(generated).toContain('import { Fx } from "@typed/fx";');
-    expect(generated).toContain('import { DomRenderTemplate, render } from "@typed/template";');
-    expect(generated).toContain("Fx.drainLayer(render(Routes, root))");
+    expect(generated).toContain("mountRuntime(Routes");
     expect(generated).toContain("TypedRouter.BrowserRouter(win)");
     expect(generated).toContain('root: "#typed-root"');
     expect(generated).not.toContain('mode: "hydrate"');

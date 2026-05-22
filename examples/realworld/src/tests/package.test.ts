@@ -47,6 +47,7 @@ describe("typed-realworld package skeleton", () => {
       "@typed/virtual-modules-ts-plugin",
       "@typed/vite-plugin",
       "@types/node",
+      "happy-dom",
       "typescript",
       "vite",
       "vitest",
