@@ -13,8 +13,10 @@ export type TemplatePlanNode =
   | TemplatePlanSelfClosingElementNode
   | TemplatePlanTextOnlyElementNode
   | TemplatePlanTextNode
+  | TemplatePlanSparseTextNode
   | TemplatePlanPartNode
   | TemplatePlanCommentNode
+  | TemplatePlanSparseCommentNode
   | TemplatePlanDocTypeNode;
 
 export interface TemplatePlanElementNode {
@@ -34,13 +36,23 @@ export interface TemplatePlanTextOnlyElementNode {
   readonly kind: "textOnlyElement";
   readonly tagName: string;
   readonly attributes: readonly TemplatePlanAttribute[];
-  readonly textContent: string | null;
+  readonly textContent: TemplatePlanTextContent | null;
 }
 
 export interface TemplatePlanTextNode {
   readonly kind: "text";
   readonly value: string;
 }
+
+export interface TemplatePlanSparseTextNode {
+  readonly kind: "sparseText";
+  readonly nodes: readonly TemplatePlanSparsePart[];
+}
+
+export type TemplatePlanTextContent =
+  | TemplatePlanTextNode
+  | TemplatePlanSparseTextNode
+  | TemplatePlanPartNode;
 
 export interface TemplatePlanPartNode {
   readonly kind: "part";
@@ -50,6 +62,11 @@ export interface TemplatePlanPartNode {
 export interface TemplatePlanCommentNode {
   readonly kind: "comment";
   readonly value: string;
+}
+
+export interface TemplatePlanSparseCommentNode {
+  readonly kind: "sparseComment";
+  readonly nodes: readonly TemplatePlanSparsePart[];
 }
 
 export interface TemplatePlanDocTypeNode {
