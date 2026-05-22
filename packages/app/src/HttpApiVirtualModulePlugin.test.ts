@@ -1782,11 +1782,20 @@ export const handler = () => Effect.succeed({ ok: true });
       expect(sourceText).toContain(
         'import * as ArticlesCommentsPrefix from "./apis/articles/comments/_prefix.js";',
       );
+      expect(sourceText).toContain("const ApiRoute = ApiRoot.prefix;");
       expect(sourceText).toContain(
-        "params: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).pathSchema",
+        "const ArticlesRoute = Route.Join(ApiRoute, ArticlesPrefix.default);",
       );
       expect(sourceText).toContain(
-        "query: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).querySchema",
+        "const ArticlesCommentsRoute = Route.Join(ArticlesRoute, ArticlesCommentsPrefix.default);",
+      );
+      expect(sourceText).toContain(
+        "const ArticlesCommentsDeleteRoute = Route.Join(ArticlesCommentsRoute, ArticlesCommentsDelete.route);",
+      );
+      expect(sourceText).toContain("params: ArticlesCommentsDeleteRoute.pathSchema");
+      expect(sourceText).toContain("query: ArticlesCommentsDeleteRoute.querySchema");
+      expect(sourceText).not.toContain(
+        "params: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).pathSchema",
       );
     });
 
@@ -1820,8 +1829,16 @@ export const handler = () => Effect.succeed({ ok: true });
 
       expect(sourceText).toBeDefined();
       expect(sourceText).toContain(
-        "params: Route.Join(ArticlesPrefixDefaultRoute.Parse(\"/articles\"), ArticlesCommentsPrefixDefaultRoute.Parse(\"/:slug/comments\"), ArticlesCommentsDeleteRouteRoute.Int(\"commentId\")).pathSchema",
+        'const ArticlesRoute = ArticlesPrefixDefaultRoute.Parse("/articles");',
       );
+      expect(sourceText).toContain(
+        'const ArticlesCommentsRoute = Route.Join(ArticlesRoute, ArticlesCommentsPrefixDefaultRoute.Parse("/:slug/comments"));',
+      );
+      expect(sourceText).toContain(
+        "const ArticlesCommentsDeleteRoute = Route.Join(ArticlesCommentsRoute, ArticlesCommentsDeleteRouteRoute.Int(\"commentId\"));",
+      );
+      expect(sourceText).toContain("params: ArticlesCommentsDeleteRoute.pathSchema");
+      expect(sourceText).toContain("query: ArticlesCommentsDeleteRoute.querySchema");
     });
 
     it("_api.ts openapi.exposure: emits installed JSON, Swagger, and Scalar CDN layers", () => {

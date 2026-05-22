@@ -484,29 +484,118 @@ function renderGroupLayerExpression(
   }, groupLayerExpression);
 }
 
-function endpointPrefixRouteExpressions(
+type RouteExpressionPart = {
+  readonly path: string;
+  readonly expression: string;
+};
+
+type RouteBindingDraft = {
+  readonly key: string;
+  readonly proposedName: string;
+  readonly parentKey: string | undefined;
+  readonly routeExpression: string;
+};
+
+type RouteBindingPlan = {
+  readonly declarations: readonly RouteBindingDeclaration[];
+  readonly endpointRouteNameByPath: ReadonlyMap<string, string>;
+};
+
+type RouteBindingDeclaration = {
+  readonly name: string;
+  readonly expression: string;
+};
+
+function createRouteBindingPlan(input: {
+  readonly endpointSpecs: readonly EndpointRenderSpec[];
+  readonly routePartsForEndpoint: (endpoint: EndpointRenderSpec) => readonly RouteExpressionPart[];
+  readonly routeExpressionForEndpoint: (endpoint: EndpointRenderSpec) => string;
+}): RouteBindingPlan {
+  const drafts = new Map<string, RouteBindingDraft>();
+  const order: string[] = [];
+  const endpointKeys = new Map<string, string>();
+
+  for (const endpoint of input.endpointSpecs) {
+    let parentKey: string | undefined;
+    for (const part of input.routePartsForEndpoint(endpoint)) {
+      const key = parentKey ? `${parentKey}|${part.path}` : `prefix:${part.path}`;
+      if (!drafts.has(key)) {
+        drafts.set(key, {
+          key,
+          parentKey,
+          proposedName: prefixRouteBindingName(part.path),
+          routeExpression: part.expression,
+        });
+        order.push(key);
+      }
+      parentKey = key;
+    }
+
+    const endpointKey = `endpoint:${endpoint.modulePath}`;
+    drafts.set(endpointKey, {
+      key: endpointKey,
+      parentKey,
+      proposedName: `${pathToIdentifier(endpoint.modulePath)}Route`,
+      routeExpression: input.routeExpressionForEndpoint(endpoint),
+    });
+    order.push(endpointKey);
+    endpointKeys.set(endpoint.modulePath, endpointKey);
+  }
+
+  const names = makeUniqueVarNames(
+    order.map((key) => {
+      const draft = drafts.get(key)!;
+      return { path: key, proposedName: draft.proposedName };
+    }),
+  );
+  const declarations = order.map((key) => {
+    const draft = drafts.get(key)!;
+    const name = names.get(key)!;
+    const parentName = draft.parentKey ? names.get(draft.parentKey) : undefined;
+    return {
+      name,
+      expression: parentName
+        ? `Route.Join(${parentName}, ${draft.routeExpression})`
+        : draft.routeExpression,
+    };
+  });
+  const endpointRouteNameByPath = new Map<string, string>();
+  for (const [path, key] of endpointKeys) {
+    endpointRouteNameByPath.set(path, names.get(key)!);
+  }
+
+  return { declarations, endpointRouteNameByPath };
+}
+
+function prefixRouteBindingName(path: string): string {
+  const fileName = basename(path);
+  if (fileName.startsWith("_api.")) return "ApiRoute";
+  const dir = dirnamePosix(path);
+  return `${pathToIdentifier(dir || path)}Route`;
+}
+
+function renderRouteBindingDeclarations(plan: RouteBindingPlan): string {
+  return plan.declarations
+    .map((declaration) => `const ${declaration.name} = ${declaration.expression};`)
+    .join("\n");
+}
+
+function endpointPrefixRouteParts(
   endpoint: EndpointRenderSpec,
   apiSpec: ApiRenderSpec,
   groupSpecByKey: ReadonlyMap<string, GroupRenderSpec>,
   directoryOptionNameByPath: ReadonlyMap<string, string>,
   expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
-): readonly string[] {
+): readonly RouteExpressionPart[] {
   return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey, expressionsByPath).flatMap(
     (path) => {
       const moduleName = directoryOptionNameByPath.get(path);
       const exportName = prefixRouteExportName(expressionsByPath, path);
-      return moduleName && exportName ? [`${moduleName}.${exportName}`] : [];
+      return moduleName && exportName
+        ? [{ path, expression: `${moduleName}.${exportName}` }]
+        : [];
     },
   );
-}
-
-function renderEffectiveEndpointRoute(
-  routeExpression: string,
-  prefixRouteExpressions: readonly string[],
-): string {
-  return prefixRouteExpressions.length === 0
-    ? routeExpression
-    : `Route.Join(${[...prefixRouteExpressions, routeExpression].join(", ")})`;
 }
 
 function endpointPrefixRoutePaths(
@@ -716,6 +805,18 @@ export function emitHttpApiSource(input: {
 
   const groupExprs: string[] = [];
   const groupSpecByKey = new Map(groupSpecs.map((spec) => [spec.key, spec]));
+  const routeBindings = createRouteBindingPlan({
+    endpointSpecs,
+    routeExpressionForEndpoint: (endpoint) => `${varNameByPath.get(endpoint.modulePath)!}.route`,
+    routePartsForEndpoint: (endpoint) =>
+      endpointPrefixRouteParts(
+        endpoint,
+        apiSpec,
+        groupSpecByKey,
+        directoryOptionNameByPath,
+        exportExpressionsByPath,
+      ),
+  });
   for (const groupSpec of groupSpecs) {
     const endpointsInGroup = endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
@@ -728,16 +829,7 @@ export function emitHttpApiSource(input: {
       const name = literals?.name ?? ep.stem;
       const factory = METHOD_FACTORIES[method] ?? "get";
       const m = varName;
-      const effectiveRoute = renderEffectiveEndpointRoute(
-        `${m}.route`,
-        endpointPrefixRouteExpressions(
-          ep,
-          apiSpec,
-          groupSpecByKey,
-          directoryOptionNameByPath,
-          exportExpressionsByPath,
-        ),
-      );
+      const effectiveRoute = routeBindings.endpointRouteNameByPath.get(ep.modulePath)!;
       const optionalPresent = input.optionalExportsByPath.get(ep.path) ?? new Set<OptionalExport>();
       const optsParts: string[] = [
         `params: ${effectiveRoute}.pathSchema`,
@@ -854,6 +946,8 @@ export function emitHttpApiSource(input: {
   const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
 
   return `${importLines.join("\n")}${openApiHelperBlock}
+
+${renderRouteBindingDeclarations(routeBindings)}
 
 export const Api = ${apiExpr};
 export const DependenciesLayer = ${dependenciesLayer};
@@ -981,6 +1075,25 @@ function emitHttpApiClientSource(input: {
 
   const groupExprs: string[] = [];
   const groupSpecByKey = new Map(input.groupSpecs.map((spec) => [spec.key, spec]));
+  const routeBindings = createRouteBindingPlan({
+    endpointSpecs: input.endpointSpecs,
+    routeExpressionForEndpoint: (endpoint) => {
+      const literals = input.extractedLiteralsByPath.get(endpoint.path);
+      const routePath = literals?.path ?? `/${endpoint.stem}`;
+      return (
+        imports.expressionFor(endpoint.path, "route", input.exportExpressionsByPath) ??
+        `Route.Parse(${JSON.stringify(routePath)})`
+      );
+    },
+    routePartsForEndpoint: (endpoint) =>
+      clientEndpointPrefixRouteParts(
+        endpoint,
+        input.apiSpec,
+        groupSpecByKey,
+        imports,
+        input.exportExpressionsByPath,
+      ),
+  });
   for (const groupSpec of input.groupSpecs) {
     const endpointsInGroup = input.endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
@@ -994,16 +1107,7 @@ function emitHttpApiClientSource(input: {
       const routeExpr =
         imports.expressionFor(endpoint.path, "route", input.exportExpressionsByPath) ??
         `Route.Parse(${JSON.stringify(routePath)})`;
-      const effectiveRouteExpr = renderEffectiveEndpointRoute(
-        routeExpr,
-        clientEndpointPrefixRouteExpressions(
-          endpoint,
-          input.apiSpec,
-          groupSpecByKey,
-          imports,
-          input.exportExpressionsByPath,
-        ),
-      );
+      const effectiveRouteExpr = routeBindings.endpointRouteNameByPath.get(endpoint.modulePath)!;
       const optsParts = [
         `params: ${effectiveRouteExpr}.pathSchema`,
         `query: ${effectiveRouteExpr}.querySchema`,
@@ -1061,6 +1165,8 @@ function emitHttpApiClientSource(input: {
   const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
 
   return `${[...importLines, ...imports.lines()].join("\n")}${openApiHelperBlock}
+
+${renderRouteBindingDeclarations(routeBindings)}
 
 export const Api = ${apiExpr};
 export const OpenApi = OpenApiModule.fromApi(Api);
@@ -1135,20 +1241,20 @@ class ClientImportBuilder {
   }
 }
 
-function clientEndpointPrefixRouteExpressions(
+function clientEndpointPrefixRouteParts(
   endpoint: EndpointRenderSpec,
   apiSpec: ApiRenderSpec,
   groupSpecByKey: ReadonlyMap<string, GroupRenderSpec>,
   imports: ClientImportBuilder,
   expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
-): readonly string[] {
+): readonly RouteExpressionPart[] {
   return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey, expressionsByPath).flatMap(
     (path) => {
       const exportName = prefixRouteExportName(expressionsByPath, path);
       const expression = exportName
         ? imports.expressionFor(path, exportName, expressionsByPath)
         : undefined;
-      return expression ? [expression] : [];
+      return expression ? [{ path, expression }] : [];
     },
   );
 }

@@ -71,9 +71,14 @@ describe("realworld generated api source", () => {
     expect(source).toContain(
       'import * as ArticlesCommentsPrefix from "./api/articles/comments/_prefix.js";',
     );
+    expect(source).toContain("const ArticlesRoute = Route.Join(ApiRoute, ArticlesPrefix.default);");
     expect(source).toContain(
-      "params: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).pathSchema",
+      "const ArticlesCommentsRoute = Route.Join(ArticlesRoute, ArticlesCommentsPrefix.default);",
     );
+    expect(source).toContain(
+      "params: ArticlesCommentsDeleteRoute.pathSchema",
+    );
+    expect(source).toContain("query: ArticlesCommentsDeleteRoute.querySchema");
     expect(source).not.toContain("/api/docs/swagger");
     expect(source).not.toContain('path: "/api/docs"');
   });
