@@ -6,6 +6,7 @@ export * as Disclosure from "./Disclosure.js";
 export * as Dom from "./Dom.js";
 export * from "./HttpRouter.js";
 export * from "./Link.js";
+export * as Menu from "./Menu.js";
 export * as Popover from "./Popover.js";
 export * as RadioGroup from "./RadioGroup.js";
 export * as StartupRef from "./StartupRef.js";

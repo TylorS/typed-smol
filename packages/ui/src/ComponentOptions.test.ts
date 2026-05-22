@@ -6,6 +6,7 @@ import { RefSubject } from "@typed/fx";
 import type { RenderTemplate } from "@typed/template";
 import * as Dialog from "./Dialog.js";
 import * as Disclosure from "./Disclosure.js";
+import * as Menu from "./Menu.js";
 import * as Tabs from "./Tabs.js";
 import * as Toolbar from "./Toolbar.js";
 
@@ -21,6 +22,7 @@ describe("typed/ui component option inference", () => {
   it("preserves renderable error and service types from non-content options", () => {
     const disclosure = {} as RefSubject.RefSubject<Disclosure.State>;
     const dialog = {} as RefSubject.RefSubject<Dialog.State>;
+    const menu = {} as RefSubject.RefSubject<Menu.State>;
     const tabs = {} as RefSubject.RefSubject<Tabs.State>;
     const toolbar = {} as RefSubject.RefSubject<Toolbar.State>;
     const label = Effect.flatMap(OptionService, () => Effect.fail(new OptionError()));
@@ -35,6 +37,11 @@ describe("typed/ui component option inference", () => {
       label,
       content: "Dialog",
     });
+    const menuContent = Menu.Content({
+      state: menu,
+      label,
+      content: "Menu",
+    });
     const tabsList = Tabs.List({
       state: tabs,
       label,
@@ -48,6 +55,7 @@ describe("typed/ui component option inference", () => {
 
     expectTypeOf<Fx.Error<typeof disclosureContent>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof dialogContent>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Error<typeof menuContent>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof tabsList>>().toEqualTypeOf<OptionError>();
     expectTypeOf<Fx.Error<typeof toolbarRoot>>().toEqualTypeOf<OptionError>();
 
@@ -55,6 +63,7 @@ describe("typed/ui component option inference", () => {
       OptionService | RenderTemplate
     >();
     expectTypeOf<Fx.Services<typeof dialogContent>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof menuContent>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof tabsList>>().toExtend<OptionService | RenderTemplate>();
     expectTypeOf<Fx.Services<typeof toolbarRoot>>().toExtend<OptionService | RenderTemplate>();
   });
