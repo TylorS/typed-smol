@@ -22,7 +22,7 @@
   - PACKAGE: `pnpm --filter @typed/ui test` passed with `3` files and `21` tests.
   - BUILD: `pnpm --filter @typed/ui build` passed.
 - commit:
-  - `76e96a0 feat(ui): add schema data attributes`
+  - `50b39c2 feat(ui): add schema data attributes`
 - deviations_or_replans:
   - The initial test used `Schema.Literal("top", "bottom")`, but this Effect version treats `Schema.Literal` as a single-literal schema. The test was corrected to use `Schema.Literals([...])`.
   - The implementation narrowed data field schemas to service-free `Schema.Codec<any, any, never, never>` so DataAttr encode/decode effects do not introduce unknown service requirements.
