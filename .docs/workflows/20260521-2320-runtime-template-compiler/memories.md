@@ -73,3 +73,9 @@
 - Template source fingerprints use the source module id plus template hash; target/options changes are plugin config fingerprints; `@typed/compiler` version is a compiler fingerprint.
 - Empty compiler versions or non-hashable options produce unavailable reasons so artifact reuse fails closed.
 - No vmc/vite materialization hook was required in this slice; the existing virtual-modules-compiler artifact suite remains green.
+
+## Task 17: Runtime Template Compiler Example
+
+- The runnable example lives in `packages/app/src/runtimeTemplateCompilerExample.ts` to avoid adding a new workspace package or touching the dirty lockfile.
+- It exercises optimized server rendering through `renderServer(emitServerTemplate(plan))`, optimized DOM hydration through `hydrate(emitDomTemplate(plan))`, and route/dependency HMR planning through `planViteHmrBoundary`.
+- The example uses an actual `RefSubject.Service` id plus app HMR registry state to prove compatible route source edits reuse service-backed state.

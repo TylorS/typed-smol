@@ -77,7 +77,7 @@ Modify:
 | T14 | direct | T7 | `pnpm --filter @typed/app test -- ServerVirtualModulePlugin` | preserve config-driven build paths | completed in `feat(app): wire server runtime templates` |
 | T15 | direct | T13, T14 | `pnpm --filter @typed/compiler test -- viteHmrFixture` | isolated fixture | completed in `feat(compiler): prove route hmr state fixture` |
 | T16 | direct | T4, T5, T13, T14 | `pnpm --filter @typed/virtual-modules-compiler test` | artifact-store fail-closed semantics | completed in `feat(compiler): integrate template output fingerprints` |
-| T17 | direct | T15, T16 | server+DOM example command created in task | example only after package gates | remove example changes |
+| T17 | direct | T15, T16 | `pnpm --filter @typed/app exec vitest run src/runtimeTemplateCompilerExample.test.ts` | example only after package gates | completed in `test: add runtime template compiler example` |
 | T18 | direct | T1 through T17 | package gates plus `pnpm build` | final audit before commit/PR | revert last hardening commit |
 
 ## Detailed Task Plan
@@ -730,7 +730,7 @@ Commit message: `feat(compiler): integrate template output fingerprints`.
 - Create or modify a focused fixture/example selected during execution after package surfaces exist.
 - Update example package scripts if needed.
 
-- [ ] **Step 1: Write failing example gate**
+- [x] **Step 1: Write failing example gate**
 
 Gate proves:
 
@@ -742,17 +742,17 @@ Run: example command created in this task.
 
 Expected: fails before example wiring.
 
-- [ ] **Step 2: Implement example**
+- [x] **Step 2: Implement example**
 
 Use the smallest route/component/dependency shape that exercises all accepted requirements.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run example command.
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `test: add runtime template compiler example`.
 
