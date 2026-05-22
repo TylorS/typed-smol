@@ -15,6 +15,8 @@
   - general optimized template compilation for all `html` templates;
   - state-preserving HMR only for route components and participating dependencies with compiler-visible state boundaries.
 - Continue toward Typed application compilation with HMR through `RefSubject`, especially service-backed or otherwise stable state identities.
+- Enable route modules to become resumable in the Qwik sense: route behavior should be representable as lazy/resumable continuations whose captured state is explicit, restorable, and addressable through generated Effect contexts and/or `RefSubject.Service` identities.
+- Transform route-module closures through a CPS-style compiler pass so closure captures become explicit continuation inputs instead of hidden heap state.
 - Favor property/equivalence tests where practical, especially for template IR and runtime equivalence.
 - Keep changes compatible with the existing virtual-module-first architecture.
 
@@ -23,7 +25,7 @@
 - Replacing `@typed/virtual-modules-compiler` or `vmc`.
 - Adding filesystem routing.
 - Rewriting all of `@typed/template` rendering before a narrowed compiler contract is approved.
-- Preserving arbitrary closure-local state across HMR.
+- Preserving arbitrary heap-local closure state without compiler-visible context/service lowering.
 - Adding production-only HMR behavior.
 - Broad arbitrary TypeScript optimization outside Typed template/app compiler surfaces.
 
@@ -33,6 +35,7 @@
 - The current DOM/server emitters should probably become clearer target adapters over shared compiler data instead of two mostly separate runtime renderers.
 - HMR source analysis should move away from fragile regular expressions early because that is enabling work for trustworthy `RefSubject` HMR.
 - `RefSubject.Service` or an equivalent stable identity model remains the right direction for HMR state preservation.
+- Effect `Context` and `RefSubject.Service` should be the primary carriers for resumed closure state and dependency identity.
 - Existing workflow `20260521-2320-runtime-template-compiler` is reference context only; this run owns its own docs and decisions.
 
 ## Acceptance Shape For Phase 1
