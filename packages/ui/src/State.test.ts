@@ -1,5 +1,5 @@
-import { assert, describe, it } from "vitest";
-import { Effect, Layer } from "effect";
+import { assert, describe, expectTypeOf, it } from "vitest";
+import { Effect } from "effect";
 import { RefSubject } from "@typed/fx";
 import * as State from "./State.js";
 
@@ -27,12 +27,24 @@ describe("typed/ui/State", () => {
       assert.strictEqual(yield* open, true);
     }).pipe(Effect.scoped, Effect.runPromise));
 
-  it("supports provider lookup for the same RefSubject", () =>
+  it("exposes RefSubject.Service for state providers", () =>
     Effect.gen(function* () {
-      const tag = State.tag<{ readonly open: boolean }>("TestDisclosureState");
-      const state = yield* RefSubject.make({ open: false });
-      const found = yield* Effect.provide(tag, Layer.succeed(tag, state));
+      const DisclosureState = State.Service<{ readonly open: boolean }>()(
+        "@typed/ui/TestDisclosureState",
+      );
+      const found = yield* Effect.gen(function* () {
+        return yield* DisclosureState;
+      }).pipe(
+        Effect.provide(
+          DisclosureState.make({
+            open: false,
+          }),
+        ),
+      );
 
-      assert.strictEqual(found, state);
+      expectTypeOf(DisclosureState).toExtend<
+        RefSubject.RefSubject<{ readonly open: boolean }, never, typeof DisclosureState>
+      >();
+      assert.deepStrictEqual(found, { open: false });
     }).pipe(Effect.scoped, Effect.runPromise));
 });
