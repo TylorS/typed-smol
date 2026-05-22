@@ -153,6 +153,27 @@ describe("typed-realworld package skeleton", () => {
     }
   });
 
+  it("uses shared recursive API prefixes instead of repeating resource path roots", () => {
+    for (const path of [
+      "src/api/articles/_prefix.ts",
+      "src/api/articles/comments/_prefix.ts",
+      "src/api/profiles/_prefix.ts",
+      "src/api/tags/_prefix.ts",
+      "src/api/user/_prefix.ts",
+      "src/api/users/_prefix.ts",
+    ]) {
+      expect(existsSync(resolve(projectRoot, path)), path).toBe(true);
+    }
+
+    expect(existsSync(resolve(projectRoot, "src/api/comments"))).toBe(false);
+
+    const repeatedRoots = apiEndpointSourceFiles()
+      .flatMap((path) =>
+        repeatedApiRoutePrefixLines(path).map((line) => `${path}:${line}`));
+
+    expect(repeatedRoots).toEqual([]);
+  });
+
   it("uses Effect.fn handlers checked with satisfies RawHandler", () => {
     for (const path of apiEndpointSourceFiles()) {
       const source = readText(path);
@@ -283,11 +304,11 @@ const apiEndpointSourceFiles = (): readonly string[] => [
   "src/api/articles/feed.ts",
   "src/api/articles/get.ts",
   "src/api/articles/list.ts",
+  "src/api/articles/comments/create.ts",
+  "src/api/articles/comments/delete.ts",
+  "src/api/articles/comments/list.ts",
   "src/api/articles/unfavorite.ts",
   "src/api/articles/update.ts",
-  "src/api/comments/create.ts",
-  "src/api/comments/delete.ts",
-  "src/api/comments/list.ts",
   "src/api/profiles/follow.ts",
   "src/api/profiles/get.ts",
   "src/api/profiles/unfollow.ts",
@@ -342,6 +363,14 @@ const effectUnknownErrorChannelLines = (path: string): readonly number[] =>
     .split("\n")
     .flatMap((line, index) =>
       /Effect(?:\.Effect)?<[^>\n,]+,\s*unknown(?:\s*[>,])/.test(line) ? [index + 1] : []);
+
+const repeatedApiRoutePrefixLines = (path: string): readonly number[] =>
+  readText(path)
+    .split("\n")
+    .flatMap((line, index) =>
+      /Route\.(?:Parse|Join)\([^)]*"\/(?:articles|profiles|tags|user|users)(?:\/|")/.test(line)
+        ? [index + 1]
+        : []);
 
 const effectCombinatorLines = (path: string): readonly number[] =>
   readText(path)

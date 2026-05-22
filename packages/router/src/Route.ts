@@ -501,7 +501,7 @@ type RouteJoinPath<
   ...infer Rest extends ReadonlyArray<Route<any, any, any, any>>,
 ]
   ? RouteJoinPath<Rest, AppendRoutePath<R, First["path"]>>
-  : R;
+  : R extends "" ? "/" : R;
 type AppendRoutePath<R extends string, P extends string> =
   StripSlashes<P> extends "" ? R : `${R}/${StripSlashes<P>}`;
 type StripSlashes<T extends string> = StripTrailingSlash<StripLeadingSlash<T>>;

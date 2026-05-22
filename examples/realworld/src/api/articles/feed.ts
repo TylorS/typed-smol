@@ -9,7 +9,7 @@ import { respond } from "../../api-support/HttpErrors.js";
 import type { RawHandler } from "./$api-types";
 
 export const route = Route.Join(
-  Route.Parse("/articles/feed"),
+  Route.Parse("/feed"),
   Route.QueryParams(
     Route.ParamWithSchema("limit", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),
     Route.ParamWithSchema("offset", Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt))).optional(),

@@ -308,6 +308,8 @@ function extractExportExpressionsByPath(
 
 function extractConstExportExpression(declarationText: string | undefined): string | undefined {
   if (!declarationText) return undefined;
+  const defaultMatch = declarationText.match(/^export\s+default\s+([\s\S]*?);?$/);
+  if (defaultMatch?.[1]) return defaultMatch[1].trim();
   const match = declarationText.match(
     /^(?:export\s+)?(?:const\s+)?\w+\s*(?::[^=]+)?=\s*([\s\S]*?);?$/,
   );
@@ -490,6 +492,7 @@ function emitApiTypesSource(
     `import type { ApiHandlerFromConfig, ApiHandlerParamsFromConfig, ApiHandlerRawFromConfig } from "@typed/app/httpapi/ApiHandler";`,
   );
   source.importTypeNamespace("Layer", "effect/Layer");
+  source.importTypeNamespace("RouterTypes", "@typed/router");
   source.importTypeNamespace("EndpointModule", moduleSpecifier);
   for (const value of importedCompanions) {
     source.importTypeNamespace(value.alias, value.moduleSpecifier);
@@ -551,8 +554,12 @@ type OptionalError<T> = T extends { readonly error: infer Error }
   ? { readonly error: Error }
   : ${inheritedErrorType};`);
 
-  source.add(`export type Config = {
-  readonly route: Endpoint["route"];
+  source.add(`type EffectiveRoute = Prefixes extends readonly []
+  ? Endpoint["route"]
+  : RouterTypes.Join<[...Prefixes, Endpoint["route"]]>;
+
+export type Config = {
+  readonly route: EffectiveRoute;
   readonly method: Endpoint["method"];
 } & OptionalHeaders<Endpoint> & OptionalBody<Endpoint> & OptionalSuccess<Endpoint> & OptionalError<Endpoint>;
 

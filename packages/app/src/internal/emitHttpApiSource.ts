@@ -76,17 +76,20 @@ function resolveEffectivePrefixForGroup(
   if (!prefixByScope) {
     return pathPrefixOverride ?? "";
   }
-  const groupPrefix = prefixByScope.byGroupDir.get(groupDirPath);
-  if (groupPrefix) return groupPrefix;
   const parts: string[] = [];
-  if (prefixByScope.apiRoot) parts.push(prefixByScope.apiRoot);
+  if (prefixByScope.apiRoot) {
+    parts.push(prefixByScope.apiRoot);
+  } else if (pathPrefixOverride) {
+    parts.push(pathPrefixOverride);
+  }
   for (const anc of ancestorDirs(groupDirPath)) {
     const p = prefixByScope.byDirectory.get(anc);
     if (p) parts.push(p);
   }
+  const groupPrefix = prefixByScope.byGroupDir.get(groupDirPath);
+  if (groupPrefix) parts.push(groupPrefix);
   const composed = joinPathSegments(parts);
-  if (composed) return composed;
-  return pathPrefixOverride ?? "";
+  return composed;
 }
 
 const DIRECTORY_CONVENTION_KINDS = [
@@ -426,6 +429,19 @@ function collectDirectoryOptionPaths(endpointSpecs: readonly EndpointRenderSpec[
   return paths.sort(compareHttpApiPathOrder);
 }
 
+function collectPrefixRoutePaths(
+  apiSpec: ApiRenderSpec,
+  endpointSpecs: readonly EndpointRenderSpec[],
+  groupSpecs: readonly GroupRenderSpec[],
+): readonly string[] {
+  const groupsByKey = new Map(groupSpecs.map((spec) => [spec.key, spec]));
+  const paths: string[] = [];
+  for (const endpoint of endpointSpecs) {
+    pushUniqueMany(paths, endpointPrefixRoutePaths(apiSpec, endpoint, groupsByKey));
+  }
+  return paths.sort(compareHttpApiPathOrder);
+}
+
 function collectGroupDependencyPaths(groupSpecs: readonly GroupRenderSpec[]): readonly string[] {
   const paths: string[] = [];
   for (const groupSpec of groupSpecs) {
@@ -462,6 +478,68 @@ function renderGroupLayerExpression(
       ? `${expression}.pipe(Layer.provideMerge(${dependencyModule}.default))`
       : expression;
   }, groupLayerExpression);
+}
+
+function endpointPrefixRouteExpressions(
+  endpoint: EndpointRenderSpec,
+  apiSpec: ApiRenderSpec,
+  groupSpecByKey: ReadonlyMap<string, GroupRenderSpec>,
+  directoryOptionNameByPath: ReadonlyMap<string, string>,
+  expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
+): readonly string[] {
+  return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey).flatMap((path) => {
+    const moduleName = directoryOptionNameByPath.get(path);
+    const exportName = prefixRouteExportName(expressionsByPath, path);
+    return moduleName && exportName ? [`${moduleName}.${exportName}`] : [];
+  });
+}
+
+function renderEffectiveEndpointRoute(
+  routeExpression: string,
+  prefixRouteExpressions: readonly string[],
+): string {
+  return prefixRouteExpressions.length === 0
+    ? routeExpression
+    : `Route.Join(${[...prefixRouteExpressions, routeExpression].join(", ")})`;
+}
+
+function endpointPrefixRoutePaths(
+  apiSpec: ApiRenderSpec,
+  endpoint: EndpointRenderSpec,
+  groupSpecByKey: ReadonlyMap<string, GroupRenderSpec>,
+): readonly string[] {
+  const paths: string[] = [];
+  if (apiSpec.apiRootPath) pushUnique(paths, apiSpec.apiRootPath);
+  pushUniqueMany(paths, endpoint.directoryCompanions["_prefix.ts"]);
+  const groupPrefix = groupSpecByKey.get(endpoint.groupKey)?.overridePath;
+  if (groupPrefix) pushUnique(paths, groupPrefix);
+  return paths;
+}
+
+function prefixRouteExportName(
+  expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
+  path: string,
+): "default" | "prefix" | undefined {
+  const expressions = expressionsByPath.get(path);
+  if (expressions?.has("default")) return "default";
+  if (expressions?.has("prefix")) return "prefix";
+  return undefined;
+}
+
+function reserveGeneratedIdentifier(
+  identifiersByPath: Map<string, string>,
+  path: string | undefined,
+  preferredName: string,
+): void {
+  if (!path || identifiersByPath.get(path) !== "Api") return;
+  const used = new Set(identifiersByPath.values());
+  let candidate = preferredName;
+  let index = 0;
+  while (used.has(candidate)) {
+    index += 1;
+    candidate = `${preferredName}${index}`;
+  }
+  identifiersByPath.set(path, candidate);
 }
 
 function toImportSpecifier(
@@ -529,7 +607,10 @@ export function emitHttpApiSource(input: {
   const apiSpec = buildApiRenderSpec(input.targetDirectory, directoryConventions);
 
   const endpointPaths = endpointSpecs.map((e) => e.modulePath);
-  const directoryOptionPaths = collectDirectoryOptionPaths(endpointSpecs);
+  const prefixRoutePaths = collectPrefixRoutePaths(apiSpec, endpointSpecs, groupSpecs);
+  const directoryOptionPaths = [
+    ...new Set([...collectDirectoryOptionPaths(endpointSpecs), ...prefixRoutePaths]),
+  ].sort(compareHttpApiPathOrder);
   const groupDependencyPaths = collectGroupDependencyPaths(groupSpecs);
   const importerDir = dirname(toPosixPath(input.importer));
 
@@ -561,6 +642,7 @@ export function emitHttpApiSource(input: {
       proposedName: pathToIdentifier(`__${path}`),
     })),
   );
+  reserveGeneratedIdentifier(directoryOptionNameByPath, apiSpec.apiRootPath, "ApiRoot");
   const groupDependencyNameByPath = makeUniqueVarNames(
     groupDependencyPaths.map((path) => ({
       path,
@@ -587,6 +669,9 @@ export function emitHttpApiSource(input: {
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
     `import * as TypedConfigModule from "typed:config";`,
   ];
+  if (prefixRoutePaths.length > 0) {
+    importLines.splice(importLines.length - 1, 0, `import * as Route from "@typed/router";`);
+  }
 
   for (const path of endpointPaths) {
     const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
@@ -610,6 +695,7 @@ export function emitHttpApiSource(input: {
   const apiId = apiSpec.defaultIdentifier;
 
   const groupExprs: string[] = [];
+  const groupSpecByKey = new Map(groupSpecs.map((spec) => [spec.key, spec]));
   for (const groupSpec of groupSpecs) {
     const endpointsInGroup = endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
@@ -622,10 +708,20 @@ export function emitHttpApiSource(input: {
       const name = literals?.name ?? ep.stem;
       const factory = METHOD_FACTORIES[method] ?? "get";
       const m = varName;
+      const effectiveRoute = renderEffectiveEndpointRoute(
+        `${m}.route`,
+        endpointPrefixRouteExpressions(
+          ep,
+          apiSpec,
+          groupSpecByKey,
+          directoryOptionNameByPath,
+          input.exportExpressionsByPath ?? new Map(),
+        ),
+      );
       const optionalPresent = input.optionalExportsByPath.get(ep.path) ?? new Set<OptionalExport>();
       const optsParts: string[] = [
-        `params: ${m}.route.pathSchema`,
-        `query: ${m}.route.querySchema`,
+        `params: ${effectiveRoute}.pathSchema`,
+        `query: ${effectiveRoute}.querySchema`,
       ];
       for (const exp of OPTIONAL_ENDPOINT_EXPORTS) {
         if (optionalPresent.has(exp)) {
@@ -834,6 +930,7 @@ function emitHttpApiClientSource(input: {
   ];
 
   const groupExprs: string[] = [];
+  const groupSpecByKey = new Map(input.groupSpecs.map((spec) => [spec.key, spec]));
   for (const groupSpec of input.groupSpecs) {
     const endpointsInGroup = input.endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
@@ -847,9 +944,19 @@ function emitHttpApiClientSource(input: {
       const routeExpr =
         imports.expressionFor(endpoint.path, "route", input.exportExpressionsByPath) ??
         `Route.Parse(${JSON.stringify(routePath)})`;
+      const effectiveRouteExpr = renderEffectiveEndpointRoute(
+        routeExpr,
+        clientEndpointPrefixRouteExpressions(
+          endpoint,
+          input.apiSpec,
+          groupSpecByKey,
+          imports,
+          input.exportExpressionsByPath,
+        ),
+      );
       const optsParts = [
-        `params: ${routeExpr}.pathSchema`,
-        `query: ${routeExpr}.querySchema`,
+        `params: ${effectiveRouteExpr}.pathSchema`,
+        `query: ${effectiveRouteExpr}.querySchema`,
       ];
       const optionalPresent =
         input.optionalExportsByPath.get(endpoint.path) ?? new Set<OptionalExport>();
@@ -975,6 +1082,20 @@ class ClientImportBuilder {
     this.#seenImports.add(line);
     this.#imports.push(line);
   }
+}
+
+function clientEndpointPrefixRouteExpressions(
+  endpoint: EndpointRenderSpec,
+  apiSpec: ApiRenderSpec,
+  groupSpecByKey: ReadonlyMap<string, GroupRenderSpec>,
+  imports: ClientImportBuilder,
+  expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
+): readonly string[] {
+  return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey).flatMap((path) => {
+    const exportName = prefixRouteExportName(expressionsByPath, path);
+    const expression = exportName ? imports.expressionFor(path, exportName, expressionsByPath) : undefined;
+    return expression ? [expression] : [];
+  });
 }
 
 function replaceIdentifiers(expression: string, replacements: ReadonlyMap<string, string>): string {

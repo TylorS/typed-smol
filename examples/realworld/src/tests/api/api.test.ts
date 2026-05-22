@@ -36,9 +36,9 @@ const expectedModuleNames = [
   "ArticlesList",
   "ArticlesUnfavorite",
   "ArticlesUpdate",
-  "CommentsCreate",
-  "CommentsDelete",
-  "CommentsList",
+  "ArticlesCommentsCreate",
+  "ArticlesCommentsDelete",
+  "ArticlesCommentsList",
   "ProfilesFollow",
   "ProfilesGet",
   "ProfilesUnfollow",
@@ -67,6 +67,13 @@ describe("realworld generated api source", () => {
     }
 
     expect(source).toContain('openapiPath: "/api/docs/openapi.json"');
+    expect(source).toContain('import * as ArticlesPrefix from "./api/articles/_prefix.js";');
+    expect(source).toContain(
+      'import * as ArticlesCommentsPrefix from "./api/articles/comments/_prefix.js";',
+    );
+    expect(source).toContain(
+      "params: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).pathSchema",
+    );
     expect(source).not.toContain("/api/docs/swagger");
     expect(source).not.toContain('path: "/api/docs"');
   });

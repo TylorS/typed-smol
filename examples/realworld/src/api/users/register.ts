@@ -7,7 +7,7 @@ import { HttpMethod } from "../../api-support/Common.js";
 import { respond } from "../../api-support/HttpErrors.js";
 import type { RawHandler } from "./$api-types";
 
-export const route = Route.Parse("/users");
+export const route = Route.Slash;
 export const method = HttpMethod.Post;
 export const body = RegisterUserRequest;
 export const success = HttpApiSchema.status(201)(UserResponse);

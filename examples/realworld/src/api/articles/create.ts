@@ -7,14 +7,14 @@ import { HttpMethod, authToken } from "../../api-support/Common.js";
 import { respond } from "../../api-support/HttpErrors.js";
 import type { RawHandler } from "./$api-types";
 
-export const route = Route.Parse("/articles");
+export const route = Route.Slash;
 export const method = HttpMethod.Post;
 export const body = CreateArticleRequest;
 export const success = HttpApiSchema.status(201)(SingleArticleResponse);
 
-export const handler = Effect.fn("Articles.create")(function* ({ body, headers }) {
-  return yield* respond(
+export const handler = Effect.fn("Articles.create")(({ body, headers }) =>
+  respond(
     Articles.use((articles) => articles.create(authToken(headers), body)),
     201,
-  );
-}) satisfies RawHandler<Articles>;
+  ),
+) satisfies RawHandler<Articles>;

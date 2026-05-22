@@ -1,12 +1,12 @@
 import * as Route from "@typed/router";
 import * as Effect from "effect/Effect";
 import * as HttpApiSchema from "effect/unstable/httpapi/HttpApiSchema";
-import { Comments } from "../../application/Comments.js";
-import { HttpMethod, authToken } from "../../api-support/Common.js";
-import { respondNoContent } from "../../api-support/HttpErrors.js";
+import { Comments } from "../../../application/Comments.js";
+import { HttpMethod, authToken } from "../../../api-support/Common.js";
+import { respondNoContent } from "../../../api-support/HttpErrors.js";
 import type { RawHandler } from "./$api-types";
 
-export const route = Route.Join(Route.Parse("/articles/:slug/comments"), Route.Int("commentId"));
+export const route = Route.Int("commentId");
 export const method = HttpMethod.Delete;
 export const success = HttpApiSchema.NoContent;
 

@@ -6,7 +6,7 @@ import { HttpMethod } from "../../api-support/Common.js";
 import { respond } from "../../api-support/HttpErrors.js";
 import type { RawHandler } from "./$api-types";
 
-export const route = Route.Parse("/users/login");
+export const route = Route.Parse("/login");
 export const method = HttpMethod.Post;
 export const body = LoginUserRequest;
 export const success = UserResponse;

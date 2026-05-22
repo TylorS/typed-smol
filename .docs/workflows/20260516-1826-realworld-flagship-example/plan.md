@@ -928,6 +928,26 @@ Execution refinements:
 - [x] Step 3: Update framework and RealWorld call sites to the modifier style.
 - [x] Step 4: Run router/app/RealWorld verification gates and scoped `git diff --check`.
 
+### Task 24: Recursive Shared API Prefixes
+
+**Files:**
+- Modify: `packages/app/src/internal/emitHttpApiSource.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.ts`
+- Modify: `packages/app/src/HttpApiVirtualModulePlugin.test.ts`
+- Modify: RealWorld API endpoint layout under `examples/realworld/src/api`
+- Modify: RealWorld package/API tests
+
+**Progress notes:**
+- 2026-05-21: RealWorld API endpoints now use shared `_prefix.ts` files for `/articles`, `/profiles`, `/tags`, `/user`, and `/users`; comments moved under `src/api/articles/comments` with its own `/:slug/comments` prefix.
+- 2026-05-21: HttpApi group `.prefix(...)` composition now recursively includes API root, inherited directory prefixes, and nested group prefixes. Endpoint `params`/`query` schemas use the effective composed `Route.Join(...)`, so handler/client types include params contributed by shared prefixes.
+- 2026-05-21: Client-mode API generation now extracts default export expressions from `_prefix.ts`, and full-mode generation imports prefix modules only when endpoint schemas need composed prefixes.
+
+- [x] Step 1: Add failing app generator tests for recursive prefix group composition and effective endpoint route schemas.
+- [x] Step 2: Add a RealWorld package guard that rejects repeated resource path roots in endpoint routes.
+- [x] Step 3: Move comments under nested article directories and add shared resource prefixes.
+- [x] Step 4: Fix full/client HttpApi emission so effective endpoint route schemas include recursive prefixes.
+- [x] Step 5: Run app/router/RealWorld verification gates and scoped `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.

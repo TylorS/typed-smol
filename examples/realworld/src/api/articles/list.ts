@@ -9,7 +9,7 @@ import { respond } from "../../api-support/HttpErrors.js";
 import type { RawHandler } from "./$api-types";
 
 export const route = Route.Join(
-  Route.Parse("/articles"),
+  Route.Slash,
   Route.QueryParams(
     Route.Param("author").optional(),
     Route.Param("favorited").optional(),

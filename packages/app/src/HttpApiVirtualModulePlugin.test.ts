@@ -1608,6 +1608,118 @@ export const prefix = Route.Parse("/api");
       expect(sourceText).toContain('.prefix("/api")');
     });
 
+    it("composes API, directory, and nested group prefixes recursively", () => {
+      const result = buildApiFromFixture({
+        "src/domain.ts": `
+import * as Schema from "effect/Schema";
+export const Success = Schema.Struct({ ok: Schema.Boolean });
+`,
+        "src/apis/_api.ts": `
+import * as Route from "@typed/router";
+export const prefix = Route.Parse("/api");
+`,
+        "src/apis/articles/_prefix.ts": `
+import * as Route from "@typed/router";
+export default Route.Parse("/articles");
+`,
+        "src/apis/articles/comments/_group.ts": `
+import * as Route from "@typed/router";
+export const prefix = Route.Parse("/:slug/comments");
+`,
+        "src/apis/articles/comments/delete.ts": `
+import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
+import { Success } from "../../../domain.js";
+export const route = Route.Int("commentId");
+export const method = "DELETE";
+export const success = Success;
+export const handler = () => Effect.succeed({ ok: true });
+`,
+      });
+      expect(result).not.toHaveProperty("errors");
+      const sourceText = getSourceText(result);
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain('.prefix("/api/articles/:slug/comments")');
+      expect(sourceText).not.toContain('.prefix("/:slug/comments")');
+    });
+
+    it("uses recursive directory prefixes for endpoint route schemas", () => {
+      const result = buildApiFromFixture({
+        "src/domain.ts": `
+import * as Schema from "effect/Schema";
+export const Success = Schema.Struct({ ok: Schema.Boolean });
+`,
+        "src/apis/_api.ts": `
+import * as Route from "@typed/router";
+export const prefix = Route.Parse("/api");
+`,
+        "src/apis/articles/_prefix.ts": `
+import * as Route from "@typed/router";
+export default Route.Parse("/articles");
+`,
+        "src/apis/articles/comments/_prefix.ts": `
+import * as Route from "@typed/router";
+export default Route.Parse("/:slug/comments");
+`,
+        "src/apis/articles/comments/delete.ts": `
+import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
+import { Success } from "../../../domain.js";
+export const route = Route.Int("commentId");
+export const method = "DELETE";
+export const success = Success;
+export const handler = () => Effect.succeed({ ok: true });
+`,
+      });
+      const sourceText = getSourceText(result);
+
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain('import * as ArticlesPrefix from "./apis/articles/_prefix.js";');
+      expect(sourceText).toContain(
+        'import * as ArticlesCommentsPrefix from "./apis/articles/comments/_prefix.js";',
+      );
+      expect(sourceText).toContain(
+        "params: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).pathSchema",
+      );
+      expect(sourceText).toContain(
+        "query: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).querySchema",
+      );
+    });
+
+    it("uses recursive directory prefixes for client endpoint route schemas", () => {
+      const fixture = createApiFixture({
+        "src/domain.ts": `
+import * as Schema from "effect/Schema";
+export const Success = Schema.Struct({ ok: Schema.Boolean });
+`,
+        "src/apis/articles/_prefix.ts": `
+import * as Route from "@typed/router";
+export default Route.Parse("/articles");
+`,
+        "src/apis/articles/comments/_prefix.ts": `
+import * as Route from "@typed/router";
+export default Route.Parse("/:slug/comments");
+`,
+        "src/apis/articles/comments/delete.ts": `
+import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
+import { Success } from "../../../domain.js";
+export const route = Route.Int("commentId");
+export const method = "DELETE";
+export const success = Success;
+export const handler = () => Effect.succeed({ ok: true });
+`,
+      });
+      const sourceText = getSourceText(
+        buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
+      );
+
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain(
+        "params: Route.Join(ArticlesPrefixDefaultRoute.Parse(\"/articles\"), ArticlesCommentsPrefixDefaultRoute.Parse(\"/:slug/comments\"), ArticlesCommentsDeleteRouteRoute.Int(\"commentId\")).pathSchema",
+      );
+    });
+
     it("_api.ts openapi.exposure: emits installed JSON, Swagger, and Scalar CDN layers", () => {
       const apiWithExposure = `
 import * as Route from "@typed/router";

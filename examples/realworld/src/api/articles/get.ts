@@ -6,7 +6,7 @@ import { HttpMethod, authToken } from "../../api-support/Common.js";
 import { respond } from "../../api-support/HttpErrors.js";
 import type { RawHandler } from "./$api-types";
 
-export const route = Route.Parse("/articles/:slug");
+export const route = Route.Parse("/:slug");
 export const method = HttpMethod.Get;
 export const success = SingleArticleResponse;
 
