@@ -18,3 +18,8 @@
 - `@typed/app` now depends on `@typed/compiler`, `@typed/template`, and test-only `happy-dom` for the runtime template surface.
 - Fallback DOM mount/hydrate must provide `DomRenderTemplate.using(root.ownerDocument)` and scope the one-shot render collection. Fallback server render must provide `HtmlRenderTemplate` and `Effect.scoped` to discharge `RenderTemplate` and `Scope` requirements.
 - `pnpm --filter @typed/app test -- runtime` currently runs the full app test set because Vitest matches broadly; expect around 17 test files and roughly 299 tests.
+
+## Task 8: RefSubject.Service
+
+- `RefSubject.Service` was already present in `packages/fx/src/RefSubject/RefSubject.ts`; Task 8 added regression coverage rather than changing the implementation.
+- For a service-backed ref `Count`, `yield* Count.service` retrieves the underlying `RefSubject`; `yield* Count` samples the current value because the service class itself implements the ref/fx/effect surface.

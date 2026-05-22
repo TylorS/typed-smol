@@ -68,7 +68,7 @@ Modify:
 | T5 | direct | T3 | `pnpm --filter @typed/compiler test -- emitDomTemplate` | use current DOM/hydration tests as oracle | completed in `feat: emit dom optimized templates` |
 | T6 | direct | T4, T5 | `pnpm --filter @typed/compiler test -- fallback` | unsupported shapes fallback only | completed in `feat: add template compiler fallback path` |
 | T7 | direct | T4, T5 | `pnpm --filter @typed/app test -- runtime` | runtime accepts fallback and compiled templates | completed in `feat(app): add typed runtime template functions` |
-| T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | revert RefSubject service additions |
+| T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | completed in `feat(fx): add refsubject service identity` |
 | T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | revert registry files |
 | T10 | direct | T8, T9 | `pnpm --filter @typed/compiler test -- analyzeComponentHmr` | analysis only, no source rewrite | revert HMR analyzer |
 | T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | revert dependency analyzer |
@@ -408,13 +408,17 @@ Commit message: `feat(app): add typed runtime template functions`.
 
 ### Task 8: Add `RefSubject.Service`
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Lock down the existing `RefSubject.Service` implementation with behavior tests before HMR wiring consumes it. Verify stable service ids, explicit `Layer` provisioning, initial/effectful initializer support, and the distinction between `Count.service` yielding the underlying `RefSubject` and `Count` sampling the current value as a ref-like `Fx`/`Effect`.
+
 **Files:**
 - Modify: `packages/fx/src/RefSubject/RefSubject.ts`
 - Modify: `packages/fx/src/RefSubject/index.ts`
 - Modify: `packages/fx/src/index.ts`
 - Create: `packages/fx/src/RefSubject.Service.test.ts`
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 Tests:
 
@@ -427,11 +431,11 @@ Run: `pnpm --filter @typed/fx test -- RefSubject.Service`
 
 Expected: fails because `RefSubject.Service` is missing.
 
-- [ ] **Step 2: Implement `RefSubject.Service`**
+- [x] **Step 2: Implement `RefSubject.Service`**
 
 Follow existing `Fx.Service` / `Context.Service` style. Keep construction pure and layer creation explicit.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/fx test -- RefSubject.Service`
 
@@ -441,7 +445,7 @@ Run: `pnpm --filter @typed/fx build`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(fx): add refsubject service identity`.
 
