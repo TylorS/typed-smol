@@ -498,11 +498,11 @@ describe("RouterVirtualModulePlugin", () => {
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
-      import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";
       import { constant } from "effect/Function";
-      import * as Effect from "effect/Effect";
+      import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";
       import * as Cause from "effect/Cause";
       import * as Result from "effect/Result";
+      import * as Effect from "effect/Effect";
       import * as ApiItem from "./routes/api/item.js";
       import * as Dependencies from "./routes/_dependencies.js";
       import * as ApiLayout from "./routes/api/_layout.js";
@@ -763,14 +763,32 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
       const router = Router.match(MFx.route, MFx.handler);
       export default router;
       "
     `);
+  });
+
+  it("does not emit unused Fx or constant imports for Fx-valued route handlers", () => {
+    const source = buildRouterFromFixture({
+      "src/routes/fx.ts": `import * as Fx from "@typed/fx/Fx"; ${routeExportForPath("/")} export const handler: Fx.Fx<number> = Fx.succeed(1);`,
+    });
+
+    expect(source).not.toContain('import * as Fx from "@typed/fx/Fx";');
+    expect(source).not.toContain('import { constant } from "effect/Function";');
+    expect(source).toContain("Router.match(MFx.route, MFx.handler)");
+  });
+
+  it("does not emit unused constant imports for function route handlers", () => {
+    const source = buildRouterFromFixture({
+      "src/routes/function.ts": route("/", "export const handler = (p: unknown) => p;"),
+    });
+
+    expect(source).toContain('import * as Fx from "@typed/fx/Fx";');
+    expect(source).not.toContain('import { constant } from "effect/Function";');
+    expect(source).toContain("Router.match(Function.route, (params) => Fx.map(params, Function.handler))");
   });
 
   it("stream-valued handler is classified as stream (fromStream) (T-07, TS-5)", () => {
@@ -796,7 +814,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as Page from "./routes/page.js";
 
       const router = Router.match(Page.route, (params) => Fx.map(params, Page.handler));
@@ -813,8 +830,6 @@ describe("RouterVirtualModulePlugin", () => {
     const source = result as string;
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as Async from "./routes/async.js";
 
       const router = Router.match(Async.route, Async.handler);
@@ -846,7 +861,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as F from "./routes/f.js";
 
       const router = Router.match(F.route, (params) => Fx.map(params, F.handler));
@@ -880,7 +894,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as Ef from "./routes/ef.js";
 
       const router = Router.match(Ef.route, (params) => Fx.mapEffect(params, Ef.handler));
@@ -914,7 +927,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as Sf from "./routes/sf.js";
 
       const router = Router.match(Sf.route, (params) => Fx.switchMap(params, (p) => Fx.fromStream(Sf.handler(p))));
@@ -960,8 +972,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as X from "./routes/x.js";
 
       const router = Router.match(X.route, X.handler);
@@ -977,8 +987,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as Xf from "./routes/xf.js";
 
       const router = Router.match(Xf.route, Xf.handler);
@@ -1074,7 +1082,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
       import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as Page from "./routes/page.js";
 
       const router = Router.match(Page.route, (params) => Fx.map(params, Page.handler));
@@ -1090,8 +1097,6 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as Fx from "@typed/fx/Fx";
-      import { constant } from "effect/Function";
       import * as MFx from "./routes/fx.js";
 
       const router = Router.match(MFx.route, MFx.handler);

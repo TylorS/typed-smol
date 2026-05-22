@@ -12,7 +12,13 @@ import type {
   RouteDescriptor,
 } from "./buildRouteDescriptors.js";
 import { siblingCompanionPath, type ConcernKind } from "./buildRouteDescriptors.js";
-import { catchExprFor, depsExprFor, handlerExprFor } from "./emitRouterHelpers.js";
+import {
+  catchExprFor,
+  depsExprFor,
+  handlerExprFor,
+  type RouterExpressionImports,
+} from "./emitRouterHelpers.js";
+import { ModuleSource } from "./moduleSource.js";
 import { makeUniqueVarNames, pathToIdentifier, routeModuleIdentifier } from "./routeIdentifiers.js";
 import { stripScriptExtension, toPosixPath } from "./path.js";
 
@@ -105,13 +111,14 @@ export function emitRouterMatchSource(
   depsFormByPath: DepsFormByPath,
 ): string {
   const importerDir = dirname(toPosixPath(importer));
-  const needsFnErrorImports = Object.values(catchFormByPath).some((f) => f.form === "fn-error");
-  const needsCatchWrapperImports = Object.values(catchFormByPath).some((f) => f.form !== "native");
   const depPaths = collectOrderedCompanionPaths(descriptors, "dependencies");
   const layoutPaths = collectOrderedCompanionPaths(descriptors, "layout");
   const guardPaths = collectOrderedCompanionPaths(descriptors, "guard");
   const catchPaths = collectOrderedCompanionPaths(descriptors, "catch");
   const entrypointPaths = collectOrderedEntrypointPaths(descriptors);
+  const source = new ModuleSource();
+  const runtimeImports = createRouterExpressionImports(source);
+  runtimeImports.router();
 
   const nameEntries: { path: string; proposedName: string }[] = [
     ...descriptors.map((d) => ({
@@ -125,49 +132,6 @@ export function emitRouterMatchSource(
     ...catchPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
   ];
   const varNameByPath = makeUniqueVarNames(nameEntries);
-
-  const importLines: string[] = [
-    `import * as Router from "@typed/router";`,
-    `import * as Fx from "@typed/fx/Fx";`,
-    ...(needsCatchWrapperImports
-      ? [`import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";`]
-      : []),
-    `import { constant } from "effect/Function";`,
-    ...(needsFnErrorImports ? [`import * as Effect from "effect/Effect";`] : []),
-    ...(needsCatchWrapperImports ? [`import * as Cause from "effect/Cause";`] : []),
-    ...(needsFnErrorImports ? [`import * as Result from "effect/Result";`] : []),
-  ];
-
-  for (const d of descriptors) {
-    const spec = toImportSpecifier(importerDir, targetDirectory, d.filePath);
-    const varName = varNameByPath.get(d.filePath)!;
-    importLines.push(`import * as ${varName} from ${JSON.stringify(spec)};`);
-  }
-  for (const p of entrypointPaths) {
-    importLines.push(
-      `import * as ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`,
-    );
-  }
-  for (const p of depPaths) {
-    importLines.push(
-      `import * as ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`,
-    );
-  }
-  for (const p of layoutPaths) {
-    importLines.push(
-      `import * as ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`,
-    );
-  }
-  for (const p of guardPaths) {
-    importLines.push(
-      `import * as ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`,
-    );
-  }
-  for (const p of catchPaths) {
-    importLines.push(
-      `import * as ${varNameByPath.get(p)} from ${JSON.stringify(toImportSpecifier(importerDir, targetDirectory, p))};`,
-    );
-  }
 
   const dirToCompanions = directoryCompanionPaths(descriptors);
   const descriptorTree = buildRouterDescriptorTree({
@@ -187,6 +151,7 @@ export function emitRouterMatchSource(
       match.entrypointExpectsRefSubject,
       varName,
       match.entrypointExport,
+      runtimeImports,
     );
   const rootSource = renderRouterDescriptorTree(descriptorTree, {
     varNameByPath,
@@ -195,13 +160,68 @@ export function emitRouterMatchSource(
     catchFormByPath,
     depsFormByPath,
     handlerExprFor: handlerExprForMatch,
-    catchExprFor,
-    depsExprFor,
+    catchExprFor: (catchForm, varName, exportName) =>
+      catchExprFor(catchForm, varName, exportName, runtimeImports),
+    depsExprFor: (kind, varName) => depsExprFor(kind, varName, runtimeImports),
   });
 
-  return `${importLines.join("\n")}
+  for (const d of descriptors) {
+    source.importNamespace(
+      varNameByPath.get(d.filePath)!,
+      toImportSpecifier(importerDir, targetDirectory, d.filePath),
+    );
+  }
+  for (const p of entrypointPaths) {
+    source.importNamespace(
+      varNameByPath.get(p)!,
+      toImportSpecifier(importerDir, targetDirectory, p),
+    );
+  }
+  for (const p of depPaths) {
+    source.importNamespace(
+      varNameByPath.get(p)!,
+      toImportSpecifier(importerDir, targetDirectory, p),
+    );
+  }
+  for (const p of layoutPaths) {
+    source.importNamespace(
+      varNameByPath.get(p)!,
+      toImportSpecifier(importerDir, targetDirectory, p),
+    );
+  }
+  for (const p of guardPaths) {
+    source.importNamespace(
+      varNameByPath.get(p)!,
+      toImportSpecifier(importerDir, targetDirectory, p),
+    );
+  }
+  for (const p of catchPaths) {
+    source.importNamespace(
+      varNameByPath.get(p)!,
+      toImportSpecifier(importerDir, targetDirectory, p),
+    );
+  }
 
-const router = ${rootSource};
-export default router;
-`;
+  source.add(`const router = ${rootSource};
+export default router;`);
+  return `${source.emit()}\n`;
+}
+
+function createRouterExpressionImports(source: ModuleSource): RouterExpressionImports {
+  return {
+    router: () => source.importNamespace("Router", "@typed/router"),
+    fx: () => source.importNamespace("Fx", "@typed/fx/Fx"),
+    constant: () => {
+      source.importNamed("constant", "effect/Function");
+      return "constant";
+    },
+    refSubject: () => {
+      source.importTypeNamed("RefSubject", "@typed/fx/RefSubject/RefSubject");
+      return "RefSubject";
+    },
+    effect: () => source.importNamespace("Effect", "effect/Effect"),
+    cause: () => source.importNamespace("Cause", "effect/Cause"),
+    result: () => source.importNamespace("Result", "effect/Result"),
+    layer: () => source.importNamespace("Layer", "effect/Layer"),
+  };
 }

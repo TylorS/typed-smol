@@ -987,6 +987,27 @@ Execution refinements:
 - [x] Step 4: Update RealWorld entrypoint assertions for implicit hydration.
 - [x] Step 5: Run app and RealWorld verification gates and scoped `git diff --check`.
 
+### Task 27: Value Virtual Module Dead-Code Emission
+
+**Files:**
+- Add: `packages/app/src/internal/moduleSource.ts`
+- Modify: `packages/app/src/internal/typeModuleSource.ts`
+- Modify: `packages/app/src/internal/emitRouterSource.ts`
+- Modify: `packages/app/src/internal/emitRouterHelpers.ts`
+- Modify: `packages/app/src/RouterVirtualModulePlugin.test.ts`
+
+**Progress notes:**
+- 2026-05-21: Introduced `ModuleSource` as the shared import/helper/body source builder so value virtual modules can pull imports from the emitted expressions that need them instead of emitting static import blocks.
+- 2026-05-21: `TypeModuleSource` now reuses `ModuleSource`, keeping the generated type-module pattern and value-module pattern aligned.
+- 2026-05-21: `router:*` generation no longer emits unused `@typed/fx/Fx` or `effect/Function` imports for Fx pass-through handlers, nor unused `constant` imports for function handlers.
+- 2026-05-21: Subagent routing decision was direct execution. Repo policy calls this a refactor-planning concern, but this session's available subagent tool only permits delegation when the user explicitly asks for subagents.
+
+- [x] Step 1: Add failing router VM tests for unused Fx/constant imports.
+- [x] Step 2: Add a reusable source-emission abstraction for imports, helpers, and body sections.
+- [x] Step 3: Refactor router runtime expression helpers to request imports only when the generated expression uses them.
+- [x] Step 4: Update router source snapshots to encode the reduced import surface.
+- [x] Step 5: Run app and RealWorld verification gates and scoped `git diff --check`.
+
 ## Tactical Replanning Triggers
 
 - `@typed/app` generated `api:` modules cannot expose a required endpoint shape without a framework fix.
