@@ -23,3 +23,9 @@
 
 - `RefSubject.Service` was already present in `packages/fx/src/RefSubject/RefSubject.ts`; Task 8 added regression coverage rather than changing the implementation.
 - For a service-backed ref `Count`, `yield* Count.service` retrieves the underlying `RefSubject`; `yield* Count` samples the current value because the service class itself implements the ref/fx/effect surface.
+
+## Task 9: HMR Registry
+
+- The app runtime HMR registry lives under the global key `__typed_hmr_registry__` and mirrors that registry into supplied hot data objects for reuse across module reloads.
+- Compatibility is derived from shape fingerprint, version, and sorted dependency fingerprints. A shape/version/dependency mismatch disposes the previous entry and creates fresh state.
+- `disposeHmrState` removes one service entry by module/service id; `pruneHmrState` is the future lifecycle hook for route/dependency cleanup.

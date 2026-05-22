@@ -69,7 +69,7 @@ Modify:
 | T6 | direct | T4, T5 | `pnpm --filter @typed/compiler test -- fallback` | unsupported shapes fallback only | completed in `feat: add template compiler fallback path` |
 | T7 | direct | T4, T5 | `pnpm --filter @typed/app test -- runtime` | runtime accepts fallback and compiled templates | completed in `feat(app): add typed runtime template functions` |
 | T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | completed in `feat(fx): add refsubject service identity` |
-| T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | revert registry files |
+| T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | completed in `feat(app): add typed hmr state registry` |
 | T10 | direct | T8, T9 | `pnpm --filter @typed/compiler test -- analyzeComponentHmr` | analysis only, no source rewrite | revert HMR analyzer |
 | T11 | direct | T10 | `pnpm --filter @typed/compiler test -- dependencyHmr` | opt-out proves no preservation | revert dependency analyzer |
 | T12 | direct | T10, T11 | `pnpm --filter @typed/compiler test -- closureContext` | no arbitrary closure serialization | revert closure context files |
@@ -451,11 +451,15 @@ Commit message: `feat(fx): add refsubject service identity`.
 
 ### Task 9: Add Dev HMR Registry
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Add an app-runtime registry that can reuse service-backed state across reloads without Vite wiring yet. Store state behind a namespaced global key, mirror it into `import.meta.hot.data`-style objects when supplied, compare shape/version/dependency fingerprints before reuse, and expose explicit dispose/prune helpers for future HMR lifecycle hooks.
+
 **Files:**
 - Create: `packages/app/src/runtime/hmrRegistry.ts`
 - Create: `packages/app/src/runtime/hmrRegistry.test.ts`
 
-- [ ] **Step 1: Write failing registry tests**
+- [x] **Step 1: Write failing registry tests**
 
 Tests:
 
@@ -469,17 +473,17 @@ Run: `pnpm --filter @typed/app test -- hmrRegistry`
 
 Expected: fails because registry is missing.
 
-- [ ] **Step 2: Implement registry**
+- [x] **Step 2: Implement registry**
 
 Use `import.meta.hot.data` when passed and a namespaced global registry for cross-module dev reuse.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/app test -- hmrRegistry`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(app): add typed hmr state registry`.
 
