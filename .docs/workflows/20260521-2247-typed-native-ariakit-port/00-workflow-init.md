@@ -1,0 +1,33 @@
+# Workflow Init - Typed Native Ariakit Port
+
+- objective: Begin a strict, PR-finalized workflow for designing a Typed-native conceptual port of Ariakit's accessible component capabilities.
+- started_at: 2026-05-21T22:47:46-0400
+- started_by: human request in Codex
+- mode: strict
+- finalization_strategy: pr
+- source_context reviewed:
+  - `AGENTS.md`
+  - `.cursor/rules/modes/strict.mdc`
+  - `.cursor/rules/stages/brainstorming.mdc`
+  - `.cursor/rules/docs-architecture.mdc`
+  - `.cursor/rules/agent-collaboration.mdc`
+  - `.cursor/rules/effect-skill-loading.mdc`
+  - `.cursor/skills/effect-skill-router/SKILL.md`
+  - `.cursor/skills/effect-module-effect/SKILL.md`
+  - `.cursor/skills/effect-module-layer/SKILL.md`
+  - `.cursor/skills/effect-module-scope/SKILL.md`
+  - `README.md`
+  - `package.json`
+  - `packages/ui/README.md`
+  - `packages/ui/src/index.ts`
+  - `packages/ui/src/Link.ts`
+  - `packages/template/README.md`
+  - `.docs/adrs/20260516-1643-typed-framework-virtual-module-first.md`
+  - `.docs/specs/typed-framework-starter/spec.md`
+  - Ariakit official docs: `https://ariakit.com/components`
+  - Ariakit official docs: `https://ariakit.com/reference`
+  - Ariakit GitHub repository: `https://github.com/ariakit/ariakit`
+- explicit_reuse_override: false
+- subagent_routing_decision:
+  - classification: specialist research and requirements extraction would normally qualify for subagent routing.
+  - outcome: direct execution for now because the available subagent tool is restricted to explicit user requests for delegation, while the user only selected strict + PR.
