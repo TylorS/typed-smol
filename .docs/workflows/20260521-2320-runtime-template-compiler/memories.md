@@ -29,3 +29,9 @@
 - The app runtime HMR registry lives under the global key `__typed_hmr_registry__` and mirrors that registry into supplied hot data objects for reuse across module reloads.
 - Compatibility is derived from shape fingerprint, version, and sorted dependency fingerprints. A shape/version/dependency mismatch disposes the previous entry and creates fresh state.
 - `disposeHmrState` removes one service entry by module/service id; `pruneHmrState` is the future lifecycle hook for route/dependency cleanup.
+
+## Task 10: Component HMR Analysis
+
+- `analyzeComponentHmr` is descriptor-only. It does not rewrite source yet.
+- Plain template optimization is not stateful HMR. Only route/dependency/component boundaries should report service-backed HMR descriptors.
+- Inline `RefSubject.make(...)` descriptors use a generated service id of `${moduleId}#${localName}` until a later source rewrite or explicit user identity replaces it.

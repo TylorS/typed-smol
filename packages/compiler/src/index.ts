@@ -1,4 +1,5 @@
 export const compilerPackageName = "@typed/compiler";
+export * from "./hmr/analyzeComponentHmr.js";
 export * from "./template/analyzeTemplate.js";
 export * from "./template/emitDomTemplate.js";
 export * from "./template/emitServerTemplate.js";
