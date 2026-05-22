@@ -4,7 +4,7 @@ import { RefSubject } from "@typed/fx";
 
 export interface Item<Value = unknown> {
   readonly id: string;
-  readonly element?: Element;
+  readonly element?: globalThis.Element;
   readonly disabled?: boolean;
   readonly value?: Value;
 }

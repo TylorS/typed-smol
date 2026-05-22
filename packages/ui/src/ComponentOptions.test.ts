@@ -13,6 +13,7 @@ import * as RadioGroup from "./RadioGroup.js";
 import type * as Reactive from "./Reactive.js";
 import * as Tabs from "./Tabs.js";
 import * as Toolbar from "./Toolbar.js";
+import { Scope } from "effect";
 
 class OptionError {
   readonly _tag = "OptionError";
@@ -125,20 +126,20 @@ describe("typed/ui component option inference", () => {
     expectTypeOf<Fx.Error<typeof toolbarRoot>>().toEqualTypeOf<OptionError>();
 
     expectTypeOf<Fx.Services<typeof disclosureContent>>().toExtend<
-      OptionService | RenderTemplate
+      OptionService | RenderTemplate | Scope.Scope
     >();
-    expectTypeOf<Fx.Services<typeof dialogContent>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof listboxRoot>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof listboxOption>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof menuContent>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof menuItem>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof selectContent>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof selectOption>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof radioItem>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof tabsList>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof tabsTab>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof tabsPanel>>().toExtend<OptionService | RenderTemplate>();
-    expectTypeOf<Fx.Services<typeof toolbarRoot>>().toExtend<OptionService | RenderTemplate>();
+    expectTypeOf<Fx.Services<typeof dialogContent>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof listboxRoot>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof listboxOption>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof menuContent>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof menuItem>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof selectContent>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof selectOption>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof radioItem>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof tabsList>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof tabsTab>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof tabsPanel>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+    expectTypeOf<Fx.Services<typeof toolbarRoot>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
   });
 
   it("exposes ref-first component source and return types", () => {

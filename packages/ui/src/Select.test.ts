@@ -12,7 +12,7 @@ describe("typed/ui/Select", () => {
       const triggerRoot = window.document.createElement("div");
       const contentRoot = window.document.createElement("div");
       window.document.body.append(triggerRoot, contentRoot);
-      const state = yield* Select.makeState({
+      const state = yield* Select.makeState<string>({
         id: "status-select",
         value: "draft",
         activeId: "draft",
@@ -70,7 +70,7 @@ describe("typed/ui/Select", () => {
   it("selects enabled options and closes the popup", () =>
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();
-      const state = yield* Select.makeState({
+      const state = yield* Select.makeState<string>({
         id: "status-select",
         value: "draft",
         activeId: "draft",
@@ -99,7 +99,7 @@ describe("typed/ui/Select", () => {
   it("hydrates Fx-backed option id and value before selecting", () =>
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();
-      const state = yield* Select.makeState({
+      const state = yield* Select.makeState<string>({
         id: "status-select",
         value: "draft",
         activeId: "draft",
@@ -132,7 +132,7 @@ describe("typed/ui/Select", () => {
   it("mirrors native toggle events into open state", () =>
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();
-      const state = yield* Select.makeState({ id: "status-select", value: "draft" });
+      const state = yield* Select.makeState<string>({ id: "status-select", value: "draft" });
       const [content] = yield* render(
         Select.Content({ state, content: "Options" }),
         window.document.body,
@@ -147,12 +147,12 @@ describe("typed/ui/Select", () => {
 
   it("moves active option through enabled DOM-ordered options without changing value", () =>
     Effect.gen(function* () {
-      const window = new Window();
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
       const first = window.document.createElement("div");
       const disabled = window.document.createElement("div");
       const last = window.document.createElement("div");
       window.document.body.append(first, disabled, last);
-      const state = yield* Select.makeState({
+      const state = yield* Select.makeState<string>({
         id: "status-select",
         value: "first",
         activeId: "first",
@@ -177,7 +177,7 @@ function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
   return [window, layer] as const;
 }
 
-function toggleEvent(window: Window, newState: "open" | "closed") {
+function toggleEvent(window: globalThis.Window & typeof globalThis, newState: "open" | "closed") {
   const event = new window.Event("toggle", { bubbles: true });
   Object.defineProperty(event, "newState", { value: newState });
   return event;

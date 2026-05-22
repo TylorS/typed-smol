@@ -74,7 +74,7 @@ describe("typed/ui/Menu", () => {
 
   it("moves active item through enabled DOM-ordered items", () =>
     Effect.gen(function* () {
-      const window = new Window();
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
       const root = window.document.createElement("div");
       const first = window.document.createElement("button");
       const disabled = window.document.createElement("button");
@@ -111,7 +111,7 @@ function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
   return [window, layer] as const;
 }
 
-function toggleEvent(window: Window, newState: "open" | "closed") {
+function toggleEvent(window: globalThis.Window & typeof globalThis, newState: "open" | "closed") {
   const event = new window.Event("toggle", { bubbles: true });
   Object.defineProperty(event, "newState", { value: newState });
   return event;

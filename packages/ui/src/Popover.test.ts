@@ -86,7 +86,7 @@ function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
   return [window, layer] as const;
 }
 
-function toggleEvent(window: Window, newState: "open" | "closed") {
+function toggleEvent(window: globalThis.Window & typeof globalThis, newState: "open" | "closed") {
   const event = new window.Event("toggle", { bubbles: true });
   Object.defineProperty(event, "newState", { value: newState });
   return event;

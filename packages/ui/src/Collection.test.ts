@@ -24,7 +24,7 @@ describe("typed/ui/Collection", () => {
 
   it("sorts registered items by DOM order", () =>
     Effect.gen(function* () {
-      const window = new Window();
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
       const root = window.document.createElement("div");
       const first = window.document.createElement("button");
       const second = window.document.createElement("button");

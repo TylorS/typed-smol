@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
-import * as Layer from "effect/Layer";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
@@ -9,7 +8,7 @@ import * as Tabs from "./Tabs.js";
 describe("typed/ui/Tabs", () => {
   it("renders APG tab roles, selected state, panels, and data attrs", () =>
     Effect.gen(function* () {
-      const window = new Window();
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
       const layer = DomRenderTemplate.using(window.document);
       const state = yield* Tabs.makeState({ selectedId: "tab-a" });
 
