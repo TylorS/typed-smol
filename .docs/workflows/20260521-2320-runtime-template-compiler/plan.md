@@ -67,7 +67,7 @@ Modify:
 | T4 | direct | T3 | `pnpm --filter @typed/compiler test -- emitServerTemplate` | use current HTML renderer as oracle | revert server emitter |
 | T5 | direct | T3 | `pnpm --filter @typed/compiler test -- emitDomTemplate` | use current DOM/hydration tests as oracle | completed in `feat: emit dom optimized templates` |
 | T6 | direct | T4, T5 | `pnpm --filter @typed/compiler test -- fallback` | unsupported shapes fallback only | completed in `feat: add template compiler fallback path` |
-| T7 | direct | T4, T5 | `pnpm --filter @typed/app test -- runtime` | runtime accepts fallback and compiled templates | revert app runtime files |
+| T7 | direct | T4, T5 | `pnpm --filter @typed/app test -- runtime` | runtime accepts fallback and compiled templates | completed in `feat(app): add typed runtime template functions` |
 | T8 | direct | T1 | `pnpm --filter @typed/fx test -- RefSubject` | no HMR yet; service API only | revert RefSubject service additions |
 | T9 | direct | T8 | `pnpm --filter @typed/app test -- hmrRegistry` | dev-only registry, no Vite wiring yet | revert registry files |
 | T10 | direct | T8, T9 | `pnpm --filter @typed/compiler test -- analyzeComponentHmr` | analysis only, no source rewrite | revert HMR analyzer |
@@ -361,6 +361,10 @@ Commit message: `feat: add template compiler fallback path`.
 
 ### Task 7: Add `@typed/app` Runtime Functions
 
+**Status:** Completed on 2026-05-22.
+
+**Focused task plan:** Add a small public runtime contract in `@typed/app` that consumes compiled DOM templates, compiled server templates, and runtime fallback templates. Keep target wrappers narrow: DOM mount/hydrate delegate compiled templates to `renderInto` and fallback templates to `DomRenderTemplate`; server render delegates compiled templates to `renderToString` and fallback templates to `HtmlRenderTemplate`.
+
 **Files:**
 - Create: `packages/app/src/runtime/RuntimeTemplate.ts`
 - Create: `packages/app/src/runtime/mount.ts`
@@ -370,7 +374,7 @@ Commit message: `feat: add template compiler fallback path`.
 - Create: `packages/app/src/runtime/runtime.test.ts`
 - Modify: `packages/app/src/index.ts`
 
-- [ ] **Step 1: Write failing runtime tests**
+- [x] **Step 1: Write failing runtime tests**
 
 Tests:
 
@@ -384,11 +388,11 @@ Run: `pnpm --filter @typed/app test -- runtime`
 
 Expected: fails because runtime functions are missing.
 
-- [ ] **Step 2: Implement runtime functions**
+- [x] **Step 2: Implement runtime functions**
 
 Implement small wrappers that delegate compiled templates to compiled execution and fallback templates to existing renderers.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `pnpm --filter @typed/app test -- runtime`
 
@@ -398,7 +402,7 @@ Run: `pnpm --filter @typed/app build`
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `feat(app): add typed runtime template functions`.
 

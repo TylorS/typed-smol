@@ -27,8 +27,10 @@
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
+    "@typed/compiler": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
+    "@typed/template": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
     "effect": "catalog:"
   },
@@ -36,6 +38,7 @@
     "@types/node": "^25.7.0",
     "@vitest/coverage-v8": "^4.1.6",
     "effect": "catalog:",
+    "happy-dom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

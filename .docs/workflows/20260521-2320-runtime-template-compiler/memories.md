@@ -12,3 +12,9 @@
 
 - Fallback is a runtime handoff, not an optimization result. It should preserve the original `TemplateStringsArray` and call `html(template, ...values)` so existing `RenderTemplate` semantics and renderable type propagation stay intact.
 - The diagnostic code for unsupported template/program shapes is `typed-template-fallback`; include `moduleId`, `reason`, and a human-readable message so generated virtual modules can surface precise fallback reasons later.
+
+## Task 7: App Runtime Functions
+
+- `@typed/app` now depends on `@typed/compiler`, `@typed/template`, and test-only `happy-dom` for the runtime template surface.
+- Fallback DOM mount/hydrate must provide `DomRenderTemplate.using(root.ownerDocument)` and scope the one-shot render collection. Fallback server render must provide `HtmlRenderTemplate` and `Effect.scoped` to discharge `RenderTemplate` and `Scope` requirements.
+- `pnpm --filter @typed/app test -- runtime` currently runs the full app test set because Vitest matches broadly; expect around 17 test files and roughly 299 tests.
