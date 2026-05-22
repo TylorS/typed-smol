@@ -165,7 +165,7 @@
   - PACKAGE: `pnpm --filter @typed/ui test` passed with `8` files and `36` tests.
   - BUILD: `pnpm --filter @typed/ui build` passed.
 - commit:
-  - pending
+  - `402a09a feat(ui): add native popover primitives`
 - deviations_or_replans:
   - Browser-runner wiring remains deferred because `@typed/ui` does not currently link `@vitest/browser-playwright` and `pnpm-lock.yaml` had unrelated dirty changes before this task.
   - Popover tests assert native trigger/content attributes, native `toggle` event mirroring, and absence of custom overlay/focus-trap elements.

@@ -770,7 +770,7 @@ pnpm --filter @typed/ui test -- Popover
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/ui/src/Popover.ts packages/ui/src/Popover.test.ts
