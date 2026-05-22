@@ -1,6 +1,6 @@
 # Requirements - Runtime Compiler Simplification
 
-Status: draft, pending human approval.
+Status: approved by human on 2026-05-22.
 
 ## Functional Requirements
 
@@ -49,7 +49,7 @@ Status: draft, pending human approval.
 
 ## Acceptance Criteria
 
-- AC-1: (maps to FR-1, FR-15, FR-16, FR-17, FR-18, NFR-6) Template tests prove the shared compiler substrate produces server and DOM behavior equivalent to current runtime rendering for the supported `html` forms.
+- AC-1: (maps to FR-1, FR-22, FR-23, FR-24, FR-25, NFR-6) Template tests prove the shared compiler substrate produces server and DOM behavior equivalent to current runtime rendering for the supported `html` forms.
 - AC-2: (maps to FR-4, FR-11, FR-12, FR-13, NFR-3, NFR-7) HMR analysis tests prove AST/type-checker-backed detection of `RefSubject.Service`, diagnostic handling of inline `RefSubject.make`, and no dependency on regex-only scanning.
 - AC-3: (maps to FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-21, NFR-7, NFR-8) Route-module CPS tests prove closures are classified, eligible closures lower to continuation descriptors with explicit Effect Context / `RefSubject.Service` captures, and unsupported captures produce diagnostics.
 - AC-4: (maps to FR-2, FR-14, FR-15, NFR-7) Dependency participation tests prove inferred participation, explicit opt-in, explicit opt-out, and anonymous state rejection.
