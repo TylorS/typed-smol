@@ -3,7 +3,7 @@
 ## Test Type Taxonomy
 
 - unit:
-  - Store constructors, setter behavior, controlled/default state, selector reads, DataAttr Schema encode/decode, and ref startup helpers.
+  - RefSubject-backed state helpers, setter/update behavior, controlled/default refs, computed selector reads, DataAttr Schema encode/decode, and ref startup helpers.
 - integration:
   - Component rendering with `@typed/template`, provider lookup through Effect Context/Layer, SSR-to-DOM startup hydration, and component event handling.
 - e2e:
@@ -13,9 +13,9 @@
 
 | ts_id | scenario | maps_to_fr_nfr | maps_to_ac | blocking |
 | ----- | -------- | -------------- | ---------- | -------- |
-| TS-1 | Store supports default, controlled, setter, event-read, selector-read, explicit store, and provider lookup behavior. | FR-5, FR-6, FR-7, NFR-2 | AC-2 | yes |
-| TS-2 | DataAttr helpers encode/decode booleans, string literal unions, optional values, and invalid values through Effect Schema. | FR-8, FR-9, FR-10, NFR-2 | AC-3 | yes |
-| TS-3 | Ref startup helper initializes a backing `RefSubject` from server-rendered DOM state without component-local parsing. | FR-11, NFR-7 | AC-4 | yes |
+| TS-1 | RefSubject-backed component state supports default refs, controlled refs, update callbacks, event-time reads, computed selector reads, explicit ref passing, and provider lookup behavior. | FR-5, FR-6, FR-7, NFR-2 | AC-2 | yes |
+| TS-2 | DataAttr helpers encode/decode whole `.data` object schemas containing booleans, string literal unions, optional values, and invalid values through Effect Schema. | FR-8, FR-9, FR-10, FR-20, NFR-2 | AC-3 | yes |
+| TS-3 | Ref startup helper initializes a backing `RefSubject` from server-rendered `data-*` attrs as a decoded `.data` object without component-local parsing. | FR-11, NFR-7 | AC-4 | yes |
 | TS-4 | Disclosure toggles with Enter/Space/activation and emits `aria-expanded`, optional `aria-controls`, and `data-open`. | FR-8, FR-12, FR-19, NFR-1 | AC-5 | yes |
 | TS-5 | Dialog modal behavior covers role/label, initial focus, Escape close, close affordance, focus return, and `data-open`. | FR-8, FR-13, FR-19, NFR-1, NFR-3 | AC-6 | yes |
 | TS-6 | Popover renders native `popover`, supports `popovertarget`/`popovertargetaction`, syncs from native toggle events, and remains non-modal. | FR-14, FR-15, FR-16, FR-17, NFR-3 | AC-7 | yes |

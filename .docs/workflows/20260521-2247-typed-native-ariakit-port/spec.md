@@ -6,7 +6,7 @@
 
 The first implementation tranche covers the substrate plus a Disclosure, Dialog, and native-Popover vertical slice:
 
-- Store substrate: explicit stores, provider helpers, focused reads/selectors, setter callbacks, and event-time reads.
+- RefSubject state substrate: explicit `RefSubject` state refs, provider helpers, focused computed reads/selectors, updates, and event-time reads.
 - Public state attributes: Schema-backed helpers for public `data-*` styling/inspection state.
 - Startup hydration: ref-based helpers that initialize backing `RefSubject`s from server-rendered DOM state.
 - Disclosure: APG disclosure behavior.
@@ -23,58 +23,63 @@ Out of scope for this tranche:
 
 ## Component Responsibilities and Interfaces
 
-### Store Substrate
+### RefSubject State Model
 
-The store substrate provides Ariakit-like state composition in Typed terms.
+`@typed/ui` maps Ariakit-like store capabilities onto `RefSubject` instead of introducing a separate store abstraction.
 
 Conceptual responsibilities:
 
-- Create explicit store values, for example `DisclosureStore.make(...)`.
-- Expose backing `RefSubject`s or computed refs for reactive reads.
-- Support default state and controlled state.
-- Support setter callbacks, such as `setOpen`.
-- Support event-time state reads without forcing render subscriptions.
-- Support focused selectors so components can update only when selected state changes.
-- Provide store helpers through Effect Context/Layer for nested component ergonomics.
+- Create explicit `RefSubject` values, for example `yield* RefSubject.make({ open: false })`.
+- Pass `RefSubject` values directly to components as the state object.
+- Treat externally provided refs as controlled state.
+- Use `RefSubject.update`, `RefSubject.set`, and event handlers for state transitions.
+- Support event-time state reads by yielding the ref.
+- Support focused reactive reads/selectors through `RefSubject.map` and related computed refs.
+- Provide optional Effect Context/Layer or `RefSubject.Service` helpers for nested component ergonomics.
 
 Conceptual interface:
 
 ```ts
-const store = yield* DisclosureStore.make({
-  defaultOpen: false,
-  setOpen: (open) => Effect.void,
-});
+const disclosure = yield* RefSubject.make({ open: false });
 
 const view = Disclosure({
-  store,
-  content: DisclosureContent({ store, content: "Details" }),
+  state: disclosure,
+  content: DisclosureContent({ state: disclosure, content: "Details" }),
 });
 ```
 
 Provider-style usage remains available:
 
 ```ts
-DisclosureProvider({ store, content: DisclosureContent({ content: "Details" }) });
+DisclosureProvider({ state: disclosure, content: DisclosureContent({ content: "Details" }) });
 ```
 
 The exact function names may change during planning, but the public names should remain similar to Ariakit where practical.
 
 ### Public Data Attributes
 
-`@typed/ui` exposes helpers for Schema-backed public `data-*` attributes.
+`@typed/ui` exposes helpers for Schema-backed public `.data={object}` values that render as `data-*` attributes.
 
 Responsibilities:
 
-- Encode typed public state into strings accepted by HTML `data-*` attributes.
-- Decode public DOM `data-*` values back into typed state for tests, inspection, and startup.
+- Define a data object schema as string keys mapped to value schemas.
+- Encode typed public state objects into plain string-valued `.data` objects accepted by the existing template object-to-`data-*` renderer.
+- Decode public DOM `data-*` values back into typed `.data` objects for tests, inspection, and startup.
+- Treat data schemas as whole-object contracts, not per-attribute descriptor objects, so they compose the same way template `.data={object}` does.
 - Keep `data-*` limited to public styling/inspection state.
 - Avoid using public `data-*` as internal hydration payloads.
+- Compose naturally with the existing template `.data={object}` / object-to-`data-*` rendering shape.
 
 Conceptual examples:
 
 ```ts
-const OpenAttr = DataAttr.schema("open", Schema.Boolean);
-const PlacementAttr = DataAttr.schema("placement", Schema.Literal("top", "right", "bottom", "left"));
+const DisclosureData = DataAttr.schema({
+  open: Schema.Boolean,
+  placement: Schema.Literal("top", "right", "bottom", "left"),
+});
+
+const data = yield* DataAttr.encode(DisclosureData, { open: true, placement: "bottom" });
+// data is { open: "true", placement: "bottom" }
 ```
 
 Rendered state should be stable enough for styling:
@@ -90,20 +95,21 @@ Components that need server-emitted startup state use a shared ref startup abstr
 Responsibilities:
 
 - Attach a DOM ref to a rendered element.
-- Decode public DOM state through Schema-backed helpers.
-- Initialize a backing `RefSubject`.
+- Decode one or more public DOM state attributes through Schema-backed helpers.
+- Initialize a backing `RefSubject` from an object decoded from the DOM.
 - Avoid per-component ad hoc DOM parsing.
+- Compose multiple data attrs easily so components can hydrate compound public state from `.data={object}` output.
 
 Conceptual shape:
 
 ```ts
-const open = yield* RefSubject.make(false);
-const ref = hydrateRefFromDataAttr(open, OpenAttr);
+const state = yield* RefSubject.make({ open: false, placement: "bottom" as const });
+const ref = hydrateRefFromData(state, DisclosureData);
 ```
 
 ### Disclosure
 
-Disclosure owns a store with `open` state and renders a control plus controlled content.
+Disclosure owns or receives a `RefSubject` with `open` state and renders a control plus controlled content.
 
 Responsibilities:
 
@@ -111,7 +117,7 @@ Responsibilities:
 - Emit `aria-expanded`.
 - Support `aria-controls` when content id is known.
 - Emit stable public `data-open`.
-- Compose with explicit store and provider store lookup.
+- Compose with explicit `RefSubject` state and optional provider lookup.
 
 ### Dialog
 
@@ -144,13 +150,13 @@ Responsibilities:
 ```mermaid
 flowchart TD
   App["Typed app code"] --> UI["@typed/ui"]
-  UI --> Store["Store substrate"]
+  UI --> State["RefSubject state model"]
   UI --> DataAttr["Schema data-* helpers"]
   UI --> Startup["Ref startup hydration"]
   UI --> Components["Disclosure / Dialog / Popover"]
 
-  Store --> RefSubject["@typed/fx RefSubject"]
-  Store --> Context["Effect Context/Layer providers"]
+  State --> RefSubject["@typed/fx RefSubject"]
+  State --> Context["Effect Context/Layer or RefSubject.Service providers"]
   Components --> Template["@typed/template html/EventHandler"]
   Components --> DataAttr
   Components --> Startup
@@ -167,22 +173,22 @@ sequenceDiagram
   participant Schema as DataAttr Schema
   participant State as RefSubject
 
-  Server->>DOM: emit public data-open/data-* attrs
+  Server->>DOM: emit public .data object as data-open/data-* attrs
   DOM->>Ref: element attached on startup
-  Ref->>Schema: decode public data-* value
-  Schema->>State: initialize backing RefSubject
+  Ref->>Schema: decode public data-* object
+  Schema->>State: initialize backing RefSubject object
   State->>DOM: future updates render through template
 ```
 
 ## Data and Control Flow
 
-1. A component either receives an explicit store or reads a provider-backed store from Effect Context.
-2. Store construction creates backing refs and computed selectors.
-3. Rendering maps store state to ARIA attributes, public `data-*` attributes, and event handlers.
+1. A component either receives an explicit `RefSubject` state value or reads a provider-backed ref from Effect Context.
+2. Ref construction creates the backing state and computed selectors.
+3. Rendering maps `RefSubject` state to ARIA attributes, public `data-*` attributes, and event handlers.
 4. Schema-backed data helpers encode public state to string attributes.
 5. On startup/hydration, refs can decode server-emitted DOM state and initialize backing `RefSubject`s.
-6. Disclosure and Dialog own their state transitions through store APIs and event handlers.
-7. Popover delegates visibility mechanics to native Popover API and synchronizes store state from native events.
+6. Disclosure and Dialog own their state transitions through `RefSubject` updates and event handlers.
+7. Popover delegates visibility mechanics to native Popover API and synchronizes `RefSubject` state from native events.
 
 ## Failure Modes and Mitigations
 
@@ -192,7 +198,7 @@ sequenceDiagram
 | `data-*` becomes internal hydration channel | Limit helpers to public styling/inspection state and route startup through ref helpers. |
 | Schema decoding accepts invalid public state | Use Schema decode failures in tests and expose typed failure paths. |
 | Dialog marks `aria-modal` without true modal behavior | Acceptance tests must cover modal behavior before `aria-modal="true"` is emitted. |
-| Store/provider APIs drift into React-like hook assumptions | Model stores as explicit Effect/Fx values, with providers as Context/Layer helpers. |
+| State APIs drift into React-like hook assumptions | Model state as explicit `RefSubject` values, with providers as Context/Layer or `RefSubject.Service` helpers. |
 | Focus behavior differs between DOM implementations and browsers | Browser-level checks are required for Dialog and native Popover behavior. |
 
 ## Requirement Traceability
@@ -202,14 +208,14 @@ sequenceDiagram
 | FR-1, NFR-5 | `@typed/ui` package scope | No new package or framework changes. |
 | FR-2 | API naming policy | Ariakit-similar names where practical. |
 | FR-3, FR-4 | tranche scope | Substrate plus Disclosure/Dialog/Popover. |
-| FR-5, FR-6, FR-7 | store substrate | Explicit stores plus Effect provider helpers. |
-| FR-8, FR-9, FR-10 | DataAttr helpers | Public state only, Schema-backed encode/decode. |
+| FR-5, FR-6, FR-7 | RefSubject state model | Explicit refs plus Effect provider helpers. |
+| FR-8, FR-9, FR-10, FR-20 | DataAttr helpers | Public state only, whole-object Schema-backed encode/decode. |
 | FR-11, NFR-7 | ref startup hydration | Shared ref path initializes `RefSubject`s from DOM. |
 | FR-12 | Disclosure | APG disclosure behavior. |
 | FR-13, NFR-1, NFR-3 | Dialog | APG modal dialog behavior and browser verification. |
 | FR-14, FR-15, FR-16, FR-17, FR-18, NFR-6 | Popover | Native Popover API only, non-modal. |
 | FR-19 | headless styling | Stable public `data-*`, no CSS. |
-| NFR-2 | test strategy | Property/state-machine tests for stores and data attrs. |
+| NFR-2 | test strategy | Property/state-machine tests for RefSubject-backed state and data attrs. |
 | NFR-4 | implementation style | Small composable Effect-native APIs. |
 
 ## References Consulted
