@@ -13,20 +13,17 @@ import {
   html,
 } from "@typed/template";
 import type * as Dom from "./Dom.js";
+import type { AnyContent } from "./Reactive.js";
 
 type AnchorClickEvent = Dom.EventOf<HTMLAnchorElement["onclick"]> & {
   readonly currentTarget: HTMLAnchorElement;
 };
 
 export interface LinkOptions extends Dom.ElementOptions<HTMLAnchorElement> {
-  readonly "aria-current"?: Renderable<string | null | undefined, any, any>;
-  readonly class?: Renderable<string | null | undefined, any, any>;
-  readonly href: Renderable<string, any, any>;
-  readonly content: Renderable<
-    string | number | boolean | null | undefined | void | RenderEvent,
-    any,
-    any
-  >;
+  readonly "aria-current"?: AnyContent<string | null | undefined>;
+  readonly class?: AnyContent<string | null | undefined>;
+  readonly href: AnyContent<string>;
+  readonly content: AnyContent<string | number | boolean | null | undefined | void | RenderEvent>;
   readonly replace?: boolean; // false
 }
 

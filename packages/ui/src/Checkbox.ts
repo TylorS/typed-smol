@@ -6,7 +6,7 @@ import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
 export type Checked = boolean | "mixed";
 
@@ -22,9 +22,9 @@ export const data = DataAttr.schema({
   checked: Schema.Union([Schema.Boolean, Schema.Literal("mixed")]),
 });
 
-type OptionalBoolean = ReactiveValue<boolean | undefined, any, any>;
-type OptionalString = ReactiveValue<string | undefined, any, any>;
-type RequiredString = ReactiveValue<string, any, any>;
+type OptionalBoolean = AnyValue<boolean | undefined>;
+type OptionalString = AnyValue<string | undefined>;
+type RequiredString = AnyValue<string>;
 
 export function makeState(
   initial: InitialState = {},
@@ -108,7 +108,7 @@ export const Checkbox = Input;
 
 export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
   readonly for?: OptionalString;
-  readonly content: Content;
+  readonly content: AnyContent;
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
@@ -118,7 +118,7 @@ export function Label<const Opts extends LabelOptions>(options: Opts): Component
 
 export interface CheckOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content?: Content;
+  readonly content?: AnyContent;
 }
 
 export function Check<const Opts extends CheckOptions<any, any> | CheckOptions<never, never> | CheckOptions<any, never> | CheckOptions<never, any>>(

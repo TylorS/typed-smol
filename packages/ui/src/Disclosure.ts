@@ -5,10 +5,9 @@ import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import type { AnyContent, Component, AnyValue } from "./Reactive.js";
 
-type AnyContent = Content;
-type OptionalString = ReactiveValue<string | undefined, any, any>;
+type OptionalString = AnyValue<string | undefined>;
 
 export interface State {
   readonly open: boolean;

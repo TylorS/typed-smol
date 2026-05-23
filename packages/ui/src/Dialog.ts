@@ -7,13 +7,12 @@ import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import * as NativeDialog from "./NativeDialog.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
-type AnyContent = Content;
-type OptionalString = ReactiveValue<string | undefined, any, any>;
-type RequiredString = ReactiveValue<string, any, any>;
-type OptionalBoolean = ReactiveValue<boolean | undefined, any, any>;
-type OptionalFocusTarget = ReactiveValue<NativeDialog.FocusTarget | undefined, any, any>;
+type OptionalString = AnyValue<string | undefined>;
+type RequiredString = AnyValue<string>;
+type OptionalBoolean = AnyValue<boolean | undefined>;
+type OptionalFocusTarget = AnyValue<NativeDialog.FocusTarget | undefined>;
 
 export interface State {
   readonly open: boolean;

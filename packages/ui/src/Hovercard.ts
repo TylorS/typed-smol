@@ -4,7 +4,7 @@ import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
-import type { Component, Content } from "./Reactive.js";
+import type { AnyContent, Component } from "./Reactive.js";
 
 export interface State {
   readonly id: string;
@@ -31,7 +31,7 @@ export function setOpen<E, R>(
 
 export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content: Content;
+  readonly content: AnyContent;
 }
 
 export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfer<E>, NoInfer<R>>>(
@@ -69,7 +69,7 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
 
 export interface DisclosureOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content: Content;
+  readonly content: AnyContent;
 }
 
 export function Disclosure<const E, const R, const Opts extends DisclosureOptions<NoInfer<E>, NoInfer<R>>>(
@@ -106,7 +106,7 @@ export function Disclosure<const E, const R, const Opts extends DisclosureOption
 
 export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content: Content;
+  readonly content: AnyContent;
 }
 
 export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
@@ -136,7 +136,7 @@ export const Hovercard = Content;
 
 export interface DismissOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content: Content;
+  readonly content: AnyContent;
 }
 
 export function Dismiss<const E, const R, const Opts extends DismissOptions<NoInfer<E>, NoInfer<R>>>(
@@ -165,7 +165,7 @@ export function Dismiss<const E, const R, const Opts extends DismissOptions<NoIn
   </button>`;
 }
 
-export function Arrow<const Opts extends { readonly content?: Content } & Dom.HostOptions<HTMLSpanElement>>(
+export function Arrow<const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>>(
   options = {} as Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { "aria-hidden": "true" });
@@ -175,7 +175,7 @@ export function Arrow<const Opts extends { readonly content?: Content } & Dom.Ho
 }
 
 export function Heading<
-  const Opts extends { readonly id?: string; readonly content: Content } & Dom.HostOptions<HTMLDivElement>,
+  const Opts extends { readonly id?: string; readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
 >(
   options: Opts,
 ): Component<Opts> {
@@ -190,7 +190,7 @@ export function Heading<
 }
 
 export function Description<
-  const Opts extends { readonly id?: string; readonly content: Content } & Dom.HostOptions<HTMLParagraphElement>,
+  const Opts extends { readonly id?: string; readonly content: AnyContent } & Dom.HostOptions<HTMLParagraphElement>,
 >(
   options: Opts,
 ): Component<Opts> {

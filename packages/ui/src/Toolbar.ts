@@ -6,10 +6,9 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as Dom from "./Dom.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
-type AnyContent = Content;
-type RequiredString = ReactiveValue<string, any, any>;
+type RequiredString = AnyValue<string>;
 
 export interface State extends Composite.State {}
 

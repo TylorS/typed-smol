@@ -5,7 +5,7 @@ import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
 export interface State {
   readonly id: string;
@@ -32,10 +32,10 @@ export function setOpen<E, R>(
 
 export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content: Content;
-  readonly showDelay?: ReactiveValue<number | undefined, any, any>;
-  readonly hideDelay?: ReactiveValue<number | undefined, any, any>;
-  readonly hoverGrace?: ReactiveValue<number | undefined, any, any>;
+  readonly content: AnyContent;
+  readonly showDelay?: AnyValue<number | undefined>;
+  readonly hideDelay?: AnyValue<number | undefined>;
+  readonly hoverGrace?: AnyValue<number | undefined>;
 }
 
 export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfer<E>, NoInfer<R>>>(
@@ -83,8 +83,8 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
 
 export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content: Content;
-  readonly placement?: ReactiveValue<string | undefined, any, any>;
+  readonly content: AnyContent;
+  readonly placement?: AnyValue<string | undefined>;
 }
 
 export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
@@ -115,7 +115,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
 
 export const Tooltip = Content;
 
-export function Arrow<const Opts extends { readonly content?: Content } & Dom.HostOptions<HTMLSpanElement>>(
+export function Arrow<const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>>(
   options = {} as Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { "aria-hidden": "true" });

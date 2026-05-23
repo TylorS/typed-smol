@@ -6,7 +6,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as Dom from "./Dom.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
 export interface State extends Composite.State {}
 
@@ -30,9 +30,9 @@ export function move<Value, E, R>(
 
 export interface RootOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly content: Content;
+  readonly content: AnyContent;
   readonly items?: readonly Collection.Item[];
-  readonly label?: ReactiveValue<string | undefined, any, any>;
+  readonly label?: AnyValue<string | undefined>;
 }
 
 export function Root<const E, const R, const Opts extends RootOptions<NoInfer<E>, NoInfer<R>>>(
@@ -85,8 +85,8 @@ export const Menubar = Root;
 
 export interface ItemOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
-  readonly id: ReactiveValue<string, any, any>;
-  readonly content: Content;
+  readonly id: AnyValue<string>;
+  readonly content: AnyContent;
 }
 
 export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>, NoInfer<R>>>(

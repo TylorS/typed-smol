@@ -6,10 +6,9 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as Dom from "./Dom.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
-type AnyContent = Content;
-type RequiredString = ReactiveValue<string, any, any>;
+type RequiredString = AnyValue<string>;
 
 export interface State<Value extends string = string> {
   readonly value: Value;
@@ -134,7 +133,7 @@ export interface ItemOptions<Value extends string = string, E = never, R = never
   extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly id: RequiredString;
-  readonly value: ReactiveValue<Value, any, any>;
+  readonly value: AnyValue<Value>;
   readonly content: AnyContent;
 }
 

@@ -1,9 +1,9 @@
 import { html } from "@typed/template";
 import * as Dom from "./Dom.js";
-import type { Component, Value as ReactiveValue } from "./Reactive.js";
+import type { Component, AnyValue } from "./Reactive.js";
 
 export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly orientation?: ReactiveValue<"horizontal" | "vertical" | undefined, any, any>;
+  readonly orientation?: AnyValue<"horizontal" | "vertical" | undefined>;
 }
 
 export function Separator<const Opts extends SeparatorOptions = {}>(

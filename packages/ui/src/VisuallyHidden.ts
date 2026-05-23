@@ -1,9 +1,9 @@
 import { html } from "@typed/template";
 import * as Dom from "./Dom.js";
-import type { Component, Content } from "./Reactive.js";
+import type { AnyContent, Component } from "./Reactive.js";
 
 export interface VisuallyHiddenOptions extends Dom.HostOptions<HTMLSpanElement> {
-  readonly content: Content;
+  readonly content: AnyContent;
 }
 
 export function VisuallyHidden<const Opts extends VisuallyHiddenOptions>(

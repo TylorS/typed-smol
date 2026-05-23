@@ -1,12 +1,12 @@
 import { html } from "@typed/template";
 import * as Dom from "./Dom.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import type { AnyContent, Component, AnyValue } from "./Reactive.js";
 
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly content: Content;
-  readonly id?: ReactiveValue<string | undefined, any, any>;
-  readonly label?: ReactiveValue<string | undefined, any, any>;
-  readonly labelledBy?: ReactiveValue<string | undefined, any, any>;
+  readonly content: AnyContent;
+  readonly id?: AnyValue<string | undefined>;
+  readonly label?: AnyValue<string | undefined>;
+  readonly labelledBy?: AnyValue<string | undefined>;
 }
 
 export function Group<const Opts extends GroupOptions>(options: Opts): Component<Opts> {
@@ -29,8 +29,8 @@ export function Group<const Opts extends GroupOptions>(options: Opts): Component
 }
 
 export interface LabelOptions extends Dom.HostOptions<HTMLSpanElement> {
-  readonly content: Content;
-  readonly id?: ReactiveValue<string | undefined, any, any>;
+  readonly content: AnyContent;
+  readonly id?: AnyValue<string | undefined>;
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {

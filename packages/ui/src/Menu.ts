@@ -9,11 +9,10 @@ import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
-type AnyContent = Content;
-type RequiredString = ReactiveValue<string, any, any>;
-type OptionalBoolean = ReactiveValue<boolean | undefined, any, any>;
+type RequiredString = AnyValue<string>;
+type OptionalBoolean = AnyValue<boolean | undefined>;
 
 export type Mode = "auto" | "hint" | "manual";
 
@@ -225,7 +224,7 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
 }
 
 export interface CheckedItemOptions<E = never, R = never> extends ItemOptions<E, R> {
-  readonly checked: ReactiveValue<boolean, any, any>;
+  readonly checked: AnyValue<boolean>;
 }
 
 export function ItemCheckbox<const E, const R, const Opts extends CheckedItemOptions<NoInfer<E>, NoInfer<R>>>(
@@ -270,7 +269,7 @@ export function ItemRadio<const E, const R, const Opts extends CheckedItemOption
 
 export function ItemCheck<
   const Opts extends {
-    readonly checked: ReactiveValue<boolean, any, any>;
+    readonly checked: AnyValue<boolean>;
     readonly content?: AnyContent;
   } & Dom.HostOptions<HTMLSpanElement>,
 >(options: Opts): Component<Opts> {

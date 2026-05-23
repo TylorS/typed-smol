@@ -4,9 +4,12 @@ import * as Schema from "effect/Schema";
 import { describe, expectTypeOf, it } from "vitest";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
-import type { RenderTemplate } from "@typed/template";
+import { EventHandler, type RenderTemplate } from "@typed/template";
+import * as Button from "./Button.js";
+import * as Combobox from "./Combobox.js";
 import * as Dialog from "./Dialog.js";
 import * as Disclosure from "./Disclosure.js";
+import * as Dom from "./Dom.js";
 import * as Form from "./Form.js";
 import * as Listbox from "./Listbox.js";
 import * as Menu from "./Menu.js";
@@ -14,6 +17,7 @@ import * as Select from "./Select.js";
 import * as RadioGroup from "./RadioGroup.js";
 import type * as Reactive from "./Reactive.js";
 import * as Tabs from "./Tabs.js";
+import * as Tooltip from "./Tooltip.js";
 import * as Toolbar from "./Toolbar.js";
 import * as DataAttr from "./DataAttr.js";
 import * as StartupRef from "./StartupRef.js";
@@ -220,6 +224,67 @@ describe("typed/ui component option inference", () => {
 
     expectTypeOf<typeof ref>().toExtend<Reactive.Value<string, OptionError, OptionService>>();
     expectTypeOf<typeof option>().toExtend<Reactive.Component<typeof options>>();
+  });
+
+  it("exposes named broad renderable aliases without erasing actual option inference", () => {
+    const value = Effect.flatMap(OptionService, () => maybeOptionError("value"));
+    const option = Select.Option({
+      state: {} as RefSubject.RefSubject<Select.State<string>>,
+      id: value,
+      value,
+      content: value,
+    });
+
+    expectTypeOf<typeof value>().toExtend<Reactive.AnyValue<string>>();
+    expectTypeOf<typeof value>().toExtend<Reactive.AnyContent<string>>();
+    expectTypeOf<Reactive.ErrorOf<typeof value>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Reactive.ServicesOf<typeof value>>().toEqualTypeOf<OptionService>();
+    expectTypeOf<Reactive.ErrorFromOptions<{ readonly value: typeof value }>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Reactive.ServicesFromOptions<{ readonly value: typeof value }>>().toEqualTypeOf<OptionService>();
+    expectTypeOf<Fx.Error<typeof option>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Services<typeof option>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+  });
+
+  it("preserves errors and services from host props, refs, events, and host renderers", () => {
+    const hostId = Effect.flatMap(OptionService, () => maybeOptionError("save"));
+    const props = {
+      id: hostId,
+      onclick: EventHandler.make((event: MouseEvent) =>
+        Effect.flatMap(OptionService, () => maybeOptionError(event.type)),
+      ),
+      ref: () => Effect.flatMap(OptionService, () => maybeOptionError(undefined)),
+    } satisfies Dom.HostProps<HTMLButtonElement>;
+    const button = Button.Button({
+      content: "Save",
+      props,
+      host: (_props, content) => Effect.flatMap(OptionService, () => maybeOptionError(content)),
+    });
+
+    expectTypeOf<Fx.Error<typeof button>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Services<typeof button>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+  });
+
+  it("keeps user-provided renderable values broad while deriving their concrete channels", () => {
+    const items = Effect.flatMap(OptionService, () =>
+      maybeOptionError<readonly Combobox.Item[]>([{ id: "apple", value: "apple" }]),
+    );
+    const delay = Effect.flatMap(OptionService, () => maybeOptionError(20));
+    const tooltip = Tooltip.Anchor({
+      state: {} as RefSubject.RefSubject<Tooltip.State>,
+      content: "Help",
+      showDelay: delay,
+    });
+    const combobox = Combobox.Input({
+      state: {} as RefSubject.RefSubject<Combobox.State>,
+      items,
+    });
+
+    expectTypeOf<typeof items>().toExtend<Reactive.AnyValue<readonly Combobox.Item[]>>();
+    expectTypeOf<typeof delay>().toExtend<Reactive.AnyValue<number | undefined>>();
+    expectTypeOf<Fx.Error<typeof tooltip | typeof combobox>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Services<typeof tooltip | typeof combobox>>().toExtend<
+      OptionService | RenderTemplate | Scope.Scope
+    >();
   });
 
   it("limits StartupRef data hydration to fields in the backing state", () => {

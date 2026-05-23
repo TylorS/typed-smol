@@ -1,13 +1,13 @@
 import { html } from "@typed/template";
 import * as Dom from "./Dom.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import type { AnyContent, Component, AnyValue } from "./Reactive.js";
 
 type ButtonType = "button" | "submit" | "reset";
 
 export interface ButtonOptions extends Dom.HostOptions<HTMLButtonElement> {
-  readonly content: Content;
-  readonly type?: ReactiveValue<ButtonType | undefined, any, any>;
-  readonly disabled?: ReactiveValue<boolean | undefined, any, any>;
+  readonly content: AnyContent;
+  readonly type?: AnyValue<ButtonType | undefined>;
+  readonly disabled?: AnyValue<boolean | undefined>;
   readonly onclick?: Dom.EventHandlerInput<Dom.EventOf<HTMLButtonElement["onclick"]>, any, any>;
 }
 

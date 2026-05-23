@@ -4,7 +4,7 @@ import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import * as Dom from "./Dom.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import type { AnyContent, Component, AnyValue } from "./Reactive.js";
 
 export interface State<out Values extends {} = {}> {
   readonly values: Values;
@@ -161,7 +161,7 @@ export function removeValue<
 export interface FormOptions<Values extends {} = {}, E = never, R = never>
   extends Dom.HostOptions<HTMLFormElement> {
   readonly state: RefSubject.RefSubject<State<Values>, E, R>;
-  readonly content: Content;
+  readonly content: AnyContent;
   readonly onsubmit?: Parameters<typeof EventHandler.fromEffectOrEventHandler>[0];
   readonly onValidSubmit?: (
     values: Values,
@@ -215,8 +215,8 @@ export interface InputOptions<
   readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly name: Name;
   readonly codec?: Schema.Schema<Values[Name]>;
-  readonly id?: ReactiveValue<string | undefined, any, any>;
-  readonly type?: ReactiveValue<string | undefined, any, any>;
+  readonly id?: AnyValue<string | undefined>;
+  readonly type?: AnyValue<string | undefined>;
 }
 
 export function Input<
@@ -257,8 +257,8 @@ export function Input<
 }
 
 export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
-  readonly content: Content;
-  readonly for?: ReactiveValue<string | undefined, any, any>;
+  readonly content: AnyContent;
+  readonly for?: AnyValue<string | undefined>;
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
@@ -269,7 +269,7 @@ export function Label<const Opts extends LabelOptions>(options: Opts): Component
 }
 
 export function Description<
-  const Opts extends { readonly id?: string; readonly content: Content } & Dom.HostOptions<HTMLDivElement>,
+  const Opts extends { readonly id?: string; readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
 >(
   options: Opts,
 ): Component<Opts> {
@@ -305,12 +305,12 @@ export function Error<
     ) as Component<Opts>;
   }
 
-  const content = RefSubject.map(options.state, (state) => state.errors[options.name] ?? "") as any;
+  const content = RefSubject.map(options.state, (state) => state.errors[options.name] ?? "");
   return Dom.renderDivHost<Opts>(props, content);
 }
 
 export function Submit<
-  const Opts extends { readonly content: Content } & Dom.HostOptions<HTMLButtonElement>,
+  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLButtonElement>,
 >(
   options: Opts,
 ): Component<Opts> {
@@ -321,7 +321,7 @@ export function Submit<
 }
 
 export function Reset<
-  const Opts extends { readonly content: Content } & Dom.HostOptions<HTMLButtonElement>,
+  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLButtonElement>,
 >(
   options: Opts,
 ): Component<Opts> {
@@ -340,7 +340,7 @@ export interface PushOptions<
   readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly name: Name;
   readonly value: ArrayFieldValue<Values, Name>;
-  readonly content: Content;
+  readonly content: AnyContent;
 }
 
 export function Push<
@@ -365,8 +365,8 @@ export interface RemoveOptions<
 > extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly name: Name;
-  readonly index: ReactiveValue<number, any, any>;
-  readonly content: Content;
+  readonly index: AnyValue<number>;
+  readonly content: AnyContent;
 }
 
 export function Remove<
@@ -394,7 +394,7 @@ export function Remove<
 }
 
 export function Group<
-  const Opts extends { readonly content: Content; readonly label?: string } & Dom.HostOptions<HTMLDivElement>,
+  const Opts extends { readonly content: AnyContent; readonly label?: string } & Dom.HostOptions<HTMLDivElement>,
 >(
   options: Opts,
 ): Component<Opts> {

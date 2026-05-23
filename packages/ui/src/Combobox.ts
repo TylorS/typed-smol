@@ -9,7 +9,7 @@ import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
-import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
 export interface State<Value extends string = string> {
   readonly id: string;
@@ -36,8 +36,8 @@ export const data = DataAttr.schema({
   selected: Schema.Boolean,
 });
 
-type OptionalString = ReactiveValue<string | undefined, any, any>;
-type RequiredString = ReactiveValue<string, any, any>;
+type OptionalString = AnyValue<string | undefined>;
+type RequiredString = AnyValue<string>;
 
 export function makeState<Value extends string = string>(
   initial: InitialState<NoInfer<Value>> = {},
@@ -98,7 +98,7 @@ export function selectActive<Value extends string, E, R>(
 export interface InputOptions<Value extends string = string, E = never, R = never>
   extends Dom.HostOptions<HTMLInputElement> {
   readonly state: RefSubject.RefSubject<State<Value>, E, R>;
-  readonly items?: ReactiveValue<readonly Item<Value>[], any, any>;
+  readonly items?: AnyValue<readonly Item<Value>[]>;
   readonly id?: OptionalString;
   readonly placeholder?: OptionalString;
   readonly filter?: (item: Item<Value>, query: string) => boolean;
@@ -211,7 +211,7 @@ function moveByKey<Value extends string, E, R>(
 }
 
 export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
-  readonly content: Content;
+  readonly content: AnyContent;
   readonly for?: OptionalString;
 }
 
@@ -223,8 +223,8 @@ export function Label<const Opts extends LabelOptions>(options: Opts): Component
 export interface PopupOptions<Value extends string = string, E = never, R = never>
   extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>, E, R>;
-  readonly content: Content;
-  readonly role?: ReactiveValue<string | undefined, any, any>;
+  readonly content: AnyContent;
+  readonly role?: AnyValue<string | undefined>;
 }
 
 export function List<
@@ -271,8 +271,8 @@ export interface ItemOptions<Value extends string = string, E = never, R = never
   extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly id: RequiredString;
-  readonly value: ReactiveValue<Value, any, any>;
-  readonly content?: Content;
+  readonly value: AnyValue<Value>;
+  readonly content?: AnyContent;
 }
 
 export function Item<
@@ -314,7 +314,7 @@ export function Item<
 }
 
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly content: Content;
+  readonly content: AnyContent;
   readonly label?: OptionalString;
 }
 
@@ -326,7 +326,7 @@ export function Group<const Opts extends GroupOptions>(options: Opts): Component
 }
 
 export function GroupLabel<
-  const Opts extends { readonly content: Content } & Dom.HostOptions<HTMLSpanElement>,
+  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
 >(
   options: Opts,
 ): Component<Opts> {
@@ -336,7 +336,7 @@ export function GroupLabel<
 }
 
 export function Row<
-  const Opts extends { readonly content: Content } & Dom.HostOptions<HTMLDivElement>,
+  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
 >(
   options: Opts,
 ): Component<Opts> {
@@ -373,7 +373,7 @@ export function Cancel<
   const R,
   const Opts extends {
     readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-    readonly content: Content;
+    readonly content: AnyContent;
   } & Dom.HostOptions<HTMLButtonElement>,
 >(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
   const onClick = EventHandler.make(() => setValue(options.state, ""));
@@ -390,7 +390,7 @@ export function Disclosure<
   const R,
   const Opts extends {
     readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-    readonly content: Content;
+    readonly content: AnyContent;
   } & Dom.HostOptions<HTMLButtonElement>,
 >(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
   const open = RefSubject.map(options.state, (state) => state.open);
@@ -407,8 +407,8 @@ export function Disclosure<
 
 export function ItemCheck<
   const Opts extends {
-    readonly selected: ReactiveValue<boolean, any, any>;
-    readonly content?: Content;
+    readonly selected: AnyValue<boolean>;
+    readonly content?: AnyContent;
   } & Dom.HostOptions<HTMLSpanElement>,
 >(options: Opts): Component<Opts> {
   return gen(function* () {
@@ -424,7 +424,7 @@ export function ItemCheck<
 }
 
 export function ItemValue<
-  const Opts extends { readonly value: Content } & Dom.HostOptions<HTMLSpanElement>,
+  const Opts extends { readonly value: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
 >(
   options: Opts,
 ): Component<Opts> {

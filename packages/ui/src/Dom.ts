@@ -5,6 +5,7 @@ import { EventHandler, html, type Renderable } from "@typed/template";
 import type { Component } from "./Reactive.js";
 
 export type EventHandlerProperty = `on${string}`;
+type AnyRenderable<A> = Renderable<A, any, any>;
 
 export type EventOf<Handler> =
   NonNullable<Handler> extends (this: any, event: infer Event, ...args: ReadonlyArray<any>) => any
@@ -40,18 +41,18 @@ export type WritableKeys<T> = {
 export type ElementProperties<Element extends globalThis.Element> = {
   readonly [K in WritableKeys<Element> as K extends EventHandlerProperty | "ref"
     ? never
-    : K]?: Renderable<Element[K] | undefined, any, any>;
+    : K]?: AnyRenderable<Element[K] | undefined>;
 };
 
 export type ElementOptions<Element extends globalThis.Element> = ElementEventHandlers<Element> &
   ElementRef<Element> &
   ElementProperties<Element>;
 
-type StringAttributeValue = Renderable<string | null | undefined, any, any>;
-type AttributeValue = Renderable<string | number | boolean | null | undefined, any, any>;
-type BooleanAttributeValue = Renderable<boolean | null | undefined, any, any>;
-type StyleValue = Renderable<string | CSSStyleDeclaration | Partial<CSSStyleDeclaration> | null | undefined, any, any>;
-type PopoverTargetActionValue = Renderable<"toggle" | "show" | "hide" | null | undefined, any, any>;
+type StringAttributeValue = AnyRenderable<string | null | undefined>;
+type AttributeValue = AnyRenderable<string | number | boolean | null | undefined>;
+type BooleanAttributeValue = AnyRenderable<boolean | null | undefined>;
+type StyleValue = AnyRenderable<string | CSSStyleDeclaration | Partial<CSSStyleDeclaration> | null | undefined>;
+type PopoverTargetActionValue = AnyRenderable<"toggle" | "show" | "hide" | null | undefined>;
 
 type HostEventHandlers = {
   readonly [K in EventHandlerProperty]?:
@@ -71,7 +72,7 @@ export type TemplateAttributeProps = {
   readonly popover?: StringAttributeValue;
   readonly popovertarget?: StringAttributeValue;
   readonly popovertargetaction?: PopoverTargetActionValue;
-  readonly ".data"?: Readonly<Record<string, Renderable<unknown, any, any>>>;
+  readonly ".data"?: Readonly<Record<string, AnyRenderable<unknown>>>;
 } & {
   readonly [K in `aria-${string}`]?: AttributeValue;
 } & {
@@ -81,10 +82,8 @@ export type TemplateAttributeProps = {
 };
 
 export type BoundElementProperties<Element extends globalThis.Element> = {
-  readonly [K in keyof Element as K extends string ? `.${K}` : never]?: Renderable<
-    Element[K] | undefined,
-    any,
-    any
+  readonly [K in keyof Element as K extends string ? `.${K}` : never]?: AnyRenderable<
+    Element[K] | undefined
   >;
 };
 
@@ -188,10 +187,10 @@ export function mergeProps<Element extends globalThis.Element>(
 export function renderHost<Element extends globalThis.Element, const Opts extends HostOptions<Element>>(
   options: Opts,
   internal: HostProps<Element>,
-  content: Renderable<unknown, any, any>,
+  content: AnyRenderable<unknown>,
   fallback: (
     props: HostProps<Element>,
-    content: Renderable<unknown, any, any>,
+    content: AnyRenderable<unknown>,
   ) => Component<Opts> | Effect.Effect<unknown, any, any>,
 ): Component<Opts> {
   const props = mergeProps(options.props, internal);
@@ -207,7 +206,7 @@ export function splitRef<Element extends globalThis.Element>(
 
 export function renderDivHost<const Opts extends HostOptions<HTMLDivElement>>(
   props: HostProps<HTMLDivElement>,
-  content: Renderable<unknown, any, any>,
+  content: AnyRenderable<unknown>,
 ): Component<Opts> {
   const split = splitRef(props);
   return html`<div ...${split.props as any} ref=${split.ref as any}>${content}</div>` as unknown as Component<Opts>;
