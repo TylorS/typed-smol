@@ -185,3 +185,32 @@ Execution started after approval of `plan.md`.
   - Added `packages/storybook/vitest.config.ts` so portable story tests resolve generated Typed VMs.
 - memory_updates:
   - Recorded path-based Storybook VM ownership, generated runtime exports, and dependency override ordering in `memories.md`.
+
+### Task
+
+- task_id: T-10
+- requirement_ids: FR-3, FR-5, FR-6, FR-8, FR-9, FR-10, NFR-3, NFR-4, NFR-8, AC-4, AC-6, AC-10
+- ts_scenarios: TS-2, TS-4, TS-5, TS-6, TS-7
+- validation_evidence:
+  - RED: `pnpm --filter @typed/storybook test -- src/portable-story.test.ts src/package-boundary.test.ts src/preset.test.ts` failed until the public-beta fixture used non-escaping `./routes`/`./api` VM paths and `tsconfig.test.json` included fixture sources.
+  - RED: Storybook portable tests exposed that generated Storybook runtime layers were composing full API server layers into canvas render, requiring `HttpRouter`; fixed by making browser runtime API imports client-mode only.
+  - GREEN: `pnpm --filter @typed/storybook test` passed with 7 files and 21 tests.
+  - GREEN: `pnpm --filter @typed/storybook build` passed.
+  - GREEN: `pnpm --filter @typed/storybook storybook:build` passed for `fixtures/public-beta`.
+  - GREEN: `pnpm --filter @typed/storybook storybook:dev-smoke` passed; the Storybook proxy returned `{"message":"Default API dependency"}` from the generated Typed HTTP server.
+  - GREEN: `pnpm --filter @typed/storybook test:stories` passed with Storybook addon-vitest browser mode, 1 story file, and 3 generated story tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 27 files, 363 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/vite-plugin test` passed with 16 tests.
+  - LINT: `pnpm exec oxlint packages/storybook packages/app packages/vite-plugin` passed with 0 errors and 4 pre-existing warnings in unrelated `packages/app` files.
+- commit:
+  - pending
+- deviations_or_replans:
+  - The runtime VM now imports API VMs in `mode=client` to keep Storybook browser bundles server-safe; real API execution is provided by the Storybook HTTP-server dev plugin through `typed:server`.
+  - Storybook preview annotations are made idempotent and query-versioned because Storybook v10 can include the same framework preview annotation twice for a custom renderer/framework package.
+  - Dev server plugin resolves `typed:server?...` from the Storybook/Vite root importer so route/API paths can use VM-safe `./src/routes` and `./src/api`.
+- context_updates:
+  - Added `packages/storybook/fixtures/public-beta` with route, API, dependency, and story fixtures outside the package publish allowlist.
+  - Added public helper `typedStorybookFetch()` and HTTP-server framework options.
+  - Added package scripts for static Storybook build, dev smoke, and addon story-test compatibility.
+- memory_updates:
+  - Recorded public-beta fixture, HTTP proxy smoke, browser-safe API runtime import, and addon-vitest server lifecycle notes in `memories.md`.

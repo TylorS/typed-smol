@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "composite": false,
+    "ignoreDeprecations": "6.0",
+    "incremental": false,
+    "paths": {
+      "@typed/storybook": ["src/index.ts"],
+      "@typed/storybook/*": ["src/*"]
+    }
+  },
+  "include": ["src", "fixtures/public-beta/src"],
+  "exclude": ["src/fixtures/**"]
+}

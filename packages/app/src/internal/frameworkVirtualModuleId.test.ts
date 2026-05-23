@@ -205,7 +205,7 @@ describe("parseTypedVirtualModuleId", () => {
   it("parses typed:storybook runtime route and api targets", () => {
     expect(
       parseTypedVirtualModuleId(
-        "typed:storybook/runtime?routes=./routes&routes=./admin&api=./api&path=/dashboard",
+        "typed:storybook/runtime?routes=./routes&routes=./admin&api=./api&path=/dashboard&serverOrigin=http%3A%2F%2F127.0.0.1%3A6174&proxyPath=%2F__typed_storybook_api",
       ),
     ).toEqual({
       ok: true,
@@ -214,6 +214,8 @@ describe("parseTypedVirtualModuleId", () => {
       apis: ["./api"],
       routes: ["./routes", "./admin"],
       path: "/dashboard",
+      serverOrigin: "http://127.0.0.1:6174",
+      proxyPath: "/__typed_storybook_api",
     });
   });
 

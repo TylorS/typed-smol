@@ -6,6 +6,7 @@ export {
 export {
   TYPED_STORYBOOK_RUNTIME_PARAMETER,
   defineTypedStoryRuntime,
+  typedStorybookFetch,
 } from "./runtime.js";
 export type * from "./types.js";
 export type * from "./runtime.js";

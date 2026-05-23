@@ -28,23 +28,33 @@ describe("StorybookVirtualModulePlugin", () => {
 
   it("emits runtime imports for route and api targets", () => {
     const source = buildStorybook(
-      "typed:storybook/runtime?routes=./routes&routes=./admin&api=./api&path=/dashboard",
+      "typed:storybook/runtime?routes=./routes&routes=./admin&api=./api&path=/dashboard&serverOrigin=http%3A%2F%2F127.0.0.1%3A6174&proxyPath=%2F__typed_storybook_api",
     ) as string;
 
     expect(source).toContain('import Routes0 from "typed:router?dir=./routes";');
     expect(source).toContain('import Routes1 from "typed:router?dir=./admin";');
-    expect(source).toContain('import * as Api0 from "typed:api?dir=./api";');
+    expect(source).toContain('import * as Api0 from "typed:api?dir=./api&mode=client";');
+    expect(source).not.toContain("typed:server");
     expect(source).toContain("export const Routes = TypedRouter.merge(Routes0, Routes1);");
     expect(source).toContain('path: "/dashboard"');
+    expect(source).toContain('serverOrigin: "http://127.0.0.1:6174"');
+    expect(source).toContain('proxyPath: "/__typed_storybook_api"');
   });
 
   it("composes generated layers before story layers and leaves test layers last", () => {
     const source = buildStorybook("typed:storybook/runtime?routes=./routes&api=./api") as string;
 
+    expect(source).toContain("export const apiLayers = [] as const;");
+    expect(source).toContain("export const DependenciesLayer = Layer.empty;");
+    expect(source).toContain("const generatedLayers = [] as const;");
+    expect(source).not.toContain("Api0.ApiLayer");
+    expect(source).toContain(
+      "export function makeStoryRuntime<const Options extends StoryRuntimeOptions = {}>",
+    );
     expect(source).toContain(
       "layers: [...generatedLayers, ...(options.layers ?? [])] as const",
     );
-    expect(source).toContain("readonly testLayers?: TestLayers;");
+    expect(source).toContain("readonly testLayers?: readonly LayerOrGroup[];");
     expect(source).toContain("...options,");
   });
 });

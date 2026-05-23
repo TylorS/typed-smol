@@ -40,6 +40,8 @@ export type TypedVirtualModuleId =
       readonly apis: readonly string[];
       readonly routes: readonly string[];
       readonly path: string;
+      readonly serverOrigin: string | undefined;
+      readonly proxyPath: string | undefined;
     };
 
 export type ParseTypedVirtualModuleIdResult = TypedVirtualModuleId | ParseFail;
@@ -179,7 +181,7 @@ function parseBrowser(params: URLSearchParams): ParseTypedVirtualModuleIdResult 
 
 const serverOptions = ["api", "routes", "html", "client", "page", "base", "name"] as const;
 const browserOptions = ["routes", "root", "base", "mode", "name"] as const;
-const storybookRuntimeOptions = ["api", "routes", "path"] as const;
+const storybookRuntimeOptions = ["api", "routes", "path", "serverOrigin", "proxyPath"] as const;
 
 function parseStorybookEntry(
   kind: "storybook/preview" | "storybook/testing",
@@ -215,6 +217,10 @@ function parseStorybookRuntime(params: URLSearchParams): ParseTypedVirtualModule
   if (!path.startsWith("/")) {
     return fail("TVM-STORYBOOK-002", 'typed:storybook/runtime path must start with "/"');
   }
+  const proxyPath = params.get("proxyPath") ?? undefined;
+  if (proxyPath !== undefined && !proxyPath.startsWith("/")) {
+    return fail("TVM-STORYBOOK-002", 'typed:storybook/runtime proxyPath must start with "/"');
+  }
   return {
     ok: true,
     kind: "storybook",
@@ -222,6 +228,8 @@ function parseStorybookRuntime(params: URLSearchParams): ParseTypedVirtualModule
     apis: apis.values,
     routes: routes.values,
     path,
+    serverOrigin: params.get("serverOrigin") ?? undefined,
+    proxyPath,
   };
 }
 

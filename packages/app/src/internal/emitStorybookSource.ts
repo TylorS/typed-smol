@@ -38,34 +38,33 @@ function emitRouteImports(routes: readonly string[]): readonly string[] {
 
 function emitApiImports(apis: readonly string[]): readonly string[] {
   return apis.map((target, index) => {
-    return `import * as Api${index} from "typed:api?dir=${target}";`;
+    return `import * as Api${index} from "typed:api?dir=${target}&mode=client";`;
   });
 }
 
 function emitRuntimeBody(parsed: RuntimeId): string {
   const routeModules = parsed.routes.map((_, index) => `Routes${index}`);
   const apiModules = parsed.apis.map((_, index) => `Api${index}`);
-  const apiLayers = apiModules.map((binding) => `${binding}.ApiLayer`);
-  const apiDependencies = apiModules.map((binding) => `${binding}.DependenciesLayer`);
-  const generatedLayers = [...apiDependencies, ...apiLayers];
   return [
     `export const routeModules = [${routeModules.join(", ")}] as const;`,
     `export const apiModules = [${apiModules.join(", ")}] as const;`,
-    `export const apiLayers = [${apiLayers.join(", ")}] as const;`,
+    "export const apiLayers = [] as const;",
     `export const Routes = ${routeExpression(routeModules)};`,
-    `export const DependenciesLayer = ${layerExpression(apiDependencies)};`,
-    `const generatedLayers = [${generatedLayers.join(", ")}] as const;`,
-    "interface StoryRuntimeOptions<Layers extends readonly LayerOrGroup[] = readonly [], TestLayers extends readonly LayerOrGroup[] = readonly []> {",
-    "  readonly layers?: Layers;",
-    "  readonly testLayers?: TestLayers;",
+    "export const DependenciesLayer = Layer.empty;",
+    "const generatedLayers = [] as const;",
+    "interface StoryRuntimeOptions {",
+    "  readonly layers?: readonly LayerOrGroup[];",
+    "  readonly testLayers?: readonly LayerOrGroup[];",
     "}",
-    "export function makeStoryRuntime<const Layers extends readonly LayerOrGroup[] = readonly [], const TestLayers extends readonly LayerOrGroup[] = readonly []>(",
-    "  options: StoryRuntimeOptions<Layers, TestLayers> = {},",
+    "export function makeStoryRuntime<const Options extends StoryRuntimeOptions = {}>(",
+    "  options: Options = {} as Options,",
     ") {",
     "  return defineTypedStoryRuntime({",
     `    path: ${JSON.stringify(parsed.path)},`,
     `    routes: ${JSON.stringify(parsed.routes)},`,
     `    api: ${JSON.stringify(parsed.apis)},`,
+    `    serverOrigin: ${jsonOrUndefined(parsed.serverOrigin)},`,
+    `    proxyPath: ${jsonOrUndefined(parsed.proxyPath)},`,
     "    ...options,",
     "    layers: [...generatedLayers, ...(options.layers ?? [])] as const,",
     "  });",
@@ -81,8 +80,6 @@ function routeExpression(routeModules: readonly string[]): string {
   return `TypedRouter.merge(${routeModules.join(", ")})`;
 }
 
-function layerExpression(layers: readonly string[]): string {
-  if (layers.length === 0) return "Layer.empty";
-  if (layers.length === 1) return layers[0];
-  return `Layer.mergeAll(${layers.join(", ")})`;
+function jsonOrUndefined(value: string | undefined): string {
+  return value === undefined ? "undefined" : JSON.stringify(value);
 }

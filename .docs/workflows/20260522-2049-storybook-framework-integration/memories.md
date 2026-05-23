@@ -23,3 +23,8 @@
 - T-9 Storybook VM inputs are path-based: `routes`, `api`, and initial route `path`; public `url` is intentionally rejected by the parser and absent from `TypedStoryRuntimeOptions`.
 - T-9 generated `typed:storybook/runtime` imports `typed:router?dir=...` and `typed:api?dir=...`, exports `Routes`, `routeModules`, `apiModules`, `apiLayers`, `DependenciesLayer`, `makeStoryRuntime()`, and `parameters`.
 - T-9 layer order is generated route/API dependencies first, then story `layers`, then explicit `testLayers` last through the Storybook runtime harness.
+- T-10 public-beta fixture lives at `packages/storybook/fixtures/public-beta` outside the package publish allowlist; it contains generated route, API, dependency, and story examples.
+- T-10 Storybook HTTP-server mode starts `typed:server?...` from a Vite-root importer and proxies `/__typed_storybook_api/*` to the generated server; dev smoke verifies `/__typed_storybook_api/message`.
+- T-10 browser Storybook runtime imports API VMs with `mode=client`; real API server behavior belongs to the preset dev plugin, not browser runtime layers.
+- T-10 Storybook v10 may include the same custom framework preview annotation twice; `previewAnnotations` uses a path plus query suffix to avoid duplicate Rolldown binding names.
+- T-10 `@storybook/addon-vitest` works for the custom Typed renderer when `test:stories` starts the fixture Storybook server first; Vitest 4 uses `test.projects`, not `defineWorkspace`.

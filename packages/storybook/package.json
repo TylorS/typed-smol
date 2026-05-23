@@ -30,18 +30,27 @@
   },
   "scripts": {
     "build": "rm -rf dist tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "storybook:build": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && storybook build --config-dir fixtures/public-beta/.storybook --output-dir .tmp/storybook-public-beta-static",
+    "storybook:dev-smoke": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && node ./scripts/storybook-dev-smoke.mjs",
+    "test": "vitest run --passWithNoTests",
+    "typecheck:stories": "node ../virtual-modules-compiler/dist/cli.js --noEmit -p tsconfig.test.json",
+    "test:stories": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && node ./scripts/storybook-test-stories.mjs"
   },
   "dependencies": {
     "@typed/app": "workspace:*",
+    "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
     "@typed/template": "workspace:*",
+    "@typed/ui": "workspace:*",
     "@typed/vite-plugin": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@storybook/addon-vitest": "10.4.1",
     "@storybook/builder-vite": "10.4.1",
+    "@vitest/browser-playwright": "catalog:",
     "happy-dom": "catalog:",
+    "playwright": "^1.60.0",
     "storybook": "10.4.1",
     "typescript": "catalog:",
     "vite": "catalog:",

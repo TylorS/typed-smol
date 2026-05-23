@@ -6,6 +6,8 @@ const packageRoot = resolve(import.meta.dirname, "..");
 const readPackageJson = () =>
   JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")) as {
     readonly exports: Record<string, unknown>;
+    readonly files?: readonly string[];
+    readonly scripts: { readonly build?: string };
   };
 
 describe("@typed/storybook package boundary", () => {
@@ -27,18 +29,20 @@ describe("@typed/storybook package boundary", () => {
     expect(existsSync(resolve(packageRoot, "src/types.ts"))).toBe(true);
   });
 
-  it("keeps test-only fixture stories out of declaration output", () => {
+  it("keeps package-local fixtures out of declaration and publish output", () => {
     const tsconfig = JSON.parse(readFileSync(resolve(packageRoot, "tsconfig.json"), "utf8")) as {
       readonly exclude?: readonly string[];
     };
+    const packageJson = readPackageJson();
 
     expect(tsconfig.exclude ?? []).toContain("src/fixtures/**");
+    expect(packageJson.files ?? []).toEqual(["dist", "src"]);
+    expect(packageJson.files ?? []).not.toContain("fixtures");
+    expect(existsSync(resolve(packageRoot, "fixtures/public-beta/.storybook/main.ts"))).toBe(true);
   });
 
   it("cleans declaration output before building", () => {
-    const packageJson = readPackageJson() as {
-      readonly scripts: { readonly build?: string };
-    };
+    const packageJson = readPackageJson();
 
     expect(packageJson.scripts.build ?? "").toContain("rm -rf dist");
   });

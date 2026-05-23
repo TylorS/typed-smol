@@ -1,4 +1,4 @@
-import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";
+import { type LayerOrGroup } from "@typed/app/runtime";
 import * as TypedRouter from "@typed/router";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -12,7 +12,9 @@ export interface TypedStoryRuntimeOptions<
   readonly api?: readonly string[];
   readonly layers?: Layers;
   readonly path?: `/${string}`;
+  readonly proxyPath?: `/${string}`;
   readonly routes?: readonly string[];
+  readonly serverOrigin?: string;
   readonly testLayers?: TestLayers;
 }
 
@@ -41,10 +43,25 @@ export function runWithTypedStoryRuntime<A, E>(
     return Effect.runPromise(effect as Effect.Effect<A, E, never>);
   }
 
-  const layer = composeWithLayers(Layer.empty, layers);
+  const layer = composeStorybookLayers(layers);
   const provided = Effect.provide(effect, layer as Layer.Layer<never, unknown, unknown>);
 
   return Effect.runPromise(provided as Effect.Effect<A, E | unknown, never>);
+}
+
+export interface TypedStorybookFetchOptions {
+  readonly fetch?: (input: string, init?: RequestInit) => Promise<Response>;
+}
+
+export function typedStorybookFetch(
+  path: `/${string}`,
+  parameters: Record<string, unknown> | undefined,
+  options: TypedStorybookFetchOptions = {},
+  init?: RequestInit,
+): Promise<Response> {
+  const runtime = typedStoryRuntimeFromParameters(parameters);
+  const fetchImpl = options.fetch ?? globalThis.fetch;
+  return fetchImpl(storybookApiPath(path, runtime), init);
 }
 
 function isTypedStoryRuntimeOptions(value: unknown): value is TypedStoryRuntimeOptions {
@@ -59,6 +76,31 @@ function runtimeLayers(runtime: TypedStoryRuntimeOptions): readonly LayerOrGroup
   ];
 }
 
+function composeStorybookLayers(layers: readonly LayerOrGroup[]): Layer.Layer<never, unknown, unknown> {
+  let out: Layer.Layer<never, unknown, unknown> = Layer.empty;
+  for (let index = layers.length - 1; index >= 0; index -= 1) {
+    out = Layer.provideMerge(out, toLayer(layers[index]!));
+  }
+  return out;
+}
+
+function toLayer(layer: LayerOrGroup): Layer.Layer<never, unknown, unknown> {
+  if (isLayerGroup(layer)) return Layer.mergeAll(layer[0], ...layer.slice(1));
+  return layer;
+}
+
+function isLayerGroup(
+  layer: LayerOrGroup,
+): layer is readonly [Layer.Layer<never, unknown, unknown>, ...ReadonlyArray<Layer.Layer<never, unknown, unknown>>] {
+  return Array.isArray(layer);
+}
+
 function toLocalUrl(path: `/${string}`): string {
   return `http://localhost${path}`;
+}
+
+function storybookApiPath(path: `/${string}`, runtime: TypedStoryRuntimeOptions): string {
+  const proxyPath = `${runtime.proxyPath ?? "/__typed_storybook_api"}${path}`;
+  if (runtime.serverOrigin === undefined) return proxyPath;
+  return new URL(proxyPath, runtime.serverOrigin).href;
 }

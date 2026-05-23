@@ -18,6 +18,11 @@ export interface TypedStorybookFrameworkOptions {
   readonly typedVite?: TypedVitePluginOptions;
   readonly server?: {
     readonly mode?: "runtime-harness" | "storybook-middleware" | "http-server";
+    readonly routes?: readonly string[];
+    readonly api?: readonly string[];
+    readonly host?: string;
+    readonly port?: number;
+    readonly proxyPath?: string;
   };
 }
 
