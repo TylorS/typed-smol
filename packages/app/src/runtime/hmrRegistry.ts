@@ -3,7 +3,11 @@ export const typedHmrRegistryKey = "__typed_hmr_registry__";
 export interface HmrStateDescriptor {
   readonly moduleId: string;
   readonly serviceId: string;
+  readonly symbolId?: string;
   readonly shapeFingerprint: string;
+  readonly captureFingerprint?: string;
+  readonly contextFingerprint?: string;
+  readonly continuationFingerprints?: readonly string[];
   readonly dependencyFingerprints?: readonly string[];
   readonly version?: string;
 }
@@ -100,14 +104,20 @@ function getExistingRegistry(options: HmrRegistryOptions): HmrRegistry | undefin
 
 function compatibilityFingerprint(descriptor: HmrStateDescriptor): string {
   return JSON.stringify({
+    captureFingerprint: descriptor.captureFingerprint,
+    contextFingerprint: descriptor.contextFingerprint,
+    continuationFingerprints: [...(descriptor.continuationFingerprints ?? [])].sort(),
     dependencyFingerprints: [...(descriptor.dependencyFingerprints ?? [])].sort(),
     shapeFingerprint: descriptor.shapeFingerprint,
+    symbolId: descriptor.symbolId,
     version: descriptor.version ?? "1",
   });
 }
 
-function entryKey(descriptor: Pick<HmrStateDescriptor, "moduleId" | "serviceId">): string {
-  return `${descriptor.moduleId}:${descriptor.serviceId}`;
+function entryKey(
+  descriptor: Pick<HmrStateDescriptor, "moduleId" | "serviceId" | "symbolId">,
+): string {
+  return `${descriptor.moduleId}:${descriptor.symbolId ?? ""}:${descriptor.serviceId}`;
 }
 
 function disposeEntry(entry: HmrRegistryEntry): void {

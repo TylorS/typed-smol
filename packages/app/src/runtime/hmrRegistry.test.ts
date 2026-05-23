@@ -64,6 +64,29 @@ describe("hmrRegistry", () => {
     expect(next).not.toBe(first);
   });
 
+  it("separates compatible service state by generated symbol identity", () => {
+    const globalObject: Record<PropertyKey, unknown> = {};
+    const first = getOrCreateHmrState(
+      descriptor({
+        captureFingerprint: "capture:a",
+        symbolId: "/src/routes/counter.ts#closure:increment",
+      }),
+      () => ({ count: 1 }),
+      { globalObject },
+    );
+    const second = getOrCreateHmrState(
+      descriptor({
+        captureFingerprint: "capture:a",
+        symbolId: "/src/routes/counter.ts#closure:decrement",
+      }),
+      () => ({ count: 2 }),
+      { globalObject },
+    );
+
+    expect(second).not.toBe(first);
+    expect(second.count).toBe(2);
+  });
+
   it("disposes and prunes registry entries", () => {
     const disposed: string[] = [];
     const globalObject: Record<PropertyKey, unknown> = {};

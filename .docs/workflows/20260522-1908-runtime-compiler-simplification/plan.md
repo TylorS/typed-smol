@@ -324,7 +324,7 @@ feat(compiler): plan resumable route hmr capabilities
 - Modify: `packages/app/src/runtimeTemplateCompilerExample.ts`
 - Modify: `packages/app/src/runtimeTemplateCompilerExample.test.ts`
 
-- [ ] **Step 1: Write failing public-import tests**
+- [x] **Step 1: Write failing public-import tests**
 
 Add tests proving `runtime/hmrRegistry` and `runtimeTemplates/hmrRegistry` share the same registry key and behavior.
 
@@ -332,7 +332,7 @@ Run: `pnpm --filter @typed/app test -- hmrRegistry`
 
 Expected: FAIL if duplicate behavior diverges or forwarding is absent.
 
-- [ ] **Step 2: Add continuation-aware descriptor fields**
+- [x] **Step 2: Add continuation-aware descriptor fields**
 
 Extend registry descriptor support to include optional:
 
@@ -342,15 +342,15 @@ Extend registry descriptor support to include optional:
 
 Do not break existing descriptor callers.
 
-- [ ] **Step 3: Forward duplicate registry module**
+- [x] **Step 3: Forward duplicate registry module**
 
 Make `packages/app/src/runtimeTemplates/hmrRegistry.ts` re-export from `../runtime/hmrRegistry.js`.
 
-- [ ] **Step 4: Update runtime template compiler example**
+- [x] **Step 4: Update runtime template compiler example**
 
 Use the new analyzer/CPS descriptor path instead of string-only HMR planning.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -360,7 +360,7 @@ pnpm --filter @typed/app test -- hmrRegistry runtimeTemplateCompilerExample
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Commit message:
 

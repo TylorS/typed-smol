@@ -1,14 +1,16 @@
 import {
   analyzeComponentHmr,
   analyzeDependencyHmr,
+  analyzeRouteModule,
   analyzeTemplate,
   emitDomTemplate,
   emitServerTemplate,
+  planRouteCpsCompilation,
   planViteHmrBoundary,
 } from "@typed/compiler";
 import { RefSubject } from "@typed/fx";
 import * as Effect from "effect/Effect";
-import { getOrCreateHmrState } from "./runtimeTemplates/hmrRegistry.js";
+import { getOrCreateHmrState } from "./runtime/hmrRegistry.js";
 import { hydrate } from "./runtimeTemplates/hydrate.js";
 import { renderServer } from "./runtimeTemplates/renderServer.js";
 
@@ -60,16 +62,23 @@ function getExampleHmrState(
 }
 
 function routeHmrPlan(routeText: string) {
+  const routeSource = `
+    const Count = RefSubject.Service<number>()("${Count.id}");
+    export const Counter = Fx.gen(function*() {
+      const count = yield* Count.service;
+      const render = () => html\`<button>${routeText}</button>\`;
+      return render();
+    });
+  `;
+  const routeFacts = analyzeRouteModule({
+    moduleId: "/examples/runtime-template-compiler/route.ts",
+    sourceText: routeSource,
+  });
+  const cps = planRouteCpsCompilation(routeFacts);
   const route = analyzeComponentHmr({
     boundary: "route-component",
     moduleId: "/examples/runtime-template-compiler/route.ts",
-    sourceText: `
-      const Count = RefSubject.Service<number>()("${Count.id}");
-      export const Counter = Fx.gen(function*() {
-        const count = yield* Count.service;
-        return html\`<button>${routeText}</button>\`;
-      });
-    `,
+    sourceText: routeSource,
   });
   const dependencies = analyzeDependencyHmr({
     dependencies: [
@@ -82,5 +91,5 @@ function routeHmrPlan(routeText: string) {
     routeModuleId: "/examples/runtime-template-compiler/route.ts",
   });
 
-  return planViteHmrBoundary({ dependencies, route });
+  return planViteHmrBoundary({ continuations: cps.continuations, dependencies, route });
 }
