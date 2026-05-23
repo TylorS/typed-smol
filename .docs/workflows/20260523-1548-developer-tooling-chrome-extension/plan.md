@@ -221,6 +221,33 @@ Existing packages receive narrow hook points only:
   - Run sidecar subagent review for schema/type inference and serialization boundary risks before commit.
   - Resolve any schema, redaction, or type-inference gaps before marking T2 complete.
 
+### T3 - Protocol RPC Group and Fixtures
+
+- requirement_links: FR-1, FR-2, FR-40, FR-43, FR-44, FR-45, NFR-1, NFR-17, NFR-18, AC-1, AC-11, AC-14.
+- write_set:
+  - `packages/devtools-protocol/src/Rpc.ts`
+  - `packages/devtools-protocol/src/Rpc.test.ts`
+  - `packages/devtools-protocol/src/Fixtures.ts`
+  - `packages/devtools-protocol/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memory/*`
+- red_step:
+  - Add `Rpc.test.ts` that imports the planned RPC group and fixtures before implementation exists.
+  - Run `pnpm --filter @typed/devtools-protocol exec vitest run src/Rpc.test.ts` and capture the missing-module failure.
+- green_step:
+  - Define protocol-owned `effect/unstable/rpc` RPCs for Handshake, SubscribeRuntimeEvents, ResolveDomBinding, and AnalyzeSource.
+  - Define host-neutral protocol fixtures that reuse exported schemas/types rather than redeclaring message shapes.
+  - Prove the group through `RpcTest.makeClient` with in-process handlers.
+- verification:
+  - `pnpm --filter @typed/devtools-protocol exec vitest run src/Rpc.test.ts`
+  - `pnpm --filter @typed/devtools-protocol test`
+  - `pnpm --filter @typed/devtools-protocol build`
+  - `rg -n "from \"(?:chrome|devtools-runtime|@typed/devtools-runtime|@typed/fx|@typed/template|@typed/navigation)|from '@typed/(?:devtools-runtime|fx|template|navigation)|\\bchrome\\." packages/devtools-protocol/src packages/devtools-protocol/package.json` must return no matches.
+  - `git diff --check -- packages/devtools-protocol .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for unstable RPC API usage, fixture shape reuse, and type inference before commit.
+
 ## Verification Matrix
 
 | scenario | required commands |

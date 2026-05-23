@@ -22,3 +22,9 @@
 - Protocol numeric fields should use finite-number codecs; do not accept `NaN` or infinities at decode boundaries.
 - OTEL Typed correlation ids must use branded Typed id schemas, not raw strings.
 - HMR protocol facts must keep `template.optimized` separate from `stateful` eligibility or rejection reasons.
+
+### T3
+
+- Direct `effect/unstable/rpc` usage belongs in `packages/devtools-protocol/src/Rpc.ts`; downstream packages should consume Typed protocol exports.
+- Use `RpcTest.makeClient` with `TypedDevtoolsRpcGroup.toLayer(...)` for host-neutral in-process RPC verification.
+- Protocol fixtures should use exported id constructors and `satisfies` against schema-derived types instead of duplicating message shapes.

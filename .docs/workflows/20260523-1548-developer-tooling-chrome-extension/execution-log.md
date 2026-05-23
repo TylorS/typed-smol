@@ -78,4 +78,33 @@
 
 ## Deferred Work
 
-- T3 through T12 remain blocked on prior-task completion.
+### T3 - Protocol RPC Group and Fixtures
+
+- task_id: T3
+- requirement_ids: FR-1, FR-2, FR-40, FR-43, FR-44, FR-45, NFR-1, NFR-17, NFR-18, AC-1, AC-11, AC-14
+- ts_scenarios: TS-1, TS-12
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-protocol exec vitest run src/Rpc.test.ts` failed with missing `./Fixtures.js`.
+  - green: `pnpm --filter @typed/devtools-protocol exec vitest run src/Rpc.test.ts` passed with 3 tests.
+  - green: `pnpm --filter @typed/devtools-protocol test` passed with typecheck plus 4 Vitest files and 24 tests.
+  - green: `pnpm --filter @typed/devtools-protocol build` passed.
+  - green: `pnpm exec oxlint packages/devtools-protocol/src` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check ...` passed for protocol package source files.
+  - green: host-neutral import/dependency grep returned no matches.
+  - green: `git diff --check -- packages/devtools-protocol .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no blocking findings for pinned `effect/unstable/rpc` usage or fixture shape reuse.
+- commit:
+  - pending
+- deviations_or_replans:
+  - none
+- context_updates:
+  - Added active T3 detail to `plan.md`.
+  - Added `TypedDevtoolsRpcGroup` with Handshake, SubscribeRuntimeEvents, ResolveDomBinding, and AnalyzeSource.
+  - Added host-neutral protocol fixtures and in-process `RpcTest` coverage.
+- memory_updates:
+  - Keep direct `effect/unstable/rpc` usage inside `packages/devtools-protocol/src/Rpc.ts`.
+  - `RpcTest.makeClient` plus `RpcGroup.toLayer` is the pinned Effect beta path for in-process protocol verification.
+
+## Deferred Work
+
+- T4 through T12 remain blocked on prior-task completion.
