@@ -420,7 +420,7 @@ test(compiler): preserve template optimization equivalence
 - Modify: `.docs/workflows/20260522-1908-runtime-compiler-simplification/memories.md`
 - Modify: `.docs/workflows/20260522-1908-runtime-compiler-simplification/plan.md`
 
-- [ ] **Step 1: Run focused package tests**
+- [x] **Step 1: Run focused package tests**
 
 Run:
 
@@ -431,7 +431,7 @@ pnpm --filter @typed/app test -- hmrRegistry runtimeTemplateCompilerExample
 
 Expected: PASS.
 
-- [ ] **Step 2: Run broader build gate if package tests pass**
+- [x] **Step 2: Run broader build gate if package tests pass**
 
 Run:
 
@@ -442,7 +442,7 @@ pnpm --filter @typed/app build
 
 Expected: PASS.
 
-- [ ] **Step 3: Update workflow memory**
+- [x] **Step 3: Update workflow memory**
 
 Record only reusable implementation lessons in:
 
@@ -450,11 +450,11 @@ Record only reusable implementation lessons in:
 .docs/workflows/20260522-1908-runtime-compiler-simplification/memories.md
 ```
 
-- [ ] **Step 4: Update plan task statuses**
+- [x] **Step 4: Update plan task statuses**
 
 Mark completed task checkboxes in this plan as implementation progresses.
 
-- [ ] **Step 5: Commit final docs/status**
+- [x] **Step 5: Commit final docs/status**
 
 Commit message:
 
