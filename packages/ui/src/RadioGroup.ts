@@ -84,8 +84,8 @@ export interface RootOptions<E = never, R = never> extends Dom.HostOptions<HTMLD
   readonly label?: RequiredString;
 }
 
-export function Root<const E, const R, const Opts extends RootOptions<E, R>>(
-  options: Opts,
+export function Root<const E, const R, const Opts extends RootOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<RootOptions<E, R>, "state">,
 ): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   const items = options.items;
@@ -142,9 +142,9 @@ export function Item<
   const Value extends string,
   const E,
   const R,
-  const Opts extends ItemOptions<Value, E, R>,
+  const Opts extends ItemOptions<Value, NoInfer<E>, NoInfer<R>>,
 >(
-  options: Opts,
+  options: Opts & Pick<ItemOptions<Value, E, R>, "state">,
 ): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);

@@ -1,7 +1,7 @@
 import { assert, describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { Window } from "happy-dom";
 import * as Combobox from "./Combobox.js";
 

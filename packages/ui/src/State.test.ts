@@ -40,9 +40,10 @@ describe("typed/ui/State", () => {
 
   it("exposes RefSubject.Service for state providers", () =>
     Effect.gen(function* () {
-      const DisclosureState = State.Service<{ readonly open: boolean }>()(
-        "@typed/ui/TestDisclosureState",
-      );
+      class DisclosureState extends State.Service<
+        DisclosureState,
+        { readonly open: boolean }
+      >()("@typed/ui/TestDisclosureState") {}
       const found = yield* Effect.gen(function* () {
         return yield* DisclosureState;
       }).pipe(
@@ -53,8 +54,8 @@ describe("typed/ui/State", () => {
         ),
       );
 
-      expectTypeOf(DisclosureState).toExtend<
-        RefSubject.RefSubject<{ readonly open: boolean }, never, typeof DisclosureState>
+      expectTypeOf<typeof DisclosureState>().toExtend<
+        RefSubject.RefSubject<{ readonly open: boolean }, never, DisclosureState>
       >();
       assert.deepStrictEqual(found, { open: false });
     }).pipe(Effect.scoped, Effect.runPromise));

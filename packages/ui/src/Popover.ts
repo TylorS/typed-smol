@@ -43,8 +43,8 @@ export interface TriggerOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly content: AnyContent;
 }
 
-export function Trigger<const E, const R, const Opts extends TriggerOptions<E, R>>(
-  options: Opts,
+export function Trigger<const E, const R, const Opts extends TriggerOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<TriggerOptions<E, R>, "state">,
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
@@ -79,8 +79,8 @@ export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTM
   readonly anchorName?: OptionalString;
 }
 
-export function Anchor<const E, const R, const Opts extends AnchorOptions<E, R>>(
-  options: Opts,
+export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<AnchorOptions<E, R>, "state">,
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const style = anchorStyleValue(options.anchorName);
@@ -99,8 +99,8 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly positionArea?: OptionalString;
 }
 
-export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
-  options: Opts,
+export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<ContentOptions<E, R>, "state">,
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
@@ -124,18 +124,19 @@ export function Content<const E, const R, const Opts extends ContentOptions<E, R
     return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
   }
 
-  return html`<div
-    id=${id}
-    popover=${mode}
-    style=${style}
-    .data=${{ open, mode }}
-    data-position-anchor=${firstOptionalString(options.positionAnchor)}
-    data-position-area=${firstOptionalString(options.positionArea)}
-    ontoggle=${onToggle}
-    ref=${NativePopover.register(options.state)}
+  const fallback = html`<div
+    id=${id as any}
+    popover=${mode as any}
+    style=${style as any}
+    .data=${{ open, mode } as any}
+    data-position-anchor=${firstOptionalString(options.positionAnchor) as any}
+    data-position-area=${firstOptionalString(options.positionArea) as any}
+    ontoggle=${onToggle as any}
+    ref=${NativePopover.register(options.state) as any}
   >
     ${options.content}
   </div>`;
+  return fallback as unknown as Component<Opts>;
 }
 
 export const Popover = Content;
@@ -144,10 +145,10 @@ export function Dismiss<
   const E,
   const R,
   const Opts extends {
-    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
     readonly content: AnyContent;
   } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts): Component<Opts> {
+>(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),

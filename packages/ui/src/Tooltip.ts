@@ -34,8 +34,8 @@ export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTM
   readonly content: Content;
 }
 
-export function Anchor<const E, const R, const Opts extends AnchorOptions<E, R>>(
-  options: Opts,
+export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<AnchorOptions<E, R>, "state">,
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const onFocus = EventHandler.make(() => setOpen(options.state, true));
@@ -70,8 +70,8 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly placement?: ReactiveValue<string | undefined, any, any>;
 }
 
-export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
-  options: Opts,
+export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<ContentOptions<E, R>, "state">,
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = RefSubject.map(options.state, (state) => String(state.open));
@@ -93,18 +93,9 @@ export function Content<const E, const R, const Opts extends ContentOptions<E, R
 
   if (options.host) return options.host(props, options.content) as Component<Opts>;
 
-  return html`<div
-    id=${id}
-    role="tooltip"
-    popover="hint"
-    data-placement=${options.placement}
-    data-open=${open}
-    ?hidden=${hidden}
-    ontoggle=${onToggle}
-    ref=${NativePopover.register(options.state)}
-  >
-    ${options.content}
-  </div>`;
+  const split = Dom.splitRef(props);
+  const fallback = html`<div ...${split.props as any} ref=${split.ref as any}>${options.content}</div>`;
+  return fallback as unknown as Component<Opts>;
 }
 
 export const Tooltip = Content;

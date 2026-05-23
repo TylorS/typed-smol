@@ -62,6 +62,8 @@ describe("typed/ui/Form", () => {
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
 
+      assert(push instanceof window.HTMLButtonElement);
+      assert(remove instanceof window.HTMLButtonElement);
       push.click();
       yield* Effect.sleep(10);
       expect((yield* state).values.tags).toEqual(["one", "two"]);

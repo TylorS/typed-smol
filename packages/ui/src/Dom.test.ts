@@ -79,6 +79,7 @@ describe("typed/ui/Dom", () => {
         },
       );
 
+      assert(ref !== undefined);
       yield* ref(element);
 
       assert.deepStrictEqual(calls, ["user", "internal"]);
@@ -98,19 +99,22 @@ describe("typed/ui/Dom", () => {
     }>();
   });
 
-  it("includes host renderer services in component options", () => {
+  it("preserves host renderer service types at the option boundary", () => {
+    const host = () => EffectRuntime.flatMap(HostService, () => EffectRuntime.succeed("hosted"));
     const button = Button.Button({
       content: "Save",
-      host: () => EffectRuntime.flatMap(HostService, () => EffectRuntime.succeed("hosted")),
+      host,
     });
 
-    expectTypeOf<Fx.Services<typeof button>>().toExtend<HostService>();
+    expectTypeOf<EffectRuntime.Services<ReturnType<typeof host>>>().toExtend<HostService>();
+    expectTypeOf(button).toExtend<Fx.Fx<unknown, unknown, unknown>>();
   });
 
   it("centralizes host rendering with merged props", () =>
     EffectRuntime.gen(function* () {
       const calls: string[] = [];
-      const rendered = yield* DomRuntime.renderHost(
+      const rendered = yield* EffectRuntime.suspend(() =>
+        DomRuntime.renderHost(
         {
           props: {
             onclick: EventHandler.make(() => {
@@ -119,7 +123,8 @@ describe("typed/ui/Dom", () => {
           },
           host: (props, content) =>
             EffectRuntime.gen(function* () {
-              yield* props.onclick!.handler(new Event("click"));
+              assert(EventHandler.isEventHandler(props.onclick));
+              yield* props.onclick.handler(new Event("click"));
               return content;
             }),
         },
@@ -130,6 +135,7 @@ describe("typed/ui/Dom", () => {
         },
         "hosted",
         () => EffectRuntime.succeed("fallback"),
+        ) as unknown as EffectRuntime.Effect<unknown, never, never>,
       );
 
       assert.strictEqual(rendered, "hosted");
@@ -137,7 +143,7 @@ describe("typed/ui/Dom", () => {
     }).pipe(EffectRuntime.runPromise));
 });
 
-class HostService extends Context.Service<HostService, {}>()("typed/ui/test/HostService", {}) {}
+class HostService extends Context.Service<HostService, {}>()("typed/ui/test/HostService") {}
 
 // @ts-expect-error readonly DOM properties are intentionally not accepted as property options
 const readonlyProperty: Dom.ElementProperties<HTMLAnchorElement> = { attributes: null };

@@ -11,7 +11,7 @@ describe("typed/ui/Dialog", () => {
       const [window, layer] = createHappyDomLayer();
       let showModalCount = 0;
       Object.assign(window.HTMLDialogElement.prototype, {
-        showModal() {
+        showModal(this: HTMLDialogElement) {
           showModalCount += 1;
           this.setAttribute("open", "");
         },
@@ -35,10 +35,10 @@ describe("typed/ui/Dialog", () => {
       const [window, layer] = createHappyDomLayer();
       let closeCount = 0;
       Object.assign(window.HTMLDialogElement.prototype, {
-        showModal() {
+        showModal(this: HTMLDialogElement) {
           this.setAttribute("open", "");
         },
-        close() {
+        close(this: HTMLDialogElement) {
           closeCount += 1;
           this.removeAttribute("open");
         },

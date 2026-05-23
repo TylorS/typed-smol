@@ -66,7 +66,7 @@ interface SelectFormBinding {
 }
 
 export function makeState<Value extends string = string>(
-  initial: InitialState<Value>,
+  initial: InitialState<NoInfer<Value>>,
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
   const state: State<Value> = {
     id: initial.id,
@@ -122,8 +122,8 @@ export function Trigger<
   const Value extends string,
   const E,
   const R,
-  const Opts extends TriggerOptions<Value, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends TriggerOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<TriggerOptions<Value, E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
   const props = {
@@ -155,8 +155,8 @@ export function Content<
   const Value extends string,
   const E,
   const R,
-  const Opts extends ContentOptions<Value, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends ContentOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<ContentOptions<Value, E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
@@ -230,8 +230,8 @@ export function Option<
   const Value extends string,
   const E,
   const R,
-  const Opts extends OptionOptions<Value, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends OptionOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<OptionOptions<Value, E, R>, "state">): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
     const value = yield* makeRef(options.value);
@@ -291,10 +291,10 @@ export function Value<
   const E,
   const R,
   const Opts extends {
-    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
   } & Dom.HostOptions<HTMLSpanElement>,
 >(
-  options: Opts,
+  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
 ): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => state.value ?? "");
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, value, (props, content) =>
@@ -304,6 +304,7 @@ export function Value<
 
 export interface HiddenInputOptions<
   Value extends string = string,
+  Values extends {} = Record<string, unknown>,
   E = never,
   R = never,
   E2 = never,
@@ -311,8 +312,8 @@ export interface HiddenInputOptions<
 >
   extends Dom.HostOptions<HTMLInputElement> {
   readonly state: RefSubject.RefSubject<State<Value>, E, R>;
-  readonly name: RequiredString;
-  readonly formState?: RefSubject.RefSubject<Form.State<Record<string, unknown>>, E2, R2>;
+  readonly name: ReactiveValue<string | (keyof NoInfer<Values> & string), any, any>;
+  readonly formState?: RefSubject.RefSubject<Form.State<Values>, E2, R2>;
   readonly form?: ReactiveValue<string | undefined, any, any>;
   readonly disabled?: OptionalBoolean;
   readonly required?: OptionalBoolean;
@@ -320,14 +321,17 @@ export interface HiddenInputOptions<
 
 export function HiddenInput<
   const Value extends string,
+  const Values extends {},
   const E,
   const R,
   const E2,
   const R2,
-  const Opts extends HiddenInputOptions<Value, E, R, E2, R2>,
->(options: Opts): Component<Opts> {
+  const Opts extends HiddenInputOptions<Value, Values, NoInfer<E>, NoInfer<R>, NoInfer<E2>, NoInfer<R2>>,
+>(
+  options: Opts & Pick<HiddenInputOptions<Value, Values, E, R, E2, R2>, "state" | "formState">,
+): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => state.value ?? "");
-  const register = hiddenInputRef<Value, E, R, E2, R2>(options);
+  const register = hiddenInputRef<Value, Values, E, R, E2, R2>(options);
   const props = {
     type: "hidden",
     name: options.name,
@@ -361,10 +365,10 @@ export function Dismiss<
   const E,
   const R,
   const Opts extends {
-    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
     readonly content: AnyContent;
   } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts): Component<Opts> {
+>(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),
@@ -522,14 +526,7 @@ function boolString<E, R>(value: RefSubject.Computed<boolean, E, R>) {
   return RefSubject.map(value, String);
 }
 
-function registerFormBinding<
-  Value extends string,
-  Values extends Record<string, unknown>,
-  E,
-  R,
-  E2,
-  R2,
->(
+function registerFormBinding<Value extends string, Values extends {}, E, R, E2, R2>(
   selectState: RefSubject.RefSubject<State<Value>, E, R>,
   formState: RefSubject.RefSubject<Form.State<Values>, E2, R2>,
   name: keyof Values & string,
@@ -540,7 +537,7 @@ function registerFormBinding<
     selectState,
     current.concat({
       setValue: (value) =>
-        Form.setValue(formState, name, value as Values[keyof Values & string]).pipe(
+        Form.setValue(formState, name, value).pipe(
           Effect.provide(context),
           Effect.orDie,
           Effect.asVoid,
@@ -549,8 +546,8 @@ function registerFormBinding<
   );
 }
 
-function hiddenInputRef<Value extends string, E, R, E2, R2>(
-  options: HiddenInputOptions<Value, E, R, E2, R2>,
+function hiddenInputRef<Value extends string, Values extends {}, E, R, E2, R2>(
+  options: HiddenInputOptions<Value, Values, E, R, E2, R2>,
 ): Dom.ElementRef<HTMLInputElement>["ref"] | undefined {
   const formState = options.formState;
   if (!formState) return undefined;
@@ -562,11 +559,12 @@ function hiddenInputRef<Value extends string, E, R, E2, R2>(
       const nameRef = yield* makeRef(options.name);
       const name = yield* nameRef;
       const context = yield* Effect.context<R2>();
-      registerFormBinding(options.state, formState, name as keyof Record<string, unknown> & string, context);
+      const fieldName = name as keyof Values & string;
+      registerFormBinding(options.state, formState, fieldName, context);
 
       const current = yield* options.state;
       if (current.value !== null) {
-        yield* Form.setValue(formState, name, current.value);
+        yield* Form.setValue(formState, fieldName, current.value);
       }
     });
 }

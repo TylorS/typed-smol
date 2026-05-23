@@ -215,6 +215,8 @@ describe("typed/ui/Popover", () => {
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
 
+      assert(anchor instanceof window.HTMLElement);
+      assert(content instanceof window.HTMLElement);
       assert.strictEqual(anchor.getAttribute("style"), "anchor-name: --menu-anchor;");
       assert.strictEqual(content.getAttribute("style"), "position-anchor: --menu-anchor; position-area: bottom;");
       assert.strictEqual(content.dataset.positionAnchor, "--menu-anchor");

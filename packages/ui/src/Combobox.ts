@@ -40,7 +40,7 @@ type OptionalString = ReactiveValue<string | undefined, any, any>;
 type RequiredString = ReactiveValue<string, any, any>;
 
 export function makeState<Value extends string = string>(
-  initial: InitialState<Value> = {},
+  initial: InitialState<NoInfer<Value>> = {},
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
   const state: State<Value> = {
     id: initial.id ?? "combobox-popover",
@@ -110,9 +110,9 @@ export function Input<
   const Value extends string,
   const E,
   const R,
-  const Opts extends InputOptions<Value, E, R>,
+  const Opts extends InputOptions<Value, NoInfer<E>, NoInfer<R>>,
 >(
-  options: Opts,
+  options: Opts & Pick<InputOptions<Value, E, R>, "state">,
 ): Component<Opts> {
   return gen(function* () {
     const items = options.items === undefined ? undefined : yield* makeRef(options.items);
@@ -231,8 +231,8 @@ export function List<
   const Value extends string,
   const E,
   const R,
-  const Opts extends PopupOptions<Value, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends PopupOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<PopupOptions<Value, E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = dataOpen(options.state);
   if (options.host) {
@@ -248,8 +248,8 @@ export function Popover<
   const Value extends string,
   const E,
   const R,
-  const Opts extends PopupOptions<Value, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends PopupOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<PopupOptions<Value, E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = dataOpen(options.state);
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
@@ -264,16 +264,9 @@ export function Popover<
     ref: NativePopover.register(options.state),
   });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<div
-    id=${id}
-    role=${options.role ?? "listbox"}
-    popover="auto"
-    .data=${{ open }}
-    ontoggle=${onToggle}
-    ref=${NativePopover.register(options.state)}
-  >
-    ${options.content}
-  </div>`;
+  const split = Dom.splitRef(props);
+  const fallback = html`<div ...${split.props as any} ref=${split.ref as any}>${options.content}</div>`;
+  return fallback as unknown as Component<Opts>;
 }
 
 export interface ItemOptions<Value extends string = string, E = never, R = never>
@@ -288,9 +281,9 @@ export function Item<
   const Value extends string,
   const E,
   const R,
-  const Opts extends ItemOptions<Value, E, R>,
+  const Opts extends ItemOptions<Value, NoInfer<E>, NoInfer<R>>,
 >(
-  options: Opts,
+  options: Opts & Pick<ItemOptions<Value, E, R>, "state">,
 ): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
@@ -365,9 +358,11 @@ export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {
 export function Value<
   const E,
   const R,
-  const Opts extends { readonly state: RefSubject.RefSubject<State, E, R> } & Dom.HostOptions<HTMLSpanElement>,
+  const Opts extends {
+    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
+  } & Dom.HostOptions<HTMLSpanElement>,
 >(
-  options: Opts,
+  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
 ): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => state.value);
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, value, (props, content) =>
@@ -379,10 +374,10 @@ export function Cancel<
   const E,
   const R,
   const Opts extends {
-    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
     readonly content: Content;
   } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts): Component<Opts> {
+>(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
   const onClick = EventHandler.make(() => setValue(options.state, ""));
   return Dom.renderHost<HTMLButtonElement, Opts>(
     options,
@@ -396,10 +391,10 @@ export function Disclosure<
   const E,
   const R,
   const Opts extends {
-    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
     readonly content: Content;
   } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts): Component<Opts> {
+>(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
   const open = RefSubject.map(options.state, (state) => state.open);
   const onClick = EventHandler.make(() =>
     Effect.flatMap(options.state, (state) => setOpen(options.state, !state.open)),

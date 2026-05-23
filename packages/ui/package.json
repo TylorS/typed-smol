@@ -21,7 +21,9 @@
   },
   "scripts": {
     "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests",
+    "lint": "oxlint src --deny-warnings",
+    "test": "pnpm run lint && pnpm run test:typecheck && vitest run --passWithNoTests",
+    "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
     "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "dependencies": {

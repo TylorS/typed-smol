@@ -45,8 +45,8 @@ export interface TriggerOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly content: AnyContent;
 }
 
-export function Trigger<const E, const R, const Opts extends TriggerOptions<E, R>>(
-  options: Opts,
+export function Trigger<const E, const R, const Opts extends TriggerOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<TriggerOptions<E, R>, "state">,
 ): Component<Opts> {
   const open = dataOpen(options.state);
   const onClick = EventHandler.make((event: MouseEvent) =>
@@ -74,8 +74,8 @@ export interface CloseOptions<E = never, R = never> extends Dom.HostOptions<HTML
   readonly content: AnyContent;
 }
 
-export function Close<const E, const R, const Opts extends CloseOptions<E, R>>(
-  options: Opts,
+export function Close<const E, const R, const Opts extends CloseOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<CloseOptions<E, R>, "state">,
 ): Component<Opts> {
   const onClick = EventHandler.make(() => close(options.state));
   const props = { type: "button", onclick: onClick } as const;
@@ -95,8 +95,8 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly content: AnyContent;
 }
 
-export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
-  options: Opts,
+export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<ContentOptions<E, R>, "state">,
 ): Component<Opts> {
   const open = dataOpen(options.state);
   const onClose = EventHandler.make(() => NativeDialog.syncClosed(options.state));

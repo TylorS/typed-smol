@@ -43,6 +43,7 @@ describe("typed/ui/Hovercard", () => {
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
 
+      assert(anchor instanceof window.HTMLElement);
       anchor.dispatchEvent(new window.FocusEvent("focus"));
       yield* Effect.sleep(10);
       expect((yield* state).open).toBe(true);

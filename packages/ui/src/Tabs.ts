@@ -76,8 +76,8 @@ export interface ListOptions<E = never, R = never> extends Dom.HostOptions<HTMLD
   readonly label?: RequiredString;
 }
 
-export function List<const E, const R, const Opts extends ListOptions<E, R>>(
-  options: Opts,
+export function List<const E, const R, const Opts extends ListOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<ListOptions<E, R>, "state">,
 ): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   const items = options.items;
@@ -131,8 +131,8 @@ export interface TabOptions<E = never, R = never> extends Dom.HostOptions<HTMLBu
   readonly content: AnyContent;
 }
 
-export function Tab<const E, const R, const Opts extends TabOptions<E, R>>(
-  options: Opts,
+export function Tab<const E, const R, const Opts extends TabOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<TabOptions<E, R>, "state">,
 ): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
@@ -166,8 +166,8 @@ export interface PanelOptions<E = never, R = never> extends Dom.HostOptions<HTML
   readonly content: AnyContent;
 }
 
-export function Panel<const E, const R, const Opts extends PanelOptions<E, R>>(
-  options: Opts,
+export function Panel<const E, const R, const Opts extends PanelOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<PanelOptions<E, R>, "state">,
 ): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);

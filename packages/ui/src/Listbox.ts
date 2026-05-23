@@ -43,7 +43,7 @@ export const optionData = DataAttr.schema({
 });
 
 export function makeState<Value extends string = string>(
-  initial: InitialState<Value> = {},
+  initial: InitialState<NoInfer<Value>> = {},
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
   const state: State<Value> = {
     value: initial.value ?? null,
@@ -90,8 +90,8 @@ export function Root<
   const Value extends string,
   const E,
   const R,
-  const Opts extends RootOptions<Value, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends RootOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<RootOptions<Value, E, R>, "state">): Component<Opts> {
   const orientation = RefSubject.map(options.state, (current) => current.orientation);
   const activeDescendant = RefSubject.map(options.state, (current) =>
     current.virtualFocus && current.activeId ? current.activeId : undefined,
@@ -154,14 +154,13 @@ export function Option<
   const Value extends string,
   const E,
   const R,
-  const Opts extends OptionOptions<Value, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends OptionOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<OptionOptions<Value, E, R>, "state">): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
     const value = yield* makeRef(options.value);
     const disabledValue = yield* makeRef(options.disabled ?? false);
     const disabled = isDisabled(disabledValue);
-    const active = isActive(options.state, id);
     const selected = isSelected(options.state, value);
     const onClick = EventHandler.make(() =>
       Effect.gen(function* () {
@@ -191,13 +190,6 @@ export function Option<
     if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
     return html`<div ...${props}>${options.content}</div>`;
   });
-}
-
-function isActive<Value extends string, E, R, E2, R2>(
-  state: RefSubject.RefSubject<State<Value>, E, R>,
-  id: RefSubject.Computed<string, E2, R2>,
-) {
-  return RefSubject.mapEffect(state, (current) => Effect.map(id, (id) => current.activeId === id));
 }
 
 function isSelected<Value extends string, E, R, E2, R2>(

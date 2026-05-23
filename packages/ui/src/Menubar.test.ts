@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import { RefSubject, Fx } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
@@ -40,6 +40,7 @@ describe("typed/ui/Menubar", () => {
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
 
+      assert(item instanceof window.HTMLElement);
       expect(item.getAttribute("id")).toBe("file");
       expect(item.getAttribute("tabindex")).toBe("0");
 

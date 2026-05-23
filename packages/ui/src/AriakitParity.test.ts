@@ -27,7 +27,7 @@ import * as Toolbar from "./Toolbar.js";
 
 describe("typed/ui Ariakit parity exports", () => {
   it("renders missing primitive families and common subparts", () =>
-    Effect.gen(function* () {
+    runScoped(Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();
       const checkbox = yield* Checkbox.makeState({ checked: true });
       const combobox = yield* Combobox.makeState<string>({ value: "Apple", open: true });
@@ -143,7 +143,7 @@ describe("typed/ui Ariakit parity exports", () => {
       assert(window.document.querySelector("[role=separator]"));
       assert(window.document.getElementById("fruit"));
       assert(window.document.querySelector("dialog"));
-    }).pipe(Effect.scoped, Effect.runPromise));
+    })));
 
   it("does not export removed overlay shims", async () => {
     const ui = await import("./index.js");
@@ -158,4 +158,8 @@ function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
   const window = new Window(...params) as unknown as globalThis.Window & typeof globalThis;
   const layer = DomRenderTemplate.using(window.document);
   return [window, layer] as const;
+}
+
+function runScoped(effect: Effect.Effect<void, unknown, unknown>) {
+  return Effect.runPromise(Effect.scoped(effect as Effect.Effect<void, unknown, never>));
 }

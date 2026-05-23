@@ -97,8 +97,8 @@ export interface TriggerOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly content: AnyContent;
 }
 
-export function Trigger<const E, const R, const Opts extends TriggerOptions<E, R>>(
-  options: Opts,
+export function Trigger<const E, const R, const Opts extends TriggerOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<TriggerOptions<E, R>, "state">,
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
@@ -134,8 +134,8 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly label?: RequiredString;
 }
 
-export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
-  options: Opts,
+export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<ContentOptions<E, R>, "state">,
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
@@ -182,20 +182,9 @@ export function Content<const E, const R, const Opts extends ContentOptions<E, R
 
   if (options.host) return options.host(props, options.content) as Component<Opts>;
 
-  return html`<div
-    id=${id}
-    role="menu"
-    popover=${mode}
-    aria-label=${options.label}
-    aria-orientation=${orientation}
-    aria-activedescendant=${activeDescendant}
-    .data=${{ open }}
-    ontoggle=${onToggle}
-    onkeydown=${onKeyDown}
-    ref=${NativePopover.register(options.state)}
-  >
-    ${options.content}
-  </div>`;
+  const split = Dom.splitRef(props);
+  const fallback = html`<div ...${split.props as any} ref=${split.ref as any}>${options.content}</div>`;
+  return fallback as unknown as Component<Opts>;
 }
 
 export const List = Content;
@@ -208,8 +197,8 @@ export interface ItemOptions<E = never, R = never> extends Dom.HostOptions<HTMLD
   readonly disabled?: OptionalBoolean;
 }
 
-export function Item<const E, const R, const Opts extends ItemOptions<E, R>>(
-  options: Opts,
+export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<ItemOptions<E, R>, "state">,
 ): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
@@ -241,8 +230,8 @@ export interface CheckedItemOptions<E = never, R = never> extends ItemOptions<E,
   readonly checked: ReactiveValue<boolean, any, any>;
 }
 
-export function ItemCheckbox<const E, const R, const Opts extends CheckedItemOptions<E, R>>(
-  options: Opts,
+export function ItemCheckbox<const E, const R, const Opts extends CheckedItemOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<CheckedItemOptions<E, R>, "state">,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, {
     id: options.id,
@@ -261,8 +250,8 @@ export function ItemCheckbox<const E, const R, const Opts extends CheckedItemOpt
   </div>`;
 }
 
-export function ItemRadio<const E, const R, const Opts extends CheckedItemOptions<E, R>>(
-  options: Opts,
+export function ItemRadio<const E, const R, const Opts extends CheckedItemOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<CheckedItemOptions<E, R>, "state">,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, {
     id: options.id,
@@ -431,9 +420,9 @@ export function SubmenuTrigger<
   const R,
   const E2,
   const R2,
-  const Opts extends SubmenuTriggerOptions<E, R, E2, R2>,
+  const Opts extends SubmenuTriggerOptions<NoInfer<E>, NoInfer<R>, NoInfer<E2>, NoInfer<R2>>,
 >(
-  options: Opts,
+  options: Opts & Pick<SubmenuTriggerOptions<E, R, E2, R2>, "state" | "submenu">,
 ): Component<Opts> {
   const id = RefSubject.map(options.submenu, (current) => current.id);
   const open = RefSubject.map(options.submenu, (current) => current.open);

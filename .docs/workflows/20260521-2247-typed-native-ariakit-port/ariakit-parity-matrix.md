@@ -5,7 +5,8 @@ Status legend:
 - `implemented`: public Typed-native primitive exists with behavior coverage.
 - `typed-native`: Ariakit capability exists through `RefSubject`, `Renderable`, `Schema`, Scope, or native platform APIs instead of React-specific hooks/stores.
 - `intentional-divergence`: not a target for `@typed/ui`.
-- `remaining`: known parity gap.
+- `refinement`: public primitive exists, but an Ariakit-like behavior option or edge policy is still missing.
+- `remaining`: known parity gap with no public Typed-native equivalent.
 
 ## Cross-Cutting
 
@@ -29,7 +30,7 @@ Status legend:
 | Checkbox | implemented | RefSubject-backed checked state and data attrs. |
 | Combobox | implemented | Input/listbox linkage, native popover content, active item movement, Enter select, Escape close, typeahead, async/static item sources, filtering, autocomplete modes, and auto-select. |
 | Composite | implemented | Movement, roving tabindex, virtual active descendant, keyboard mapping, and typeahead helper. |
-| Dialog | implemented | Native `<dialog>`, trigger/close, open sync, and invoker focus restoration path. More focus policy options remain. |
+| Dialog | refinement | Native `<dialog>`, trigger/close, open sync, and invoker focus restoration path. Initial/final focus policy and richer close-policy options remain as refinements. |
 | Disclosure | implemented | Button/content APG attributes with public data state. |
 | Modal focus shim | intentional-divergence | Removed in favor of native `<dialog>` for modal focus. |
 | Form | implemented | Typed state, keyed field names, schema validation, field metadata, schema DOM value codecs, submit/reset lifecycle, and array-only `Push`/`Remove`. |
@@ -42,9 +43,15 @@ Status legend:
 | Separator / Group / Heading / VisuallyHidden / Role / Focusable | implemented | Structural primitives and common subparts exist. |
 | Tabs | implemented | Tablist/tab/panel relationships, automatic keyboard activation, manual selection helper. |
 | Toolbar | implemented | Toolbar role, item roving tabindex, keyboard movement. |
-| Tooltip | implemented | Native hint popover and focus/hover lifecycle. Delay/grace policy remains. |
+| Tooltip | refinement | Native hint popover and focus/hover lifecycle. Delay/grace policy remains as a refinement. |
 
 ## Remaining Explicit Gaps
 
 - Host-first composition, typeahead wiring, Combobox filtering/autocomplete, nested submenu delay coordination, Select form-state sync, and Form metadata/codecs/lifecycle hooks are closed in the current gap pass.
-- Remaining parity work should be treated as refinement or newly discovered edge cases rather than the explicit known-gap list above.
+- There are no known broad `remaining` component-family gaps in the current matrix.
+
+## Known Refinements
+
+- Dialog: expose typed options for initial focus, final focus, modal/non-modal behavior, and close policies beyond the current native baseline.
+- Tooltip: expose typed open/close delay and hover/focus grace policies while preserving non-interactive tooltip semantics.
+- Docs: older slice-specific workflow finalization notes still describe gaps that are now closed by later passes; use this matrix as the current parity source of truth.

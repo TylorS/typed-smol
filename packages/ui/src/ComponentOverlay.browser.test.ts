@@ -1,5 +1,6 @@
 import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
+import type * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
 import * as Combobox from "./Combobox.js";
@@ -107,14 +108,19 @@ function key(value: string): KeyboardEvent {
   return new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: value });
 }
 
-function renderOne<Element extends globalThis.Element>(
-  component: Component<any>,
-  root: globalThis.Element,
-): Effect.Effect<Element, never, never> {
+function renderOne<Element extends globalThis.HTMLElement, Opts extends {} = {}>(
+  component: Component<Opts>,
+  root: globalThis.HTMLElement,
+): Effect.Effect<Element, never, Scope.Scope> {
   return render(component, root).pipe(
     Fx.provide(DomRenderTemplate.using(document)),
     Fx.take(1),
     Fx.collectAll,
-    Effect.map((elements) => elements[0] as Element),
-  );
+    Effect.map((elements) => {
+      const element = elements[0];
+      assert(element instanceof HTMLElement);
+      return element as Element;
+    }),
+    Effect.orDie,
+  ) as Effect.Effect<Element, never, Scope.Scope>;
 }

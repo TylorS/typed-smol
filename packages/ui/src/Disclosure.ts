@@ -7,8 +7,8 @@ import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Content<unknown, never, never>;
-type OptionalString = ReactiveValue<string | undefined, never, never>;
+type AnyContent = Content;
+type OptionalString = ReactiveValue<string | undefined, any, any>;
 
 export interface State {
   readonly open: boolean;
@@ -43,7 +43,7 @@ export interface ButtonOptions<E = never, R = never> extends Dom.HostOptions<HTM
   readonly content: AnyContent;
 }
 
-export function Button<const E, const R, const Opts extends ButtonOptions<E, R>>(
+export function Button<const E, const R, const Opts extends ButtonOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
 ): Component<Opts> {
   const open = dataOpen(options.state);
@@ -77,7 +77,7 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly content: AnyContent;
 }
 
-export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
+export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
 ): Component<Opts> {
   const open = dataOpen(options.state);

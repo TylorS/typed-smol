@@ -76,7 +76,7 @@ describe("typed/ui/Listbox", () => {
 
   it("moves active item through enabled DOM-ordered options without changing value", () =>
     Effect.gen(function* () {
-      const window = new Window();
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
       const first = window.document.createElement("div");
       const disabled = window.document.createElement("div");
       const last = window.document.createElement("div");

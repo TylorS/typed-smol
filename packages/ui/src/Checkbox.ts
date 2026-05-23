@@ -57,8 +57,8 @@ export interface InputOptions<E = never, R = never> extends Dom.HostOptions<HTML
   readonly required?: OptionalBoolean;
 }
 
-export function Input<const E, const R, const Opts extends InputOptions<E, R>>(
-  options: Opts,
+export function Input<const E, const R, const Opts extends InputOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<InputOptions<E, R>, "state">,
 ): Component<Opts> {
   return gen(function* () {
     const disabledValue = yield* makeRef(options.disabled ?? false);

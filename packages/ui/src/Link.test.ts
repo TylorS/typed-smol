@@ -177,7 +177,11 @@ describe("typed/ui/Link", () => {
     return Effect.gen(function* () {
       const renderValues: string[] = [];
       yield* Fx.observe(render(routes, window.document.body), (rendered) =>
-        Effect.sync(() => renderValues.push(rendered.valueOf().textContent ?? "")),
+        Effect.sync(() => {
+          const node = rendered.valueOf();
+          assert(node instanceof window.Node);
+          renderValues.push(node.textContent ?? "");
+        }),
       ).pipe(Effect.forkScoped);
       yield* Effect.sleep(50);
 

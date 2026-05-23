@@ -173,8 +173,8 @@ export function Form<
   const Values extends {} ,
   const E,
   const R,
-  const Opts extends FormOptions<Values, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends FormOptions<Values, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<FormOptions<Values, E, R>, "state">): Component<Opts> {
   const internalSubmit = EventHandler.make((event: SubmitEvent) =>
     Effect.gen(function* () {
       event.preventDefault();
@@ -224,8 +224,8 @@ export function Input<
   const Name extends keyof Values & string,
   const E,
   const R,
-  const Opts extends InputOptions<Values, Name, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends InputOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<InputOptions<Values, Name, E, R>, "state">): Component<Opts> {
   const value = options.codec
     ? RefSubject.mapEffect(options.state, (state) =>
         encodeDomValue(options.codec!, state.values[options.name]),
@@ -294,8 +294,8 @@ export function Error<
   const Name extends keyof Values & string,
   const E,
   const R,
-  const Opts extends ErrorOptions<Values, Name, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends ErrorOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<ErrorOptions<Values, Name, E, R>, "state">): Component<Opts> {
   const id = `${options.name}-error`;
   const props = Dom.mergeProps(options.props, { id, role: "alert" });
   if (options.host) {
@@ -305,9 +305,9 @@ export function Error<
     ) as Component<Opts>;
   }
 
-  return html`<div ...${props}>
-    ${RefSubject.map(options.state, (state) => state.errors[options.name] ?? "")}
-  </div>` as Component<Opts>;
+  const content = RefSubject.map(options.state, (state) => state.errors[options.name] ?? "") as any;
+  const fallback = html`<div ...${props as any}>${content}</div>`;
+  return fallback as unknown as Component<Opts>;
 }
 
 export function Submit<
@@ -349,8 +349,8 @@ export function Push<
   const Name extends ArrayFieldName<Values>,
   const E,
   const R,
-  const Opts extends PushOptions<Values, Name, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends PushOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<PushOptions<Values, Name, E, R>, "state">): Component<Opts> {
   const onClick = EventHandler.make(() => pushValue(options.state, options.name, options.value));
   const props = Dom.mergeProps(options.props, { type: "button", onclick: onClick });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
@@ -375,8 +375,8 @@ export function Remove<
   const Name extends ArrayFieldName<Values>,
   const E,
   const R,
-  const Opts extends RemoveOptions<Values, Name, E, R>,
->(options: Opts): Component<Opts> {
+  const Opts extends RemoveOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<RemoveOptions<Values, Name, E, R>, "state">): Component<Opts> {
   const onClick = EventHandler.make(() => {
     if (typeof options.index === "number") {
       return removeValue(options.state, options.name, options.index);
