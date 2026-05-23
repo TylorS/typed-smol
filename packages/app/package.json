@@ -30,6 +30,8 @@
   "dependencies": {
     "@effect/platform-node": "catalog:",
     "@typed/compiler": "workspace:*",
+    "@typed/devtools-protocol": "workspace:*",
+    "@typed/devtools-runtime": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/id": "workspace:*",
     "@typed/router": "workspace:*",

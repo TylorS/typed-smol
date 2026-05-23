@@ -1,6 +1,7 @@
 export type {
   TypedConfig,
   TypedCompressionOptions,
+  TypedDevtoolsConfig,
   TypedTestConfig,
   TypedLintConfig,
   TypedFormatConfig,

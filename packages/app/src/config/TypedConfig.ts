@@ -56,6 +56,11 @@ export interface TypedFormatConfig {
   readonly arrowParens?: "always" | "avoid";
 }
 
+export interface TypedDevtoolsConfig {
+  readonly enabled?: boolean;
+  readonly sessionId?: string;
+}
+
 export interface TypedConfig {
   /** Server entry file path. Default: "server.ts" */
   readonly entry?: string;
@@ -117,6 +122,9 @@ export interface TypedConfig {
   readonly analyze?:
     | boolean
     | { readonly filename?: string; readonly open?: boolean; readonly template?: string };
+
+  /** DevTools instrumentation opt-in. Default: false. */
+  readonly devtools?: boolean | TypedDevtoolsConfig;
 
   /** Brotli compression for builds. Default: true. */
   readonly compression?: TypedCompressionOptions;

@@ -356,6 +356,38 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar subagent review for disabled-by-default behavior, Layer type inference, protocol dependency boundaries, and package/publish wiring before commit.
 
+### T8 - App DevTools Config Wiring
+
+- requirement_links: FR-3, FR-5, FR-8, FR-9, FR-10, FR-18, FR-38, FR-39, FR-41, FR-42, NFR-3, NFR-4, NFR-5, NFR-13, NFR-15, NFR-17, AC-2, AC-13.
+- write_set:
+  - `packages/app/package.json`
+  - `packages/app/src/config/TypedConfig.ts`
+  - `packages/app/src/config/index.ts`
+  - `packages/app/src/devtoolsConfig.test.ts`
+  - `packages/app/src/runtime/devtools.ts`
+  - `packages/app/src/runtime/index.ts`
+  - `pnpm-lock.yaml`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused app config tests before runtime helper wiring exists.
+  - Run `pnpm --filter @typed/app exec vitest run src/devtoolsConfig.test.ts` and capture the missing runtime/config surface failure.
+  - Add a focused disabled object-form session-id test and capture the explicit opt-in failure.
+- green_step:
+  - Add typed config `devtools` boolean/object opt-in.
+  - Add app runtime helper that resolves config into an explicit `@typed/devtools-runtime` Layer.
+  - Keep object-form config disabled unless `enabled: true`.
+  - Wire app package dependencies on protocol/runtime without importing Chrome APIs or `effect/unstable/rpc`.
+- verification:
+  - `pnpm --filter @typed/app exec vitest run src/devtoolsConfig.test.ts`
+  - `pnpm --filter @typed/app build`
+  - `pnpm exec oxlint packages/app/src/devtoolsConfig.test.ts packages/app/src/runtime/devtools.ts packages/app/src/config/TypedConfig.ts packages/app/src/config/index.ts packages/app/src/runtime/index.ts`
+  - `pnpm exec oxfmt --check packages/app/src/devtoolsConfig.test.ts packages/app/src/runtime/devtools.ts packages/app/src/config/TypedConfig.ts packages/app/src/config/index.ts packages/app/src/runtime/index.ts`
+  - `rg -n "effect/unstable/rpc|chrome\\." packages/app/src/devtoolsConfig.test.ts packages/app/src/runtime/devtools.ts packages/app/src/config/TypedConfig.ts packages/app/src/config/index.ts packages/app/src/runtime/index.ts` must return no matches.
+  - `git diff --check -- packages/app pnpm-lock.yaml .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for opt-in semantics, disabled default, Layer typing, protocol dependency boundaries, and staged-index hygiene before commit.
+
 ## Verification Matrix
 
 | scenario | required commands |

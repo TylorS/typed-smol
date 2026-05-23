@@ -203,6 +203,12 @@ importers:
       '@typed/compiler':
         specifier: workspace:*
         version: link:../compiler
+      '@typed/devtools-protocol':
+        specifier: workspace:*
+        version: link:../devtools-protocol
+      '@typed/devtools-runtime':
+        specifier: workspace:*
+        version: link:../devtools-runtime
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx

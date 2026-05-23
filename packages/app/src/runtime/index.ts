@@ -1,4 +1,5 @@
 export * from "./RuntimeTemplate.js";
+export * from "./devtools.js";
 export * from "./hmrRegistry.js";
 export * from "./hydrate.js";
 export * from "./mount.js";

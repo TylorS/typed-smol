@@ -59,3 +59,9 @@
 - New publishable workspace packages need lockfile wiring and `scripts/publish-beta.sh` topo-order updates in the same task that introduces them.
 - Runtime package code can depend on protocol ids/events, but direct `effect/unstable/rpc` remains isolated to the protocol package and later transport adapters.
 - Disabled runtime services should use a no-op service path, and enabled runtime snapshots should clone protocol events on emit/read to prevent caller-owned object mutation.
+
+### T8
+
+- App config owns only opt-in resolution and explicit Layer construction; runtime capture remains in `@typed/devtools-runtime`.
+- Object-form devtools config must require `enabled: true`; a `sessionId` alone does not enable instrumentation or allocate a runtime session id.
+- Stage app config exports surgically when concurrent config work adds unrelated exports or options in the same files.

@@ -204,7 +204,7 @@
   - green: `git diff --check -- packages/devtools-runtime pnpm-lock.yaml scripts/publish-beta.sh .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found mutable snapshot and weak disabled-default proof; both were fixed with a no-op disabled service, cloned snapshots, and focused regression tests.
 - commit:
-  - pending
+  - `eff5fcc feat(devtools): add runtime layer package`
 - deviations_or_replans:
   - Expanded T7 write set to include `tsconfig.test.json`, `pnpm-lock.yaml`, and `scripts/publish-beta.sh` for workspace/test/publish wiring.
 - context_updates:
@@ -214,6 +214,32 @@
   - Disabled runtime services should be a distinct no-op path, not an enabled-style collector with a guard.
   - Runtime event history snapshots should clone protocol events on emit and on read so caller-owned objects cannot mutate captured history.
 
+### T8 - App DevTools Config Wiring
+
+- task_id: T8
+- requirement_ids: FR-3, FR-5, FR-8, FR-9, FR-10, FR-18, FR-38, FR-39, FR-41, FR-42, NFR-3, NFR-4, NFR-5, NFR-13, NFR-15, NFR-17, AC-2, AC-13
+- ts_scenarios: TS-2, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/app exec vitest run src/devtoolsConfig.test.ts` failed before app dependency/runtime helper wiring with missing `@typed/devtools-runtime`.
+  - red: after config helper implementation, `pnpm --filter @typed/app exec vitest run src/devtoolsConfig.test.ts` failed because object-form config with only `sessionId` still produced `session:inactive`.
+  - green: `pnpm --filter @typed/app exec vitest run src/devtoolsConfig.test.ts` passed with 4 tests and no type errors.
+  - green: `pnpm --filter @typed/app build` passed.
+  - green: `pnpm exec oxlint packages/app/src/devtoolsConfig.test.ts packages/app/src/runtime/devtools.ts packages/app/src/config/TypedConfig.ts packages/app/src/config/index.ts packages/app/src/runtime/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/app/src/devtoolsConfig.test.ts packages/app/src/runtime/devtools.ts packages/app/src/config/TypedConfig.ts packages/app/src/config/index.ts packages/app/src/runtime/index.ts` passed.
+  - green: app boundary grep for `effect/unstable/rpc` and `chrome.` returned no matches.
+  - green: `git diff --check -- packages/app pnpm-lock.yaml .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no blockers and called out staged-index hygiene risks in shared config files; both were handled with partial staging.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Expanded T8 write set to include `packages/app/package.json`, `packages/app/src/config/index.ts`, `packages/app/src/runtime/devtools.ts`, and `pnpm-lock.yaml` so the app can depend on the explicit runtime Layer package.
+  - `packages/app/src/config/TypedConfig.ts` and `packages/app/src/config/index.ts` have unrelated concurrent config additions; stage only DevTools-owned hunks for this task.
+- context_updates:
+  - Added active T8 detail to `plan.md`.
+  - Added app config opt-in resolution and explicit `DevtoolsRuntimeLayer` construction helper.
+- memory_updates:
+  - Object-form devtools config remains disabled unless `enabled: true`; a `sessionId` alone is not an opt-in.
+
 ## Deferred Work
 
-- T8 through T12 remain blocked on prior-task completion.
+- T9 through T12 remain blocked on prior-task completion.
