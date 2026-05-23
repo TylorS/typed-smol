@@ -29,11 +29,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
+    "build": "rm -rf dist tsconfig.tsbuildinfo; tsc",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@typed/app": "workspace:*",
+    "@typed/router": "workspace:*",
     "@typed/template": "workspace:*",
     "@typed/vite-plugin": "workspace:*",
     "effect": "catalog:"

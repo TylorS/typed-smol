@@ -108,6 +108,19 @@ Status: approved on 2026-05-22.
   2. Check worktree status for unrelated changes.
   3. Record merge-readiness evidence.
 
+## Active Task Detail — T-9 Path-Based Storybook Virtual Modules
+
+- status: completed
+- requirement_links: FR-3, FR-5, FR-6, FR-8, FR-9, FR-10, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6
+- substeps:
+  1. Add failing tests for `typed:storybook/*` virtual module parsing, runtime source emission, and `typedVitePlugin()` registration.
+  2. Add failing Storybook tests for preview annotation injection, path-based runtime options, narrowed story result types, and fixture package boundaries.
+  3. Implement `@typed/app` Storybook VM parsing and source generation for `typed:storybook/preview`, `typed:storybook/testing`, and `typed:storybook/runtime?...`.
+  4. Register the Storybook VM plugin from `@typed/vite-plugin`.
+  5. Update `@typed/storybook` runtime options to use `path`, `routes`, `api`, `layers`, and `testLayers`; remove public `url`.
+  6. Migrate the portable fixture to generated `typed:storybook/runtime` parameters.
+  7. Run Storybook, app, Vite plugin, build, and lint gates.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.

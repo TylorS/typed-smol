@@ -37,6 +37,7 @@ describe("createTypedViteResolver", () => {
       "typed-html-virtual-module",
       "typed-server-virtual-module",
       "typed-browser-virtual-module",
+      "typed-storybook-virtual-module",
     ]);
   });
 
@@ -46,7 +47,7 @@ describe("createTypedViteResolver", () => {
       { createHttpApiVirtualModulePlugin: fakeHttpApiPlugin },
     );
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(8);
+    expect(manager.plugins).toHaveLength(9);
     expect(manager.plugins[0].name).toBe("router-virtual-module");
     expect(manager.plugins[1].name).toBe("route-handlers-virtual-module");
     expect(manager.plugins[2].name).toBe("httpapi-virtual-module");
@@ -74,7 +75,7 @@ describe("createTypedViteResolver", () => {
       routerVmOptions: { prefix: "routes:", name: "custom-router" },
     });
     const manager = resolver as PluginManager;
-    expect(manager.plugins).toHaveLength(8);
+    expect(manager.plugins).toHaveLength(9);
     expect(manager.plugins[0].name).toBe("custom-router");
     expect(manager.plugins[1].name).toBe("route-handlers-virtual-module");
     expect(manager.plugins[2].name).toBe("httpapi-virtual-module");

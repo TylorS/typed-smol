@@ -43,9 +43,6 @@ export interface TypedRenderer extends WebRenderer {
 
 export type TypedStoryResult =
   | DomRuntimeTemplate<readonly [], unknown, unknown>
-  | HTMLElement
-  | DocumentFragment
-  | string
   | void;
 
 export type TypedComponent<TArgs extends StrictArgs = StrictArgs> = (

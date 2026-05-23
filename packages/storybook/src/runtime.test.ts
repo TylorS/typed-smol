@@ -17,7 +17,7 @@ describe("Typed story runtime harness", () => {
     const canvasElement = createRoot();
     const runtime = defineTypedStoryRuntime({
       layers: [Layer.succeed(Greeting, { message: "server-side" })] as const,
-      url: "http://localhost/server-backed",
+      path: "/server-backed",
     });
 
     const teardown = await renderToCanvas(
@@ -42,6 +42,27 @@ describe("Typed story runtime harness", () => {
     const runtime = defineTypedStoryRuntime({ layers: [greeting] as const });
 
     expectTypeOf(runtime.layers).toEqualTypeOf<readonly [typeof greeting] | undefined>();
+  });
+
+  it("uses path-based runtime options and test layers", () => {
+    const storyLayer = Layer.succeed(Greeting, { message: "story" });
+    const testLayer = Layer.succeed(Greeting, { message: "test" });
+    const runtime = defineTypedStoryRuntime({
+      path: "/server-backed",
+      routes: ["./routes"] as const,
+      api: ["./api"] as const,
+      layers: [storyLayer] as const,
+      testLayers: [testLayer] as const,
+    });
+
+    expect(runtime).toEqual({
+      path: "/server-backed",
+      routes: ["./routes"],
+      api: ["./api"],
+      layers: [storyLayer],
+      testLayers: [testLayer],
+    });
+    expectTypeOf(runtime).not.toHaveProperty("url");
   });
 });
 

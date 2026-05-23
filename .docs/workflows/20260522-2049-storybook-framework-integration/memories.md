@@ -19,3 +19,7 @@
 - T-6 built story files should prefer pipe-style `SaveMessage.pipe(Effect.map(...))`; the direct two-argument `Effect.map(SaveMessage, ...)` failed type-checking in the fixture.
 - T-7 package docs live in `packages/storybook/README.md` and cover config, runtime layer parameters, and portable story setup.
 - Current focused verification commands for the package are `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
+- T-9 Storybook virtual modules live in `@typed/app`, not `@typed/storybook`; `@typed/vite-plugin` registers `typed-storybook-virtual-module` alongside the other app VMs.
+- T-9 Storybook VM inputs are path-based: `routes`, `api`, and initial route `path`; public `url` is intentionally rejected by the parser and absent from `TypedStoryRuntimeOptions`.
+- T-9 generated `typed:storybook/runtime` imports `typed:router?dir=...` and `typed:api?dir=...`, exports `Routes`, `routeModules`, `apiModules`, `apiLayers`, `DependenciesLayer`, `makeStoryRuntime()`, and `parameters`.
+- T-9 layer order is generated route/API dependencies first, then story `layers`, then explicit `testLayers` last through the Storybook runtime harness.

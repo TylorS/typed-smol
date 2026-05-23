@@ -26,4 +26,20 @@ describe("@typed/storybook package boundary", () => {
     expect(existsSync(resolve(packageRoot, "src/testing.ts"))).toBe(true);
     expect(existsSync(resolve(packageRoot, "src/types.ts"))).toBe(true);
   });
+
+  it("keeps test-only fixture stories out of declaration output", () => {
+    const tsconfig = JSON.parse(readFileSync(resolve(packageRoot, "tsconfig.json"), "utf8")) as {
+      readonly exclude?: readonly string[];
+    };
+
+    expect(tsconfig.exclude ?? []).toContain("src/fixtures/**");
+  });
+
+  it("cleans declaration output before building", () => {
+    const packageJson = readPackageJson() as {
+      readonly scripts: { readonly build?: string };
+    };
+
+    expect(packageJson.scripts.build ?? "").toContain("rm -rf dist");
+  });
 });

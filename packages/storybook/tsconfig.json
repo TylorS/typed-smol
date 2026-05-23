@@ -6,7 +6,7 @@
     "lib": ["DOM", "ESNext"]
   },
   "include": ["src"],
-  "exclude": ["**/*.test.ts"],
+  "exclude": ["**/*.test.ts", "src/fixtures/**"],
   "references": [
     { "path": "../app" },
     { "path": "../template" },

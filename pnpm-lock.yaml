@@ -407,6 +407,9 @@ importers:
       '@typed/app':
         specifier: workspace:*
         version: link:../app
+      '@typed/router':
+        specifier: workspace:*
+        version: link:../router
       '@typed/template':
         specifier: workspace:*
         version: link:../template

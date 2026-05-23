@@ -16,6 +16,7 @@ import {
   type RouterVirtualModulePluginOptions,
 } from "@typed/app/RouterVirtualModulePlugin";
 import { createServerVirtualModulePlugin } from "@typed/app/ServerVirtualModulePlugin";
+import { createStorybookVirtualModulePlugin } from "@typed/app/StorybookVirtualModulePlugin";
 import type { TypedConfig } from "@typed/app/config/TypedConfig";
 import { loadTypedConfig } from "@typed/app/config/loadTypedConfig";
 import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
@@ -124,6 +125,7 @@ export function createTypedViteResolver(
     createHtmlVirtualModulePlugin(),
     createServerVirtualModulePlugin(),
     createBrowserVirtualModulePlugin(),
+    createStorybookVirtualModulePlugin(),
   ];
   return new PluginManager(plugins);
 }

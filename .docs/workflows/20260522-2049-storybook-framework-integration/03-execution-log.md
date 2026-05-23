@@ -159,3 +159,29 @@ Execution started after approval of `plan.md`.
   - Storybook work completed on `codex/typed-beta`; no separate merge operation was needed because execution happened on the target branch.
 - memory_updates:
   - No new durable implementation memory beyond T-7.
+
+### Task
+
+- task_id: T-9
+- requirement_ids: FR-3, FR-5, FR-6, FR-8, FR-9, FR-10, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6
+- ts_scenarios: TS-2, TS-4, TS-5, TS-6, TS-7
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app test -- src/internal/frameworkVirtualModuleId.test.ts src/StorybookVirtualModulePlugin.test.ts` failed because `typed:storybook/*` IDs and plugin source generation were missing.
+  - RED: `pnpm --filter @typed/storybook test` failed because preview annotations, path-only runtime options, narrowed result typing, fixture exclusion, and generated Storybook runtime use were missing.
+  - RED: `pnpm --filter @typed/vite-plugin test -- src/index.test.ts` failed because `typedVitePlugin()` did not register the Storybook VM plugin.
+  - GREEN: `pnpm --filter @typed/app test` passed with 27 files, 363 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/storybook test` passed with generated `typed:storybook/runtime?path=/server-backed` parameters in the portable fixture.
+  - GREEN: `pnpm --filter @typed/storybook build` passed.
+  - GREEN: `pnpm --filter @typed/vite-plugin test` passed.
+  - LINT: `pnpm exec oxlint packages/storybook packages/app packages/vite-plugin` passed with 0 errors and 4 pre-existing warnings in unrelated `packages/app` files.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Storybook VMs are implemented in `@typed/app`, matching the route/API VM ownership boundary.
+  - Public Storybook runtime options are path-based; the internal router layer still converts `path` to a localhost URL for `TypedRouter.TestRouter`.
+  - `testLayers` remain explicit in v1 and are applied after generated/API and story layers.
+- context_updates:
+  - Added `StorybookVirtualModulePlugin` to `@typed/app` and registered it from `@typed/vite-plugin`.
+  - Added `packages/storybook/vitest.config.ts` so portable story tests resolve generated Typed VMs.
+- memory_updates:
+  - Recorded path-based Storybook VM ownership, generated runtime exports, and dependency override ordering in `memories.md`.

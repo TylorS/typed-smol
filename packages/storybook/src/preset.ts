@@ -19,7 +19,10 @@ export const core: PresetProperty<"core"> = async (config) => ({
   renderer: "@typed/storybook",
 });
 
-export const previewAnnotations: PresetProperty<"previewAnnotations"> = (entry = []) => entry;
+export const previewAnnotations: PresetProperty<"previewAnnotations"> = (entry = []) => [
+  ...entry,
+  import.meta.resolve("@typed/storybook/preview.js"),
+];
 
 export interface TypedStorybookPresetOptions {
   readonly presets?: {

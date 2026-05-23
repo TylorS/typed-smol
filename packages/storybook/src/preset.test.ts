@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { InlineConfig, Plugin } from "vite";
 import { TYPED_STORYBOOK_FRAMEWORK } from "./index.js";
-import { viteFinal } from "./preset.js";
+import { previewAnnotations, viteFinal } from "./preset.js";
 
 const pluginNames = (config: InlineConfig) =>
   (config.plugins ?? []).flat().map((plugin) => (plugin as Plugin).name);
 
 describe("@typed/storybook preset", () => {
+  it("adds the Typed preview annotations entry", () => {
+    const annotations = previewAnnotations(["./user-preview.js"]);
+
+    expect(annotations[0]).toBe("./user-preview.js");
+    expect(annotations[1]).toMatch(/\/preview\.js$/);
+  });
+
   it("preserves existing Vite plugins while appending typed plugins", async () => {
     const userPlugin = { name: "user-plugin" } satisfies Plugin;
     const baseConfig = { plugins: [userPlugin] } satisfies InlineConfig;

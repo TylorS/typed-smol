@@ -27,6 +27,19 @@ export type TypedVirtualModuleId =
       readonly base: string;
       readonly mode: BrowserMode | undefined;
       readonly name: string | undefined;
+    }
+  | {
+      readonly ok: true;
+      readonly kind: "storybook";
+      readonly module: "preview" | "testing";
+    }
+  | {
+      readonly ok: true;
+      readonly kind: "storybook";
+      readonly module: "runtime";
+      readonly apis: readonly string[];
+      readonly routes: readonly string[];
+      readonly path: string;
     };
 
 export type ParseTypedVirtualModuleIdResult = TypedVirtualModuleId | ParseFail;
@@ -62,6 +75,12 @@ export function parseTypedVirtualModuleId(id: string): ParseTypedVirtualModuleId
       return parseServer(params);
     case "browser":
       return parseBrowser(params);
+    case "storybook/preview":
+      return parseStorybookEntry(kind, params);
+    case "storybook/testing":
+      return parseStorybookEntry(kind, params);
+    case "storybook/runtime":
+      return parseStorybookRuntime(params);
     default:
       return fail("TVM-ID-001", `unsupported typed virtual module "${kind}"`);
   }
@@ -160,6 +179,51 @@ function parseBrowser(params: URLSearchParams): ParseTypedVirtualModuleIdResult 
 
 const serverOptions = ["api", "routes", "html", "client", "page", "base", "name"] as const;
 const browserOptions = ["routes", "root", "base", "mode", "name"] as const;
+const storybookRuntimeOptions = ["api", "routes", "path"] as const;
+
+function parseStorybookEntry(
+  kind: "storybook/preview" | "storybook/testing",
+  params: URLSearchParams,
+): ParseTypedVirtualModuleIdResult {
+  const unsupported = firstUnsupportedOption(params, []);
+  const module = kind === "storybook/preview" ? "preview" : "testing";
+  if (unsupported) {
+    return fail(
+      "TVM-STORYBOOK-003",
+      `typed:storybook/${module} does not support query option "${unsupported}"`,
+    );
+  }
+  return { ok: true, kind: "storybook", module };
+}
+
+function parseStorybookRuntime(params: URLSearchParams): ParseTypedVirtualModuleIdResult {
+  const unsupported = firstUnsupportedOption(params, storybookRuntimeOptions);
+  if (unsupported) {
+    return fail(
+      "TVM-STORYBOOK-003",
+      `typed:storybook/runtime does not support query option "${unsupported}"`,
+    );
+  }
+  const apis = validateStorybookTargets(params.getAll("api"), "typed:storybook/runtime api");
+  if (!apis.ok) return fail("TVM-STORYBOOK-002", apis.reason);
+  const routes = validateStorybookTargets(
+    params.getAll("routes"),
+    "typed:storybook/runtime routes",
+  );
+  if (!routes.ok) return fail("TVM-STORYBOOK-002", routes.reason);
+  const path = params.get("path") ?? "/";
+  if (!path.startsWith("/")) {
+    return fail("TVM-STORYBOOK-002", 'typed:storybook/runtime path must start with "/"');
+  }
+  return {
+    ok: true,
+    kind: "storybook",
+    module: "runtime",
+    apis: apis.values,
+    routes: routes.values,
+    path,
+  };
+}
 
 function firstUnsupportedOption(
   params: URLSearchParams,
@@ -193,6 +257,23 @@ function validateTargets(values: readonly string[], label: string) {
     out.push(validated.value);
   }
   return { ok: true as const, values: out };
+}
+
+function validateStorybookTargets(values: readonly string[], label: string) {
+  const out: string[] = [];
+  for (const value of values) {
+    const validated = validateTarget(value, label);
+    if (!validated.ok) return { ok: false as const, reason: validated.reason };
+    if (isUrlLikeTarget(validated.value)) {
+      return { ok: false as const, reason: `${label} must be a path, not a URL` };
+    }
+    out.push(validated.value);
+  }
+  return { ok: true as const, values: out };
+}
+
+function isUrlLikeTarget(value: string): boolean {
+  return value.startsWith("//") || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value);
 }
 
 function optionalTarget(

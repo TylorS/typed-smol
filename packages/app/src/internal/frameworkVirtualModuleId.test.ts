@@ -202,6 +202,54 @@ describe("parseTypedVirtualModuleId", () => {
     });
   });
 
+  it("parses typed:storybook runtime route and api targets", () => {
+    expect(
+      parseTypedVirtualModuleId(
+        "typed:storybook/runtime?routes=./routes&routes=./admin&api=./api&path=/dashboard",
+      ),
+    ).toEqual({
+      ok: true,
+      kind: "storybook",
+      module: "runtime",
+      apis: ["./api"],
+      routes: ["./routes", "./admin"],
+      path: "/dashboard",
+    });
+  });
+
+  it("parses typed:storybook preview and testing modules", () => {
+    expect(parseTypedVirtualModuleId("typed:storybook/preview")).toEqual({
+      ok: true,
+      kind: "storybook",
+      module: "preview",
+    });
+    expect(parseTypedVirtualModuleId("typed:storybook/testing")).toEqual({
+      ok: true,
+      kind: "storybook",
+      module: "testing",
+    });
+  });
+
+  it("rejects URL-shaped typed:storybook runtime inputs", () => {
+    expect(parseTypedVirtualModuleId("typed:storybook/runtime?url=http://localhost/users")).toEqual({
+      ok: false,
+      code: "TVM-STORYBOOK-003",
+      reason: 'typed:storybook/runtime does not support query option "url"',
+    });
+    expect(parseTypedVirtualModuleId("typed:storybook/runtime?routes=https://example.test/app")).toEqual(
+      {
+        ok: false,
+        code: "TVM-STORYBOOK-002",
+        reason: 'typed:storybook/runtime routes must be a path, not a URL',
+      },
+    );
+    expect(parseTypedVirtualModuleId("typed:storybook/runtime?api=//example.test/api")).toEqual({
+      ok: false,
+      code: "TVM-STORYBOOK-002",
+      reason: 'typed:storybook/runtime api must be a path, not a URL',
+    });
+  });
+
   it("rejects typed:browser hydrate mode because hydration is the default behavior", () => {
     expect(parseTypedVirtualModuleId("typed:browser?routes=*&mode=hydrate")).toEqual({
       ok: false,
