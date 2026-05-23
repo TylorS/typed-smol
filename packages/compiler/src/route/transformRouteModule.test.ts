@@ -53,4 +53,33 @@ describe("transformRouteModule", () => {
       },
     ]);
   });
+
+  it("emits continuation serialization metadata and prefers user descriptors", () => {
+    const result = transformRouteModule({
+      moduleId: "/src/routes/dashboard.ts",
+      sourceText: `
+        const titleSerializable = Serializable.schema(Schema.String, { id: "Title" });
+        const title = "Dashboard";
+        const options = { pageSize: 20 };
+
+        export const route = () => {
+          const renderTitle = () => title;
+          const renderOptions = () => options.pageSize;
+          return html\`<section>\${renderTitle}\${renderOptions}</section>\`;
+        };
+      `,
+    });
+
+    expect(result.transformed).toBe(true);
+    expect(result.sourceText).toContain(
+      'import { Serializable as __TypedSerializable } from "@typed/app";',
+    );
+    expect(result.sourceText).toContain(
+      '__TypedSerializable.capture("title", titleSerializable)',
+    );
+    expect(result.sourceText).toContain(
+      '__TypedSerializable.generated("/src/routes/dashboard.ts#capture:options"',
+    );
+    expect(result.sourceText).toContain("export const __typedRouteContinuationSerializables =");
+  });
 });

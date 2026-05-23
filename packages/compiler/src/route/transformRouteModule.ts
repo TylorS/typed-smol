@@ -6,7 +6,7 @@ import {
   type TypedCompilerDiagnostic,
 } from "../diagnostics/diagnostics.js";
 import { analyzeRouteModule } from "./analyzeRouteModule.js";
-import type { RouteDiagnostic, RouteModulePlan } from "./RouteModulePlan.js";
+import type { RouteCaptureFact, RouteDiagnostic, RouteModulePlan } from "./RouteModulePlan.js";
 
 export interface TransformRouteModuleInput {
   readonly moduleId: string;
@@ -55,10 +55,16 @@ export function transformRouteModule(input: TransformRouteModuleInput): Transfor
   );
   const rewrites = collectClosureRewrites(tsMod, sourceFile, continuations);
   if (rewrites.length === 0) return unchanged(input, route, continuations, diagnostics);
+  const serializableAliases = collectSerializableDescriptorAliases(tsMod, sourceFile);
+  const serializationNeeded = continuations.some(hasSerializableCaptures);
 
   const sourceText = applyEdits(input.sourceText, [
+    ...(serializationNeeded ? [serializableImportEdit()] : []),
     ...rewrites.flatMap((rewrite) => [rewrite.insert, rewrite.replace]),
     descriptorEdit(input.sourceText, continuations, rewrites),
+    ...(serializationNeeded
+      ? [serializationDescriptorEdit(input.sourceText, continuations, serializableAliases)]
+      : []),
   ]);
 
   return {
@@ -156,6 +162,18 @@ function descriptorEdit(
   };
 }
 
+function serializationDescriptorEdit(
+  sourceText: string,
+  continuations: readonly RouteClosureContinuation[],
+  aliases: ReadonlyMap<string, string>,
+): TextEdit {
+  return {
+    end: sourceText.length,
+    start: sourceText.length,
+    text: `\n${serializationDescriptorSource(continuations, aliases)}\n`,
+  };
+}
+
 function descriptorSource(
   continuations: readonly RouteClosureContinuation[],
   rewrites: readonly ClosureRewrite[],
@@ -166,6 +184,108 @@ function descriptorSource(
     symbolName: symbolNames.get(continuation.closureName),
   }));
   return `export const __typedRouteContinuations = ${JSON.stringify(descriptors, null, 2)} as const;`;
+}
+
+function serializationDescriptorSource(
+  continuations: readonly RouteClosureContinuation[],
+  aliases: ReadonlyMap<string, string>,
+): string {
+  const entries = continuations
+    .map((continuation) => continuationSerializationEntry(continuation, aliases))
+    .filter((entry) => entry !== undefined);
+  return [
+    "export const __typedRouteContinuationSerializables = {",
+    entries.map((entry) => `  ${entry}`).join(",\n"),
+    "} as const;",
+  ].join("\n");
+}
+
+function continuationSerializationEntry(
+  continuation: RouteClosureContinuation,
+  aliases: ReadonlyMap<string, string>,
+): string | undefined {
+  const captures = continuation.captures.filter(isSerializableCapture);
+  if (captures.length === 0) return undefined;
+  return `${JSON.stringify(continuation.id)}: __TypedSerializable.continuation(${JSON.stringify(
+    continuation.id,
+  )}, [${captures.map((capture) => captureSerializationSource(continuation, capture, aliases)).join(", ")}])`;
+}
+
+function captureSerializationSource(
+  continuation: RouteClosureContinuation,
+  capture: Extract<RouteCaptureFact, { kind: "context-capture" | "serializable-value" }>,
+  aliases: ReadonlyMap<string, string>,
+): string {
+  const descriptor = aliases.get(capture.name) ?? generatedDescriptorSource(continuation, capture);
+  return `__TypedSerializable.capture(${JSON.stringify(capture.name)}, ${descriptor})`;
+}
+
+function generatedDescriptorSource(
+  continuation: RouteClosureContinuation,
+  capture: Extract<RouteCaptureFact, { kind: "context-capture" | "serializable-value" }>,
+): string {
+  const id = `${continuation.moduleId}#capture:${capture.name}`;
+  const plan = {
+    fingerprint: JSON.stringify({
+      id,
+      initializerSource: capture.initializerSource,
+      kind: capture.kind,
+      version: continuation.version,
+    }),
+    source: {
+      exportName: capture.name,
+      fileName: continuation.moduleId,
+    },
+    typeId: id,
+    version: 1,
+  };
+  return `__TypedSerializable.generated(${JSON.stringify(id)}, ${JSON.stringify(plan, null, 2)})`;
+}
+
+function collectSerializableDescriptorAliases(
+  tsMod: typeof ts,
+  sourceFile: ts.SourceFile,
+): ReadonlyMap<string, string> {
+  const aliases = new Map<string, string>();
+  visit(tsMod, sourceFile, (node) => {
+    if (!tsMod.isVariableDeclaration(node) || !tsMod.isIdentifier(node.name)) return;
+    if (!isSerializableDescriptorCall(tsMod, node.initializer)) return;
+    const captureName = captureNameFromDescriptorName(node.name.text);
+    if (captureName) aliases.set(captureName, node.name.text);
+  });
+  return aliases;
+}
+
+function isSerializableDescriptorCall(tsMod: typeof ts, expression: ts.Expression | undefined): boolean {
+  if (!expression || !tsMod.isCallExpression(expression)) return false;
+  const call = expression.expression;
+  if (!tsMod.isPropertyAccessExpression(call)) return false;
+  if (call.name.text !== "schema" && call.name.text !== "generated") return false;
+  return call.expression.getText() === "Serializable";
+}
+
+function captureNameFromDescriptorName(name: string): string | undefined {
+  if (!name.endsWith("Serializable")) return undefined;
+  const captureName = name.slice(0, -"Serializable".length);
+  return captureName.length > 0 ? captureName : undefined;
+}
+
+function hasSerializableCaptures(continuation: RouteClosureContinuation): boolean {
+  return continuation.captures.some(isSerializableCapture);
+}
+
+function isSerializableCapture(
+  capture: RouteCaptureFact,
+): capture is Extract<RouteCaptureFact, { kind: "context-capture" | "serializable-value" }> {
+  return capture.kind === "context-capture" || capture.kind === "serializable-value";
+}
+
+function serializableImportEdit(): TextEdit {
+  return {
+    end: 0,
+    start: 0,
+    text: 'import { Serializable as __TypedSerializable } from "@typed/app";\n',
+  };
 }
 
 function routeDiagnostics(

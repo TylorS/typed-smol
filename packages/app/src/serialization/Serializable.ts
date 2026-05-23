@@ -7,6 +7,8 @@ export namespace Serializable {
     | SchemaDescriptor<S>
     | GeneratedDescriptor<Schema.Schema.Type<S>, S["Encoded"]>;
 
+  export type AnyDescriptor = SchemaDescriptor | GeneratedDescriptor;
+
   export type SchemaDescriptor<S extends AnySchema = AnySchema> = {
     readonly _tag: "Schema";
     readonly id?: string;
@@ -34,6 +36,20 @@ export namespace Serializable {
     readonly exportName?: string;
   };
 
+  export type CaptureDescriptor<D extends AnyDescriptor = AnyDescriptor> = {
+    readonly _tag: "Capture";
+    readonly name: string;
+    readonly descriptor: D;
+  };
+
+  export type ContinuationDescriptor<
+    C extends readonly CaptureDescriptor[] = readonly CaptureDescriptor[],
+  > = {
+    readonly _tag: "Continuation";
+    readonly id: string;
+    readonly captures: C;
+  };
+
   export type SchemaDescriptorOptions = {
     readonly id?: string;
   };
@@ -50,6 +66,16 @@ export namespace Serializable {
     id: string,
     plan: GeneratedSchemaPlan,
   ): GeneratedDescriptor<A, I> => ({ _tag: "Generated", id, plan });
+
+  export const capture = <D extends AnyDescriptor>(
+    name: string,
+    descriptor: D,
+  ): CaptureDescriptor<D> => ({ _tag: "Capture", descriptor, name });
+
+  export const continuation = <C extends readonly CaptureDescriptor[]>(
+    id: string,
+    captures: C,
+  ): ContinuationDescriptor<C> => ({ _tag: "Continuation", captures, id });
 
   export function fromSchemaOrGenerated<S extends AnySchema>(
     schema: S,

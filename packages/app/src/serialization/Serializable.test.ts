@@ -60,4 +60,26 @@ describe("Serializable", () => {
       plan,
     });
   });
+
+  it("describes route continuation captures with explicit serialization descriptors", () => {
+    const Title = Schema.String;
+    const title = Serializable.capture("title", Serializable.schema(Title, { id: "Title" }));
+    const continuation = Serializable.continuation("route#renderTitle", [title]);
+
+    expect(continuation).toEqual({
+      _tag: "Continuation",
+      captures: [
+        {
+          _tag: "Capture",
+          descriptor: {
+            _tag: "Schema",
+            id: "Title",
+            schema: Title,
+          },
+          name: "title",
+        },
+      ],
+      id: "route#renderTitle",
+    });
+  });
 });
