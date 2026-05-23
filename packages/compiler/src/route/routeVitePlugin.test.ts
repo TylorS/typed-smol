@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { invalidRouteModuleSource } from "./routeFixtures.js";
 import { typedRouteVitePlugin } from "./routeVitePlugin.js";
 
 describe("typedRouteVitePlugin", () => {
@@ -30,13 +31,7 @@ describe("typedRouteVitePlugin", () => {
     const result = await handleHotUpdate(plugin, {
       file: "/src/routes/mutable.ts",
       modules: [{ id: "/src/routes/mutable.ts" }],
-      read: () => `
-        let count = 0;
-        export const route = () => {
-          const increment = () => count++;
-          return html\`<button>\${increment}</button>\`;
-        };
-      `,
+      read: () => invalidRouteModuleSource,
       server: {
         moduleGraph: {
           invalidateModule: (mod: unknown) => invalidated.push(mod),

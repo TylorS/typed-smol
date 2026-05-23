@@ -27,6 +27,10 @@ import {
   invalidTemplateDiagnosticCode,
   invalidTemplateModuleSource,
 } from "@typed/compiler/template/templateFixtures";
+import {
+  invalidRouteDiagnosticCode,
+  invalidRouteModuleSource,
+} from "@typed/compiler/route/routeFixtures";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -204,6 +208,21 @@ describe("virtual-modules-ts-plugin", () => {
     expect(
       diagnostics.some((diagnostic) =>
         String(diagnostic.messageText).includes(invalidTemplateDiagnosticCode),
+      ),
+    ).toBe(true);
+  });
+
+  it("appends typed route resumability semantic diagnostics", () => {
+    const dir = createTempDirInWorkspace();
+    const entryPath = join(dir, "entry.ts");
+    writeFileSync(entryPath, `${invalidRouteModuleSource}\n`, "utf8");
+
+    const service = createPluginLanguageService(dir, entryPath);
+    const diagnostics = service.getSemanticDiagnostics(entryPath);
+
+    expect(
+      diagnostics.some((diagnostic) =>
+        String(diagnostic.messageText).includes(invalidRouteDiagnosticCode),
       ),
     ).toBe(true);
   });

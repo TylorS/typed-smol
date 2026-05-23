@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 import { createTypedCompilerExtension } from "./vmcExtension.js";
+import { invalidRouteDiagnosticCode, invalidRouteModuleSource } from "./route/routeFixtures.js";
 
 describe("createTypedCompilerExtension", () => {
   it("transforms imported typed html templates through module transform metadata", () => {
@@ -43,5 +44,31 @@ describe("createTypedCompilerExtension", () => {
     });
 
     expect(result).toBeUndefined();
+  });
+
+  it("reports route resumability diagnostics through the compiler extension", () => {
+    const extension = createTypedCompilerExtension();
+    const sourceFile = ts.createSourceFile(
+      "/project/routes/mutable.ts",
+      invalidRouteModuleSource,
+      ts.ScriptTarget.Latest,
+    );
+
+    const result = extension.transformSource?.({
+      fileName: "/project/routes/mutable.ts",
+      options: {},
+      projectRoot: "/project",
+      rootNames: ["/project/routes/mutable.ts"],
+      sourceFile,
+      sourceText: invalidRouteModuleSource,
+      ts,
+    });
+
+    expect(result?.sourceText).toBe(invalidRouteModuleSource);
+    expect(
+      result?.diagnostics?.some((diagnostic) =>
+        String(diagnostic.messageText).includes(invalidRouteDiagnosticCode),
+      ),
+    ).toBe(true);
   });
 });

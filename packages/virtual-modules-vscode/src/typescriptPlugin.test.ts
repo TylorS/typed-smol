@@ -16,6 +16,7 @@ describe("typescript plugin configuration", () => {
 
   it("creates config that keeps template diagnostics enabled by default", () => {
     expect(createTypeScriptPluginConfiguration()).toEqual({
+      routeDiagnostics: true,
       templateDiagnostics: true,
     });
   });

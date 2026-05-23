@@ -60,6 +60,7 @@ import {
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/app";
 import {
+  getRouteDiagnostics,
   getTemplateDiagnostics,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/compiler";
@@ -71,6 +72,7 @@ import type { PluginCreateInfo } from "./types.js";
 interface VirtualModulesTsPluginConfig {
   readonly debounceMs?: number;
   readonly templateDiagnostics?: boolean;
+  readonly routeDiagnostics?: boolean;
   /** Path to typed.config.ts (relative to project root or absolute). */
   readonly configPath?: string;
   /** Path to vmc.config.ts (relative to project root or absolute); default file name when omitted. */
@@ -1010,7 +1012,17 @@ function init(modules: { typescript: typeof import("typescript") }): {
       debounceMs,
     });
     if (config.templateDiagnostics !== false) {
-      attachTemplateDiagnostics({
+      attachCompilerDiagnostics({
+        routeDiagnostics: config.routeDiagnostics !== false,
+        templateDiagnostics: true,
+        ts,
+        languageService: info.languageService,
+        languageServiceHost: info.project as import("typescript").LanguageServiceHost,
+      });
+    } else if (config.routeDiagnostics !== false) {
+      attachCompilerDiagnostics({
+        routeDiagnostics: true,
+        templateDiagnostics: false,
         ts,
         languageService: info.languageService,
         languageServiceHost: info.project as import("typescript").LanguageServiceHost,
@@ -1049,10 +1061,12 @@ function init(modules: { typescript: typeof import("typescript") }): {
 
 module.exports = init;
 
-function attachTemplateDiagnostics(options: {
+function attachCompilerDiagnostics(options: {
   readonly ts: typeof import("typescript");
   readonly languageService: import("typescript").LanguageService;
   readonly languageServiceHost: import("typescript").LanguageServiceHost;
+  readonly templateDiagnostics: boolean;
+  readonly routeDiagnostics: boolean;
 }): void {
   const originalGetSemanticDiagnostics =
     options.languageService.getSemanticDiagnostics.bind(options.languageService);
@@ -1063,12 +1077,22 @@ function attachTemplateDiagnostics(options: {
     if (sourceText === undefined) return diagnostics;
     return [
       ...diagnostics,
-      ...getTemplateDiagnostics({
-        moduleId: fileName,
-        sourceFile,
-        sourceText,
-        ts: options.ts,
-      }),
+      ...(options.templateDiagnostics
+        ? getTemplateDiagnostics({
+            moduleId: fileName,
+            sourceFile,
+            sourceText,
+            ts: options.ts,
+          })
+        : []),
+      ...(options.routeDiagnostics
+        ? getRouteDiagnostics({
+            moduleId: fileName,
+            sourceFile,
+            sourceText,
+            ts: options.ts,
+          })
+        : []),
     ];
   };
 }

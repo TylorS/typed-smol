@@ -10,6 +10,8 @@ export * from "./hmr/options.js";
 export * from "./hmr/viteHmr.js";
 export * from "./route/analyzeRouteModule.js";
 export * from "./route/RouteModulePlan.js";
+export * from "./route/routeDiagnostics.js";
+export * from "./route/routeFixtures.js";
 export * from "./route/routeVitePlugin.js";
 export * from "./route/transformRouteModule.js";
 export * from "./schema/schemaPlan.js";

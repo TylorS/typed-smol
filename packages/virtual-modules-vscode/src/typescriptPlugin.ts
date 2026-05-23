@@ -5,6 +5,7 @@ const TYPESCRIPT_EXTENSION_ID = "vscode.typescript-language-features";
 
 export interface TypeScriptPluginConfiguration {
   readonly templateDiagnostics: boolean;
+  readonly routeDiagnostics: boolean;
 }
 
 interface TypeScriptExtensionApi {
@@ -19,6 +20,7 @@ export function createTypeScriptPluginConfiguration(
   input: Partial<TypeScriptPluginConfiguration> = {},
 ): TypeScriptPluginConfiguration {
   return {
+    routeDiagnostics: input.routeDiagnostics ?? true,
     templateDiagnostics: input.templateDiagnostics ?? true,
   };
 }
