@@ -90,6 +90,15 @@ Status: approved on 2026-05-22.
   4. Run the composed story through Storybook `composeStory()` and `run()`.
   5. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
 
+## Active Task Detail — T-7 Package Docs And Memory
+
+- status: completed
+- requirement_links: NFR-8, AC-10
+- substeps:
+  1. Add package usage docs for config, runtime layers, and portable stories.
+  2. Update workflow memory with durable commands and current implementation boundaries.
+  3. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.

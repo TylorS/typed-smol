@@ -17,3 +17,5 @@
 - T-6 portable story coverage uses `setProjectAnnotations(projectAnnotations)`, `composeStory(ServerBacked, meta, projectAnnotations)`, and `Story.run({ canvasElement })`.
 - T-6 fixture stories are included in the package build, so service-requiring Typed templates need `TypedStoryResult` to allow non-`never` Effect service channels.
 - T-6 built story files should prefer pipe-style `SaveMessage.pipe(Effect.map(...))`; the direct two-argument `Effect.map(SaveMessage, ...)` failed type-checking in the fixture.
+- T-7 package docs live in `packages/storybook/README.md` and cover config, runtime layer parameters, and portable story setup.
+- Current focused verification commands for the package are `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.

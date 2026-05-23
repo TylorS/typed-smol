@@ -122,3 +122,22 @@ Execution started after approval of `plan.md`.
   - Added `packages/storybook/src/fixtures/server-backed.stories.ts`.
 - memory_updates:
   - Recorded portable-story `composeStory()`/`run()` coverage and fixture typing notes in `memories.md`.
+
+### Task
+
+- task_id: T-7
+- requirement_ids: NFR-8, AC-10
+- ts_scenarios: n/a
+- validation_evidence:
+  - DOCS: Added `packages/storybook/README.md` covering framework config, runtime layers, and portable stories.
+  - GREEN: `pnpm --filter @typed/storybook test` passed.
+  - GREEN: `pnpm --filter @typed/storybook build` passed.
+  - LINT: `pnpm exec oxlint packages/storybook` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - none
+- context_updates:
+  - Package docs explicitly mark route-handler and HttpApi fixtures as next hardening targets.
+- memory_updates:
+  - Recorded Storybook package verification commands and README coverage in `memories.md`.
