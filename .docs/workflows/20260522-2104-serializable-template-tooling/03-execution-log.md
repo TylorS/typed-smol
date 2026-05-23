@@ -164,3 +164,31 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
   - `@typed/virtual-modules-compiler` exports `runVmcCli`.
 - memory_updates:
   - recorded the reusable CLI runner and Typed compiler extension in `memory/episodes.md`.
+
+### Task M7 - Template Vite Plugin And `@typed/vite-plugin`
+
+- task_id: M7
+- requirement_ids: FR-07, FR-08, NFR-01, NFR-03, NFR-05
+- ts_scenarios: TS-07, TS-10
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/compiler test -- templateVitePlugin` failed because `./templateVitePlugin.js` did not exist.
+  - initial red: `pnpm --filter @typed/vite-plugin test -- index` failed because `typedVitePlugin()` did not register the template transform before `virtual-modules`.
+  - green: `pnpm --filter @typed/compiler test -- templateVitePlugin` passed, 21 files / 80 tests.
+  - green: `pnpm --filter @typed/vite-plugin test -- index` passed, 1 file / 16 tests.
+  - green: `pnpm --filter @typed/compiler test -- vite templateVitePlugin` passed, 21 files / 80 tests.
+  - green: `pnpm --filter @typed/vite-plugin test` passed, 1 file / 16 tests.
+  - green: `pnpm --filter @typed/compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/vite-plugin exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm --filter @typed/vite-plugin build` passed.
+  - green: focused `pnpm exec oxlint ...` over touched compiler/vite-plugin files passed.
+  - green: `git diff --check` passed.
+- commit: current atomic commit `feat(vite): add template transform plugin`
+- deviations_or_replans:
+  - Used the Vite transform hook directly with `enforce: "pre"` so template transforms run before virtual module resolution.
+  - `@typed/vite-plugin` now builds `@typed/compiler` before tests because package exports resolve through compiler `dist`.
+- context_updates:
+  - `@typed/compiler` exports `typedTemplateVitePlugin`.
+  - `@typed/vite-plugin` accepts `templates: false | TypedTemplateVitePluginOptions`.
+- memory_updates:
+  - recorded the Vite template transform boundary in `memory/episodes.md`.

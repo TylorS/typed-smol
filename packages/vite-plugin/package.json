@@ -17,10 +17,11 @@
   },
   "scripts": {
     "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "test": "pnpm --filter @typed/compiler build && vitest run --passWithNoTests"
   },
   "dependencies": {
     "@typed/app": "workspace:*",
+    "@typed/compiler": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
     "@typed/virtual-modules-vite": "workspace:*",
     "rollup-plugin-visualizer": "^7.0.1",

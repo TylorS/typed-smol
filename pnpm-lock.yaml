@@ -306,6 +306,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.12(@types/node@25.7.0)(esbuild@0.28.0)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
         version: 4.1.6(@types/node@25.7.0)(@vitest/browser-playwright@4.1.6)(@vitest/coverage-v8@4.1.6)(happy-dom@20.9.0)(vite@8.0.12(@types/node@25.7.0)(esbuild@0.28.0)(yaml@2.9.0))
@@ -656,6 +659,9 @@ importers:
       '@typed/app':
         specifier: workspace:*
         version: link:../app
+      '@typed/compiler':
+        specifier: workspace:*
+        version: link:../compiler
       '@typed/virtual-modules':
         specifier: workspace:*
         version: link:../virtual-modules

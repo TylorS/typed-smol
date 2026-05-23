@@ -38,9 +38,11 @@
     "@types/node": "^25.7.0",
     "happy-dom": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": ">=5.0.0"
   }
 }

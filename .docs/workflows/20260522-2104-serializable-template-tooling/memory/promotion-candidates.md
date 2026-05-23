@@ -7,3 +7,4 @@
 - Consider keeping `reportExtensionDiagnostics` as the single extension diagnostic reporting path for future CLI/Vite integrations.
 - Consider standardizing hoisted `TemplateStringsArray.typedTemplatePlan` metadata if the Vite plugin and TS plugin can consume it without a separate sidecar manifest.
 - Consider keeping `runVmcCli` as the single CLI orchestration layer for `vmc`, `@typed/compiler`, and future framework-specific compiler hosts.
+- Consider keeping `templates: false` as the framework-wide template transform rollback switch across Vite, CLI, and future editor integrations.

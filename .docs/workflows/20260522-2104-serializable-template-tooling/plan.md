@@ -220,12 +220,12 @@ Goal: Make template compilation available in runtime applications during Vite bu
 
 Tasks:
 
-1. Add `typedTemplateVitePlugin()` in `@typed/compiler` or an approved subpath.
-2. Implement direct `transform` hook.
-3. Wire shared diagnostics to Vite warnings/errors.
-4. Add options for enable/disable and diagnostic mode.
-5. Register plugin in `typedVitePlugin()` before virtual module Vite plugin.
-6. Add Vite plugin order and transform tests.
+1. [completed] Add `typedTemplateVitePlugin()` in `@typed/compiler` or an approved subpath.
+2. [completed] Implement direct `transform` hook.
+3. [completed] Wire shared diagnostics to Vite warnings/errors.
+4. [completed] Add options for enable/disable and diagnostic mode.
+5. [completed] Register plugin in `typedVitePlugin()` before virtual module Vite plugin.
+6. [completed] Add Vite plugin order and transform tests.
 
 Traceability:
 

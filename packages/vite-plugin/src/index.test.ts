@@ -133,6 +133,26 @@ describe("typedVitePlugin", () => {
     expect(virtualPlugin).toBeDefined();
   });
 
+  it("registers the template transform before virtual modules", () => {
+    const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
+    const names = plugins.map((plugin) => (plugin as { name?: string }).name);
+
+    expect(names.indexOf("typed-template")).toBeGreaterThanOrEqual(0);
+    expect(names.indexOf("typed-template")).toBeLessThan(names.indexOf("virtual-modules"));
+  });
+
+  it("does not register the template transform when disabled", () => {
+    const plugins = typedVitePlugin({
+      compression: false,
+      templates: false,
+      tsconfigPaths: false,
+    });
+
+    expect(plugins.map((plugin) => (plugin as { name?: string }).name)).not.toContain(
+      "typed-template",
+    );
+  });
+
   it("auto-creates LS-backed session when createTypeInfoApiSession is not provided", () => {
     const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
     const virtualPlugin = plugins.find(

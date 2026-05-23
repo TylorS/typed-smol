@@ -46,3 +46,10 @@
 - `runVmcCli` accepts compiler extensions and forwards them through compile, build, and watch modes.
 - Added `createTypedCompilerExtension` as the first `@typed/compiler` extension, installing the template module transform into the shared `vmc` compiler host path.
 - Added the `typed-compiler` bin to `@typed/compiler`.
+
+## M7 - Template Vite Plugin
+
+- Added `typedTemplateVitePlugin` to `@typed/compiler`.
+- The plugin runs as a Vite `enforce: "pre"` transform, filters JavaScript and TypeScript module ids, calls `transformTemplateModule`, and returns `{ code, map: null }` only when source changes.
+- Shared compiler diagnostics are reported through the Vite hook context with `diagnostics: "error" | "warn" | "silent"`.
+- `@typed/vite-plugin` registers the template transform before `virtual-modules` and exposes `templates: false` as the rollback switch.

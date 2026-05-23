@@ -19,6 +19,10 @@ import { createServerVirtualModulePlugin } from "@typed/app/ServerVirtualModuleP
 import { createStorybookVirtualModulePlugin } from "@typed/app/StorybookVirtualModulePlugin";
 import type { TypedConfig } from "@typed/app/config/TypedConfig";
 import { loadTypedConfig } from "@typed/app/config/loadTypedConfig";
+import {
+  typedTemplateVitePlugin,
+  type TypedTemplateVitePluginOptions,
+} from "@typed/compiler";
 import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
 import {
   collectTypeTargetSpecsFromPlugins,
@@ -97,6 +101,12 @@ export interface TypedVitePluginOptions {
    * Set false to force-disable vavite integration.
    */
   readonly serverEntry?: string | false;
+
+  /**
+   * Enable direct Typed template transforms before virtual modules. Default true.
+   * Set false to preserve interpreted template behavior without compiler transforms.
+   */
+  readonly templates?: boolean | TypedTemplateVitePluginOptions;
 }
 
 /** Optional dependency injection for createTypedViteResolver (e.g. for tests). */
@@ -142,6 +152,7 @@ function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
     warnOnError: config.warnOnError,
     compression: config.compression,
     serverEntry: config.entry,
+    templates: true,
   };
 }
 
@@ -190,6 +201,14 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
 
   if (resolvedOptions.tsconfigPaths !== false) {
     plugins.push(nativeTsconfigPathsPlugin);
+  }
+
+  if (resolvedOptions.templates !== false) {
+    plugins.push(
+      typedTemplateVitePlugin(
+        typeof resolvedOptions.templates === "object" ? resolvedOptions.templates : {},
+      ),
+    );
   }
 
   plugins.push(
