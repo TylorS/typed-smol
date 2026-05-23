@@ -59,6 +59,16 @@ Status: approved on 2026-05-22.
   3. Implement minimal `viteFinal` composition using framework options.
   4. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
 
+## Active Task Detail — T-4 Renderer Lifecycle
+
+- status: completed
+- requirement_links: FR-4, FR-12, AC-3, AC-9, TS-3, TS-8
+- substeps:
+  1. Add a failing renderer lifecycle test proving a Typed template story mounts, calls `showMain`, and tears down the canvas.
+  2. Verify `pnpm --filter @typed/storybook test` fails because `renderToCanvas` is missing.
+  3. Implement `renderToCanvas` through `@typed/app/runtime.mount`.
+  4. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.

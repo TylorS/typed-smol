@@ -8,6 +8,7 @@ import type {
   StrictArgs,
   WebRenderer,
 } from "storybook/internal/types";
+import type { DomRuntimeTemplate } from "@typed/app/runtime";
 import type { TypedVitePluginOptions } from "@typed/vite-plugin";
 
 export const TYPED_STORYBOOK_FRAMEWORK = "@typed/storybook" as const;
@@ -40,7 +41,7 @@ export interface TypedRenderer extends WebRenderer {
   storyResult: TypedStoryResult;
 }
 
-export type TypedStoryResult = HTMLElement | DocumentFragment | string | void;
+export type TypedStoryResult = DomRuntimeTemplate | HTMLElement | DocumentFragment | string | void;
 
 export type TypedComponent<TArgs extends StrictArgs = StrictArgs> = (
   args: TArgs,

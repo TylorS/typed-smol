@@ -64,3 +64,23 @@ Execution started after approval of `plan.md`.
   - none
 - memory_updates:
   - Recorded Vite composition check in `memories.md`.
+
+### Task
+
+- task_id: T-4
+- requirement_ids: FR-4, FR-12, AC-3, AC-9
+- ts_scenarios: TS-3, TS-8
+- validation_evidence:
+  - SETUP RED: `pnpm --filter @typed/storybook test` first failed because `happy-dom` was not a package-local dev dependency for renderer DOM tests.
+  - RED: `pnpm --filter @typed/storybook test` failed because `renderToCanvas` was not exported from `preview.ts`.
+  - GREEN: `pnpm --filter @typed/storybook test` passed.
+  - GREEN: `pnpm --filter @typed/storybook build` passed after making the no-harness Effect requirement boundary explicit.
+  - LINT: `pnpm exec oxlint packages/storybook` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - T-4 only mounts stories whose Effect requirements can run without an external layer; runtime harness layer composition remains T-5.
+- context_updates:
+  - Added `happy-dom` as a direct dev dependency because Storybook renderer tests construct a real DOM root.
+- memory_updates:
+  - Recorded the baseline renderer lifecycle and no-harness boundary in `memories.md`.
