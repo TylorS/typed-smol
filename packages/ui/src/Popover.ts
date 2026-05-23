@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import * as NativePopover from "./NativePopover.js";
 import type { Component, Content } from "./Reactive.js";
 
 type AnyContent = Content;
@@ -26,7 +27,7 @@ export function makeState(
 }
 
 export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
-  return RefSubject.update(state, (current) => ({ ...current, open }));
+  return NativePopover.setOpen(state, open);
 }
 
 export interface TriggerOptions {
@@ -71,19 +72,37 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
-    setOpen(options.state, event.newState === "open"),
+    NativePopover.syncToggle(options.state, event),
   );
 
-  return html`<div id=${id} popover=${mode} .data=${{ open, mode }} ontoggle=${onToggle}>
+  return html`<div
+    id=${id}
+    popover=${mode}
+    .data=${{ open, mode }}
+    ontoggle=${onToggle}
+    ref=${NativePopover.register(options.state)}
+  >
     ${options.content}
   </div>`;
 }
 
+export const Popover = Content;
+
 export function Dismiss<
   const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
 >(options: Opts): Component<Opts> {
-  const onClick = EventHandler.make(() => setOpen(options.state, false));
-  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
+  const id = RefSubject.map(options.state, (current) => current.id);
+  const onClick = EventHandler.make((event: Event) =>
+    NativePopover.hideFromEvent(options.state, event),
+  );
+  return html`<button
+    type="button"
+    popovertarget=${id}
+    popovertargetaction="hide"
+    onclick=${onClick}
+  >
+    ${options.content}
+  </button>`;
 }
 
 export function Arrow<const Opts extends { readonly content?: AnyContent }>(
@@ -91,6 +110,9 @@ export function Arrow<const Opts extends { readonly content?: AnyContent }>(
 ): Component<Opts> {
   return html`<span aria-hidden="true">${options.content ?? ""}</span>`;
 }
+
+export const DisclosureArrow = Arrow;
+export const PopoverDisclosureArrow = Arrow;
 
 export function Heading<const Opts extends { readonly id?: string; readonly content: AnyContent }>(
   options: Opts,

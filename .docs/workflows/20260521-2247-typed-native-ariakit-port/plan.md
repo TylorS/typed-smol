@@ -889,3 +889,17 @@ pnpm --filter @typed/ui build
 - [ ] Confirm no unrelated dirty files are staged.
 - [ ] Summarize remaining browser-test limitations if any.
 - [ ] Continue to finalization with PR strategy.
+
+## 2026-05-23 Parity Hardening Slice
+
+- [x] Add failing tests for native popover command paths and native dialog semantics.
+- [x] Add shared native popover/dialog controllers for state-to-DOM commands.
+- [x] Convert Dialog content to native `<dialog>` and keep close focus-return behavior.
+- [x] Convert Popover/Menu/Select dismiss and selection paths to command native popovers.
+- [x] Convert Hovercard and Tooltip content to native popover-backed surfaces.
+- [x] Add exact Ariakit-style aliases for common renamed root/subpart exports.
+- [x] Add missing `FocusTrap`, `Store`, and `Tab` public modules.
+- [x] Fix reactive id handling for Menubar and Toolbar item tabindex/focus state.
+- [x] Constrain `StartupRef.fromData` to decoded fields that compose into backing state.
+- [x] Run full `@typed/ui` verification gates.
+- [x] Confirm `@typed/ui` has no `test:browser` script in this checkout.

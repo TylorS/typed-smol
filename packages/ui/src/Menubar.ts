@@ -1,10 +1,11 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 export interface State extends Composite.State {}
 
@@ -52,6 +53,8 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
   </div>`;
 }
 
+export const Menubar = Root;
+
 export interface ItemOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly id: ReactiveValue<string, any, any>;
@@ -59,17 +62,23 @@ export interface ItemOptions {
 }
 
 export function Item<const Opts extends ItemOptions>(options: Opts): Component<Opts> {
-  const active = RefSubject.map(options.state, (state) => state.activeId === options.id);
-  const onFocus = EventHandler.make(() =>
-    RefSubject.update(options.state, (state) => ({ ...state, activeId: String(options.id) })),
-  );
+  return gen(function* () {
+    const id = yield* makeRef(options.id);
+    const active = RefSubject.mapEffect(options.state, (state) =>
+      Effect.map(id, (itemId) => state.activeId === itemId),
+    );
+    const onFocus = EventHandler.make(() =>
+      Effect.flatMap(id, (itemId) =>
+        RefSubject.update(options.state, (state) => ({ ...state, activeId: itemId })),
+      ),
+    );
+    const props = {
+      id,
+      role: "menuitem",
+      tabindex: RefSubject.map(active, (value) => (value ? 0 : -1)),
+      onfocus: onFocus,
+    } as const;
 
-  return html`<div
-    id=${options.id}
-    role="menuitem"
-    tabindex=${RefSubject.map(active, (value) => (value ? 0 : -1))}
-    onfocus=${onFocus}
-  >
-    ${options.content}
-  </div>`;
+    return html`<div ...${props}>${options.content}</div>`;
+  });
 }

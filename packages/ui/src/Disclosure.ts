@@ -52,6 +52,8 @@ export function Button<const Opts extends ButtonOptions>(options: Opts): Compone
   </button>`;
 }
 
+export const Disclosure = Button;
+
 export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly id?: OptionalString;

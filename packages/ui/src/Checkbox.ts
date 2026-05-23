@@ -83,6 +83,8 @@ export function Input<const Opts extends InputOptions>(options: Opts): Component
   });
 }
 
+export const Checkbox = Input;
+
 export interface LabelOptions {
   readonly for?: OptionalString;
   readonly content: Content;

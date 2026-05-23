@@ -7,6 +7,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
+import * as NativePopover from "./NativePopover.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
@@ -65,7 +66,7 @@ export function makeState(
 }
 
 export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
-  return RefSubject.update(state, (current) => ({ ...current, open }));
+  return NativePopover.setOpen(state, open);
 }
 
 export function setActive(
@@ -126,7 +127,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
-    setOpen(options.state, event.newState === "open"),
+    NativePopover.syncToggle(options.state, event),
   );
 
   return html`<div
@@ -138,12 +139,14 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     aria-activedescendant=${activeDescendant}
     .data=${{ open }}
     ontoggle=${onToggle}
+    ref=${NativePopover.register(options.state)}
   >
     ${options.content}
   </div>`;
 }
 
 export const List = Content;
+export const Menu = Content;
 
 export interface ItemOptions {
   readonly state: RefSubject.RefSubject<State>;
@@ -223,6 +226,21 @@ export function Separator(): Component<{}> {
   return html`<div role="separator"></div>`;
 }
 
+export const Arrow = MenuArrow;
+export const ButtonArrow = MenuButtonArrow;
+
+export function MenuArrow<const Opts extends { readonly content?: AnyContent }>(
+  options = {} as Opts,
+): Component<Opts> {
+  return html`<span aria-hidden="true">${options.content ?? ""}</span>`;
+}
+
+export function MenuButtonArrow<const Opts extends { readonly content?: AnyContent }>(
+  options = {} as Opts,
+): Component<Opts> {
+  return html`<span aria-hidden="true">${options.content ?? "▾"}</span>`;
+}
+
 export function Group<
   const Opts extends { readonly content: AnyContent; readonly label?: RequiredString },
 >(options: Opts): Component<Opts> {
@@ -250,8 +268,18 @@ export function Description<
 export function Dismiss<
   const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
 >(options: Opts): Component<Opts> {
-  const onClick = EventHandler.make(() => setOpen(options.state, false));
-  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
+  const id = RefSubject.map(options.state, (current) => current.id);
+  const onClick = EventHandler.make((event: Event) =>
+    NativePopover.hideFromEvent(options.state, event),
+  );
+  return html`<button
+    type="button"
+    popovertarget=${id}
+    popovertargetaction="hide"
+    onclick=${onClick}
+  >
+    ${options.content}
+  </button>`;
 }
 
 interface ToggleEventLike extends Event {

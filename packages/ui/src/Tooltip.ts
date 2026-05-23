@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
+import * as NativePopover from "./NativePopover.js";
 import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
 export interface State {
@@ -21,7 +22,7 @@ export function makeState(
 }
 
 export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
-  return RefSubject.update(state, (current) => ({ ...current, open }));
+  return NativePopover.setOpen(state, open);
 }
 
 export interface AnchorOptions {
@@ -55,15 +56,34 @@ export interface ContentOptions {
 
 export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
+  const open = RefSubject.map(options.state, (state) => String(state.open));
   const hidden = RefSubject.map(options.state, (state) => !state.open);
+  const onToggle = EventHandler.make((event: ToggleEventLike) =>
+    NativePopover.syncToggle(options.state, event),
+  );
 
-  return html`<div id=${id} role="tooltip" data-placement=${options.placement} ?hidden=${hidden}>
+  return html`<div
+    id=${id}
+    role="tooltip"
+    popover="hint"
+    data-placement=${options.placement}
+    data-open=${open}
+    ?hidden=${hidden}
+    ontoggle=${onToggle}
+    ref=${NativePopover.register(options.state)}
+  >
     ${options.content}
   </div>`;
 }
+
+export const Tooltip = Content;
 
 export function Arrow<const Opts extends { readonly content?: Content }>(
   options = {} as Opts,
 ): Component<Opts> {
   return html`<span aria-hidden="true">${options.content ?? ""}</span>`;
+}
+
+interface ToggleEventLike extends Event {
+  readonly newState?: "open" | "closed";
 }

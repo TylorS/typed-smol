@@ -1,10 +1,11 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
 type RequiredString = ReactiveValue<string, any, any>;
@@ -49,6 +50,8 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
   </div>`;
 }
 
+export const Toolbar = Root;
+
 export interface ItemOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly id: RequiredString;
@@ -56,8 +59,13 @@ export interface ItemOptions {
 }
 
 export function Item<const Opts extends ItemOptions>(options: Opts): Component<Opts> {
-  const tabIndex = Composite.tabIndex(options.state, String(options.id));
-  return html`<div id=${options.id} role="button" tabindex=${tabIndex}>${options.content}</div>`;
+  return gen(function* () {
+    const id = yield* makeRef(options.id);
+    const tabIndex = RefSubject.mapEffect(id, (itemId) =>
+      Effect.map(options.state, (state) => (state.activeId === itemId ? 0 : -1)),
+    );
+    return html`<div id=${id} role="button" tabindex=${tabIndex}>${options.content}</div>`;
+  });
 }
 
 export function Container<const Opts extends { readonly content: AnyContent }>(

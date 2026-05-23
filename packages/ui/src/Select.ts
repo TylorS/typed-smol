@@ -7,6 +7,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
+import * as NativePopover from "./NativePopover.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
@@ -76,7 +77,7 @@ export function setOpen<Value extends string>(
   state: RefSubject.RefSubject<State<Value>>,
   open: boolean,
 ): Effect.Effect<State<Value>> {
-  return RefSubject.update(state, (current) => ({ ...current, open }));
+  return NativePopover.setOpen(state, open);
 }
 
 export function select<Value extends string>(
@@ -138,7 +139,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
-    setOpen(options.state, event.newState === "open"),
+    NativePopover.syncToggle(options.state, event),
   );
 
   return html`<div
@@ -150,6 +151,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     aria-activedescendant=${activeDescendant}
     .data=${{ open }}
     ontoggle=${onToggle}
+    ref=${NativePopover.register(options.state)}
   >
     ${options.content}
   </div>`;
@@ -173,10 +175,11 @@ export function Option<const Opts extends OptionOptions>(options: Opts): Compone
     const disabledValue = yield* makeRef(options.disabled ?? false);
     const disabled = isDisabled(disabledValue);
     const selected = isSelected(options.state, value);
-    const onClick = EventHandler.make(() =>
+    const onClick = EventHandler.make((event: Event) =>
       Effect.gen(function* () {
         if (yield* disabled) return;
         yield* select(options.state, yield* id, yield* value);
+        yield* NativePopover.hideFromEvent(options.state, event);
       }),
     );
     const props = {
@@ -225,8 +228,18 @@ export function Arrow<const Opts extends { readonly content?: AnyContent }>(
 export function Dismiss<
   const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
 >(options: Opts): Component<Opts> {
-  const onClick = EventHandler.make(() => setOpen(options.state, false));
-  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
+  const id = RefSubject.map(options.state, (current) => current.id);
+  const onClick = EventHandler.make((event: Event) =>
+    NativePopover.hideFromEvent(options.state, event),
+  );
+  return html`<button
+    type="button"
+    popovertarget=${id}
+    popovertargetaction="hide"
+    onclick=${onClick}
+  >
+    ${options.content}
+  </button>`;
 }
 
 export function Group<

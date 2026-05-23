@@ -12,3 +12,6 @@ export function Heading<const Opts extends HeadingOptions>(options: Opts): Compo
     ${options.content}
   </div>`;
 }
+
+export const Level = Heading;
+export const HeadingLevel = Heading;

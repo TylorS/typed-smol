@@ -9,3 +9,7 @@
 - Disclosure uses `DataAttr.encode` through `RefSubject.mapEffect` to emit stable `data-open` while preserving direct `RefSubject` state and inferred template return types.
 - Dialog mirrors the Disclosure data-state pattern and stores the invoking element in a WeakMap keyed by the state ref so close controls can return focus without adding store objects.
 - Popover is native-only: trigger/content attributes plus native `toggle` event mirroring; no JS click toggle, overlay element, focus trap, or positioning fallback.
+- Later parity hardening added shared native controllers so RefSubject state can command registered popover/dialog DOM nodes.
+- Portal is no longer part of the parity target; native popover is the baseline overlay substrate.
+- StartupRef schemas should decode only fields that compose into the backing RefSubject state.
+- Menubar and Toolbar item ids must be resolved through `makeRef`; never compare or stringify raw renderables.

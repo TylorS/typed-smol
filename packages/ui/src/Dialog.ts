@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import * as NativeDialog from "./NativeDialog.js";
 import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
@@ -18,8 +19,6 @@ export const data = DataAttr.schema({
   open: Schema.Boolean,
 });
 
-const invokers = new WeakMap<RefSubject.RefSubject<State>, HTMLElement>();
-
 export function makeState(
   initial: State,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -27,11 +26,11 @@ export function makeState(
 }
 
 export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
-  return RefSubject.update(state, (current) => ({ ...current, open }));
+  return open ? NativeDialog.showModal(state) : NativeDialog.close(state);
 }
 
 export function close(state: RefSubject.RefSubject<State>): Effect.Effect<State> {
-  return setOpen(state, false).pipe(Effect.tap(() => focusInvoker(state)));
+  return NativeDialog.close(state);
 }
 
 export interface TriggerOptions {
@@ -42,16 +41,7 @@ export interface TriggerOptions {
 
 export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
-  const onClick = EventHandler.make((event: MouseEvent) => {
-    const eventTarget = event.currentTarget ?? event.target;
-    const activeElement = getActiveElement(eventTarget);
-    const target = isFocusableElement(eventTarget) ? eventTarget : activeElement;
-
-    return Effect.gen(function* () {
-      if (target) invokers.set(options.state, target);
-      yield* setOpen(options.state, true);
-    });
-  });
+  const onClick = EventHandler.make((event: MouseEvent) => NativeDialog.showModal(options.state, event));
 
   return html`<button
     type="button"
@@ -88,19 +78,21 @@ export interface ContentOptions {
 
 export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
-  const hidden = RefSubject.map(options.state, (current) => !current.open);
+  const onClose = EventHandler.make(() => NativeDialog.syncClosed(options.state));
 
-  return html`<div
+  return html`<dialog
     id=${options.id}
-    role="dialog"
-    aria-modal="true"
     aria-label=${options.label}
-    ?hidden=${hidden}
     .data=${{ open }}
+    onclose=${onClose}
+    oncancel=${onClose}
+    ref=${NativeDialog.register(options.state)}
   >
     ${options.content}
-  </div>`;
+  </dialog>`;
 }
+
+export const Dialog = Content;
 
 export function Heading<
   const Opts extends { readonly id?: OptionalString; readonly content: AnyContent },
@@ -118,21 +110,4 @@ function dataOpen(state: RefSubject.RefSubject<State>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
   );
-}
-
-function focusInvoker(state: RefSubject.RefSubject<State>) {
-  return Effect.sync(() => invokers.get(state)?.focus());
-}
-
-function isFocusableElement(value: EventTarget | null): value is HTMLElement {
-  return typeof value === "object" && value !== null && "focus" in value;
-}
-
-function getActiveElement(value: EventTarget | null): HTMLElement | undefined {
-  const document =
-    typeof value === "object" && value !== null && "ownerDocument" in value
-      ? (value as { readonly ownerDocument?: Document }).ownerDocument
-      : undefined;
-  const activeElement = document?.activeElement ?? null;
-  return isFocusableElement(activeElement) ? activeElement : undefined;
 }

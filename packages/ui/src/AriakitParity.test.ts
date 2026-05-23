@@ -6,13 +6,13 @@ import { Window } from "happy-dom";
 import * as Button from "./Button.js";
 import * as Combobox from "./Combobox.js";
 import * as Command from "./Command.js";
+import * as FocusTrap from "./FocusTrap.js";
 import * as Focusable from "./Focusable.js";
 import * as Form from "./Form.js";
 import * as Group from "./Group.js";
 import * as Heading from "./Heading.js";
 import * as Hovercard from "./Hovercard.js";
 import * as Menubar from "./Menubar.js";
-import * as Portal from "./Portal.js";
 import * as Radio from "./Radio.js";
 import * as Role from "./Role.js";
 import * as Separator from "./Separator.js";
@@ -23,6 +23,8 @@ import * as Dialog from "./Dialog.js";
 import * as Menu from "./Menu.js";
 import * as Popover from "./Popover.js";
 import * as Select from "./Select.js";
+import * as Store from "./Store.js";
+import * as Tab from "./Tab.js";
 import * as Toolbar from "./Toolbar.js";
 
 describe("typed/ui Ariakit parity exports", () => {
@@ -38,15 +40,16 @@ describe("typed/ui Ariakit parity exports", () => {
       const menubar = yield* Menubar.makeState();
       const popover = yield* Popover.makeState({ id: "invite-popover", open: true, mode: "auto" });
       const radio = yield* Radio.makeState({ value: "one", activeId: "one" });
+      const storeValue = Store.useStoreState(radio, (state) => state.value);
       const select = yield* Select.makeState({ id: "fruit-select", value: "Apple", open: true });
+      const tabs = yield* Tab.makeState({ selectedId: "one" });
       const toolbar = yield* Toolbar.makeState();
       const tooltip = yield* Tooltip.makeState({ id: "tip", open: true });
-      const portalTarget = window.document.createElement("section");
-      window.document.body.append(portalTarget);
 
       yield* render(
         html`${Button.Button({ content: "Button" })} ${Command.Command({ content: "Command" })}
         ${Focusable.Focusable({ content: "Focusable" })}
+        ${FocusTrap.FocusTrap({ content: "Focus trap" })}
         ${Group.Group({ label: "Group", content: Group.Label({ content: "Label" }) })}
         ${Heading.Heading({ level: 2, content: "Heading" })}
         ${Role.Role({ role: "note", content: "Role" })} ${Separator.Separator()}
@@ -65,6 +68,7 @@ describe("typed/ui Ariakit parity exports", () => {
             ${Combobox.Row({ content: "row" })} ${Combobox.Separator()}`,
           })}`,
         })}
+        ${Dialog.Dialog({ state: dialog, label: "Dialog", content: "Dialog body" })}
         ${Dialog.Disclosure({ state: dialog, content: "Open dialog" })}
         ${Dialog.Heading({ id: "dialog-title", content: "Dialog title" })}
         ${Dialog.Description({ id: "dialog-desc", content: "Dialog description" })}
@@ -78,7 +82,7 @@ describe("typed/ui Ariakit parity exports", () => {
         ${Hovercard.Disclosure({ state: hovercard, content: "More" })}
         ${Hovercard.Dismiss({ state: hovercard, content: "Close" })}
         ${Menu.Button({ state: menu, content: "File" })}
-        ${Menu.List({
+        ${Menu.Menu({
           state: menu,
           content: html`${Menu.Group({
             label: "File actions",
@@ -90,22 +94,24 @@ describe("typed/ui Ariakit parity exports", () => {
             })}
             ${Menu.ItemRadio({ state: menu, id: "small", checked: false, content: "Small" })}
             ${Menu.Separator()}`,
-          })}`,
+          })} ${Menu.MenuArrow()} ${Menu.MenuButtonArrow()}`,
         })}
         ${Menubar.Root({
           state: menubar,
           content: Menubar.Item({ state: menubar, id: "file", content: "File" }),
         })}
-        ${Popover.Anchor({ state: popover, content: "Anchor" })} ${Popover.Arrow()}
+        ${Menubar.Menubar({ state: menubar, content: "Menubar" })}
+        ${Popover.Popover({ state: popover, content: "Popover" })}
+        ${Popover.Anchor({ state: popover, content: "Anchor" })} ${Popover.PopoverDisclosureArrow()}
         ${Popover.Dismiss({ state: popover, content: "Close" })}
         ${Popover.Heading({ content: "Heading" })}
         ${Popover.Description({ content: "Description" })}
-        ${Portal.Portal({ target: portalTarget, content: "Portal" })}
         ${Radio.Root({
           state: radio,
           label: "Radio",
           content: Radio.Item({ state: radio, id: "one", value: "one", content: "One" }),
         })}
+        ${storeValue}
         ${Select.Label({ for: "fruit-select", content: "Fruit" })}
         ${Select.Value({ state: select })} ${Select.Arrow()}
         ${Select.List({
@@ -122,6 +128,9 @@ describe("typed/ui Ariakit parity exports", () => {
           })}`,
         })}
         ${Select.Dismiss({ state: select, content: "Close" })}
+        ${Tab.Tab({ state: tabs, id: "one", panelId: "panel-one", content: "Tab" })}
+        ${Tab.Panel({ state: tabs, id: "panel-one", tabId: "one", content: "Panel" })}
+        ${Toolbar.Toolbar({ state: toolbar, content: "Toolbar" })}
         ${Toolbar.Item({ state: toolbar, id: "bold", content: "Bold" })}
         ${Toolbar.Container({ content: "Container" })} ${Toolbar.Separator()}
         ${Tooltip.Anchor({ state: tooltip, content: "Anchor" })}
@@ -132,7 +141,7 @@ describe("typed/ui Ariakit parity exports", () => {
       assert(window.document.querySelector("button"));
       assert(window.document.querySelector("[role=separator]"));
       assert(window.document.getElementById("fruit"));
-      assert.strictEqual(portalTarget.textContent, "Portal");
+      assert(window.document.querySelector("dialog"));
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

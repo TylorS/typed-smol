@@ -12,12 +12,13 @@ type RefServices<Ref> = Ref extends RefCallback<any, infer R> ? R : never;
 
 export function fromData<State extends Record<string, unknown>, Fields extends DataAttr.DataFields>(
   ref: RefSubject.RefSubject<State>,
-  data: DataAttr.DataAttr<Fields>,
+  data: DataAttr.DataAttr<Fields> &
+    (DataAttr.Type<Fields> extends Partial<State> ? unknown : never),
 ): RefCallback<Schema.SchemaError, Schema.Struct.DecodingServices<Fields>> {
   return (element) =>
     DataAttr.decode(data, element).pipe(
       Effect.flatMap((value) =>
-        RefSubject.update(ref, (current) => ({ ...current, ...value }) as State),
+        RefSubject.update(ref, (current) => ({ ...current, ...value })),
       ),
       Effect.asVoid,
     );

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
+import { RefSubject } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
 import * as Toolbar from "./Toolbar.js";
@@ -32,5 +33,26 @@ describe("typed/ui/Toolbar", () => {
       const state = yield* Toolbar.makeState({ activeId: "bold" });
       yield* Toolbar.move(state, [{ id: "bold" }, { id: "italic" }], "next");
       expect((yield* state).activeId).toBe("italic");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("uses resolved reactive item ids for roving tabindex", () =>
+    Effect.gen(function* () {
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
+      const layer = DomRenderTemplate.using(window.document);
+      const id = yield* RefSubject.make("bold");
+      const state = yield* Toolbar.makeState({ activeId: "bold" });
+      const [item] = yield* render(
+        Toolbar.Item({ state, id, content: "B" }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      expect(item.getAttribute("id")).toBe("bold");
+      expect(item.getAttribute("tabindex")).toBe("0");
+
+      yield* RefSubject.set(id, "italic");
+      yield* Effect.sleep(10);
+
+      expect(item.getAttribute("id")).toBe("italic");
+      expect(item.getAttribute("tabindex")).toBe("-1");
     }).pipe(Effect.scoped, Effect.runPromise));
 });

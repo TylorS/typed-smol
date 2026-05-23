@@ -1,5 +1,6 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 import { describe, expectTypeOf, it } from "vitest";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
@@ -13,6 +14,8 @@ import * as RadioGroup from "./RadioGroup.js";
 import type * as Reactive from "./Reactive.js";
 import * as Tabs from "./Tabs.js";
 import * as Toolbar from "./Toolbar.js";
+import * as DataAttr from "./DataAttr.js";
+import * as StartupRef from "./StartupRef.js";
 import { Scope } from "effect";
 
 class OptionError {
@@ -156,6 +159,15 @@ describe("typed/ui component option inference", () => {
 
     expectTypeOf<typeof ref>().toExtend<Reactive.Value<string, OptionError, OptionService>>();
     expectTypeOf<typeof option>().toExtend<Reactive.Component<typeof options>>();
+  });
+
+  it("limits StartupRef data hydration to fields in the backing state", () => {
+    const state = {} as RefSubject.RefSubject<{ readonly open: boolean }>;
+
+    StartupRef.fromData(state, DataAttr.schema({ open: Schema.Boolean }));
+
+    // @ts-expect-error placement is not part of the backing state
+    StartupRef.fromData(state, DataAttr.schema({ placement: Schema.String }));
   });
 });
 
