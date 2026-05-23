@@ -27,7 +27,7 @@ Status: approved by human on 2026-05-22.
 | TS-2 | Analyze a route module with `RefSubject.Service` using TS AST/type checker and emit stable HMR facts without regex source truth. | FR-4, FR-11, FR-12, FR-13, NFR-3, NFR-7 | AC-2 | yes |
 | TS-3 | Lower route closures with Effect service captures and `RefSubject.Service` captures into CPS continuation descriptors. | FR-5, FR-6, FR-7, FR-8, FR-9, FR-21, NFR-8 | AC-3, AC-7 | yes |
 | TS-4 | Reject mutable/anonymous/non-serializable closure captures with structured diagnostics. | FR-10, FR-29, NFR-5, NFR-7 | AC-3, AC-9 | yes |
-| TS-5 | Prove dependency participation inference, opt-in, opt-out, and anonymous state rejection. | FR-2, FR-14, FR-15, NFR-7 | AC-4 | yes |
+| TS-5 | Prove dependency participation inference, opt-in, opt-out, anonymous state rejection, recursive traversal, cycle termination, and transitive dependency descriptor inclusion. | FR-2, FR-14, FR-15, FR-15a, NFR-3, NFR-7 | AC-4, AC-4a | yes |
 | TS-6 | Restore compatible HMR state through hot-data registry and fresh-initialize or invalidate on compatibility mismatch. | FR-16, FR-17, FR-18, NFR-4, NFR-5, NFR-9 | AC-5 | yes |
 | TS-7 | Collapse or forward duplicate `@typed/app` HMR registry surfaces and prove public imports behave consistently. | FR-19, NFR-1 | AC-6 | yes |
 | TS-8 | Preserve value/error/service typing for generated Effect contexts and `RefSubject.Service` state identities. | FR-20, FR-21, NFR-8 | AC-7 | yes |

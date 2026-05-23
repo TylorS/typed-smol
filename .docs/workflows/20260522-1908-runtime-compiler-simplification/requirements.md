@@ -19,6 +19,7 @@ Status: approved by human on 2026-05-22.
 - FR-13: The compiler shall produce one shared route/dependency/resumability descriptor model consumed by Vite runtime emission, dependency participation, CPS planning, and capability planning.
 - FR-14: The compiler shall preserve explicit dependency participation controls: inferred participation, explicit opt-in, and explicit opt-out.
 - FR-15: Dependency HMR participation shall reject anonymous `RefSubject` state unless it can be migrated to a stable service identity.
+- FR-15a: Route-module dependency participation shall traverse compiler-visible dependency modules recursively, including transitive route helpers/state modules, while respecting explicit opt-out boundaries and cycle detection.
 - FR-16: Vite HMR runtime output shall use guarded `import.meta.hot` code, mutate `hot.data` rather than reassigning it, and register cleanup through dispose/prune paths.
 - FR-17: HMR compatibility shall be checked by module identity, generated symbol identity, service identity, capture/context fingerprint, state-shape fingerprint, dependency fingerprints, and compiler/runtime version.
 - FR-18: HMR shall invalidate or fall back to fresh initialization when compatibility cannot be proven.
@@ -53,6 +54,7 @@ Status: approved by human on 2026-05-22.
 - AC-2: (maps to FR-4, FR-11, FR-12, FR-13, NFR-3, NFR-7) HMR analysis tests prove AST/type-checker-backed detection of `RefSubject.Service`, diagnostic handling of inline `RefSubject.make`, and no dependency on regex-only scanning.
 - AC-3: (maps to FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-21, NFR-7, NFR-8) Route-module CPS tests prove closures are classified, eligible closures lower to continuation descriptors with explicit Effect Context / `RefSubject.Service` captures, and unsupported captures produce diagnostics.
 - AC-4: (maps to FR-2, FR-14, FR-15, NFR-7) Dependency participation tests prove inferred participation, explicit opt-in, explicit opt-out, and anonymous state rejection.
+- AC-4a: (maps to FR-15a, NFR-3, NFR-7) Recursive dependency tests prove transitive dependencies participate in resumability/HMR descriptors, cycles terminate deterministically, and opt-out boundaries stop traversal.
 - AC-5: (maps to FR-16, FR-17, FR-18, NFR-4, NFR-5, NFR-9) Vite HMR runtime tests prove guarded hot usage, hot-data registry reuse, dispose/prune cleanup, and invalid/fresh-state fallback on compatibility mismatch.
 - AC-6: (maps to FR-19, NFR-1) `@typed/app` has one canonical HMR/resume registry runtime implementation, with duplicate surfaces removed or forwarded through one owner and tests covering public imports.
 - AC-7: (maps to FR-20, FR-21, NFR-8) Type tests prove `RefSubject.Service` state identity and generated Effect Context captures preserve value, error, and service requirements through compiler/runtime APIs.
@@ -64,10 +66,12 @@ Status: approved by human on 2026-05-22.
 
 - must_have:
   - FR-1 through FR-21
+  - FR-15a
   - FR-26 through FR-29
   - NFR-1 through NFR-5
   - NFR-8 through NFR-10
   - AC-2 through AC-10
+  - AC-4a
 - should_have:
   - FR-22 through FR-25
   - NFR-6

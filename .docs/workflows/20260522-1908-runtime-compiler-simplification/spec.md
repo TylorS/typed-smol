@@ -55,8 +55,17 @@ Uses TypeScript source files and type-checker facts to inspect route modules. It
 - inline `RefSubject.make(...)` migration/diagnostic cases;
 - Effect services required by captured values or returned programs;
 - dependency modules that participate in the route boundary.
+- transitive dependencies reachable from route modules, including helper/state modules that contribute closures, services, templates, or `RefSubject.Service` identities.
 
 Regex scanning is not an accepted source of truth for this analyzer.
+
+Dependency traversal is recursive across compiler-visible modules. It must:
+
+- preserve stable traversal order;
+- stop at explicit opt-out boundaries;
+- track visited modules to terminate cycles deterministically;
+- record why each dependency participates;
+- emit diagnostics for anonymous state or unsupported captures in transitive dependencies.
 
 ### Closure CPS Planner
 
@@ -170,17 +179,18 @@ sequenceDiagram
 1. The compiler receives route module source and virtual-module/compiler context.
 2. The TypeScript analyzer builds route facts from AST and type-checker evidence.
 3. Every `html` template is converted to the shared template model.
-4. Every compiler-visible route closure is classified.
-5. Captures are mapped to one of:
+4. The analyzer recursively visits compiler-visible route dependencies in stable order.
+5. Every compiler-visible route/dependency closure is classified.
+6. Captures are mapped to one of:
    - generated Effect `Context` record;
    - existing `RefSubject.Service`;
    - dependency service identity;
    - unsupported diagnostic.
-6. The CPS planner emits continuation descriptors for eligible closures.
-7. Server and DOM targets emit optimized template output from the same template model.
-8. Vite HMR glue registers descriptors and state/context identities with the canonical runtime registry.
-9. On update, the runtime restores only entries whose compatibility fingerprints match.
-10. If compatibility fails, the update invalidates or fresh-initializes rather than restoring stale heap state.
+7. The CPS planner emits continuation descriptors for eligible closures.
+8. Server and DOM targets emit optimized template output from the same template model.
+9. Vite HMR glue registers descriptors and state/context identities with the canonical runtime registry.
+10. On update, the runtime restores only entries whose compatibility fingerprints match.
+11. If compatibility fails, the update invalidates or fresh-initializes rather than restoring stale heap state.
 
 ## Failure Modes and Mitigations
 
@@ -192,6 +202,8 @@ sequenceDiagram
 | Generated context type erases Effect error/service requirements | type unsound runtime API | compile-time tests for value/error/service preservation |
 | Template server and DOM emitters drift | environment-specific behavior bugs | shared template model plus equivalence tests against runtime renderer |
 | Dependency module changes shape | restored state no longer compatible | include dependency fingerprints in compatibility fingerprint |
+| Recursive dependency graph contains a cycle | infinite analysis or nondeterministic descriptors | maintain visited module set and emit deterministic cycle metadata |
+| Transitive dependency opts out | state unexpectedly preserved past boundary | stop traversal at opt-out and record boundary reason |
 | Vite HMR accepts incompatible update | stale app behavior | generated runtime calls invalidate or fresh-initializes on mismatch |
 | Runtime registry duplication diverges | inconsistent preserve/cleanup behavior | canonicalize registry implementation and test both public import paths |
 | Materialized output is stale | editor/build mismatch | use virtual artifact-store fingerprints when output is persisted |
@@ -201,7 +213,7 @@ sequenceDiagram
 | requirement_id | design_element | notes |
 | -------------- | -------------- | ----- |
 | FR-1, FR-22, FR-23, FR-24, FR-25 | Shared Template Compiler | One template model feeds all environments. |
-| FR-2, FR-14, FR-15 | Route Module Analyzer, Dependency Participation | HMR boundary remains narrower than all-template optimization. |
+| FR-2, FR-14, FR-15, FR-15a | Route Module Analyzer, Dependency Participation | HMR boundary remains narrower than all-template optimization and dependency traversal is recursive with opt-out and cycle handling. |
 | FR-3, FR-5, FR-6, FR-7, FR-8 | Closure CPS Planner, Continuation Descriptor | First tasks enable route resumability and HMR. |
 | FR-4, NFR-3 | Route Module Analyzer | AST/type-checker facts replace regex source truth. |
 | FR-9, FR-10, FR-21 | Effect Context Capture Records | Captures become explicit typed context records or diagnostics. |
