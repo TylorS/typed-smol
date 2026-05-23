@@ -33,6 +33,7 @@
     "storybook:build": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && storybook build --config-dir fixtures/public-beta/.storybook --output-dir .tmp/storybook-public-beta-static",
     "storybook:dev-smoke": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && node ./scripts/storybook-dev-smoke.mjs",
     "test": "vitest run --passWithNoTests",
+    "test:portable": "vitest run --passWithNoTests src/portable-story.test.ts",
     "typecheck:stories": "node ../virtual-modules-compiler/dist/cli.js --noEmit -p tsconfig.test.json",
     "test:stories": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && node ./scripts/storybook-test-stories.mjs"
   },

@@ -1068,17 +1068,36 @@ function emitHttpApiClientSource(input: {
 }): string {
   void input.directoryOptionNameByPath;
   const imports = new ClientImportBuilder(input.importerDir, input.targetDirectory);
+  const groupDependencyPaths = collectGroupDependencyPaths(input.groupSpecs);
+  const groupDependencyNameByPath = makeUniqueVarNames(
+    groupDependencyPaths.map((path) => ({
+      path,
+      proposedName: pathToIdentifier(`__${path}`),
+    })),
+  );
   const importLines: string[] = [
     `import * as Route from "@typed/router";`,
     `import type * as HttpClient from "effect/unstable/http/HttpClient";`,
+    `import * as Effect from "effect/Effect";`,
+    `import * as Layer from "effect/Layer";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
     `import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`,
     `import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";`,
     `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
   ];
+  if (groupDependencyPaths.length > 0) {
+    importLines.push(`import * as Router from "@typed/router";`);
+  }
+  for (const path of groupDependencyPaths) {
+    const importSpecifier = toImportSpecifier(input.importerDir, input.targetDirectory, path);
+    importLines.push(
+      `import * as ${groupDependencyNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
+    );
+  }
 
   const groupExprs: string[] = [];
+  const typedClientGroups: string[] = [];
   const groupSpecByKey = new Map(input.groupSpecs.map((spec) => [spec.key, spec]));
   const routeBindings = createRouteBindingPlan({
     endpointSpecs: input.endpointSpecs,
@@ -1102,6 +1121,8 @@ function emitHttpApiClientSource(input: {
   for (const groupSpec of input.groupSpecs) {
     const endpointsInGroup = input.endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
+    const groupName = input.groupNamesByPath.get(groupSpec.dirPath) ?? groupSpec.defaultName;
+    const typedClientEndpoints: string[] = [];
 
     const endpointExprs = endpointsInGroup.map((endpoint) => {
       const literals = input.extractedLiteralsByPath.get(endpoint.path);
@@ -1113,10 +1134,9 @@ function emitHttpApiClientSource(input: {
         imports.expressionFor(endpoint.path, "route", input.exportExpressionsByPath) ??
         `Route.Parse(${JSON.stringify(routePath)})`;
       const effectiveRouteExpr = routeBindings.endpointRouteNameByPath.get(endpoint.modulePath)!;
-      const optsParts = [
-        `params: ${effectiveRouteExpr}.pathSchema`,
-        `query: ${effectiveRouteExpr}.querySchema`,
-      ];
+      const optsParts = shouldEmitClientRouteSchemas(literals?.path)
+        ? [`params: ${effectiveRouteExpr}.pathSchema`, `query: ${effectiveRouteExpr}.querySchema`]
+        : [];
       const optionalPresent =
         input.optionalExportsByPath.get(endpoint.path) ?? new Set<OptionalExport>();
       for (const option of OPTIONAL_ENDPOINT_EXPORTS) {
@@ -1141,6 +1161,13 @@ function emitHttpApiClientSource(input: {
           if (expression) optsParts.push(`${optionName}: ${expression}`);
         }
       }
+      typedClientEndpoints.push(
+        renderTypedClientEndpoint(
+          groupName,
+          name,
+          endpointNeedsClientRequest(optsParts),
+        ),
+      );
 
       return renderAnnotatedEndpointExpression(
         `HttpApiEndpoint.${factory}(${JSON.stringify(name)}, ${routeExpr}.path, { ${optsParts.join(", ")} })`,
@@ -1155,7 +1182,7 @@ function emitHttpApiClientSource(input: {
     );
     const suffix = effectivePrefix ? `.prefix(${JSON.stringify(effectivePrefix)})` : "";
     const groupChain = endpointExprs.map((expr) => `.add(${expr})`).join("");
-    const groupName = input.groupNamesByPath.get(groupSpec.dirPath) ?? groupSpec.defaultName;
+    typedClientGroups.push(renderTypedClientGroup(groupName, typedClientEndpoints));
     groupExprs.push(
       renderAnnotatedGroupExpression(
         `HttpApiGroup.make(${JSON.stringify(groupName)})${groupChain}${suffix}`,
@@ -1170,6 +1197,10 @@ function emitHttpApiClientSource(input: {
     input.openapiPlan?.api.annotations,
     input.openapiPlan?.api.generation,
   );
+  const dependenciesLayer = renderDependenciesLayer(
+    groupDependencyPaths,
+    groupDependencyNameByPath,
+  );
   const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
   const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
 
@@ -1178,6 +1209,7 @@ function emitHttpApiClientSource(input: {
 ${renderRouteBindingDeclarations(routeBindings)}
 
 export const Api = ${apiExpr};
+export const DependenciesLayer = ${dependenciesLayer};
 export const OpenApi = OpenApiModule.fromApi(Api);
 export const Client = HttpApiClient.make(Api);
 export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>
@@ -1188,7 +1220,60 @@ export const makeClientWith = <E, R>(
 ) => HttpApiClient.makeWith(Api, { ...options, httpClient });
 export const makeUrlBuilder = (options?: { readonly baseUrl?: URL | string }) =>
   HttpApiClient.urlBuilder(Api, options);
+
+type TypedRawClient = typeof Client extends Effect.Effect<infer A, any, any> ? A : never;
+
+function makeTypedClientFromRaw(client: TypedRawClient) {
+  return {
+${typedClientGroups.map((group) => `    ${group}`).join(",\n")}
+  } as const;
+}
+
+export const makeTypedClient = (options?: { readonly baseUrl?: URL | string }) =>
+  Effect.map(makeClient(options), makeTypedClientFromRaw);
+export const makeTypedClientWith = <E, R>(
+  httpClient: HttpClient.HttpClient.With<E, R>,
+  options?: { readonly baseUrl?: URL | string },
+) =>
+  Effect.map(
+    makeClientWith(httpClient, options) as unknown as Effect.Effect<TypedRawClient, E, R>,
+    makeTypedClientFromRaw,
+  );
 `;
+}
+
+function renderTypedClientGroup(groupName: string, endpointEntries: readonly string[]): string {
+  return `${JSON.stringify(groupName)}: {\n${endpointEntries.map((entry) => `      ${entry}`).join(",\n")}\n    }`;
+}
+
+function renderTypedClientEndpoint(
+  groupName: string,
+  endpointName: string,
+  requestRequired: boolean,
+): string {
+  const groupKey = JSON.stringify(groupName);
+  const endpointKey = JSON.stringify(endpointName);
+  const methodType = `TypedRawClient[${groupKey}][${endpointKey}]`;
+  const methodCall = `client[${groupKey}][${endpointKey}]`;
+  if (requestRequired) {
+    return `${endpointKey}: (request: Parameters<${methodType}>[0]) => ${methodCall}(request)`;
+  }
+  return `${endpointKey}: () => ${methodCall}({} as Parameters<${methodType}>[0])`;
+}
+
+function endpointNeedsClientRequest(optionParts: readonly string[]): boolean {
+  return optionParts.some(
+    (part) =>
+      part.startsWith("params:") ||
+      part.startsWith("query:") ||
+      part.startsWith("payload:") ||
+      part.startsWith("headers:"),
+  );
+}
+
+function shouldEmitClientRouteSchemas(path: string | undefined): boolean {
+  if (path === undefined) return true;
+  return path.includes(":") || path.includes("*");
 }
 
 class ClientImportBuilder {

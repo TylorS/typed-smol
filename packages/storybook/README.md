@@ -95,11 +95,11 @@ Stories should call APIs through generated `typed:api` clients:
 import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { apiBaseUrl } from "typed:storybook/runtime?routes=./routes&api=./api";
-import { makeClient } from "typed:api?dir=./api&mode=client";
+import { makeTypedClient } from "typed:api?dir=./api&mode=client";
 
 const message = Effect.gen(function* () {
-  const client = yield* makeClient({ baseUrl: apiBaseUrl });
-  return yield* client.root.message({ params: {}, query: {} });
+  const client = yield* makeTypedClient({ baseUrl: apiBaseUrl });
+  return yield* client.root.message();
 }).pipe(Effect.provide(FetchHttpClient.layer));
 ```
 
@@ -120,9 +120,15 @@ The public-beta fixture in `fixtures/public-beta` covers generated route
 rendering, API proxy fetches, and explicit `testLayers` overrides. It is outside
 the package publish allowlist.
 
+Use `test:portable` for direct executable story tests that do not boot a
+Storybook dev server.
+
 ## Story Tests
 
 The fixture includes Storybook's Vitest addon configuration using
 `@storybook/addon-vitest` and Vitest browser mode. `test:stories` starts the
 fixture Storybook dev server, runs the addon-generated browser story tests
 against it, and then tears the server down.
+
+Use `test:stories` for server-backed Storybook tests that need the Typed HTTP
+server and Storybook proxy.

@@ -534,6 +534,9 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).toContain("HttpApiClient.makeWith(Api, { ...options, httpClient })");
     expect(sourceText).toContain("export const makeUrlBuilder = ");
     expect(sourceText).toContain("HttpApiClient.urlBuilder(Api, options)");
+    expect(sourceText).toContain("export const makeTypedClient = ");
+    expect(sourceText).toContain("Effect.map(makeClient(options), makeTypedClientFromRaw)");
+    expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
     expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
     expect(sourceText).not.toContain("HttpApiBuilder");
     expect(sourceText).not.toContain("./apis/status.js");
@@ -541,6 +544,28 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).not.toContain("node:fs");
     expect(sourceText).not.toContain("export const serve");
     expect(sourceText).not.toContain("export const ApiLayer");
+  });
+
+  it("re-exports discovered API dependencies from client-only modules", () => {
+    const fixture = createApiFixture({
+      "src/apis/_dependencies.ts": `
+import * as Layer from "effect/Layer";
+export const RootApiService = "RootApiService";
+export default Layer.empty;
+`,
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+    });
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
+    );
+
+    expect(sourceText).toContain('import * as Router from "@typed/router";');
+    expect(sourceText).toContain('import * as Dependencies from "./apis/_dependencies.js";');
+    expect(sourceText).toContain(
+      "export const DependenciesLayer = Layer.mergeAll(Layer.empty, Router.normalizeDependencyInput(Dependencies.default));",
+    );
+    expect(sourceText).not.toContain("export const ApiLayer");
+    expect(sourceText).not.toContain("HttpApiBuilder");
   });
 
   it("emits client-only API modules with endpoint route schemas intact", () => {
@@ -570,6 +595,22 @@ export const handler = () => Effect.succeed({ ok: true });
     expect(sourceText).toContain("query: CommentsDeleteRoute.querySchema");
     expect(sourceText).not.toContain(
       'Route.Parse("/articles/:slug/comments/:commentId").pathSchema',
+    );
+  });
+
+  it("omits empty params and query schemas from literal client endpoints", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
+    );
+
+    expect(sourceText).toContain(
+      'HttpApiEndpoint.get("status", StatusRouteRoute.Parse("/status").path, { success: StatusSuccessSchema.Struct({ status: StatusSuccessSchema.Literal("ok") }), error: StatusErrorSchema.Struct({ message: StatusErrorSchema.String }) })',
+    );
+    expect(sourceText).not.toContain("params: StatusRoute.pathSchema");
+    expect(sourceText).not.toContain("query: StatusRoute.querySchema");
+    expect(sourceText).toContain(
+      '"status": () => client["root"]["status"]({} as Parameters<TypedRawClient["root"]["status"]>[0])',
     );
   });
 

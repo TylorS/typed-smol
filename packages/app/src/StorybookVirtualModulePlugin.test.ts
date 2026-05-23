@@ -49,9 +49,11 @@ describe("StorybookVirtualModulePlugin", () => {
   it("composes generated layers before story layers and leaves test layers last", () => {
     const source = buildStorybook("typed:storybook/runtime?routes=./routes&api=./api") as string;
 
-    expect(source).toContain("export const apiLayers = [] as const;");
-    expect(source).toContain("export const DependenciesLayer = Layer.empty;");
-    expect(source).toContain("const generatedLayers = [] as const;");
+    expect(source).toContain("export const apiLayers = [Api0.DependenciesLayer] as const;");
+    expect(source).toContain(
+      "export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...apiLayers);",
+    );
+    expect(source).toContain("const generatedLayers = [DependenciesLayer] as const;");
     expect(source).not.toContain("Api0.ApiLayer");
     expect(source).toContain(
       "export function makeStoryRuntime<const Options extends StoryRuntimeOptions = {}>",

@@ -214,3 +214,30 @@ Execution started after approval of `plan.md`.
   - Added package scripts for static Storybook build, dev smoke, and addon story-test compatibility.
 - memory_updates:
   - Recorded public-beta fixture, HTTP proxy smoke, browser-safe API runtime import, and addon-vitest server lifecycle notes in `memories.md`.
+
+### Task
+
+- task_id: T-12
+- requirement_ids: FR-5, FR-6, FR-8, FR-9, FR-10, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6
+- ts_scenarios: TS-4, TS-5, TS-6, TS-7
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts` failed until client-mode API VMs exported `DependenciesLayer` and Storybook runtime composed `Api0.DependenciesLayer` into generated layers.
+  - RED: `pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts` failed until literal no-input API endpoints omitted empty params/query schemas and generated `makeTypedClient()` wrappers.
+  - GREEN: `pnpm --filter @typed/app test -- src/HttpApiVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts` passed with 27 files, 365 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/storybook test:portable` passed with 1 file and 3 tests.
+  - GREEN: `pnpm --filter @typed/storybook typecheck:stories`, `test`, and `build` passed after clearing stale `.typed` VMC artifacts.
+  - GREEN: `pnpm --filter @typed/storybook storybook:build`, `storybook:dev-smoke`, and `test:stories` passed for the public-beta fixture.
+  - GREEN: `pnpm --filter @typed/app test` passed with 27 files, 365 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/vite-plugin test` passed with 16 tests.
+  - LINT: `pnpm exec oxlint packages/storybook packages/app packages/vite-plugin` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Browser-safe Storybook runtime composes API `DependenciesLayer` from `typed:api?mode=client`; it still does not import `typed:server` or full API server layers.
+  - Raw `makeClient()` remains available; `makeTypedClient()` is a Typed convenience wrapper for no-input endpoints so stories do not need empty `{ params, query }` objects.
+  - Server-backed Storybook tests are now explicit through `test:stories`; direct portable story tests are explicit through `test:portable`.
+- context_updates:
+  - Client-mode API VMs now export dependency metadata, raw client constructors, typed client constructors, and URL builders.
+  - Storybook runtime generated layers now include API dependency layers before story-level layers and `testLayers`.
+- memory_updates:
+  - Recorded generated API client convenience wrapper and Storybook dependency-layer composition notes in `memories.md`.

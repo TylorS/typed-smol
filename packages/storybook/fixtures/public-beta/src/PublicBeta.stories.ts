@@ -9,7 +9,7 @@ import {
   makeStoryRuntime,
   parameters,
 } from "typed:storybook/runtime?routes=./routes&api=./api&path=/dashboard&serverOrigin=http%3A%2F%2F127.0.0.1%3A6173&proxyPath=%2F__typed_storybook_api";
-import { makeClient } from "typed:api?dir=./api&mode=client";
+import { makeTypedClient } from "typed:api?dir=./api&mode=client";
 import { ApiMessage } from "./api/_dependencies.js";
 
 const meta = {
@@ -27,8 +27,8 @@ export const RouteBacked = {
 export const ApiBacked = {
   render: () =>
     html`<output data-testid="api-message">${Effect.gen(function* () {
-      const client = yield* makeClient({ baseUrl: apiBaseUrl });
-      const body = yield* client.root.message({ params: {}, query: {} });
+      const client = yield* makeTypedClient({ baseUrl: apiBaseUrl });
+      const body = yield* client.root.message();
       return body.message;
     }).pipe(Effect.provide(FetchHttpClient.layer))}</output>`,
 } satisfies StoryObj;

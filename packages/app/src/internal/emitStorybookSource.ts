@@ -45,16 +45,17 @@ function emitApiImports(apis: readonly string[]): readonly string[] {
 function emitRuntimeBody(parsed: RuntimeId): string {
   const routeModules = parsed.routes.map((_, index) => `Routes${index}`);
   const apiModules = parsed.apis.map((_, index) => `Api${index}`);
+  const apiLayers = apiModules.map((module) => `${module}.DependenciesLayer`);
   return [
     `export const routeModules = [${routeModules.join(", ")}] as const;`,
     `export const apiModules = [${apiModules.join(", ")}] as const;`,
-    "export const apiLayers = [] as const;",
+    `export const apiLayers = [${apiLayers.join(", ")}] as const;`,
     `export const serverOrigin = ${jsonOrUndefined(parsed.serverOrigin)};`,
     `export const proxyPath = ${jsonOrDefault(parsed.proxyPath, "/__typed_storybook_api")};`,
     "export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;",
     `export const Routes = ${routeExpression(routeModules)};`,
-    "export const DependenciesLayer = Layer.empty;",
-    "const generatedLayers = [] as const;",
+    dependencyLayerExpression(apiLayers),
+    generatedLayersExpression(apiLayers),
     "interface StoryRuntimeOptions {",
     "  readonly layers?: readonly LayerOrGroup[];",
     "  readonly testLayers?: readonly LayerOrGroup[];",
@@ -75,6 +76,16 @@ function emitRuntimeBody(parsed: RuntimeId): string {
     "export const parameters = { typed: makeStoryRuntime() };",
     "",
   ].join("\n");
+}
+
+function dependencyLayerExpression(apiLayers: readonly string[]): string {
+  if (apiLayers.length === 0) return "export const DependenciesLayer = Layer.empty;";
+  return "export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...apiLayers);";
+}
+
+function generatedLayersExpression(apiLayers: readonly string[]): string {
+  if (apiLayers.length === 0) return "const generatedLayers = [] as const;";
+  return "const generatedLayers = [DependenciesLayer] as const;";
 }
 
 function routeExpression(routeModules: readonly string[]): string {
