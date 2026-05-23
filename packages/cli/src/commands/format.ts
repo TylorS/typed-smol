@@ -80,6 +80,7 @@ export const format = Command.make("format", {
     Argument.string("targets").pipe(Argument.withDescription("Files or directories to format")),
   ),
 }).pipe(
+  Command.withAlias("fmt"),
   Command.withDescription("Format with oxfmt"),
   Command.withHandler((flags) =>
     Effect.gen(function* () {

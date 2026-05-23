@@ -21,7 +21,7 @@ describe("typed CLI integration", () => {
     expect(out).toContain("check");
     expect(out).toContain("test");
     expect(out).toContain("lint");
-    expect(out).toContain("format");
+    expect(out).toContain("format, fmt");
     expect(out).toContain("run");
   });
 
@@ -60,6 +60,12 @@ describe("typed CLI integration", () => {
   it("prints help for run subcommand", () => {
     const out = runTyped(["run", "--help"]);
     expect(out).toContain("Run a TypeScript file");
+  });
+
+  it("prints help for fmt alias", () => {
+    const out = runTyped(["fmt", "--help"]);
+    expect(out).toContain("Format with oxfmt");
+    expect(out).toContain("--check");
   });
 
   it("fails when server entry is missing", () => {
