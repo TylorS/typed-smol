@@ -1,6 +1,7 @@
 export const compilerPackageName = "@typed/compiler";
 export * from "./capabilities/compileCapabilities.js";
 export * from "./cps/planCpsCompilation.js";
+export * from "./devtools/componentFacts.js";
 export * from "./diagnostics/diagnostics.js";
 export * from "./hmr/analyzeComponentHmr.js";
 export * from "./hmr/closureContext.js";

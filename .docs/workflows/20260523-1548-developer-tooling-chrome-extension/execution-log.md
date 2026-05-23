@@ -107,4 +107,38 @@
 
 ## Deferred Work
 
-- T4 through T12 remain blocked on prior-task completion.
+### T4 - Compiler Component DevTools Facts
+
+- task_id: T4
+- requirement_ids: FR-12, FR-17, FR-41, FR-42, NFR-7, NFR-15, NFR-17, AC-3, AC-13
+- ts_scenarios: TS-3, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/compiler exec vitest run src/devtools/componentFacts.test.ts` failed because `@typed/devtools-protocol` was not yet wired into the compiler package.
+  - red: after sidecar review, the focused test failed on fallback RefSubject id collision (`ref:count` instead of component-scoped id).
+  - green: `pnpm --filter @typed/compiler exec vitest run src/devtools/componentFacts.test.ts` passed with 4 tests.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm exec oxlint packages/compiler/src/devtools/componentFacts.ts packages/compiler/src/devtools/componentFacts.test.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/compiler/src/devtools/componentFacts.ts packages/compiler/src/devtools/componentFacts.test.ts` passed.
+  - green: compiler devtools boundary grep for `effect/unstable/rpc` and `chrome.` returned no matches.
+  - green: `git diff --check -- packages/compiler pnpm-lock.yaml .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: First sidecar review found the rich-fact/protocol-summary mismatch and runtime anchor-path concern; both were addressed before the green run.
+  - review: Second sidecar review found fallback RefSubject id collisions, sparse part id/source gaps, and staged-index hygiene risk; all implementation blockers except surgical staging were fixed before the green run.
+  - review: Final scoped sidecar review found no blockers after the sparse/refsubject/protocol-summary fixes.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Expanded T4 write set to include compiler package dependency, tsconfig project reference, and lockfile so compiler can consume `@typed/devtools-protocol` as the protocol source of truth.
+  - `packages/compiler/src/index.ts` has unrelated concurrent route export changes; stage only the devtools export for this task.
+- context_updates:
+  - Added active T4 detail to `plan.md`.
+  - Added `createComponentDevtoolsFact(s)` for compiler-local rich component/template facts plus protocol-safe `summary`.
+  - Added compiler dependency and project reference to `@typed/devtools-protocol`.
+- memory_updates:
+  - Component DevTools facts should expose a protocol-safe `summary` and keep richer compiler-only template/source fields outside `ComponentSummary`.
+  - Template `node` part ids should use the effective runtime anchor path, matching `transformTemplateModule` behavior.
+  - Fallback RefSubject ids must be scoped by `moduleId#exportName#localName`; only explicit ids or service ids may stand alone.
+  - Sparse template parts need stable ids that include kind/name/path/value indexes, and should retain expression source spans when compiler analysis provides them.
+
+## Deferred Work
+
+- T5 through T12 remain blocked on prior-task completion.

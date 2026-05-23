@@ -290,6 +290,9 @@ importers:
 
   packages/compiler:
     dependencies:
+      '@typed/devtools-protocol':
+        specifier: workspace:*
+        version: link:../devtools-protocol
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx

@@ -28,3 +28,11 @@
 - Direct `effect/unstable/rpc` usage belongs in `packages/devtools-protocol/src/Rpc.ts`; downstream packages should consume Typed protocol exports.
 - Use `RpcTest.makeClient` with `TypedDevtoolsRpcGroup.toLayer(...)` for host-neutral in-process RPC verification.
 - Protocol fixtures should use exported id constructors and `satisfies` against schema-derived types instead of duplicating message shapes.
+
+### T4
+
+- Compiler DevTools facts can carry rich compiler-only fields, but cross-boundary payloads must use the protocol-safe `ComponentSummary` shape.
+- Use `TemplateModuleTemplate` evidence from `analyzeTemplateModule` when source spans or expression mapping are needed.
+- Match `transformTemplateModule` for node-part effective runtime paths; template source ids should reflect the runtime anchor path, not only parser part paths.
+- Fallback RefSubject ids must include component scope (`moduleId#exportName#localName`) to avoid local-name collisions.
+- Sparse template part ids should include kind, optional name, path, and nested value indexes; static-only `templateHash#path#static` is not unique enough.

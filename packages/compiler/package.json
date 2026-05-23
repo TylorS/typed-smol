@@ -28,6 +28,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@typed/devtools-protocol": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/template": "workspace:*",
     "@typed/virtual-modules": "workspace:*",

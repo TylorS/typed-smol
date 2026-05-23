@@ -248,6 +248,34 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar subagent review for unstable RPC API usage, fixture shape reuse, and type inference before commit.
 
+### T4 - Compiler Component DevTools Facts
+
+- requirement_links: FR-12, FR-17, FR-41, FR-42, NFR-7, NFR-15, NFR-17, AC-3, AC-13.
+- write_set:
+  - `packages/compiler/src/devtools/componentFacts.ts`
+  - `packages/compiler/src/devtools/componentFacts.test.ts`
+  - `packages/compiler/src/index.ts`
+  - `packages/compiler/package.json`
+  - `packages/compiler/tsconfig.json`
+  - `pnpm-lock.yaml`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memory/*`
+- red_step:
+  - Add focused component fact tests importing the planned devtools module before implementation exists.
+  - Run `pnpm --filter @typed/compiler exec vitest run src/devtools/componentFacts.test.ts` and capture the missing-module failure.
+- green_step:
+  - Implement deterministic component fact planning that consumes existing compiler/template/HMR facts and protocol id constructors.
+  - Include stable component ids, module ids, source spans, template hash, template part paths, HMR boundary id, related RefSubject ids, and related Fx root ids.
+  - Add compiler dependency and project reference for `@typed/devtools-protocol`.
+- verification:
+  - `pnpm --filter @typed/compiler exec vitest run src/devtools/componentFacts.test.ts`
+  - `pnpm --filter @typed/compiler build`
+  - `rg -n "effect/unstable/rpc|chrome\\." packages/compiler/src/devtools packages/compiler/src/index.ts` must return no matches.
+  - `git diff --check -- packages/compiler package.json pnpm-lock.yaml .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for deterministic ids, source span/part mapping, protocol dependency boundaries, and staged-index hygiene before commit.
+
 ## Verification Matrix
 
 | scenario | required commands |
