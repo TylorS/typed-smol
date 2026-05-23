@@ -382,7 +382,9 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as TypedConfigModule from "typed:config";
       import * as Status from "./apis/status.js";
 
-      export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
+      const StatusRoute = Status.route;
+
+      export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: StatusRoute.pathSchema, query: StatusRoute.querySchema, success: Status.success, error: Status.error })));
       export const DependenciesLayer = Layer.empty;
       export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
@@ -555,7 +557,11 @@ export const handler = () => Effect.succeed({ ok: true });
       buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
     );
 
-    expect(sourceText).toContain('Int("commentId")).pathSchema');
+    expect(sourceText).toContain(
+      'const CommentsDeleteRoute = CommentsDeleteRouteRoute.Join(CommentsDeleteRouteRoute.Parse("/articles/:slug/comments"), CommentsDeleteRouteRoute.Int("commentId"));',
+    );
+    expect(sourceText).toContain("params: CommentsDeleteRoute.pathSchema");
+    expect(sourceText).toContain("query: CommentsDeleteRoute.querySchema");
     expect(sourceText).not.toContain(
       'Route.Parse("/articles/:slug/comments/:commentId").pathSchema',
     );
@@ -1139,7 +1145,9 @@ export const handler = (({ headers, query, body }) => {
       import * as TypedConfigModule from "typed:config";
       import * as Status from "./apis/status.js";
 
-      export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: Status.route.pathSchema, query: Status.route.querySchema, success: Status.success, error: Status.error })));
+      const StatusRoute = Status.route;
+
+      export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: StatusRoute.pathSchema, query: StatusRoute.querySchema, success: Status.success, error: Status.error })));
       export const DependenciesLayer = Layer.empty;
       export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
       export const OpenApi = OpenApiModule.fromApi(Api);
