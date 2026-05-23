@@ -28,10 +28,10 @@ export function register<S extends State>(
 
 export function showModal<S extends State>(
   state: RefSubject.RefSubject<S>,
-  event?: Event,
+  source?: Event | HTMLElement,
 ): Effect.Effect<S> {
   return Effect.gen(function* () {
-    rememberInvoker(state, event);
+    rememberInvoker(state, source);
     openElement(elements.get(state));
     return yield* RefSubject.update(state, (current) => ({ ...current, open: true }));
   });
@@ -39,9 +39,10 @@ export function showModal<S extends State>(
 
 export function close<S extends State>(state: RefSubject.RefSubject<S>): Effect.Effect<S> {
   return Effect.gen(function* () {
+    const invoker = invokers.get(state);
     closeElement(elements.get(state));
     const next = yield* RefSubject.update(state, (current) => ({ ...current, open: false }));
-    invokers.get(state)?.focus();
+    if (invoker) restoreFocus(invoker);
     return next;
   });
 }
@@ -50,8 +51,11 @@ export function syncClosed<S extends State>(state: RefSubject.RefSubject<S>): Ef
   return RefSubject.update(state, (current) => ({ ...current, open: false }));
 }
 
-function rememberInvoker<S extends State>(state: RefSubject.RefSubject<S>, event?: Event): void {
-  const target = event?.currentTarget ?? event?.target;
+function rememberInvoker<S extends State>(
+  state: RefSubject.RefSubject<S>,
+  source?: Event | HTMLElement,
+): void {
+  const target = source instanceof Event ? source.currentTarget ?? source.target : source;
   if (isFocusableElement(target)) {
     invokers.set(state, target);
     return;
@@ -79,6 +83,14 @@ function closeElement(element: DialogElement | undefined): void {
   }
 
   element.removeAttribute("open");
+}
+
+function restoreFocus(element: HTMLElement): void {
+  element.focus();
+
+  const window = element.ownerDocument?.defaultView;
+  window?.requestAnimationFrame(() => element.focus());
+  window?.setTimeout(() => element.focus(), 0);
 }
 
 function isFocusableElement(value: EventTarget | null | undefined): value is HTMLElement {

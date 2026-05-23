@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import * as Dom from "./Dom.js";
 import * as NativeDialog from "./NativeDialog.js";
 import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
@@ -33,7 +34,7 @@ export function close(state: RefSubject.RefSubject<State>): Effect.Effect<State>
   return NativeDialog.close(state);
 }
 
-export interface TriggerOptions {
+export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly controls?: OptionalString;
   readonly content: AnyContent;
@@ -41,8 +42,22 @@ export interface TriggerOptions {
 
 export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
-  const onClick = EventHandler.make((event: MouseEvent) => NativeDialog.showModal(options.state, event));
+  const onClick = EventHandler.make((event: MouseEvent) =>
+    NativeDialog.showModal(
+      options.state,
+      (event.currentTarget ?? event.target) as HTMLButtonElement,
+    ),
+  );
+  const props = {
+    type: "button",
+    "aria-haspopup": "dialog",
+    "aria-expanded": open,
+    "aria-controls": options.controls,
+    ".data": { open },
+    onclick: onClick,
+  } as const;
 
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<button
     type="button"
     aria-haspopup="dialog"
@@ -55,21 +70,23 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
   </button>`;
 }
 
-export interface CloseOptions {
+export interface CloseOptions extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
 }
 
 export function Close<const Opts extends CloseOptions>(options: Opts): Component<Opts> {
   const onClick = EventHandler.make(() => close(options.state));
+  const props = { type: "button", onclick: onClick } as const;
 
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
 }
 
 export const Dismiss = Close;
 export const Disclosure = Trigger;
 
-export interface ContentOptions {
+export interface ContentOptions extends Dom.HostOptions<HTMLDialogElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly id?: OptionalString;
   readonly label: RequiredString;
@@ -79,7 +96,16 @@ export interface ContentOptions {
 export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const open = dataOpen(options.state);
   const onClose = EventHandler.make(() => NativeDialog.syncClosed(options.state));
+  const props = {
+    id: options.id,
+    "aria-label": options.label,
+    ".data": { open },
+    onclose: onClose,
+    oncancel: onClose,
+    ref: NativeDialog.register(options.state),
+  } as const;
 
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<dialog
     id=${options.id}
     aria-label=${options.label}

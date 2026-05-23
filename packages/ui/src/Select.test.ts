@@ -197,6 +197,52 @@ describe("typed/ui/Select", () => {
 
       expect(yield* state).toMatchObject({ activeId: "published", value: "draft" });
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves active option with typeahead text", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Select.makeState<string>({
+        id: "status-select",
+        value: "draft",
+        activeId: "draft",
+      });
+      yield* render(
+        Select.Content({
+          state,
+          items: [
+            { id: "draft", value: "draft", textValue: "Draft" },
+            { id: "published", value: "published", textValue: "Published" },
+          ],
+          content: "Options",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=listbox]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "p", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect(yield* state).toMatchObject({ activeId: "published", value: "draft" });
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("participates in native forms through a hidden input", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const form = window.document.createElement("form");
+      window.document.body.append(form);
+      const state = yield* Select.makeState<string>({
+        id: "status-select",
+        value: "published",
+      });
+
+      yield* render(
+        Select.HiddenInput({ state, name: "status" }),
+        form,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      expect(new window.FormData(form).get("status")).toBe("published");
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

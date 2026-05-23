@@ -7,7 +7,7 @@ export interface State {
 }
 
 interface ToggleEventLike extends Event {
-  readonly newState?: "open" | "closed";
+  readonly newState?: string;
 }
 
 type PopoverElement = HTMLElement;

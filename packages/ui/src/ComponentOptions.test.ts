@@ -187,6 +187,23 @@ describe("typed/ui component option inference", () => {
     // @ts-expect-error missing is not a field in the backing form state
     Form.Error({ state: form, name: "missing" });
   });
+
+  it("limits form push and remove to array field names", () => {
+    const form = {} as RefSubject.RefSubject<
+      Form.State<{
+        readonly email: string;
+        readonly tags: readonly string[];
+      }>
+    >;
+
+    Form.Push({ state: form, name: "tags", value: "typed", content: "Add" });
+    Form.Remove({ state: form, name: "tags", index: 0, content: "Remove" });
+
+    // @ts-expect-error email is not an array field
+    Form.Push({ state: form, name: "email", value: "typed", content: "Add" });
+    // @ts-expect-error email is not an array field
+    Form.Remove({ state: form, name: "email", index: 0, content: "Remove" });
+  });
 });
 
 function maybeOptionError<A>(value: A): Effect.Effect<A, OptionError> {

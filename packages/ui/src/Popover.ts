@@ -1,14 +1,18 @@
 import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
+import * as Stream from "effect/Stream";
 import { RefSubject } from "@typed/fx";
+import * as FxRuntime from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
-import type { Component, Content } from "./Reactive.js";
+import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
-type OptionalString = string | undefined;
+type OptionalString = ReactiveValue<string | undefined, any, any>;
 
 export interface State {
   readonly id: string;
@@ -31,7 +35,7 @@ export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Eff
   return NativePopover.setOpen(state, open);
 }
 
-export interface TriggerOptions {
+export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
 }
@@ -39,7 +43,15 @@ export interface TriggerOptions {
 export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
+  const props = {
+    type: "button",
+    popovertarget: id,
+    popovertargetaction: "toggle",
+    "aria-expanded": open,
+    ".data": { open },
+  } as const;
 
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<button
     type="button"
     popovertarget=${id}
@@ -53,7 +65,7 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
 
 export const Disclosure = Trigger;
 
-export interface AnchorOptions {
+export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
   readonly anchorName?: OptionalString;
@@ -61,12 +73,13 @@ export interface AnchorOptions {
 
 export function Anchor<const Opts extends AnchorOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
-  const style =
-    options.anchorName === undefined ? undefined : `anchor-name: ${options.anchorName};`;
+  const style = anchorStyleValue(options.anchorName);
+  const props = { popovertarget: id, style } as const;
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<span popovertarget=${id} style=${style}>${options.content}</span>`;
 }
 
-export interface ContentOptions {
+export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
   readonly positionAnchor?: OptionalString;
@@ -77,18 +90,29 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
-  const style = positionStyle(options.positionAnchor, options.positionArea);
+  const style = positionStyleValue(options.positionAnchor, options.positionArea);
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     NativePopover.syncToggle(options.state, event),
   );
+  const props = {
+    id,
+    popover: mode,
+    style,
+    ".data": { open, mode },
+    "data-position-anchor": firstOptionalString(options.positionAnchor),
+    "data-position-area": firstOptionalString(options.positionArea),
+    ontoggle: onToggle,
+    ref: NativePopover.register(options.state),
+  } as const;
 
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<div
     id=${id}
     popover=${mode}
     style=${style}
     .data=${{ open, mode }}
-    data-position-anchor=${options.positionAnchor}
-    data-position-area=${options.positionArea}
+    data-position-anchor=${firstOptionalString(options.positionAnchor)}
+    data-position-area=${firstOptionalString(options.positionArea)}
     ontoggle=${onToggle}
     ref=${NativePopover.register(options.state)}
   >
@@ -99,12 +123,23 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
 export const Popover = Content;
 
 export function Dismiss<
-  const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
+  const Opts extends {
+    readonly state: RefSubject.RefSubject<State>;
+    readonly content: AnyContent;
+  } & Dom.HostOptions<HTMLButtonElement>,
 >(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),
   );
+  const props = {
+    type: "button",
+    popovertarget: id,
+    popovertargetaction: "hide",
+    onclick: onClick,
+  } as const;
+
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<button
     type="button"
     popovertarget=${id}
@@ -137,7 +172,7 @@ export function Description<
 }
 
 interface ToggleEventLike extends Event {
-  readonly newState?: "open" | "closed";
+  readonly newState?: string;
 }
 
 function dataOpen(state: RefSubject.RefSubject<State>) {
@@ -152,10 +187,49 @@ function dataMode(state: RefSubject.RefSubject<State>) {
   );
 }
 
-function positionStyle(
-  positionAnchor: OptionalString,
-  positionArea: OptionalString,
+function anchorStyle(anchorName: string | undefined): string | undefined {
+  return anchorName === undefined ? undefined : `anchor-name: ${anchorName};`;
+}
+
+function anchorStyleValue(value: OptionalString | undefined): OptionalString | undefined {
+  if (value === undefined) return undefined;
+  if (Effect.isEffect(value)) return Effect.map(value, anchorStyle);
+  if (Stream.isStream(value)) return Stream.map(value, anchorStyle);
+  if (FxRuntime.isFx(value)) return FxRuntime.map(value, anchorStyle);
+  return anchorStyle(value);
+}
+
+function positionStyleValue(
+  positionAnchor: OptionalString | undefined,
+  positionArea: OptionalString | undefined,
 ): OptionalString | undefined {
+  if (positionAnchor === undefined && positionArea === undefined) return undefined;
+
+  return Effect.all([firstOptionalString(positionAnchor), firstOptionalString(positionArea)]).pipe(
+    Effect.map(([anchor, area]) => positionStyle(anchor, area)),
+  );
+}
+
+function firstOptionalString(
+  value: OptionalString | undefined,
+): Effect.Effect<string | undefined, any, any> {
+  if (value === undefined) return Effect.succeed(undefined);
+  if (Effect.isEffect(value)) return value;
+  if (Stream.isStream(value)) return Stream.runHead(value).pipe(Effect.map(Option.getOrUndefined));
+  if (FxRuntime.isFx(value)) {
+    return value.pipe(
+      FxRuntime.collectUpTo(1),
+      Effect.map((values) => values[0]),
+    );
+  }
+
+  return Effect.succeed(value);
+}
+
+function positionStyle(
+  positionAnchor: string | undefined,
+  positionArea: string | undefined,
+): string | undefined {
   if (positionAnchor === undefined && positionArea === undefined) return undefined;
   const anchorStyle = positionAnchor === undefined ? "" : `position-anchor: ${positionAnchor};`;
   const areaStyle = positionArea === undefined ? "" : ` position-area: ${positionArea};`;

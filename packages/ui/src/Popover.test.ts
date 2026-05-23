@@ -190,6 +190,36 @@ describe("typed/ui/Popover", () => {
       assert.strictEqual(content.dataset.positionAnchor, "--menu-anchor");
       assert.strictEqual(content.dataset.positionArea, "bottom span-right");
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("updates anchor-positioning attributes from renderable values", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Popover.makeState({
+        id: "menu-popover",
+        open: false,
+        mode: "auto",
+      });
+      const anchorName = yield* Effect.succeed(Fx.succeed("--menu-anchor"));
+      const positionAnchor = yield* Effect.succeed(Fx.succeed("--menu-anchor"));
+      const [anchor] = yield* render(
+        Popover.Anchor({ state, content: "Anchor", anchorName }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      const [content] = yield* render(
+        Popover.Content({
+          state,
+          content: "Menu",
+          positionAnchor,
+          positionArea: Fx.succeed("bottom"),
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      assert.strictEqual(anchor.getAttribute("style"), "anchor-name: --menu-anchor;");
+      assert.strictEqual(content.getAttribute("style"), "position-anchor: --menu-anchor; position-area: bottom;");
+      assert.strictEqual(content.dataset.positionAnchor, "--menu-anchor");
+      assert.strictEqual(content.dataset.positionArea, "bottom");
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

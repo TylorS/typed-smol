@@ -1,7 +1,12 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { assert, describe, expectTypeOf, it } from "vitest";
+import * as Context from "effect/Context";
 import type { Effect } from "effect";
-import type { EventHandler, Renderable } from "@typed/template";
+import * as EffectRuntime from "effect/Effect";
+import { EventHandler, type Renderable } from "@typed/template";
+import { Fx } from "@typed/fx";
 import type * as Dom from "./Dom.js";
+import * as DomRuntime from "./Dom.js";
+import * as Button from "./Button.js";
 
 describe("typed/ui/Dom", () => {
   it("maps writable DOM properties to renderable property options", () => {
@@ -40,7 +45,59 @@ describe("typed/ui/Dom", () => {
       readonly disabled?: Renderable<boolean, any, any>;
     }>();
   });
+
+  it("chains event handlers with user-first default-prevented semantics", () =>
+    EffectRuntime.gen(function* () {
+      const calls: string[] = [];
+      const user = EventHandler.make((event: Event) => {
+        calls.push("user");
+        event.preventDefault();
+      });
+      const internal = EventHandler.make(() => {
+        calls.push("internal");
+      });
+      const event = new Event("click", { cancelable: true });
+
+      yield* DomRuntime.chainEvent(user, internal)!.handler(event);
+
+      assert.deepStrictEqual(calls, ["user"]);
+    }).pipe(EffectRuntime.runPromise));
+
+  it("composes refs with user ref before internal ref", () =>
+    EffectRuntime.gen(function* () {
+      const calls: string[] = [];
+      const element = {} as HTMLButtonElement;
+      const ref = DomRuntime.composeRefs<HTMLButtonElement>(
+        () => {
+          calls.push("user");
+        },
+        () => {
+          calls.push("internal");
+        },
+      );
+
+      yield* ref(element);
+
+      assert.deepStrictEqual(calls, ["user", "internal"]);
+    }).pipe(EffectRuntime.runPromise));
+
+  it("adds host renderer options to element options", () => {
+    expectTypeOf<DomRuntime.HostOptions<HTMLButtonElement>>().toMatchTypeOf<{
+      readonly host?: unknown;
+    }>();
+  });
+
+  it("includes host renderer services in component options", () => {
+    const button = Button.Button({
+      content: "Save",
+      host: () => EffectRuntime.flatMap(HostService, () => EffectRuntime.succeed("hosted")),
+    });
+
+    expectTypeOf<Fx.Services<typeof button>>().toExtend<HostService>();
+  });
 });
+
+class HostService extends Context.Service<HostService, {}>()("typed/ui/test/HostService", {}) {}
 
 // @ts-expect-error readonly DOM properties are intentionally not accepted as property options
 const readonlyProperty: Dom.ElementProperties<HTMLAnchorElement> = { attributes: null };

@@ -32,6 +32,11 @@ export interface KeyboardEventLike {
   preventDefault?: () => void;
 }
 
+export interface TypeaheadBuffer {
+  readonly value: string;
+  readonly updatedAt: number;
+}
+
 export function makeState(
   initial: InitialState = {},
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -114,6 +119,26 @@ export function typeahead<Item extends Collection.Item>(
   );
 
   return item?.id ?? null;
+}
+
+export function typeaheadKey(event: {
+  readonly key: string;
+  readonly altKey?: boolean;
+  readonly ctrlKey?: boolean;
+  readonly metaKey?: boolean;
+}): string | null {
+  if (event.altKey || event.ctrlKey || event.metaKey) return null;
+  return event.key.length === 1 ? event.key : null;
+}
+
+export function updateTypeaheadBuffer(
+  buffer: TypeaheadBuffer,
+  key: string,
+  now: number,
+  timeout = 500,
+): TypeaheadBuffer {
+  const value = now - buffer.updatedAt > timeout ? key : buffer.value + key;
+  return { value, updatedAt: now };
 }
 
 function nextActiveId<Value>(

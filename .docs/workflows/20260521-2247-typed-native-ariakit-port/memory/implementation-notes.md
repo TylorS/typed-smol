@@ -18,3 +18,7 @@
 - Popover exposes CSS anchor-positioning through `anchorName`, `positionAnchor`, and `positionArea` attributes without adding a JavaScript positioning engine.
 - Combobox is now native-popover-backed with input `aria-controls`, active item movement, Enter selection, and Escape close.
 - Form field controls must keep `name` keyed to the backing `State<Values>` object.
+- Host-first composition should use `Dom.HostOptions<Element>`: internal props/content are passed to caller hosts, while built-in defaults can remain inline templates when spread setup would alter reactive render behavior.
+- `Dom.chainEvent` runs caller event handlers first and skips internal handlers when `defaultPrevented`; `Dom.composeRefs` runs caller refs before internal startup/registration refs.
+- Form `Push`/`Remove` are constrained to array-valued field names and update the backing `RefSubject` directly.
+- Native dialog invokers should be captured as elements synchronously before returning an Effect from event handlers; event `currentTarget` can be cleared before deferred Effect work observes it.

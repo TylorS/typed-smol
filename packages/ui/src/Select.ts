@@ -7,6 +7,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
+import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
@@ -101,7 +102,8 @@ export function move<Value extends string>(
   });
 }
 
-export interface TriggerOptions<Value extends string = string> {
+export interface TriggerOptions<Value extends string = string>
+  extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly content: AnyContent;
 }
@@ -109,7 +111,16 @@ export interface TriggerOptions<Value extends string = string> {
 export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
+  const props = {
+    type: "button",
+    popovertarget: id,
+    popovertargetaction: "toggle",
+    "aria-haspopup": "listbox",
+    "aria-expanded": open,
+    ".data": { open },
+  } as const;
 
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<button
     type="button"
     popovertarget=${id}
@@ -124,7 +135,7 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
 
 export const Select = Trigger;
 
-export interface ContentOptions<Value extends string = string> {
+export interface ContentOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly content: AnyContent;
   readonly items?: readonly Item<Value>[];
@@ -149,6 +160,20 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
       : EventHandler.make((event: KeyboardEvent) =>
           Effect.gen(function* () {
             const current = yield* options.state;
+            const typeaheadKey = Composite.typeaheadKey(event);
+            const typeaheadId =
+              typeaheadKey &&
+              Composite.typeahead(items, typeaheadKey, (item) => item.textValue ?? item.value);
+
+            if (typeaheadId) {
+              event.preventDefault();
+              yield* RefSubject.update(options.state, (value) => ({
+                ...value,
+                activeId: typeaheadId,
+              }));
+              return;
+            }
+
             const direction = Composite.keyMove(event, current);
             if (!direction) return;
 
@@ -156,7 +181,20 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
             yield* move(options.state, items, direction);
           }),
         );
+  const props = {
+    id,
+    role: "listbox",
+    popover: mode,
+    "aria-label": options.label,
+    "aria-orientation": orientation,
+    "aria-activedescendant": activeDescendant,
+    ".data": { open },
+    ontoggle: onToggle,
+    onkeydown: onKeyDown,
+    ref: NativePopover.register(options.state),
+  } as const;
 
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<div
     id=${id}
     role="listbox"
@@ -176,7 +214,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
 export const Popover = Content;
 export const List = Content;
 
-export interface OptionOptions<Value extends string = string> {
+export interface OptionOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly id: RequiredString;
   readonly value: ReactiveValue<Value, any, any>;
@@ -217,6 +255,7 @@ export function Option<const Opts extends OptionOptions>(options: Opts): Compone
       onclick: onClick,
     } as const;
 
+    if (options.host) return options.host(props, options.content) as Component<Opts>;
     return html`<div ...${props}>${options.content}</div>`;
   });
 }
@@ -233,6 +272,30 @@ export function Value<const Opts extends { readonly state: RefSubject.RefSubject
   options: Opts,
 ): Component<Opts> {
   return html`${RefSubject.map(options.state, (state) => state.value ?? "")}`;
+}
+
+export interface HiddenInputOptions<Value extends string = string>
+  extends Dom.HostOptions<HTMLInputElement> {
+  readonly state: RefSubject.RefSubject<State<Value>>;
+  readonly name: RequiredString;
+  readonly form?: ReactiveValue<string | undefined, any, any>;
+  readonly disabled?: OptionalBoolean;
+  readonly required?: OptionalBoolean;
+}
+
+export function HiddenInput<const Opts extends HiddenInputOptions>(options: Opts): Component<Opts> {
+  const value = RefSubject.map(options.state, (state) => state.value ?? "");
+  const props = {
+    type: "hidden",
+    name: options.name,
+    form: options.form,
+    ".value": value,
+    "?disabled": options.disabled ?? false,
+    "?required": options.required ?? false,
+  } as const;
+
+  if (options.host) return options.host(props, "") as Component<Opts>;
+  return html`<input ...${props} />`;
 }
 
 export function Arrow<const Opts extends { readonly content?: AnyContent }>(
@@ -300,7 +363,7 @@ export function Separator(): Component<{}> {
 }
 
 interface ToggleEventLike extends Event {
-  readonly newState?: "open" | "closed";
+  readonly newState?: string;
 }
 
 function dataOpen<Value extends string>(state: RefSubject.RefSubject<State<Value>>) {

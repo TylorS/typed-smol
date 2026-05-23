@@ -1,7 +1,7 @@
-import type * as Effect from "effect/Effect";
-import type * as Stream from "effect/Stream";
-import type { Fx } from "@typed/fx/Fx";
-import type { EventHandler, Renderable } from "@typed/template";
+import * as Effect from "effect/Effect";
+import * as Stream from "effect/Stream";
+import { drain, isFx, type Fx } from "@typed/fx/Fx";
+import { EventHandler, type Renderable } from "@typed/template";
 
 export type EventHandlerProperty = `on${string}`;
 
@@ -46,6 +46,18 @@ export type ElementOptions<Element extends globalThis.Element> = ElementEventHan
   ElementRef<Element> &
   ElementProperties<Element>;
 
+export type HostProps<Element extends globalThis.Element> = Readonly<Record<string, unknown>> &
+  Partial<ElementRef<Element>>;
+
+export type HostRenderer<Element extends globalThis.Element, A = unknown, E = never, R = never> = (
+  props: HostProps<Element>,
+  content: Renderable<unknown, E, R>,
+) => Fx<A, E, R> | Effect.Effect<A, E, R>;
+
+export interface HostOptions<Element extends globalThis.Element> {
+  readonly host?: HostRenderer<Element, any, any, any>;
+}
+
 export type ElementByTagName = HTMLElementTagNameMap &
   SVGElementTagNameMap &
   MathMLElementTagNameMap;
@@ -55,3 +67,56 @@ export type OptionsByTagName = {
 };
 
 export type OptionsForTag<Tag extends keyof ElementByTagName> = OptionsByTagName[Tag];
+
+export type EventHandlerInput<Ev extends Event = Event, E = never, R = never> =
+  | Effect.Effect<unknown, E, R>
+  | EventHandler.EventHandler<Ev, E, R>
+  | null
+  | undefined;
+
+export function chainEvent<Ev extends Event, E1 = never, R1 = never, E2 = never, R2 = never>(
+  user: EventHandlerInput<Ev, E1, R1>,
+  internal: EventHandlerInput<Ev, E2, R2>,
+): EventHandler.EventHandler<Ev, E1 | E2, R1 | R2> | undefined {
+  const userHandler = toEventHandler(user);
+  const internalHandler = toEventHandler(internal);
+  if (!userHandler && !internalHandler) return undefined;
+
+  return EventHandler.make((event: Ev) =>
+    Effect.gen(function* () {
+      if (userHandler) yield* userHandler.handler(event);
+      if (!event.defaultPrevented && internalHandler) yield* internalHandler.handler(event);
+    }),
+  );
+}
+
+export function composeRefs<Element extends globalThis.Element, E1 = never, R1 = never>(
+  user: ElementRef<Element>["ref"] | null | undefined,
+  internal?: ElementRef<Element>["ref"] | null,
+): ((element: Element) => Effect.Effect<void, E1, R1>) | undefined {
+  if (!user && !internal) return undefined;
+
+  return (element) =>
+    Effect.gen(function* () {
+      yield* runRef(user, element);
+      yield* runRef(internal, element);
+    });
+}
+
+function toEventHandler<Ev extends Event, E, R>(
+  handler: EventHandlerInput<Ev, E, R>,
+): EventHandler.EventHandler<Ev, E, R> | undefined {
+  return handler == null ? undefined : EventHandler.fromEffectOrEventHandler(handler);
+}
+
+function runRef<Element extends globalThis.Element>(
+  ref: ElementRef<Element>["ref"] | null | undefined,
+  element: Element,
+): Effect.Effect<void, any, any> {
+  if (!ref) return Effect.void;
+  const result = ref(element);
+  if (Effect.isEffect(result)) return Effect.asVoid(result);
+  if (Stream.isStream(result)) return Stream.runDrain(result);
+  if (isFx(result)) return drain(result);
+  return Effect.void;
+}

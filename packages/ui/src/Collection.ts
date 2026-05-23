@@ -7,6 +7,7 @@ export interface Item<Value = unknown> {
   readonly element?: globalThis.Element;
   readonly disabled?: boolean;
   readonly value?: Value;
+  readonly textValue?: string;
 }
 
 export type State<Value = unknown> = readonly Item<Value>[];
