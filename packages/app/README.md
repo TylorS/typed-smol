@@ -146,7 +146,7 @@ export default {
 import { Matcher } from "typed:router?dir=./routes";
 
 // Import generated API client
-import { Client } from "typed:api?dir=./endpoints";
+import { Client, makeClient, makeClientWith, makeUrlBuilder } from "typed:api?dir=./endpoints";
 
 // Define typed handler
 import { ApiHandler } from "@typed/app";

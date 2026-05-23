@@ -10,7 +10,6 @@ import * as HttpRouter from "effect/unstable/http/HttpRouter";
 import { inferStaticAssetRoot } from "./internal/staticAssets.js";
 import {
   resolveTypedHttpServerSsl,
-  type TypedHttpServerSsl,
   type TypedHttpServerSslInput,
 } from "./internal/ssl.js";
 

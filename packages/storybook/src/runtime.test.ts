@@ -4,7 +4,7 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { html } from "@typed/template";
-import { defineTypedStoryRuntime, typedStorybookFetch } from "./index.js";
+import { defineTypedStoryRuntime } from "./index.js";
 import { renderToCanvas } from "./preview.js";
 import type { RenderContext, TypedRenderer } from "./types.js";
 
@@ -65,23 +65,6 @@ describe("Typed story runtime harness", () => {
     expectTypeOf(runtime).not.toHaveProperty("url");
   });
 
-  it("uses proxy metadata for Storybook API requests", async () => {
-    const runtime = defineTypedStoryRuntime({
-      path: "/server-backed",
-      serverOrigin: "http://127.0.0.1:6174",
-      proxyPath: "/__typed_storybook_api",
-    });
-
-    const fetch = vi.fn(() => Promise.resolve(new Response("ok")));
-
-    await typedStorybookFetch("/api/message", { typed: runtime }, { fetch });
-
-    expect(runtime.serverOrigin).toBe("http://127.0.0.1:6174");
-    expect(fetch).toHaveBeenCalledWith(
-      "http://127.0.0.1:6174/__typed_storybook_api/api/message",
-      undefined,
-    );
-  });
 });
 
 function createRoot(): HTMLElement {

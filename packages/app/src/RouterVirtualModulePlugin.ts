@@ -17,7 +17,6 @@ import {
   dependencyLayerType,
   TypeModuleSource,
   typeTuple,
-  typeUnion,
 } from "./internal/typeModuleSource.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type {

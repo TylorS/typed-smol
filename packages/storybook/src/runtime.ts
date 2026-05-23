@@ -49,21 +49,6 @@ export function runWithTypedStoryRuntime<A, E>(
   return Effect.runPromise(provided as Effect.Effect<A, E | unknown, never>);
 }
 
-export interface TypedStorybookFetchOptions {
-  readonly fetch?: (input: string, init?: RequestInit) => Promise<Response>;
-}
-
-export function typedStorybookFetch(
-  path: `/${string}`,
-  parameters: Record<string, unknown> | undefined,
-  options: TypedStorybookFetchOptions = {},
-  init?: RequestInit,
-): Promise<Response> {
-  const runtime = typedStoryRuntimeFromParameters(parameters);
-  const fetchImpl = options.fetch ?? globalThis.fetch;
-  return fetchImpl(storybookApiPath(path, runtime), init);
-}
-
 function isTypedStoryRuntimeOptions(value: unknown): value is TypedStoryRuntimeOptions {
   return value !== null && typeof value === "object";
 }
@@ -97,10 +82,4 @@ function isLayerGroup(
 
 function toLocalUrl(path: `/${string}`): string {
   return `http://localhost${path}`;
-}
-
-function storybookApiPath(path: `/${string}`, runtime: TypedStoryRuntimeOptions): string {
-  const proxyPath = `${runtime.proxyPath ?? "/__typed_storybook_api"}${path}`;
-  if (runtime.serverOrigin === undefined) return proxyPath;
-  return new URL(proxyPath, runtime.serverOrigin).href;
 }

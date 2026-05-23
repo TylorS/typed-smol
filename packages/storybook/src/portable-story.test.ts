@@ -27,7 +27,7 @@ describe("portable server-backed stories", () => {
     expect(canvasElement.innerHTML).toContain("Generated route dependency");
   });
 
-  it("wires API stories through the Storybook proxy helper", async () => {
+  it("wires API stories through the generated typed API client", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -44,10 +44,8 @@ describe("portable server-backed stories", () => {
 
     await Story.run({ canvasElement });
 
-    expect(fetch).toHaveBeenCalledWith(
-      "http://127.0.0.1:6173/__typed_storybook_api/message",
-      undefined,
-    );
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetchRequestUrl()).toBe("http://127.0.0.1:6173/__typed_storybook_api/message");
     expect(canvasElement.innerHTML).toContain("Fetched through Storybook proxy");
   });
 
@@ -65,4 +63,12 @@ function createRoot(): HTMLElement {
   return (new Window() as unknown as globalThis.Window & typeof globalThis).document.createElement(
     "div",
   );
+}
+
+function fetchRequestUrl(): string {
+  const input = vi.mocked(fetch).mock.calls[0]?.[0];
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  if (input instanceof Request) return input.url;
+  throw new TypeError("Expected fetch to be called with a request");
 }

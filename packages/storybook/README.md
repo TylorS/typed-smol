@@ -89,12 +89,18 @@ export default defineTypedStorybookConfig({
 });
 ```
 
-Stories should call APIs through the same-origin helper:
+Stories should call APIs through generated `typed:api` clients:
 
 ```ts
-import { typedStorybookFetch } from "@typed/storybook";
+import * as Effect from "effect/Effect";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import { apiBaseUrl } from "typed:storybook/runtime?routes=./routes&api=./api";
+import { makeClient } from "typed:api?dir=./api&mode=client";
 
-const response = await typedStorybookFetch("/message", context.parameters);
+const message = Effect.gen(function* () {
+  const client = yield* makeClient({ baseUrl: apiBaseUrl });
+  return yield* client.root.message({ params: {}, query: {} });
+}).pipe(Effect.provide(FetchHttpClient.layer));
 ```
 
 ## Portable Stories

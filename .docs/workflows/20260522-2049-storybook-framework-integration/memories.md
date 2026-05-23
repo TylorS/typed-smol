@@ -28,3 +28,4 @@
 - T-10 browser Storybook runtime imports API VMs with `mode=client`; real API server behavior belongs to the preset dev plugin, not browser runtime layers.
 - T-10 Storybook v10 may include the same custom framework preview annotation twice; `previewAnnotations` uses a path plus query suffix to avoid duplicate Rolldown binding names.
 - T-10 `@storybook/addon-vitest` works for the custom Typed renderer when `test:stories` starts the fixture Storybook server first; Vitest 4 uses `test.projects`, not `defineWorkspace`.
+- T-11 `typedStorybookFetch` was removed; Storybook API stories now use generated `typed:api` client constructors (`makeClient`, `makeClientWith`, `makeUrlBuilder`) plus `apiBaseUrl` from `typed:storybook/runtime`.

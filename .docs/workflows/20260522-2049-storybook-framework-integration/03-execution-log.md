@@ -210,7 +210,7 @@ Execution started after approval of `plan.md`.
   - Dev server plugin resolves `typed:server?...` from the Storybook/Vite root importer so route/API paths can use VM-safe `./src/routes` and `./src/api`.
 - context_updates:
   - Added `packages/storybook/fixtures/public-beta` with route, API, dependency, and story fixtures outside the package publish allowlist.
-  - Added public helper `typedStorybookFetch()` and HTTP-server framework options.
+  - Added HTTP-server framework options and later replaced the Storybook fetch helper with generated `typed:api` client constructors.
   - Added package scripts for static Storybook build, dev smoke, and addon story-test compatibility.
 - memory_updates:
   - Recorded public-beta fixture, HTTP proxy smoke, browser-safe API runtime import, and addon-vitest server lifecycle notes in `memories.md`.

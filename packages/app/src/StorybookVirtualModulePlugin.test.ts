@@ -39,6 +39,11 @@ describe("StorybookVirtualModulePlugin", () => {
     expect(source).toContain('path: "/dashboard"');
     expect(source).toContain('serverOrigin: "http://127.0.0.1:6174"');
     expect(source).toContain('proxyPath: "/__typed_storybook_api"');
+    expect(source).toContain('export const serverOrigin = "http://127.0.0.1:6174";');
+    expect(source).toContain('export const proxyPath = "/__typed_storybook_api";');
+    expect(source).toContain(
+      "export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;",
+    );
   });
 
   it("composes generated layers before story layers and leaves test layers last", () => {

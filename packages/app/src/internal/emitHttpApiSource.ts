@@ -1070,6 +1070,7 @@ function emitHttpApiClientSource(input: {
   const imports = new ClientImportBuilder(input.importerDir, input.targetDirectory);
   const importLines: string[] = [
     `import * as Route from "@typed/router";`,
+    `import type * as HttpClient from "effect/unstable/http/HttpClient";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
     `import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`,
     `import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";`,
@@ -1179,6 +1180,14 @@ ${renderRouteBindingDeclarations(routeBindings)}
 export const Api = ${apiExpr};
 export const OpenApi = OpenApiModule.fromApi(Api);
 export const Client = HttpApiClient.make(Api);
+export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>
+  HttpApiClient.make(Api, options);
+export const makeClientWith = <E, R>(
+  httpClient: HttpClient.HttpClient.With<E, R>,
+  options?: { readonly baseUrl?: URL | string },
+) => HttpApiClient.makeWith(Api, { ...options, httpClient });
+export const makeUrlBuilder = (options?: { readonly baseUrl?: URL | string }) =>
+  HttpApiClient.urlBuilder(Api, options);
 `;
 }
 
@@ -1302,7 +1311,7 @@ function renderAnnotatedApiExpression(
   generation: OpenApiGenerationConfig | undefined,
 ): string {
   const merged = {
-    ...(annotations ?? {}),
+    ...annotations,
     ...renderGenerationAnnotations(generation),
   };
   if (Object.keys(merged).length === 0) return apiExpression;

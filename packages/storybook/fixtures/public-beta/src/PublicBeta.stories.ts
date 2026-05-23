@@ -1,17 +1,15 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { html } from "@typed/template";
-import {
-  typedStorybookFetch,
-  type Meta,
-  type StoryContext,
-  type StoryObj,
-} from "@typed/storybook";
+import { type Meta, type StoryObj } from "@typed/storybook";
 import {
   Routes,
+  apiBaseUrl,
   makeStoryRuntime,
   parameters,
 } from "typed:storybook/runtime?routes=./routes&api=./api&path=/dashboard&serverOrigin=http%3A%2F%2F127.0.0.1%3A6173&proxyPath=%2F__typed_storybook_api";
+import { makeClient } from "typed:api?dir=./api&mode=client";
 import { ApiMessage } from "./api/_dependencies.js";
 
 const meta = {
@@ -27,12 +25,12 @@ export const RouteBacked = {
 } satisfies StoryObj;
 
 export const ApiBacked = {
-  render: (_args: object, context: StoryContext) =>
-    html`<output data-testid="api-message">${Effect.promise(async () => {
-      const response = await typedStorybookFetch("/message", context.parameters);
-      const body = (await response.json()) as { readonly message: string };
+  render: () =>
+    html`<output data-testid="api-message">${Effect.gen(function* () {
+      const client = yield* makeClient({ baseUrl: apiBaseUrl });
+      const body = yield* client.root.message({ params: {}, query: {} });
       return body.message;
-    })}</output>`,
+    }).pipe(Effect.provide(FetchHttpClient.layer))}</output>`,
 } satisfies StoryObj;
 
 export const ApiTestLayerOverride = {

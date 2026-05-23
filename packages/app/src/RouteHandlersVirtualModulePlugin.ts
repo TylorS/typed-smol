@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
 import type {
   TypeInfoFileSnapshot,

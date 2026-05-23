@@ -19,6 +19,16 @@ export default defineConfig({
               "pnpm exec storybook dev --config-dir fixtures/public-beta/.storybook --port 6173 --ci --no-open",
           }),
         ],
+        optimizeDeps: {
+          include: [
+            "effect/unstable/http/FetchHttpClient",
+            "effect/unstable/httpapi/HttpApi",
+            "effect/unstable/httpapi/HttpApiClient",
+            "effect/unstable/httpapi/HttpApiEndpoint",
+            "effect/unstable/httpapi/HttpApiGroup",
+            "effect/unstable/httpapi/OpenApi",
+          ],
+        },
         test: {
           name: "storybook",
           browser: {

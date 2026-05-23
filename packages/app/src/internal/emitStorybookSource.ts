@@ -49,6 +49,9 @@ function emitRuntimeBody(parsed: RuntimeId): string {
     `export const routeModules = [${routeModules.join(", ")}] as const;`,
     `export const apiModules = [${apiModules.join(", ")}] as const;`,
     "export const apiLayers = [] as const;",
+    `export const serverOrigin = ${jsonOrUndefined(parsed.serverOrigin)};`,
+    `export const proxyPath = ${jsonOrDefault(parsed.proxyPath, "/__typed_storybook_api")};`,
+    "export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;",
     `export const Routes = ${routeExpression(routeModules)};`,
     "export const DependenciesLayer = Layer.empty;",
     "const generatedLayers = [] as const;",
@@ -82,4 +85,8 @@ function routeExpression(routeModules: readonly string[]): string {
 
 function jsonOrUndefined(value: string | undefined): string {
   return value === undefined ? "undefined" : JSON.stringify(value);
+}
+
+function jsonOrDefault(value: string | undefined, fallback: string): string {
+  return JSON.stringify(value ?? fallback);
 }
