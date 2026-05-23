@@ -20,4 +20,5 @@
 - Redaction happens during serialization before values cross runtime or Chrome bridges.
 - Redaction must inspect property descriptors before reading values so sensitive accessors cannot execute.
 - Protocol numeric fields should use finite-number codecs; do not accept `NaN` or infinities at decode boundaries.
+- OTEL Typed correlation ids must use branded Typed id schemas, not raw strings.
 - HMR protocol facts must keep `template.optimized` separate from `stateful` eligibility or rejection reasons.

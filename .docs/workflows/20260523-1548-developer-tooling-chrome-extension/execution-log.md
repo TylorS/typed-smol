@@ -56,11 +56,15 @@
   - green: `pnpm exec oxlint packages/devtools-protocol/src` passed with 0 warnings and 0 errors.
   - green: `pnpm exec oxfmt --check packages/devtools-protocol/src/Ids.ts packages/devtools-protocol/src/Schemas.ts packages/devtools-protocol/src/Serialization.ts packages/devtools-protocol/src/Serialization.test.ts packages/devtools-protocol/src/typeInference.test.ts packages/devtools-protocol/src/index.ts` passed.
   - green: `git diff --check -- packages/devtools-protocol .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found non-finite numeric decode, unbranded OTEL correlation ids, and accessor redaction hazards.
+  - green: after review fixes, `pnpm --filter @typed/devtools-protocol test` passed with typecheck plus 3 Vitest files and 21 tests.
+  - green: after review fixes, `pnpm --filter @typed/devtools-protocol build` passed.
+  - green: after review fixes, host-neutral import/dependency grep and scoped `git diff --check` passed.
 - commit:
-  - pending
+  - `22606d0 feat(devtools): add protocol schemas and serialization`
 - deviations_or_replans:
   - Added `Ids.ts` to the T2 write set to quiet an `oxlint` control-regex warning discovered during protocol package lint verification.
-  - Recorded direct self-review evidence instead of spawning a sidecar subagent because the current tool policy only permits subagents when explicitly requested.
+  - Ran sidecar subagent review because the user explicitly requested subagents and frequent review.
 - context_updates:
   - Added active T2 detail to `plan.md`.
   - Added protocol schemas for ids, capabilities, handshake, runtime events, DOM binding, HMR status facts, and source Analyzer requests/results.
@@ -70,6 +74,7 @@
   - Use protocol decode helpers with `onExcessProperty: "error"` at cross-boundary decode sites.
   - HMR protocol facts keep template optimization separate from stateful-HMR eligibility or rejection reasons.
   - Redacted accessor properties must not invoke getters during serialization.
+  - OTEL Typed correlation ids must use branded Typed id schemas, not raw strings.
 
 ## Deferred Work
 
