@@ -84,3 +84,41 @@ Execution started after approval of `plan.md`.
   - Added `happy-dom` as a direct dev dependency because Storybook renderer tests construct a real DOM root.
 - memory_updates:
   - Recorded the baseline renderer lifecycle and no-harness boundary in `memories.md`.
+
+### Task
+
+- task_id: T-5
+- requirement_ids: FR-5, FR-6, FR-9, NFR-1, NFR-2, NFR-4, AC-4, AC-8
+- ts_scenarios: TS-4, TS-7
+- validation_evidence:
+  - RED: `pnpm --filter @typed/storybook test` failed because `defineTypedStoryRuntime` was not exported.
+  - GREEN: `pnpm --filter @typed/storybook test` passed.
+  - GREEN: `pnpm --filter @typed/storybook build` passed after moving runtime parameters to `storyContext.parameters`, matching Storybook's render context type.
+  - LINT: `pnpm exec oxlint packages/storybook` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - First harness boundary supports story-level Effect layers in `parameters.typed.layers`; route/request/API fixtures remain T-6.
+- context_updates:
+  - Runtime helper is exported from `@typed/storybook` main entrypoint.
+- memory_updates:
+  - Recorded `storyContext.parameters.typed` as the current runtime harness parameter location.
+
+### Task
+
+- task_id: T-6
+- requirement_ids: FR-7, FR-10, NFR-3, NFR-4, AC-4, AC-6, AC-10
+- ts_scenarios: TS-4, TS-5
+- validation_evidence:
+  - RED: `pnpm --filter @typed/storybook test` failed because `./fixtures/server-backed.stories.js` was missing.
+  - GREEN: `pnpm --filter @typed/storybook test` passed with the composed `ServerBacked` story running via Storybook `composeStory()` and `run()`.
+  - GREEN: `pnpm --filter @typed/storybook build` passed after widening `TypedStoryResult` for service-requiring Typed templates and using pipe-style `Effect.map` in the built fixture.
+  - LINT: `pnpm exec oxlint packages/storybook` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - The fixture proves server-side Effect service execution through runtime layers; route-handler and HttpApi-specific stories remain future hardening after this vertical path.
+- context_updates:
+  - Added `packages/storybook/src/fixtures/server-backed.stories.ts`.
+- memory_updates:
+  - Recorded portable-story `composeStory()`/`run()` coverage and fixture typing notes in `memories.md`.

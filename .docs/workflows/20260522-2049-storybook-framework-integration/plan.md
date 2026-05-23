@@ -69,6 +69,27 @@ Status: approved on 2026-05-22.
   3. Implement `renderToCanvas` through `@typed/app/runtime.mount`.
   4. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
 
+## Active Task Detail — T-5 Runtime Harness Boundary
+
+- status: completed
+- requirement_links: FR-5, FR-6, FR-9, NFR-1, NFR-2, NFR-4, AC-4, AC-8, TS-4, TS-7
+- substeps:
+  1. Add a failing runtime harness test where a story template reads an Effect service provided by story-level runtime layers.
+  2. Verify `pnpm --filter @typed/storybook test` fails because the author-facing runtime helper is missing.
+  3. Add `defineTypedStoryRuntime()` and apply `storyContext.parameters.typed.layers` during `renderToCanvas`.
+  4. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
+
+## Active Task Detail — T-6 Fixture And Portable Stories
+
+- status: completed
+- requirement_links: FR-7, FR-10, NFR-3, NFR-4, AC-4, AC-6, AC-10, TS-4, TS-5
+- substeps:
+  1. Add a failing portable-story test that imports a missing server-backed fixture story.
+  2. Verify `pnpm --filter @typed/storybook test` fails because the fixture story does not exist.
+  3. Add a minimal server-backed fixture story using `defineTypedStoryRuntime({ layers })`.
+  4. Run the composed story through Storybook `composeStory()` and `run()`.
+  5. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.
