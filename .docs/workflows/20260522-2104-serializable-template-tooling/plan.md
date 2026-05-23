@@ -74,11 +74,11 @@ Goal: Add extension points beneath existing `vmc` CLI behavior without breaking 
 
 Tasks:
 
-1. Add extension interfaces to `@typed/virtual-modules-compiler`.
-2. Thread extensions through normal compile, build mode, and watch mode.
-3. Add direct source-transform hook support in compiler host flow.
-4. Add extension diagnostic collection/reporting.
-5. Prove virtual modules still resolve with an extension installed.
+1. [completed] Add extension interfaces to `@typed/virtual-modules-compiler`.
+2. [completed] Thread extensions through normal compile, build mode, and watch mode.
+3. [completed] Add direct source-transform hook support in compiler host flow.
+4. [completed] Add extension diagnostic collection/reporting.
+5. [completed] Prove compile works with an extension installed while default no-extension behavior remains compatible.
 
 Traceability:
 

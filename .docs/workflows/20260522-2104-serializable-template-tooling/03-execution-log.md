@@ -28,3 +28,22 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
 ## Deferred Work
 
 - Route/template diagnostic migration is deferred until host-neutral diagnostic substrate is needed by dependent M5/M8 work.
+
+### Task M2 - Extensible `vmc` Framework Hooks
+
+- task_id: M2
+- requirement_ids: FR-04, FR-05, NFR-03, NFR-05
+- ts_scenarios: TS-05, TS-10 partial
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/virtual-modules-compiler test -- extensions` failed because extension transforms/diagnostics were ignored.
+  - green: `pnpm --filter @typed/virtual-modules-compiler test -- extensions` passed, 3 files / 20 tests.
+  - green: `pnpm --filter @typed/virtual-modules-compiler exec tsc --noEmit` passed.
+  - green: `pnpm --filter @typed/virtual-modules-compiler test` passed, 3 files / 20 tests.
+  - green: `git diff --check` for touched M2 files passed.
+- commit: pending
+- deviations_or_replans:
+  - First M2 slice focuses on compile/build/watch extension seams and compile-path tests. Full virtual-module compatibility suites remain required before closing M2.
+- context_updates: exported extension API from `@typed/virtual-modules-compiler`.
+- memory_updates:
+  - recorded vmc extension seam in `memory/episodes.md`.
+  - added vmc extension API shape as a promotion candidate.

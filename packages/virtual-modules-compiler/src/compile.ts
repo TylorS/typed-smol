@@ -7,6 +7,14 @@ import type {
 } from "@typed/virtual-modules";
 import { attachCompilerHostAdapter, ensureTypeTargetBootstrapFile } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
+import {
+  attachSourceTransformExtensions,
+  collectExtensionDiagnostics,
+  createProgramContext,
+  extensionTypeTargetSpecs,
+  runBeforeProgramCreate,
+  type VmcCompilerExtension,
+} from "./extensions.js";
 import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 
 export interface CompileParams {
@@ -19,6 +27,7 @@ export interface CompileParams {
   readonly reportDiagnostic: ts.DiagnosticReporter;
   /** Type target specs for structural assignability in TypeInfo API. From vmc.config when using loadResolver. */
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
+  readonly extensions?: readonly VmcCompilerExtension[];
 }
 
 /**
@@ -35,6 +44,7 @@ export function compile(params: CompileParams): number {
     pluginModules,
     reportDiagnostic,
     typeTargetSpecs,
+    extensions,
   } = params;
   const { options, fileNames, projectReferences } = commandLine;
   const configFileParsingDiagnostics = (
@@ -78,9 +88,10 @@ export function compile(params: CompileParams): number {
 
   const projectRoot = sys.getCurrentDirectory();
 
+  const effectiveTypeTargetSpecs = extensionTypeTargetSpecs(typeTargetSpecs, extensions);
   let effectiveRootNames = fileNames;
-  if (typeTargetSpecs && typeTargetSpecs.length > 0) {
-    const bootstrapPath = ensureTypeTargetBootstrapFile(projectRoot, typeTargetSpecs, {
+  if (effectiveTypeTargetSpecs && effectiveTypeTargetSpecs.length > 0) {
+    const bootstrapPath = ensureTypeTargetBootstrapFile(projectRoot, effectiveTypeTargetSpecs, {
       mkdirSync,
       writeFile: (path, content) => sys.writeFile(path, content),
     });
@@ -90,6 +101,15 @@ export function compile(params: CompileParams): number {
   }
 
   const host = ts.createCompilerHost(options);
+  const context = createProgramContext({
+    options,
+    projectReferences,
+    projectRoot,
+    rootNames: effectiveRootNames,
+    ts,
+  });
+  runBeforeProgramCreate(extensions, context);
+  attachSourceTransformExtensions({ ts, compilerHost: host, context, extensions, reportDiagnostic });
 
   const createTypeInfoApiSession = createLazyTypeInfoApiSession({
     ts,
@@ -101,7 +121,7 @@ export function compile(params: CompileParams): number {
         projectReferences,
         configFileParsingDiagnostics: allConfigErrors,
       }),
-    ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
+    ...(effectiveTypeTargetSpecs?.length ? { typeTargetSpecs: effectiveTypeTargetSpecs } : {}),
   });
   const artifactStoreFactory = createVmcArtifactStoreFactory({
     ts,
@@ -112,7 +132,7 @@ export function compile(params: CompileParams): number {
     pluginModules,
     projectRoot,
     rootNames: effectiveRootNames,
-    ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
+    ...(effectiveTypeTargetSpecs?.length ? { typeTargetSpecs: effectiveTypeTargetSpecs } : {}),
   });
 
   const adapter = attachCompilerHostAdapter({
@@ -137,7 +157,8 @@ export function compile(params: CompileParams): number {
 
     const preEmit = ts.getPreEmitDiagnostics(program);
     const emitResult = program.emit();
-    const allDiagnostics = [...preEmit, ...emitResult.diagnostics];
+    const extensionDiagnostics = collectExtensionDiagnostics(extensions, { ...context, program });
+    const allDiagnostics = [...preEmit, ...emitResult.diagnostics, ...extensionDiagnostics];
 
     for (const d of allDiagnostics) {
       reportDiagnostic(d);

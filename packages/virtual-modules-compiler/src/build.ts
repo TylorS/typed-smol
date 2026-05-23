@@ -9,6 +9,14 @@ import type {
 } from "@typed/virtual-modules";
 import { attachCompilerHostAdapter, ensureTypeTargetBootstrapFile } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
+import {
+  attachSourceTransformExtensions,
+  collectExtensionDiagnostics,
+  createProgramContext,
+  extensionTypeTargetSpecs,
+  runBeforeProgramCreate,
+  type VmcCompilerExtension,
+} from "./extensions.js";
 import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 
 function inferProjectRoot(
@@ -38,6 +46,7 @@ export interface BuildParams {
   readonly reportDiagnostic: ts.DiagnosticReporter;
   readonly reportSolutionBuilderStatus?: ts.DiagnosticReporter;
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
+  readonly extensions?: readonly VmcCompilerExtension[];
 }
 
 /**
@@ -54,6 +63,7 @@ export function runBuild(params: BuildParams): number {
     reportDiagnostic,
     reportSolutionBuilderStatus,
     typeTargetSpecs,
+    extensions,
   } = params;
   const { projects, buildOptions } = buildCommand;
 
@@ -89,8 +99,9 @@ export function runBuild(params: BuildParams): number {
     }
     const root = inferProjectRoot(sys, opts, rootNames, projectRoot);
     let effectiveRootNames = rootNames ?? [];
-    if (typeTargetSpecs && typeTargetSpecs.length > 0) {
-      const bootstrapPath = ensureTypeTargetBootstrapFile(root, typeTargetSpecs, {
+    const effectiveTypeTargetSpecs = extensionTypeTargetSpecs(typeTargetSpecs, extensions);
+    if (effectiveTypeTargetSpecs && effectiveTypeTargetSpecs.length > 0) {
+      const bootstrapPath = ensureTypeTargetBootstrapFile(root, effectiveTypeTargetSpecs, {
         mkdirSync,
         writeFile: (path, content) => sys.writeFile(path, content),
       });
@@ -98,10 +109,19 @@ export function runBuild(params: BuildParams): number {
         ? [...effectiveRootNames]
         : [...effectiveRootNames, bootstrapPath];
     }
+    const context = createProgramContext({
+      options: opts ?? {},
+      projectReferences: refs,
+      projectRoot: root,
+      rootNames: effectiveRootNames,
+      ts,
+    });
+    runBeforeProgramCreate(extensions, context);
+    attachSourceTransformExtensions({ ts, compilerHost: host, context, extensions, reportDiagnostic });
     const createTypeInfoApiSession = createLazyTypeInfoApiSession({
       ts,
       createProgram: () => createProgramForSession(effectiveRootNames, opts ?? {}),
-      ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
+      ...(effectiveTypeTargetSpecs?.length ? { typeTargetSpecs: effectiveTypeTargetSpecs } : {}),
     });
     const artifactStoreFactory = createVmcArtifactStoreFactory({
       ts,
@@ -112,7 +132,7 @@ export function runBuild(params: BuildParams): number {
       pluginModules,
       projectRoot: root,
       rootNames: effectiveRootNames,
-      ...(typeTargetSpecs?.length ? { typeTargetSpecs } : {}),
+      ...(effectiveTypeTargetSpecs?.length ? { typeTargetSpecs: effectiveTypeTargetSpecs } : {}),
     });
     const adapter = attachCompilerHostAdapter({
       ts,
@@ -124,7 +144,7 @@ export function runBuild(params: BuildParams): number {
       reportDiagnostic,
     });
     adapters.push(adapter);
-    return ts.createEmitAndSemanticDiagnosticsBuilderProgram(
+    const builder = ts.createEmitAndSemanticDiagnosticsBuilderProgram(
       effectiveRootNames,
       opts ?? {},
       host,
@@ -132,6 +152,11 @@ export function runBuild(params: BuildParams): number {
       configFileParsingDiagnostics,
       refs,
     );
+    const program = builder.getProgram();
+    for (const diagnostic of collectExtensionDiagnostics(extensions, { ...context, program })) {
+      reportDiagnostic(diagnostic);
+    }
+    return builder;
   };
 
   const host = ts.createSolutionBuilderHost(

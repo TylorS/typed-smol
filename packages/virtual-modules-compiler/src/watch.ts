@@ -11,6 +11,13 @@ import type {
 } from "@typed/virtual-modules";
 import { attachCompilerHostAdapter, ensureTypeTargetBootstrapFile } from "@typed/virtual-modules";
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
+import {
+  attachSourceTransformExtensions,
+  createProgramContext,
+  extensionTypeTargetSpecs,
+  runBeforeProgramCreate,
+  type VmcCompilerExtension,
+} from "./extensions.js";
 import { createLazyTypeInfoApiSession } from "./typeInfoSession.js";
 
 export interface WatchParams {
@@ -24,6 +31,7 @@ export interface WatchParams {
   readonly reportDiagnostic: ts.DiagnosticReporter;
   readonly reportWatchStatus?: ts.WatchStatusReporter;
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
+  readonly extensions?: readonly VmcCompilerExtension[];
 }
 
 export interface WatchResolverState {
@@ -49,6 +57,7 @@ export function runWatch(params: WatchParams): void {
     reportDiagnostic,
     reportWatchStatus,
     typeTargetSpecs,
+    extensions,
   } = params;
   const { options, fileNames, projectReferences, watchOptions } = commandLine;
 
@@ -63,9 +72,10 @@ export function runWatch(params: WatchParams): void {
   const projectRoot = sys.getCurrentDirectory();
   const watchHost = createAdapterWatchHost(sys);
 
+  const initialTypeTargetSpecs = extensionTypeTargetSpecs(typeTargetSpecs, extensions);
   let effectiveFileNames = fileNames;
-  if (typeTargetSpecs && typeTargetSpecs.length > 0) {
-    const bootstrapPath = ensureTypeTargetBootstrapFile(projectRoot, typeTargetSpecs, {
+  if (initialTypeTargetSpecs && initialTypeTargetSpecs.length > 0) {
+    const bootstrapPath = ensureTypeTargetBootstrapFile(projectRoot, initialTypeTargetSpecs, {
       mkdirSync,
       writeFile: (path, content) => sys.writeFile(path, content),
     });
@@ -82,7 +92,7 @@ export function runWatch(params: WatchParams): void {
   let currentVmcConfigPath = vmcConfigPath;
   let currentVmcConfigDependencyPaths = vmcConfigDependencyPaths;
   let currentPluginModules = pluginModules;
-  let currentTypeTargetSpecs = typeTargetSpecs;
+  let currentTypeTargetSpecs = initialTypeTargetSpecs;
   const resolverProxy: VirtualModuleResolver = {
     resolveModule: (resolveOptions) => currentResolver.resolveModule(resolveOptions),
     resolvePluginName: (resolveOptions) =>
@@ -148,11 +158,20 @@ export function runWatch(params: WatchParams): void {
       currentVmcConfigPath = resolverState.vmcConfigPath;
       currentVmcConfigDependencyPaths = resolverState.vmcConfigDependencyPaths;
       currentPluginModules = resolverState.pluginModules;
-      currentTypeTargetSpecs = resolverState.typeTargetSpecs;
+      currentTypeTargetSpecs = extensionTypeTargetSpecs(resolverState.typeTargetSpecs, extensions);
     }
     syncInputWatchers();
     const currentRootNames = rootNames ?? effectiveFileNames;
     const currentOptions = opts ?? options;
+    const context = createProgramContext({
+      options: currentOptions,
+      projectReferences: refs ?? projectReferences,
+      projectRoot,
+      rootNames: currentRootNames,
+      ts,
+    });
+    runBeforeProgramCreate(extensions, context);
+    attachSourceTransformExtensions({ ts, compilerHost: host, context, extensions, reportDiagnostic });
     const createTypeInfoApiSession = createLazyTypeInfoApiSession({
       ts,
       createProgram: () =>
