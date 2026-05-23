@@ -75,16 +75,22 @@ export function move<Value extends string, E, R>(
   });
 }
 
-export interface RootOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State, E, R>;
+export interface RootOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly content: AnyContent;
-  readonly items?: readonly Item[];
+  readonly items?: readonly Item<Value>[];
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
-export function Root<const E, const R, const Opts extends RootOptions<NoInfer<E>, NoInfer<R>>>(
-  options: Opts & Pick<RootOptions<E, R>, "state">,
+export function Root<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends RootOptions<Value, NoInfer<E>, NoInfer<R>>,
+>(
+  options: Opts & Pick<RootOptions<Value, E, R>, "state">,
 ): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   const items = options.items;
