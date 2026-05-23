@@ -94,7 +94,7 @@
   - green: `git diff --check -- packages/devtools-protocol .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no blocking findings for pinned `effect/unstable/rpc` usage or fixture shape reuse.
 - commit:
-  - pending
+  - `cd404a1 feat(devtools): add protocol rpc group`
 - deviations_or_replans:
   - none
 - context_updates:
@@ -125,7 +125,7 @@
   - review: Second sidecar review found fallback RefSubject id collisions, sparse part id/source gaps, and staged-index hygiene risk; all implementation blockers except surgical staging were fixed before the green run.
   - review: Final scoped sidecar review found no blockers after the sparse/refsubject/protocol-summary fixes.
 - commit:
-  - pending
+  - `bbbe8df feat(devtools): add compiler component facts`
 - deviations_or_replans:
   - Expanded T4 write set to include compiler package dependency, tsconfig project reference, and lockfile so compiler can consume `@typed/devtools-protocol` as the protocol source of truth.
   - `packages/compiler/src/index.ts` has unrelated concurrent route export changes; stage only the devtools export for this task.
@@ -139,6 +139,31 @@
   - Fallback RefSubject ids must be scoped by `moduleId#exportName#localName`; only explicit ids or service ids may stand alone.
   - Sparse template parts need stable ids that include kind/name/path/value indexes, and should retain expression source spans when compiler analysis provides them.
 
+### T5 - Compiler HMR DevTools Facts
+
+- task_id: T5
+- requirement_ids: FR-17, FR-25, FR-26, FR-41, FR-42, NFR-15, NFR-17, AC-6, AC-13
+- ts_scenarios: TS-6, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/compiler exec vitest run src/devtools/hmrFacts.test.ts` failed with missing `./hmrFacts.js`.
+  - green: `pnpm --filter @typed/compiler exec vitest run src/devtools/hmrFacts.test.ts` passed with 6 tests.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm exec oxlint packages/compiler/src/devtools/hmrFacts.ts packages/compiler/src/devtools/hmrFacts.test.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/compiler/src/devtools/hmrFacts.ts packages/compiler/src/devtools/hmrFacts.test.ts` passed.
+  - green: compiler devtools boundary grep for `effect/unstable/rpc` and `chrome.` returned no matches.
+  - green: `git diff --check -- packages/compiler .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found staged-index hygiene risk plus non-blocking gaps around canonical service ordering, dependency rejection coverage, and unknown route status; implementation/test gaps were resolved before commit, and `index.ts` will be staged surgically.
+- commit:
+  - pending
+- deviations_or_replans:
+  - none
+- context_updates:
+  - Added active T5 detail to `plan.md`.
+  - Added `createHmrStatusFacts` to adapt compiler compile capability output into protocol `HmrStatusFact` values.
+- memory_updates:
+  - HMR DevTools facts should sort service ids by compiler module id and service id for deterministic payloads.
+  - Route components with no inferred HMR services and no explicit rejection remain `Unknown`, not `Rejected`.
+
 ## Deferred Work
 
-- T5 through T12 remain blocked on prior-task completion.
+- T6 through T12 remain blocked on prior-task completion.

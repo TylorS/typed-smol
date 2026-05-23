@@ -36,3 +36,11 @@
 - Match `transformTemplateModule` for node-part effective runtime paths; template source ids should reflect the runtime anchor path, not only parser part paths.
 - Fallback RefSubject ids must include component scope (`moduleId#exportName#localName`) to avoid local-name collisions.
 - Sparse template part ids should include kind, optional name, path, and nested value indexes; static-only `templateHash#path#static` is not unique enough.
+
+### T5
+
+- HMR DevTools facts adapt `CompileCapabilitiesPlan` into protocol `HmrStatusFact`; do not create compiler-local HMR protocol shapes.
+- Keep `template.optimized` independent from `stateful` eligibility so optimized HTML templates can still show rejected or unknown stateful-HMR status.
+- Dependency and route HMR rejection reasons need protocol mapping at the compiler boundary, not inside Chrome/runtime consumers.
+- Sort HMR service ids by module id and service id before emitting facts so repeated plans are deterministic across input ordering.
+- A route component with no inferred stateful services and no explicit compiler rejection should emit `Unknown`, not `Rejected`.

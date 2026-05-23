@@ -276,6 +276,30 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar subagent review for deterministic ids, source span/part mapping, protocol dependency boundaries, and staged-index hygiene before commit.
 
+### T5 - Compiler HMR DevTools Facts
+
+- requirement_links: FR-17, FR-25, FR-26, FR-41, FR-42, NFR-15, NFR-17, AC-6, AC-13.
+- write_set:
+  - `packages/compiler/src/devtools/hmrFacts.ts`
+  - `packages/compiler/src/devtools/hmrFacts.test.ts`
+  - `packages/compiler/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused HMR fact tests importing the planned devtools module before implementation exists.
+  - Run `pnpm --filter @typed/compiler exec vitest run src/devtools/hmrFacts.test.ts` and capture the missing-module failure.
+- green_step:
+  - Convert existing `CompileCapabilitiesPlan` output into protocol-owned `HmrStatusFact` values.
+  - Preserve the distinction between optimized template output and stateful-HMR eligibility.
+  - Map compiler rejection reasons into protocol `HmrRejectionReason` values without redefining protocol shapes.
+- verification:
+  - `pnpm --filter @typed/compiler exec vitest run src/devtools/hmrFacts.test.ts`
+  - `pnpm --filter @typed/compiler build`
+  - `rg -n "effect/unstable/rpc|chrome\\." packages/compiler/src/devtools packages/compiler/src/index.ts` must return no matches.
+  - `git diff --check -- packages/compiler .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for optimized-vs-stateful separation, rejection reason mapping, protocol dependency boundaries, and staged-index hygiene before commit.
+
 ## Verification Matrix
 
 | scenario | required commands |
