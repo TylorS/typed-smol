@@ -141,3 +141,21 @@ Execution started after approval of `plan.md`.
   - Package docs explicitly mark route-handler and HttpApi fixtures as next hardening targets.
 - memory_updates:
   - Recorded Storybook package verification commands and README coverage in `memories.md`.
+
+### Task
+
+- task_id: T-8
+- requirement_ids: NFR-8, AC-10
+- ts_scenarios: n/a
+- validation_evidence:
+  - FINAL: `pnpm --filter @typed/storybook test` passed with 6 test files and 9 tests.
+  - FINAL: `pnpm --filter @typed/storybook build` passed.
+  - FINAL: `pnpm exec oxlint packages/storybook` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Worktree contains unrelated concurrent UI/compiler/template workflow changes outside the Storybook integration scope.
+- context_updates:
+  - Storybook work completed on `codex/typed-beta`; no separate merge operation was needed because execution happened on the target branch.
+- memory_updates:
+  - No new durable implementation memory beyond T-7.

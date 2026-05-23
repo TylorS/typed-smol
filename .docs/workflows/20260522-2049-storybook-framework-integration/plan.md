@@ -99,6 +99,15 @@ Status: approved on 2026-05-22.
   2. Update workflow memory with durable commands and current implementation boundaries.
   3. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
 
+## Active Task Detail — T-8 Final Verification
+
+- status: completed
+- requirement_links: NFR-8, AC-10
+- substeps:
+  1. Re-run focused Storybook package verification.
+  2. Check worktree status for unrelated changes.
+  3. Record merge-readiness evidence.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.
