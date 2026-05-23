@@ -20,6 +20,8 @@ import { createStorybookVirtualModulePlugin } from "@typed/app/StorybookVirtualM
 import type { TypedConfig } from "@typed/app/config/TypedConfig";
 import { loadTypedConfig } from "@typed/app/config/loadTypedConfig";
 import {
+  typedRouteVitePlugin,
+  type TypedRouteVitePluginOptions,
   typedTemplateVitePlugin,
   type TypedTemplateVitePluginOptions,
 } from "@typed/compiler";
@@ -107,6 +109,12 @@ export interface TypedVitePluginOptions {
    * Set false to preserve interpreted template behavior without compiler transforms.
    */
   readonly templates?: boolean | TypedTemplateVitePluginOptions;
+
+  /**
+   * Enable direct Typed route continuation transforms and dev HMR. Default true.
+   * Set false to preserve route modules without resumability/HMR compiler rewrites.
+   */
+  readonly routes?: boolean | TypedRouteVitePluginOptions;
 }
 
 /** Optional dependency injection for createTypedViteResolver (e.g. for tests). */
@@ -153,6 +161,7 @@ function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
     compression: config.compression,
     serverEntry: config.entry,
     templates: true,
+    routes: true,
   };
 }
 
@@ -207,6 +216,14 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
     plugins.push(
       typedTemplateVitePlugin(
         typeof resolvedOptions.templates === "object" ? resolvedOptions.templates : {},
+      ),
+    );
+  }
+
+  if (resolvedOptions.routes !== false) {
+    plugins.push(
+      typedRouteVitePlugin(
+        typeof resolvedOptions.routes === "object" ? resolvedOptions.routes : {},
       ),
     );
   }

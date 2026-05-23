@@ -141,6 +141,14 @@ describe("typedVitePlugin", () => {
     expect(names.indexOf("typed-template")).toBeLessThan(names.indexOf("virtual-modules"));
   });
 
+  it("registers the route transform after templates and before virtual modules", () => {
+    const plugins = typedVitePlugin({ tsconfigPaths: false, compression: false });
+    const names = plugins.map((plugin) => (plugin as { name?: string }).name);
+
+    expect(names.indexOf("typed-route")).toBeGreaterThan(names.indexOf("typed-template"));
+    expect(names.indexOf("typed-route")).toBeLessThan(names.indexOf("virtual-modules"));
+  });
+
   it("does not register the template transform when disabled", () => {
     const plugins = typedVitePlugin({
       compression: false,
@@ -150,6 +158,18 @@ describe("typedVitePlugin", () => {
 
     expect(plugins.map((plugin) => (plugin as { name?: string }).name)).not.toContain(
       "typed-template",
+    );
+  });
+
+  it("does not register the route transform when disabled", () => {
+    const plugins = typedVitePlugin({
+      compression: false,
+      routes: false,
+      tsconfigPaths: false,
+    });
+
+    expect(plugins.map((plugin) => (plugin as { name?: string }).name)).not.toContain(
+      "typed-route",
     );
   });
 
