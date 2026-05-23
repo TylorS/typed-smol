@@ -179,7 +179,7 @@
   - green: `git diff --check -- packages/compiler .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found position-base ambiguity, first-text-match source spans, duplicate route analysis, and staged-index hygiene risk; implementation/test gaps were fixed, and final scoped review found no blockers.
 - commit:
-  - pending
+  - `9d6b0bd feat(devtools): add compiler source analyzer planning`
 - deviations_or_replans:
   - none
 - context_updates:
@@ -189,6 +189,31 @@
   - Source Analyzer request/range positions default to zero-based DevTools coordinates; one-based compiler/editor positions require an explicit planner option.
   - RefSubject and Fx source Analyzer facts should use TypeScript declaration name spans, not text search over source content.
 
+### T7 - DevTools Runtime Layer Package
+
+- task_id: T7
+- requirement_ids: FR-3, FR-5, FR-8, FR-9, FR-10, FR-18, FR-38, FR-39, FR-41, FR-42, NFR-3, NFR-4, NFR-5, NFR-13, NFR-15, NFR-17, AC-2, AC-13
+- ts_scenarios: TS-2, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime test` failed before implementation with missing runtime/protocol/effect modules and missing `./Layer.js`.
+  - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck and 5 Vitest tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/Layer.ts packages/devtools-runtime/src/Layer.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: runtime package boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime pnpm-lock.yaml scripts/publish-beta.sh .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found mutable snapshot and weak disabled-default proof; both were fixed with a no-op disabled service, cloned snapshots, and focused regression tests.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Expanded T7 write set to include `tsconfig.test.json`, `pnpm-lock.yaml`, and `scripts/publish-beta.sh` for workspace/test/publish wiring.
+- context_updates:
+  - Added active T7 detail to `plan.md`.
+  - Added `@typed/devtools-runtime` package with explicit `DevtoolsRuntime` Effect service and `DevtoolsRuntimeLayer` constructor.
+- memory_updates:
+  - Disabled runtime services should be a distinct no-op path, not an enabled-style collector with a guard.
+  - Runtime event history snapshots should clone protocol events on emit and on read so caller-owned objects cannot mutate captured history.
+
 ## Deferred Work
 
-- T7 through T12 remain blocked on prior-task completion.
+- T8 through T12 remain blocked on prior-task completion.

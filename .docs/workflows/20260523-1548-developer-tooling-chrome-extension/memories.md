@@ -52,3 +52,10 @@
 - Resource matching should compare resource URL, module id, and source-map/original-resource aliases after normalizing file URLs and path separators.
 - Treat protocol Source Analyzer line/column positions as zero-based DevTools coordinates by default; one-based compiler/editor coordinates must opt in at the planner boundary.
 - Source Analyzer definition locations should come from TypeScript declaration name spans, not first textual matches, so comments/imports/template references cannot steal the source location.
+
+### T7
+
+- The runtime package starts as an explicit Effect service/Layer boundary; the default Layer must be disabled and no-op.
+- New publishable workspace packages need lockfile wiring and `scripts/publish-beta.sh` topo-order updates in the same task that introduces them.
+- Runtime package code can depend on protocol ids/events, but direct `effect/unstable/rpc` remains isolated to the protocol package and later transport adapters.
+- Disabled runtime services should use a no-op service path, and enabled runtime snapshots should clone protocol events on emit/read to prevent caller-owned object mutation.

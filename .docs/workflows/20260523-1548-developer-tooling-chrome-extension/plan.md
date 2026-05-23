@@ -324,6 +324,38 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar subagent review for protocol-shape reuse, artifact/resource matching, unavailable-state behavior, and staged-index hygiene before commit.
 
+### T7 - DevTools Runtime Layer Package
+
+- requirement_links: FR-3, FR-5, FR-8, FR-9, FR-10, FR-18, FR-38, FR-39, FR-41, FR-42, NFR-3, NFR-4, NFR-5, NFR-13, NFR-15, NFR-17, AC-2, AC-13.
+- write_set:
+  - `packages/devtools-runtime/package.json`
+  - `packages/devtools-runtime/tsconfig.json`
+  - `packages/devtools-runtime/tsconfig.test.json`
+  - `packages/devtools-runtime/src/Layer.ts`
+  - `packages/devtools-runtime/src/Layer.test.ts`
+  - `packages/devtools-runtime/src/index.ts`
+  - `pnpm-lock.yaml`
+  - `scripts/publish-beta.sh`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add runtime Layer tests before implementation exists.
+  - Run `pnpm --filter @typed/devtools-runtime test` and capture missing package/module wiring failure.
+- green_step:
+  - Create `@typed/devtools-runtime` with explicit `DevtoolsRuntime` service and `DevtoolsRuntimeLayer` constructor.
+  - Keep the default Layer disabled and no-op for capture.
+  - Allow explicit Layer composition to enable capture with protocol runtime events.
+  - Add workspace lockfile and beta publish order wiring for the new package.
+- verification:
+  - `pnpm --filter @typed/devtools-runtime test`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `rg -n "chrome\\.|effect/unstable/rpc" packages/devtools-runtime/src packages/devtools-runtime/package.json` must return no matches.
+  - `pnpm exec oxlint packages/devtools-runtime/src`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/Layer.ts packages/devtools-runtime/src/Layer.test.ts packages/devtools-runtime/src/index.ts`
+  - `git diff --check -- packages/devtools-runtime pnpm-lock.yaml scripts/publish-beta.sh .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for disabled-by-default behavior, Layer type inference, protocol dependency boundaries, and package/publish wiring before commit.
+
 ## Verification Matrix
 
 | scenario | required commands |

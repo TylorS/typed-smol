@@ -21,6 +21,7 @@ TOPO_ORDER=(
   # Level 1: depend only on level 0
   packages/navigation
   packages/template
+  packages/devtools-runtime
   packages/virtual-modules-compiler
   packages/virtual-modules-ts-plugin
   packages/virtual-modules-vite

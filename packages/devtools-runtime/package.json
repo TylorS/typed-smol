@@ -1,0 +1,38 @@
+{
+  "name": "@typed/devtools-runtime",
+  "version": "1.0.0-beta.4",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
+    "test": "pnpm run test:typecheck && vitest run --passWithNoTests",
+    "test:typecheck": "tsc -p tsconfig.test.json --noEmit"
+  },
+  "dependencies": {
+    "@typed/devtools-protocol": "workspace:*",
+    "@typed/fx": "workspace:*",
+    "@typed/navigation": "workspace:*",
+    "@typed/template": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
