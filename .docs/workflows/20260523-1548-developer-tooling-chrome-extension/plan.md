@@ -160,7 +160,7 @@ Existing packages receive narrow hook points only:
 
 | task_id | owner | files | prerequisites | validation_commands | exit_criteria | rollback |
 | ------- | ----- | ----- | ------------- | ------------------- | ------------- | -------- |
-| T1 | protocol | `packages/devtools-protocol/package.json`, `tsconfig.json`, `src/Ids.ts`, `src/Ids.test.ts`, `src/index.ts` | none | `pnpm --filter @typed/devtools-protocol test`; `pnpm --filter @typed/devtools-protocol build` | Package builds; branded id tests fail first, then pass; no Chrome/runtime imports. | Remove `packages/devtools-protocol`. |
+| T1 | protocol | `packages/devtools-protocol/package.json`, `tsconfig.json`, `tsconfig.test.json`, `src/Ids.ts`, `src/Ids.test.ts`, `src/Ids.typecheck.ts`, `src/index.ts`, `pnpm-lock.yaml`, `scripts/publish-beta.sh` | none | `pnpm --filter @typed/devtools-protocol test`; `pnpm --filter @typed/devtools-protocol build` | Package builds; branded id runtime and type tests fail first, then pass; no Chrome/runtime imports; lockfile and beta publish order include the new package. | Remove `packages/devtools-protocol`; remove publish order entry; regenerate lockfile. |
 | T2 | protocol | `src/Schemas.ts`, `src/Serialization.ts`, `src/Serialization.test.ts`, `src/typeInference.test.ts` | T1 | `pnpm --filter @typed/devtools-protocol test`; `pnpm --filter @typed/devtools-protocol build` | Schema/redaction tests pass; invalid payloads fail decoding; type inference fixture rejects broad casts. | Revert schema/serialization files. |
 | T3 | protocol | `src/Rpc.ts`, `src/Rpc.test.ts`, `src/Fixtures.ts` | T2 | `pnpm --filter @typed/devtools-protocol test`; `pnpm --filter @typed/devtools-protocol build` | `RpcGroup` contains Handshake, SubscribeRuntimeEvents, ResolveDomBinding, AnalyzeSource; in-process RPC fixture passes. | Revert RPC files; keep ids/schemas. |
 | T4 | compiler | `packages/compiler/src/devtools/componentFacts.ts`, `componentFacts.test.ts`, `packages/compiler/src/index.ts` | T3 | `pnpm --filter @typed/compiler exec vitest run src/devtools/componentFacts.test.ts`; `pnpm --filter @typed/compiler build` | Component fact tests pass with stable component ids, module ids, source spans, template hashes, and paths. | Revert compiler devtools component files and export. |
@@ -186,6 +186,38 @@ Existing packages receive narrow hook points only:
 | T24 | chrome/runtime | `packages/devtools-chrome/src/devtoolsSmoke.test.ts`, `packages/devtools-chrome/MANUAL_SMOKE.md` | T20 through T23 | `pnpm --filter @typed/devtools-chrome exec vitest run src/devtoolsSmoke.test.ts`; `pnpm --filter @typed/devtools-chrome build` | Smoke covers connect, Elements workflow, Sources workflow, reload/reconnect; manual smoke doc lists exact browser steps for any non-automated assertion. | Keep automated unit/integration tests; mark only browser automation as blocked in `MANUAL_SMOKE.md` with evidence. |
 | T25 | fixtures | `packages/storybook/src/devtoolsFixtures.ts`, `packages/storybook/src/devtoolsFixtures.test.ts`, `packages/devtools-protocol/src/Fixtures.ts` | T3, T21 | `pnpm --filter @typed/storybook exec vitest run src/devtoolsFixtures.test.ts`; `pnpm --filter @typed/devtools-protocol test` | Storybook/protocol fixture renders runtime facts without Chrome APIs. | Keep protocol fixtures only; revert Storybook fixture files. |
 | T26 | final validation | execution log and `memories.md` in workflow folder | T1 through T25 | `pnpm --filter @typed/devtools-protocol test`; `pnpm --filter @typed/devtools-runtime test`; `pnpm --filter @typed/devtools-chrome test`; `pnpm --filter @typed/compiler test`; `pnpm --filter @typed/template test`; `pnpm --filter @typed/fx test`; `pnpm --filter @typed/app test`; `pnpm build`; `git diff --check` | All blocking TS scenarios have evidence in execution log; memory notes capture reusable implementation lessons. | Loop back to failed task; do not mark workflow complete. |
+
+## Active Task Detail
+
+### T1 - Protocol Package and Branded Ids
+
+- requirement_links: FR-1, FR-2, FR-41 through FR-45, NFR-1, NFR-2, NFR-15 through NFR-18, AC-1, AC-13, AC-14.
+- write_set:
+  - `packages/devtools-protocol/package.json`
+  - `packages/devtools-protocol/tsconfig.json`
+  - `packages/devtools-protocol/tsconfig.test.json`
+  - `packages/devtools-protocol/src/Ids.ts`
+  - `packages/devtools-protocol/src/Ids.test.ts`
+  - `packages/devtools-protocol/src/Ids.typecheck.ts`
+  - `packages/devtools-protocol/src/index.ts`
+  - `pnpm-lock.yaml`
+  - `scripts/publish-beta.sh`
+- red_step:
+  - Add package shell plus `Ids.test.ts` that imports id constructors/types from `./Ids`.
+  - Run `pnpm --filter @typed/devtools-protocol exec vitest run src/Ids.test.ts` and capture the missing-export or failing-id evidence.
+- green_step:
+  - Implement host-neutral branded string id constructors with deterministic prefix validation.
+  - Export the id surface from `src/index.ts`.
+  - Add a build-included type fixture that proves plain strings and wrong branded ids are rejected.
+- verification:
+  - `pnpm --filter @typed/devtools-protocol test`
+  - `pnpm --filter @typed/devtools-protocol build`
+  - `rg -n "chrome|devtools-runtime|@typed/devtools-runtime|@typed/fx|@typed/template|@typed/navigation" packages/devtools-protocol` must return no matches.
+  - `rg -n "packages/devtools-protocol" pnpm-lock.yaml scripts/publish-beta.sh` must find both package-manager and release wiring.
+  - `git diff --check -- packages/devtools-protocol .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for T1 conventions before commit.
+  - Resolve any production-grade findings before marking T1 complete.
 
 ## Verification Matrix
 

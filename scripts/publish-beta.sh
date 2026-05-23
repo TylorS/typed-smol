@@ -16,6 +16,7 @@ TOPO_ORDER=(
   packages/fx
   packages/guard
   packages/id
+  packages/devtools-protocol
   packages/virtual-modules
   # Level 1: depend only on level 0
   packages/navigation
