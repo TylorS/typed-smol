@@ -49,6 +49,16 @@ Status: approved on 2026-05-22.
   4. Re-run `pnpm --filter @typed/storybook test`.
   5. Re-run `pnpm --filter @typed/storybook build` and `pnpm exec oxlint packages/storybook`.
 
+## Active Task Detail — T-3 Vite Preset Composition
+
+- status: completed
+- requirement_links: FR-3, FR-8, NFR-5, NFR-6, AC-2, AC-7, TS-2, TS-6
+- substeps:
+  1. Add a failing preset test proving `viteFinal` preserves existing plugins and appends `typedVitePlugin()` output.
+  2. Verify `pnpm --filter @typed/storybook test` fails because `viteFinal` is missing.
+  3. Implement minimal `viteFinal` composition using framework options.
+  4. Re-run `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.

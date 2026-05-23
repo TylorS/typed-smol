@@ -8,11 +8,13 @@ import type {
   StrictArgs,
   WebRenderer,
 } from "storybook/internal/types";
+import type { TypedVitePluginOptions } from "@typed/vite-plugin";
 
 export const TYPED_STORYBOOK_FRAMEWORK = "@typed/storybook" as const;
 
 export interface TypedStorybookFrameworkOptions {
   readonly typedConfig?: string;
+  readonly typedVite?: TypedVitePluginOptions;
   readonly server?: {
     readonly mode?: "runtime-harness" | "storybook-middleware" | "http-server";
   };
