@@ -6,5 +6,5 @@ export default defineConfig({
   clean: true,
   outDir: "dist",
   splitting: false,
-  noExternal: ["@typed/virtual-modules"],
+  noExternal: ["@typed/compiler", "@typed/virtual-modules"],
 });

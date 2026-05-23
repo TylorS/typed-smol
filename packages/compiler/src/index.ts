@@ -18,6 +18,7 @@ export * from "./template/emitServerTemplate.js";
 export * from "./template/fallback.js";
 export * from "./template/fingerprints.js";
 export * from "./template/TemplatePlan.js";
+export * from "./template/templateDiagnostics.js";
 export * from "./template/templateVitePlugin.js";
 export * from "./template/transformTemplateModule.js";
 export * from "./vmcExtension.js";

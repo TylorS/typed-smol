@@ -59,6 +59,10 @@ import {
   createServerVirtualModulePlugin,
   // @ts-expect-error It's ESM being imported by CJS
 } from "@typed/app";
+import {
+  getTemplateDiagnostics,
+  // @ts-expect-error It's ESM being imported by CJS
+} from "@typed/compiler";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts, { DirectoryWatcherCallback, FileWatcherCallback } from "typescript";
@@ -1004,6 +1008,11 @@ function init(modules: { typescript: typeof import("typescript") }): {
       watchHost,
       debounceMs,
     });
+    attachTemplateDiagnostics({
+      ts,
+      languageService: info.languageService,
+      languageServiceHost: info.project as import("typescript").LanguageServiceHost,
+    });
 
     // Force program rebuild so resolution uses our patched host.
     const projectWithDirty = info.project as {
@@ -1036,3 +1045,37 @@ function init(modules: { typescript: typeof import("typescript") }): {
 }
 
 module.exports = init;
+
+function attachTemplateDiagnostics(options: {
+  readonly ts: typeof import("typescript");
+  readonly languageService: import("typescript").LanguageService;
+  readonly languageServiceHost: import("typescript").LanguageServiceHost;
+}): void {
+  const originalGetSemanticDiagnostics =
+    options.languageService.getSemanticDiagnostics.bind(options.languageService);
+  options.languageService.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] => {
+    const diagnostics = originalGetSemanticDiagnostics(fileName);
+    const sourceFile = options.languageService.getProgram()?.getSourceFile(fileName);
+    const sourceText = getSourceText(options.languageServiceHost, fileName, sourceFile);
+    if (sourceText === undefined) return diagnostics;
+    return [
+      ...diagnostics,
+      ...getTemplateDiagnostics({
+        moduleId: fileName,
+        sourceFile,
+        sourceText,
+        ts: options.ts,
+      }),
+    ];
+  };
+}
+
+function getSourceText(
+  languageServiceHost: import("typescript").LanguageServiceHost,
+  fileName: string,
+  sourceFile: import("typescript").SourceFile | undefined,
+): string | undefined {
+  if (sourceFile) return sourceFile.text;
+  const snapshot = languageServiceHost.getScriptSnapshot?.(fileName);
+  return snapshot?.getText(0, snapshot.getLength());
+}

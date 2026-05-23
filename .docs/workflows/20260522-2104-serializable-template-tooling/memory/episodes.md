@@ -53,3 +53,9 @@
 - The plugin runs as a Vite `enforce: "pre"` transform, filters JavaScript and TypeScript module ids, calls `transformTemplateModule`, and returns `{ code, map: null }` only when source changes.
 - Shared compiler diagnostics are reported through the Vite hook context with `diagnostics: "error" | "warn" | "silent"`.
 - `@typed/vite-plugin` registers the template transform before `virtual-modules` and exposes `templates: false` as the rollback switch.
+
+## M8 - Template TS Plugin Diagnostics
+
+- Added `getTemplateDiagnostics` to `@typed/compiler`; it reuses `analyzeTemplateModule` and converts shared compiler diagnostics to `ts.Diagnostic`.
+- `@typed/virtual-modules-ts-plugin` now appends template diagnostics from `getSemanticDiagnostics` after installing the virtual-module language-service adapter.
+- The TS plugin build bundles `@typed/compiler` so editor hosts do not need to bridge the plugin's CommonJS output to compiler ESM at runtime.

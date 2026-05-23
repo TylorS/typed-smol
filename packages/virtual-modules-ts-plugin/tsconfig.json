@@ -13,6 +13,9 @@
   "exclude": ["**/*.test.ts"],
   "references": [
     {
+      "path": "../compiler"
+    },
+    {
       "path": "../virtual-modules"
     }
   ]

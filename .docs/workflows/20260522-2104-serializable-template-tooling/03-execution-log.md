@@ -192,3 +192,30 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
   - `@typed/vite-plugin` accepts `templates: false | TypedTemplateVitePluginOptions`.
 - memory_updates:
   - recorded the Vite template transform boundary in `memory/episodes.md`.
+
+### Task M8 - Template TS Plugin Diagnostics
+
+- task_id: M8
+- requirement_ids: FR-01, FR-04, FR-09, NFR-01, NFR-05
+- ts_scenarios: TS-08, TS-10
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/compiler test -- templateDiagnostics` failed because `./templateDiagnostics.js` did not exist.
+  - initial red: `pnpm --filter @typed/virtual-modules-ts-plugin test -- plugin -t "appends typed template semantic diagnostics"` failed because invalid template diagnostics were not appended.
+  - green: `pnpm --filter @typed/compiler test -- templateDiagnostics` passed, 22 files / 81 tests.
+  - green: `pnpm --filter @typed/virtual-modules-ts-plugin test -- plugin -t "appends typed template semantic diagnostics"` passed, 2 files / 14 tests.
+  - green: `pnpm --filter @typed/virtual-modules-ts-plugin test` passed, 2 files / 14 tests.
+  - green: `pnpm --filter @typed/compiler test -- templateDiagnostics templateVitePlugin analyzeTemplateModule` passed, 22 files / 81 tests.
+  - green: `pnpm --filter @typed/compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm --filter @typed/virtual-modules-ts-plugin build` passed.
+  - green: focused `pnpm exec oxlint ...` over touched compiler/TS-plugin files passed.
+  - green: `git diff --check` passed.
+- commit: current atomic commit `feat(ts-plugin): surface template diagnostics`
+- deviations_or_replans:
+  - Template diagnostics are appended after the existing virtual module language-service adapter so both diagnostic streams survive.
+  - The TS plugin bundles `@typed/compiler` with its CJS output to avoid runtime ESM/CJS loading drift in editor hosts.
+- context_updates:
+  - `@typed/compiler` exports `getTemplateDiagnostics`.
+  - `@typed/virtual-modules-ts-plugin` now depends on `@typed/compiler`.
+- memory_updates:
+  - recorded the shared compiler diagnostic service and TS plugin semantic diagnostic wrapper in `memory/episodes.md`.

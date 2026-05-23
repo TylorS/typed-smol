@@ -549,6 +549,9 @@ importers:
 
   packages/virtual-modules-ts-plugin:
     dependencies:
+      '@typed/compiler':
+        specifier: workspace:*
+        version: link:../compiler
       '@typed/virtual-modules':
         specifier: workspace:*
         version: link:../virtual-modules

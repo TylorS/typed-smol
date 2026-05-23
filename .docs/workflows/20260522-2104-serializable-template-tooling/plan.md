@@ -248,11 +248,11 @@ Goal: Surface compiler diagnostics in-editor through the TypeScript plugin.
 
 Tasks:
 
-1. Add a template diagnostic service in `@typed/compiler`.
-2. Extend `@typed/virtual-modules-ts-plugin` to call it for normal source files.
-3. Reuse existing TypeInfo/session setup.
-4. Append diagnostics to semantic diagnostics.
-5. Add fixture proving invalid template diagnostics match CLI/Vite snapshots.
+1. [completed] Add a template diagnostic service in `@typed/compiler`.
+2. [completed] Extend `@typed/virtual-modules-ts-plugin` to call it for normal source files.
+3. [completed] Reuse existing TypeInfo/session setup.
+4. [completed] Append diagnostics to semantic diagnostics.
+5. [completed] Add fixture proving invalid template diagnostics match CLI/Vite snapshots.
 
 Traceability:
 
