@@ -17,6 +17,7 @@ export * from "./RouteLayout.js";
 export * from "./RouteCatch.js";
 export * from "./httpapi/ApiHandler.js";
 export * from "./httpapi/Handlers.js";
+export * from "./serialization/Serializable.js";
 export * from "./internal/resolveConfig.js";
 export type * from "./internal/appConfigTypes.js";
 export * from "./internal/appLayerTypes.js";

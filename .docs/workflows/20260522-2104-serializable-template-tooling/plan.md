@@ -100,11 +100,11 @@ Goal: Introduce public runtime serialization descriptors.
 
 Tasks:
 
-1. Add `packages/app/src/serialization/Serializable.ts`.
-2. Export the API from `@typed/app`.
-3. Support explicit schema descriptors.
-4. Add generated descriptor placeholder shape used by compiler output.
-5. Add docs/tests for user-provided schema precedence.
+1. [completed] Add `packages/app/src/serialization/Serializable.ts`.
+2. [completed] Export the API from `@typed/app`.
+3. [completed] Support explicit schema descriptors.
+4. [completed] Add generated descriptor placeholder shape used by compiler output.
+5. [completed] Add docs/tests for user-provided schema precedence.
 
 Traceability:
 

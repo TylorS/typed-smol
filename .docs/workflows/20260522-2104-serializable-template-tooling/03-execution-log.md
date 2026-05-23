@@ -40,10 +40,29 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
   - green: `pnpm --filter @typed/virtual-modules-compiler exec tsc --noEmit` passed.
   - green: `pnpm --filter @typed/virtual-modules-compiler test` passed, 3 files / 20 tests.
   - green: `git diff --check` for touched M2 files passed.
-- commit: pending
+- commit: `a91a674 feat(vmc): add compiler extension hooks`
 - deviations_or_replans:
   - First M2 slice focuses on compile/build/watch extension seams and compile-path tests. Full virtual-module compatibility suites remain required before closing M2.
 - context_updates: exported extension API from `@typed/virtual-modules-compiler`.
 - memory_updates:
   - recorded vmc extension seam in `memory/episodes.md`.
   - added vmc extension API shape as a promotion candidate.
+
+### Task M3 - `@typed/app` Serialization API
+
+- task_id: M3
+- requirement_ids: FR-02, FR-03, NFR-02, NFR-05
+- ts_scenarios: TS-02
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/app test -- Serializable` failed because `./Serializable.js` did not exist.
+  - green: `pnpm --filter @typed/app test -- Serializable` passed, 26 files / 356 tests.
+  - green: `pnpm --filter @typed/app exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/app build` passed.
+- commit: current atomic commit `feat(app): add serializable descriptors`
+- deviations_or_replans:
+  - `@typed/app` owns descriptor constructors and generated descriptor metadata only. Compiler-only schema-planning details remain deferred to M4.
+  - Vitest's `Serializable` filter still imported the wider app suite due package typecheck configuration; treated as stronger focused-package coverage.
+- context_updates: exported `Serializable` from `@typed/app`.
+- memory_updates:
+  - recorded serialization descriptor API in `memory/episodes.md`.
+  - added generated descriptor placeholder as a promotion candidate.
