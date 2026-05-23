@@ -149,8 +149,6 @@ Existing packages receive narrow hook points only:
 - Create `packages/fx/src/RefSubject/devtools.ts`.
 - Create `packages/fx/src/RefSubject.devtools.test.ts`.
 - Modify `packages/fx/src/RefSubject.ts`.
-- Create `packages/fx/src/Fx/devtools.ts`.
-- Create `packages/fx/src/Fx.devtools.test.ts`.
 - Modify `packages/fx/src/Fx/index.ts`.
 - Modify `packages/fx/src/index.ts`.
 - Modify `packages/app/src/config/TypedConfig.ts`.
