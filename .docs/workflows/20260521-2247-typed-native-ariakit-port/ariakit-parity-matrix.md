@@ -12,7 +12,7 @@ Status legend:
 | Area | Status | Notes |
 | --- | --- | --- |
 | React stores/hooks | typed-native | Mapped to public `RefSubject` state and `RefSubject.Service` provider keys. |
-| Portal / PortalContext | intentional-divergence | Native popover/dialog are the overlay baseline; portals are not a parity target. |
+| Native overlay root | intentional-divergence | Native popover/dialog are the overlay baseline; non-native overlay mounting APIs are not a target. |
 | Render props / `as` composition | implemented | `Dom.HostOptions<Element>` is the preferred replacement path. Stateful primitives, overlay parts, composite parts, Form controls, and structural helpers pass internal props/content to caller-owned hosts through `Dom.mergeProps`. |
 | Data attrs | implemented | `DataAttr.schema` and `.data={object}` encode public state. |
 | Startup hydration | implemented | `StartupRef.fromData` composes multiple schema-backed DOM data hydrators. |
@@ -31,7 +31,7 @@ Status legend:
 | Composite | implemented | Movement, roving tabindex, virtual active descendant, keyboard mapping, and typeahead helper. |
 | Dialog | implemented | Native `<dialog>`, trigger/close, open sync, and invoker focus restoration path. More focus policy options remain. |
 | Disclosure | implemented | Button/content APG attributes with public data state. |
-| FocusTrap | intentional-divergence | Deprecated in favor of native `<dialog>` for modal focus. |
+| Modal focus shim | intentional-divergence | Removed in favor of native `<dialog>` for modal focus. |
 | Form | implemented | Typed state, keyed field names, schema validation, field metadata, schema DOM value codecs, submit/reset lifecycle, and array-only `Push`/`Remove`. |
 | Hovercard | implemented | Native popover content, anchor open/close lifecycle, disclosure/dismiss parts. |
 | Listbox | implemented | Single-select options, active movement, selected data attrs, virtual focus relationship. |

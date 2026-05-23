@@ -7,9 +7,7 @@ import {
   createVirtualFileName,
   createVirtualKey,
   getProgramWithTypeTargetBootstrap,
-  loadPluginsFromEntries,
   loadResolverFromVmcConfig,
-  PluginManager,
 } from "@typed/virtual-modules";
 import type { VirtualModuleResolver } from "@typed/virtual-modules";
 
@@ -17,7 +15,6 @@ const TSPLUGIN_NAME = "@typed/virtual-modules-ts-plugin";
 
 interface TsPluginConfig {
   name?: string;
-  plugins?: readonly string[];
   debounceMs?: number;
   vmcConfigPath?: string;
 }
@@ -132,7 +129,7 @@ function getProgramForProject(projectRoot: string): ts.Program | undefined {
 
 /**
  * Create a resolver for a workspace folder.
- * Prefers vmc config loading, with legacy tsconfig plugin fallback.
+ * Uses vmc config loading only.
  */
 export function createResolver(projectRoot: string): {
   resolve: (id: string, importer: string) => ResolverResult | undefined;
@@ -142,7 +139,6 @@ export function createResolver(projectRoot: string): {
   const tsconfigPath = findTsconfig(projectRoot);
   const tsPluginConfig = tsconfigPath ? getPluginConfig(tsconfigPath) : undefined;
   const vmcConfigPath = getVmcConfigPath(tsPluginConfig);
-  const legacyPluginSpecifiers = tsPluginConfig?.plugins ?? [];
 
   let resolver: VirtualModuleResolver | undefined;
   let pluginSpecifiers: readonly string[] = [];
@@ -158,16 +154,6 @@ export function createResolver(projectRoot: string): {
     resolver = loadedResolver.resolver;
     pluginSpecifiers = loadedResolver.pluginSpecifiers;
     typeTargetSpecs = loadedResolver.typeTargetSpecs;
-  }
-
-  // Backward-compatible fallback for legacy tsconfig plugin-specifier lists.
-  if (!resolver && legacyPluginSpecifiers.length > 0) {
-    const loadedPlugins = loadPluginsFromEntries(legacyPluginSpecifiers, projectRoot);
-    pluginSpecifiers = legacyPluginSpecifiers;
-    if (loadedPlugins.plugins.length > 0) {
-      resolver = new PluginManager(loadedPlugins.plugins);
-      typeTargetSpecs ??= collectTypeTargetSpecsFromPlugins(loadedPlugins.plugins);
-    }
   }
 
   if (!resolver) {

@@ -10,7 +10,7 @@
 - Dialog mirrors the Disclosure data-state pattern and stores the invoking element in a WeakMap keyed by the state ref so close controls can return focus without adding store objects.
 - Popover is native-only: trigger/content attributes plus native `toggle` event mirroring; no JS click toggle, overlay element, focus trap, or positioning fallback.
 - Later parity hardening added shared native controllers so RefSubject state can command registered popover/dialog DOM nodes.
-- Portal is no longer part of the parity target; native popover is the baseline overlay substrate.
+- Native popover is the baseline overlay substrate.
 - StartupRef schemas should decode only fields that compose into the backing RefSubject state.
 - Menubar and Toolbar item ids must be resolved through `makeRef`; never compare or stringify raw renderables.
 - Composite keyboard parity now flows through explicit `items` collections on Menu, Menubar, Listbox, Select, RadioGroup, Tabs, and Toolbar roots/content.
@@ -29,3 +29,5 @@
 - Use `Dom.renderHost` as the host-first escape hatch so the merge and cast stay centralized.
 - Do not spread `ref` inside template prop bags; split it with `Dom.splitRef` and attach it with an explicit `ref=${...}` attribute.
 - Form codec decode failures should update the field error and mark the field touched while preserving the previous valid value.
+- Prerelease cleanup removed the modal-focus and overlay-mounting shims from `@typed/ui`; native Dialog and Popover are the only overlay/focus substrate.
+- VS Code virtual-module resolution is config-file-only; tsconfig plugin lists should configure the TS plugin itself and may point at `vmcConfigPath`, but they are not plugin source fallback lists.

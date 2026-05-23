@@ -6,7 +6,6 @@ import { Window } from "happy-dom";
 import * as Button from "./Button.js";
 import * as Combobox from "./Combobox.js";
 import * as Command from "./Command.js";
-import * as FocusTrap from "./FocusTrap.js";
 import * as Focusable from "./Focusable.js";
 import * as Form from "./Form.js";
 import * as Group from "./Group.js";
@@ -49,7 +48,6 @@ describe("typed/ui Ariakit parity exports", () => {
       yield* render(
         html`${Button.Button({ content: "Button" })} ${Command.Command({ content: "Command" })}
         ${Focusable.Focusable({ content: "Focusable" })}
-        ${FocusTrap.FocusTrap({ content: "Focus trap" })}
         ${Group.Group({ label: "Group", content: Group.Label({ content: "Label" }) })}
         ${Heading.Heading({ level: 2, content: "Heading" })}
         ${Role.Role({ role: "note", content: "Role" })} ${Separator.Separator()}
@@ -143,6 +141,13 @@ describe("typed/ui Ariakit parity exports", () => {
       assert(window.document.getElementById("fruit"));
       assert(window.document.querySelector("dialog"));
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("does not export removed overlay shims", async () => {
+    const ui = await import("./index.js");
+
+    assert(!("FocusTrap" in ui));
+    assert(!("Portal" in ui));
+  });
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

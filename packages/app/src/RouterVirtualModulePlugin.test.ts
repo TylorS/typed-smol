@@ -303,7 +303,7 @@ describe("RouterVirtualModulePlugin", () => {
     expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
   });
 
-  it("rejects legacy router prefix ids", () => {
+  it("rejects old router prefix ids", () => {
     const parsed = parseRouterVirtualModuleId("router:./routes");
     expect(parsed.ok).toBe(false);
   });

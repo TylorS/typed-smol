@@ -41,7 +41,7 @@ The problem is to design a Typed-native component system that preserves Ariakit-
 
 ### Approach 1: Abstract Substrate First
 
-Build the foundation first: Role, Focusable, Collection, Composite, Portal, Group, Separator, and Command.
+Build the foundation first: Role, Focusable, Collection, Composite, Group, Separator, and Command.
 
 Pros:
 
@@ -61,7 +61,7 @@ Build Button, Checkbox, Disclosure, Dialog, Popover, and Tooltip first.
 Pros:
 
 - Produces usable components quickly.
-- Exercises visibility state, focus restoration, portals, and event handlers.
+- Exercises visibility state, focus restoration, native overlays, and event handlers.
 - Easier to document and demo early.
 
 Cons:

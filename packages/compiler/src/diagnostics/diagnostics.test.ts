@@ -81,7 +81,7 @@ describe("compiler diagnostics", () => {
     });
   });
 
-  it("converts to virtual-module diagnostics for legacy plugin hosts", () => {
+  it("converts to virtual-module diagnostics for plugin hosts", () => {
     const diagnostic = diag({ code: "TYPED-VM-001", source: "vmc" });
 
     expect(toVirtualModuleDiagnostic(diagnostic, "typed-template")).toEqual({

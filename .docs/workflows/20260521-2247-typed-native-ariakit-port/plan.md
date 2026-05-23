@@ -898,7 +898,7 @@ pnpm --filter @typed/ui build
 - [x] Convert Popover/Menu/Select dismiss and selection paths to command native popovers.
 - [x] Convert Hovercard and Tooltip content to native popover-backed surfaces.
 - [x] Add exact Ariakit-style aliases for common renamed root/subpart exports.
-- [x] Add missing `FocusTrap`, `Store`, and `Tab` public modules.
+- [x] Keep `Store` and `Tab` public modules; remove modal focus shims in favor of native Dialog.
 - [x] Fix reactive id handling for Menubar and Toolbar item tabindex/focus state.
 - [x] Constrain `StartupRef.fromData` to decoded fields that compose into backing state.
 - [x] Run full `@typed/ui` verification gates.

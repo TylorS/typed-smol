@@ -32,7 +32,7 @@ The first milestone should attach Disclosure, Dialog, and Popover as a concrete 
 Candidate slices:
 
 1. Abstract substrate first:
-   - Role, Focusable, Collection, Composite, Portal, Group, Separator, Command.
+   - Role, Focusable, Collection, Composite, Group, Separator, Command.
    - This creates the behavior foundation for richer widgets.
 2. User-facing minimal kit first:
    - Button, Checkbox, Disclosure, Dialog, Popover, Tooltip.

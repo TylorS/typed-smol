@@ -18,12 +18,12 @@ describe("virtualPreviewDisk", () => {
     expect(getVirtualPreviewPath(projectRoot, artifactPath)).toBe(resolve(artifactPath));
   });
 
-  it("keeps legacy virtual filenames under the shared preview root", () => {
+  it("rejects virtual artifact paths outside the shared preview root", () => {
     const projectRoot = resolve("/workspace/app");
 
-    expect(getVirtualPreviewPath(projectRoot, "/workspace/app/src/__virtual_plugin_hash.ts")).toBe(
-      join(projectRoot, VIRTUAL_PREVIEW_RELATIVE, "__virtual_plugin_hash.ts"),
-    );
+    expect(() =>
+      getVirtualPreviewPath(projectRoot, "/workspace/app/src/__virtual_plugin_hash.ts"),
+    ).toThrow("outside the virtual preview root");
   });
 
   it("normalizes preview source imports relative to the preview file path", () => {
@@ -31,11 +31,11 @@ describe("virtualPreviewDisk", () => {
     const source = getVirtualPreviewSource(
       projectRoot,
       "/workspace/app/src/routes/entry.ts",
-      "/workspace/app/src/__virtual_router_hash.ts",
+      join(projectRoot, VIRTUAL_PREVIEW_RELATIVE, "router", "routes.ts"),
       'import { route } from "./route";\nexport { route };',
     );
 
-    expect(source).toContain('from "../../../src/routes/route"');
+    expect(source).toContain('from "../../../../src/routes/route"');
   });
 
   it("materializes nested virtual imports next to the parent preview artifact", () => {

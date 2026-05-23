@@ -17,7 +17,6 @@ export type VirtualPreviewResolver = (moduleId: string) => VirtualPreviewResolve
 
 /**
  * Absolute path for a virtual preview file under projectRoot/node_modules/.typed/virtual/.
- * Uses the basename from virtualFileName (e.g. __virtual_router_abc123.ts) for uniqueness.
  */
 export function getVirtualPreviewPath(projectRoot: string, virtualFileName: string): string {
   const virtualRoot = resolve(projectRoot, VIRTUAL_PREVIEW_RELATIVE);
@@ -25,10 +24,15 @@ export function getVirtualPreviewPath(projectRoot: string, virtualFileName: stri
   if (isAbsolute(virtualFileName) && isPathInside(virtualRoot, resolvedVirtualFile)) {
     return resolvedVirtualFile;
   }
+  if (isAbsolute(virtualFileName)) {
+    throw new Error(`Virtual preview path is outside the virtual preview root: ${virtualFileName}`);
+  }
 
-  const base = virtualFileName.replace(/^.*[/\\]/, ""); // basename
-  const dir = join(projectRoot, VIRTUAL_PREVIEW_RELATIVE);
-  return resolve(dir, base);
+  const previewPath = resolve(virtualRoot, virtualFileName);
+  if (!isPathInside(virtualRoot, previewPath)) {
+    throw new Error(`Virtual preview path is outside the virtual preview root: ${virtualFileName}`);
+  }
+  return previewPath;
 }
 
 function isPathInside(baseDir: string, candidate: string): boolean {

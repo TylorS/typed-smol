@@ -9,7 +9,7 @@ The target should preserve the capabilities that make Ariakit valuable:
 - accessible component families grounded in WAI-ARIA patterns
 - composable state stores for controlled and uncontrolled widgets
 - provider/context-style composition adapted to Typed and Effect
-- abstract primitives for role, focus, collection, composite navigation, portal, group, command, and separators
+- abstract primitives for role, focus, collection, composite navigation, group, command, and separators
 - concrete widgets such as Button, Checkbox, Combobox, Dialog, Disclosure, Form, Heading, Hovercard, Menu, Menubar, Popover, Radio, Select, Tab, Toolbar, Tooltip, and VisuallyHidden
 - advanced composition between widgets, such as Dialog + Combobox command menus, Select + Combobox, Menu + Combobox, and tabbed command palettes
 

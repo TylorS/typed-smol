@@ -303,7 +303,7 @@ describe("parseHttpApiVirtualModuleId", () => {
     if (result.ok) expect(result.relativeDirectory).toBe("./api");
   });
 
-  it("returns not ok for legacy api prefix ids", () => {
+  it("returns not ok for old api prefix ids", () => {
     const result = parseHttpApiVirtualModuleId("api:./apis");
     expect(result.ok).toBe(false);
   });

@@ -49,7 +49,7 @@ The component layer is native-platform-first. Modal behavior belongs to native `
 
 CSS Anchor Positioning is exposed through stable DOM attributes and state hooks so users can apply native `anchor-name`, `position-anchor`, and `position-area` CSS without requiring a custom JavaScript positioning engine.
 
-Portal APIs are an intentional Ariakit divergence. `@typed/ui` assumes native Popover and Dialog APIs for layered UI instead of implementing portal-based overlay infrastructure.
+Layered UI uses native Popover and Dialog APIs directly.
 
 ## API reference
 

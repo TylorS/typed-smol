@@ -18,7 +18,7 @@ VS Code extension that bridges **virtual module imports** (e.g. `router:./routes
 
 ## Architecture
 
-- **Resolver** (`resolver.ts`): Loads plugins from `vmc.config.ts` or legacy tsconfig `compilerOptions.plugins`; builds TypeScript Program per project root for type-aware plugins; caches programs until source changes.
+- **Resolver** (`resolver.ts`): Loads plugins from `vmc.config.ts`; builds TypeScript Program per project root for type-aware plugins; caches programs until source changes.
 - **Content provision**: `virtual-module:` scheme via `TextDocumentContentProvider`; `typed-virtual:` scheme via `FileSystemProvider` (read-only). Path-based URIs survive tsserver's `toTsFilePath` (query params dropped).
 - **Preview on disk** (`virtualPreviewDisk.ts`): Writes to `node_modules/.typed/virtual/` when opening from tree/command for editable inspection; content stays in sync via refresh.
 - **Project root**: Uses nearest `tsconfig.json` containing the file so resolution matches the correct plugin set (e.g. sample-project in a monorepo).
