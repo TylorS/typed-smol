@@ -38,6 +38,17 @@ Status: approved on 2026-05-22.
   5. Run `pnpm --filter @typed/storybook build` for skeleton type/build verification.
   6. Record validation evidence in `03-execution-log.md` and memory notes.
 
+## Active Task Detail — T-2 Public Exports
+
+- status: completed
+- requirement_links: FR-1, FR-2, AC-1, TS-1
+- substeps:
+  1. Add failing public-surface tests for the framework constant, config helper, preset exports, preview annotations, and portable-story testing exports.
+  2. Verify `pnpm --filter @typed/storybook test` fails because these exports are missing.
+  3. Implement minimal public exports without renderer or Vite behavior beyond package identity.
+  4. Re-run `pnpm --filter @typed/storybook test`.
+  5. Re-run `pnpm --filter @typed/storybook build` and `pnpm exec oxlint packages/storybook`.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.

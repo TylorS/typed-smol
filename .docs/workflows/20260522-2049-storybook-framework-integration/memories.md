@@ -5,3 +5,5 @@
 - T-1 starts with package-boundary tests before source entrypoints to preserve red-green evidence for the package skeleton.
 - T-1 red failure was the expected missing `src/index.ts` assertion in `packages/storybook/src/package-boundary.test.ts`.
 - T-1 green checks: `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.
+- T-2 dependency check: `storybook` and `@storybook/builder-vite` are current at `10.4.1`, while `@storybook/types` is still `8.6.14`; use Storybook v10's bundled `storybook/internal/types` type surface instead of adding old `@storybook/types`.
+- T-2 red failure was missing public exports in `public-surface.test.ts`; green checks were `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, and `pnpm exec oxlint packages/storybook`.

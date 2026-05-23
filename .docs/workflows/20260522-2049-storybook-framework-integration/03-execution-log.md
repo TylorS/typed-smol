@@ -26,3 +26,22 @@ Execution started after approval of `plan.md`.
 ## Deferred Work
 
 - Storybook behavior implementation remains in T-2 through T-6.
+
+### Task
+
+- task_id: T-2
+- requirement_ids: FR-1, FR-2, AC-1
+- ts_scenarios: TS-1
+- validation_evidence:
+  - RED: `pnpm --filter @typed/storybook test` failed because `defineTypedStorybookConfig`, preset exports, and portable-story helpers were missing.
+  - GREEN: `pnpm --filter @typed/storybook test` passed.
+  - GREEN: `pnpm --filter @typed/storybook build` passed.
+  - LINT: `pnpm exec oxlint packages/storybook` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Installed `storybook@10.4.1` and `@storybook/builder-vite@10.4.1` for current Storybook v10 type surfaces; avoided `@storybook/types` because the latest published package is still `8.6.14`.
+- context_updates:
+  - none
+- memory_updates:
+  - Recorded current Storybook dependency decision in `memories.md`.
