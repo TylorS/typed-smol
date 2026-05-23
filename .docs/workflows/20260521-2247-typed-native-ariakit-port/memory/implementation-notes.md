@@ -13,3 +13,8 @@
 - Portal is no longer part of the parity target; native popover is the baseline overlay substrate.
 - StartupRef schemas should decode only fields that compose into the backing RefSubject state.
 - Menubar and Toolbar item ids must be resolved through `makeRef`; never compare or stringify raw renderables.
+- Composite keyboard parity now flows through explicit `items` collections on Menu, Menubar, Listbox, Select, RadioGroup, Tabs, and Toolbar roots/content.
+- NativePopover registration hydrates initially-open RefSubject state into the DOM with `showPopover`, matching NativeDialog initial-open behavior.
+- Popover exposes CSS anchor-positioning through `anchorName`, `positionAnchor`, and `positionArea` attributes without adding a JavaScript positioning engine.
+- Combobox is now native-popover-backed with input `aria-controls`, active item movement, Enter selection, and Escape close.
+- Form field controls must keep `name` keyed to the backing `State<Values>` object.

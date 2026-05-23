@@ -55,7 +55,7 @@
 - commit:
   - `799a72e feat(ui): add refsubject state helpers`
 - deviations_or_replans:
-  - Effect v4 does not expose `Context.GenericTag` at runtime; `State.tag` uses `Context.Service` to construct the provider key.
+  - Effect v4 does not expose `Context.GenericTag` at runtime; `State.Service` uses `Context.Service` to construct the provider key.
 - context_updates:
   - none
 - memory_updates:
@@ -198,4 +198,7 @@
 
 ## Deferred Work
 
-- Browser-runner wiring for `@typed/ui` remains deferred until dependency linkage can be changed without mixing unrelated lockfile changes.
+- Browser-runner wiring was added in the parity-closure pass with `packages/ui/vitest.browser.config.ts`, `test:browser`, and a native overlay baseline smoke.
+- Parity-closure pass added `ariakit-parity-matrix.md` and expanded implementation coverage for Composite keyboard movement, native popover initial-open hydration, CSS anchor-positioning attributes, Combobox popup linkage/keyboard behavior, Hovercard close lifecycle, and keyed Form field names.
+- Remaining gaps are tracked explicitly in `ariakit-parity-matrix.md`.
+- Parity-closure verification: `pnpm --filter @typed/ui test` passed with 24 files and 93 tests; `pnpm --filter @typed/ui build` passed; `pnpm --filter @typed/ui exec vitest typecheck --run src/ComponentOptions.test.ts` passed with 4 type-test cases; `pnpm --filter @typed/ui run test:browser` passed with 1 file and 2 tests.

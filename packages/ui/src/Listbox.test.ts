@@ -104,6 +104,30 @@ describe("typed/ui/Listbox", () => {
       );
       expect(yield* state).toMatchObject({ activeId: "first", value: "first" });
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves active option from root keyboard events", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Listbox.makeState({ value: "first", activeId: "first" });
+      yield* render(
+        Listbox.Root({
+          state,
+          items: [
+            { id: "first", value: "first" },
+            { id: "second", value: "second" },
+          ],
+          content: "Options",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=listbox]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect(yield* state).toMatchObject({ activeId: "second", value: "first" });
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

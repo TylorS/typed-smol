@@ -37,13 +37,16 @@ export function setValue<Values extends Record<string, unknown>>(
   }));
 }
 
-export interface FormOptions {
-  readonly state: RefSubject.RefSubject<State>;
+export interface FormOptions<Values extends Record<string, unknown> = Record<string, unknown>> {
+  readonly state: RefSubject.RefSubject<State<Values>>;
   readonly content: Content;
   readonly onsubmit?: Parameters<typeof EventHandler.fromEffectOrEventHandler>[0];
 }
 
-export function Form<const Opts extends FormOptions>(options: Opts): Component<Opts> {
+export function Form<
+  const Values extends Record<string, unknown>,
+  const Opts extends FormOptions<Values>,
+>(options: Opts): Component<Opts> {
   const onSubmit = options.onsubmit
     ? EventHandler.fromEffectOrEventHandler(options.onsubmit)
     : EventHandler.make((event: SubmitEvent) => Effect.sync(() => event.preventDefault()));
@@ -51,14 +54,21 @@ export function Form<const Opts extends FormOptions>(options: Opts): Component<O
   return html`<form onsubmit=${onSubmit}>${options.content}</form>`;
 }
 
-export interface InputOptions {
-  readonly state: RefSubject.RefSubject<State>;
-  readonly name: string;
+export interface InputOptions<
+  Values extends Record<string, unknown> = Record<string, unknown>,
+  Name extends keyof Values & string = keyof Values & string,
+> {
+  readonly state: RefSubject.RefSubject<State<Values>>;
+  readonly name: Name;
   readonly id?: ReactiveValue<string | undefined, any, any>;
   readonly type?: ReactiveValue<string | undefined, any, any>;
 }
 
-export function Input<const Opts extends InputOptions>(options: Opts): Component<Opts> {
+export function Input<
+  const Values extends Record<string, unknown>,
+  const Name extends keyof Values & string,
+  const Opts extends InputOptions<Values, Name>,
+>(options: Opts): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => String(state.values[options.name] ?? ""));
   const describedBy = RefSubject.map(options.state, (state) =>
     state.errors[options.name] ? `${options.name}-error` : undefined,
@@ -92,13 +102,21 @@ export function Description<const Opts extends { readonly id?: string; readonly 
   return html`<div id=${options.id}>${options.content}</div>`;
 }
 
-export interface ErrorOptions {
-  readonly state: RefSubject.RefSubject<State>;
-  readonly name: string;
+export interface ErrorOptions<
+  Values extends Record<string, unknown> = Record<string, unknown>,
+  Name extends keyof Values & string = keyof Values & string,
+> {
+  readonly state: RefSubject.RefSubject<State<Values>>;
+  readonly name: Name;
 }
 
-export function Error<const Opts extends ErrorOptions>(options: Opts): Component<Opts> {
-  return html`<div id=${`${options.name}-error`} role="alert">
+export function Error<
+  const Values extends Record<string, unknown>,
+  const Name extends keyof Values & string,
+  const Opts extends ErrorOptions<Values, Name>,
+>(options: Opts): Component<Opts> {
+  const id = `${options.name}-error`;
+  return html`<div id=${id} role="alert">
     ${RefSubject.map(options.state, (state) => state.errors[options.name] ?? "")}
   </div>`;
 }

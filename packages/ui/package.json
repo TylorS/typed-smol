@@ -21,7 +21,8 @@
   },
   "scripts": {
     "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
@@ -34,6 +35,7 @@
     "happy-dom": "catalog:"
   },
   "devDependencies": {
+    "@vitest/browser-playwright": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

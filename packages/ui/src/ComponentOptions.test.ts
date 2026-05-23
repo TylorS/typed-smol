@@ -7,6 +7,7 @@ import { RefSubject } from "@typed/fx";
 import type { RenderTemplate } from "@typed/template";
 import * as Dialog from "./Dialog.js";
 import * as Disclosure from "./Disclosure.js";
+import * as Form from "./Form.js";
 import * as Listbox from "./Listbox.js";
 import * as Menu from "./Menu.js";
 import * as Select from "./Select.js";
@@ -168,6 +169,23 @@ describe("typed/ui component option inference", () => {
 
     // @ts-expect-error placement is not part of the backing state
     StartupRef.fromData(state, DataAttr.schema({ placement: Schema.String }));
+  });
+
+  it("keeps form field names keyed to the backing values object", () => {
+    const form = {} as RefSubject.RefSubject<
+      Form.State<{
+        readonly email: string;
+        readonly password: string;
+      }>
+    >;
+
+    Form.Input({ state: form, name: "email" });
+    Form.Error({ state: form, name: "password" });
+
+    // @ts-expect-error missing is not a field in the backing form state
+    Form.Input({ state: form, name: "missing" });
+    // @ts-expect-error missing is not a field in the backing form state
+    Form.Error({ state: form, name: "missing" });
   });
 });
 

@@ -169,6 +169,34 @@ describe("typed/ui/Select", () => {
       );
       expect(yield* state).toMatchObject({ activeId: "last", value: "first" });
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves active option from content keyboard events", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Select.makeState<string>({
+        id: "status-select",
+        value: "draft",
+        activeId: "draft",
+      });
+      yield* render(
+        Select.Content({
+          state,
+          items: [
+            { id: "draft", value: "draft" },
+            { id: "published", value: "published" },
+          ],
+          content: "Options",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=listbox]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect(yield* state).toMatchObject({ activeId: "published", value: "draft" });
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

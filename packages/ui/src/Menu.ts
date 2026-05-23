@@ -115,6 +115,7 @@ export const Button = Trigger;
 export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
+  readonly items?: readonly Item[];
   readonly label?: RequiredString;
 }
 
@@ -129,6 +130,20 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     NativePopover.syncToggle(options.state, event),
   );
+  const items = options.items;
+  const onKeyDown =
+    items === undefined
+      ? undefined
+      : EventHandler.make((event: KeyboardEvent) =>
+          Effect.gen(function* () {
+            const current = yield* options.state;
+            const direction = Composite.keyMove(event, current);
+            if (!direction) return;
+
+            event.preventDefault();
+            yield* move(options.state, items, direction);
+          }),
+        );
 
   return html`<div
     id=${id}
@@ -139,6 +154,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     aria-activedescendant=${activeDescendant}
     .data=${{ open }}
     ontoggle=${onToggle}
+    onkeydown=${onKeyDown}
     ref=${NativePopover.register(options.state)}
   >
     ${options.content}

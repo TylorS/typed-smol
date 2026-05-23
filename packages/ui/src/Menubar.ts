@@ -43,12 +43,32 @@ export function move<Value>(
 export interface RootOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: Content;
+  readonly items?: readonly Collection.Item[];
   readonly label?: ReactiveValue<string | undefined, any, any>;
 }
 
 export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
-  return html`<div role="menubar" aria-label=${options.label} aria-orientation=${orientation}>
+  const items = options.items;
+  const onKeyDown =
+    items === undefined
+      ? undefined
+      : EventHandler.make((event: KeyboardEvent) =>
+          Effect.gen(function* () {
+            const current = yield* options.state;
+            const direction = Composite.keyMove(event, current);
+            if (!direction) return;
+
+            event.preventDefault();
+            yield* move(options.state, items, direction);
+          }),
+        );
+  return html`<div
+    role="menubar"
+    aria-label=${options.label}
+    aria-orientation=${orientation}
+    onkeydown=${onKeyDown}
+  >
     ${options.content}
   </div>`;
 }

@@ -50,4 +50,38 @@ describe("typed/ui/Composite", () => {
     expect(Composite.keyMove({ key: "Home" }, {})).toBe("first");
     expect(Composite.keyMove({ key: "End" }, {})).toBe("last");
   });
+
+  it("moves with keyboard events and prevents native scrolling only for handled keys", () =>
+    Effect.gen(function* () {
+      const collection = yield* Collection.makeState([{ id: "a" }, { id: "b" }]);
+      const state = yield* Composite.makeState({ activeId: "a", orientation: "vertical" });
+      let prevented = 0;
+
+      const handled = yield* Composite.moveByKey(
+        {
+          key: "ArrowDown",
+          preventDefault: () => {
+            prevented += 1;
+          },
+        },
+        { state, collection },
+      );
+      const ignored = yield* Composite.moveByKey({ key: "ArrowRight" }, { state, collection });
+
+      expect(handled).toBe(true);
+      expect(ignored).toBe(false);
+      expect(prevented).toBe(1);
+      expect((yield* state).activeId).toBe("b");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("finds enabled items with typeahead text", () => {
+    const items = [
+      { id: "a", text: "Archive" },
+      { id: "b", text: "Rename", disabled: true },
+      { id: "c", text: "Remove" },
+    ];
+
+    expect(Composite.typeahead(items, "re", (item) => item.text)).toBe("c");
+    expect(Composite.typeahead(items, "x", (item) => item.text)).toBeNull();
+  });
 });

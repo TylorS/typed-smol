@@ -48,4 +48,27 @@ describe("typed/ui/Tabs", () => {
       yield* Tabs.select(state, "tab-b");
       expect((yield* state).selectedId).toBe("tab-b");
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("selects the next tab from list keyboard events in automatic mode", () =>
+    Effect.gen(function* () {
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
+      const layer = DomRenderTemplate.using(window.document);
+      const state = yield* Tabs.makeState({ selectedId: "tab-a" });
+
+      yield* render(
+        Tabs.List({
+          state,
+          items: [{ id: "tab-a" }, { id: "tab-b" }],
+          content: "Tabs",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=tablist]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect((yield* state).selectedId).toBe("tab-b");
+    }).pipe(Effect.scoped, Effect.runPromise));
 });

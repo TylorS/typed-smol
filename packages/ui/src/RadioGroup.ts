@@ -80,17 +80,33 @@ export function move<Value extends string>(
 export interface RootOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
+  readonly items?: readonly Item[];
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
 export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
+  const items = options.items;
+  const onKeyDown =
+    items === undefined
+      ? undefined
+      : EventHandler.make((event: KeyboardEvent) =>
+          Effect.gen(function* () {
+            const current = yield* options.state;
+            const direction = Composite.keyMove(event, current);
+            if (!direction) return;
+
+            event.preventDefault();
+            yield* move(options.state, items, direction);
+          }),
+        );
   return html`<div
     id=${options.id}
     role="radiogroup"
     aria-label=${options.label}
     aria-orientation=${orientation}
+    onkeydown=${onKeyDown}
   >
     ${options.content}
   </div>`;

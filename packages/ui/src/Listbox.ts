@@ -80,6 +80,7 @@ export function move<Value extends string>(
 export interface RootOptions<Value extends string = string> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly content: AnyContent;
+  readonly items?: readonly Item<Value>[];
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
@@ -89,6 +90,20 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
   const activeDescendant = RefSubject.map(options.state, (current) =>
     current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
+  const items = options.items;
+  const onKeyDown =
+    items === undefined
+      ? undefined
+      : EventHandler.make((event: KeyboardEvent) =>
+          Effect.gen(function* () {
+            const current = yield* options.state;
+            const direction = Composite.keyMove(event, current);
+            if (!direction) return;
+
+            event.preventDefault();
+            yield* move(options.state, items, direction);
+          }),
+        );
 
   return html`<div
     id=${options.id}
@@ -96,6 +111,7 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
     aria-label=${options.label}
     aria-orientation=${orientation}
     aria-activedescendant=${activeDescendant}
+    onkeydown=${onKeyDown}
   >
     ${options.content}
   </div>`;

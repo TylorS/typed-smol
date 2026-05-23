@@ -86,6 +86,30 @@ describe("typed/ui/Popover", () => {
       assert.strictEqual((yield* state).open, false);
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("shows the native popover on registration when initial state is open", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      let showCount = 0;
+      Object.assign(window.HTMLElement.prototype, {
+        showPopover() {
+          showCount += 1;
+        },
+      });
+      const state = yield* Popover.makeState({
+        id: "menu-popover",
+        open: true,
+        mode: "auto",
+      });
+
+      yield* render(Popover.Content({ state, content: "Menu" }), window.document.body).pipe(
+        Fx.provide(layer),
+        Fx.take(1),
+        Fx.collectAll,
+      );
+
+      assert.strictEqual(showCount, 1);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("dismisses the native popover as well as the backing state", () =>
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();
@@ -135,6 +159,36 @@ describe("typed/ui/Popover", () => {
 
       assert.strictEqual(window.document.querySelector("[data-overlay]"), null);
       assert.strictEqual(window.document.querySelector("[data-focus-trap]"), null);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("exposes anchor-positioning attributes without a custom positioning engine", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Popover.makeState({
+        id: "menu-popover",
+        open: false,
+        mode: "auto",
+      });
+      const [anchor] = yield* render(
+        Popover.Anchor({ state, content: "Anchor", anchorName: "--menu-anchor" }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      const [content] = yield* render(
+        Popover.Content({
+          state,
+          content: "Menu",
+          positionAnchor: "--menu-anchor",
+          positionArea: "bottom span-right",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      assert(anchor instanceof window.HTMLElement);
+      assert(content instanceof window.HTMLElement);
+      assert.strictEqual(anchor.getAttribute("style"), "anchor-name: --menu-anchor;");
+      assert.strictEqual(content.getAttribute("style"), "position-anchor: --menu-anchor; position-area: bottom span-right;");
+      assert.strictEqual(content.dataset.positionAnchor, "--menu-anchor");
+      assert.strictEqual(content.dataset.positionArea, "bottom span-right");
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

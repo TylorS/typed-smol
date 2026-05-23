@@ -8,6 +8,7 @@ import * as NativePopover from "./NativePopover.js";
 import type { Component, Content } from "./Reactive.js";
 
 type AnyContent = Content;
+type OptionalString = string | undefined;
 
 export interface State {
   readonly id: string;
@@ -55,22 +56,28 @@ export const Disclosure = Trigger;
 export interface AnchorOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
+  readonly anchorName?: OptionalString;
 }
 
 export function Anchor<const Opts extends AnchorOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
-  return html`<span popovertarget=${id}>${options.content}</span>`;
+  const style =
+    options.anchorName === undefined ? undefined : `anchor-name: ${options.anchorName};`;
+  return html`<span popovertarget=${id} style=${style}>${options.content}</span>`;
 }
 
 export interface ContentOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
+  readonly positionAnchor?: OptionalString;
+  readonly positionArea?: OptionalString;
 }
 
 export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
+  const style = positionStyle(options.positionAnchor, options.positionArea);
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     NativePopover.syncToggle(options.state, event),
   );
@@ -78,7 +85,10 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   return html`<div
     id=${id}
     popover=${mode}
+    style=${style}
     .data=${{ open, mode }}
+    data-position-anchor=${options.positionAnchor}
+    data-position-area=${options.positionArea}
     ontoggle=${onToggle}
     ref=${NativePopover.register(options.state)}
   >
@@ -140,4 +150,14 @@ function dataMode(state: RefSubject.RefSubject<State>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.mode ?? "auto")),
   );
+}
+
+function positionStyle(
+  positionAnchor: OptionalString,
+  positionArea: OptionalString,
+): OptionalString | undefined {
+  if (positionAnchor === undefined && positionArea === undefined) return undefined;
+  const anchorStyle = positionAnchor === undefined ? "" : `position-anchor: ${positionAnchor};`;
+  const areaStyle = positionArea === undefined ? "" : ` position-area: ${positionArea};`;
+  return `${anchorStyle}${areaStyle}`.trim();
 }

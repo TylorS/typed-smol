@@ -3,6 +3,8 @@ import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
+import * as Collection from "./Collection.js";
+import * as Composite from "./Composite.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
@@ -13,14 +15,20 @@ export type Orientation = "horizontal" | "vertical";
 
 export interface State {
   readonly selectedId: string;
+  readonly activeId: string;
   readonly activationMode: ActivationMode;
   readonly orientation: Orientation;
+  readonly loop: boolean;
+  readonly rtl: boolean;
 }
 
 export interface InitialState {
   readonly selectedId: string;
+  readonly activeId?: string;
   readonly activationMode?: ActivationMode;
   readonly orientation?: Orientation;
+  readonly loop?: boolean;
+  readonly rtl?: boolean;
 }
 
 export function makeState(
@@ -28,8 +36,11 @@ export function makeState(
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
   return RefSubject.make({
     selectedId: initial.selectedId,
+    activeId: initial.activeId ?? initial.selectedId,
     activationMode: initial.activationMode ?? "automatic",
     orientation: initial.orientation ?? "horizontal",
+    loop: initial.loop ?? true,
+    rtl: initial.rtl ?? false,
   });
 }
 
@@ -37,23 +48,56 @@ export function select(
   state: RefSubject.RefSubject<State>,
   selectedId: string,
 ): Effect.Effect<State> {
-  return RefSubject.update(state, (current) => ({ ...current, selectedId }));
+  return RefSubject.update(state, (current) => ({ ...current, activeId: selectedId, selectedId }));
+}
+
+export function move(
+  state: RefSubject.RefSubject<State>,
+  items: readonly Collection.Item[],
+  direction: Composite.Move,
+): Effect.Effect<State> {
+  return Effect.gen(function* () {
+    const current = yield* state;
+    const enabled = Collection.enabledItems(Collection.byDomOrder(items));
+    const activeId = nextActiveId(enabled, current, direction);
+    return yield* RefSubject.update(state, (value) => ({
+      ...value,
+      activeId: activeId ?? value.activeId,
+      selectedId: value.activationMode === "automatic" && activeId !== null ? activeId : value.selectedId,
+    }));
+  });
 }
 
 export interface ListOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
+  readonly items?: readonly Collection.Item[];
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
 export function List<const Opts extends ListOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
+  const items = options.items;
+  const onKeyDown =
+    items === undefined
+      ? undefined
+      : EventHandler.make((event: KeyboardEvent) =>
+          Effect.gen(function* () {
+            const current = yield* options.state;
+            const direction = Composite.keyMove(event, current);
+            if (!direction) return;
+
+            event.preventDefault();
+            yield* move(options.state, items, direction);
+          }),
+        );
   return html`<div
     id=${options.id}
     role="tablist"
     aria-label=${options.label}
     aria-orientation=${orientation}
+    onkeydown=${onKeyDown}
   >
     ${options.content}
   </div>`;
@@ -120,4 +164,22 @@ function isSelected(
   id: RefSubject.Computed<string, any, any>,
 ) {
   return RefSubject.mapEffect(state, (value) => Effect.map(id, (id) => value.selectedId === id));
+}
+
+function nextActiveId(
+  items: readonly Collection.Item[],
+  state: State,
+  direction: Composite.Move,
+): string | null {
+  if (items.length === 0) return null;
+  if (direction === "first") return items[0]?.id ?? null;
+  if (direction === "last") return items[items.length - 1]?.id ?? null;
+
+  const index = Math.max(
+    0,
+    items.findIndex((item) => item.id === state.activeId),
+  );
+  const next = index + (direction === "next" ? 1 : -1);
+  if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;
+  return items[Math.min(Math.max(next, 0), items.length - 1)]?.id ?? null;
 }

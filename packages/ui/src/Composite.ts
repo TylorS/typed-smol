@@ -27,6 +27,11 @@ export interface MoveOptions<Value = unknown> {
   readonly collection: RefSubject.RefSubject<Collection.State<Value>>;
 }
 
+export interface KeyboardEventLike {
+  readonly key: string;
+  preventDefault?: () => void;
+}
+
 export function makeState(
   initial: InitialState = {},
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -45,6 +50,21 @@ export function move<Value>(options: MoveOptions<Value>, direction: Move): Effec
     const current = yield* options.state;
     const activeId = nextActiveId(items, current, direction);
     return yield* RefSubject.update(options.state, (state) => ({ ...state, activeId }));
+  });
+}
+
+export function moveByKey<Value>(
+  event: KeyboardEventLike,
+  options: MoveOptions<Value>,
+): Effect.Effect<boolean> {
+  return Effect.gen(function* () {
+    const current = yield* options.state;
+    const direction = keyMove(event, current);
+    if (!direction) return false;
+
+    event.preventDefault?.();
+    yield* move(options, direction);
+    return true;
   });
 }
 
@@ -79,6 +99,21 @@ export function keyMove(
   if (orientation !== "horizontal" && event.key === "ArrowDown") return "next";
   if (orientation !== "horizontal" && event.key === "ArrowUp") return "previous";
   return undefined;
+}
+
+export function typeahead<Item extends Collection.Item>(
+  items: readonly Item[],
+  search: string,
+  text: (item: Item) => string = (item) => item.id,
+): string | null {
+  const query = search.trim().toLocaleLowerCase();
+  if (query.length === 0) return null;
+
+  const item = Collection.enabledItems(Collection.byDomOrder(items)).find((item) =>
+    text(item).toLocaleLowerCase().startsWith(query),
+  );
+
+  return item?.id ?? null;
 }
 
 function nextActiveId<Value>(

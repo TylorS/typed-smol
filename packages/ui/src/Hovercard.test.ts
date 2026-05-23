@@ -33,6 +33,32 @@ describe("typed/ui/Hovercard", () => {
       expect(dismiss.getAttribute("popovertarget")).toBe("profile-card");
       expect(dismiss.getAttribute("popovertargetaction")).toBe("hide");
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("closes anchor-triggered hovercards on blur and mouse leave", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Hovercard.makeState({ id: "profile-card", open: false });
+      const [anchor] = yield* render(
+        Hovercard.Anchor({ state, content: "Profile" }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      anchor.dispatchEvent(new window.FocusEvent("focus"));
+      yield* Effect.sleep(10);
+      expect((yield* state).open).toBe(true);
+
+      anchor.dispatchEvent(new window.FocusEvent("blur"));
+      yield* Effect.sleep(10);
+      expect((yield* state).open).toBe(false);
+
+      anchor.dispatchEvent(new window.MouseEvent("mouseenter"));
+      yield* Effect.sleep(10);
+      expect((yield* state).open).toBe(true);
+
+      anchor.dispatchEvent(new window.MouseEvent("mouseleave"));
+      yield* Effect.sleep(10);
+      expect((yield* state).open).toBe(false);
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
@@ -40,4 +66,3 @@ function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
   const layer = DomRenderTemplate.using(window.document);
   return [window, layer] as const;
 }
-

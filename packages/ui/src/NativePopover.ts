@@ -17,7 +17,12 @@ const elements = new WeakMap<object, PopoverElement>();
 export function register<S extends State>(
   state: RefSubject.RefSubject<S>,
 ): (element: HTMLElement) => Effect.Effect<void> {
-  return (element) => Effect.sync(() => elements.set(state, element as PopoverElement));
+  return (element) =>
+    Effect.gen(function* () {
+      elements.set(state, element);
+      const current = yield* state;
+      if (current.open) command(element, "show");
+    });
 }
 
 export function setOpen<S extends State>(

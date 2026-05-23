@@ -103,6 +103,27 @@ describe("typed/ui/Menu", () => {
       );
       expect((yield* state).activeId).toBe("first");
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves active item from content keyboard events", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Menu.makeState({ id: "actions-menu", activeId: "rename" });
+      yield* render(
+        Menu.Content({
+          state,
+          items: [{ id: "rename" }, { id: "archive" }],
+          content: "Actions",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=menu]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect((yield* state).activeId).toBe("archive");
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
-import { html } from "@typed/template";
+import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
@@ -34,17 +34,33 @@ export function move(
 export interface RootOptions {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
+  readonly items?: Collection.State;
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
 export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
+  const items = options.items;
+  const onKeyDown =
+    items === undefined
+      ? undefined
+      : EventHandler.make((event: KeyboardEvent) =>
+          Effect.gen(function* () {
+            const current = yield* options.state;
+            const direction = Composite.keyMove(event, current);
+            if (!direction) return;
+
+            event.preventDefault();
+            yield* move(options.state, items, direction);
+          }),
+        );
   return html`<div
     id=${options.id}
     role="toolbar"
     aria-label=${options.label}
     aria-orientation=${orientation}
+    onkeydown=${onKeyDown}
   >
     ${options.content}
   </div>`;

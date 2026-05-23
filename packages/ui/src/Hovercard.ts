@@ -34,13 +34,17 @@ export function Anchor<const Opts extends AnchorOptions>(options: Opts): Compone
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = RefSubject.map(options.state, (state) => state.open);
   const onFocus = EventHandler.make(() => setOpen(options.state, true));
+  const onBlur = EventHandler.make(() => setOpen(options.state, false));
   const onMouseEnter = EventHandler.make(() => setOpen(options.state, true));
+  const onMouseLeave = EventHandler.make(() => setOpen(options.state, false));
 
   return html`<span
     aria-controls=${id}
     aria-expanded=${open}
     onfocus=${onFocus}
+    onblur=${onBlur}
     onmouseenter=${onMouseEnter}
+    onmouseleave=${onMouseLeave}
   >
     ${options.content}
   </span>`;

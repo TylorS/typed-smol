@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
 import { RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, html, isElement, render } from "@typed/template";
 import { Window } from "happy-dom";
 import * as Toolbar from "./Toolbar.js";
 
@@ -35,6 +35,30 @@ describe("typed/ui/Toolbar", () => {
       expect((yield* state).activeId).toBe("italic");
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("moves active toolbar item from root keyboard events", () =>
+    Effect.gen(function* () {
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
+      const layer = DomRenderTemplate.using(window.document);
+      const state = yield* Toolbar.makeState({ activeId: "bold" });
+
+      yield* render(
+        Toolbar.Root({
+          state,
+          items: [{ id: "bold" }, { id: "italic" }],
+          content: html`${Toolbar.Item({ state, id: "bold", content: "B" })}
+          ${Toolbar.Item({ state, id: "italic", content: "I" })}`,
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=toolbar]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect((yield* state).activeId).toBe("italic");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("uses resolved reactive item ids for roving tabindex", () =>
     Effect.gen(function* () {
       const window = new Window() as unknown as globalThis.Window & typeof globalThis;
@@ -45,6 +69,8 @@ describe("typed/ui/Toolbar", () => {
         Toolbar.Item({ state, id, content: "B" }),
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      assert(isElement(item), "Item should be an element");
 
       expect(item.getAttribute("id")).toBe("bold");
       expect(item.getAttribute("tabindex")).toBe("0");
