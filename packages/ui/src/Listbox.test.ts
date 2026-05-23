@@ -128,6 +128,30 @@ describe("typed/ui/Listbox", () => {
 
       expect(yield* state).toMatchObject({ activeId: "second", value: "first" });
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves active option with typeahead text", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Listbox.makeState({ value: "first", activeId: "first" });
+      yield* render(
+        Listbox.Root({
+          state,
+          items: [
+            { id: "first", value: "first", textValue: "First" },
+            { id: "second", value: "second", textValue: "Second" },
+          ],
+          content: "Options",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=listbox]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "s", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect(yield* state).toMatchObject({ activeId: "second", value: "first" });
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

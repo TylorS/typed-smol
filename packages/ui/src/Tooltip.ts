@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
+import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
 import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
@@ -25,7 +26,7 @@ export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Eff
   return NativePopover.setOpen(state, open);
 }
 
-export interface AnchorOptions {
+export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: Content;
 }
@@ -36,6 +37,16 @@ export function Anchor<const Opts extends AnchorOptions>(options: Opts): Compone
   const onBlur = EventHandler.make(() => setOpen(options.state, false));
   const onMouseEnter = EventHandler.make(() => setOpen(options.state, true));
   const onMouseLeave = EventHandler.make(() => setOpen(options.state, false));
+
+  const props = Dom.mergeProps(options.props, {
+    "aria-describedby": id,
+    onfocus: onFocus,
+    onblur: onBlur,
+    onmouseenter: onMouseEnter,
+    onmouseleave: onMouseLeave,
+  });
+
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
 
   return html`<span
     aria-describedby=${id}
@@ -48,7 +59,7 @@ export function Anchor<const Opts extends AnchorOptions>(options: Opts): Compone
   </span>`;
 }
 
-export interface ContentOptions {
+export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: Content;
   readonly placement?: ReactiveValue<string | undefined, any, any>;
@@ -61,6 +72,19 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     NativePopover.syncToggle(options.state, event),
   );
+
+  const props = Dom.mergeProps(options.props, {
+    id,
+    role: "tooltip",
+    popover: "hint",
+    "data-placement": options.placement,
+    "data-open": open,
+    "?hidden": hidden,
+    ontoggle: onToggle,
+    ref: NativePopover.register(options.state),
+  });
+
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
 
   return html`<div
     id=${id}
@@ -78,12 +102,15 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
 
 export const Tooltip = Content;
 
-export function Arrow<const Opts extends { readonly content?: Content }>(
+export function Arrow<const Opts extends { readonly content?: Content } & Dom.HostOptions<HTMLSpanElement>>(
   options = {} as Opts,
 ): Component<Opts> {
-  return html`<span aria-hidden="true">${options.content ?? ""}</span>`;
+  const props = Dom.mergeProps(options.props, { "aria-hidden": "true" });
+  if (options.host) return options.host(props, options.content ?? "") as Component<Opts>;
+
+  return html`<span ...${props}>${options.content ?? ""}</span>`;
 }
 
 interface ToggleEventLike extends Event {
-  readonly newState?: "open" | "closed";
+  readonly newState?: string;
 }

@@ -7,6 +7,7 @@ import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
+import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
@@ -15,6 +16,7 @@ export interface State<Value extends string = string> {
   readonly value: string;
   readonly open: boolean;
   readonly activeId: string | null;
+  readonly filteredItems: readonly Item<Value>[];
 }
 
 export interface InitialState<Value extends string = string> {
@@ -40,12 +42,15 @@ type RequiredString = ReactiveValue<string, any, any>;
 export function makeState<Value extends string = string>(
   initial: InitialState<Value> = {},
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
-  return RefSubject.make({
+  const state: State<Value> = {
     id: initial.id ?? "combobox-popover",
     value: initial.value ?? "",
     open: initial.open ?? false,
     activeId: initial.activeId ?? null,
-  });
+    filteredItems: [],
+  };
+
+  return RefSubject.make(state);
 }
 
 export function setOpen<Value extends string>(
@@ -93,33 +98,70 @@ export function selectActive<Value extends string>(
   });
 }
 
-export interface InputOptions<Value extends string = string> {
+export interface InputOptions<Value extends string = string> extends Dom.HostOptions<HTMLInputElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
-  readonly items?: readonly Item<Value>[];
+  readonly items?: ReactiveValue<readonly Item<Value>[], any, any>;
   readonly id?: OptionalString;
   readonly placeholder?: OptionalString;
+  readonly filter?: (item: Item<Value>, query: string) => boolean;
+  readonly autocomplete?: "none" | "list" | "inline" | "both";
+  readonly autoSelect?: boolean;
 }
 
 export function Input<const Value extends string, const Opts extends InputOptions<Value>>(
   options: Opts,
 ): Component<Opts> {
-  const value = RefSubject.map(options.state, (state) => state.value);
-  const popupId = RefSubject.map(options.state, (state) => state.id);
-  const open = RefSubject.map(options.state, (state) => state.open);
-  const activeDescendant = RefSubject.map(options.state, (state) => state.activeId ?? undefined);
-  const onInput = EventHandler.make((event: ComboboxInputEvent) =>
-    setValue(options.state, event.currentTarget.value),
-  );
-  const onFocus = EventHandler.make(() => setOpen(options.state, true));
-  const items = options.items;
-  const onKeyDown =
-    items === undefined
-      ? undefined
-      : EventHandler.make((event: KeyboardEvent) =>
-          Effect.gen(function* () {
+  return gen(function* () {
+    const items = options.items === undefined ? undefined : yield* makeRef(options.items);
+    const value = RefSubject.map(options.state, (state) => state.value);
+    const popupId = RefSubject.map(options.state, (state) => state.id);
+    const open = RefSubject.map(options.state, (state) => state.open);
+    const activeDescendant = RefSubject.map(options.state, (state) => state.activeId ?? undefined);
+    const onInput = EventHandler.make((event: ComboboxInputEvent) =>
+      Effect.gen(function* () {
+        const query = event.currentTarget.value;
+        if (!items) {
+          yield* setValue(options.state, query);
+          return;
+        }
+
+        const filteredItems = filterItems(yield* items, query, options.filter);
+        const active = options.autoSelect === true ? filteredItems[0] : undefined;
+        const nextValue =
+          active && (options.autocomplete === "inline" || options.autocomplete === "both")
+            ? active.value
+            : query;
+        yield* RefSubject.update(options.state, (state) => ({
+          ...state,
+          activeId: active?.id ?? null,
+          filteredItems,
+          open: true,
+          value: nextValue,
+        }));
+      }),
+    );
+    const onFocus = EventHandler.make(() => setOpen(options.state, true));
+    const onKeyDown =
+      items === undefined
+        ? undefined
+        : EventHandler.make((event: KeyboardEvent) =>
+            Effect.gen(function* () {
+              const currentItems = yield* items;
+              const typeaheadId = Composite.typeaheadFromEvent(event, currentItems, (item) =>
+                item.textValue ?? item.value,
+              );
+              if (typeaheadId) {
+                yield* RefSubject.update(options.state, (state) => ({
+                  ...state,
+                  activeId: typeaheadId,
+                  open: true,
+                }));
+                return;
+              }
+
             if (event.key === "Enter") {
               event.preventDefault();
-              yield* selectActive(options.state, items);
+              yield* selectActive(options.state, currentItems);
               return;
             }
 
@@ -136,35 +178,53 @@ export function Input<const Value extends string, const Opts extends InputOption
             if (!direction) return;
 
             event.preventDefault();
-            yield* move(options.state, items, direction);
+            yield* move(options.state, currentItems, direction);
           }),
         );
 
-  return html`<input
-    id=${options.id}
-    role="combobox"
-    aria-autocomplete="list"
-    aria-controls=${popupId}
-    aria-expanded=${open}
-    aria-activedescendant=${activeDescendant}
-    placeholder=${options.placeholder}
-    .value=${value}
-    oninput=${onInput}
-    onfocus=${onFocus}
-    onkeydown=${onKeyDown}
-  />`;
+    const props = Dom.mergeProps(options.props, {
+      id: options.id,
+      role: "combobox",
+      "aria-autocomplete": ariaAutocomplete(options.autocomplete),
+      "aria-controls": popupId,
+      "aria-expanded": open,
+      "aria-activedescendant": activeDescendant,
+      placeholder: options.placeholder,
+      ".value": value,
+      oninput: onInput,
+      onfocus: onFocus,
+      onkeydown: onKeyDown,
+    });
+
+    if (options.host) return options.host(props, "") as Component<Opts>;
+
+    return html`<input
+      id=${options.id}
+      role="combobox"
+      aria-autocomplete=${ariaAutocomplete(options.autocomplete)}
+      aria-controls=${popupId}
+      aria-expanded=${open}
+      aria-activedescendant=${activeDescendant}
+      placeholder=${options.placeholder}
+      .value=${value}
+      oninput=${onInput}
+      onfocus=${onFocus}
+      onkeydown=${onKeyDown}
+    />`;
+  });
 }
 
-export interface LabelOptions {
+export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
   readonly content: Content;
   readonly for?: OptionalString;
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
+  if (options.host) return options.host(Dom.mergeProps(options.props, { for: options.for }), options.content) as Component<Opts>;
   return html`<label for=${options.for}>${options.content}</label>`;
 }
 
-export interface PopupOptions<Value extends string = string> {
+export interface PopupOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly content: Content;
   readonly role?: ReactiveValue<string | undefined, any, any>;
@@ -173,6 +233,12 @@ export interface PopupOptions<Value extends string = string> {
 export function List<const Opts extends PopupOptions>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = dataOpen(options.state);
+  if (options.host) {
+    return options.host(
+      Dom.mergeProps(options.props, { id, role: options.role ?? "listbox", ".data": { open } }),
+      options.content,
+    ) as Component<Opts>;
+  }
   return html`<div id=${id} role=${options.role ?? "listbox"} .data=${{ open }}>${options.content}</div>`;
 }
 
@@ -182,6 +248,15 @@ export function Popover<const Opts extends PopupOptions>(options: Opts): Compone
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     NativePopover.syncToggle(options.state, event),
   );
+  const props = Dom.mergeProps(options.props, {
+    id,
+    role: options.role ?? "listbox",
+    popover: "auto",
+    ".data": { open },
+    ontoggle: onToggle,
+    ref: NativePopover.register(options.state),
+  });
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<div
     id=${id}
     role=${options.role ?? "listbox"}
@@ -194,7 +269,7 @@ export function Popover<const Opts extends PopupOptions>(options: Opts): Compone
   </div>`;
 }
 
-export interface ItemOptions<Value extends string = string> {
+export interface ItemOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly id: RequiredString;
   readonly value: ReactiveValue<Value, any, any>;
@@ -220,16 +295,17 @@ export function Item<const Value extends string, const Opts extends ItemOptions<
       }),
     );
 
-    return html`<div
-      id=${id}
-      role="option"
-      aria-selected=${selected}
-      data-active-item=${active}
-      .data=${{ selected }}
-      onclick=${onClick}
-    >
-      ${options.content ?? value}
-    </div>`;
+    const props = Dom.mergeProps(options.props, {
+      id,
+      role: "option",
+      "aria-selected": selected,
+      "data-active-item": active,
+      ".data": { selected },
+      onclick: onClick,
+    });
+    const content = options.content ?? value;
+    if (options.host) return options.host(props, content) as Component<Opts>;
+    return html`<div ...${props}>${content}</div>`;
   });
 }
 
@@ -338,4 +414,20 @@ function nextActiveId<Value extends string>(
   );
   const next = index + (direction === "next" ? 1 : -1);
   return items[(next + items.length) % items.length]?.id ?? null;
+}
+
+function filterItems<Value extends string>(
+  items: readonly Item<Value>[],
+  query: string,
+  filter: ((item: Item<Value>, query: string) => boolean) | undefined,
+): readonly Item<Value>[] {
+  const predicate =
+    filter ??
+    ((item: Item<Value>, value: string) =>
+      (item.textValue ?? item.value).toLocaleLowerCase().startsWith(value.toLocaleLowerCase()));
+  return items.filter((item) => predicate(item, query));
+}
+
+function ariaAutocomplete(value: InputOptions["autocomplete"]): string {
+  return value ?? "list";
 }

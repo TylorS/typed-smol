@@ -5,6 +5,7 @@ import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
+import * as Dom from "./Dom.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 export type Checked = boolean | "mixed";
@@ -45,7 +46,7 @@ export function toggle(state: RefSubject.RefSubject<State>): Effect.Effect<State
   }));
 }
 
-export interface InputOptions {
+export interface InputOptions extends Dom.HostOptions<HTMLInputElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly id?: OptionalString;
   readonly name?: OptionalString;
@@ -67,6 +68,22 @@ export function Input<const Opts extends InputOptions>(options: Opts): Component
       setChecked(options.state, event.currentTarget.checked),
     );
 
+    const props = Dom.mergeProps(options.props, {
+      id: options.id,
+      name: options.name,
+      value: options.value,
+      type: "checkbox",
+      "aria-checked": checkedValue,
+      "?checked": checked,
+      "?disabled": disabled,
+      "?required": required,
+      ".indeterminate": indeterminate,
+      ".data": { checked: dataChecked(options.state) },
+      onchange: onChange,
+    });
+
+    if (options.host) return options.host(props, "") as Component<Opts>;
+
     return html`<input
       id=${options.id}
       name=${options.name}
@@ -85,22 +102,24 @@ export function Input<const Opts extends InputOptions>(options: Opts): Component
 
 export const Checkbox = Input;
 
-export interface LabelOptions {
+export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
   readonly for?: OptionalString;
   readonly content: Content;
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
+  if (options.host) return options.host(Dom.mergeProps(options.props, { for: options.for }), options.content) as Component<Opts>;
   return html`<label for=${options.for}>${options.content}</label>`;
 }
 
-export interface CheckOptions {
+export interface CheckOptions extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content?: Content;
 }
 
 export function Check<const Opts extends CheckOptions>(options: Opts): Component<Opts> {
   const hidden = RefSubject.map(options.state, (state) => state.checked !== true);
+  if (options.host) return options.host(Dom.mergeProps(options.props, { "aria-hidden": "true", "?hidden": hidden }), options.content ?? "✓") as Component<Opts>;
   return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>`;
 }
 

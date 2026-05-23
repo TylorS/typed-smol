@@ -124,6 +124,66 @@ describe("typed/ui/Menu", () => {
 
       expect((yield* state).activeId).toBe("archive");
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves active item with typeahead text", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Menu.makeState({ id: "actions-menu", activeId: "rename" });
+      yield* render(
+        Menu.Content({
+          state,
+          items: [
+            { id: "rename", textValue: "Rename" },
+            { id: "archive", textValue: "Archive" },
+          ],
+          content: "Actions",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=menu]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "a", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect((yield* state).activeId).toBe("archive");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("opens and closes submenus with delayed native popover coordination", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const triggerRoot = window.document.createElement("div");
+      const submenuRoot = window.document.createElement("div");
+      window.document.body.append(triggerRoot, submenuRoot);
+      const parent = yield* Menu.makeState({ id: "parent-menu", open: true });
+      const submenu = yield* Menu.makeState({ id: "export-menu", open: false });
+      yield* render(
+        Menu.SubmenuTrigger({
+          state: parent,
+          submenu,
+          content: "Export",
+          openDelay: 1,
+          closeDelay: 1,
+        }),
+        triggerRoot,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      yield* render(Menu.Submenu({ state: submenu, content: "Formats" }), submenuRoot).pipe(
+        Fx.provide(layer),
+        Fx.take(1),
+        Fx.collectAll,
+      );
+
+      const trigger = window.document.querySelector("button");
+      assert(trigger instanceof window.HTMLElement);
+      trigger.dispatchEvent(new window.MouseEvent("pointerenter", { bubbles: true }));
+      yield* Effect.sleep(5);
+      expect((yield* submenu).open).toBe(true);
+
+      trigger.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      yield* Effect.sleep(5);
+      expect((yield* submenu).open).toBe(false);
+      expect((yield* parent).open).toBe(true);
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

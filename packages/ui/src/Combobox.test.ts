@@ -1,6 +1,6 @@
 import { assert, describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
-import { Fx } from "@typed/fx";
+import { Fx, RefSubject } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
 import * as Combobox from "./Combobox.js";
@@ -54,6 +54,38 @@ describe("typed/ui/Combobox", () => {
       input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       yield* Effect.sleep(10);
       expect(yield* state).toMatchObject({ activeId: "apple", value: "Apple", open: false });
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("filters async item sources, autocompletes, and auto-selects the first match", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const items = yield* RefSubject.make([
+        { id: "apple", value: "Apple", textValue: "Apple" },
+        { id: "banana", value: "Banana", textValue: "Banana" },
+      ]);
+      const state = yield* Combobox.makeState<string>({ id: "fruit-popup", value: "" });
+      const [input] = yield* render(
+        Combobox.Input({
+          state,
+          items,
+          autocomplete: "both",
+          autoSelect: true,
+          filter: (item, query) => item.textValue?.toLowerCase().startsWith(query.toLowerCase()) === true,
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      assert(input instanceof window.HTMLInputElement);
+      input.value = "Ba";
+      input.dispatchEvent(new window.InputEvent("input", { bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect(yield* state).toMatchObject({
+        activeId: "banana",
+        filteredItems: [{ id: "banana", value: "Banana", textValue: "Banana" }],
+        value: "Banana",
+        open: true,
+      });
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

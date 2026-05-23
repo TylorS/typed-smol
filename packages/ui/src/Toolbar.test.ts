@@ -81,4 +81,30 @@ describe("typed/ui/Toolbar", () => {
       expect(item.getAttribute("id")).toBe("italic");
       expect(item.getAttribute("tabindex")).toBe("-1");
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves active toolbar item with typeahead text", () =>
+    Effect.gen(function* () {
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
+      const layer = DomRenderTemplate.using(window.document);
+      const state = yield* Toolbar.makeState({ activeId: "bold" });
+
+      yield* render(
+        Toolbar.Root({
+          state,
+          items: [
+            { id: "bold", textValue: "Bold" },
+            { id: "italic", textValue: "Italic" },
+          ],
+          content: "Tools",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=toolbar]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "i", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect((yield* state).activeId).toBe("italic");
+    }).pipe(Effect.scoped, Effect.runPromise));
 });

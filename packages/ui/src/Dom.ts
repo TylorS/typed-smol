@@ -56,6 +56,7 @@ export type HostRenderer<Element extends globalThis.Element, A = unknown, E = ne
 
 export interface HostOptions<Element extends globalThis.Element> {
   readonly host?: HostRenderer<Element, any, any, any>;
+  readonly props?: HostProps<Element>;
 }
 
 export type ElementByTagName = HTMLElementTagNameMap &
@@ -103,6 +104,26 @@ export function composeRefs<Element extends globalThis.Element, E1 = never, R1 =
     });
 }
 
+export function mergeProps<Element extends globalThis.Element>(
+  user: HostProps<Element> | undefined,
+  internal: HostProps<Element>,
+): HostProps<Element> {
+  if (!user) return internal;
+  const merged: Record<string, unknown> = { ...user, ...internal };
+
+  for (const [key, value] of Object.entries(user)) {
+    if (isEventKey(key)) {
+      merged[key] = chainEvent(
+        value as EventHandlerInput<Event, any, any>,
+        internal[key] as EventHandlerInput<Event, any, any>,
+      );
+    }
+  }
+
+  merged.ref = composeRefs(user.ref, internal.ref);
+  return merged as HostProps<Element>;
+}
+
 function toEventHandler<Ev extends Event, E, R>(
   handler: EventHandlerInput<Ev, E, R>,
 ): EventHandler.EventHandler<Ev, E, R> | undefined {
@@ -119,4 +140,8 @@ function runRef<Element extends globalThis.Element>(
   if (Stream.isStream(result)) return Stream.runDrain(result);
   if (isFx(result)) return drain(result);
   return Effect.void;
+}
+
+function isEventKey(key: string): key is EventHandlerProperty {
+  return key.startsWith("on");
 }

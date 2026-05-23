@@ -8,6 +8,7 @@ import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
+import * as Form from "./Form.js";
 import * as NativePopover from "./NativePopover.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
@@ -56,6 +57,13 @@ export const optionData = DataAttr.schema({
   selected: Schema.Boolean,
 });
 
+const formBindings = new WeakMap<object, ReadonlyArray<SelectFormBinding<any>>>();
+
+interface SelectFormBinding<Values extends Record<string, unknown>> {
+  readonly state: RefSubject.RefSubject<Form.State<Values>>;
+  readonly name: keyof Values & string;
+}
+
 export function makeState<Value extends string = string>(
   initial: InitialState<Value>,
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
@@ -86,7 +94,9 @@ export function select<Value extends string>(
   activeId: string,
   value: Value,
 ): Effect.Effect<State<Value>> {
-  return RefSubject.update(state, (current) => ({ ...current, activeId, open: false, value }));
+  return RefSubject.update(state, (current) => ({ ...current, activeId, open: false, value })).pipe(
+    Effect.tap(() => syncFormBindings(state, value)),
+  );
 }
 
 export function move<Value extends string>(
@@ -278,6 +288,7 @@ export interface HiddenInputOptions<Value extends string = string>
   extends Dom.HostOptions<HTMLInputElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly name: RequiredString;
+  readonly formState?: RefSubject.RefSubject<Form.State<Record<string, unknown>>>;
   readonly form?: ReactiveValue<string | undefined, any, any>;
   readonly disabled?: OptionalBoolean;
   readonly required?: OptionalBoolean;
@@ -293,9 +304,17 @@ export function HiddenInput<const Opts extends HiddenInputOptions>(options: Opts
     "?disabled": options.disabled ?? false,
     "?required": options.required ?? false,
   } as const;
+  const register = options.formState
+    ? () =>
+        Effect.gen(function* () {
+          registerFormBinding(options.state, options.formState!, options.name as string);
+          const current = yield* options.state;
+          if (current.value !== null) yield* Form.setValue(options.formState!, options.name as string, current.value);
+        })
+    : undefined;
 
   if (options.host) return options.host(props, "") as Component<Opts>;
-  return html`<input ...${props} />`;
+  return html`<input ...${props} ref=${register} />`;
 }
 
 export function Arrow<const Opts extends { readonly content?: AnyContent }>(
@@ -450,4 +469,24 @@ function nextActiveId<Value extends string>(
   const next = index + delta;
   if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;
   return items[Math.min(Math.max(next, 0), items.length - 1)]?.id ?? null;
+}
+
+function registerFormBinding<Values extends Record<string, unknown>>(
+  selectState: RefSubject.RefSubject<State>,
+  formState: RefSubject.RefSubject<Form.State<Values>>,
+  name: keyof Values & string,
+): void {
+  const current = formBindings.get(selectState) ?? [];
+  formBindings.set(selectState, current.concat({ state: formState, name }));
+}
+
+function syncFormBindings<Value extends string>(
+  selectState: RefSubject.RefSubject<State<Value>>,
+  value: Value,
+): Effect.Effect<void> {
+  const bindings = formBindings.get(selectState) ?? [];
+  return Effect.all(
+    bindings.map((binding) => Form.setValue(binding.state, binding.name, value)),
+    { concurrency: "unbounded" },
+  ).pipe(Effect.asVoid);
 }

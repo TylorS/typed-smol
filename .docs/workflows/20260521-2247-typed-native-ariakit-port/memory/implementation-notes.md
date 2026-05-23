@@ -22,3 +22,7 @@
 - `Dom.chainEvent` runs caller event handlers first and skips internal handlers when `defaultPrevented`; `Dom.composeRefs` runs caller refs before internal startup/registration refs.
 - Form `Push`/`Remove` are constrained to array-valued field names and update the backing `RefSubject` directly.
 - Native dialog invokers should be captured as elements synchronously before returning an Effect from event handlers; event `currentTarget` can be cleared before deferred Effect work observes it.
+- Host-first component APIs should extend `Dom.HostOptions<Element>` and call `Dom.mergeProps(options.props, internalProps)` before invoking `options.host`.
+- `Dom.mergeProps` centralizes user-first event handlers and user-first ref composition; component code should not hand-roll event/ref merging.
+- Form field codecs use this Effect version's single-parameter `Schema.Schema<A>` public type and decode DOM strings through `Schema.decodeUnknownEffect`.
+- Menubar typeahead should be wired before arrow movement, matching Menu/Listbox/Select/RadioGroup/Tabs/Toolbar behavior.

@@ -5,6 +5,7 @@ import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import * as Dom from "./Dom.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 export interface State extends Composite.State {}
@@ -40,7 +41,7 @@ export function move<Value>(
   });
 }
 
-export interface RootOptions {
+export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: Content;
   readonly items?: readonly Collection.Item[];
@@ -56,6 +57,15 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
       : EventHandler.make((event: KeyboardEvent) =>
           Effect.gen(function* () {
             const current = yield* options.state;
+            const typeaheadId = Composite.typeaheadFromEvent(event, items);
+            if (typeaheadId) {
+              yield* RefSubject.update(options.state, (value) => ({
+                ...value,
+                activeId: typeaheadId,
+              }));
+              return;
+            }
+
             const direction = Composite.keyMove(event, current);
             if (!direction) return;
 
@@ -63,6 +73,15 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
             yield* move(options.state, items, direction);
           }),
         );
+  const props = Dom.mergeProps(options.props, {
+    role: "menubar",
+    "aria-label": options.label,
+    "aria-orientation": orientation,
+    onkeydown: onKeyDown,
+  });
+
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
+
   return html`<div
     role="menubar"
     aria-label=${options.label}
@@ -75,7 +94,7 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
 
 export const Menubar = Root;
 
-export interface ItemOptions {
+export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly id: ReactiveValue<string, any, any>;
   readonly content: Content;
@@ -98,6 +117,8 @@ export function Item<const Opts extends ItemOptions>(options: Opts): Component<O
       tabindex: RefSubject.map(active, (value) => (value ? 0 : -1)),
       onfocus: onFocus,
     } as const;
+
+    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
 
     return html`<div ...${props}>${options.content}</div>`;
   });

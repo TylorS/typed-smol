@@ -5,6 +5,7 @@ import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import * as Dom from "./Dom.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
@@ -68,7 +69,7 @@ export function move(
   });
 }
 
-export interface ListOptions {
+export interface ListOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
   readonly items?: readonly Collection.Item[];
@@ -85,6 +86,17 @@ export function List<const Opts extends ListOptions>(options: Opts): Component<O
       : EventHandler.make((event: KeyboardEvent) =>
           Effect.gen(function* () {
             const current = yield* options.state;
+            const typeaheadId = Composite.typeaheadFromEvent(event, items);
+            if (typeaheadId) {
+              yield* RefSubject.update(options.state, (value) => ({
+                ...value,
+                activeId: typeaheadId,
+                selectedId:
+                  value.activationMode === "automatic" ? typeaheadId : value.selectedId,
+              }));
+              return;
+            }
+
             const direction = Composite.keyMove(event, current);
             if (!direction) return;
 
@@ -92,6 +104,14 @@ export function List<const Opts extends ListOptions>(options: Opts): Component<O
             yield* move(options.state, items, direction);
           }),
         );
+  const props = Dom.mergeProps(options.props, {
+    id: options.id,
+    role: "tablist",
+    "aria-label": options.label,
+    "aria-orientation": orientation,
+    onkeydown: onKeyDown,
+  });
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<div
     id=${options.id}
     role="tablist"
@@ -103,7 +123,7 @@ export function List<const Opts extends ListOptions>(options: Opts): Component<O
   </div>`;
 }
 
-export interface TabOptions {
+export interface TabOptions extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly id: RequiredString;
   readonly panelId: RequiredString;
@@ -131,11 +151,12 @@ export function Tab<const Opts extends TabOptions>(options: Opts): Component<Opt
       onclick: onClick,
     } as const;
 
+    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
     return html`<button ...${props}>${options.content}</button>`;
   });
 }
 
-export interface PanelOptions {
+export interface PanelOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly id: RequiredString;
   readonly tabId: RequiredString;
@@ -155,6 +176,8 @@ export function Panel<const Opts extends PanelOptions>(options: Opts): Component
     } as const;
     const hidden = RefSubject.map(selected, (value) => !value);
 
+    const mergedProps = Dom.mergeProps(options.props, { ...props, "?hidden": hidden });
+    if (options.host) return options.host(mergedProps, options.content) as Component<Opts>;
     return html`<div ...${props} ?hidden=${hidden}>${options.content}</div>`;
   });
 }

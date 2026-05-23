@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
+import * as Form from "./Form.js";
 import * as Select from "./Select.js";
 
 describe("typed/ui/Select", () => {
@@ -242,6 +243,30 @@ describe("typed/ui/Select", () => {
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
 
       expect(new window.FormData(form).get("status")).toBe("published");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("syncs selected values into a typed Form controller", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const form = yield* Form.makeState({ values: { status: "draft" } });
+      const state = yield* Select.makeState<string>({
+        id: "status-select",
+        value: "draft",
+        activeId: "draft",
+        open: true,
+      });
+      yield* render(
+        html`${Select.HiddenInput({ state, formState: form, name: "status" })}
+        ${Select.Option({ state, id: "published", value: "published", content: "Published" })}`,
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const option = window.document.getElementById("published");
+      assert(option instanceof window.HTMLElement);
+      option.click();
+      yield* Effect.sleep(10);
+
+      expect((yield* form).values.status).toBe("published");
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

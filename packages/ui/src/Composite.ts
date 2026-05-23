@@ -121,6 +121,25 @@ export function typeahead<Item extends Collection.Item>(
   return item?.id ?? null;
 }
 
+export function typeaheadFromEvent<Item extends Collection.Item>(
+  event: {
+    readonly key: string;
+    readonly altKey?: boolean;
+    readonly ctrlKey?: boolean;
+    readonly metaKey?: boolean;
+    preventDefault?: () => void;
+  },
+  items: readonly Item[],
+  text: (item: Item) => string = (item) => item.textValue ?? item.id,
+): string | null {
+  const key = typeaheadKey(event);
+  if (!key) return null;
+
+  const id = typeahead(items, key, text);
+  if (id) event.preventDefault?.();
+  return id;
+}
+
 export function typeaheadKey(event: {
   readonly key: string;
   readonly altKey?: boolean;

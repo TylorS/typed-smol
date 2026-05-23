@@ -83,4 +83,30 @@ describe("typed/ui/RadioGroup", () => {
 
       expect(yield* state).toMatchObject({ activeId: "two", value: "two" });
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("moves value with typeahead text", () =>
+    Effect.gen(function* () {
+      const window = new Window() as unknown as globalThis.Window & typeof globalThis;
+      const layer = DomRenderTemplate.using(window.document);
+      const state = yield* RadioGroup.makeState<string>({ value: "one", activeId: "one" });
+
+      yield* render(
+        RadioGroup.Root({
+          state,
+          items: [
+            { id: "one", value: "one", textValue: "One" },
+            { id: "two", value: "two", textValue: "Two" },
+          ],
+          content: "Choices",
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      window.document
+        .querySelector("[role=radiogroup]")
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "t", bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect(yield* state).toMatchObject({ activeId: "two", value: "two" });
+    }).pipe(Effect.scoped, Effect.runPromise));
 });

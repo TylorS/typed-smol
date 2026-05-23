@@ -1,7 +1,7 @@
 import { assert, describe, it } from "vitest";
-import { Effect } from "effect";
+import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, render } from "@typed/template";
+import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
 import * as Disclosure from "./Disclosure.js";
 
@@ -64,6 +64,35 @@ describe("typed/ui/Disclosure", () => {
 
       assert.strictEqual(panel.hidden, false);
       assert.strictEqual(panel.dataset.open, "true");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("merges caller host events before internal disclosure events", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const calls: string[] = [];
+      const state = yield* Disclosure.makeState({ open: false });
+      yield* render(
+        Disclosure.Button({
+          state,
+          controls: "panel",
+          content: "Details",
+          props: {
+            onclick: Effect.sync(() => {
+              calls.push("user");
+            }),
+          },
+          host: (props, content) => html`<button ...${props}>${content}</button>`,
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const button = window.document.querySelector("button");
+      assert(button instanceof window.HTMLButtonElement);
+      button.click();
+      yield* Effect.sleep(10);
+
+      assert.deepStrictEqual(calls, ["user"]);
+      assert.deepStrictEqual(yield* state, { open: true });
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

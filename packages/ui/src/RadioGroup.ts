@@ -5,6 +5,7 @@ import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import * as Dom from "./Dom.js";
 import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
@@ -77,7 +78,7 @@ export function move<Value extends string>(
   });
 }
 
-export interface RootOptions {
+export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State>;
   readonly content: AnyContent;
   readonly items?: readonly Item[];
@@ -94,6 +95,15 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
       : EventHandler.make((event: KeyboardEvent) =>
           Effect.gen(function* () {
             const current = yield* options.state;
+            const typeaheadId = Composite.typeaheadFromEvent(event, items, (item) =>
+              item.textValue ?? item.value ?? item.id,
+            );
+            if (typeaheadId) {
+              const next = items.find((item) => item.id === typeaheadId);
+              if (next) yield* selectItem(options.state, next.id, next.value);
+              return;
+            }
+
             const direction = Composite.keyMove(event, current);
             if (!direction) return;
 
@@ -101,6 +111,14 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
             yield* move(options.state, items, direction);
           }),
         );
+  const props = Dom.mergeProps(options.props, {
+    id: options.id,
+    role: "radiogroup",
+    "aria-label": options.label,
+    "aria-orientation": orientation,
+    onkeydown: onKeyDown,
+  });
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
   return html`<div
     id=${options.id}
     role="radiogroup"
@@ -112,7 +130,7 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
   </div>`;
 }
 
-export interface ItemOptions<Value extends string = string> {
+export interface ItemOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
   readonly state: RefSubject.RefSubject<State<Value>>;
   readonly id: RequiredString;
   readonly value: ReactiveValue<Value, any, any>;
@@ -141,6 +159,7 @@ export function Item<const Value extends string, const Opts extends ItemOptions<
       onclick: onClick,
     };
 
+    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
     return html`<div ...${props}>${options.content}</div>`;
   });
 }
