@@ -1,0 +1,79 @@
+## Workflow Init
+
+- objective: Explore Typed developer tooling as a first-class product surface, with a Chrome DevTools panel centered on Fx stream graphs and RefSubject state for Inferred Components, and frame the initial strict-mode intent and scope.
+- started_at: 2026-05-23T15:48:47-0400
+- started_by: human request in Codex
+- source_context_reviewed:
+  - `AGENTS.md`
+  - `.cursor/rules/modes/strict.mdc`
+  - `.cursor/rules/stages/brainstorming.mdc`
+  - `.cursor/rules/docs-architecture.mdc`
+  - `.cursor/rules/agent-collaboration.mdc`
+  - `.docs/_templates/workflow-init.md`
+  - `.docs/_templates/brainstorming.md`
+  - `.docs/adrs/20260516-1643-typed-framework-virtual-module-first.md`
+  - `.docs/adrs/20260515-2018-virtual-module-artifact-store.md`
+  - `.docs/adrs/20260522-2058-storybook-runtime-harness-first.md`
+  - `.docs/adrs/20260522-2124-compiler-direct-transforms-and-extensible-vmc.md`
+  - `.docs/specs/typed-framework-starter/spec.md`
+  - `.docs/specs/virtual-modules/spec.md`
+  - `.docs/workflows/20260522-2049-storybook-framework-integration/intent.md`
+  - `.docs/workflows/20260522-2049-storybook-framework-integration/scope.md`
+  - `.docs/workflows/20260522-2104-serializable-template-tooling/intent.md`
+  - `.docs/workflows/20260522-2104-serializable-template-tooling/scope.md`
+  - `packages/cli/AGENTS.md`
+  - `packages/vite-plugin/AGENTS.md`
+  - `packages/storybook/AGENTS.md`
+  - `packages/compiler/AGENTS.md`
+  - `packages/virtual-modules/AGENTS.md`
+  - `packages/virtual-modules-vscode/AGENTS.md`
+  - `packages/fx/AGENTS.md`
+  - `packages/template/AGENTS.md`
+  - `packages/fx/src/Fx/Fx.ts`
+  - `packages/fx/src/RefSubject/RefSubject.ts`
+  - `packages/compiler/src/route/RouteModulePlan.ts`
+  - `packages/compiler/src/route/analyzeRouteModule.ts`
+  - `packages/compiler/src/hmr/analyzeComponentHmr.ts`
+  - `packages/compiler/src/hmr/dependencies.ts`
+  - `packages/compiler/src/capabilities/compileCapabilities.ts`
+  - `packages/navigation/AGENTS.md`
+  - `packages/router/AGENTS.md`
+  - `packages/navigation/src/Navigation.ts`
+  - `packages/navigation/src/model.ts`
+  - `packages/fx/src/Fx/combinators/withSpan.ts`
+  - `.cursor/rules/effect-skill-loading.mdc`
+  - `.cursor/skills/effect-skill-router/SKILL.md`
+  - `.cursor/skills/effect-module-effect/SKILL.md`
+  - `.cursor/skills/effect-module-stream/SKILL.md`
+  - `.cursor/skills/effect-module-layer/SKILL.md`
+  - `.cursor/skills/effect-module-unstable-devtools/SKILL.md`
+  - `.cursor/skills/effect-module-unstable-observability/SKILL.md`
+  - `package.json`
+  - `pnpm-workspace.yaml`
+  - Chrome extension docs: Manifest V3, DevTools extension architecture, DevTools panels, messaging, Side Panel API, service worker lifecycle.
+  - OpenTelemetry docs: tracing API, overview, current specification index.
+- explicit_reuse_override: false
+
+## Notes
+
+- initial constraints:
+  - Mode: `strict`.
+  - Finalization strategy: `merge`.
+  - Existing workflow folders are reference-only.
+  - Current branch has broad dirty concurrent edits across UI, compiler, Storybook, app, virtual-modules, and RealWorld files; this workflow must not disturb them.
+  - Typed framework work remains virtual-module-first; do not introduce hidden filesystem routing.
+  - Developer tooling should reuse shared compiler, virtual-module, Vite, Storybook, and VS Code surfaces instead of creating isolated analyzers that drift.
+  - Chrome extension design must respect MV3 constraints: service-worker lifecycle, local packaged code, DevTools page limitations, and message-passing behavior.
+  - Human clarified the Chrome surface is a DevTools panel.
+  - Human wants active visibility into Fx stream graphs and RefSubject state for Inferred Components.
+  - Human wants to see which components were HMR-optimized, which were not, and why.
+  - Human wants to see Navigation events.
+  - Human wants to see and visualize OTEL traces.
+- initial risks:
+  - Scope can sprawl across Chrome extension, VS Code, CLI, Storybook, Vite, compiler diagnostics, reactive graph instrumentation, and runtime introspection.
+  - Chrome DevTools extension APIs have current-version caveats that affect async messaging and `browser` namespace support.
+  - Runtime inspection may require an explicit app-side bridge; content scripts alone cannot see enough Typed framework state safely.
+  - Current `Fx` and `RefSubject` surfaces are executable/reactive values, but requirements must still define what graph metadata is available, inferred by compiler analysis, or captured through development-only instrumentation.
+  - HMR visibility must distinguish template optimization from state-preserving HMR eligibility/rejection so the panel does not imply unsafe state reuse.
+  - OTEL trace visualization must follow trace/span relationships and should not invent a proprietary trace model when OpenTelemetry span data is available.
+  - Subagent routing is required by repo policy for broad exploration, but the available Codex subagent tool requires explicit user authorization before spawning; direct exploration is recorded until authorization is explicit.
