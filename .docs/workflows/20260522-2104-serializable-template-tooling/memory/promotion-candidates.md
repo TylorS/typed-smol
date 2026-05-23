@@ -5,3 +5,4 @@
 - Final `Serializable.GeneratedSchemaPlan` metadata shape after M4 schema planning proves the compiler/runtime boundary.
 - Final `SchemaGenerationPlan` fingerprint payload after template transforms consume generated descriptors.
 - Consider keeping `reportExtensionDiagnostics` as the single extension diagnostic reporting path for future CLI/Vite integrations.
+- Consider standardizing hoisted `TemplateStringsArray.typedTemplatePlan` metadata if the Vite plugin and TS plugin can consume it without a separate sidecar manifest.

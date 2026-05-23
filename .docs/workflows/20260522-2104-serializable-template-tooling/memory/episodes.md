@@ -32,3 +32,10 @@
 - Source transform host attachment updates existing host state instead of stacking wrappers.
 - Serializable generated descriptor metadata now accepts a plan root, and compiler emit includes it.
 - Bigint literal schema plans preserve bigint values and stable fingerprints.
+
+## M5 - Template Module Analysis And Direct Transform Core
+
+- Added `analyzeTemplateModule` over TypeScript `SourceFile` with `@typed/template` named alias and namespace import detection.
+- Module analysis records tagged template spans, tag spans, quasi spans, expression spans, local variable names, and existing `TemplatePlan` facts.
+- Added `transformTemplateModule` that hoists template strings with attached `typedTemplatePlan` metadata and rewrites typed tagged templates to equivalent `html(templateStrings, ...values)` calls.
+- Templates without imported typed `html` bindings remain unchanged, preserving the interpreted fallback path.

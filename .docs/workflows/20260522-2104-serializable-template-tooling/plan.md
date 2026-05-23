@@ -165,12 +165,12 @@ Goal: Move from `TemplateStringsArray`-only analysis to source-file module analy
 
 Tasks:
 
-1. Add `template-module-analysis` over TypeScript `SourceFile`.
-2. Detect `@typed/template` `html` imports and local aliases.
-3. Map every template literal quasi and expression to source spans.
-4. Reuse `TemplatePlan` for parsed HTML facts.
-5. Add `template-transform` that rewrites user modules through a generated runtime plan.
-6. Preserve interpreted fallback when a template is not transformable.
+1. [completed] Add `template-module-analysis` over TypeScript `SourceFile`.
+2. [completed] Detect `@typed/template` `html` imports and local aliases.
+3. [completed] Map every template literal quasi and expression to source spans.
+4. [completed] Reuse `TemplatePlan` for parsed HTML facts.
+5. [completed] Add `template-transform` that rewrites user modules through a generated runtime plan.
+6. [completed] Preserve interpreted fallback when a template is not transformable.
 
 Traceability:
 

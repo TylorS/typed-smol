@@ -113,3 +113,27 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
   - Bigint literal planning preserves bigint values and fingerprints them deterministically.
 - memory_updates:
   - recorded extension diagnostic fail-closed behavior in `memory/episodes.md`.
+
+### Task M5 - Template Module Analysis And Direct Transform Core
+
+- task_id: M5
+- requirement_ids: FR-01, FR-07, FR-09, NFR-01, NFR-04, NFR-05
+- ts_scenarios: TS-07, TS-08
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/compiler test -- analyzeTemplateModule` failed because `./analyzeTemplateModule.js` did not exist.
+  - green: `pnpm --filter @typed/compiler test -- analyzeTemplateModule` passed, 18 files / 71 tests.
+  - initial red: `pnpm --filter @typed/compiler test -- transformTemplateModule` failed because `./transformTemplateModule.js` did not exist.
+  - green: `pnpm --filter @typed/compiler test -- transformTemplateModule` passed, 19 files / 74 tests.
+  - green: `pnpm --filter @typed/compiler test -- template` passed, 19 files / 74 tests.
+  - green: `pnpm --filter @typed/compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: focused `pnpm exec oxlint ...` over touched compiler files passed.
+  - green: `git diff --check` passed.
+- commit: current atomic commit `feat(compiler): add template module transforms`
+- deviations_or_replans:
+  - The first transform core preserves runtime behavior by rewriting `html\`...\`` to `html(hoistedTemplateStrings, ...values)` and attaching the generated `TemplatePlan` to the hoisted template object.
+  - Vite/build-mode optimized rendering can consume the hoisted metadata in later milestones without forcing this slice to change the `@typed/template` runtime contract.
+- context_updates: exported `analyzeTemplateModule` and `transformTemplateModule` from `@typed/compiler`.
+- memory_updates:
+  - recorded template module analysis and transform boundary in `memory/episodes.md`.
+  - added hoisted template-plan metadata as a promotion candidate.
