@@ -6,6 +6,8 @@ export * from "./hmr/closureContext.js";
 export * from "./hmr/dependencies.js";
 export * from "./hmr/options.js";
 export * from "./hmr/viteHmr.js";
+export * from "./route/analyzeRouteModule.js";
+export * from "./route/RouteModulePlan.js";
 export * from "./template/analyzeTemplate.js";
 export * from "./template/emitDomTemplate.js";
 export * from "./template/emitServerTemplate.js";

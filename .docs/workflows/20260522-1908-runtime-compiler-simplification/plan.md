@@ -60,7 +60,7 @@
 - Create: `packages/compiler/src/route/analyzeRouteModule.test.ts`
 - Modify: `packages/compiler/src/index.ts`
 
-- [ ] **Step 1: Write failing route analyzer tests**
+- [x] **Step 1: Write failing route analyzer tests**
 
 Add tests that prove the analyzer detects route closures, `html` templates, `RefSubject.Service`, inline `RefSubject.make`, and Effect services from AST/type-checker facts.
 
@@ -68,7 +68,7 @@ Run: `pnpm --filter @typed/compiler test -- analyzeRouteModule`
 
 Expected: FAIL because `analyzeRouteModule` is not exported.
 
-- [ ] **Step 2: Define route fact types**
+- [x] **Step 2: Define route fact types**
 
 Create `RouteModulePlan.ts` with discriminated unions for:
 
@@ -86,7 +86,7 @@ Include diagnostic codes:
 - `unsupported-dynamic-service-id`
 - `unsupported-closure-capture`
 
-- [ ] **Step 3: Implement minimal AST analyzer**
+- [x] **Step 3: Implement minimal AST analyzer**
 
 Implement `analyzeRouteModule({ moduleId, sourceText, compilerOptions? })`.
 
@@ -99,20 +99,20 @@ Use `typescript` APIs:
 
 The first implementation may classify identifiers syntactically, but must preserve an upgrade path for type checker data.
 
-- [ ] **Step 4: Export the route analyzer**
+- [x] **Step 4: Export the route analyzer**
 
 Update `packages/compiler/src/index.ts` to export:
 
 - `./route/RouteModulePlan.js`
 - `./route/analyzeRouteModule.js`
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `pnpm --filter @typed/compiler test -- analyzeRouteModule`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Commit message:
 
