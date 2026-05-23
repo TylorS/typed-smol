@@ -27,6 +27,11 @@ export interface MoveOptions<Value = unknown> {
   readonly collection: RefSubject.RefSubject<Collection.State<Value>>;
 }
 
+export interface ActiveIdState {
+  readonly activeId: string | null;
+  readonly loop: boolean;
+}
+
 export interface KeyboardEventLike {
   readonly key: string;
   preventDefault?: () => void;
@@ -51,9 +56,8 @@ export function makeState(
 
 export function move<Value>(options: MoveOptions<Value>, direction: Move): Effect.Effect<State> {
   return Effect.gen(function* () {
-    const items = Collection.enabledItems(Collection.byDomOrder(yield* options.collection));
     const current = yield* options.state;
-    const activeId = nextActiveId(items, current, direction);
+    const activeId = moveActiveId(yield* options.collection, current, direction);
     return yield* RefSubject.update(options.state, (state) => ({ ...state, activeId }));
   });
 }
@@ -106,6 +110,34 @@ export function keyMove(
   return undefined;
 }
 
+export function orderedEnabledItems<Item extends Collection.Item>(
+  items: readonly Item[],
+): readonly Item[] {
+  return Collection.enabledItems(Collection.byDomOrder(items));
+}
+
+export function moveActiveId<Item extends Collection.Item>(
+  items: readonly Item[],
+  state: ActiveIdState,
+  direction: Move,
+): string | null {
+  return moveActiveItem(items, state, direction)?.id ?? null;
+}
+
+export function moveActiveItem<Item extends Collection.Item>(
+  items: readonly Item[],
+  state: ActiveIdState,
+  direction: Move,
+): Item | undefined {
+  const enabled = orderedEnabledItems(items);
+  if (enabled.length === 0) return undefined;
+  if (direction === "first") return enabled[0];
+  if (direction === "last") return enabled[enabled.length - 1];
+
+  const index = activeIndex(enabled, state.activeId, direction, state.loop);
+  return enabled[index];
+}
+
 export function typeahead<Item extends Collection.Item>(
   items: readonly Item[],
   search: string,
@@ -114,7 +146,7 @@ export function typeahead<Item extends Collection.Item>(
   const query = search.trim().toLocaleLowerCase();
   if (query.length === 0) return null;
 
-  const item = Collection.enabledItems(Collection.byDomOrder(items)).find((item) =>
+  const item = orderedEnabledItems(items).find((item) =>
     text(item).toLocaleLowerCase().startsWith(query),
   );
 
@@ -160,22 +192,19 @@ export function updateTypeaheadBuffer(
   return { value, updatedAt: now };
 }
 
-function nextActiveId<Value>(
-  items: Collection.State<Value>,
-  state: State,
-  direction: Move,
-): string | null {
-  if (items.length === 0) return null;
-  if (direction === "first") return items[0]?.id ?? null;
-  if (direction === "last") return items[items.length - 1]?.id ?? null;
+function activeIndex<Item extends Collection.Item>(
+  items: readonly Item[],
+  activeId: string | null,
+  direction: "next" | "previous",
+  loop: boolean,
+): number {
+  if (activeId === null) return direction === "previous" && loop ? items.length - 1 : 0;
 
-  const index = Math.max(
-    0,
-    items.findIndex((item) => item.id === state.activeId),
-  );
+  const current = items.findIndex((item) => item.id === activeId);
+  const index = current === -1 ? 0 : current;
   const delta = direction === "next" ? 1 : -1;
   const next = index + delta;
 
-  if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;
-  return items[Math.min(Math.max(next, 0), items.length - 1)]?.id ?? null;
+  if (loop) return (next + items.length) % items.length;
+  return Math.min(Math.max(next, 0), items.length - 1);
 }

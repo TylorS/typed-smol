@@ -74,8 +74,7 @@ export function move<Value extends string>(
 ): Effect.Effect<State<Value>> {
   return Effect.gen(function* () {
     const current = yield* state;
-    const enabled = Collection.enabledItems(Collection.byDomOrder(items));
-    const activeId = nextActiveId(enabled, current.activeId, direction);
+    const activeId = Composite.moveActiveId(items, { activeId: current.activeId, loop: true }, direction);
     return yield* RefSubject.update(state, (value) => ({ ...value, activeId, open: true }));
   });
 }
@@ -86,9 +85,7 @@ export function selectActive<Value extends string>(
 ): Effect.Effect<State<Value>> {
   return Effect.gen(function* () {
     const current = yield* state;
-    const active = Collection.enabledItems(Collection.byDomOrder(items)).find(
-      (item) => item.id === current.activeId,
-    );
+    const active = Composite.orderedEnabledItems(items).find((item) => item.id === current.activeId);
     if (!active) return current;
     return yield* RefSubject.update(state, (value) => ({
       ...value,
@@ -387,26 +384,6 @@ function dataOpen<Value extends string>(state: RefSubject.RefSubject<State<Value
       selected: false,
     }).pipe(Effect.map((encoded) => encoded.open ?? "false")),
   );
-}
-
-function nextActiveId<Value extends string>(
-  items: readonly Item<Value>[],
-  activeId: string | null,
-  direction: Composite.Move,
-): string | null {
-  if (items.length === 0) return null;
-  if (direction === "first") return items[0]?.id ?? null;
-  if (direction === "last") return items[items.length - 1]?.id ?? null;
-  if (activeId === null) {
-    return direction === "previous" ? items[items.length - 1]?.id ?? null : items[0]?.id ?? null;
-  }
-
-  const index = Math.max(
-    0,
-    items.findIndex((item) => item.id === activeId),
-  );
-  const next = index + (direction === "next" ? 1 : -1);
-  return items[(next + items.length) % items.length]?.id ?? null;
 }
 
 function filterItems<Value extends string>(

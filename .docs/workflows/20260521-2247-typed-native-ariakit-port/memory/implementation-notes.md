@@ -31,3 +31,5 @@
 - Form codec decode failures should update the field error and mark the field touched while preserving the previous valid value.
 - Prerelease cleanup removed the modal-focus and overlay-mounting shims from `@typed/ui`; native Dialog and Popover are the only overlay/focus substrate.
 - VS Code virtual-module resolution is config-file-only; tsconfig plugin lists should configure the TS plugin itself and may point at `vmcConfigPath`, but they are not plugin source fallback lists.
+- Composite active-id movement belongs in `Composite.moveActiveId`/`moveActiveItem`; components should not carry local `nextActiveId` copies.
+- `Composite.moveActiveId` handles ordering, disabled-item filtering, loop/clamp policy, and unset active ids before component-specific state updates.

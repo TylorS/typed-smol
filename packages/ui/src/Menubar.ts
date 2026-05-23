@@ -22,22 +22,9 @@ export function move<Value>(
   direction: Composite.Move,
 ): Effect.Effect<State> {
   return Effect.gen(function* () {
-    const enabled = Collection.enabledItems(Collection.byDomOrder(items));
     const current = yield* state;
-    if (enabled.length === 0) return current;
-    const index = Math.max(
-      0,
-      enabled.findIndex((item) => item.id === current.activeId),
-    );
-    const activeId =
-      direction === "first"
-        ? enabled[0]?.id
-        : direction === "last"
-          ? enabled[enabled.length - 1]?.id
-          : enabled[(index + (direction === "next" ? 1 : -1) + enabled.length) % enabled.length]
-              ?.id;
-
-    return yield* RefSubject.update(state, (value) => ({ ...value, activeId: activeId ?? null }));
+    const activeId = Composite.moveActiveId(items, current, direction);
+    return yield* RefSubject.update(state, (value) => ({ ...value, activeId }));
   });
 }
 

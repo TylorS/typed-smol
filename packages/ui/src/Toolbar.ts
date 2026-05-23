@@ -26,8 +26,7 @@ export function move(
 ): Effect.Effect<State> {
   return Effect.gen(function* () {
     const current = yield* state;
-    const enabled = Collection.enabledItems(Collection.byDomOrder(items));
-    const activeId = nextActiveId(enabled, current, direction);
+    const activeId = Composite.moveActiveId(items, current, direction);
     return yield* RefSubject.update(state, (value) => ({ ...value, activeId }));
   });
 }
@@ -130,23 +129,4 @@ export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {
   }
 
   return html`<div role="separator"></div>`;
-}
-
-function nextActiveId(
-  items: Collection.State,
-  state: State,
-  direction: Composite.Move,
-): string | null {
-  if (items.length === 0) return null;
-  if (direction === "first") return items[0]?.id ?? null;
-  if (direction === "last") return items[items.length - 1]?.id ?? null;
-
-  const index = Math.max(
-    0,
-    items.findIndex((item) => item.id === state.activeId),
-  );
-  const delta = direction === "next" ? 1 : -1;
-  const next = index + delta;
-  if (state.loop) return items[(next + items.length) % items.length]?.id ?? null;
-  return items[Math.min(Math.max(next, 0), items.length - 1)]?.id ?? null;
 }

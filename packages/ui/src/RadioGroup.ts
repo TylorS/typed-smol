@@ -65,9 +65,7 @@ export function move<Value extends string>(
 ): Effect.Effect<State<Value>> {
   return Effect.gen(function* () {
     const current = yield* state;
-    const enabled = Collection.enabledItems(items);
-    const nextId = nextActiveId(enabled, current.activeId, direction, current.loop);
-    const next = enabled.find((item) => item.id === nextId);
+    const next = Composite.moveActiveItem(items, current, direction);
     if (!next) return current;
 
     return yield* RefSubject.update(state, (value) => ({
@@ -171,24 +169,4 @@ function isChecked<Value extends string>(
   return RefSubject.mapEffect(state, (current) =>
     Effect.map(value, (value) => current.value === value),
   );
-}
-
-function nextActiveId<Value>(
-  items: readonly Collection.Item<Value>[],
-  activeId: string,
-  direction: Composite.Move,
-  loop: boolean,
-): string | undefined {
-  if (items.length === 0) return undefined;
-  if (direction === "first") return items[0]?.id;
-  if (direction === "last") return items[items.length - 1]?.id;
-
-  const index = Math.max(
-    0,
-    items.findIndex((item) => item.id === activeId),
-  );
-  const delta = direction === "next" ? 1 : -1;
-  const next = index + delta;
-  if (loop) return items[(next + items.length) % items.length]?.id;
-  return items[Math.min(Math.max(next, 0), items.length - 1)]?.id;
 }
