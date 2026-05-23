@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Stream from "effect/Stream";
 import { drain, isFx, type Fx } from "@typed/fx/Fx";
 import { EventHandler, type Renderable } from "@typed/template";
+import type { Component } from "./Reactive.js";
 
 export type EventHandlerProperty = `on${string}`;
 
@@ -122,6 +123,26 @@ export function mergeProps<Element extends globalThis.Element>(
 
   merged.ref = composeRefs(user.ref, internal.ref);
   return merged as HostProps<Element>;
+}
+
+export function renderHost<Element extends globalThis.Element, const Opts extends HostOptions<Element>>(
+  options: Opts,
+  internal: HostProps<Element>,
+  content: Renderable<unknown, any, any>,
+  fallback: (
+    props: HostProps<Element>,
+    content: Renderable<unknown, any, any>,
+  ) => Component<Opts> | Effect.Effect<unknown, any, any>,
+): Component<Opts> {
+  const props = mergeProps(options.props, internal);
+  return (options.host ? options.host(props, content) : fallback(props, content)) as Component<Opts>;
+}
+
+export function splitRef<Element extends globalThis.Element>(
+  props: HostProps<Element>,
+): { readonly props: HostProps<Element>; readonly ref: ElementRef<Element>["ref"] | undefined } {
+  const { ref, ...rest } = props;
+  return { props: rest, ref };
 }
 
 function toEventHandler<Ev extends Event, E, R>(

@@ -81,6 +81,14 @@ describe("typed/ui/Dom", () => {
       assert.deepStrictEqual(calls, ["user", "internal"]);
     }).pipe(EffectRuntime.runPromise));
 
+  it("splits refs from host props for explicit template ref attributes", () => {
+    const ref = () => undefined;
+    const split = DomRuntime.splitRef<HTMLButtonElement>({ type: "button", ref });
+
+    assert.strictEqual(split.ref, ref);
+    assert.deepStrictEqual(split.props, { type: "button" });
+  });
+
   it("adds host renderer options to element options", () => {
     expectTypeOf<DomRuntime.HostOptions<HTMLButtonElement>>().toMatchTypeOf<{
       readonly host?: unknown;
@@ -95,6 +103,35 @@ describe("typed/ui/Dom", () => {
 
     expectTypeOf<Fx.Services<typeof button>>().toExtend<HostService>();
   });
+
+  it("centralizes host rendering with merged props", () =>
+    EffectRuntime.gen(function* () {
+      const calls: string[] = [];
+      const rendered = yield* DomRuntime.renderHost(
+        {
+          props: {
+            onclick: EventHandler.make(() => {
+              calls.push("user");
+            }),
+          },
+          host: (props, content) =>
+            EffectRuntime.gen(function* () {
+              yield* props.onclick!.handler(new Event("click"));
+              return content;
+            }),
+        },
+        {
+          onclick: EventHandler.make(() => {
+            calls.push("internal");
+          }),
+        },
+        "hosted",
+        () => EffectRuntime.succeed("fallback"),
+      );
+
+      assert.strictEqual(rendered, "hosted");
+      assert.deepStrictEqual(calls, ["user", "internal"]);
+    }).pipe(EffectRuntime.runPromise));
 });
 
 class HostService extends Context.Service<HostService, {}>()("typed/ui/test/HostService", {}) {}

@@ -113,105 +113,98 @@ export function Input<const Value extends string, const Opts extends InputOption
 ): Component<Opts> {
   return gen(function* () {
     const items = options.items === undefined ? undefined : yield* makeRef(options.items);
-    const value = RefSubject.map(options.state, (state) => state.value);
-    const popupId = RefSubject.map(options.state, (state) => state.id);
-    const open = RefSubject.map(options.state, (state) => state.open);
-    const activeDescendant = RefSubject.map(options.state, (state) => state.activeId ?? undefined);
-    const onInput = EventHandler.make((event: ComboboxInputEvent) =>
-      Effect.gen(function* () {
-        const query = event.currentTarget.value;
-        if (!items) {
-          yield* setValue(options.state, query);
-          return;
-        }
-
-        const filteredItems = filterItems(yield* items, query, options.filter);
-        const active = options.autoSelect === true ? filteredItems[0] : undefined;
-        const nextValue =
-          active && (options.autocomplete === "inline" || options.autocomplete === "both")
-            ? active.value
-            : query;
-        yield* RefSubject.update(options.state, (state) => ({
-          ...state,
-          activeId: active?.id ?? null,
-          filteredItems,
-          open: true,
-          value: nextValue,
-        }));
-      }),
-    );
-    const onFocus = EventHandler.make(() => setOpen(options.state, true));
-    const onKeyDown =
-      items === undefined
-        ? undefined
-        : EventHandler.make((event: KeyboardEvent) =>
-            Effect.gen(function* () {
-              const currentItems = yield* items;
-              const typeaheadId = Composite.typeaheadFromEvent(event, currentItems, (item) =>
-                item.textValue ?? item.value,
-              );
-              if (typeaheadId) {
-                yield* RefSubject.update(options.state, (state) => ({
-                  ...state,
-                  activeId: typeaheadId,
-                  open: true,
-                }));
-                return;
-              }
-
-            if (event.key === "Enter") {
-              event.preventDefault();
-              yield* selectActive(options.state, currentItems);
-              return;
-            }
-
-            if (event.key === "Escape") {
-              event.preventDefault();
-              yield* setOpen(options.state, false);
-              return;
-            }
-
-            const direction = Composite.keyMove(event, {
-              orientation: "vertical",
-              rtl: false,
-            });
-            if (!direction) return;
-
-            event.preventDefault();
-            yield* move(options.state, currentItems, direction);
-          }),
-        );
-
-    const props = Dom.mergeProps(options.props, {
-      id: options.id,
-      role: "combobox",
-      "aria-autocomplete": ariaAutocomplete(options.autocomplete),
-      "aria-controls": popupId,
-      "aria-expanded": open,
-      "aria-activedescendant": activeDescendant,
-      placeholder: options.placeholder,
-      ".value": value,
-      oninput: onInput,
-      onfocus: onFocus,
-      onkeydown: onKeyDown,
-    });
+    const props = Dom.mergeProps(options.props, inputProps(options, items));
 
     if (options.host) return options.host(props, "") as Component<Opts>;
 
-    return html`<input
-      id=${options.id}
-      role="combobox"
-      aria-autocomplete=${ariaAutocomplete(options.autocomplete)}
-      aria-controls=${popupId}
-      aria-expanded=${open}
-      aria-activedescendant=${activeDescendant}
-      placeholder=${options.placeholder}
-      .value=${value}
-      oninput=${onInput}
-      onfocus=${onFocus}
-      onkeydown=${onKeyDown}
-    />`;
+    const split = Dom.splitRef(props);
+    return html`<input ...${split.props} ref=${split.ref} />`;
   });
+}
+
+function inputProps<Value extends string>(
+  options: InputOptions<Value>,
+  items: RefSubject.RefSubject<readonly Item<Value>[], any, any> | undefined,
+): Dom.HostProps<HTMLInputElement> {
+  return {
+    id: options.id,
+    role: "combobox",
+    "aria-autocomplete": ariaAutocomplete(options.autocomplete),
+    "aria-controls": RefSubject.map(options.state, (state) => state.id),
+    "aria-expanded": RefSubject.map(options.state, (state) => state.open),
+    "aria-activedescendant": RefSubject.map(options.state, (state) => state.activeId ?? undefined),
+    placeholder: options.placeholder,
+    ".value": RefSubject.map(options.state, (state) => state.value),
+    oninput: inputHandler(options, items),
+    onfocus: EventHandler.make(() => setOpen(options.state, true)),
+    onkeydown: keyDownHandler(options, items),
+  };
+}
+
+function inputHandler<Value extends string>(
+  options: InputOptions<Value>,
+  items: RefSubject.RefSubject<readonly Item<Value>[], any, any> | undefined,
+) {
+  return EventHandler.make((event: ComboboxInputEvent) =>
+    Effect.gen(function* () {
+      const query = event.currentTarget.value;
+      if (!items) return yield* setValue(options.state, query);
+      return yield* updateQuery(options, yield* items, query);
+    }),
+  );
+}
+
+function keyDownHandler<Value extends string>(
+  options: InputOptions<Value>,
+  items: RefSubject.RefSubject<readonly Item<Value>[], any, any> | undefined,
+) {
+  if (!items) return undefined;
+  return EventHandler.make((event: KeyboardEvent) =>
+    Effect.gen(function* () {
+      const currentItems = yield* items;
+      if (yield* moveByTypeahead(options, currentItems, event)) return;
+      yield* moveByKey(options, currentItems, event);
+    }),
+  );
+}
+
+function updateQuery<Value extends string>(
+  options: InputOptions<Value>,
+  items: readonly Item<Value>[],
+  query: string,
+): Effect.Effect<State<Value>> {
+  const filteredItems = filterItems(items, query, options.filter);
+  const active = options.autoSelect === true ? filteredItems[0] : undefined;
+  return RefSubject.update(options.state, (state) => ({
+    ...state,
+    activeId: active?.id ?? null,
+    filteredItems,
+    open: true,
+    value: autocompleteValue(query, active, options.autocomplete),
+  }));
+}
+
+function moveByTypeahead<Value extends string>(
+  options: InputOptions<Value>,
+  items: readonly Item<Value>[],
+  event: KeyboardEvent,
+): Effect.Effect<boolean> {
+  const activeId = Composite.typeaheadFromEvent(event, items, (item) => item.textValue ?? item.value);
+  if (!activeId) return Effect.succeed(false);
+  return RefSubject.update(options.state, (state) => ({ ...state, activeId, open: true })).pipe(
+    Effect.as(true),
+  );
+}
+
+function moveByKey<Value extends string>(
+  options: InputOptions<Value>,
+  items: readonly Item<Value>[],
+  event: KeyboardEvent,
+): Effect.Effect<void> {
+  if (event.key === "Enter") return preventDefault(event, selectActive(options.state, items));
+  if (event.key === "Escape") return preventDefault(event, setOpen(options.state, false));
+  const direction = Composite.keyMove(event, { orientation: "vertical", rtl: false });
+  return direction ? preventDefault(event, move(options.state, items, direction)) : Effect.void;
 }
 
 export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
@@ -428,6 +421,22 @@ function filterItems<Value extends string>(
   return items.filter((item) => predicate(item, query));
 }
 
+function autocompleteValue<Value extends string>(
+  query: string,
+  active: Item<Value> | undefined,
+  autocomplete: InputOptions["autocomplete"],
+): string {
+  return active && (autocomplete === "inline" || autocomplete === "both") ? active.value : query;
+}
+
 function ariaAutocomplete(value: InputOptions["autocomplete"]): string {
   return value ?? "list";
+}
+
+function preventDefault<A, E, R>(
+  event: Event,
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<void, E, R> {
+  event.preventDefault();
+  return Effect.asVoid(effect);
 }

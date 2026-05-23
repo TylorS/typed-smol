@@ -26,3 +26,6 @@
 - `Dom.mergeProps` centralizes user-first event handlers and user-first ref composition; component code should not hand-roll event/ref merging.
 - Form field codecs use this Effect version's single-parameter `Schema.Schema<A>` public type and decode DOM strings through `Schema.decodeUnknownEffect`.
 - Menubar typeahead should be wired before arrow movement, matching Menu/Listbox/Select/RadioGroup/Tabs/Toolbar behavior.
+- Use `Dom.renderHost` as the host-first escape hatch so the merge and cast stay centralized.
+- Do not spread `ref` inside template prop bags; split it with `Dom.splitRef` and attach it with an explicit `ref=${...}` attribute.
+- Form codec decode failures should update the field error and mark the field touched while preserving the previous valid value.

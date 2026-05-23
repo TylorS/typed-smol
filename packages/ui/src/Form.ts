@@ -53,17 +53,7 @@ export function setValue<Values extends Record<string, unknown>>(
   name: keyof Values & string,
   value: unknown,
 ): Effect.Effect<State<Values>> {
-  return RefSubject.update(state, (current) => ({
-    ...current,
-    values: { ...current.values, [name]: value },
-    meta: {
-      ...current.meta,
-      [name]: {
-        dirty: current.defaultValues[name] !== value,
-        touched: true,
-      },
-    },
-  }));
+  return RefSubject.update(state, (current) => updateField(current, name, value));
 }
 
 export function validate<Values extends Record<string, unknown>>(
@@ -143,7 +133,7 @@ export function pushValue<
   return RefSubject.update(state, (current) => {
     const currentValue = current.values[name];
     const values = Array.isArray(currentValue) ? currentValue.concat(value) : [value];
-    return { ...current, values: { ...current.values, [name]: values } };
+    return updateField(current, name, values);
   });
 }
 
@@ -160,7 +150,7 @@ export function removeValue<
     const values = Array.isArray(currentValue)
       ? currentValue.filter((_, valueIndex) => valueIndex !== index)
       : [];
-    return { ...current, values: { ...current.values, [name]: values } };
+    return updateField(current, name, values);
   });
 }
 
@@ -241,8 +231,9 @@ export function Input<
   );
   const onInput = EventHandler.make((event: InputEventLike) =>
     options.codec
-      ? Effect.flatMap(decodeDomValue(options.codec, event.currentTarget.value), (value) =>
-          setValue(options.state, options.name, value),
+      ? decodeDomValue(options.codec, event.currentTarget.value).pipe(
+          Effect.flatMap((value) => setValue(options.state, options.name, value)),
+          Effect.catch((error) => setFieldError(options.state, options.name, error)),
         )
       : setValue(options.state, options.name, event.currentTarget.value),
   );
@@ -417,4 +408,50 @@ function errorsForValues<Values extends Record<string, unknown>>(
     (errors, key) => ({ ...errors, [key]: message }),
     {},
   );
+}
+
+function updateField<Values extends Record<string, unknown>>(
+  current: State<Values>,
+  name: keyof Values & string,
+  value: unknown,
+): State<Values> {
+  const errors: Partial<Record<keyof Values & string, string>> = { ...current.errors };
+  delete errors[name];
+  return {
+    ...current,
+    values: { ...current.values, [name]: value },
+    errors,
+    meta: {
+      ...current.meta,
+      [name]: {
+        dirty: !sameValue(current.defaultValues[name], value),
+        touched: true,
+      },
+    },
+  };
+}
+
+function setFieldError<Values extends Record<string, unknown>>(
+  state: RefSubject.RefSubject<State<Values>>,
+  name: keyof Values & string,
+  error: Schema.SchemaError,
+): Effect.Effect<State<Values>> {
+  return RefSubject.update(state, (current) => ({
+    ...current,
+    errors: { ...current.errors, [name]: String(error) },
+    meta: {
+      ...current.meta,
+      [name]: {
+        dirty: !sameValue(current.defaultValues[name], current.values[name]),
+        touched: true,
+      },
+    },
+  }));
+}
+
+function sameValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => Object.is(value, right[index]));
 }

@@ -58,6 +58,7 @@ export const optionData = DataAttr.schema({
 });
 
 const formBindings = new WeakMap<object, ReadonlyArray<SelectFormBinding<any>>>();
+const hiddenInputRefs = new WeakMap<object, unknown>();
 
 interface SelectFormBinding<Values extends Record<string, unknown>> {
   readonly state: RefSubject.RefSubject<Form.State<Values>>;
@@ -130,17 +131,10 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
     ".data": { open },
   } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="toggle"
-    aria-haspopup="listbox"
-    aria-expanded=${open}
-    .data=${{ open }}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) => {
+    const split = Dom.splitRef(props);
+    return html`<button ...${split.props} ref=${split.ref}>${content}</button>`;
+  });
 }
 
 export const Select = Trigger;
@@ -204,21 +198,10 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     ref: NativePopover.register(options.state),
   } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<div
-    id=${id}
-    role="listbox"
-    popover=${mode}
-    aria-label=${options.label}
-    aria-orientation=${orientation}
-    aria-activedescendant=${activeDescendant}
-    .data=${{ open }}
-    ontoggle=${onToggle}
-    onkeydown=${onKeyDown}
-    ref=${NativePopover.register(options.state)}
-  >
-    ${options.content}
-  </div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) => {
+    const split = Dom.splitRef(props);
+    return html`<div ...${split.props} ref=${split.ref}>${content}</div>`;
+  });
 }
 
 export const Popover = Content;
@@ -265,8 +248,10 @@ export function Option<const Opts extends OptionOptions>(options: Opts): Compone
       onclick: onClick,
     } as const;
 
-    if (options.host) return options.host(props, options.content) as Component<Opts>;
-    return html`<div ...${props}>${options.content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) => {
+      const split = Dom.splitRef(props);
+      return html`<div ...${split.props} ref=${split.ref}>${content}</div>`;
+    });
   });
 }
 
@@ -296,6 +281,7 @@ export interface HiddenInputOptions<Value extends string = string>
 
 export function HiddenInput<const Opts extends HiddenInputOptions>(options: Opts): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => state.value ?? "");
+  const register = hiddenInputRef(options);
   const props = {
     type: "hidden",
     name: options.name,
@@ -303,18 +289,13 @@ export function HiddenInput<const Opts extends HiddenInputOptions>(options: Opts
     ".value": value,
     "?disabled": options.disabled ?? false,
     "?required": options.required ?? false,
+    ref: register,
   } as const;
-  const register = options.formState
-    ? () =>
-        Effect.gen(function* () {
-          registerFormBinding(options.state, options.formState!, options.name as string);
-          const current = yield* options.state;
-          if (current.value !== null) yield* Form.setValue(options.formState!, options.name as string, current.value);
-        })
-    : undefined;
 
-  if (options.host) return options.host(props, "") as Component<Opts>;
-  return html`<input ...${props} ref=${register} />`;
+  return Dom.renderHost<HTMLInputElement, Opts>(options, props, "", (props) => {
+    const split = Dom.splitRef(props);
+    return html`<input ...${split.props} ref=${split.ref} />`;
+  });
 }
 
 export function Arrow<const Opts extends { readonly content?: AnyContent }>(
@@ -478,6 +459,27 @@ function registerFormBinding<Values extends Record<string, unknown>>(
 ): void {
   const current = formBindings.get(selectState) ?? [];
   formBindings.set(selectState, current.concat({ state: formState, name }));
+}
+
+function hiddenInputRef<const Opts extends HiddenInputOptions>(
+  options: Opts,
+): Dom.ElementRef<HTMLInputElement>["ref"] | undefined {
+  if (!options.formState) return undefined;
+
+  return (element) => {
+    if (hiddenInputRefs.get(element) === options.formState) return;
+    hiddenInputRefs.set(element, options.formState);
+    registerFormBinding(options.state, options.formState!, options.name as string);
+
+    void Effect.runPromise(
+      Effect.gen(function* () {
+        const current = yield* options.state;
+        if (current.value !== null) {
+          yield* Form.setValue(options.formState!, options.name as string, current.value);
+        }
+      }),
+    );
+  };
 }
 
 function syncFormBindings<Value extends string>(

@@ -31,6 +31,24 @@ describe("typed/ui/Form", () => {
       expect((yield* state).values.tags).toEqual(["two"]);
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("tracks array field metadata when pushing and removing values", () =>
+    Effect.gen(function* () {
+      const state = yield* Form.makeState({ values: { tags: ["one"] as string[] } });
+
+      yield* Form.pushValue(state, "tags", "two");
+      expect(Form.fieldMeta(yield* state, "tags")).toMatchObject({
+        dirty: true,
+        touched: true,
+      });
+
+      yield* Form.removeValue(state, "tags", 1);
+      expect((yield* state).values.tags).toEqual(["one"]);
+      expect(Form.fieldMeta(yield* state, "tags")).toMatchObject({
+        dirty: false,
+        touched: true,
+      });
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("renders Push and Remove buttons for array fields", () =>
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();
@@ -99,6 +117,33 @@ describe("typed/ui/Form", () => {
       yield* Effect.sleep(10);
       expect((yield* state).values.age).toBe(42);
       expect(Form.fieldMeta(yield* state, "age")).toMatchObject({ dirty: true, touched: true });
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("stores field errors when schema codecs reject DOM values", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Form.makeState({ values: { code: "ok" } });
+      yield* render(
+        Form.Input({
+          state,
+          name: "code",
+          codec: Schema.String.check(Schema.isMinLength(2)),
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const input = window.document.querySelector("input");
+      assert(input instanceof window.HTMLInputElement);
+      input.value = "x";
+      input.dispatchEvent(new window.InputEvent("input", { bubbles: true }));
+      yield* Effect.sleep(10);
+
+      expect((yield* state).values.code).toBe("ok");
+      expect((yield* state).errors.code).toBeTruthy();
+      expect(Form.fieldMeta(yield* state, "code")).toMatchObject({
+        dirty: false,
+        touched: true,
+      });
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("validates and submits decoded values through lifecycle handlers", () =>

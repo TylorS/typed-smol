@@ -268,6 +268,80 @@ describe("typed/ui/Select", () => {
 
       expect((yield* form).values.status).toBe("published");
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("merges caller host events before internal Select option behavior", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const calls: string[] = [];
+      const state = yield* Select.makeState<string>({
+        id: "status-select",
+        value: "draft",
+        activeId: "draft",
+        open: true,
+      });
+      yield* render(
+        Select.Option({
+          state,
+          id: "published",
+          value: "published",
+          content: "Published",
+          props: {
+            onclick: Effect.sync(() => {
+              calls.push("user");
+            }),
+          },
+          host: (props, content) => html`<div ...${props}>${content}</div>`,
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const option = window.document.getElementById("published");
+      assert(option instanceof window.HTMLElement);
+      option.click();
+      yield* Effect.sleep(10);
+
+      expect(calls).toEqual(["user"]);
+      expect(yield* state).toMatchObject({ value: "published", open: false });
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("preserves Select HiddenInput form registration through host refs", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const form = yield* Form.makeState({ values: { status: "draft" } });
+      const state = yield* Select.makeState<string>({
+        id: "status-select",
+        value: "draft",
+        activeId: "draft",
+        open: true,
+      });
+      const userRefs: string[] = [];
+      yield* render(
+        html`${Select.HiddenInput({
+          state,
+          formState: form,
+          name: "status",
+          props: {
+            ref: (element) => {
+              userRefs.push(element.tagName);
+            },
+          },
+          host: (props) => {
+            const { ref, ...rest } = props;
+            return html`<input ...${rest} ref=${ref} />`;
+          },
+        })}
+        ${Select.Option({ state, id: "published", value: "published", content: "Published" })}`,
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const option = window.document.getElementById("published");
+      assert(option instanceof window.HTMLElement);
+      option.click();
+      yield* Effect.sleep(10);
+
+      expect(userRefs).toEqual(["INPUT"]);
+      expect((yield* form).values.status).toBe("published");
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
