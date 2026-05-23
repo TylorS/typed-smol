@@ -113,7 +113,7 @@ export function encodeDomValue<A>(
   return Schema.encodeUnknownEffect(codec)(value).pipe(Effect.map(String));
 }
 
-  export type ArrayFieldName<Values extends {}> = {
+export type ArrayFieldName<Values extends {}> = {
   readonly [Name in keyof Values & string]: Values[Name] extends readonly unknown[] ? Name : never;
 }[keyof Values & string];
 
@@ -306,8 +306,7 @@ export function Error<
   }
 
   const content = RefSubject.map(options.state, (state) => state.errors[options.name] ?? "") as any;
-  const fallback = html`<div ...${props as any}>${content}</div>`;
-  return fallback as unknown as Component<Opts>;
+  return Dom.renderDivHost<Opts>(props, content);
 }
 
 export function Submit<

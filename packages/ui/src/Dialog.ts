@@ -2,15 +2,18 @@ import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import * as NativeDialog from "./NativeDialog.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 type AnyContent = Content;
 type OptionalString = ReactiveValue<string | undefined, any, any>;
 type RequiredString = ReactiveValue<string, any, any>;
+type OptionalBoolean = ReactiveValue<boolean | undefined, any, any>;
+type OptionalFocusTarget = ReactiveValue<NativeDialog.FocusTarget | undefined, any, any>;
 
 export interface State {
   readonly open: boolean;
@@ -93,25 +96,63 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
   readonly id?: OptionalString;
   readonly label: RequiredString;
   readonly content: AnyContent;
+  readonly modal?: OptionalBoolean;
+  readonly initialFocus?: OptionalFocusTarget;
+  readonly finalFocus?: OptionalFocusTarget;
+  readonly closeOnEscape?: OptionalBoolean;
+  readonly closeOnOutsideInteraction?: OptionalBoolean;
 }
 
 export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<ContentOptions<E, R>, "state">,
 ): Component<Opts> {
-  const open = dataOpen(options.state);
-  const onClose = EventHandler.make(() => NativeDialog.syncClosed(options.state));
-  const props = {
-    id: options.id,
-    "aria-label": options.label,
-    ".data": { open },
-    onclose: onClose,
-    oncancel: onClose,
-    ref: NativeDialog.register(options.state),
-  } as const;
+  return gen(function* () {
+    const modal = yield* makeRef(options.modal ?? true);
+    const initialFocus = yield* makeRef(options.initialFocus);
+    const finalFocus = yield* makeRef(options.finalFocus);
+    const closeOnEscape = yield* makeRef(options.closeOnEscape ?? true);
+    const closeOnOutsideInteraction = yield* makeRef(options.closeOnOutsideInteraction ?? false);
+    const open = dataOpen(options.state);
+    const onClose = EventHandler.make(() => NativeDialog.syncClosed(options.state));
+    const onCancel = EventHandler.make((event: Event) =>
+      Effect.gen(function* () {
+        if ((yield* closeOnEscape) === false) {
+          event.preventDefault();
+          return;
+        }
+        yield* NativeDialog.close(options.state);
+      }),
+    );
+    const onClick = EventHandler.make((event: MouseEvent) =>
+      Effect.gen(function* () {
+        if ((yield* closeOnOutsideInteraction) !== true) return;
+        if (event.target !== event.currentTarget) return;
+        yield* NativeDialog.close(options.state);
+      }),
+    );
+    const props = {
+      id: options.id,
+      "aria-label": options.label,
+      ".data": { open },
+      onclose: onClose,
+      oncancel: onCancel,
+      onclick: onClick,
+      ref: NativeDialog.register(options.state, {
+        modal: yield* modal,
+        initialFocus: yield* initialFocus,
+        finalFocus: yield* finalFocus,
+      }),
+    } as const;
 
-  return Dom.renderHost<HTMLDialogElement, Opts>(options, props, options.content, (props, content) => {
-    const split = Dom.splitRef(props);
-    return html`<dialog ...${split.props} ref=${split.ref}>${content}</dialog>`;
+    return Dom.renderHost<HTMLDialogElement, Opts>(
+      options,
+      props,
+      options.content,
+      (props, content) => {
+        const split = Dom.splitRef(props);
+        return html`<dialog ...${split.props} ref=${split.ref}>${content}</dialog>`;
+      },
+    );
   });
 }
 

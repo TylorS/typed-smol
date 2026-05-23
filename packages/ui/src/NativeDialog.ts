@@ -7,22 +7,37 @@ export interface State {
 
 interface DialogElement extends HTMLElement {
   readonly open?: boolean;
+  show?: () => void;
   showModal?: () => void;
   close?: () => void;
 }
 
+export type FocusTarget =
+  | string
+  | HTMLElement
+  | (() => HTMLElement | null | undefined);
+
+export interface Options {
+  readonly modal?: boolean;
+  readonly initialFocus?: FocusTarget;
+  readonly finalFocus?: FocusTarget;
+}
+
 const elements = new WeakMap<object, DialogElement>();
 const invokers = new WeakMap<object, HTMLElement>();
+const optionsByState = new WeakMap<object, Options>();
 
 export function register<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
+  options: Options = {},
 ): (element: HTMLElement) => Effect.Effect<void, E, R> {
   return (element) =>
     Effect.gen(function* () {
       const dialog = element as DialogElement;
       elements.set(state, dialog);
+      optionsByState.set(state, options);
       const current = yield* state;
-      if (current.open) openElement(dialog);
+      if (current.open) openElement(dialog, options);
     });
 }
 
@@ -32,7 +47,8 @@ export function showModal<S extends State, E, R>(
 ): Effect.Effect<S, E, R> {
   return Effect.gen(function* () {
     rememberInvoker(state, source);
-    openElement(elements.get(state));
+    const options = optionsByState.get(state);
+    openElement(elements.get(state), options);
     return yield* RefSubject.update(state, (current) => ({ ...current, open: true }));
   });
 }
@@ -41,7 +57,8 @@ export function close<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
 ): Effect.Effect<S, E, R> {
   return Effect.gen(function* () {
-    const invoker = invokers.get(state);
+    const options = optionsByState.get(state);
+    const invoker = focusTarget(elements.get(state), options?.finalFocus) ?? invokers.get(state);
     closeElement(elements.get(state));
     const next = yield* RefSubject.update(state, (current) => ({ ...current, open: false }));
     if (invoker) restoreFocus(invoker);
@@ -69,14 +86,22 @@ function rememberInvoker<S extends State, E, R>(
   if (activeElement) invokers.set(state, activeElement);
 }
 
-function openElement(element: DialogElement | undefined): void {
+function openElement(element: DialogElement | undefined, options: Options = {}): void {
   if (!element) return;
+  if (options.modal === false && typeof element.show === "function" && element.open !== true) {
+    element.show();
+    focusInitial(element, options);
+    return;
+  }
+
   if (typeof element.showModal === "function" && element.open !== true) {
     element.showModal();
+    focusInitial(element, options);
     return;
   }
 
   element.setAttribute("open", "");
+  focusInitial(element, options);
 }
 
 function closeElement(element: DialogElement | undefined): void {
@@ -95,6 +120,24 @@ function restoreFocus(element: HTMLElement): void {
   const window = element.ownerDocument?.defaultView;
   window?.requestAnimationFrame(() => element.focus());
   window?.setTimeout(() => element.focus(), 0);
+}
+
+function focusInitial(element: DialogElement, options: Options): void {
+  const target = focusTarget(element, options.initialFocus);
+  target?.focus();
+}
+
+function focusTarget(element: DialogElement | undefined, target: FocusTarget | undefined): HTMLElement | undefined {
+  if (!element || target === undefined) return undefined;
+  if (typeof target === "string") {
+    const found = element.ownerDocument?.querySelector(target);
+    return isFocusableElement(found) ? found : undefined;
+  }
+  if (typeof target === "function") {
+    const found = target();
+    return isFocusableElement(found) ? found : undefined;
+  }
+  return target;
 }
 
 function isFocusableElement(value: EventTarget | null | undefined): value is HTMLElement {

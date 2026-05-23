@@ -101,3 +101,49 @@ const nav = html`<nav>
   ${Link({ href: "/", content: "Home" })} ${Link({ href: "/todos", content: "Todos" })}
 </nav>`;
 ```
+
+### Compact Component Example
+
+```ts
+import { Dialog, Form, Select, Tooltip } from "@typed/ui";
+import { html } from "@typed/template";
+
+const dialog = yield* Dialog.makeState({ open: false });
+const form = yield* Form.makeState({ values: { status: "draft" } });
+const select = yield* Select.makeState({ id: "status", value: "draft" });
+const tooltip = yield* Tooltip.makeState({ id: "status-help" });
+
+const view = html`
+  ${Dialog.Trigger({ state: dialog, controls: "settings", content: "Settings" })}
+  ${Dialog.Content({
+    state: dialog,
+    id: "settings",
+    label: "Settings",
+    initialFocus: "#status-trigger",
+    content: html`
+      ${Tooltip.Anchor({ state: tooltip, content: "Status" })}
+      ${Tooltip.Content({ state: tooltip, content: "Choose a publishing state" })}
+      ${Form.Form({
+        state: form,
+        content: html`
+          ${Select.Trigger({ state: select, content: "Draft", props: { id: "status-trigger" } })}
+          ${Select.Content({
+            state: select,
+            label: "Status",
+            content: html`
+              ${Select.Option({ state: select, id: "draft", value: "draft", content: "Draft" })}
+              ${Select.Option({
+                state: select,
+                id: "published",
+                value: "published",
+                content: "Published",
+              })}
+            `,
+          })}
+          ${Select.HiddenInput({ state: select, formState: form, name: "status" })}
+        `,
+      })}
+    `,
+  })}
+`;
+```

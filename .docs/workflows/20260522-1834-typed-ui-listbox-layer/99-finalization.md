@@ -19,6 +19,10 @@ Date: 2026-05-22
 - Browser-runner coverage remains future work.
 - Select/Combobox composition around Listbox is not implemented yet.
 
+## Current Status Note
+
+This note captured the state of this slice at finalization time. Later parity passes added Select and Combobox composition around Listbox; use `.docs/workflows/20260521-2247-typed-native-ariakit-port/ariakit-parity-matrix.md` as the current source of truth.
+
 ## Readiness
 
 - The Listbox slice is ready as the next `@typed/ui` Ariakit-like primitive on `codex/typed-beta`.

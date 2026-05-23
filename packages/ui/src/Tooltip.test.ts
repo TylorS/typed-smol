@@ -28,6 +28,39 @@ describe("typed/ui/Tooltip", () => {
       expect(calls).toEqual(["show", "hide"]);
       expect((yield* state).open).toBe(false);
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("applies anchor show and hide delays with hover grace", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Tooltip.makeState({ id: "tip", open: false });
+      const [anchor] = yield* render(
+        Tooltip.Anchor({
+          state,
+          content: "Help",
+          showDelay: 20,
+          hideDelay: 30,
+          hoverGrace: 30,
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      assert(anchor instanceof window.HTMLElement);
+
+      anchor.dispatchEvent(new window.MouseEvent("mouseenter"));
+      yield* Effect.sleep(10);
+      expect((yield* state).open).toBe(false);
+      yield* Effect.sleep(20);
+      expect((yield* state).open).toBe(true);
+
+      anchor.dispatchEvent(new window.MouseEvent("mouseleave"));
+      yield* Effect.sleep(10);
+      anchor.dispatchEvent(new window.MouseEvent("mouseenter"));
+      yield* Effect.sleep(35);
+      expect((yield* state).open).toBe(true);
+
+      anchor.dispatchEvent(new window.MouseEvent("mouseleave"));
+      yield* Effect.sleep(35);
+      expect((yield* state).open).toBe(false);
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
@@ -35,4 +68,3 @@ function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
   const layer = DomRenderTemplate.using(window.document);
   return [window, layer] as const;
 }
-

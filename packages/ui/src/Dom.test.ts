@@ -115,32 +115,48 @@ describe("typed/ui/Dom", () => {
       const calls: string[] = [];
       const rendered = yield* EffectRuntime.suspend(() =>
         DomRuntime.renderHost(
-        {
-          props: {
+          {
+            props: {
+              onclick: EventHandler.make(() => {
+                calls.push("user");
+              }),
+            },
+            host: (props, content) =>
+              EffectRuntime.gen(function* () {
+                assert(EventHandler.isEventHandler(props.onclick));
+                yield* props.onclick.handler(new Event("click"));
+                return content;
+              }),
+          },
+          {
             onclick: EventHandler.make(() => {
-              calls.push("user");
+              calls.push("internal");
             }),
           },
-          host: (props, content) =>
-            EffectRuntime.gen(function* () {
-              assert(EventHandler.isEventHandler(props.onclick));
-              yield* props.onclick.handler(new Event("click"));
-              return content;
-            }),
-        },
-        {
-          onclick: EventHandler.make(() => {
-            calls.push("internal");
-          }),
-        },
-        "hosted",
-        () => EffectRuntime.succeed("fallback"),
+          "hosted",
+          () => EffectRuntime.succeed("fallback"),
         ) as unknown as EffectRuntime.Effect<unknown, never, never>,
       );
 
       assert.strictEqual(rendered, "hosted");
       assert.deepStrictEqual(calls, ["user", "internal"]);
     }).pipe(EffectRuntime.runPromise));
+
+  it("renders div host fallbacks with explicit ref propagation", () => {
+    const calls: string[] = [];
+    const rendered = DomRuntime.renderDivHost(
+      {
+        role: "tooltip",
+        ref: () => {
+          calls.push("ref");
+        },
+      },
+      "content",
+    );
+
+    expectTypeOf(rendered).toExtend<Fx.Fx<unknown, unknown, unknown>>();
+    assert.deepStrictEqual(calls, []);
+  });
 });
 
 class HostService extends Context.Service<HostService, {}>()("typed/ui/test/HostService") {}

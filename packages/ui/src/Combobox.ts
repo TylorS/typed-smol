@@ -264,9 +264,7 @@ export function Popover<
     ref: NativePopover.register(options.state),
   });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
-  const split = Dom.splitRef(props);
-  const fallback = html`<div ...${split.props as any} ref=${split.ref as any}>${options.content}</div>`;
-  return fallback as unknown as Component<Opts>;
+  return Dom.renderDivHost<Opts>(props, options.content);
 }
 
 export interface ItemOptions<Value extends string = string, E = never, R = never>

@@ -1,7 +1,7 @@
 import { assert, describe, it } from "vitest";
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, render } from "@typed/template";
+import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
 import * as Dialog from "./Dialog.js";
 
@@ -91,6 +91,79 @@ describe("typed/ui/Dialog", () => {
       assert.strictEqual(window.document.activeElement, trigger);
     }).pipe(Effect.scoped, Effect.runPromise);
   });
+
+  it("supports content focus and close policy options", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      Object.assign(window.HTMLDialogElement.prototype, {
+        showModal(this: HTMLDialogElement) {
+          this.setAttribute("open", "");
+        },
+        close(this: HTMLDialogElement) {
+          this.removeAttribute("open");
+        },
+      });
+      const state = yield* Dialog.makeState({ open: false });
+      const final = window.document.createElement("button");
+      const root = window.document.createElement("div");
+      final.id = "final";
+      window.document.body.append(final, root);
+
+      const [dialog] = yield* render(
+        Dialog.Content({
+          state,
+          label: "Preferences",
+          initialFocus: "#first-field",
+          finalFocus: final,
+          closeOnEscape: false,
+          closeOnOutsideInteraction: true,
+          content: html`<input id="first-field" />`,
+        }),
+        root,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      assert(dialog instanceof window.HTMLDialogElement);
+
+      yield* Dialog.setOpen(state, true);
+      yield* Effect.sleep(10);
+      assert.strictEqual(window.document.activeElement?.id, "first-field");
+
+      dialog.dispatchEvent(new window.Event("cancel", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(10);
+      assert.strictEqual((yield* state).open, true);
+
+      dialog.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      yield* Effect.sleep(10);
+      assert.strictEqual((yield* state).open, false);
+      assert.strictEqual(window.document.activeElement, final);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("can open non-modal dialogs without showModal", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      let showCount = 0;
+      let showModalCount = 0;
+      Object.assign(window.HTMLDialogElement.prototype, {
+        show(this: HTMLDialogElement) {
+          showCount += 1;
+          this.setAttribute("open", "");
+        },
+        showModal(this: HTMLDialogElement) {
+          showModalCount += 1;
+          this.setAttribute("open", "");
+        },
+      });
+      const state = yield* Dialog.makeState({ open: false });
+      yield* render(
+        Dialog.Content({ state, label: "Preferences", modal: false, content: "Body" }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      yield* Dialog.setOpen(state, true);
+      yield* Effect.sleep(10);
+
+      assert.strictEqual(showCount, 1);
+      assert.strictEqual(showModalCount, 0);
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

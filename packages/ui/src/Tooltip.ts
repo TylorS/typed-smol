@@ -1,10 +1,11 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
+import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
-import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
+import { makeRef, type Component, type Content, type Value as ReactiveValue } from "./Reactive.js";
 
 export interface State {
   readonly id: string;
@@ -32,36 +33,52 @@ export function setOpen<E, R>(
 export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: Content;
+  readonly showDelay?: ReactiveValue<number | undefined, any, any>;
+  readonly hideDelay?: ReactiveValue<number | undefined, any, any>;
+  readonly hoverGrace?: ReactiveValue<number | undefined, any, any>;
 }
 
 export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<AnchorOptions<E, R>, "state">,
 ): Component<Opts> {
-  const id = RefSubject.map(options.state, (state) => state.id);
-  const onFocus = EventHandler.make(() => setOpen(options.state, true));
-  const onBlur = EventHandler.make(() => setOpen(options.state, false));
-  const onMouseEnter = EventHandler.make(() => setOpen(options.state, true));
-  const onMouseLeave = EventHandler.make(() => setOpen(options.state, false));
+  return gen(function* () {
+    const showDelay = yield* makeRef(options.showDelay ?? 0);
+    const hideDelay = yield* makeRef(options.hideDelay ?? options.hoverGrace ?? 0);
+    let scheduleVersion = 0;
+    const schedule = (open: boolean, delay: RefSubject.Computed<number | undefined, any, any>) =>
+      Effect.gen(function* () {
+        const version = ++scheduleVersion;
+        const duration = yield* delay;
+        if (duration && duration > 0) yield* Effect.sleep(duration);
+        if (version !== scheduleVersion) return;
+        yield* setOpen(options.state, open);
+      });
+    const id = RefSubject.map(options.state, (state) => state.id);
+    const onFocus = EventHandler.make(() => schedule(true, showDelay));
+    const onBlur = EventHandler.make(() => schedule(false, hideDelay));
+    const onMouseEnter = EventHandler.make(() => schedule(true, showDelay));
+    const onMouseLeave = EventHandler.make(() => schedule(false, hideDelay));
 
-  const props = Dom.mergeProps(options.props, {
-    "aria-describedby": id,
-    onfocus: onFocus,
-    onblur: onBlur,
-    onmouseenter: onMouseEnter,
-    onmouseleave: onMouseLeave,
+    const props = Dom.mergeProps(options.props, {
+      "aria-describedby": id,
+      onfocus: onFocus,
+      onblur: onBlur,
+      onmouseenter: onMouseEnter,
+      onmouseleave: onMouseLeave,
+    });
+
+    if (options.host) return options.host(props, options.content) as Component<Opts>;
+
+    return html`<span
+      aria-describedby=${id}
+      onfocus=${onFocus}
+      onblur=${onBlur}
+      onmouseenter=${onMouseEnter}
+      onmouseleave=${onMouseLeave}
+    >
+      ${options.content}
+    </span>`;
   });
-
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<span
-    aria-describedby=${id}
-    onfocus=${onFocus}
-    onblur=${onBlur}
-    onmouseenter=${onMouseEnter}
-    onmouseleave=${onMouseLeave}
-  >
-    ${options.content}
-  </span>`;
 }
 
 export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
@@ -93,9 +110,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
 
   if (options.host) return options.host(props, options.content) as Component<Opts>;
 
-  const split = Dom.splitRef(props);
-  const fallback = html`<div ...${split.props as any} ref=${split.ref as any}>${options.content}</div>`;
-  return fallback as unknown as Component<Opts>;
+  return Dom.renderDivHost<Opts>(props, options.content);
 }
 
 export const Tooltip = Content;

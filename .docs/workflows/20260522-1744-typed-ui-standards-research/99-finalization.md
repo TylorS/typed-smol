@@ -20,6 +20,10 @@ Date: 2026-05-22
 - Browser-runner verification for native popover/focus behavior remains future work; the current slice uses package-local happy-dom tests.
 - Menu, Select/Listbox, and Combobox remain intentionally deferred.
 
+## Current Status Note
+
+This note captured the state of this slice at finalization time. Later parity passes added Menu, Select/Listbox, Combobox, component-rendered browser tests, and the native popover/dialog baseline; use `.docs/workflows/20260521-2247-typed-native-ariakit-port/ariakit-parity-matrix.md` as the current source of truth.
+
 ## Readiness
 
 - The UI standards tranche is ready in PR #3 as part of `codex/typed-beta`.

@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Stream from "effect/Stream";
 import { drain, isFx, type Fx } from "@typed/fx/Fx";
-import { EventHandler, type Renderable } from "@typed/template";
+import { EventHandler, html, type Renderable } from "@typed/template";
 import type { Component } from "./Reactive.js";
 
 export type EventHandlerProperty = `on${string}`;
@@ -143,6 +143,14 @@ export function splitRef<Element extends globalThis.Element>(
 ): { readonly props: HostProps<Element>; readonly ref: ElementRef<Element>["ref"] | undefined } {
   const { ref, ...rest } = props;
   return { props: rest, ref };
+}
+
+export function renderDivHost<const Opts extends HostOptions<HTMLDivElement>>(
+  props: HostProps<HTMLDivElement>,
+  content: Renderable<unknown, any, any>,
+): Component<Opts> {
+  const split = splitRef(props);
+  return html`<div ...${split.props as any} ref=${split.ref as any}>${content}</div>` as unknown as Component<Opts>;
 }
 
 function toEventHandler<Ev extends Event, E, R>(
