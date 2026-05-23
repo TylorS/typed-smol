@@ -41,17 +41,18 @@ Goal: Create one compiler diagnostic model and host adapters.
 
 Tasks:
 
-1. Add `packages/compiler/src/diagnostics/*` with:
+1. [completed] Add `packages/compiler/src/diagnostics/*` with:
    - `TypedCompilerDiagnostic`
    - `SourceSpan`
    - `DiagnosticRelatedInfo`
    - `DiagnosticFix`
    - helpers for sorting/deduping/stable snapshots
-2. Add adapters:
+2. [completed] Add adapters:
    - compiler diagnostic to `ts.Diagnostic`
    - compiler diagnostic to virtual-module diagnostic
    - compiler diagnostic to Vite warning/error payload shape
-3. Migrate route/template compiler diagnostics to shared diagnostics where touched.
+3. [completed] Export the diagnostics surface from `@typed/compiler`.
+4. [completed] Keep existing route/template diagnostics unchanged for compatibility in this first substrate slice.
 
 Traceability:
 
@@ -366,4 +367,3 @@ Recall targets:
 ## Approval Gate
 
 Planning exits only after explicit human approval of this `plan.md`.
-
