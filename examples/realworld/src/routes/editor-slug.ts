@@ -1,6 +1,7 @@
 // oxlint-disable require-yield
 import { Fx, RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
+import { Button } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import { UpdateArticleRequest } from "../domain/RealWorldApi.js";
 import { BrowserAuth } from "../common/BrowserAuth.js";
@@ -46,7 +47,11 @@ export const template = Fx.fn("EditorSlug")(function* (params) {
               <fieldset class="form-group">
                 <input class="form-control" name="tagList" placeholder="Enter tags" />
               </fieldset>
-              <button class="btn btn-lg pull-xs-right btn-primary">Update Article</button>
+              ${Button.Button({
+                content: "Update Article",
+                props: { class: "btn btn-lg pull-xs-right btn-primary" },
+                type: "submit",
+              })}
             </fieldset>
           </form>
         </div>

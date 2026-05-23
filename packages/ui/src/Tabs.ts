@@ -45,18 +45,18 @@ export function makeState(
   });
 }
 
-export function select(
-  state: RefSubject.RefSubject<State>,
+export function select<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
   selectedId: string,
-): Effect.Effect<State> {
+): Effect.Effect<State, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, activeId: selectedId, selectedId }));
 }
 
-export function move(
-  state: RefSubject.RefSubject<State>,
+export function move<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
   items: readonly Collection.Item[],
   direction: Composite.Move,
-): Effect.Effect<State> {
+): Effect.Effect<State, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     const activeId = Composite.moveActiveId(items, current, direction);
@@ -68,15 +68,17 @@ export function move(
   });
 }
 
-export interface ListOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ListOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: AnyContent;
   readonly items?: readonly Collection.Item[];
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
-export function List<const Opts extends ListOptions>(options: Opts): Component<Opts> {
+export function List<const E, const R, const Opts extends ListOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   const items = options.items;
   const onKeyDown =
@@ -122,14 +124,16 @@ export function List<const Opts extends ListOptions>(options: Opts): Component<O
   </div>`;
 }
 
-export interface TabOptions extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface TabOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly id: RequiredString;
   readonly panelId: RequiredString;
   readonly content: AnyContent;
 }
 
-export function Tab<const Opts extends TabOptions>(options: Opts): Component<Opts> {
+export function Tab<const E, const R, const Opts extends TabOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
     const panelId = yield* makeRef(options.panelId);
@@ -155,14 +159,16 @@ export function Tab<const Opts extends TabOptions>(options: Opts): Component<Opt
   });
 }
 
-export interface PanelOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface PanelOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly id: RequiredString;
   readonly tabId: RequiredString;
   readonly content: AnyContent;
 }
 
-export function Panel<const Opts extends PanelOptions>(options: Opts): Component<Opts> {
+export function Panel<const E, const R, const Opts extends PanelOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
     const tabId = yield* makeRef(options.tabId);
@@ -181,9 +187,9 @@ export function Panel<const Opts extends PanelOptions>(options: Opts): Component
   });
 }
 
-function isSelected(
-  state: RefSubject.RefSubject<State>,
-  id: RefSubject.Computed<string, any, any>,
+function isSelected<E, R, E2, R2>(
+  state: RefSubject.RefSubject<State, E, R>,
+  id: RefSubject.Computed<string, E2, R2>,
 ) {
   return RefSubject.mapEffect(state, (value) => Effect.map(id, (id) => value.selectedId === id));
 }

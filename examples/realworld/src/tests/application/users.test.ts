@@ -14,29 +14,34 @@ import {
 import {
   ApplicationTestLayer,
   defaultDataDirectory,
-  exitWithLayer,
-  runWithLayer,
+  makeLayerExitRunner,
+  makeLayerRunner,
+  type LayerServices,
 } from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "application-users-test.sqlite");
 const TestLayer = ApplicationTestLayer({ databasePath: testDatabasePath });
+type TestServices = LayerServices<typeof TestLayer>;
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
+const exit = makeLayerExitRunner(TestLayer);
 
-const expectRealWorldError = async <A, E, R>(
+const expectRealWorldError = async <A, E, R extends TestServices>(
   effect: Effect.Effect<A, E, R>,
 ): Promise<RealWorldError> => {
-  const exit = await exitWithLayer(effect, TestLayer);
-  if (Exit.isFailure(exit)) {
-    const result = Cause.findFail(exit.cause);
+  const resultExit = await exit(effect);
+  if (Exit.isFailure(resultExit)) {
+    const result = Cause.findFail(resultExit.cause);
     if (Result.isSuccess(result)) return result.success.error as RealWorldError;
   }
 
   throw new Error("Expected RealWorldError failure");
 };
 
-const register = (username = "app_user", email = "app.user@example.com") =>
+const register = (
+  username = usernameValue("app_user"),
+  email = emailValue("app.user@example.com"),
+) =>
   Users.use((users) =>
     users.register({
       user: {
@@ -88,22 +93,24 @@ describe("user application service", () => {
   });
 
   it("maps validation, duplicate, missing token, and invalid credentials errors", async () => {
-    const blank = await expectRealWorldError(
+    const invalidPassword = await expectRealWorldError(
       Users.use((users) =>
         users.register({
           user: {
-            username: "",
+            username: usernameValue("blank_user"),
             email: emailValue("blank@example.com"),
-            password: passwordValue("password123"),
+            password: passwordValue("short"),
           },
         }),
       ),
     );
-    expect(blank.status).toBe(422);
-    expect(blank.errors.username).toEqual(["can't be blank"]);
+    expect(invalidPassword.status).toBe(422);
+    expect(invalidPassword.errors.password).toEqual(["can't be blank"]);
 
     await run(register());
-    const duplicate = await expectRealWorldError(register("app_user", "other@example.com"));
+    const duplicate = await expectRealWorldError(
+      register(usernameValue("app_user"), emailValue("other@example.com")),
+    );
     expect(duplicate.status).toBe(409);
     expect(duplicate.errors.username).toEqual(["has already been taken"]);
 

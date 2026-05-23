@@ -1,6 +1,12 @@
+import type ts from "typescript";
+
 export interface AnalyzeRouteModuleInput {
   readonly moduleId: string;
   readonly sourceText: string;
+  readonly checker?: ts.TypeChecker;
+  readonly refSubjectType?: ts.Type;
+  readonly sourceFile?: ts.SourceFile;
+  readonly ts?: typeof ts;
 }
 
 export interface RouteModulePlan {

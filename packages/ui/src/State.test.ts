@@ -1,6 +1,7 @@
 import { assert, describe, expectTypeOf, it } from "vitest";
 import { Effect } from "effect";
 import { RefSubject } from "@typed/fx";
+import * as Reactive from "./Reactive.js";
 import * as State from "./State.js";
 
 describe("typed/ui/State", () => {
@@ -25,6 +26,16 @@ describe("typed/ui/State", () => {
       yield* RefSubject.update(state, (current) => ({ ...current, open: true }));
 
       assert.strictEqual(yield* open, true);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("keeps computed refs intact when normalizing reactive values", () =>
+    Effect.gen(function* () {
+      const state = yield* RefSubject.make({ count: 1 });
+      const count = RefSubject.map(state, (current) => current.count);
+      const normalized = yield* Reactive.makeRef(count);
+
+      assert.strictEqual(normalized, count);
+      assert.strictEqual(yield* normalized, 1);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("exposes RefSubject.Service for state providers", () =>

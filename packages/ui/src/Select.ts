@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect";
+import type * as Context from "effect/Context";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
@@ -57,12 +58,11 @@ export const optionData = DataAttr.schema({
   selected: Schema.Boolean,
 });
 
-const formBindings = new WeakMap<object, ReadonlyArray<SelectFormBinding<any>>>();
+const formBindings = new WeakMap<object, ReadonlyArray<SelectFormBinding>>();
 const hiddenInputRefs = new WeakMap<object, unknown>();
 
-interface SelectFormBinding<Values extends Record<string, unknown>> {
-  readonly state: RefSubject.RefSubject<Form.State<Values>>;
-  readonly name: keyof Values & string;
+interface SelectFormBinding {
+  readonly setValue: (value: unknown) => Effect.Effect<void, never, never>;
 }
 
 export function makeState<Value extends string = string>(
@@ -83,28 +83,28 @@ export function makeState<Value extends string = string>(
   return RefSubject.make(state);
 }
 
-export function setOpen<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function setOpen<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   open: boolean,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return NativePopover.setOpen(state, open);
 }
 
-export function select<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function select<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   activeId: string,
   value: Value,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, activeId, open: false, value })).pipe(
     Effect.tap(() => syncFormBindings(state, value)),
   );
 }
 
-export function move<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function move<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   items: readonly Item<Value>[],
   direction: Composite.Move,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     const activeId = Composite.moveActiveId(items, current, direction);
@@ -112,13 +112,18 @@ export function move<Value extends string>(
   });
 }
 
-export interface TriggerOptions<Value extends string = string>
+export interface TriggerOptions<Value extends string = string, E = never, R = never>
   extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly content: AnyContent;
 }
 
-export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
+export function Trigger<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends TriggerOptions<Value, E, R>,
+>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
   const props = {
@@ -138,14 +143,20 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
 
 export const Select = Trigger;
 
-export interface ContentOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface ContentOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly content: AnyContent;
   readonly items?: readonly Item<Value>[];
   readonly label?: RequiredString;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
+export function Content<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends ContentOptions<Value, E, R>,
+>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
@@ -206,15 +217,21 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
 export const Popover = Content;
 export const List = Content;
 
-export interface OptionOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface OptionOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly id: RequiredString;
   readonly value: ReactiveValue<Value, any, any>;
   readonly content: AnyContent;
   readonly disabled?: OptionalBoolean;
 }
 
-export function Option<const Opts extends OptionOptions>(options: Opts): Component<Opts> {
+export function Option<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends OptionOptions<Value, E, R>,
+>(options: Opts): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
     const value = yield* makeRef(options.value);
@@ -257,30 +274,60 @@ export function Option<const Opts extends OptionOptions>(options: Opts): Compone
 export const Item = Option;
 
 export function Label<
-  const Opts extends { readonly for?: RequiredString; readonly content: AnyContent },
+  const Opts extends {
+    readonly for?: RequiredString;
+    readonly content: AnyContent;
+  } & Dom.HostOptions<HTMLLabelElement>,
 >(options: Opts): Component<Opts> {
-  return html`<label for=${options.for}>${options.content}</label>`;
+  return Dom.renderHost<HTMLLabelElement, Opts>(
+    options,
+    { for: options.for },
+    options.content,
+    (props, content) => html`<label ...${props}>${content}</label>`,
+  );
 }
 
-export function Value<const Opts extends { readonly state: RefSubject.RefSubject<State> }>(
+export function Value<
+  const E,
+  const R,
+  const Opts extends {
+    readonly state: RefSubject.RefSubject<State, E, R>;
+  } & Dom.HostOptions<HTMLSpanElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`${RefSubject.map(options.state, (state) => state.value ?? "")}`;
+  const value = RefSubject.map(options.state, (state) => state.value ?? "");
+  return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, value, (props, content) =>
+    html`<span ...${props}>${content}</span>`,
+  );
 }
 
-export interface HiddenInputOptions<Value extends string = string>
+export interface HiddenInputOptions<
+  Value extends string = string,
+  E = never,
+  R = never,
+  E2 = never,
+  R2 = never,
+>
   extends Dom.HostOptions<HTMLInputElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly name: RequiredString;
-  readonly formState?: RefSubject.RefSubject<Form.State<Record<string, unknown>>>;
+  readonly formState?: RefSubject.RefSubject<Form.State<Record<string, unknown>>, E2, R2>;
   readonly form?: ReactiveValue<string | undefined, any, any>;
   readonly disabled?: OptionalBoolean;
   readonly required?: OptionalBoolean;
 }
 
-export function HiddenInput<const Opts extends HiddenInputOptions>(options: Opts): Component<Opts> {
+export function HiddenInput<
+  const Value extends string,
+  const E,
+  const R,
+  const E2,
+  const R2,
+  const Opts extends HiddenInputOptions<Value, E, R, E2, R2>,
+>(options: Opts): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => state.value ?? "");
-  const register = hiddenInputRef(options);
+  const register = hiddenInputRef<Value, E, R, E2, R2>(options);
   const props = {
     type: "hidden",
     name: options.name,
@@ -297,90 +344,133 @@ export function HiddenInput<const Opts extends HiddenInputOptions>(options: Opts
   });
 }
 
-export function Arrow<const Opts extends { readonly content?: AnyContent }>(
+export function Arrow<
+  const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
+>(
   options = {} as Opts,
 ): Component<Opts> {
-  return html`<span aria-hidden="true">${options.content ?? "▾"}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(
+    options,
+    { "aria-hidden": "true" },
+    options.content ?? "▾",
+    (props, content) => html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export function Dismiss<
-  const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: AnyContent },
+  const E,
+  const R,
+  const Opts extends {
+    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly content: AnyContent;
+  } & Dom.HostOptions<HTMLButtonElement>,
 >(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),
   );
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="hide"
-    onclick=${onClick}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(
+    options,
+    { type: "button", popovertarget: id, popovertargetaction: "hide", onclick: onClick },
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export function Group<
-  const Opts extends { readonly content: AnyContent; readonly label?: RequiredString },
+  const Opts extends {
+    readonly content: AnyContent;
+    readonly label?: RequiredString;
+  } & Dom.HostOptions<HTMLDivElement>,
 >(options: Opts): Component<Opts> {
-  return html`<div role="group" aria-label=${options.label}>${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { role: "group", "aria-label": options.label },
+    options.content,
+    (props, content) => html`<div ...${props}>${content}</div>`,
+  );
 }
 
-export function GroupLabel<const Opts extends { readonly content: AnyContent }>(
+export function GroupLabel<
+  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`<span>${options.content}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, options.content, (props, content) =>
+    html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export function Heading<
-  const Opts extends { readonly content: AnyContent; readonly id?: RequiredString },
+  const Opts extends {
+    readonly content: AnyContent;
+    readonly id?: RequiredString;
+  } & Dom.HostOptions<HTMLDivElement>,
 >(options: Opts): Component<Opts> {
-  return html`<div id=${options.id} role="heading" aria-level="1">${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { id: options.id, role: "heading", "aria-level": "1" },
+    options.content,
+    (props, content) => html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export function ItemCheck<
   const Opts extends {
     readonly selected: ReactiveValue<boolean, any, any>;
     readonly content?: AnyContent;
-  },
+  } & Dom.HostOptions<HTMLSpanElement>,
 >(options: Opts): Component<Opts> {
   return gen(function* () {
     const selected = yield* makeRef(options.selected);
     const hidden = RefSubject.map(selected, (value) => !value);
-    return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>`;
+    return Dom.renderHost<HTMLSpanElement, Opts>(
+      options,
+      { "aria-hidden": "true", "?hidden": hidden },
+      options.content ?? "✓",
+      (props, content) => html`<span ...${props}>${content}</span>`,
+    );
   });
 }
 
-export function Row<const Opts extends { readonly content: AnyContent }>(
+export function Row<
+  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`<div role="row">${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "row" }, options.content, (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }
 
-export function Separator(): Component<{}> {
-  return html`<div role="separator"></div>`;
+export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {}>(
+  options = {} as Opts,
+): Component<Opts> {
+  return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "separator" }, "", (props) =>
+    html`<div ...${props}></div>`,
+  );
 }
 
 interface ToggleEventLike extends Event {
   readonly newState?: string;
 }
 
-function dataOpen<Value extends string>(state: RefSubject.RefSubject<State<Value>>) {
+function dataOpen<Value extends string, E, R>(state: RefSubject.RefSubject<State<Value>, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
   );
 }
 
-function dataMode<Value extends string>(state: RefSubject.RefSubject<State<Value>>) {
+function dataMode<Value extends string, E, R>(state: RefSubject.RefSubject<State<Value>, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.mode ?? "auto")),
   );
 }
 
-function dataActive<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  id: RefSubject.Computed<string, any, any>,
-  disabled: RefSubject.Computed<boolean, any, any>,
+function dataActive<Value extends string, E, R, E2, R2, E3, R3>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  id: RefSubject.Computed<string, E2, R2>,
+  disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.gen(function* () {
@@ -396,19 +486,19 @@ function dataActive<Value extends string>(
   );
 }
 
-function isSelected<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  value: RefSubject.Computed<Value, any, any>,
+function isSelected<Value extends string, E, R, E2, R2>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  value: RefSubject.Computed<Value, E2, R2>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.map(value, (value) => current.value === value),
   );
 }
 
-function dataSelected<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  value: RefSubject.Computed<Value, any, any>,
-  disabled: RefSubject.Computed<boolean, any, any>,
+function dataSelected<Value extends string, E, R, E2, R2, E3, R3>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  value: RefSubject.Computed<Value, E2, R2>,
+  disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.gen(function* () {
@@ -424,51 +514,70 @@ function dataSelected<Value extends string>(
   );
 }
 
-function isDisabled(disabled: RefSubject.Computed<boolean | undefined, any, any>) {
+function isDisabled<E, R>(disabled: RefSubject.Computed<boolean | undefined, E, R>) {
   return RefSubject.map(disabled, (value) => value === true);
 }
 
-function boolString(value: RefSubject.Computed<boolean, any, any>) {
+function boolString<E, R>(value: RefSubject.Computed<boolean, E, R>) {
   return RefSubject.map(value, String);
 }
 
-function registerFormBinding<Values extends Record<string, unknown>>(
-  selectState: RefSubject.RefSubject<State>,
-  formState: RefSubject.RefSubject<Form.State<Values>>,
+function registerFormBinding<
+  Value extends string,
+  Values extends Record<string, unknown>,
+  E,
+  R,
+  E2,
+  R2,
+>(
+  selectState: RefSubject.RefSubject<State<Value>, E, R>,
+  formState: RefSubject.RefSubject<Form.State<Values>, E2, R2>,
   name: keyof Values & string,
+  context: Context.Context<R2>,
 ): void {
   const current = formBindings.get(selectState) ?? [];
-  formBindings.set(selectState, current.concat({ state: formState, name }));
+  formBindings.set(
+    selectState,
+    current.concat({
+      setValue: (value) =>
+        Form.setValue(formState, name, value as Values[keyof Values & string]).pipe(
+          Effect.provide(context),
+          Effect.orDie,
+          Effect.asVoid,
+        ),
+    }),
+  );
 }
 
-function hiddenInputRef<const Opts extends HiddenInputOptions>(
-  options: Opts,
+function hiddenInputRef<Value extends string, E, R, E2, R2>(
+  options: HiddenInputOptions<Value, E, R, E2, R2>,
 ): Dom.ElementRef<HTMLInputElement>["ref"] | undefined {
-  if (!options.formState) return undefined;
+  const formState = options.formState;
+  if (!formState) return undefined;
 
-  return (element) => {
-    if (hiddenInputRefs.get(element) === options.formState) return;
-    hiddenInputRefs.set(element, options.formState);
-    registerFormBinding(options.state, options.formState!, options.name as string);
+  return (element) =>
+    Effect.gen(function* () {
+      if (hiddenInputRefs.get(element) === formState) return;
+      hiddenInputRefs.set(element, formState);
+      const nameRef = yield* makeRef(options.name);
+      const name = yield* nameRef;
+      const context = yield* Effect.context<R2>();
+      registerFormBinding(options.state, formState, name as keyof Record<string, unknown> & string, context);
 
-    void Effect.runPromise(
-      Effect.gen(function* () {
-        const current = yield* options.state;
-        if (current.value !== null) {
-          yield* Form.setValue(options.formState!, options.name as string, current.value);
-        }
-      }),
-    );
-  };
+      const current = yield* options.state;
+      if (current.value !== null) {
+        yield* Form.setValue(formState, name, current.value);
+      }
+    });
 }
 
-function syncFormBindings<Value extends string>(
-  selectState: RefSubject.RefSubject<State<Value>>,
+function syncFormBindings<Value extends string, E, R>(
+  selectState: RefSubject.RefSubject<State<Value>, E, R>,
   value: Value,
 ): Effect.Effect<void> {
   const bindings = formBindings.get(selectState) ?? [];
   return Effect.all(
-    bindings.map((binding) => Form.setValue(binding.state, binding.name, value)),
+    bindings.map((binding) => binding.setValue(value)),
     { concurrency: "unbounded" },
   ).pipe(Effect.asVoid);
 }

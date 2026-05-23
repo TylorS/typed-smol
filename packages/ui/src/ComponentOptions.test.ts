@@ -23,8 +23,16 @@ class OptionError {
   readonly _tag = "OptionError";
 }
 
+class StateError {
+  readonly _tag = "StateError";
+}
+
 class OptionService extends Context.Service<OptionService, { readonly label: string }>()(
   "typed/ui/test/OptionService",
+) {}
+
+class StateService extends Context.Service<StateService, { readonly state: string }>()(
+  "typed/ui/test/StateService",
 ) {}
 
 describe("typed/ui component option inference", () => {
@@ -144,6 +152,58 @@ describe("typed/ui component option inference", () => {
     expectTypeOf<Fx.Services<typeof tabsTab>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
     expectTypeOf<Fx.Services<typeof tabsPanel>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
     expectTypeOf<Fx.Services<typeof toolbarRoot>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+  });
+
+  it("preserves RefSubject state error and service channels", () => {
+    const dialog = {} as RefSubject.RefSubject<Dialog.State, StateError, StateService>;
+    const listbox = {} as RefSubject.RefSubject<Listbox.State<string>, StateError, StateService>;
+    const menu = {} as RefSubject.RefSubject<Menu.State, StateError, StateService>;
+    const select = {} as RefSubject.RefSubject<Select.State<string>, StateError, StateService>;
+    const tabs = {} as RefSubject.RefSubject<Tabs.State, StateError, StateService>;
+
+    const dialogContent = Dialog.Content({ state: dialog, label: "Dialog", content: "Dialog" });
+    const listboxRoot = Listbox.Root({ state: listbox, content: "Listbox" });
+    const menuContent = Menu.Content({ state: menu, content: "Menu" });
+    const selectContent = Select.Content({ state: select, content: "Select" });
+    const tabsList = Tabs.List({ state: tabs, content: "Tabs" });
+
+    expectTypeOf<Fx.Error<typeof dialogContent>>().toExtend<StateError>();
+    expectTypeOf<Fx.Error<typeof listboxRoot>>().toExtend<StateError>();
+    expectTypeOf<Fx.Error<typeof menuContent>>().toExtend<StateError>();
+    expectTypeOf<Fx.Error<typeof selectContent>>().toExtend<StateError>();
+    expectTypeOf<Fx.Error<typeof tabsList>>().toExtend<StateError>();
+
+    expectTypeOf<Fx.Services<typeof dialogContent>>().toExtend<
+      StateService | RenderTemplate | Scope.Scope
+    >();
+    expectTypeOf<Fx.Services<typeof listboxRoot>>().toExtend<
+      StateService | RenderTemplate | Scope.Scope
+    >();
+    expectTypeOf<Fx.Services<typeof menuContent>>().toExtend<
+      StateService | RenderTemplate | Scope.Scope
+    >();
+    expectTypeOf<Fx.Services<typeof selectContent>>().toExtend<
+      StateService | RenderTemplate | Scope.Scope
+    >();
+    expectTypeOf<Fx.Services<typeof tabsList>>().toExtend<
+      StateService | RenderTemplate | Scope.Scope
+    >();
+  });
+
+  it("preserves RefSubject state channels through state helper effects", () => {
+    const dialog = {} as RefSubject.RefSubject<Dialog.State, StateError, StateService>;
+    const menu = {} as RefSubject.RefSubject<Menu.State, StateError, StateService>;
+    const select = {} as RefSubject.RefSubject<Select.State<string>, StateError, StateService>;
+
+    expectTypeOf(Dialog.setOpen(dialog, true)).toEqualTypeOf<
+      Effect.Effect<Dialog.State, StateError, StateService>
+    >();
+    expectTypeOf(Menu.setOpen(menu, true)).toEqualTypeOf<
+      Effect.Effect<Menu.State, StateError, StateService>
+    >();
+    expectTypeOf(Select.setOpen(select, true)).toEqualTypeOf<
+      Effect.Effect<Select.State<string>, StateError, StateService>
+    >();
   });
 
   it("exposes ref-first component source and return types", () => {

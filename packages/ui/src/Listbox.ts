@@ -57,19 +57,19 @@ export function makeState<Value extends string = string>(
   return RefSubject.make(state);
 }
 
-export function select<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function select<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   activeId: string,
   value: Value,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, activeId, value }));
 }
 
-export function move<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function move<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   items: readonly Item<Value>[],
   direction: Composite.Move,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     const activeId = Composite.moveActiveId(items, current, direction);
@@ -77,15 +77,21 @@ export function move<Value extends string>(
   });
 }
 
-export interface RootOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface RootOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly content: AnyContent;
   readonly items?: readonly Item<Value>[];
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
-export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
+export function Root<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends RootOptions<Value, E, R>,
+>(options: Opts): Component<Opts> {
   const orientation = RefSubject.map(options.state, (current) => current.orientation);
   const activeDescendant = RefSubject.map(options.state, (current) =>
     current.virtualFocus && current.activeId ? current.activeId : undefined,
@@ -135,15 +141,21 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
   </div>`;
 }
 
-export interface OptionOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface OptionOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly id: RequiredString;
   readonly value: ReactiveValue<Value, any, any>;
   readonly content: AnyContent;
   readonly disabled?: OptionalBoolean;
 }
 
-export function Option<const Opts extends OptionOptions>(options: Opts): Component<Opts> {
+export function Option<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends OptionOptions<Value, E, R>,
+>(options: Opts): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
     const value = yield* makeRef(options.value);
@@ -181,26 +193,26 @@ export function Option<const Opts extends OptionOptions>(options: Opts): Compone
   });
 }
 
-function isActive<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  id: RefSubject.Computed<string, any, any>,
+function isActive<Value extends string, E, R, E2, R2>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  id: RefSubject.Computed<string, E2, R2>,
 ) {
   return RefSubject.mapEffect(state, (current) => Effect.map(id, (id) => current.activeId === id));
 }
 
-function isSelected<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  value: RefSubject.Computed<Value, any, any>,
+function isSelected<Value extends string, E, R, E2, R2>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  value: RefSubject.Computed<Value, E2, R2>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.map(value, (value) => current.value === value),
   );
 }
 
-function dataActive<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  id: RefSubject.Computed<string, any, any>,
-  disabled: RefSubject.Computed<boolean, any, any>,
+function dataActive<Value extends string, E, R, E2, R2, E3, R3>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  id: RefSubject.Computed<string, E2, R2>,
+  disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.gen(function* () {
@@ -216,10 +228,10 @@ function dataActive<Value extends string>(
   );
 }
 
-function dataSelected<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  value: RefSubject.Computed<Value, any, any>,
-  disabled: RefSubject.Computed<boolean, any, any>,
+function dataSelected<Value extends string, E, R, E2, R2, E3, R3>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  value: RefSubject.Computed<Value, E2, R2>,
+  disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.gen(function* () {
@@ -235,10 +247,10 @@ function dataSelected<Value extends string>(
   );
 }
 
-function isDisabled(disabled: RefSubject.Computed<boolean | undefined, any, any>) {
+function isDisabled<E, R>(disabled: RefSubject.Computed<boolean | undefined, E, R>) {
   return RefSubject.map(disabled, (value) => value === true);
 }
 
-function boolString(value: RefSubject.Computed<boolean, any, any>) {
+function boolString<E, R>(value: RefSubject.Computed<boolean, E, R>) {
   return RefSubject.map(value, String);
 }

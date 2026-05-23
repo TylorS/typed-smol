@@ -17,11 +17,17 @@ import * as UserCurrent from "../../api/user/current.js";
 import * as UsersRegister from "../../api/users/register.js";
 import { resetDatabase } from "../../infrastructure/Reset.js";
 import { email, password, tagName, username } from "../helpers/domain.js";
-import { ApplicationTestLayer, defaultDataDirectory, runWithLayer } from "../helpers/layers.js";
+import {
+  ApplicationTestLayer,
+  defaultDataDirectory,
+  makeLayerRunner,
+  type LayerServices,
+} from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "api-test.sqlite");
 const testGeneratedDir = resolve(defaultDataDirectory, "api-generated-test");
 const TestLayer = ApplicationTestLayer({ databasePath: testDatabasePath });
+type TestServices = LayerServices<typeof TestLayer>;
 
 const expectedModuleNames = [
   "ArticlesCreate",
@@ -45,12 +51,11 @@ const expectedModuleNames = [
   "UsersRegister",
 ] as const;
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
 
 const json = async <A>(response: Response): Promise<A> => response.json();
 
-const responseFrom = async <E, R>(
+const responseFrom = async <E, R extends TestServices>(
   effect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
 ): Promise<Response> => HttpServerResponse.toWeb(await run(effect));
 
@@ -125,13 +130,13 @@ describe("realworld API endpoint handlers", () => {
     expect(article.status).toBe(201);
     expect(articleBody.article.slug).toBe("api-article");
 
-    const tags = await responseFrom(TagsList.handler({}));
+    const tags = await responseFrom(TagsList.handler());
     expect(tags.status).toBe(200);
     expect(await json(tags)).toMatchObject({ tags: expect.arrayContaining(["typed"]) });
   });
 
   it("returns RealWorld error envelopes and no body for delete success", async () => {
-    const missing = await responseFrom(UserCurrent.handler({}));
+    const missing = await responseFrom(UserCurrent.handler({ headers: {} }));
     expect(missing.status).toBe(401);
     expect(await json(missing)).toEqual({ errors: { token: ["is missing"] } });
 

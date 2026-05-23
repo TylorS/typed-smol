@@ -11,6 +11,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./compiler-runtime/*.js": {
+      "types": "./dist/compiler-runtime/*.d.ts",
+      "import": "./dist/compiler-runtime/*.js"
+    },
+    "./compiler-runtime/*": {
+      "types": "./dist/compiler-runtime/*.d.ts",
+      "import": "./dist/compiler-runtime/*.js"
+    },
     "./*": {
       "types": "./dist/*.d.ts",
       "import": "./dist/*.js"

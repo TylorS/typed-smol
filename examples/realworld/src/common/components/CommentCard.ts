@@ -1,7 +1,7 @@
 import type { RefSubject as RefSubjectType } from "@typed/fx/RefSubject/RefSubject";
 import { Fx, RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
-import { Link } from "@typed/ui";
+import { Button, Link } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import type { Comment } from "../../domain/Article.js";
 import { safeTextPreview } from "../../domain/Markdown.js";
@@ -31,12 +31,11 @@ export const CommentCard = Fx.fn("CommentCard")(<E, R>(input: {
         content: html`<img class="comment-author-img" src=${avatar} /> ${displayName}`,
       })}
       <span class="mod-options">
-        <button
-          class="btn btn-sm btn-outline-danger"
-          onclick=${deleteComment(input.slug, comment.id)}
-        >
-          <i class="ion-trash-a"></i>
-        </button>
+        ${Button.Button({
+          content: html`<i class="ion-trash-a"></i>`,
+          onclick: deleteComment(input.slug, comment.id),
+          props: { class: "btn btn-sm btn-outline-danger" },
+        })}
       </span>
     </div>
   </div>`;

@@ -1,3 +1,5 @@
+import * as Effect from "effect/Effect";
+
 export const typedHmrRegistryKey = "__typed_hmr_registry__";
 
 export interface HmrStateDescriptor {
@@ -52,6 +54,32 @@ export function getOrCreateHmrState<A>(
     dispose: options.onDispose,
   });
   return value;
+}
+
+export function getOrCreateHmrStateEffect<A, E, R>(
+  descriptor: HmrStateDescriptor,
+  create: () => Effect.Effect<A, E, R>,
+  options: HmrRegistryOptions = {},
+): Effect.Effect<A, E, R> {
+  if (options.enabled === false) return create();
+
+  const registry = getRegistry(options);
+  const key = entryKey(descriptor);
+  const fingerprint = compatibilityFingerprint(descriptor);
+  const entry = registry.entries.get(key);
+
+  if (entry?.compatibilityFingerprint === fingerprint) return Effect.succeed(entry.value as A);
+  if (entry) disposeEntry(entry);
+
+  return Effect.map(create(), (value) => {
+    registry.entries.set(key, {
+      ...descriptor,
+      value,
+      compatibilityFingerprint: fingerprint,
+      dispose: options.onDispose,
+    });
+    return value;
+  });
 }
 
 export function disposeHmrState(

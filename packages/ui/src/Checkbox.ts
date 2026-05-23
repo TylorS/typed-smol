@@ -32,22 +32,24 @@ export function makeState(
   return RefSubject.make({ checked: initial.checked ?? false });
 }
 
-export function setChecked(
-  state: RefSubject.RefSubject<State>,
+export function setChecked<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
   checked: Checked,
-): Effect.Effect<State> {
+): Effect.Effect<State, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, checked }));
 }
 
-export function toggle(state: RefSubject.RefSubject<State>): Effect.Effect<State> {
+export function toggle<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+): Effect.Effect<State, E, R> {
   return RefSubject.update(state, (current) => ({
     ...current,
     checked: current.checked === true ? false : true,
   }));
 }
 
-export interface InputOptions extends Dom.HostOptions<HTMLInputElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface InputOptions<E = never, R = never> extends Dom.HostOptions<HTMLInputElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly id?: OptionalString;
   readonly name?: OptionalString;
   readonly value?: RequiredString;
@@ -55,7 +57,9 @@ export interface InputOptions extends Dom.HostOptions<HTMLInputElement> {
   readonly required?: OptionalBoolean;
 }
 
-export function Input<const Opts extends InputOptions>(options: Opts): Component<Opts> {
+export function Input<const E, const R, const Opts extends InputOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   return gen(function* () {
     const disabledValue = yield* makeRef(options.disabled ?? false);
     const requiredValue = yield* makeRef(options.required ?? false);
@@ -112,22 +116,24 @@ export function Label<const Opts extends LabelOptions>(options: Opts): Component
   return html`<label for=${options.for}>${options.content}</label>`;
 }
 
-export interface CheckOptions extends Dom.HostOptions<HTMLSpanElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface CheckOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content?: Content;
 }
 
-export function Check<const Opts extends CheckOptions>(options: Opts): Component<Opts> {
+export function Check<const Opts extends CheckOptions<any, any> | CheckOptions<never, never> | CheckOptions<any, never> | CheckOptions<never, any>>(
+  options: Opts,
+): Component<Opts> {
   const hidden = RefSubject.map(options.state, (state) => state.checked !== true);
   if (options.host) return options.host(Dom.mergeProps(options.props, { "aria-hidden": "true", "?hidden": hidden }), options.content ?? "✓") as Component<Opts>;
-  return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>`;
+  return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>` as Component<Opts>;
 }
 
 interface CheckboxChangeEvent extends Event {
   readonly currentTarget: HTMLInputElement;
 }
 
-function dataChecked(state: RefSubject.RefSubject<State>) {
+function dataChecked<E, R>(state: RefSubject.RefSubject<State, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.checked ?? "false")),
   );

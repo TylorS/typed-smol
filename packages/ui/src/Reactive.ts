@@ -7,8 +7,7 @@ import type { Renderable, RenderEvent, RenderTemplate } from "@typed/template";
 
 export type Ref<A, E = never, R = never> =
   | RefSubject.RefSubject<A, E, R>
-  | RefSubject.Computed<A, E, R>
-  | RefSubject.Filtered<A, E, R>;
+  | RefSubject.Computed<A, E, R>;
 
 export type Value<A, E = never, R = never> =
   | Ref<A, E, R>
@@ -27,15 +26,9 @@ export type Component<Opts extends {}, A = RenderEvent> = Fx<
 
 export function makeRef<A, E, R>(
   value: Value<A, E, R>,
-): Effect.Effect<RefSubject.RefSubject<A, E>, never, R | Scope.Scope>;
+): Effect.Effect<RefSubject.Computed<A, E, R>, never, R | Scope.Scope>;
 export function makeRef<A, E, R>(
   value: Value<A, E, R>,
-): Effect.Effect<RefSubject.RefSubject<A, E>, never, R | Scope.Scope> {
-  if (RefSubject.isRefSubject(value)) {
-    return Effect.succeed(value as RefSubject.RefSubject<A, E>);
-  }
-
-  return RefSubject.make(
-    value as A | Effect.Effect<A, E, R> | Stream.Stream<A, E, R> | Fx<A, E, R>,
-  );
+): Effect.Effect<RefSubject.Computed<A, E, R>, never, R | Scope.Scope> {
+  return RefSubject.isComputed(value) ? Effect.succeed(value) : RefSubject.make(value);
 }

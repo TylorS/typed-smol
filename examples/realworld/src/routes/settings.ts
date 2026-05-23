@@ -1,4 +1,5 @@
 import { EventHandler, html } from "@typed/template";
+import { Button } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import { UpdateUserRequest } from "../domain/RealWorldApi.js";
 import { BrowserAuth } from "../common/BrowserAuth.js";
@@ -85,11 +86,19 @@ export const template = html`<section class="settings-page">
                 type="password"
               />
             </fieldset>
-            <button class="btn btn-lg btn-primary pull-xs-right">Update Settings</button>
+            ${Button.Button({
+              content: "Update Settings",
+              props: { class: "btn btn-lg btn-primary pull-xs-right" },
+              type: "submit",
+            })}
           </fieldset>
         </form>
         <hr />
-        <button class="btn btn-outline-danger" onclick=${logout}>Or click here to logout.</button>
+        ${Button.Button({
+          content: "Or click here to logout.",
+          onclick: logout,
+          props: { class: "btn btn-outline-danger" },
+        })}
       </div>
     </div>
   </div>

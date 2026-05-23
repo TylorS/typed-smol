@@ -22,16 +22,21 @@ export function makeState(
   return RefSubject.make({ id: initial.id, open: initial.open ?? false });
 }
 
-export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
+export function setOpen<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+  open: boolean,
+): Effect.Effect<State, E, R> {
   return NativePopover.setOpen(state, open);
 }
 
-export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: Content;
 }
 
-export function Anchor<const Opts extends AnchorOptions>(options: Opts): Component<Opts> {
+export function Anchor<const E, const R, const Opts extends AnchorOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const onFocus = EventHandler.make(() => setOpen(options.state, true));
   const onBlur = EventHandler.make(() => setOpen(options.state, false));
@@ -59,13 +64,15 @@ export function Anchor<const Opts extends AnchorOptions>(options: Opts): Compone
   </span>`;
 }
 
-export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: Content;
   readonly placement?: ReactiveValue<string | undefined, any, any>;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
+export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = RefSubject.map(options.state, (state) => String(state.open));
   const hidden = RefSubject.map(options.state, (state) => !state.open);

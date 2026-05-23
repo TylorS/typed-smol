@@ -3,6 +3,11 @@ import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { makeBrowserClient } from "../../common/BrowserApiClient.js";
 import { BrowserAuthState, createAuthStore, type AuthStore } from "../../common/State.js";
+import {
+  email as emailValue,
+  tagName,
+  username as usernameValue,
+} from "../helpers/domain.js";
 
 const profile = {
   username: "reader",
@@ -54,9 +59,9 @@ describe("realworld browser mutation workflows", () => {
         yield* store.updateSettings({
           user: {
             bio: "Updated bio",
-            email: "reader@example.com",
+            email: emailValue("reader@example.com"),
             image: null,
-            username: "reader",
+            username: usernameValue("reader"),
           },
         });
         return yield* store.getToken;
@@ -95,7 +100,7 @@ describe("realworld browser mutation workflows", () => {
             title: "Typed Runtime",
             description: "Runtime workflows",
             body: "Typed template workflows.",
-            tagList: ["typed", "effect"],
+            tagList: [tagName("typed"), tagName("effect")],
           },
         });
         yield* store.updateArticle("typed-runtime", {

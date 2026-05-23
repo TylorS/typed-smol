@@ -1,7 +1,7 @@
 import type { RefSubject as RefSubjectType } from "@typed/fx/RefSubject/RefSubject";
 import { Fx, RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
-import { Link } from "@typed/ui";
+import { Button, Link } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import type { ArticlePreview } from "../../domain/Article.js";
 import { safeTextPreview } from "../../domain/Markdown.js";
@@ -21,9 +21,11 @@ export const AuthorMeta = Fx.fn("AuthorMeta")((articleRef: RefSubjectType<Articl
       ${Link({ class: "author", href: profileHref, content: displayName })}
       <span class="date">${RefSubject.proxy(articleRef).createdAt}</span>
     </div>
-    <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(articleRef)}>
-      Favorite ${favoritesCount}
-    </button>`;
+    ${Button.Button({
+      content: html`Favorite ${favoritesCount}`,
+      onclick: favoriteArticle(articleRef),
+      props: { class: "btn btn-outline-primary btn-sm" },
+    })}`;
 });
 
 const favoriteArticle = (article: RefSubjectType<ArticlePreview>) =>

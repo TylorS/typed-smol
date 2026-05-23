@@ -1,5 +1,5 @@
 import { EventHandler, html } from "@typed/template";
-import { Link } from "@typed/ui";
+import { Button, Link } from "@typed/ui";
 import * as Router from "@typed/router";
 import * as Effect from "effect/Effect";
 import { LoginUserRequest } from "../domain/RealWorldApi.js";
@@ -54,7 +54,11 @@ export const template = html`<section class="auth-page">
               type="password"
             />
           </fieldset>
-          <button class="btn btn-lg btn-primary pull-xs-right">Sign in</button>
+          ${Button.Button({
+            content: "Sign in",
+            props: { class: "btn btn-lg btn-primary pull-xs-right" },
+            type: "submit",
+          })}
         </form>
       </div>
     </div>

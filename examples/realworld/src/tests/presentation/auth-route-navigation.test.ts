@@ -2,7 +2,7 @@ import { assert, describe, it } from "vitest";
 import { Effect } from "effect";
 import * as Layer from "effect/Layer";
 import { Fx } from "@typed/fx";
-import { CurrentPath } from "@typed/navigation";
+import { CurrentPath, Navigation } from "@typed/navigation";
 import * as Matcher from "@typed/router/Matcher";
 import { TestRouter } from "@typed/router/Router";
 import { DomRenderTemplate, html, render } from "@typed/template";
@@ -24,7 +24,9 @@ describe("realworld auth route navigation", () => {
         setInput(window, form, "email", "reader@example.com");
         setInput(window, form, "password", "password123");
 
-        form.dispatchEvent(new window.SubmitEvent("submit", { bubbles: true, cancelable: true }));
+        form.dispatchEvent(
+          new window.Event("submit", { bubbles: true, cancelable: true }) as unknown as Event,
+        );
         yield* Effect.sleep("50 millis");
 
         assert.equal(yield* CurrentPath, "/");
@@ -39,7 +41,9 @@ describe("realworld auth route navigation", () => {
         setInput(window, form, "email", "reader@example.com");
         setInput(window, form, "password", "password123");
 
-        form.dispatchEvent(new window.SubmitEvent("submit", { bubbles: true, cancelable: true }));
+        form.dispatchEvent(
+          new window.Event("submit", { bubbles: true, cancelable: true }) as unknown as Event,
+        );
         yield* Effect.sleep("50 millis");
 
         assert.equal(yield* CurrentPath, "/");
@@ -50,10 +54,10 @@ describe("realworld auth route navigation", () => {
 
 const withRenderedAuthRoute = (
   path: string,
-  test: (window: Window) => Effect.Effect<void, never, BrowserAuth>,
+  test: (window: Window) => Effect.Effect<void, never, BrowserAuth | Navigation>,
 ) => {
   const window = new Window({ url: `http://localhost${path}` });
-  const layer = DomRenderTemplate.using(window.document).pipe(
+  const layer = DomRenderTemplate.using(window.document as unknown as Document).pipe(
     Layer.merge(TestRouter({ url: `http://localhost${path}` })),
   );
   const routes = Matcher.empty
@@ -63,9 +67,10 @@ const withRenderedAuthRoute = (
 
   return Effect.gen(function* () {
     yield* installFormGlobals(window);
-    yield* Fx.observe(render(routes, window.document.body), () => Effect.void).pipe(
-      Effect.forkScoped,
-    );
+    yield* Fx.observe(
+      render(routes, window.document.body as unknown as HTMLElement),
+      () => Effect.void,
+    ).pipe(Effect.forkScoped);
     yield* Effect.sleep("50 millis");
     yield* test(window);
   }).pipe(
@@ -86,7 +91,7 @@ const userResponse: UserResponse = {
   },
 };
 
-const unexpected = (name: string) => Effect.dieMessage(`Unexpected auth workflow: ${name}`);
+const unexpected = (name: string) => Effect.die(new Error(`Unexpected auth workflow: ${name}`));
 
 const authStore: AuthStore = {
   createArticle: () => unexpected("createArticle"),
@@ -108,13 +113,13 @@ const authStore: AuthStore = {
 const findForm = (window: Window): HTMLFormElement => {
   const form = window.document.querySelector("form");
   assert(form instanceof window.HTMLFormElement);
-  return form;
+  return form as unknown as HTMLFormElement;
 };
 
 const setInput = (window: Window, form: HTMLFormElement, name: string, value: string): void => {
   const input = form.elements.namedItem(name);
   assert(input instanceof window.HTMLInputElement);
-  input.value = value;
+  (input as unknown as HTMLInputElement).value = value;
 };
 
 const installFormGlobals = (window: Window) =>

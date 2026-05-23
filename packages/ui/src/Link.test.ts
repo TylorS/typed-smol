@@ -6,11 +6,73 @@ import { CurrentPath } from "@typed/navigation/Navigation";
 import * as Matcher from "@typed/router/Matcher";
 import * as Route from "@typed/router/Route";
 import { BrowserRouter, ServerRouter } from "@typed/router/Router";
-import { DomRenderTemplate, html, many, render } from "@typed/template";
+import { Button } from "./Button.js";
+import {
+  DomRenderTemplate,
+  EventHandler,
+  html,
+  many,
+  render,
+  renderToHtmlString,
+  StaticHtmlRenderTemplate,
+} from "@typed/template";
 import { Link } from "./Link.js";
 import { Window } from "happy-dom";
 
 describe("typed/ui/Link", () => {
+  it("renders static html on the server", () =>
+    Effect.gen(function* () {
+      const rendered = yield* renderToHtmlString(
+        html`${Link({ href: "/register", content: "Need an account?" })}`,
+      );
+
+      assert(rendered.includes('href="/register"'));
+      assert(rendered.includes("Need an account?"));
+      assert(!rendered.includes("onclick"));
+    }).pipe(
+      Effect.provide(StaticHtmlRenderTemplate),
+      Effect.provide(ServerRouter({ url: "http://localhost/login" })),
+      Effect.scoped,
+      Effect.runPromise,
+    ));
+
+  it("renders button click handlers as static html on the server", () =>
+    Effect.gen(function* () {
+      const rendered = yield* renderToHtmlString(
+        html`${Button({
+          content: "Or click here to logout.",
+          onclick: EventHandler.make(() => Effect.void),
+          props: { class: "btn btn-outline-danger" },
+        })}`,
+      );
+
+      assert(rendered.includes('class="btn btn-outline-danger"'));
+      assert(rendered.includes("Or click here to logout."));
+      assert(!rendered.includes("onclick"));
+    }).pipe(Effect.provide(StaticHtmlRenderTemplate), Effect.scoped, Effect.runPromise));
+
+  it("renders settings-style form controls as static html on the server", () =>
+    Effect.gen(function* () {
+      const rendered = yield* renderToHtmlString(html`<section class="settings-page">
+        <form onsubmit=${EventHandler.make(() => Effect.void)}>
+          <textarea name="bio" rows="8"></textarea>
+          ${Button({
+            content: "Update Settings",
+            props: { class: "btn btn-lg btn-primary pull-xs-right" },
+            type: "submit",
+          })}
+        </form>
+        ${Button({
+          content: "Or click here to logout.",
+          onclick: EventHandler.make(() => Effect.void),
+          props: { class: "btn btn-outline-danger" },
+        })}
+      </section>`);
+
+      assert(rendered.includes('class="settings-page"'));
+      assert(rendered.includes("Or click here to logout."));
+    }).pipe(Effect.provide(StaticHtmlRenderTemplate), Effect.scoped, Effect.runPromise));
+
   it("renders <a> with href and content", () =>
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();

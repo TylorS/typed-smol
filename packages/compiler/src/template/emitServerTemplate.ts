@@ -1,3 +1,9 @@
+import * as Effect from "effect/Effect";
+import { Fx } from "@typed/fx";
+import {
+  resolveServerValue,
+  runServerSlot,
+} from "@typed/template/compiler-runtime/renderable";
 import type {
   TemplatePlan,
   TemplatePlanAttribute,
@@ -18,20 +24,23 @@ export function emitServerTemplate(plan: TemplatePlan): CompiledServerTemplate {
   };
 }
 
-function renderTemplate(plan: TemplatePlan, values: ArrayLike<unknown>): string {
-  return `<!--t_${plan.templateHash}-->${renderNodes(plan.nodes, values)}<!--/t_${plan.templateHash}-->`;
+async function renderTemplate(plan: TemplatePlan, values: ArrayLike<unknown>): Promise<string> {
+  return `<!--t_${plan.templateHash}-->${await renderNodes(plan.nodes, values)}<!--/t_${plan.templateHash}-->`;
 }
 
-function renderNodes(nodes: readonly TemplatePlanNode[], values: ArrayLike<unknown>): string {
-  return nodes.map((node) => renderNode(node, values)).join("");
+async function renderNodes(
+  nodes: readonly TemplatePlanNode[],
+  values: ArrayLike<unknown>,
+): Promise<string> {
+  return (await Promise.all(nodes.map((node) => renderNode(node, values)))).join("");
 }
 
-function renderNode(node: TemplatePlanNode, values: ArrayLike<unknown>): string {
+async function renderNode(node: TemplatePlanNode, values: ArrayLike<unknown>): Promise<string> {
   switch (node.kind) {
     case "element":
       return renderElement(node.tagName, node.attributes, node.children, values);
     case "selfClosingElement":
-      return `<${node.tagName}${renderAttributes(node.attributes, values)}/>`;
+      return `<${node.tagName}${await renderAttributes(node.attributes, values)}/>`;
     case "textOnlyElement":
       return renderTextOnlyElement(node, values);
     case "text":
@@ -43,9 +52,9 @@ function renderNode(node: TemplatePlanNode, values: ArrayLike<unknown>): string 
     case "comment":
       return `<!--${node.value}-->`;
     case "commentPart":
-      return `<!--${renderValue(values[node.valueIndex], escapeText)}-->`;
+      return `<!--${await renderValue(values[node.valueIndex], escapeText)}-->`;
     case "sparseComment":
-      return `<!--${renderSparse(node.nodes, values, String)}-->`;
+      return `<!--${await renderSparse(node.nodes, values, String)}-->`;
     case "doctype":
       return renderDocType(node);
   }
@@ -56,92 +65,125 @@ function renderElement(
   attributes: readonly TemplatePlanAttribute[],
   children: readonly TemplatePlanNode[],
   values: ArrayLike<unknown>,
-): string {
-  return `<${tagName}${renderAttributes(attributes, values)}>${renderNodes(children, values)}</${tagName}>`;
+): Promise<string> {
+  return Promise.all([renderAttributes(attributes, values), renderNodes(children, values)]).then(
+    ([attrs, body]) => `<${tagName}${attrs}>${body}</${tagName}>`,
+  );
 }
 
 function renderTextOnlyElement(
   node: Extract<TemplatePlanNode, { readonly kind: "textOnlyElement" }>,
   values: ArrayLike<unknown>,
-): string {
+): Promise<string> {
   const content = node.textContent ? renderTextContent(node.textContent, values) : "";
-  return `<${node.tagName}${renderAttributes(node.attributes, values)}>${content}</${node.tagName}>`;
+  return Promise.all([renderAttributes(node.attributes, values), content]).then(
+    ([attrs, body]) => `<${node.tagName}${attrs}>${body}</${node.tagName}>`,
+  );
 }
 
-function renderTextContent(content: TemplatePlanTextContent, values: ArrayLike<unknown>): string {
+function renderTextContent(
+  content: TemplatePlanTextContent,
+  values: ArrayLike<unknown>,
+): Promise<string> | string {
   if (content.kind === "text") return content.value;
   if (content.kind === "sparseText") return renderSparse(content.nodes, values, String);
   return renderValue(values[content.valueIndex], String);
 }
 
-function renderAttributes(
+async function renderAttributes(
   attributes: readonly TemplatePlanAttribute[],
   values: ArrayLike<unknown>,
-): string {
-  return attributes
-    .map((attribute) => renderAttribute(attribute, values))
-    .filter(Boolean)
-    .join("");
+): Promise<string> {
+  const rendered = await Promise.all(
+    attributes.map((attribute) => renderAttribute(attribute, values)),
+  );
+  return rendered.filter(Boolean).join("");
 }
 
-function renderAttribute(attribute: TemplatePlanAttribute, values: ArrayLike<unknown>): string {
+async function renderAttribute(
+  attribute: TemplatePlanAttribute,
+  values: ArrayLike<unknown>,
+): Promise<string> {
   switch (attribute.kind) {
     case "attribute":
       return renderStaticAttribute(attribute.name, attribute.value);
     case "dynamicAttribute":
+      return renderNamedAttribute(
+        attribute.name,
+        resolveSlotValue(values[attribute.valueIndex]),
+      );
     case "boolean":
-      return values[attribute.valueIndex] ? ` ${attribute.name}` : "";
+      return (await resolveSlotValue(values[attribute.valueIndex])) ? ` ${attribute.name}` : "";
     case "className":
     case "property":
-      return renderNamedAttribute(attribute.name, values[attribute.valueIndex]);
+      return renderNamedAttribute(attribute.name, resolveSlotValue(values[attribute.valueIndex]));
     case "sparseAttribute":
     case "sparseClassName":
       return renderNamedAttribute(attribute.name, renderSparse(attribute.nodes, values, String));
     case "data":
-      return renderRecordAttributes(values[attribute.valueIndex], "data-");
+      return renderRecordAttributes(
+        await resolveSlotValue(values[attribute.valueIndex]),
+        "data-",
+      );
     case "properties":
-      return renderRecordAttributes(values[attribute.valueIndex], "");
+      return renderRecordAttributes(
+        await resolveSlotValue(values[attribute.valueIndex]),
+        "",
+      );
     case "event":
     case "ref":
       return "";
   }
 }
 
-function renderNamedAttribute(name: string, value: unknown): string {
-  if (value === false || value === null || value === undefined) return "";
-  return ` ${name}="${escapeAttribute(String(value))}"`;
+async function renderNamedAttribute(name: string, value: unknown): Promise<string> {
+  const rendered = await value;
+  if (rendered === false || rendered === null || rendered === undefined) return "";
+  return ` ${name}="${escapeAttribute(String(rendered))}"`;
 }
 
 function renderStaticAttribute(name: string, value: string): string {
   return value === "" ? ` ${name}` : ` ${name}="${value}"`;
 }
 
-function renderNodePart(index: number, values: ArrayLike<unknown>): string {
-  return `<!--n_${index}-->${renderValue(values[index], escapeText)}<!--/n_${index}-->`;
+async function renderNodePart(index: number, values: ArrayLike<unknown>): Promise<string> {
+  return `<!--n_${index}-->${await renderServerValue(values[index])}<!--/n_${index}-->`;
 }
 
-function renderRecordAttributes(value: unknown, prefix: string): string {
+async function renderRecordAttributes(value: unknown, prefix: string): Promise<string> {
   if (!isRecord(value)) return "";
-  return Object.entries(value)
-    .map(([key, child]) => renderNamedAttribute(`${prefix}${key}`, child))
-    .join("");
+  const attributes = await Promise.all(
+    Object.entries(value).map(([key, child]) =>
+      renderNamedAttribute(`${prefix}${key}`, resolveSlotValue(child)),
+    ),
+  );
+  return attributes.join("");
 }
 
-function renderSparse(
+async function renderSparse(
   nodes: readonly TemplatePlanSparsePart[],
   values: ArrayLike<unknown>,
   encode: (value: string) => string,
-): string {
-  return nodes
-    .map((node) =>
+): Promise<string> {
+  const rendered = await Promise.all(
+    nodes.map((node) =>
       node.kind === "text" ? node.value : renderValue(values[node.valueIndex], encode),
-    )
-    .join("");
+    ),
+  );
+  return rendered.join("");
 }
 
-function renderValue(value: unknown, encode: (value: string) => string): string {
-  if (value === null || value === undefined) return "";
-  return encode(String(value));
+async function renderValue(value: unknown, encode: (value: string) => string): Promise<string> {
+  return encode(await renderServerValue(value));
+}
+
+async function renderServerValue(value: unknown): Promise<string> {
+  const events = await Effect.runPromise(Fx.collectAll(runServerSlot("unknown", value, {})));
+  return events.map((event) => event.html).join("");
+}
+
+function resolveSlotValue(value: unknown): Promise<unknown> {
+  return Effect.runPromise(resolveServerValue("unknown", value, {}));
 }
 
 function renderDocType(node: Extract<TemplatePlanNode, { readonly kind: "doctype" }>): string {

@@ -1,16 +1,17 @@
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
+import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+import * as Effect from "effect/Effect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Effect } from "effect";
 import { resetDatabase } from "../../infrastructure/Reset.js";
+import { template as settingsTemplate } from "../../routes/settings.js";
 import { renderUrl } from "../../server.js";
-import { defaultDataDirectory, runWithLayer, ServerPageTestLayer } from "../helpers/layers.js";
+import { defaultDataDirectory, makeLayerRunner, ServerPageTestLayer } from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "ssr-test.sqlite");
 const TestLayer = ServerPageTestLayer({ databasePath: testDatabasePath });
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
 
 const render = (url: string): Promise<string> => run(renderUrl(url));
 
@@ -77,18 +78,39 @@ describe("realworld SSR pages", () => {
     expect(html).not.toContain("Seeded Typed RealWorld 2");
   });
 
-  it("renders auth and settings forms with RealWorld field contracts", async () => {
+  it("renders login form with RealWorld field contracts", async () => {
     const login = await render("/login");
-    const register = await render("/register");
-    const settings = await render("/settings");
 
     expect(login).toContain('class="auth-page"');
     expect(login).toContain('name="email"');
     expect(login).toContain('name="password"');
+  });
+
+  it("renders register form with RealWorld field contracts", async () => {
+    const register = await render("/register");
+
+    expect(register).toContain('class="auth-page"');
     expect(register).toContain('name="username"');
     expect(register).toContain("Have an account?");
+  });
+
+  it("renders settings form with RealWorld field contracts", async () => {
+    const settings = await render("/settings");
+
     expect(settings).toContain('class="settings-page"');
     expect(settings).toContain('name="image"');
+    expect(settings).toContain("Or click here to logout.");
+  });
+
+  it("renders settings route template directly as static html", async () => {
+    const settings = await Effect.runPromise(
+      renderToHtmlString(settingsTemplate).pipe(
+        Effect.provide(StaticHtmlRenderTemplate),
+        Effect.scoped,
+      ),
+    );
+
+    expect(settings).toContain('class="settings-page"');
     expect(settings).toContain("Or click here to logout.");
   });
 

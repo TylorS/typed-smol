@@ -22,7 +22,6 @@ import * as Dialog from "./Dialog.js";
 import * as Menu from "./Menu.js";
 import * as Popover from "./Popover.js";
 import * as Select from "./Select.js";
-import * as Store from "./Store.js";
 import * as Tab from "./Tab.js";
 import * as Toolbar from "./Toolbar.js";
 
@@ -31,16 +30,20 @@ describe("typed/ui Ariakit parity exports", () => {
     Effect.gen(function* () {
       const [window, layer] = createHappyDomLayer();
       const checkbox = yield* Checkbox.makeState({ checked: true });
-      const combobox = yield* Combobox.makeState({ value: "Apple", open: true });
+      const combobox = yield* Combobox.makeState<string>({ value: "Apple", open: true });
       const dialog = yield* Dialog.makeState({ open: true });
-      const form = yield* Form.makeState({ values: { email: "" } });
+      const form = yield* Form.makeState<{ email: string }>({ values: { email: "" } });
       const hovercard = yield* Hovercard.makeState({ id: "profile-card", open: true });
       const menu = yield* Menu.makeState({ id: "file-menu", open: true });
       const menubar = yield* Menubar.makeState();
       const popover = yield* Popover.makeState({ id: "invite-popover", open: true, mode: "auto" });
-      const radio = yield* Radio.makeState({ value: "one", activeId: "one" });
-      const storeValue = Store.useStoreState(radio, (state) => state.value);
-      const select = yield* Select.makeState({ id: "fruit-select", value: "Apple", open: true });
+      const radio = yield* Radio.makeState<string>({ value: "one", activeId: "one" });
+      const radioValue = RefSubject.map(radio, (state) => state.value);
+      const select = yield* Select.makeState<string>({
+        id: "fruit-select",
+        value: "Apple",
+        open: true,
+      });
       const tabs = yield* Tab.makeState({ selectedId: "one" });
       const toolbar = yield* Toolbar.makeState();
       const tooltip = yield* Tooltip.makeState({ id: "tip", open: true });
@@ -92,7 +95,8 @@ describe("typed/ui Ariakit parity exports", () => {
             })}
             ${Menu.ItemRadio({ state: menu, id: "small", checked: false, content: "Small" })}
             ${Menu.Separator()}`,
-          })} ${Menu.MenuArrow()} ${Menu.MenuButtonArrow()}`,
+          })}
+          ${Menu.MenuArrow()} ${Menu.MenuButtonArrow()}`,
         })}
         ${Menubar.Root({
           state: menubar,
@@ -109,8 +113,7 @@ describe("typed/ui Ariakit parity exports", () => {
           label: "Radio",
           content: Radio.Item({ state: radio, id: "one", value: "one", content: "One" }),
         })}
-        ${storeValue}
-        ${Select.Label({ for: "fruit-select", content: "Fruit" })}
+        ${radioValue} ${Select.Label({ for: "fruit-select", content: "Fruit" })}
         ${Select.Value({ state: select })} ${Select.Arrow()}
         ${Select.List({
           state: select,
@@ -147,6 +150,7 @@ describe("typed/ui Ariakit parity exports", () => {
 
     assert(!("FocusTrap" in ui));
     assert(!("Portal" in ui));
+    assert(!("Store" in ui));
   });
 });
 

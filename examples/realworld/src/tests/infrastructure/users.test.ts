@@ -11,16 +11,18 @@ import { DuplicateUserField, PasswordPolicyError } from "../../domain/Repository
 import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
 import {
   defaultDataDirectory,
-  exitWithLayer,
-  runWithLayer,
+  makeLayerExitRunner,
+  makeLayerRunner,
+  type LayerServices,
   UserRepositoryTestLayer,
 } from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "users-test.sqlite");
 const TestLayer = UserRepositoryTestLayer({ databasePath: testDatabasePath });
+type TestServices = LayerServices<typeof TestLayer>;
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
+const exit = makeLayerExitRunner(TestLayer);
 
 const createUser = UserRepository.use((repo) =>
   repo.create({
@@ -43,11 +45,13 @@ const readPasswordRow = (email: string) =>
     }),
   );
 
-const expectFailure = async <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<E> => {
-  const exit = await exitWithLayer(effect, TestLayer);
+const expectFailure = async <A, E, R extends TestServices>(
+  effect: Effect.Effect<A, E, R>,
+): Promise<E> => {
+  const resultExit = await exit(effect);
 
-  if (Exit.isFailure(exit)) {
-    const result = Cause.findFail(exit.cause);
+  if (Exit.isFailure(resultExit)) {
+    const result = Cause.findFail(resultExit.cause);
     if (Result.isSuccess(result)) return result.success.error as E;
   }
 

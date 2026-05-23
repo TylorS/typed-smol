@@ -31,16 +31,21 @@ export function makeState(
   return RefSubject.make(initial);
 }
 
-export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
+export function setOpen<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+  open: boolean,
+): Effect.Effect<State, E, R> {
   return NativePopover.setOpen(state, open);
 }
 
-export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface TriggerOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: AnyContent;
 }
 
-export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
+export function Trigger<const E, const R, const Opts extends TriggerOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
   const props = {
@@ -51,7 +56,10 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
     ".data": { open },
   } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  if (options.host) {
+    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
+  }
+
   return html`<button
     type="button"
     popovertarget=${id}
@@ -65,28 +73,35 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
 
 export const Disclosure = Trigger;
 
-export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: AnyContent;
   readonly anchorName?: OptionalString;
 }
 
-export function Anchor<const Opts extends AnchorOptions>(options: Opts): Component<Opts> {
+export function Anchor<const E, const R, const Opts extends AnchorOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const style = anchorStyleValue(options.anchorName);
   const props = { popovertarget: id, style } as const;
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  if (options.host) {
+    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
+  }
+
   return html`<span popovertarget=${id} style=${style}>${options.content}</span>`;
 }
 
-export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: AnyContent;
   readonly positionAnchor?: OptionalString;
   readonly positionArea?: OptionalString;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
+export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
@@ -105,7 +120,10 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     ref: NativePopover.register(options.state),
   } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  if (options.host) {
+    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
+  }
+
   return html`<div
     id=${id}
     popover=${mode}
@@ -123,8 +141,10 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
 export const Popover = Content;
 
 export function Dismiss<
+  const E,
+  const R,
   const Opts extends {
-    readonly state: RefSubject.RefSubject<State>;
+    readonly state: RefSubject.RefSubject<State, E, R>;
     readonly content: AnyContent;
   } & Dom.HostOptions<HTMLButtonElement>,
 >(options: Opts): Component<Opts> {
@@ -139,7 +159,10 @@ export function Dismiss<
     onclick: onClick,
   } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  if (options.host) {
+    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
+  }
+
   return html`<button
     type="button"
     popovertarget=${id}
@@ -150,38 +173,63 @@ export function Dismiss<
   </button>`;
 }
 
-export function Arrow<const Opts extends { readonly content?: AnyContent }>(
+export function Arrow<
+  const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
+>(
   options = {} as Opts,
 ): Component<Opts> {
-  return html`<span aria-hidden="true">${options.content ?? ""}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(
+    options,
+    { "aria-hidden": "true" },
+    options.content ?? "",
+    (props, content) => html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export const DisclosureArrow = Arrow;
 export const PopoverDisclosureArrow = Arrow;
 
-export function Heading<const Opts extends { readonly id?: string; readonly content: AnyContent }>(
+export function Heading<
+  const Opts extends {
+    readonly id?: string;
+    readonly content: AnyContent;
+  } & Dom.HostOptions<HTMLDivElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`<div id=${options.id} role="heading" aria-level="1">${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { id: options.id, role: "heading", "aria-level": "1" },
+    options.content,
+    (props, content) => html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export function Description<
-  const Opts extends { readonly id?: string; readonly content: AnyContent },
+  const Opts extends {
+    readonly id?: string;
+    readonly content: AnyContent;
+  } & Dom.HostOptions<HTMLParagraphElement>,
 >(options: Opts): Component<Opts> {
-  return html`<p id=${options.id}>${options.content}</p>`;
+  return Dom.renderHost<HTMLParagraphElement, Opts>(
+    options,
+    { id: options.id },
+    options.content,
+    (props, content) => html`<p ...${props}>${content}</p>`,
+  );
 }
 
 interface ToggleEventLike extends Event {
   readonly newState?: string;
 }
 
-function dataOpen(state: RefSubject.RefSubject<State>) {
+function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
   );
 }
 
-function dataMode(state: RefSubject.RefSubject<State>) {
+function dataMode<E, R>(state: RefSubject.RefSubject<State, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.mode ?? "auto")),
   );

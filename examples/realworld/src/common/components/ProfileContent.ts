@@ -1,5 +1,6 @@
 import { Fx, RefSubject } from "@typed/fx";
 import { EventHandler, html, many } from "@typed/template";
+import { Button } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import type { ProfileViewData } from "../routeData.js";
 import { safeTextPreview } from "../../domain/Markdown.js";
@@ -27,9 +28,11 @@ export const ProfileContent = Fx.fn("ProfileContent")(<E, R>(
         <img class="user-img user-pic" src=${avatar} />
         <h4>${username}</h4>
         <p>${bio}</p>
-        <button class="btn btn-sm btn-outline-primary" onclick=${followProfile(data.profile)}>
-          Follow ${username}
-        </button>
+        ${Button.Button({
+          content: html`Follow ${username}`,
+          onclick: followProfile(data.profile),
+          props: { class: "btn btn-sm btn-outline-primary" },
+        })}
       </div>
     </div>
     <div class="container">

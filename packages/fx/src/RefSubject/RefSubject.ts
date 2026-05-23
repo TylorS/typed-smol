@@ -36,6 +36,7 @@ import { FxTypeId, isFx } from "../Fx/TypeId.js";
 import * as Sink from "../Sink/Sink.js";
 import * as Subject from "../Subject/Subject.js";
 import * as Versioned from "../Versioned/Versioned.js";
+import { hasProperty } from "effect/Predicate";
 
 export const RefSubjectTypeId = Symbol.for("@typed/fx/RefSubject");
 export type RefSubjectTypeId = typeof RefSubjectTypeId;
@@ -2640,4 +2641,16 @@ class FilteredFromService<R, A, E, R2>
       Effect.map(this.effect, (c) => c.asComputed()),
     );
   }
+}
+
+export function isComputed<T>(
+  value: T,
+): value is Extract<T, Computed.Any> {
+  return hasProperty(value, ComputedTypeId);
+}
+
+export function isFiltered<T>(
+  value: T,
+): value is Extract<T, Filtered.Any> {
+  return hasProperty(value, FilteredTypeId);
 }

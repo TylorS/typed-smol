@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
-import { Effect, Option } from "effect";
+import { Option } from "effect";
 import * as Schema from "effect/Schema";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CommentId, UserId } from "../../domain/Ids.js";
@@ -9,15 +9,14 @@ import { CommentRepository } from "../../infrastructure/repositories/CommentRepo
 import {
   CommentRepositoryTestLayer,
   defaultDataDirectory,
-  runWithLayer,
+  makeLayerRunner,
 } from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "comments-test.sqlite");
 const TestLayer = CommentRepositoryTestLayer({ databasePath: testDatabasePath });
 const seedSlug = "seeded-typed-realworld-1";
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
 
 const userId = (id: number) => Schema.decodeUnknownSync(UserId)(id);
 const commentId = (id: number) => Schema.decodeUnknownSync(CommentId)(id);

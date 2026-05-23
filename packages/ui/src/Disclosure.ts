@@ -7,8 +7,8 @@ import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-type AnyContent = Content;
-type OptionalString = ReactiveValue<string | undefined, any, any>;
+type AnyContent = Content<unknown, never, never>;
+type OptionalString = ReactiveValue<string | undefined, never, never>;
 
 export interface State {
   readonly open: boolean;
@@ -24,21 +24,28 @@ export function makeState(
   return RefSubject.make(initial);
 }
 
-export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
+export function setOpen<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+  open: boolean,
+): Effect.Effect<State, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
-export function toggle(state: RefSubject.RefSubject<State>): Effect.Effect<State> {
+export function toggle<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+): Effect.Effect<State, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, open: !current.open }));
 }
 
-export interface ButtonOptions extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ButtonOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly controls?: OptionalString;
   readonly content: AnyContent;
 }
 
-export function Button<const Opts extends ButtonOptions>(options: Opts): Component<Opts> {
+export function Button<const E, const R, const Opts extends ButtonOptions<E, R>>(
+  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
+): Component<Opts> {
   const open = dataOpen(options.state);
   const onClick = EventHandler.make(() => toggle(options.state));
   const props = Dom.mergeProps(options.props, {
@@ -64,13 +71,15 @@ export function Button<const Opts extends ButtonOptions>(options: Opts): Compone
 
 export const Disclosure = Button;
 
-export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly id?: OptionalString;
   readonly content: AnyContent;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
+export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
+  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
+): Component<Opts> {
   const open = dataOpen(options.state);
   const hidden = RefSubject.map(options.state, (current) => !current.open);
   const props = Dom.mergeProps(options.props, { id: options.id, "?hidden": hidden, ".data": { open } });
@@ -79,7 +88,7 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
   return html`<div id=${options.id} ?hidden=${hidden} .data=${{ open }}>${options.content}</div>`;
 }
 
-function dataOpen(state: RefSubject.RefSubject<State>) {
+function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
   );

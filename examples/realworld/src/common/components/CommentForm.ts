@@ -1,5 +1,6 @@
 import { Fx, RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
+import { Button } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import { BrowserAuth } from "../BrowserAuth.js";
 import { textField } from "../formInput.js";
@@ -19,7 +20,11 @@ export const CommentForm = Fx.fn("CommentForm")(
       ></textarea>
     </div>
     <div class="card-footer">
-      <button class="btn btn-sm btn-primary">Post Comment</button>
+      ${Button.Button({
+        content: "Post Comment",
+        props: { class: "btn btn-sm btn-primary" },
+        type: "submit",
+      })}
     </div>
   </form>`,
 );

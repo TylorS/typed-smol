@@ -5,11 +5,12 @@ import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import type { RealWorldClient } from "../../Api.js";
 import { makeBrowserClient } from "../../common/BrowserApiClient.js";
 import { BrowserAuthState, createAuthStore } from "../../common/State.js";
+import { Email, OpaqueToken, Username } from "../../domain/Ids.js";
 
 const user = {
-  email: "reader@example.com",
-  token: "external-token",
-  username: "reader",
+  email: Email.make("reader@example.com"),
+  token: OpaqueToken.make("external-token"),
+  username: Username.make("reader"),
   bio: null,
   image: null,
 };
@@ -49,11 +50,13 @@ describe("realworld auth store state", () => {
     const client = await Effect.runPromise(
       makeBrowserClient({ baseUrl: "http://typed.test" }).pipe(
         Effect.provide(
-          BrowserAuthState.make({
-            state: "loading",
-            token: null,
-            currentUser: null,
-          }),
+          BrowserAuthState.make(
+            Effect.succeed({
+              state: "loading" as const,
+              token: null,
+              currentUser: null,
+            }),
+          ),
         ),
         Effect.provide(FetchHttpClient.layer),
       ),
@@ -68,11 +71,13 @@ describe("realworld auth store state", () => {
       Effect.provideService(
         makeBrowserClient({ baseUrl: "http://typed.test" }).pipe(
           Effect.provide(
-            BrowserAuthState.make({
-              state: "loading",
-              token: null,
-              currentUser: null,
-            }),
+            BrowserAuthState.make(
+              Effect.succeed({
+                state: "loading" as const,
+                token: null,
+                currentUser: null,
+              }),
+            ),
           ),
           Effect.provide(FetchHttpClient.layer),
         ),
@@ -129,15 +134,20 @@ const unusedClient: RealWorldClient = {
     create: unusedRequest,
     delete: unusedRequest,
     favorite: unusedRequest,
+    feed: unusedRequest,
+    get: unusedRequest,
+    list: unusedRequest,
     unfavorite: unusedRequest,
     update: unusedRequest,
   },
   comments: {
     create: unusedRequest,
     delete: unusedRequest,
+    list: unusedRequest,
   },
   profiles: {
     follow: unusedRequest,
+    get: unusedRequest,
     unfollow: unusedRequest,
   },
   user: {
@@ -147,5 +157,8 @@ const unusedClient: RealWorldClient = {
   users: {
     login: unusedRequest,
     register: unusedRequest,
+  },
+  tags: {
+    list: unusedRequest,
   },
 };

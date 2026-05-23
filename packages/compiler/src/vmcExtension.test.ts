@@ -3,7 +3,7 @@ import ts from "typescript";
 import { createTypedCompilerExtension } from "./vmcExtension.js";
 
 describe("createTypedCompilerExtension", () => {
-  it("transforms imported typed html templates through module transform metadata", () => {
+  it("transforms imported typed html templates through direct DOM factories", () => {
     const extension = createTypedCompilerExtension();
     const sourceText = [
       'import { html } from "@typed/template";',
@@ -23,8 +23,11 @@ describe("createTypedCompilerExtension", () => {
     });
 
     expect(result?.diagnostics).toEqual([]);
-    expect(result?.sourceText).toContain("typedTemplatePlan");
-    expect(result?.sourceText).toContain("export const view = html(__typed_template_0, name);");
+    expect(result?.sourceText).toContain('from "@typed/template/compiler-runtime/dom"');
+    expect(result?.sourceText).toContain("defineDomTemplate");
+    expect(result?.sourceText).toContain("export const view = __typed_template_0(name);");
+    expect(result?.sourceText).not.toContain("typedTemplatePlan");
+    expect(result?.sourceText).not.toContain("html(__typed_template_0");
   });
 
   it("does not rewrite modules without typed template imports", () => {

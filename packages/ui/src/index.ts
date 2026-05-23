@@ -27,7 +27,6 @@ export * as Select from "./Select.js";
 export * as Separator from "./Separator.js";
 export * as StartupRef from "./StartupRef.js";
 export * as State from "./State.js";
-export * as Store from "./Store.js";
 export * as Tab from "./Tab.js";
 export * as Tabs from "./Tabs.js";
 export * as Tooltip from "./Tooltip.js";

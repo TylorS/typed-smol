@@ -22,9 +22,9 @@ export interface InitialState {
   readonly virtualFocus?: boolean;
 }
 
-export interface MoveOptions<Value = unknown> {
-  readonly state: RefSubject.RefSubject<State>;
-  readonly collection: RefSubject.RefSubject<Collection.State<Value>>;
+export interface MoveOptions<Value = unknown, E = never, R = never, E2 = never, R2 = never> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+  readonly collection: RefSubject.RefSubject<Collection.State<Value>, E2, R2>;
 }
 
 export interface ActiveIdState {
@@ -54,7 +54,10 @@ export function makeState(
   });
 }
 
-export function move<Value>(options: MoveOptions<Value>, direction: Move): Effect.Effect<State> {
+export function move<Value, E, R, E2, R2>(
+  options: MoveOptions<Value, E, R, E2, R2>,
+  direction: Move,
+): Effect.Effect<State, E | E2, R | R2> {
   return Effect.gen(function* () {
     const current = yield* options.state;
     const activeId = moveActiveId(yield* options.collection, current, direction);
@@ -62,10 +65,10 @@ export function move<Value>(options: MoveOptions<Value>, direction: Move): Effec
   });
 }
 
-export function moveByKey<Value>(
+export function moveByKey<Value, E, R, E2, R2>(
   event: KeyboardEventLike,
-  options: MoveOptions<Value>,
-): Effect.Effect<boolean> {
+  options: MoveOptions<Value, E, R, E2, R2>,
+): Effect.Effect<boolean, E | E2, R | R2> {
   return Effect.gen(function* () {
     const current = yield* options.state;
     const direction = keyMove(event, current);
@@ -77,15 +80,18 @@ export function moveByKey<Value>(
   });
 }
 
-export function tabIndex(state: RefSubject.RefSubject<State>, id: string): Effect.Effect<0 | -1> {
+export function tabIndex<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+  id: string,
+): Effect.Effect<0 | -1, E, R> {
   return Effect.map(state, (current) =>
     current.virtualFocus ? -1 : current.activeId === id ? 0 : -1,
   );
 }
 
-export function activeDescendant(
-  state: RefSubject.RefSubject<State>,
-): Effect.Effect<string | undefined> {
+export function activeDescendant<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+): Effect.Effect<string | undefined, E, R> {
   return Effect.map(state, (current) =>
     current.virtualFocus && current.activeId ? current.activeId : undefined,
   );

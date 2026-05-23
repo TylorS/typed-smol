@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Window } from "happy-dom";
 import * as AsyncData from "@typed/async-data";
 import { Fx, RefAsyncData } from "@typed/fx";
-import { Effect } from "effect";
+import { Effect, Scope } from "effect";
 import {
   DomRenderTemplate,
   html,
@@ -16,24 +16,35 @@ import { Banner } from "../../common/components/Banner.js";
 import { FeedContent } from "../../common/components/FeedContent.js";
 import { ProfileContent } from "../../common/components/ProfileContent.js";
 import { avatarSrc, defaultAvatar } from "../../common/Layout.js";
+import type { Article, Comment } from "../../domain/Article.js";
+import type { Profile } from "../../domain/User.js";
+import { commentId, isoDateTime, slug, tagName, username } from "../helpers/domain.js";
 
-const profile = {
-  username: "reader",
+const profile: Profile = {
+  username: username("reader"),
   bio: "<img src=x onerror=alert(1)> javascript:alert(1)",
   image: "javascript:alert(1)",
   following: false,
 };
 
-const article = {
-  slug: "typed-runtime",
+const article: Article = {
+  slug: slug("typed-runtime"),
   title: "Typed Runtime",
   description: "<img src=x onerror=alert(1)> javascript:alert(1)",
   body: "## Body\n\n<img src=x onerror=alert(1)> [x](javascript:alert(1))",
-  tagList: ["typed"],
-  createdAt: "2026-05-17T00:00:00.000Z",
-  updatedAt: "2026-05-17T00:00:00.000Z",
+  tagList: [tagName("typed")],
+  createdAt: isoDateTime("2026-05-17T00:00:00.000Z"),
+  updatedAt: isoDateTime("2026-05-17T00:00:00.000Z"),
   favorited: false,
   favoritesCount: 0,
+  author: profile,
+};
+
+const comment: Comment = {
+  id: commentId(1),
+  createdAt: article.createdAt,
+  updatedAt: article.updatedAt,
+  body: "<script>alert(1)</script> javascript:alert(1)",
   author: profile,
 };
 
@@ -56,11 +67,7 @@ describe("realworld presentation XSS hardening", () => {
             article,
             comments: [
               {
-                id: 1,
-                createdAt: article.createdAt,
-                updatedAt: article.updatedAt,
-                body: "<script>alert(1)</script> javascript:alert(1)",
-                author: profile,
+                ...comment,
               },
             ],
           }),
@@ -146,12 +153,12 @@ describe("realworld presentation XSS hardening", () => {
 });
 
 const render = (
-  template: Effect.Effect<Parameters<typeof renderToHtmlString>[0], never, never>,
+  template: Effect.Effect<Parameters<typeof renderToHtmlString>[0], never, Scope.Scope>,
 ): Promise<string> =>
   Effect.runPromise(
     template.pipe(
       Effect.flatMap(renderToHtmlString),
       Effect.provide(StaticHtmlRenderTemplate),
       Effect.scoped,
-    ),
+    ) as Effect.Effect<string, unknown, never>,
   );

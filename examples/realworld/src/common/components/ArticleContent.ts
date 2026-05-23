@@ -1,5 +1,6 @@
 import { Fx, RefSubject } from "@typed/fx";
 import { EventHandler, html, many, unsafeHtml } from "@typed/template";
+import { Button } from "@typed/ui";
 import * as Effect from "effect/Effect";
 import type { Article } from "../../domain/Article.js";
 import type { ArticleViewData } from "../routeData.js";
@@ -35,12 +36,16 @@ export const ArticleContent = Fx.fn("ArticleContent")(<E, R>(
       </ul>
       <hr />
       <div class="article-actions">
-        <button class="btn btn-outline-primary btn-sm" onclick=${favoriteArticle(article)}>
-          Favorite Article (${articleFields.favoritesCount})
-        </button>
-        <button class="btn btn-outline-primary btn-sm" onclick=${followAuthor(article)}>
-          Follow ${authorName}
-        </button>
+        ${Button.Button({
+          content: html`Favorite Article (${articleFields.favoritesCount})`,
+          onclick: favoriteArticle(article),
+          props: { class: "btn btn-outline-primary btn-sm" },
+        })}
+        ${Button.Button({
+          content: html`Follow ${authorName}`,
+          onclick: followAuthor(article),
+          props: { class: "btn btn-outline-primary btn-sm" },
+        })}
       </div>
       ${CommentForm(articleFields.slug)}
       ${many(

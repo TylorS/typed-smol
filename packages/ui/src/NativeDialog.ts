@@ -14,9 +14,9 @@ interface DialogElement extends HTMLElement {
 const elements = new WeakMap<object, DialogElement>();
 const invokers = new WeakMap<object, HTMLElement>();
 
-export function register<S extends State>(
-  state: RefSubject.RefSubject<S>,
-): (element: HTMLElement) => Effect.Effect<void> {
+export function register<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
+): (element: HTMLElement) => Effect.Effect<void, E, R> {
   return (element) =>
     Effect.gen(function* () {
       const dialog = element as DialogElement;
@@ -26,10 +26,10 @@ export function register<S extends State>(
     });
 }
 
-export function showModal<S extends State>(
-  state: RefSubject.RefSubject<S>,
+export function showModal<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
   source?: Event | HTMLElement,
-): Effect.Effect<S> {
+): Effect.Effect<S, E, R> {
   return Effect.gen(function* () {
     rememberInvoker(state, source);
     openElement(elements.get(state));
@@ -37,7 +37,9 @@ export function showModal<S extends State>(
   });
 }
 
-export function close<S extends State>(state: RefSubject.RefSubject<S>): Effect.Effect<S> {
+export function close<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
+): Effect.Effect<S, E, R> {
   return Effect.gen(function* () {
     const invoker = invokers.get(state);
     closeElement(elements.get(state));
@@ -47,12 +49,14 @@ export function close<S extends State>(state: RefSubject.RefSubject<S>): Effect.
   });
 }
 
-export function syncClosed<S extends State>(state: RefSubject.RefSubject<S>): Effect.Effect<S> {
+export function syncClosed<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
+): Effect.Effect<S, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, open: false }));
 }
 
-function rememberInvoker<S extends State>(
-  state: RefSubject.RefSubject<S>,
+function rememberInvoker<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
   source?: Event | HTMLElement,
 ): void {
   const target = source instanceof Event ? source.currentTarget ?? source.target : source;

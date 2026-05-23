@@ -5,6 +5,7 @@ import { isNullish, isObject } from "effect/Predicate";
 import { map as mapRecord } from "effect/Record";
 import type { Scope } from "effect/Scope";
 import * as Context from "effect/Context";
+import { isStream } from "effect/Stream";
 import { Fx, RefSubject } from "@typed/fx";
 import {
   addTemplateHash,
@@ -106,6 +107,7 @@ export function renderToHtmlString<E, R>(
   fx: Fx.Fx<RenderEvent | null | undefined, E, R>,
 ): Effect.Effect<string, E, R> {
   return fx.pipe(
+    Fx.dropAfter((event) => isHtmlRenderEvent(event) && event.last),
     renderToHtml,
     Fx.collectAll,
     Effect.map((events) => events.join("")),
@@ -330,6 +332,8 @@ function liftRenderableToFx<E, R>(
         return Fx.mergeOrdered(...renderable.map((r) => liftRenderableToFx<E, R>(r, isStatic)));
       } else if (Fx.isFx(renderable)) {
         return takeOneIfNotRenderEvent(renderable);
+      } else if (isStream(renderable)) {
+        return takeOneIfNotRenderEvent(Fx.fromStream(renderable) as Fx.Fx<any, E, R>);
       } else if (Effect.isEffect(renderable)) {
         return Fx.unwrap(Effect.map(renderable, (r) => liftRenderableToFx<E, R>(r, isStatic)));
       } else if (isHtmlRenderEvent(renderable)) {

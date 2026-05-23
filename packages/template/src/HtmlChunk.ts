@@ -227,14 +227,40 @@ function textOnlyElementToHtmlChunks(builder: HtmlChunksBuilder, node: Template.
 }
 
 function textContentToHtml(builder: HtmlChunksBuilder, textContent: Template.Text) {
-  switch (textContent._tag) {
+  const normalized = trimTextOnlyEdges(textContent);
+  switch (normalized._tag) {
     case "text":
-      return builder.text(textContent.value);
+      return builder.text(normalized.value);
     case "text-part":
-      return builder.part(textContent, (v) => renderToString(v, ""));
+      return builder.part(normalized, (v) => renderToString(v, ""));
     case "sparse-text":
-      return builder.sparsePart(textContent, (v) => renderToString(v, ""));
+      return builder.sparsePart(normalized, (v) => renderToString(v, ""));
   }
+}
+
+function trimTextOnlyEdges(textContent: Template.Text): Template.Text {
+  if (textContent._tag === "text") return textNode(textContent.value.trim());
+  if (textContent._tag === "text-part") return textContent;
+
+  const nodes = textContent.nodes.map((node) =>
+    node._tag === "text" ? textNode(node.value) : node,
+  );
+  const firstText = nodes.find((node): node is Template.TextNode => node._tag === "text");
+  const lastText = nodes.findLast((node): node is Template.TextNode => node._tag === "text");
+
+  if (firstText) {
+    nodes[nodes.indexOf(firstText)] = textNode(firstText.value.trimStart());
+  }
+
+  if (lastText) {
+    nodes[nodes.lastIndexOf(lastText)] = textNode(lastText.value.trimEnd());
+  }
+
+  return { _tag: "sparse-text", nodes };
+}
+
+function textNode(value: string): Template.TextNode {
+  return { _tag: "text", value };
 }
 
 function nodeToHtmlChunk(builder: HtmlChunksBuilder, node: Template.Node) {

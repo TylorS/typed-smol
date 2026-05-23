@@ -1,4 +1,5 @@
 import { analyzeRouteModule } from "../route/analyzeRouteModule.js";
+import type { AnalyzeRouteModuleInput } from "../route/RouteModulePlan.js";
 
 export type ComponentHmrBoundary = "route-component" | "dependency" | "template";
 
@@ -6,6 +7,10 @@ export interface ComponentHmrInput {
   readonly moduleId: string;
   readonly sourceText: string;
   readonly boundary: ComponentHmrBoundary;
+  readonly checker?: AnalyzeRouteModuleInput["checker"];
+  readonly refSubjectType?: AnalyzeRouteModuleInput["refSubjectType"];
+  readonly sourceFile?: AnalyzeRouteModuleInput["sourceFile"];
+  readonly ts?: AnalyzeRouteModuleInput["ts"];
 }
 
 export interface ComponentHmrResult {
@@ -38,8 +43,12 @@ export function analyzeComponentHmr(input: ComponentHmrInput): ComponentHmrResul
   }
 
   const route = analyzeRouteModule({
+    checker: input.checker,
     moduleId: input.moduleId,
+    refSubjectType: input.refSubjectType,
+    sourceFile: input.sourceFile,
     sourceText: input.sourceText,
+    ts: input.ts,
   });
   const services = [
     ...route.inlineRefSubjects.map((ref) => ({

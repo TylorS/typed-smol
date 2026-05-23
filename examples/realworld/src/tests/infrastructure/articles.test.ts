@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
-import { Effect, Option } from "effect";
+import { Option } from "effect";
 import * as Schema from "effect/Schema";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { UserId } from "../../domain/Ids.js";
@@ -10,14 +10,14 @@ import { TagRepository } from "../../infrastructure/repositories/TagRepository.j
 import {
   ArticleRepositoryTestLayer,
   defaultDataDirectory,
-  runWithLayer,
+  makeLayerRunner,
 } from "../helpers/layers.js";
+import { tagName } from "../helpers/domain.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "articles-test.sqlite");
 const TestLayer = ArticleRepositoryTestLayer({ databasePath: testDatabasePath });
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
 
 const userId = (id: number) => Schema.decodeUnknownSync(UserId)(id);
 
@@ -66,7 +66,9 @@ describe("article and tag repositories", () => {
       ArticleRepository.use((articles) => articles.list({ limit: 1, offset: 1 }, Option.none())),
     );
 
-    expect(byTag.articles.every((article) => article.tagList.includes("typed"))).toBe(true);
+    expect(byTag.articles.every((article) => article.tagList.includes(tagName("typed")))).toBe(
+      true,
+    );
     expect(byAuthor.articles.every((article) => article.author.username === "seed_secondary")).toBe(
       true,
     );

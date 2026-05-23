@@ -86,10 +86,10 @@ describe("Vite HMR fixture", () => {
     const boundary = planCounterBoundary({});
     const source = emitViteHmrRuntime(boundary);
 
-    expect(source).toContain('from "@typed/app/runtime"');
+    expect(source).toContain('from "@typed/app/runtime/hmrRegistry"');
     expect(source).toContain("import.meta");
-    expect(source).toContain("__typedHot.accept()");
-    expect(source).toContain("__typedHot.dispose");
+    expect(source).toContain("import.meta.hot.accept()");
+    expect(source).toContain("import.meta.hot.dispose");
     expect(source).toContain("getOrCreateHmrState");
     expect(source).toContain("pruneHmrState");
   });

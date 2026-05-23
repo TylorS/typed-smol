@@ -26,21 +26,28 @@ export function makeState(
   return RefSubject.make(initial);
 }
 
-export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
+export function setOpen<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+  open: boolean,
+): Effect.Effect<State, E, R> {
   return open ? NativeDialog.showModal(state) : NativeDialog.close(state);
 }
 
-export function close(state: RefSubject.RefSubject<State>): Effect.Effect<State> {
+export function close<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+): Effect.Effect<State, E, R> {
   return NativeDialog.close(state);
 }
 
-export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface TriggerOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly controls?: OptionalString;
   readonly content: AnyContent;
 }
 
-export function Trigger<const Opts extends TriggerOptions>(options: Opts): Component<Opts> {
+export function Trigger<const E, const R, const Opts extends TriggerOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const open = dataOpen(options.state);
   const onClick = EventHandler.make((event: MouseEvent) =>
     NativeDialog.showModal(
@@ -57,43 +64,40 @@ export function Trigger<const Opts extends TriggerOptions>(options: Opts): Compo
     onclick: onClick,
   } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<button
-    type="button"
-    aria-haspopup="dialog"
-    aria-expanded=${open}
-    aria-controls=${options.controls}
-    .data=${{ open }}
-    onclick=${onClick}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
-export interface CloseOptions extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface CloseOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: AnyContent;
 }
 
-export function Close<const Opts extends CloseOptions>(options: Opts): Component<Opts> {
+export function Close<const E, const R, const Opts extends CloseOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const onClick = EventHandler.make(() => close(options.state));
   const props = { type: "button", onclick: onClick } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export const Dismiss = Close;
 export const Disclosure = Trigger;
 
-export interface ContentOptions extends Dom.HostOptions<HTMLDialogElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDialogElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly id?: OptionalString;
   readonly label: RequiredString;
   readonly content: AnyContent;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
+export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const open = dataOpen(options.state);
   const onClose = EventHandler.make(() => NativeDialog.syncClosed(options.state));
   const props = {
@@ -105,34 +109,43 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
     ref: NativeDialog.register(options.state),
   } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<dialog
-    id=${options.id}
-    aria-label=${options.label}
-    .data=${{ open }}
-    onclose=${onClose}
-    oncancel=${onClose}
-    ref=${NativeDialog.register(options.state)}
-  >
-    ${options.content}
-  </dialog>`;
+  return Dom.renderHost<HTMLDialogElement, Opts>(options, props, options.content, (props, content) => {
+    const split = Dom.splitRef(props);
+    return html`<dialog ...${split.props} ref=${split.ref}>${content}</dialog>`;
+  });
 }
 
 export const Dialog = Content;
 
 export function Heading<
-  const Opts extends { readonly id?: OptionalString; readonly content: AnyContent },
+  const Opts extends {
+    readonly id?: OptionalString;
+    readonly content: AnyContent;
+  } & Dom.HostOptions<HTMLDivElement>,
 >(options: Opts): Component<Opts> {
-  return html`<div id=${options.id} role="heading" aria-level="1">${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { id: options.id, role: "heading", "aria-level": "1" },
+    options.content,
+    (props, content) => html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export function Description<
-  const Opts extends { readonly id?: OptionalString; readonly content: AnyContent },
+  const Opts extends {
+    readonly id?: OptionalString;
+    readonly content: AnyContent;
+  } & Dom.HostOptions<HTMLParagraphElement>,
 >(options: Opts): Component<Opts> {
-  return html`<p id=${options.id}>${options.content}</p>`;
+  return Dom.renderHost<HTMLParagraphElement, Opts>(
+    options,
+    { id: options.id },
+    options.content,
+    (props, content) => html`<p ...${props}>${content}</p>`,
+  );
 }
 
-function dataOpen(state: RefSubject.RefSubject<State>) {
+function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
   );

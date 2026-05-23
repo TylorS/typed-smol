@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import * as Effect from "effect/Effect";
 import {
   disposeHmrState,
   getOrCreateHmrState,
+  getOrCreateHmrStateEffect,
   pruneHmrState,
   typedHmrRegistryKey,
   type HmrStateDescriptor,
@@ -121,5 +123,36 @@ describe("hmrRegistry", () => {
 
     expect(second).not.toBe(first);
     expect(globalObject[typedHmrRegistryKey]).toBeUndefined();
+  });
+
+  it("reuses compatible effect-created state after the first creation", async () => {
+    const globalObject: Record<PropertyKey, unknown> = {};
+    const created: number[] = [];
+
+    const first = await Effect.runPromise(
+      getOrCreateHmrStateEffect(
+        descriptor({ serviceId: "/src/routes/ui.ts#select" }),
+        () =>
+          Effect.sync(() => {
+            created.push(1);
+            return { value: "apple" };
+          }),
+        { globalObject },
+      ),
+    );
+    const second = await Effect.runPromise(
+      getOrCreateHmrStateEffect(
+        descriptor({ serviceId: "/src/routes/ui.ts#select" }),
+        () =>
+          Effect.sync(() => {
+            created.push(2);
+            return { value: "banana" };
+          }),
+        { globalObject },
+      ),
+    );
+
+    expect(second).toBe(first);
+    expect(created).toEqual([1]);
   });
 });

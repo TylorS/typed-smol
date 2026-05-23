@@ -24,6 +24,9 @@ describe("typed/ui/Dom", () => {
   it("maps event handlers and refs from the concrete element type", () => {
     const absentClickHandler: Dom.ElementOptions<HTMLAnchorElement>["onclick"] = null;
 
+    expectTypeOf<EventHandler.EventHandler<MouseEvent, any, any>>().toExtend<
+      Button.ButtonOptions["onclick"]
+    >();
     expectTypeOf<EventHandler.EventHandler<PointerEvent, any, any>>().toExtend<
       Dom.ElementOptions<HTMLAnchorElement>["onclick"]
     >();

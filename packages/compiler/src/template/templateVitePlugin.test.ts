@@ -17,8 +17,11 @@ describe("typedTemplateVitePlugin", () => {
     const result = await transform(plugin, sourceText, "/src/view.ts");
 
     expect(result).toMatchObject({ map: null });
-    expect(result?.code).toContain("typedTemplatePlan");
-    expect(result?.code).toContain("export const view = html(__typed_template_0, name);");
+    expect(result?.code).toContain('from "@typed/template/compiler-runtime/dom"');
+    expect(result?.code).toContain("defineDomTemplate");
+    expect(result?.code).toContain("export const view = __typed_template_0(name);");
+    expect(result?.code).not.toContain("typedTemplatePlan");
+    expect(result?.code).not.toContain("html(__typed_template_0");
   });
 
   it("leaves modules unchanged when template transforms are disabled", async () => {

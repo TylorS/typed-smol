@@ -12,13 +12,12 @@ import type {
 } from "./RouteModulePlan.js";
 
 export function analyzeRouteModule(input: AnalyzeRouteModuleInput): RouteModulePlan {
-  const sourceFile = ts.createSourceFile(
-    input.moduleId,
-    input.sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-  );
-  const context = createContext(input.moduleId, sourceFile);
+  const tsMod = input.ts ?? ts;
+  const sourceFile =
+    input.sourceFile ??
+    tsMod.createSourceFile(input.moduleId, input.sourceText, tsMod.ScriptTarget.Latest, true);
+  const context = createContext(input.moduleId, sourceFile, input);
+  collectImports(context, sourceFile);
 
   visit(sourceFile, (node) => {
     collectServices(context, node);
@@ -48,9 +47,18 @@ interface RouteAnalysisContext {
   readonly closures: RouteClosureFact[];
   readonly diagnostics: RouteDiagnostic[];
   readonly serviceAliases: Map<string, RouteCaptureFact>;
+  readonly checker?: ts.TypeChecker;
+  readonly refSubjectType?: ts.Type;
+  readonly uiComponentAliases: Set<string>;
+  readonly uiNamespaces: Set<string>;
+  readonly uiStateAliases: Set<string>;
 }
 
-function createContext(moduleId: string, sourceFile: ts.SourceFile): RouteAnalysisContext {
+function createContext(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  input: AnalyzeRouteModuleInput,
+): RouteAnalysisContext {
   return {
     moduleId,
     sourceFile,
@@ -61,7 +69,57 @@ function createContext(moduleId: string, sourceFile: ts.SourceFile): RouteAnalys
     closures: [],
     diagnostics: [],
     serviceAliases: new Map(),
+    checker: input.checker,
+    refSubjectType: input.refSubjectType,
+    uiComponentAliases: new Set(),
+    uiNamespaces: new Set(),
+    uiStateAliases: new Set(),
   };
+}
+
+const uiStatefulComponents = new Set([
+  "Checkbox",
+  "Collection",
+  "Combobox",
+  "Composite",
+  "Dialog",
+  "Disclosure",
+  "Form",
+  "Hovercard",
+  "Listbox",
+  "Menu",
+  "Menubar",
+  "Popover",
+  "Radio",
+  "RadioGroup",
+  "Select",
+  "Tab",
+  "Tabs",
+  "Toolbar",
+  "Tooltip",
+]);
+
+function collectImports(context: RouteAnalysisContext, sourceFile: ts.SourceFile): void {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !isTypedUiImport(statement)) continue;
+    const moduleSpecifier = statement.moduleSpecifier;
+    const moduleName = ts.isStringLiteral(moduleSpecifier) ? moduleSpecifier.text : "";
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings) continue;
+
+    if (ts.isNamespaceImport(bindings)) {
+      if (moduleName === "@typed/ui/State") context.uiStateAliases.add(bindings.name.text);
+      else context.uiNamespaces.add(bindings.name.text);
+      continue;
+    }
+
+    for (const element of bindings.elements) {
+      const importedName = element.propertyName?.text ?? element.name.text;
+      const localName = element.name.text;
+      if (importedName === "State") context.uiStateAliases.add(localName);
+      if (uiStatefulComponents.has(importedName)) context.uiComponentAliases.add(localName);
+    }
+  }
 }
 
 function collectServices(context: RouteAnalysisContext, node: ts.Node): void {
@@ -78,7 +136,7 @@ function collectRefSubjectService(
   localName: string,
   initializer: ts.Expression | undefined,
 ): void {
-  const serviceId = refSubjectServiceId(initializer);
+  const serviceId = refSubjectServiceId(context, initializer);
   if (serviceId === undefined) return;
   context.refSubjectServices.push({
     kind: "refsubject-service",
@@ -115,21 +173,44 @@ function collectServiceAlias(
 
 function collectInlineRefSubjects(context: RouteAnalysisContext, node: ts.Node): void {
   if (!ts.isVariableDeclaration(node) || !ts.isIdentifier(node.name)) return;
+  if (!isConstVariableDeclaration(node)) return;
   const call = unwrapYield(node.initializer);
-  if (!call || !isPropertyCall(call, "RefSubject", "make")) return;
-  const initializerSource = call.arguments[0]?.getText(context.sourceFile) ?? "";
+  const semanticMatch = semanticInlineStateFactoryMatch(context, node.initializer);
+  const syntaxMatch = semanticMatch ?? (call ? inlineStateFactoryMatch(context, call) : null);
+  if (!syntaxMatch) return;
   const localName = node.name.text;
   context.inlineRefSubjects.push({
-    initializerSource,
+    initializerSource: syntaxMatch.initializerSource,
     localName,
     moduleId: context.moduleId,
     serviceId: `${context.moduleId}#${localName}`,
   });
   context.diagnostics.push({
     code: "anonymous-refsubject-state",
-    message: `Inline RefSubject.make in ${context.moduleId} should migrate ${localName} to RefSubject.Service for resumable HMR`,
+    message: `Inline ${syntaxMatch.factoryName} in ${context.moduleId} should migrate ${localName} to RefSubject.Service for resumable HMR`,
     moduleId: context.moduleId,
   });
+}
+
+interface InlineStateFactoryMatch {
+  readonly factoryName: string;
+  readonly initializerSource: string;
+}
+
+function isConstVariableDeclaration(node: ts.VariableDeclaration): boolean {
+  const declarationList = node.parent;
+  return (
+    ts.isVariableDeclarationList(declarationList) &&
+    (declarationList.flags & ts.NodeFlags.Const) !== 0
+  );
+}
+
+function isTypedUiImport(statement: ts.ImportDeclaration): boolean {
+  return (
+    ts.isStringLiteral(statement.moduleSpecifier) &&
+    (statement.moduleSpecifier.text === "@typed/ui" ||
+      statement.moduleSpecifier.text.startsWith("@typed/ui/"))
+  );
 }
 
 function collectTemplates(context: RouteAnalysisContext, node: ts.Node): void {
@@ -193,13 +274,97 @@ function collectBindingNames(names: Set<string>, binding: ts.BindingName): void 
   }
 }
 
-function refSubjectServiceId(expression: ts.Expression | undefined): string | undefined {
+function refSubjectServiceId(
+  context: RouteAnalysisContext,
+  expression: ts.Expression | undefined,
+): string | undefined {
   if (!expression || !ts.isCallExpression(expression)) return undefined;
   const idArg = expression.arguments[0];
   if (!idArg || !ts.isStringLiteral(idArg)) return undefined;
   const inner = expression.expression;
   if (!ts.isCallExpression(inner)) return undefined;
-  return isPropertyAccess(inner.expression, "RefSubject", "Service") ? idArg.text : undefined;
+  return isServiceFactory(context, inner.expression) ? idArg.text : undefined;
+}
+
+function isServiceFactory(context: RouteAnalysisContext, expression: ts.Expression): boolean {
+  if (!ts.isPropertyAccessExpression(expression) || expression.name.text !== "Service") {
+    return false;
+  }
+
+  const owner = expressionText(expression.expression);
+  return (
+    owner === "RefSubject" ||
+    context.uiStateAliases.has(owner) ||
+    [...context.uiNamespaces].some((namespace) => owner === `${namespace}.State`)
+  );
+}
+
+function inlineStateFactoryMatch(
+  context: RouteAnalysisContext,
+  call: ts.CallExpression,
+): InlineStateFactoryMatch | null {
+  if (!isPropertyCall(call, "RefSubject", "make") && !isTypedUiMakeStateCall(context, call)) {
+    return null;
+  }
+
+  return {
+    factoryName: inlineStateFactoryName(call),
+    initializerSource: inlineStateInitializerSource(context, call),
+  };
+}
+
+function semanticInlineStateFactoryMatch(
+  context: RouteAnalysisContext,
+  initializer: ts.Expression | undefined,
+): InlineStateFactoryMatch | null {
+  if (!initializer || !containsYield(initializer) || !isRefSubjectTypedExpression(context, initializer)) {
+    return null;
+  }
+  return {
+    factoryName: "RefSubject-producing initializer",
+    initializerSource: initializer.getText(context.sourceFile),
+  };
+}
+
+function isRefSubjectTypedExpression(
+  context: RouteAnalysisContext,
+  expression: ts.Expression,
+): boolean {
+  if (!context.checker || !context.refSubjectType) return false;
+  return isTypeAssignableTo(
+    context.checker,
+    context.checker.getTypeAtLocation(expression),
+    context.refSubjectType,
+  );
+}
+
+function isTypedUiMakeStateCall(context: RouteAnalysisContext, call: ts.CallExpression): boolean {
+  if (!ts.isPropertyAccessExpression(call.expression) || call.expression.name.text !== "makeState") {
+    return false;
+  }
+
+  const owner = expressionText(call.expression.expression);
+  if (context.uiComponentAliases.has(owner)) return true;
+
+  return [...context.uiNamespaces].some((namespace) => {
+    if (!owner.startsWith(`${namespace}.`)) return false;
+    return uiStatefulComponents.has(owner.slice(namespace.length + 1));
+  });
+}
+
+function inlineStateInitializerSource(
+  context: RouteAnalysisContext,
+  call: ts.CallExpression,
+): string {
+  return isPropertyCall(call, "RefSubject", "make")
+    ? call.arguments[0]?.getText(context.sourceFile) ?? ""
+    : call.getText(context.sourceFile);
+}
+
+function inlineStateFactoryName(call: ts.CallExpression): string {
+  return isPropertyCall(call, "RefSubject", "make")
+    ? "RefSubject.make"
+    : call.expression.getText();
 }
 
 function effectServiceId(heritageClauses: ts.NodeArray<ts.HeritageClause> | undefined): string | undefined {
@@ -216,6 +381,27 @@ function effectServiceIdFromExpression(expression: ts.Expression): string | unde
   const idArg = expression.arguments[0];
   if (idArg && ts.isStringLiteral(idArg)) return idArg.text;
   return effectServiceIdFromExpression(expression.expression);
+}
+
+function isTypeAssignableTo(checker: ts.TypeChecker, source: ts.Type, target: ts.Type): boolean {
+  return checker.isTypeAssignableTo(source, target);
+}
+
+function containsYield(node: ts.Node): boolean {
+  let found = false;
+  visit(node, (child) => {
+    if (ts.isYieldExpression(child) || isParsedYieldStarExpression(child)) found = true;
+  });
+  return found;
+}
+
+function isParsedYieldStarExpression(node: ts.Node): boolean {
+  return (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.AsteriskToken &&
+    ts.isIdentifier(node.left) &&
+    node.left.text === "yield"
+  );
 }
 
 function closureExpression(expression: ts.Expression | undefined): ts.FunctionLikeDeclaration | undefined {

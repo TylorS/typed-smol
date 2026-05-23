@@ -19,11 +19,11 @@ export function makeState(
   return Composite.makeState(initial);
 }
 
-export function move(
-  state: RefSubject.RefSubject<State>,
+export function move<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
   items: Collection.State,
   direction: Composite.Move,
-): Effect.Effect<State> {
+): Effect.Effect<State, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     const activeId = Composite.moveActiveId(items, current, direction);
@@ -31,15 +31,17 @@ export function move(
   });
 }
 
-export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface RootOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: AnyContent;
   readonly items?: Collection.State;
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
-export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
+export function Root<const E, const R, const Opts extends RootOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   const items = options.items;
   const onKeyDown =
@@ -87,13 +89,15 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
 
 export const Toolbar = Root;
 
-export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ItemOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly id: RequiredString;
   readonly content: AnyContent;
 }
 
-export function Item<const Opts extends ItemOptions>(options: Opts): Component<Opts> {
+export function Item<const E, const R, const Opts extends ItemOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   return gen(function* () {
     const id = yield* makeRef(options.id);
     const tabIndex = RefSubject.mapEffect(id, (itemId) =>

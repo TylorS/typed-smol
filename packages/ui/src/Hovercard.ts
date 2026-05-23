@@ -22,16 +22,21 @@ export function makeState(
   return RefSubject.make({ id: initial.id, open: initial.open ?? false });
 }
 
-export function setOpen(state: RefSubject.RefSubject<State>, open: boolean): Effect.Effect<State> {
+export function setOpen<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+  open: boolean,
+): Effect.Effect<State, E, R> {
   return NativePopover.setOpen(state, open);
 }
 
-export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface AnchorOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: Content;
 }
 
-export function Anchor<const Opts extends AnchorOptions>(options: Opts): Component<Opts> {
+export function Anchor<const E, const R, const Opts extends AnchorOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = RefSubject.map(options.state, (state) => state.open);
   const onFocus = EventHandler.make(() => setOpen(options.state, true));
@@ -62,9 +67,11 @@ export function Anchor<const Opts extends AnchorOptions>(options: Opts): Compone
   </span>`;
 }
 
-export interface DisclosureOptions extends AnchorOptions {}
+export interface DisclosureOptions<E = never, R = never> extends AnchorOptions<E, R> {}
 
-export function Disclosure<const Opts extends DisclosureOptions>(options: Opts): Component<Opts> {
+export function Disclosure<const E, const R, const Opts extends DisclosureOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = RefSubject.map(options.state, (state) => state.open);
   const onClick = EventHandler.make(() =>
@@ -94,12 +101,14 @@ export function Disclosure<const Opts extends DisclosureOptions>(options: Opts):
   </button>`;
 }
 
-export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: Content;
 }
 
-export function Content<const Opts extends ContentOptions>(options: Opts): Component<Opts> {
+export function Content<const E, const R, const Opts extends ContentOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = RefSubject.map(options.state, (state) => String(state.open));
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
@@ -131,12 +140,14 @@ export function Content<const Opts extends ContentOptions>(options: Opts): Compo
 
 export const Hovercard = Content;
 
-export interface DismissOptions extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface DismissOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: Content;
 }
 
-export function Dismiss<const Opts extends DismissOptions>(options: Opts): Component<Opts> {
+export function Dismiss<const E, const R, const Opts extends DismissOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),

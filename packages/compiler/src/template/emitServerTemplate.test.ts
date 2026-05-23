@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
+import * as Stream from "effect/Stream";
+import { Fx } from "@typed/fx";
 import { html, HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
+import { HtmlRenderEvent } from "@typed/template/RenderEvent";
 import { analyzeTemplate } from "./analyzeTemplate.js";
 import { emitServerTemplate } from "./emitServerTemplate.js";
 
@@ -56,5 +59,28 @@ describe("emitServerTemplate", () => {
     await expect(compiled.renderToString(values)).resolves.toBe(
       await runtimeHtml(template, ...values),
     );
+  });
+
+  it("renders native Stream slots with the current server initial-only behavior", async () => {
+    const template = strings("<main>", "</main>");
+    const compiled = emitServerTemplate(analyzeTemplate(template));
+
+    await expect(compiled.renderToString([Stream.make("one", "two")])).resolves.toBe(
+      await runtimeHtml(template, Stream.make("one", "two")),
+    );
+  });
+
+  it("streams nested HtmlRenderEvent slots until their last event", async () => {
+    const template = strings("<main>", "</main>");
+    const compiled = emitServerTemplate(analyzeTemplate(template));
+    const nested = Fx.make<HtmlRenderEvent>((sink) =>
+      Effect.gen(function* () {
+        yield* sink.onSuccess(HtmlRenderEvent("<span>", false));
+        yield* sink.onSuccess(HtmlRenderEvent("nested", false));
+        yield* sink.onSuccess(HtmlRenderEvent("</span>", true));
+      }),
+    );
+
+    await expect(compiled.renderToString([nested])).resolves.toBe(await runtimeHtml(template, nested));
   });
 });

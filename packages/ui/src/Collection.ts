@@ -18,21 +18,25 @@ export function makeState<Value = unknown>(
   return RefSubject.make(initial);
 }
 
-export function register<Value>(
-  collection: RefSubject.RefSubject<State<Value>>,
+export function register<Value, E, R>(
+  collection: RefSubject.RefSubject<State<Value>, E, R>,
   item: Item<Value>,
-): Effect.Effect<void, never, Scope.Scope> {
+): Effect.Effect<void, E, R | Scope.Scope> {
   return Effect.gen(function* () {
     yield* RefSubject.update(collection, (items) => upsert(items, item)).pipe(Effect.asVoid);
+    const context = yield* Effect.context<R>();
     const scope = yield* Effect.scope;
-    yield* Scope.addFinalizer(scope, unregister(collection, item.id));
+    yield* Scope.addFinalizer(
+      scope,
+      unregister(collection, item.id).pipe(Effect.provide(context), Effect.ignore({ log: true })),
+    );
   });
 }
 
-export function unregister<Value>(
-  collection: RefSubject.RefSubject<State<Value>>,
+export function unregister<Value, E, R>(
+  collection: RefSubject.RefSubject<State<Value>, E, R>,
   id: string,
-): Effect.Effect<void> {
+): Effect.Effect<void, E, R> {
   return RefSubject.update(collection, (items) => items.filter((item) => item.id !== id)).pipe(
     Effect.asVoid,
   );

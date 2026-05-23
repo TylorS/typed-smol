@@ -43,26 +43,26 @@ export function makeState<Value extends string>(
   });
 }
 
-export function setValue<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function setValue<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   value: Value,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, activeId: value, value }));
 }
 
-export function selectItem<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function selectItem<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   activeId: string,
   value: Value,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, activeId, value }));
 }
 
-export function move<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function move<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   items: readonly Item<Value>[],
   direction: Composite.Move,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     const next = Composite.moveActiveItem(items, current, direction);
@@ -76,15 +76,17 @@ export function move<Value extends string>(
   });
 }
 
-export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State>;
+export interface RootOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
   readonly content: AnyContent;
   readonly items?: readonly Item[];
   readonly id?: RequiredString;
   readonly label?: RequiredString;
 }
 
-export function Root<const Opts extends RootOptions>(options: Opts): Component<Opts> {
+export function Root<const E, const R, const Opts extends RootOptions<E, R>>(
+  options: Opts,
+): Component<Opts> {
   const orientation = RefSubject.map(options.state, (state) => state.orientation);
   const items = options.items;
   const onKeyDown =
@@ -128,14 +130,20 @@ export function Root<const Opts extends RootOptions>(options: Opts): Component<O
   </div>`;
 }
 
-export interface ItemOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface ItemOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly id: RequiredString;
   readonly value: ReactiveValue<Value, any, any>;
   readonly content: AnyContent;
 }
 
-export function Item<const Value extends string, const Opts extends ItemOptions<Value>>(
+export function Item<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends ItemOptions<Value, E, R>,
+>(
   options: Opts,
 ): Component<Opts> {
   return gen(function* () {
@@ -162,9 +170,9 @@ export function Item<const Value extends string, const Opts extends ItemOptions<
   });
 }
 
-function isChecked<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
-  value: RefSubject.Computed<Value, any, any>,
+function isChecked<Value extends string, E, R, E2, R2>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
+  value: RefSubject.Computed<Value, E2, R2>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
     Effect.map(value, (value) => current.value === value),

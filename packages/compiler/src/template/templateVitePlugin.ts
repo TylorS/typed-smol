@@ -7,6 +7,7 @@ export type TypedTemplateViteDiagnosticMode = "error" | "warn" | "silent";
 export interface TypedTemplateVitePluginOptions {
   readonly enabled?: boolean;
   readonly diagnostics?: TypedTemplateViteDiagnosticMode;
+  readonly target?: "dom" | "server";
 }
 
 const PLUGIN_NAME = "typed-template";
@@ -28,7 +29,7 @@ export function typedTemplateVitePlugin(
       if (options.enabled === false) return null;
       const moduleId = moduleIdFromViteId(id);
       if (!shouldTransformModule(moduleId)) return null;
-      const result = transformTemplateModule({ moduleId, sourceText });
+      const result = transformTemplateModule({ moduleId, sourceText, target: options.target });
       reportDiagnostics(this, result.diagnostics, options.diagnostics ?? "error");
       if (!result.transformed) return null;
       return { code: result.sourceText, map: null };

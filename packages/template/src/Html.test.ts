@@ -4,6 +4,7 @@ import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import type { RenderEvent, RenderTemplate } from "./index.js";
 import {
+  EventHandler,
   html,
   HtmlRenderEvent,
   HtmlRenderTemplate,
@@ -58,11 +59,47 @@ describe("Html", () => {
       );
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("renders to string once the final html event is emitted", async () => {
+    const stream = Fx.mergeAll(
+      Fx.succeed(HtmlRenderEvent("<p>Done</p>", true)),
+      Fx.never as Fx.Fx<RenderEvent>,
+    );
+
+    await expect(
+      Promise.race([
+        Effect.runPromise(renderToHtmlString(stream)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("renderToHtmlString did not stop at last event")), 100),
+        ),
+      ]),
+    ).resolves.toBe("<p>Done</p>");
+  });
+
   it("renders template with static attribute", () =>
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(html` <div data-foo="Hello, world!"></div> `),
       ).toMatchInlineSnapshot(`"<div data-foo="Hello, world!"></div>"`);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("skips event handlers from spread properties in static html", () =>
+    Effect.gen(function* () {
+      const rendered = yield* getStaticHtml(
+        html`<button ...${{ type: "button", onclick: EventHandler.make(() => Effect.void) }}
+          >Save</button>`,
+      );
+
+      expect(rendered).toContain('type="button"');
+      expect(rendered).not.toContain("onclick");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("skips event handler attributes in static html", () =>
+    Effect.gen(function* () {
+      const rendered = yield* getStaticHtml(
+        html`<form onsubmit=${EventHandler.make(() => Effect.void)}></form>`,
+      );
+
+      expect(rendered).not.toContain("onsubmit");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders template with primitive attribute interpolation", () =>

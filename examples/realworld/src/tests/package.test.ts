@@ -72,6 +72,7 @@ describe("typed-realworld package skeleton", () => {
       "test:acceptance:local",
       "test:api:hurl:local",
       "test:e2e:local",
+      "test:hmr:local",
       "test:integration",
       "test:ssr",
       "test:unit",
@@ -309,6 +310,14 @@ describe("typed-realworld package skeleton", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("uses @typed/ui primitives for product buttons and submit controls", () => {
+    const buttonOffenders = buttonSourceFiles().flatMap((path) =>
+      rawButtonLines(path).map((line) => `${path}:${line}`),
+    );
+
+    expect(buttonOffenders).toEqual([]);
+  });
+
   it("provides SqlClient through layers instead of rebuilding sqlite per repository call", () => {
     const dependencyLayer = readText("src/.server.dependencies.ts");
     const offenders = repositorySourceFiles().flatMap((path) =>
@@ -356,6 +365,7 @@ const productionSourceFiles = (): readonly string[] => [
 ];
 
 const routeSourceFiles = (): readonly string[] => [
+  "src/routes/__hmr-ui.ts",
   "src/routes/article.ts",
   "src/routes/editor-slug.ts",
   "src/routes/editor.ts",
@@ -482,6 +492,19 @@ const linkSourceFiles = (): readonly string[] => [
   "src/routes/register.ts",
 ];
 
+const buttonSourceFiles = (): readonly string[] => [
+  "src/common/components/ArticleContent.ts",
+  "src/common/components/AuthorMeta.ts",
+  "src/common/components/CommentCard.ts",
+  "src/common/components/CommentForm.ts",
+  "src/common/components/ProfileContent.ts",
+  "src/routes/editor-slug.ts",
+  "src/routes/editor.ts",
+  "src/routes/login.ts",
+  "src/routes/register.ts",
+  "src/routes/settings.ts",
+];
+
 const effectUnknownErrorChannelLines = (path: string): readonly number[] =>
   readText(path)
     .split("\n")
@@ -533,6 +556,11 @@ const rawAnchorHrefLines = (path: string): readonly number[] => {
 
   return offenders;
 };
+
+const rawButtonLines = (path: string): readonly number[] =>
+  readText(path)
+    .split("\n")
+    .flatMap((line, index) => (line.includes("<button") ? [index + 1] : []));
 
 const stackedProvideLines = (path: string): readonly number[] =>
   readText(path)

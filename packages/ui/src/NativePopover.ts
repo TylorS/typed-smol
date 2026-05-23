@@ -14,9 +14,9 @@ type PopoverElement = HTMLElement;
 
 const elements = new WeakMap<object, PopoverElement>();
 
-export function register<S extends State>(
-  state: RefSubject.RefSubject<S>,
-): (element: HTMLElement) => Effect.Effect<void> {
+export function register<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
+): (element: HTMLElement) => Effect.Effect<void, E, R> {
   return (element) =>
     Effect.gen(function* () {
       elements.set(state, element);
@@ -25,28 +25,28 @@ export function register<S extends State>(
     });
 }
 
-export function setOpen<S extends State>(
-  state: RefSubject.RefSubject<S>,
+export function setOpen<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
   open: boolean,
   source?: HTMLElement,
-): Effect.Effect<S> {
+): Effect.Effect<S, E, R> {
   return open ? show(state, source) : hide(state);
 }
 
-export function syncToggle<S extends State>(
-  state: RefSubject.RefSubject<S>,
+export function syncToggle<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
   event: ToggleEventLike,
-): Effect.Effect<S> {
+): Effect.Effect<S, E, R> {
   return RefSubject.update(state, (current) => ({
     ...current,
     open: event.newState === "open",
   }));
 }
 
-export function show<S extends State>(
-  state: RefSubject.RefSubject<S>,
+export function show<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
   source?: HTMLElement,
-): Effect.Effect<S> {
+): Effect.Effect<S, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     command(find(state, current.id), "show", source);
@@ -54,7 +54,9 @@ export function show<S extends State>(
   });
 }
 
-export function hide<S extends State>(state: RefSubject.RefSubject<S>): Effect.Effect<S> {
+export function hide<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
+): Effect.Effect<S, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     command(find(state, current.id), "hide");
@@ -62,10 +64,10 @@ export function hide<S extends State>(state: RefSubject.RefSubject<S>): Effect.E
   });
 }
 
-export function hideFromEvent<S extends State>(
-  state: RefSubject.RefSubject<S>,
+export function hideFromEvent<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
   event: Event,
-): Effect.Effect<S> {
+): Effect.Effect<S, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     command(find(state, current.id, event), "hide");
@@ -73,8 +75,8 @@ export function hideFromEvent<S extends State>(
   });
 }
 
-function find<S extends State>(
-  state: RefSubject.RefSubject<S>,
+function find<S extends State, E, R>(
+  state: RefSubject.RefSubject<S, E, R>,
   id: string,
   event?: Event,
 ): PopoverElement | undefined {

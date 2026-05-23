@@ -61,7 +61,7 @@ const comment = {
   author: profile,
 };
 
-const roundTrip = <S extends Schema.Top>(schema: S, input: S["Encoded"]): S["Encoded"] => {
+const roundTrip = <A, I>(schema: Schema.Codec<A, I, never, never>, input: I): I => {
   const decoded = Schema.decodeUnknownSync(schema)(input);
   return Schema.encodeSync(schema)(decoded);
 };
@@ -87,10 +87,11 @@ describe("RealWorld API response schemas", () => {
   });
 
   it("keeps article previews body-free", () => {
-    const encoded = roundTrip(MultipleArticlesResponse, {
+    const payload = {
       articles: [{ ...articlePreview, body: "should be omitted" }],
       articlesCount: 1,
-    });
+    };
+    const encoded = roundTrip(MultipleArticlesResponse, payload);
 
     expect("body" in encoded.articles[0]).toBe(false);
   });

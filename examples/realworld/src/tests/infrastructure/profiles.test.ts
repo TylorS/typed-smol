@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
-import { Effect, Option } from "effect";
+import { Option } from "effect";
 import * as Schema from "effect/Schema";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { UserId } from "../../domain/Ids.js";
@@ -8,15 +8,14 @@ import { resetDatabase } from "../../infrastructure/Reset.js";
 import { ProfileRepository } from "../../infrastructure/repositories/ProfileRepository.js";
 import {
   defaultDataDirectory,
+  makeLayerRunner,
   ProfileRepositoryTestLayer,
-  runWithLayer,
 } from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "profiles-test.sqlite");
 const TestLayer = ProfileRepositoryTestLayer({ databasePath: testDatabasePath });
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
 
 const userId = (id: number) => Schema.decodeUnknownSync(UserId)(id);
 

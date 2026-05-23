@@ -10,22 +10,30 @@ import { resetDatabase } from "../../infrastructure/Reset.js";
 import {
   ApplicationTestLayer,
   defaultDataDirectory,
-  exitWithLayer,
-  runWithLayer,
+  makeLayerExitRunner,
+  makeLayerRunner,
+  type LayerServices,
 } from "../helpers/layers.js";
+import {
+  email as emailValue,
+  password as passwordValue,
+  tagName,
+  username as usernameValue,
+} from "../helpers/domain.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "application-articles-test.sqlite");
 const TestLayer = ApplicationTestLayer({ databasePath: testDatabasePath });
+type TestServices = LayerServices<typeof TestLayer>;
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
+const exit = makeLayerExitRunner(TestLayer);
 
-const expectRealWorldError = async <A, E, R>(
+const expectRealWorldError = async <A, E, R extends TestServices>(
   effect: Effect.Effect<A, E, R>,
 ): Promise<RealWorldError> => {
-  const exit = await exitWithLayer(effect, TestLayer);
-  if (Exit.isFailure(exit)) {
-    const result = Cause.findFail(exit.cause);
+  const resultExit = await exit(effect);
+  if (Exit.isFailure(resultExit)) {
+    const result = Cause.findFail(resultExit.cause);
     if (Result.isSuccess(result)) return result.success.error as RealWorldError;
   }
 
@@ -36,9 +44,9 @@ const registerToken = (username: string, email: string) =>
   Users.use((users) =>
     users.register({
       user: {
-        username,
-        email,
-        password: "password123",
+        username: usernameValue(username),
+        email: emailValue(email),
+        password: passwordValue("password123"),
       },
     }),
   ).pipe(Effect.map((response) => parseAuthorizationHeader(`Token ${response.user.token}`)));
@@ -61,7 +69,7 @@ describe("article application service", () => {
             title: "Application Article",
             description: "Created through the application layer",
             body: "Article body",
-            tagList: ["typed", "app"],
+            tagList: [tagName("typed"), tagName("app")],
           },
         }),
       ),

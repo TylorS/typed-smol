@@ -1,5 +1,10 @@
 import type { CompiledServerTemplate, RuntimeTemplateFallback } from "@typed/compiler";
-import { HtmlRenderTemplate, renderToHtmlString, type Renderable } from "@typed/template";
+import {
+  HtmlRenderTemplate,
+  renderToHtmlString,
+  type Renderable,
+  type RenderTemplate,
+} from "@typed/template";
 import * as Effect from "effect/Effect";
 import {
   emptyValues,
@@ -15,7 +20,7 @@ export function renderServer<Values extends ReadonlyArray<Renderable.Any>>(
 ): Effect.Effect<
   ServerRenderResult,
   Renderable.Error<Values[number]>,
-  Renderable.Services<Values[number]>
+  Exclude<Renderable.Services<Values[number]>, RenderTemplate>
 > {
   if (isCompiledServerTemplate(template)) return renderCompiled(template, options);
   if (isTemplateFallback(template)) return renderFallback(template, options);
@@ -39,7 +44,7 @@ function renderFallback<Values extends ReadonlyArray<Renderable.Any>>(
 ): Effect.Effect<
   ServerRenderResult,
   Renderable.Error<Values[number]>,
-  Renderable.Services<Values[number]>
+  Exclude<Renderable.Services<Values[number]>, RenderTemplate>
 > {
   return Effect.map(
     renderToHtmlString(template.render(...(options.values ?? emptyValues()))).pipe(

@@ -6,22 +6,22 @@ import { EventHandler, html } from "@typed/template";
 import * as Dom from "./Dom.js";
 import type { Component, Content, Value as ReactiveValue } from "./Reactive.js";
 
-export interface State<Values extends Record<string, unknown> = Record<string, unknown>> {
+export interface State<out Values extends {} = {}> {
   readonly values: Values;
   readonly defaultValues: Values;
   readonly errors: Partial<Record<keyof Values & string, string>>;
   readonly meta: FieldMetaByName<Values>;
   readonly submitting: boolean;
-  readonly schema?: Schema.Schema<Values>;
+  readonly schema?: Schema.Optic<Values, unknown>;
 }
 
-export interface InitialState<Values extends Record<string, unknown> = Record<string, unknown>> {
+export interface InitialState<Values extends {} = {}> {
   readonly values: Values;
   readonly defaultValues?: Values;
   readonly errors?: Partial<Record<keyof Values & string, string>>;
   readonly meta?: Partial<FieldMetaByName<Values>>;
   readonly submitting?: boolean;
-  readonly schema?: Schema.Schema<Values>;
+  readonly schema?: Schema.Optic<Values, unknown>;
 }
 
 export interface FieldMeta {
@@ -29,11 +29,11 @@ export interface FieldMeta {
   readonly touched: boolean;
 }
 
-export type FieldMetaByName<Values extends Record<string, unknown>> = Partial<
+export type FieldMetaByName<Values extends {}> = Partial<
   Record<keyof Values & string, FieldMeta>
 >;
 
-export function makeState<Values extends Record<string, unknown>>(
+export function makeState<Values extends {}>(
   initial: InitialState<Values>,
 ): Effect.Effect<RefSubject.RefSubject<State<Values>>, never, Scope.Scope> {
   const state: State<Values> = {
@@ -48,17 +48,17 @@ export function makeState<Values extends Record<string, unknown>>(
   return RefSubject.make(state);
 }
 
-export function setValue<Values extends Record<string, unknown>>(
-  state: RefSubject.RefSubject<State<Values>>,
+export function setValue<Values extends {}, E, R>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
   name: keyof Values & string,
   value: unknown,
-): Effect.Effect<State<Values>> {
+): Effect.Effect<State<Values>, E, R> {
   return RefSubject.update(state, (current) => updateField(current, name, value));
 }
 
-export function validate<Values extends Record<string, unknown>>(
-  state: RefSubject.RefSubject<State<Values>>,
-): Effect.Effect<Values, Schema.SchemaError, any> {
+export function validate<Values extends {}, E, R>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+): Effect.Effect<Values, Schema.SchemaError | E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     if (!current.schema) {
@@ -80,9 +80,9 @@ export function validate<Values extends Record<string, unknown>>(
   });
 }
 
-export function reset<Values extends Record<string, unknown>>(
-  state: RefSubject.RefSubject<State<Values>>,
-): Effect.Effect<State<Values>> {
+export function reset<Values extends {}, E, R>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+): Effect.Effect<State<Values>, E, R> {
   return RefSubject.update(state, (current) => ({
     ...current,
     values: current.defaultValues,
@@ -92,7 +92,7 @@ export function reset<Values extends Record<string, unknown>>(
   }));
 }
 
-export function fieldMeta<Values extends Record<string, unknown>>(
+export function fieldMeta<Values extends {}>(
   state: State<Values>,
   name: keyof Values & string,
 ): FieldMeta {
@@ -113,23 +113,25 @@ export function encodeDomValue<A>(
   return Schema.encodeUnknownEffect(codec)(value).pipe(Effect.map(String));
 }
 
-export type ArrayFieldName<Values extends Record<string, unknown>> = {
+  export type ArrayFieldName<Values extends {}> = {
   readonly [Name in keyof Values & string]: Values[Name] extends readonly unknown[] ? Name : never;
 }[keyof Values & string];
 
 export type ArrayFieldValue<
-  Values extends Record<string, unknown>,
+  Values extends {} ,
   Name extends ArrayFieldName<Values>,
 > = Values[Name] extends readonly (infer Value)[] ? Value : never;
 
 export function pushValue<
-  Values extends Record<string, unknown>,
+  Values extends {} ,
   Name extends ArrayFieldName<Values>,
+  E,
+  R,
 >(
-  state: RefSubject.RefSubject<State<Values>>,
+  state: RefSubject.RefSubject<State<Values>, E, R>,
   name: Name,
   value: ArrayFieldValue<Values, Name>,
-): Effect.Effect<State<Values>> {
+): Effect.Effect<State<Values>, E, R> {
   return RefSubject.update(state, (current) => {
     const currentValue = current.values[name];
     const values = Array.isArray(currentValue) ? currentValue.concat(value) : [value];
@@ -138,13 +140,15 @@ export function pushValue<
 }
 
 export function removeValue<
-  Values extends Record<string, unknown>,
+  Values extends {} ,
   Name extends ArrayFieldName<Values>,
+  E,
+  R,
 >(
-  state: RefSubject.RefSubject<State<Values>>,
+  state: RefSubject.RefSubject<State<Values>, E, R>,
   name: Name,
   index: number,
-): Effect.Effect<State<Values>> {
+): Effect.Effect<State<Values>, E, R> {
   return RefSubject.update(state, (current) => {
     const currentValue = current.values[name];
     const values = Array.isArray(currentValue)
@@ -154,9 +158,9 @@ export function removeValue<
   });
 }
 
-export interface FormOptions<Values extends Record<string, unknown> = Record<string, unknown>>
+export interface FormOptions<Values extends {} = {}, E = never, R = never>
   extends Dom.HostOptions<HTMLFormElement> {
-  readonly state: RefSubject.RefSubject<State<Values>>;
+  readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly content: Content;
   readonly onsubmit?: Parameters<typeof EventHandler.fromEffectOrEventHandler>[0];
   readonly onValidSubmit?: (
@@ -166,8 +170,10 @@ export interface FormOptions<Values extends Record<string, unknown> = Record<str
 }
 
 export function Form<
-  const Values extends Record<string, unknown>,
-  const Opts extends FormOptions<Values>,
+  const Values extends {} ,
+  const E,
+  const R,
+  const Opts extends FormOptions<Values, E, R>,
 >(options: Opts): Component<Opts> {
   const internalSubmit = EventHandler.make((event: SubmitEvent) =>
     Effect.gen(function* () {
@@ -179,6 +185,7 @@ export function Form<
     }).pipe(
       Effect.ensuring(
         RefSubject.update(options.state, (state) => ({ ...state, submitting: false })).pipe(
+          Effect.orDie,
           Effect.asVoid,
         ),
       ),
@@ -192,13 +199,7 @@ export function Form<
         }),
       )
     : internalSubmit;
-  const onReset = EventHandler.make((event: Event) =>
-    Effect.gen(function* () {
-      event.preventDefault();
-      yield* reset(options.state);
-    }),
-  );
-
+  const onReset = EventHandler.make(() => reset(options.state), { preventDefault: true });
   const props = Dom.mergeProps(options.props, { onsubmit: onSubmit, onreset: onReset });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
 
@@ -206,10 +207,12 @@ export function Form<
 }
 
 export interface InputOptions<
-  Values extends Record<string, unknown> = Record<string, unknown>,
+  Values extends {} = {},
   Name extends keyof Values & string = keyof Values & string,
+  E = never,
+  R = never,
 > extends Dom.HostOptions<HTMLInputElement> {
-  readonly state: RefSubject.RefSubject<State<Values>>;
+  readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly name: Name;
   readonly codec?: Schema.Schema<Values[Name]>;
   readonly id?: ReactiveValue<string | undefined, any, any>;
@@ -217,9 +220,11 @@ export interface InputOptions<
 }
 
 export function Input<
-  const Values extends Record<string, unknown>,
+  const Values extends {},
   const Name extends keyof Values & string,
-  const Opts extends InputOptions<Values, Name>,
+  const E,
+  const R,
+  const Opts extends InputOptions<Values, Name, E, R>,
 >(options: Opts): Component<Opts> {
   const value = options.codec
     ? RefSubject.mapEffect(options.state, (state) =>
@@ -231,10 +236,10 @@ export function Input<
   );
   const onInput = EventHandler.make((event: InputEventLike) =>
     options.codec
-      ? decodeDomValue(options.codec, event.currentTarget.value).pipe(
-          Effect.flatMap((value) => setValue(options.state, options.name, value)),
-          Effect.catch((error) => setFieldError(options.state, options.name, error)),
-        )
+      ? Effect.matchEffect(decodeDomValue(options.codec, event.currentTarget.value), {
+          onFailure: (error) => setFieldError(options.state, options.name, error),
+          onSuccess: (value) => setValue(options.state, options.name, value),
+        })
       : setValue(options.state, options.name, event.currentTarget.value),
   );
   const props = Dom.mergeProps(options.props, {
@@ -275,17 +280,21 @@ export function Description<
 }
 
 export interface ErrorOptions<
-  Values extends Record<string, unknown> = Record<string, unknown>,
+  Values extends {} = {} ,
   Name extends keyof Values & string = keyof Values & string,
+  E = never,
+  R = never,
 > extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Values>>;
+  readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly name: Name;
 }
 
 export function Error<
-  const Values extends Record<string, unknown>,
+  const Values extends {} ,
   const Name extends keyof Values & string,
-  const Opts extends ErrorOptions<Values, Name>,
+  const E,
+  const R,
+  const Opts extends ErrorOptions<Values, Name, E, R>,
 >(options: Opts): Component<Opts> {
   const id = `${options.name}-error`;
   const props = Dom.mergeProps(options.props, { id, role: "alert" });
@@ -298,7 +307,7 @@ export function Error<
 
   return html`<div ...${props}>
     ${RefSubject.map(options.state, (state) => state.errors[options.name] ?? "")}
-  </div>`;
+  </div>` as Component<Opts>;
 }
 
 export function Submit<
@@ -324,19 +333,23 @@ export function Reset<
 }
 
 export interface PushOptions<
-  Values extends Record<string, unknown> = Record<string, unknown>,
+  Values extends {} = {} ,
   Name extends ArrayFieldName<Values> = ArrayFieldName<Values>,
+  E = never,
+  R = never,
 > extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State<Values>>;
+  readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly name: Name;
   readonly value: ArrayFieldValue<Values, Name>;
   readonly content: Content;
 }
 
 export function Push<
-  const Values extends Record<string, unknown>,
+  const Values extends {} ,
   const Name extends ArrayFieldName<Values>,
-  const Opts extends PushOptions<Values, Name>,
+  const E,
+  const R,
+  const Opts extends PushOptions<Values, Name, E, R>,
 >(options: Opts): Component<Opts> {
   const onClick = EventHandler.make(() => pushValue(options.state, options.name, options.value));
   const props = Dom.mergeProps(options.props, { type: "button", onclick: onClick });
@@ -346,19 +359,23 @@ export function Push<
 }
 
 export interface RemoveOptions<
-  Values extends Record<string, unknown> = Record<string, unknown>,
+  Values extends {} = {} ,
   Name extends ArrayFieldName<Values> = ArrayFieldName<Values>,
+  E = never,
+  R = never,
 > extends Dom.HostOptions<HTMLButtonElement> {
-  readonly state: RefSubject.RefSubject<State<Values>>;
+  readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly name: Name;
   readonly index: ReactiveValue<number, any, any>;
   readonly content: Content;
 }
 
 export function Remove<
-  const Values extends Record<string, unknown>,
+  const Values extends {} ,
   const Name extends ArrayFieldName<Values>,
-  const Opts extends RemoveOptions<Values, Name>,
+  const E,
+  const R,
+  const Opts extends RemoveOptions<Values, Name, E, R>,
 >(options: Opts): Component<Opts> {
   const onClick = EventHandler.make(() => {
     if (typeof options.index === "number") {
@@ -399,7 +416,7 @@ interface InputEventLike extends Event {
   readonly currentTarget: HTMLInputElement;
 }
 
-function errorsForValues<Values extends Record<string, unknown>>(
+function errorsForValues<Values extends {} >(
   values: Values,
   error: Schema.SchemaError,
 ): Partial<Record<keyof Values & string, string>> {
@@ -410,7 +427,7 @@ function errorsForValues<Values extends Record<string, unknown>>(
   );
 }
 
-function updateField<Values extends Record<string, unknown>>(
+function updateField<Values extends {} >(
   current: State<Values>,
   name: keyof Values & string,
   value: unknown,
@@ -431,11 +448,11 @@ function updateField<Values extends Record<string, unknown>>(
   };
 }
 
-function setFieldError<Values extends Record<string, unknown>>(
-  state: RefSubject.RefSubject<State<Values>>,
+function setFieldError<Values extends {}, E, R>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
   name: keyof Values & string,
   error: Schema.SchemaError,
-): Effect.Effect<State<Values>> {
+): Effect.Effect<State<Values>, E, R> {
   return RefSubject.update(state, (current) => ({
     ...current,
     errors: { ...current.errors, [name]: String(error) },

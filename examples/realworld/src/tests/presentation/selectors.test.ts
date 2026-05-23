@@ -1,10 +1,9 @@
 import { readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Effect } from "effect";
 import { resetDatabase } from "../../infrastructure/Reset.js";
 import { renderUrl } from "../../server.js";
-import { defaultDataDirectory, runWithLayer, ServerPageTestLayer } from "../helpers/layers.js";
+import { defaultDataDirectory, makeLayerRunner, ServerPageTestLayer } from "../helpers/layers.js";
 
 const testDatabasePath = resolve(defaultDataDirectory, "selectors-test.sqlite");
 const TestLayer = ServerPageTestLayer({ databasePath: testDatabasePath });
@@ -55,7 +54,6 @@ describe("realworld selector contract", () => {
   });
 });
 
-const run = <A, E, R>(effect: Effect.Effect<A, E, R>): Promise<A> =>
-  runWithLayer(effect, TestLayer);
+const run = makeLayerRunner(TestLayer);
 
 const render = (url: string): Promise<string> => run(renderUrl(url));

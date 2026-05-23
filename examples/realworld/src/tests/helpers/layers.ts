@@ -17,6 +17,8 @@ import { UserRepository } from "../../infrastructure/repositories/UserRepository
 import { ServerApiClient } from "../../common/serverApiClient.js";
 
 type ConfigOverrides = Partial<RealWorldConfigService>;
+export type ReadyLayer<ROut = never, E = unknown> = Layer.Layer<ROut, E, never>;
+export type LayerServices<L extends ReadyLayer> = Layer.Success<L>;
 
 export { defaultDataDirectory };
 
@@ -58,12 +60,22 @@ export const ProfileRepositoryTestLayer = (overrides: ConfigOverrides) =>
 export const UserRepositoryTestLayer = (overrides: ConfigOverrides) =>
   composeWithLayers(UserRepository.Live, [InfrastructureTestLayer(overrides)]);
 
-export const runWithLayer = <A, E, R>(
+export const runWithLayer = <ROut, ELayer, A, E, R extends ROut>(
   effect: Effect.Effect<A, E, R>,
-  layer: Layer.Layer<R, never, never>,
+  layer: ReadyLayer<ROut, ELayer>,
 ): Promise<A> => Effect.runPromise(Effect.provide(effect, layer));
 
-export const exitWithLayer = <A, E, R>(
+export const exitWithLayer = <ROut, ELayer, A, E, R extends ROut>(
   effect: Effect.Effect<A, E, R>,
-  layer: Layer.Layer<R, never, never>,
+  layer: ReadyLayer<ROut, ELayer>,
 ) => Effect.runPromiseExit(Effect.provide(effect, layer));
+
+export const makeLayerRunner =
+  <ROut, ELayer>(layer: ReadyLayer<ROut, ELayer>) =>
+  <A, E, R extends ROut>(effect: Effect.Effect<A, E, R>): Promise<A> =>
+    runWithLayer(effect, layer);
+
+export const makeLayerExitRunner =
+  <ROut, ELayer>(layer: ReadyLayer<ROut, ELayer>) =>
+  <A, E, R extends ROut>(effect: Effect.Effect<A, E, R>) =>
+    exitWithLayer(effect, layer);

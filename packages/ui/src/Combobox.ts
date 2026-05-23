@@ -21,7 +21,7 @@ export interface State<Value extends string = string> {
 
 export interface InitialState<Value extends string = string> {
   readonly id?: string;
-  readonly value?: string;
+  readonly value?: Value;
   readonly open?: boolean;
   readonly activeId?: string | null;
 }
@@ -53,25 +53,25 @@ export function makeState<Value extends string = string>(
   return RefSubject.make(state);
 }
 
-export function setOpen<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function setOpen<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   open: boolean,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
-export function setValue<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function setValue<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   value: string,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return RefSubject.update(state, (current) => ({ ...current, value }));
 }
 
-export function move<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function move<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   items: readonly Item<Value>[],
   direction: Composite.Move,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     const activeId = Composite.moveActiveId(items, { activeId: current.activeId, loop: true }, direction);
@@ -79,10 +79,10 @@ export function move<Value extends string>(
   });
 }
 
-export function selectActive<Value extends string>(
-  state: RefSubject.RefSubject<State<Value>>,
+export function selectActive<Value extends string, E, R>(
+  state: RefSubject.RefSubject<State<Value>, E, R>,
   items: readonly Item<Value>[],
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   return Effect.gen(function* () {
     const current = yield* state;
     const active = Composite.orderedEnabledItems(items).find((item) => item.id === current.activeId);
@@ -95,8 +95,9 @@ export function selectActive<Value extends string>(
   });
 }
 
-export interface InputOptions<Value extends string = string> extends Dom.HostOptions<HTMLInputElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface InputOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLInputElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly items?: ReactiveValue<readonly Item<Value>[], any, any>;
   readonly id?: OptionalString;
   readonly placeholder?: OptionalString;
@@ -105,7 +106,12 @@ export interface InputOptions<Value extends string = string> extends Dom.HostOpt
   readonly autoSelect?: boolean;
 }
 
-export function Input<const Value extends string, const Opts extends InputOptions<Value>>(
+export function Input<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends InputOptions<Value, E, R>,
+>(
   options: Opts,
 ): Component<Opts> {
   return gen(function* () {
@@ -119,9 +125,9 @@ export function Input<const Value extends string, const Opts extends InputOption
   });
 }
 
-function inputProps<Value extends string>(
-  options: InputOptions<Value>,
-  items: RefSubject.RefSubject<readonly Item<Value>[], any, any> | undefined,
+function inputProps<Value extends string, E, R, E2, R2>(
+  options: InputOptions<Value, E, R>,
+  items: RefSubject.Computed<readonly Item<Value>[], E2, R2> | undefined,
 ): Dom.HostProps<HTMLInputElement> {
   return {
     id: options.id,
@@ -138,9 +144,9 @@ function inputProps<Value extends string>(
   };
 }
 
-function inputHandler<Value extends string>(
-  options: InputOptions<Value>,
-  items: RefSubject.RefSubject<readonly Item<Value>[], any, any> | undefined,
+function inputHandler<Value extends string, E, R, E2, R2>(
+  options: InputOptions<Value, E, R>,
+  items: RefSubject.Computed<readonly Item<Value>[], E2, R2> | undefined,
 ) {
   return EventHandler.make((event: ComboboxInputEvent) =>
     Effect.gen(function* () {
@@ -151,9 +157,9 @@ function inputHandler<Value extends string>(
   );
 }
 
-function keyDownHandler<Value extends string>(
-  options: InputOptions<Value>,
-  items: RefSubject.RefSubject<readonly Item<Value>[], any, any> | undefined,
+function keyDownHandler<Value extends string, E, R, E2, R2>(
+  options: InputOptions<Value, E, R>,
+  items: RefSubject.Computed<readonly Item<Value>[], E2, R2> | undefined,
 ) {
   if (!items) return undefined;
   return EventHandler.make((event: KeyboardEvent) =>
@@ -165,11 +171,11 @@ function keyDownHandler<Value extends string>(
   );
 }
 
-function updateQuery<Value extends string>(
-  options: InputOptions<Value>,
+function updateQuery<Value extends string, E, R>(
+  options: InputOptions<Value, E, R>,
   items: readonly Item<Value>[],
   query: string,
-): Effect.Effect<State<Value>> {
+): Effect.Effect<State<Value>, E, R> {
   const filteredItems = filterItems(items, query, options.filter);
   const active = options.autoSelect === true ? filteredItems[0] : undefined;
   return RefSubject.update(options.state, (state) => ({
@@ -181,11 +187,11 @@ function updateQuery<Value extends string>(
   }));
 }
 
-function moveByTypeahead<Value extends string>(
-  options: InputOptions<Value>,
+function moveByTypeahead<Value extends string, E, R>(
+  options: InputOptions<Value, E, R>,
   items: readonly Item<Value>[],
   event: KeyboardEvent,
-): Effect.Effect<boolean> {
+): Effect.Effect<boolean, E, R> {
   const activeId = Composite.typeaheadFromEvent(event, items, (item) => item.textValue ?? item.value);
   if (!activeId) return Effect.succeed(false);
   return RefSubject.update(options.state, (state) => ({ ...state, activeId, open: true })).pipe(
@@ -193,11 +199,11 @@ function moveByTypeahead<Value extends string>(
   );
 }
 
-function moveByKey<Value extends string>(
-  options: InputOptions<Value>,
+function moveByKey<Value extends string, E, R>(
+  options: InputOptions<Value, E, R>,
   items: readonly Item<Value>[],
   event: KeyboardEvent,
-): Effect.Effect<void> {
+): Effect.Effect<void, E, R> {
   if (event.key === "Enter") return preventDefault(event, selectActive(options.state, items));
   if (event.key === "Escape") return preventDefault(event, setOpen(options.state, false));
   const direction = Composite.keyMove(event, { orientation: "vertical", rtl: false });
@@ -214,13 +220,19 @@ export function Label<const Opts extends LabelOptions>(options: Opts): Component
   return html`<label for=${options.for}>${options.content}</label>`;
 }
 
-export interface PopupOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface PopupOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly content: Content;
   readonly role?: ReactiveValue<string | undefined, any, any>;
 }
 
-export function List<const Opts extends PopupOptions>(options: Opts): Component<Opts> {
+export function List<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends PopupOptions<Value, E, R>,
+>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = dataOpen(options.state);
   if (options.host) {
@@ -232,7 +244,12 @@ export function List<const Opts extends PopupOptions>(options: Opts): Component<
   return html`<div id=${id} role=${options.role ?? "listbox"} .data=${{ open }}>${options.content}</div>`;
 }
 
-export function Popover<const Opts extends PopupOptions>(options: Opts): Component<Opts> {
+export function Popover<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends PopupOptions<Value, E, R>,
+>(options: Opts): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = dataOpen(options.state);
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
@@ -259,14 +276,20 @@ export function Popover<const Opts extends PopupOptions>(options: Opts): Compone
   </div>`;
 }
 
-export interface ItemOptions<Value extends string = string> extends Dom.HostOptions<HTMLDivElement> {
-  readonly state: RefSubject.RefSubject<State<Value>>;
+export interface ItemOptions<Value extends string = string, E = never, R = never>
+  extends Dom.HostOptions<HTMLDivElement> {
+  readonly state: RefSubject.RefSubject<State<Value>, E, R>;
   readonly id: RequiredString;
   readonly value: ReactiveValue<Value, any, any>;
   readonly content?: Content;
 }
 
-export function Item<const Value extends string, const Opts extends ItemOptions<Value>>(
+export function Item<
+  const Value extends string,
+  const E,
+  const R,
+  const Opts extends ItemOptions<Value, E, R>,
+>(
   options: Opts,
 ): Component<Opts> {
   return gen(function* () {
@@ -299,73 +322,122 @@ export function Item<const Value extends string, const Opts extends ItemOptions<
   });
 }
 
-export interface GroupOptions {
+export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly content: Content;
   readonly label?: OptionalString;
 }
 
 export function Group<const Opts extends GroupOptions>(options: Opts): Component<Opts> {
-  return html`<div role="group" aria-label=${options.label}>${options.content}</div>`;
+  const props = Dom.mergeProps(options.props, { role: "group", "aria-label": options.label });
+  if (options.host) return options.host(props, options.content) as Component<Opts>;
+
+  return html`<div ...${props}>${options.content}</div>`;
 }
 
-export function GroupLabel<const Opts extends { readonly content: Content }>(
+export function GroupLabel<
+  const Opts extends { readonly content: Content } & Dom.HostOptions<HTMLSpanElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`<span>${options.content}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, options.content, (props, content) =>
+    html`<span ...${props}>${content}</span>`,
+  );
 }
 
-export function Row<const Opts extends { readonly content: Content }>(
+export function Row<
+  const Opts extends { readonly content: Content } & Dom.HostOptions<HTMLDivElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`<div role="row">${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "row" }, options.content, (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }
 
-export function Separator(): Component<{}> {
-  return html`<div role="separator"></div>`;
+export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {}>(
+  options = {} as Opts,
+): Component<Opts> {
+  return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "separator" }, "", (props) =>
+    html`<div ...${props}></div>`,
+  );
 }
 
-export function Value<const Opts extends { readonly state: RefSubject.RefSubject<State> }>(
+export function Value<
+  const E,
+  const R,
+  const Opts extends { readonly state: RefSubject.RefSubject<State, E, R> } & Dom.HostOptions<HTMLSpanElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`${RefSubject.map(options.state, (state) => state.value)}`;
+  const value = RefSubject.map(options.state, (state) => state.value);
+  return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, value, (props, content) =>
+    html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export function Cancel<
-  const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: Content },
+  const E,
+  const R,
+  const Opts extends {
+    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly content: Content;
+  } & Dom.HostOptions<HTMLButtonElement>,
 >(options: Opts): Component<Opts> {
   const onClick = EventHandler.make(() => setValue(options.state, ""));
-  return html`<button type="button" onclick=${onClick}>${options.content}</button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(
+    options,
+    { type: "button", onclick: onClick },
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export function Disclosure<
-  const Opts extends { readonly state: RefSubject.RefSubject<State>; readonly content: Content },
+  const E,
+  const R,
+  const Opts extends {
+    readonly state: RefSubject.RefSubject<State, E, R>;
+    readonly content: Content;
+  } & Dom.HostOptions<HTMLButtonElement>,
 >(options: Opts): Component<Opts> {
   const open = RefSubject.map(options.state, (state) => state.open);
   const onClick = EventHandler.make(() =>
     Effect.flatMap(options.state, (state) => setOpen(options.state, !state.open)),
   );
-  return html`<button type="button" aria-expanded=${open} onclick=${onClick}>
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(
+    options,
+    { type: "button", "aria-expanded": open, onclick: onClick },
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export function ItemCheck<
   const Opts extends {
     readonly selected: ReactiveValue<boolean, any, any>;
     readonly content?: Content;
-  },
+  } & Dom.HostOptions<HTMLSpanElement>,
 >(options: Opts): Component<Opts> {
   return gen(function* () {
     const selected = yield* makeRef(options.selected);
     const hidden = RefSubject.map(selected, (value) => !value);
-    return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>`;
+    return Dom.renderHost<HTMLSpanElement, Opts>(
+      options,
+      { "aria-hidden": "true", "?hidden": hidden },
+      options.content ?? "✓",
+      (props, content) => html`<span ...${props}>${content}</span>`,
+    );
   });
 }
 
-export function ItemValue<const Opts extends { readonly value: Content }>(
+export function ItemValue<
+  const Opts extends { readonly value: Content } & Dom.HostOptions<HTMLSpanElement>,
+>(
   options: Opts,
 ): Component<Opts> {
-  return html`<span>${options.value}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, options.value, (props, content) =>
+    html`<span ...${props}>${content}</span>`,
+  );
 }
 
 interface ComboboxInputEvent extends Event {
@@ -376,7 +448,7 @@ interface ToggleEventLike extends Event {
   readonly newState?: "open" | "closed";
 }
 
-function dataOpen<Value extends string>(state: RefSubject.RefSubject<State<Value>>) {
+function dataOpen<Value extends string, E, R>(state: RefSubject.RefSubject<State<Value>, E, R>) {
   return RefSubject.mapEffect(state, (value) =>
     DataAttr.encode(data, {
       active: false,

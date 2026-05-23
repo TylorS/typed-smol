@@ -54,7 +54,7 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
   if (!plan.eligible) return "";
 
   return [
-    'import { getOrCreateHmrState, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime";',
+    'import { getOrCreateHmrState, getOrCreateHmrStateEffect, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime/hmrRegistry";',
     "type __TypedHot = {",
     "  readonly data: Record<string, unknown>;",
     "  readonly accept: () => void;",
@@ -70,9 +70,13 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
     "  const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);",
     "  return descriptor ? getOrCreateHmrState(descriptor, create, { hotData: __typedHot?.data }) : create();",
     "}",
-    "if (__typedHot) {",
-    "  __typedHot.accept();",
-    "  __typedHot.dispose((data) => {",
+    'export function __typedGetHmrStateEffect<A, E, R>(serviceId: string, create: () => import("effect/Effect").Effect<A, E, R>): import("effect/Effect").Effect<A, E, R> {',
+    "  const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);",
+    "  return descriptor ? getOrCreateHmrStateEffect(descriptor, create, { hotData: __typedHot?.data }) : create();",
+    "}",
+    "if (import.meta.hot) {",
+    "  import.meta.hot.accept();",
+    "  import.meta.hot.dispose((data) => {",
     "    data[typedHmrRegistryKey] = (globalThis as Record<string, unknown>)[typedHmrRegistryKey];",
     "    pruneHmrState((entry) => __typedHmrModules.has(entry.moduleId) && !__typedHasDescriptor(entry));",
     "  });",

@@ -10,11 +10,16 @@ export type RefCallback<E = never, R = never> = (
 type RefError<Ref> = Ref extends RefCallback<infer E, any> ? E : never;
 type RefServices<Ref> = Ref extends RefCallback<any, infer R> ? R : never;
 
-export function fromData<State extends Record<string, unknown>, Fields extends DataAttr.DataFields>(
-  ref: RefSubject.RefSubject<State>,
+export function fromData<
+  State extends Record<string, unknown>,
+  E,
+  R,
+  Fields extends DataAttr.DataFields,
+>(
+  ref: RefSubject.RefSubject<State, E, R>,
   data: DataAttr.DataAttr<Fields> &
     (DataAttr.Type<Fields> extends Partial<State> ? unknown : never),
-): RefCallback<Schema.SchemaError, Schema.Struct.DecodingServices<Fields>> {
+): RefCallback<Schema.SchemaError | E, Schema.Struct.DecodingServices<Fields> | R> {
   return (element) =>
     DataAttr.decode(data, element).pipe(
       Effect.flatMap((value) =>

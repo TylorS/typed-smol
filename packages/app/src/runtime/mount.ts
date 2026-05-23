@@ -1,6 +1,12 @@
 import type { CompiledDomTemplate, RuntimeTemplateFallback } from "@typed/compiler";
 import { type Fx, Fx as FxRuntime } from "@typed/fx";
-import { DomRenderTemplate, render, type RenderEvent, type Renderable } from "@typed/template";
+import {
+  DomRenderTemplate,
+  render,
+  type RenderEvent,
+  type Renderable,
+  type RenderTemplate,
+} from "@typed/template";
 import * as Effect from "effect/Effect";
 import {
   emptyValues,
@@ -13,18 +19,22 @@ import { isCompiledDomTemplate, isTemplateFallback } from "./internal.js";
 export function mount<Values extends ReadonlyArray<Renderable.Any>>(
   template: CompiledDomTemplate | RuntimeTemplateFallback<Values>,
   options: MountOptions<Values>,
-): Effect.Effect<MountedApp, Renderable.Error<Values[number]>, Renderable.Services<Values[number]>>;
+): Effect.Effect<
+  MountedApp,
+  Renderable.Error<Values[number]>,
+  Exclude<Renderable.Services<Values[number]>, RenderTemplate>
+>;
 export function mount<E, R>(
   template: Fx.Fx<RenderEvent, E, R>,
   options: MountOptions,
-): Effect.Effect<MountedApp, E, R>;
+): Effect.Effect<MountedApp, E, Exclude<R, RenderTemplate>>;
 export function mount<Values extends ReadonlyArray<Renderable.Any>, E, R>(
   template: DomRuntimeTemplate<Values> | Fx.Fx<RenderEvent, E, R>,
   options: MountOptions<Values>,
 ): Effect.Effect<
   MountedApp,
   Renderable.Error<Values[number]> | E,
-  Renderable.Services<Values[number]> | R
+  Exclude<Renderable.Services<Values[number]> | R, RenderTemplate>
 > {
   if (isCompiledDomTemplate(template)) return mountCompiled(template, options);
   if (isTemplateFallback(template)) return mountFallback(template, options);
@@ -48,7 +58,7 @@ function mountFallback<Values extends ReadonlyArray<Renderable.Any>>(
 ): Effect.Effect<
   MountedApp,
   Renderable.Error<Values[number]>,
-  Renderable.Services<Values[number]>
+  Exclude<Renderable.Services<Values[number]>, RenderTemplate>
 > {
   return Effect.map(
     render(template.render(...(options.values ?? emptyValues())), options.root).pipe(
@@ -64,7 +74,7 @@ function mountFallback<Values extends ReadonlyArray<Renderable.Any>>(
 function mountFx<E, R>(
   fx: Fx.Fx<RenderEvent, E, R>,
   options: MountOptions,
-): Effect.Effect<MountedApp, E, R> {
+): Effect.Effect<MountedApp, E, Exclude<R, RenderTemplate>> {
   return Effect.map(
     render(fx, options.root).pipe(
       FxRuntime.provide(DomRenderTemplate.using(options.root.ownerDocument)),

@@ -7,6 +7,7 @@ import {
   emitDomTemplate,
   emitServerTemplate,
 } from "@typed/compiler";
+import { html } from "@typed/template";
 import { hydrate, mount, renderServer, type MountedApp } from "../index.js";
 
 const strings = (...values: readonly string[]): TemplateStringsArray =>
@@ -80,6 +81,14 @@ describe("@typed/app runtime templates", () => {
     >();
     expectTypeOf(renderServer(fallback, { values: [Effect.succeed(1)] })).toExtend<
       Effect.Effect<{ readonly html: string }>
+    >();
+  });
+
+  it("does not leak RenderTemplate from mounted DOM renderables", () => {
+    const root = createRoot();
+
+    expectTypeOf(mount(html`<main>Mounted</main>`, { root })).toExtend<
+      Effect.Effect<MountedApp, never, never>
     >();
   });
 });
