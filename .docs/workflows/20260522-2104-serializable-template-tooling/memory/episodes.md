@@ -17,3 +17,10 @@
 - Added `Serializable.schema(...)` for explicit Effect Schema descriptors.
 - Added `Serializable.generated(...)` as the public placeholder for compiler-owned schema generation metadata.
 - Added `Serializable.fromSchemaOrGenerated(...)` to encode the user-schema precedence rule without exposing compiler internals in `@typed/app`.
+
+## M4 - Type-Directed Schema Planning
+
+- Added `@typed/compiler` schema plans over the existing `TypeNode` model.
+- Supported primitives, literals, objects, optional properties, arrays, tuples, unions, and string/number index signatures.
+- Unsupported shapes fail closed through shared compiler diagnostics.
+- Added descriptor-source emit that references `Serializable.generated(...)`.

@@ -66,3 +66,24 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
 - memory_updates:
   - recorded serialization descriptor API in `memory/episodes.md`.
   - added generated descriptor placeholder as a promotion candidate.
+
+### Task M4 - Type-Directed Schema Generation
+
+- task_id: M4
+- requirement_ids: FR-03, FR-04, NFR-02, NFR-04, NFR-05
+- ts_scenarios: TS-03, TS-04
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/compiler test -- schemaPlan` failed because `./schemaPlan.js` did not exist.
+  - second red: `pnpm --filter @typed/compiler test -- schemaPlan` failed because `emitSerializableDescriptorSource` was not implemented.
+  - green: `pnpm --filter @typed/compiler test -- schemaPlan` passed, 17 files / 67 tests.
+  - green: `pnpm --filter @typed/compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm exec oxlint packages/compiler/src/schema/schemaPlan.ts packages/compiler/src/schema/schemaPlan.test.ts packages/compiler/src/index.ts` passed.
+- commit: pending
+- deviations_or_replans:
+  - Schema planning starts from the existing `@typed/virtual-modules` `TypeNode` boundary.
+  - The generated descriptor emitter references `@typed/app` public metadata and does not expose compiler plan internals to runtime descriptors.
+- context_updates: exported schema planning and descriptor-source emitter from `@typed/compiler`.
+- memory_updates:
+  - recorded TypeNode-to-schema-plan boundary in `memory/episodes.md`.
+  - added schema-plan fingerprinting as a promotion candidate.

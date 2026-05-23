@@ -126,8 +126,8 @@ Goal: Convert compiler-visible `TypeNode` facts into deterministic schema plans.
 
 Tasks:
 
-1. Add `packages/compiler/src/schema/*` plan types.
-2. Implement supported shape planning:
+1. [completed] Add `packages/compiler/src/schema/*` plan types.
+2. [completed] Implement supported shape planning:
    - primitives
    - literals
    - objects
@@ -135,14 +135,14 @@ Tasks:
    - arrays/tuples
    - simple unions
    - records/index signatures
-3. Add unsupported-shape diagnostics:
+3. [completed] Add unsupported-shape diagnostics:
    - functions
    - arbitrary classes
    - symbols
    - unresolved generics
    - recursive graphs
    - `any`/broad `unknown`
-4. Add generated-source emitter that references `@typed/app` serialization API.
+4. [completed] Add generated-source emitter that references `@typed/app` serialization API.
 
 Traceability:
 
