@@ -128,7 +128,7 @@ feat(compiler): add route module analyzer foundation
 - Modify: `packages/compiler/src/hmr/dependencies.ts`
 - Modify: `packages/compiler/src/hmr/dependencies.test.ts`
 
-- [ ] **Step 1: Write failing tests for regex-free HMR detection**
+- [x] **Step 1: Write failing tests for regex-free HMR detection**
 
 Add tests that include formatting and nested calls that would be brittle for the current regexes, such as:
 
@@ -143,15 +143,15 @@ Run: `pnpm --filter @typed/compiler test -- analyzeComponentHmr dependencies`
 
 Expected: FAIL under current regex detection.
 
-- [ ] **Step 2: Adapt `analyzeComponentHmr`**
+- [x] **Step 2: Adapt `analyzeComponentHmr`**
 
 Make `analyzeComponentHmr` call `analyzeRouteModule` for `route-component` and `dependency` boundaries. Preserve its public result shape for existing callers.
 
-- [ ] **Step 3: Adapt dependency participation**
+- [x] **Step 3: Adapt dependency participation**
 
 Make `analyzeDependencyHmr` consume shared service facts and anonymous state diagnostics from route analysis.
 
-- [ ] **Step 4: Verify compatibility**
+- [x] **Step 4: Verify compatibility**
 
 Run:
 
@@ -161,7 +161,7 @@ pnpm --filter @typed/compiler test -- analyzeComponentHmr dependencies compileCa
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit message:
 

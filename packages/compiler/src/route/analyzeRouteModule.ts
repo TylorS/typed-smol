@@ -231,8 +231,21 @@ function closureExpression(expression: ts.Expression | undefined): ts.FunctionLi
 function unwrapYield(expression: ts.Expression | undefined): ts.CallExpression | undefined {
   if (!expression) return undefined;
   if (ts.isCallExpression(expression)) return expression;
+  if (isParsedYieldStar(expression)) return expression.right;
   if (!ts.isYieldExpression(expression) || !expression.expression) return undefined;
   return ts.isCallExpression(expression.expression) ? expression.expression : undefined;
+}
+
+function isParsedYieldStar(
+  expression: ts.Expression,
+): expression is ts.BinaryExpression & { readonly right: ts.CallExpression } {
+  return (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.AsteriskToken &&
+    ts.isIdentifier(expression.left) &&
+    expression.left.text === "yield" &&
+    ts.isCallExpression(expression.right)
+  );
 }
 
 function templateLocalName(node: ts.TaggedTemplateExpression): string | undefined {

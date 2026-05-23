@@ -1,3 +1,5 @@
+import { analyzeRouteModule } from "../route/analyzeRouteModule.js";
+
 export type ComponentHmrBoundary = "route-component" | "dependency" | "template";
 
 export interface ComponentHmrInput {
@@ -30,20 +32,27 @@ export interface RefSubjectServiceDescriptor {
   readonly serviceId: string;
 }
 
-const inlineRefSubjectPattern =
-  /const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:yield\*\s*)?RefSubject\.make\(([^)]*)\)/g;
-
-const refSubjectServicePattern =
-  /const\s+([A-Za-z_$][\w$]*)\s*=\s*RefSubject\.Service(?:<[^>]*>)?\(\)\("([^"]+)"\)/g;
-
 export function analyzeComponentHmr(input: ComponentHmrInput): ComponentHmrResult {
   if (input.boundary === "template") {
     return { moduleId: input.moduleId, boundary: input.boundary, eligible: false, services: [] };
   }
 
+  const route = analyzeRouteModule({
+    moduleId: input.moduleId,
+    sourceText: input.sourceText,
+  });
   const services = [
-    ...findInlineRefSubjects(input.moduleId, input.sourceText),
-    ...findRefSubjectServices(input.sourceText),
+    ...route.inlineRefSubjects.map((ref) => ({
+      kind: "inline-refsubject" as const,
+      localName: ref.localName,
+      serviceId: ref.serviceId,
+      initializerSource: ref.initializerSource,
+    })),
+    ...route.services.map((service) => ({
+      kind: "refsubject-service" as const,
+      localName: service.localName,
+      serviceId: service.serviceId,
+    })),
   ];
 
   return {
@@ -52,24 +61,4 @@ export function analyzeComponentHmr(input: ComponentHmrInput): ComponentHmrResul
     eligible: services.length > 0,
     services,
   };
-}
-
-function findInlineRefSubjects(
-  moduleId: string,
-  sourceText: string,
-): readonly InlineRefSubjectDescriptor[] {
-  return [...sourceText.matchAll(inlineRefSubjectPattern)].map((match) => ({
-    kind: "inline-refsubject",
-    localName: match[1],
-    serviceId: `${moduleId}#${match[1]}`,
-    initializerSource: match[2].trim(),
-  }));
-}
-
-function findRefSubjectServices(sourceText: string): readonly RefSubjectServiceDescriptor[] {
-  return [...sourceText.matchAll(refSubjectServicePattern)].map((match) => ({
-    kind: "refsubject-service",
-    localName: match[1],
-    serviceId: match[2],
-  }));
 }

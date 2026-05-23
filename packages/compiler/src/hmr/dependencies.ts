@@ -1,3 +1,5 @@
+import { analyzeRouteModule } from "../route/analyzeRouteModule.js";
+
 export type DependencyHmrReason = "imported" | "route-companion" | "explicit-opt-in";
 
 export interface DependencyHmrInput {
@@ -31,9 +33,6 @@ export interface DependencyHmrRejected {
   readonly reason: "anonymous-refsubject-state" | "explicit-opt-out";
 }
 
-const refSubjectServicePattern = /RefSubject\.Service(?:<[^>]*>)?\(\)\("([^"]+)"\)/g;
-const anonymousRefSubjectPattern = /RefSubject\.make\(/;
-
 export function analyzeDependencyHmr(input: DependencyHmrInput): DependencyHmrResult {
   const participants: DependencyHmrParticipant[] = [];
   const rejected: DependencyHmrRejected[] = [];
@@ -44,10 +43,14 @@ export function analyzeDependencyHmr(input: DependencyHmrInput): DependencyHmrRe
       continue;
     }
 
-    const serviceIds = findRefSubjectServiceIds(dependency.sourceText);
+    const route = analyzeRouteModule({
+      moduleId: dependency.moduleId,
+      sourceText: dependency.sourceText,
+    });
+    const serviceIds = route.services.map((service) => service.serviceId);
     if (serviceIds.length > 0 || dependency.optIn) {
       participants.push(participant(dependency, serviceIds));
-    } else if (anonymousRefSubjectPattern.test(dependency.sourceText)) {
+    } else if (route.inlineRefSubjects.length > 0) {
       rejected.push({ moduleId: dependency.moduleId, reason: "anonymous-refsubject-state" });
     }
   }
@@ -65,10 +68,6 @@ function participant(
     serviceIds,
     fingerprint: dependencyFingerprint(dependency.moduleId, serviceIds, dependency.reason),
   };
-}
-
-function findRefSubjectServiceIds(sourceText: string): readonly string[] {
-  return [...sourceText.matchAll(refSubjectServicePattern)].map((match) => match[1]);
 }
 
 function dependencyFingerprint(

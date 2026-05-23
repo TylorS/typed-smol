@@ -28,6 +28,33 @@ describe("analyzeDependencyHmr", () => {
     expect(result.rejected).toEqual([]);
   });
 
+  it("marks multiline service dependencies as participating", () => {
+    const result = analyzeDependencyHmr({
+      routeModuleId: "/src/routes/counter.ts",
+      dependencies: [
+        {
+          moduleId: "/src/routes/counter/state.ts",
+          reason: "imported",
+          sourceText: `
+            export const Count =
+              RefSubject
+                .Service<number>()
+                ("@app/routes/counter/Count");
+          `,
+        },
+      ],
+    });
+
+    expect(result.participants).toEqual([
+      {
+        moduleId: "/src/routes/counter/state.ts",
+        reason: "imported",
+        serviceIds: ["@app/routes/counter/Count"],
+        fingerprint: "/src/routes/counter/state.ts:@app/routes/counter/Count",
+      },
+    ]);
+  });
+
   it("marks route companion dependencies as participating", () => {
     const result = analyzeDependencyHmr({
       routeModuleId: "/src/routes/counter.ts",

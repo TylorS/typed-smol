@@ -70,4 +70,29 @@ describe("analyzeComponentHmr", () => {
       },
     ]);
   });
+
+  it("recognizes multiline RefSubject.Service identities through route analysis", () => {
+    const result = analyzeComponentHmr({
+      boundary: "route-component",
+      moduleId: "/src/routes/counter.ts",
+      sourceText: `
+        import { RefSubject } from "@typed/fx";
+
+        const Count =
+          RefSubject
+            .Service<number>()
+            ("@app/routes/counter/Count");
+
+        export const route = () => html\`<button>\${Count}</button>\`;
+      `,
+    });
+
+    expect(result.services).toEqual([
+      {
+        kind: "refsubject-service",
+        localName: "Count",
+        serviceId: "@app/routes/counter/Count",
+      },
+    ]);
+  });
 });
