@@ -241,3 +241,31 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
   - VS Code extension configures the TS plugin with template diagnostics enabled.
 - memory_updates:
   - recorded VS Code TS-plugin configuration and guarded code action behavior in `memory/episodes.md`.
+
+### Task M10 - Cross-Host Verification And Memory
+
+- task_id: M10
+- requirement_ids: FR-01 through FR-10, NFR-01 through NFR-05
+- ts_scenarios: TS-01 through TS-10
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/compiler test -- templateDiagnostics templateVitePlugin` failed because `./templateFixtures.js` did not exist.
+  - initial red: `pnpm --filter @typed/virtual-modules-ts-plugin test -- plugin -t "appends typed template semantic diagnostics"` failed because `@typed/compiler/template/templateFixtures` did not exist.
+  - green: `pnpm --filter @typed/compiler test -- templateDiagnostics templateVitePlugin` passed, 22 files / 81 tests.
+  - green: `pnpm --filter @typed/virtual-modules-ts-plugin test -- plugin -t "appends typed template semantic diagnostics"` passed, 2 files / 14 tests.
+  - green: `pnpm --filter @typed/compiler test` passed, 22 files / 81 tests.
+  - green: `pnpm --filter @typed/app test` passed, 27 files / 363 tests.
+  - green: `pnpm --filter @typed/vite-plugin test` passed, 1 file / 16 tests.
+  - green: `pnpm --filter @typed/virtual-modules-compiler test` passed, 4 files / 26 tests.
+  - green: `pnpm --filter @typed/virtual-modules-ts-plugin test` passed, 2 files / 14 tests.
+  - green: `pnpm --filter @typed/virtual-modules-vscode build` passed.
+  - green: `pnpm --filter @typed/virtual-modules-vscode test` passed, 5 files / 11 tests.
+  - green: package builds for `@typed/compiler`, `@typed/vite-plugin`, and `@typed/virtual-modules-ts-plugin` passed.
+  - green: focused `pnpm exec oxlint ...` over M10 touched files passed.
+  - green: `git diff --check` passed.
+- commit: current atomic commit `test(compiler): share invalid template fixture`
+- deviations_or_replans:
+  - No package AGENTS updates were needed; package responsibilities were recorded in workflow memory instead.
+- context_updates:
+  - Shared invalid template fixture now lives at `@typed/compiler/template/templateFixtures`.
+- memory_updates:
+  - recorded the final cross-host validation set in `memory/episodes.md`.

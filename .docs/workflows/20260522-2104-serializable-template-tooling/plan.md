@@ -299,10 +299,10 @@ Goal: Prove the tranche is coherent and record durable follow-up context.
 
 Tasks:
 
-1. Add shared invalid-template fixture used by CLI/TS plugin/Vite tests.
-2. Run final validation hooks.
-3. Update workflow memory notes.
-4. Update package AGENTS docs if new package responsibilities are created.
+1. [completed] Add shared invalid-template fixture used by CLI/TS plugin/Vite tests.
+2. [completed] Run final validation hooks.
+3. [completed] Update workflow memory notes.
+4. [completed] Update package AGENTS docs if new package responsibilities are created.
 
 Traceability:
 

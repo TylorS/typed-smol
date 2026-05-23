@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 import { getTemplateDiagnostics } from "./templateDiagnostics.js";
+import {
+  invalidTemplateDiagnosticCode,
+  invalidTemplateModuleSource,
+} from "./templateFixtures.js";
 
 describe("getTemplateDiagnostics", () => {
   it("returns TypeScript diagnostics for invalid typed templates", () => {
-    const sourceText = 'import { html } from "@typed/template";\nhtml`<div .props=>`;';
+    const sourceText = invalidTemplateModuleSource;
     const sourceFile = ts.createSourceFile("/src/view.ts", sourceText, ts.ScriptTarget.Latest);
 
     const diagnostics = getTemplateDiagnostics({
@@ -20,6 +24,6 @@ describe("getTemplateDiagnostics", () => {
       code: 900001,
       file: sourceFile,
     });
-    expect(String(diagnostics[0]?.messageText)).toContain("TYPED-TEMPLATE-ANALYZE-001");
+    expect(String(diagnostics[0]?.messageText)).toContain(invalidTemplateDiagnosticCode);
   });
 });

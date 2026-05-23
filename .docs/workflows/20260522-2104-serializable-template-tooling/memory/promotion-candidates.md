@@ -10,3 +10,4 @@
 - Consider keeping `templates: false` as the framework-wide template transform rollback switch across Vite, CLI, and future editor integrations.
 - Consider treating `getTemplateDiagnostics` as the canonical editor/CLI diagnostic source for source-file HTML template analysis.
 - Consider standardizing encoded compiler fix metadata for future VS Code quick fixes; current VS Code provider intentionally stays inert without it.
+- Promote `@typed/compiler/template/templateFixtures` only if more cross-package host tests need shared compiler fixtures; keep production APIs separate from test fixtures where possible.

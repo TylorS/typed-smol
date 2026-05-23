@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { typedTemplateVitePlugin } from "./templateVitePlugin.js";
+import {
+  invalidTemplateDiagnosticCode,
+  invalidTemplateModuleSource,
+} from "./templateFixtures.js";
 
 describe("typedTemplateVitePlugin", () => {
   it("transforms typed html templates in Vite transform hooks", async () => {
@@ -37,10 +41,9 @@ describe("typedTemplateVitePlugin", () => {
   it("reports template diagnostics through the Vite hook context", async () => {
     const warnings: string[] = [];
     const plugin = typedTemplateVitePlugin({ diagnostics: "warn" });
-    const sourceText = 'import { html } from "@typed/template";\nhtml`<div .props=>`;';
 
     await expect(
-      transform(plugin, sourceText, "/src/view.ts", {
+      transform(plugin, invalidTemplateModuleSource, "/src/view.ts", {
         warn: (message) => warnings.push(message),
         error: (error) => {
           throw new Error(String(error));
@@ -49,7 +52,7 @@ describe("typedTemplateVitePlugin", () => {
     ).resolves.toBeNull();
 
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain("TYPED-TEMPLATE-ANALYZE-001");
+    expect(warnings[0]).toContain(invalidTemplateDiagnosticCode);
   });
 });
 

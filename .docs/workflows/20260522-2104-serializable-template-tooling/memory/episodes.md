@@ -65,3 +65,9 @@
 - `@typed/virtual-modules-vscode` contributes and configures `@typed/virtual-modules-ts-plugin` through VS Code's TypeScript extension API.
 - Template diagnostics remain owned by the TS plugin; the VS Code extension only enables/configures that path and documents it.
 - Added a guarded quick-fix provider that returns code actions only when a diagnostic carries encoded compiler fix metadata.
+
+## M10 - Cross-Host Verification
+
+- Added `@typed/compiler/template/templateFixtures` for shared invalid-template test inputs.
+- Compiler diagnostics, Vite transform diagnostics, and TypeScript plugin diagnostics now assert against the same invalid template fixture.
+- Final cross-host validation passed for compiler, app, vite plugin, virtual-modules compiler, virtual-modules TS plugin, and virtual-modules VS Code build/test.

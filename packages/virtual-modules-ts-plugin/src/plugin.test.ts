@@ -23,6 +23,10 @@ import {
   PluginManager,
   type VirtualArtifactManifest,
 } from "@typed/virtual-modules";
+import {
+  invalidTemplateDiagnosticCode,
+  invalidTemplateModuleSource,
+} from "@typed/compiler/template/templateFixtures";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -192,18 +196,16 @@ describe("virtual-modules-ts-plugin", () => {
   it("appends typed template semantic diagnostics", () => {
     const dir = createTempDirInWorkspace();
     const entryPath = join(dir, "entry.ts");
-    writeFileSync(
-      entryPath,
-      'import { html } from "@typed/template";\nhtml`<div .props=>`;\n',
-      "utf8",
-    );
+    writeFileSync(entryPath, `${invalidTemplateModuleSource}\n`, "utf8");
 
     const service = createPluginLanguageService(dir, entryPath);
     const diagnostics = service.getSemanticDiagnostics(entryPath);
 
-    expect(diagnostics.some((diagnostic) => String(diagnostic.messageText).includes("TYPED-TEMPLATE-ANALYZE-001"))).toBe(
-      true,
-    );
+    expect(
+      diagnostics.some((diagnostic) =>
+        String(diagnostic.messageText).includes(invalidTemplateDiagnosticCode),
+      ),
+    ).toBe(true);
   });
 
   it("materializes create() virtual modules through the shared artifact store", () => {
