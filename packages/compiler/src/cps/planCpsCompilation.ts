@@ -4,6 +4,11 @@ import type {
   TemplateCompileCapability,
 } from "../capabilities/compileCapabilities.js";
 import type { ViteHmrServicePlan } from "../hmr/viteHmr.js";
+import type {
+  RouteCaptureFact,
+  RouteClosureFact,
+  RouteModulePlan,
+} from "../route/RouteModulePlan.js";
 import type { TemplateOutputTarget } from "../template/fingerprints.js";
 
 export interface CpsCompilationPlan {
@@ -12,7 +17,10 @@ export interface CpsCompilationPlan {
   readonly diagnostics: readonly CpsDiagnostic[];
 }
 
-export type CpsContinuation = TemplateOutputContinuation | HmrStateContinuation;
+export type CpsContinuation =
+  | TemplateOutputContinuation
+  | HmrStateContinuation
+  | RouteClosureContinuation;
 
 export interface TemplateOutputContinuation {
   readonly id: string;
@@ -34,10 +42,30 @@ export interface HmrStateContinuation {
   readonly version: string;
 }
 
+export interface RouteClosureContinuation {
+  readonly id: string;
+  readonly kind: "route-closure";
+  readonly moduleId: string;
+  readonly symbolId: string;
+  readonly closureName: string;
+  readonly captures: readonly RouteCaptureFact[];
+  readonly serviceIds: readonly string[];
+  readonly templateHashes: readonly string[];
+  readonly dependencyFingerprints: readonly string[];
+  readonly compatibilityFingerprint: string;
+  readonly version: string;
+}
+
 export interface CpsDiagnostic {
   readonly code: "hmr-rejected";
   readonly moduleId: string;
   readonly reason: HmrCompileRejected["reason"];
+}
+
+export interface RouteCpsCompilationOptions {
+  readonly dependencyFingerprints?: readonly string[];
+  readonly templateHashes?: readonly string[];
+  readonly version?: string;
 }
 
 export function planCpsCompilation(capabilities: CompileCapabilitiesPlan): CpsCompilationPlan {
@@ -89,4 +117,72 @@ function hmrDiagnostic(rejected: HmrCompileRejected): CpsDiagnostic {
     moduleId: rejected.moduleId,
     reason: rejected.reason,
   };
+}
+
+export function planRouteCpsCompilation(
+  route: RouteModulePlan,
+  options: RouteCpsCompilationOptions = {},
+): CpsCompilationPlan {
+  const dependencyFingerprints = [...(options.dependencyFingerprints ?? [])].sort();
+  const templateHashes = [...(options.templateHashes ?? [])].sort();
+  const version = options.version ?? "1";
+
+  return {
+    moduleId: route.moduleId,
+    continuations: route.closures
+      .filter((closure) => closure.captures.length > 0)
+      .map((closure) => routeClosureContinuation(route.moduleId, closure, {
+        dependencyFingerprints,
+        templateHashes,
+        version,
+      })),
+    diagnostics: [],
+  };
+}
+
+function routeClosureContinuation(
+  moduleId: string,
+  closure: RouteClosureFact,
+  options: Required<RouteCpsCompilationOptions>,
+): RouteClosureContinuation {
+  const symbolId = `${moduleId}#closure:${closure.name}`;
+  const captures = stableCaptures(closure.captures);
+  return {
+    captures,
+    closureName: closure.name,
+    compatibilityFingerprint: routeClosureCompatibility(symbolId, captures, options),
+    dependencyFingerprints: options.dependencyFingerprints,
+    id: symbolId,
+    kind: "route-closure",
+    moduleId,
+    serviceIds: serviceIds(captures),
+    symbolId,
+    templateHashes: options.templateHashes,
+    version: options.version,
+  };
+}
+
+function routeClosureCompatibility(
+  symbolId: string,
+  captures: readonly RouteCaptureFact[],
+  options: Required<RouteCpsCompilationOptions>,
+): string {
+  return JSON.stringify({
+    captures: captures.map(captureFingerprint),
+    dependencyFingerprints: options.dependencyFingerprints,
+    symbolId,
+    version: options.version,
+  });
+}
+
+function stableCaptures(captures: readonly RouteCaptureFact[]): readonly RouteCaptureFact[] {
+  return [...captures].sort((left, right) => captureFingerprint(left).localeCompare(captureFingerprint(right)));
+}
+
+function serviceIds(captures: readonly RouteCaptureFact[]): readonly string[] {
+  return [...new Set(captures.map((capture) => capture.serviceId))].sort();
+}
+
+function captureFingerprint(capture: RouteCaptureFact): string {
+  return `${capture.kind}:${capture.name}:${capture.serviceId}`;
 }

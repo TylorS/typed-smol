@@ -180,7 +180,7 @@ refactor(compiler): derive hmr facts from route analysis
 - Modify: `packages/compiler/src/route/analyzeRouteModule.ts`
 - Modify: `packages/compiler/src/route/analyzeRouteModule.test.ts`
 
-- [ ] **Step 1: Write failing CPS tests**
+- [x] **Step 1: Write failing CPS tests**
 
 Add tests proving:
 
@@ -192,7 +192,7 @@ Run: `pnpm --filter @typed/compiler test -- closureContext planCpsCompilation an
 
 Expected: FAIL because `route-closure` continuations do not exist.
 
-- [ ] **Step 2: Extend capture facts**
+- [x] **Step 2: Extend capture facts**
 
 Add capture kinds:
 
@@ -202,7 +202,7 @@ Add capture kinds:
 - `template-value`
 - `unsupported`
 
-- [ ] **Step 3: Extend CPS continuation types**
+- [x] **Step 3: Extend CPS continuation types**
 
 Add `RouteClosureContinuation` with:
 
@@ -217,11 +217,11 @@ Add `RouteClosureContinuation` with:
 - `compatibilityFingerprint`
 - `version`
 
-- [ ] **Step 4: Lower route facts into continuations**
+- [x] **Step 4: Lower route facts into continuations**
 
 Update `planCpsCompilation` to accept optional route facts or add a companion `planRouteCpsCompilation` if the existing API would become muddy. Prefer the smaller API after reading call sites.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -231,7 +231,7 @@ pnpm --filter @typed/compiler test -- closureContext planCpsCompilation analyzeR
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Commit message:
 

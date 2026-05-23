@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planCpsCompilation } from "./planCpsCompilation.js";
+import { analyzeRouteModule } from "../route/analyzeRouteModule.js";
+import { planRouteCpsCompilation } from "./planCpsCompilation.js";
 
 describe("planCpsCompilation", () => {
   it("lowers optimized template capabilities into DOM and server continuations", () => {
@@ -122,5 +124,86 @@ describe("planCpsCompilation", () => {
         reason: "explicit-opt-out",
       },
     ]);
+  });
+
+  it("lowers route closures with RefSubject.Service captures into continuations", () => {
+    const route = analyzeRouteModule({
+      moduleId: "/src/routes/counter.ts",
+      sourceText: `
+        const Count = RefSubject.Service<number>()("@app/Count");
+        export const route = () => {
+          const increment = () => Count.onSuccess(1);
+          return html\`<button onClick=\${increment}>Count</button>\`;
+        };
+      `,
+    });
+
+    const plan = planRouteCpsCompilation(route, { version: "test" });
+
+    expect(plan.continuations).toEqual(
+      expect.arrayContaining([
+        {
+          captures: [
+            {
+              kind: "refsubject-service",
+              name: "Count",
+              serviceId: "@app/Count",
+            },
+          ],
+          closureName: "increment",
+          compatibilityFingerprint: JSON.stringify({
+            captures: ["refsubject-service:Count:@app/Count"],
+            dependencyFingerprints: [],
+            symbolId: "/src/routes/counter.ts#closure:increment",
+            version: "test",
+          }),
+          dependencyFingerprints: [],
+          id: "/src/routes/counter.ts#closure:increment",
+          kind: "route-closure",
+          moduleId: "/src/routes/counter.ts",
+          serviceIds: ["@app/Count"],
+          symbolId: "/src/routes/counter.ts#closure:increment",
+          templateHashes: [],
+          version: "test",
+        },
+      ]),
+    );
+  });
+
+  it("lowers route closures with Effect service captures into continuations", () => {
+    const route = analyzeRouteModule({
+      moduleId: "/src/routes/profile.ts",
+      sourceText: `
+        class ProfileClient extends Context.Service<
+          ProfileClient,
+          { readonly load: Effect.Effect<string> }
+        >()("@app/ProfileClient") {}
+
+        export const route = Effect.gen(function* route() {
+          const client = yield* ProfileClient;
+          const load = () => client.load;
+          return html\`<section>\${yield* load()}</section>\`;
+        });
+      `,
+    });
+
+    const plan = planRouteCpsCompilation(route, { version: "test" });
+
+    expect(plan.continuations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          captures: [
+            {
+              kind: "effect-service",
+              name: "client",
+              serviceId: "@app/ProfileClient",
+            },
+          ],
+          closureName: "load",
+          kind: "route-closure",
+          serviceIds: ["@app/ProfileClient"],
+        }),
+      ]),
+    );
   });
 });
