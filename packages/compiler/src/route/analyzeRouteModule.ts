@@ -3,6 +3,7 @@ import type {
   AnalyzeRouteModuleInput,
   RouteCaptureFact,
   RouteClosureFact,
+  RouteClosureParameterFact,
   RouteDiagnostic,
   RouteEffectServiceFact,
   RouteInlineRefSubjectFact,
@@ -155,10 +156,10 @@ function collectInlineRefSubjects(context: RouteAnalysisContext, node: ts.Node):
     moduleId: context.moduleId,
     serviceId: `${context.moduleId}#${localName}`,
   });
-  context.diagnostics.push({
-    code: "anonymous-refsubject-state",
-    message: `Inline RefSubject.make in ${context.moduleId} should migrate ${localName} to RefSubject.Service for resumable HMR`,
-    moduleId: context.moduleId,
+  context.captureAliases.set(localName, {
+    kind: "refsubject-service",
+    name: localName,
+    serviceId: `${context.moduleId}#${localName}`,
   });
 }
 
@@ -187,7 +188,38 @@ function pushClosure(
     captures: closureCaptures(context, closure, name),
     moduleId: context.moduleId,
     name,
+    parameters: closureParameters(context.moduleId, name, closure),
   });
+}
+
+function closureParameters(
+  moduleId: string,
+  closureName: string,
+  closure: ts.FunctionLikeDeclaration,
+): readonly RouteClosureParameterFact[] {
+  return closure.parameters
+    .map((parameter, index) => parameterFact(moduleId, closureName, parameter, index))
+    .filter(isRouteClosureParameterFact);
+}
+
+function parameterFact(
+  moduleId: string,
+  closureName: string,
+  parameter: ts.ParameterDeclaration,
+  index: number,
+): RouteClosureParameterFact | undefined {
+  if (!ts.isIdentifier(parameter.name)) return undefined;
+  return {
+    index,
+    name: parameter.name.text,
+    serviceId: `${moduleId}#closure:${closureName}:params`,
+  };
+}
+
+function isRouteClosureParameterFact(
+  value: RouteClosureParameterFact | undefined,
+): value is RouteClosureParameterFact {
+  return value !== undefined;
 }
 
 function closureCaptures(

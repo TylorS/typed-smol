@@ -47,11 +47,12 @@ export function analyzeDependencyHmr(input: DependencyHmrInput): DependencyHmrRe
       moduleId: dependency.moduleId,
       sourceText: dependency.sourceText,
     });
-    const serviceIds = route.services.map((service) => service.serviceId);
+    const serviceIds = [
+      ...route.services.map((service) => service.serviceId),
+      ...route.inlineRefSubjects.map((service) => service.serviceId),
+    ];
     if (serviceIds.length > 0 || dependency.optIn) {
       participants.push(participant(dependency, serviceIds));
-    } else if (route.inlineRefSubjects.length > 0) {
-      rejected.push({ moduleId: dependency.moduleId, reason: "anonymous-refsubject-state" });
     }
   }
 

@@ -43,7 +43,14 @@ export interface RouteTemplateFact {
 export interface RouteClosureFact {
   readonly moduleId: string;
   readonly name: string;
+  readonly parameters: readonly RouteClosureParameterFact[];
   readonly captures: readonly RouteCaptureFact[];
+}
+
+export interface RouteClosureParameterFact {
+  readonly index: number;
+  readonly name: string;
+  readonly serviceId: string;
 }
 
 export type RouteCaptureFact =

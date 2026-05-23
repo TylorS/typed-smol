@@ -81,6 +81,12 @@ function routeHmrRuntime(): string {
     '    if (typeof __typedRouteContinuationSerializables !== "undefined") {',
     "      data.__typedRouteContinuationSerializables = __typedRouteContinuationSerializables;",
     "    }",
+    '    if (typeof __typedRouteGeneratedServices !== "undefined") {',
+    "      data.__typedRouteGeneratedServices = __typedRouteGeneratedServices;",
+    "    }",
+    '    if (typeof __typedRouteParameterServices !== "undefined") {',
+    "      data.__typedRouteParameterServices = __typedRouteParameterServices;",
+    "    }",
     "  });",
     "}",
   ].join("\n");

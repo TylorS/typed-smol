@@ -104,7 +104,7 @@ describe("analyzeDependencyGraphHmr", () => {
     ]);
   });
 
-  it("rejects anonymous state in transitive dependencies", () => {
+  it("promotes inline RefSubject state in transitive dependencies", () => {
     const result = analyzeDependencyGraphHmr({
       routeModuleId: "/src/routes/counter.ts",
       entryModuleIds: ["/src/routes/counter/state.ts"],
@@ -124,12 +124,17 @@ describe("analyzeDependencyGraphHmr", () => {
       ],
     });
 
-    expect(result.rejected).toEqual([
-      {
-        moduleId: "/src/routes/counter/anonymous.ts",
-        reason: "anonymous-refsubject-state",
-      },
-    ]);
+    expect(result.participants).toEqual(
+      expect.arrayContaining([
+        {
+          fingerprint: "/src/routes/counter/anonymous.ts:/src/routes/counter/anonymous.ts#count",
+          moduleId: "/src/routes/counter/anonymous.ts",
+          reason: "imported",
+          serviceIds: ["/src/routes/counter/anonymous.ts#count"],
+        },
+      ]),
+    );
+    expect(result.rejected).toEqual([]);
   });
 });
 

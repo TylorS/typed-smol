@@ -6,7 +6,12 @@ import {
   type TypedCompilerDiagnostic,
 } from "../diagnostics/diagnostics.js";
 import { analyzeRouteModule } from "./analyzeRouteModule.js";
-import type { RouteCaptureFact, RouteDiagnostic, RouteModulePlan } from "./RouteModulePlan.js";
+import type {
+  RouteCaptureFact,
+  RouteDiagnostic,
+  RouteInlineRefSubjectFact,
+  RouteModulePlan,
+} from "./RouteModulePlan.js";
 
 export interface TransformRouteModuleInput {
   readonly moduleId: string;
@@ -54,13 +59,18 @@ export function transformRouteModule(input: TransformRouteModuleInput): Transfor
     true,
   );
   const rewrites = collectClosureRewrites(tsMod, sourceFile, continuations);
+  const inlineRefSubjectRewrites = collectInlineRefSubjectRewrites(tsMod, sourceFile, route);
   if (rewrites.length === 0) return unchanged(input, route, continuations, diagnostics);
   const serializableAliases = collectSerializableDescriptorAliases(tsMod, sourceFile);
   const serializationNeeded = continuations.some(hasSerializableCaptures);
 
   const sourceText = applyEdits(input.sourceText, [
+    ...(inlineRefSubjectRewrites.length > 0 ? [hmrMemoImportEdit()] : []),
     ...(serializationNeeded ? [serializableImportEdit()] : []),
+    ...inlineRefSubjectRewrites,
     ...rewrites.flatMap((rewrite) => [rewrite.insert, rewrite.replace]),
+    ...(route.inlineRefSubjects.length > 0 ? [generatedServicesEdit(input.sourceText, route)] : []),
+    ...(hasParameterServices(continuations) ? [parameterServicesEdit(input.sourceText, continuations)] : []),
     descriptorEdit(input.sourceText, continuations, rewrites),
     ...(serializationNeeded
       ? [serializationDescriptorEdit(input.sourceText, continuations, serializableAliases)]
@@ -74,6 +84,70 @@ export function transformRouteModule(input: TransformRouteModuleInput): Transfor
     route,
     sourceText,
     transformed: true,
+  };
+}
+
+function collectInlineRefSubjectRewrites(
+  tsMod: typeof ts,
+  sourceFile: ts.SourceFile,
+  route: RouteModulePlan,
+): readonly TextEdit[] {
+  const services = new Map(route.inlineRefSubjects.map((service) => [service.localName, service]));
+  const edits: TextEdit[] = [];
+  visit(tsMod, sourceFile, (node) => {
+    if (!tsMod.isVariableDeclaration(node) || !tsMod.isIdentifier(node.name)) return;
+    const service = services.get(node.name.text);
+    const call = service && inlineRefSubjectCall(tsMod, node.initializer);
+    if (!call || !service) return;
+    edits.push(inlineRefSubjectEdit(sourceFile, call, service));
+  });
+  return edits;
+}
+
+function inlineRefSubjectEdit(
+  sourceFile: ts.SourceFile,
+  call: ts.CallExpression,
+  service: RouteInlineRefSubjectFact,
+): TextEdit {
+  return {
+    end: call.getEnd(),
+    start: call.getStart(sourceFile),
+    text: hmrMemoEffectCall(call.getText(sourceFile), service.serviceId),
+  };
+}
+
+function hmrMemoEffectCall(callSource: string, serviceId: string): string {
+  return [
+    `__typedGetOrCreateHmrMemoEffect(${JSON.stringify(serviceId)}, () => ${callSource}, `,
+    "{ hotData: (import.meta as ImportMeta & ",
+    "{ readonly hot?: { readonly data: Record<string, unknown> } }).hot?.data })",
+  ].join("");
+}
+
+function generatedServicesEdit(sourceText: string, route: RouteModulePlan): TextEdit {
+  return {
+    end: sourceText.length,
+    start: sourceText.length,
+    text: `\nexport const __typedRouteGeneratedServices = ${JSON.stringify(
+      route.inlineRefSubjects,
+      null,
+      2,
+    )} as const;\n`,
+  };
+}
+
+function parameterServicesEdit(
+  sourceText: string,
+  continuations: readonly RouteClosureContinuation[],
+): TextEdit {
+  return {
+    end: sourceText.length,
+    start: sourceText.length,
+    text: `\nexport const __typedRouteParameterServices = ${JSON.stringify(
+      continuations.flatMap((continuation) => continuation.parameters),
+      null,
+      2,
+    )} as const;\n`,
   };
 }
 
@@ -130,6 +204,41 @@ function closureInitializer(tsMod: typeof ts, expression: ts.Expression | undefi
   if (!expression) return undefined;
   if (tsMod.isArrowFunction(expression) || tsMod.isFunctionExpression(expression)) return expression;
   return undefined;
+}
+
+function inlineRefSubjectCall(
+  tsMod: typeof ts,
+  expression: ts.Expression | undefined,
+): ts.CallExpression | undefined {
+  if (!expression) return undefined;
+  if (tsMod.isCallExpression(expression) && isRefSubjectMakeCall(tsMod, expression)) return expression;
+  if (tsMod.isYieldExpression(expression) && expression.expression) {
+    return inlineRefSubjectCall(tsMod, expression.expression);
+  }
+  if (!isParsedYieldStar(tsMod, expression)) return undefined;
+  return isRefSubjectMakeCall(tsMod, expression.right) ? expression.right : undefined;
+}
+
+function isParsedYieldStar(
+  tsMod: typeof ts,
+  expression: ts.Expression,
+): expression is ts.BinaryExpression & { readonly right: ts.CallExpression } {
+  return (
+    tsMod.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === tsMod.SyntaxKind.AsteriskToken &&
+    tsMod.isIdentifier(expression.left) &&
+    expression.left.text === "yield" &&
+    tsMod.isCallExpression(expression.right)
+  );
+}
+
+function isRefSubjectMakeCall(tsMod: typeof ts, call: ts.CallExpression): boolean {
+  const expression = call.expression;
+  return (
+    tsMod.isPropertyAccessExpression(expression) &&
+    expression.expression.getText() === "RefSubject" &&
+    expression.name.text === "make"
+  );
 }
 
 function variableStatement(tsMod: typeof ts, node: ts.VariableDeclaration): ts.VariableStatement | undefined {
@@ -274,6 +383,10 @@ function hasSerializableCaptures(continuation: RouteClosureContinuation): boolea
   return continuation.captures.some(isSerializableCapture);
 }
 
+function hasParameterServices(continuations: readonly RouteClosureContinuation[]): boolean {
+  return continuations.some((continuation) => continuation.parameters.length > 0);
+}
+
 function isSerializableCapture(
   capture: RouteCaptureFact,
 ): capture is Extract<RouteCaptureFact, { kind: "context-capture" | "serializable-value" }> {
@@ -285,6 +398,14 @@ function serializableImportEdit(): TextEdit {
     end: 0,
     start: 0,
     text: 'import { Serializable as __TypedSerializable } from "@typed/app";\n',
+  };
+}
+
+function hmrMemoImportEdit(): TextEdit {
+  return {
+    end: 0,
+    start: 0,
+    text: 'import { getOrCreateHmrMemoEffect as __typedGetOrCreateHmrMemoEffect } from "@typed/app/runtime";\n',
   };
 }
 

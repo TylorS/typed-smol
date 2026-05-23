@@ -92,6 +92,7 @@ describe("Vite HMR fixture", () => {
     expect(source).toContain("__typedHot.dispose");
     expect(source).toContain("getOrCreateHmrState");
     expect(source).toContain("pruneHmrState");
+    expect(source).toContain("typedHmrMemoMapKey");
   });
 });
 

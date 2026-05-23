@@ -7,6 +7,7 @@ import type { ViteHmrServicePlan } from "../hmr/viteHmr.js";
 import type {
   RouteCaptureFact,
   RouteClosureFact,
+  RouteClosureParameterFact,
   RouteModulePlan,
 } from "../route/RouteModulePlan.js";
 import type { TemplateOutputTarget } from "../template/fingerprints.js";
@@ -49,6 +50,7 @@ export interface RouteClosureContinuation {
   readonly symbolId: string;
   readonly closureName: string;
   readonly captures: readonly RouteCaptureFact[];
+  readonly parameters: readonly RouteClosureParameterFact[];
   readonly serviceIds: readonly string[];
   readonly templateHashes: readonly string[];
   readonly dependencyFingerprints: readonly string[];
@@ -130,7 +132,7 @@ export function planRouteCpsCompilation(
   return {
     moduleId: route.moduleId,
     continuations: route.closures
-      .filter((closure) => closure.captures.length > 0)
+      .filter((closure) => closure.captures.length > 0 || closure.parameters.length > 0)
       .map((closure) => routeClosureContinuation(route.moduleId, closure, {
         dependencyFingerprints,
         templateHashes,
@@ -147,14 +149,16 @@ function routeClosureContinuation(
 ): RouteClosureContinuation {
   const symbolId = `${moduleId}#closure:${closure.name}`;
   const captures = stableCaptures(closure.captures);
+  const parameters = stableParameters(closure.parameters);
   return {
     captures,
     closureName: closure.name,
-    compatibilityFingerprint: routeClosureCompatibility(symbolId, captures, options),
+    compatibilityFingerprint: routeClosureCompatibility(symbolId, captures, parameters, options),
     dependencyFingerprints: options.dependencyFingerprints,
     id: symbolId,
     kind: "route-closure",
     moduleId,
+    parameters,
     serviceIds: serviceIds(captures),
     symbolId,
     templateHashes: options.templateHashes,
@@ -165,11 +169,13 @@ function routeClosureContinuation(
 function routeClosureCompatibility(
   symbolId: string,
   captures: readonly RouteCaptureFact[],
+  parameters: readonly RouteClosureParameterFact[],
   options: Required<RouteCpsCompilationOptions>,
 ): string {
   return JSON.stringify({
     captures: captures.map(captureFingerprint),
     dependencyFingerprints: options.dependencyFingerprints,
+    parameters: parameters.map(parameterFingerprint),
     symbolId,
     version: options.version,
   });
@@ -189,6 +195,16 @@ function serviceIds(captures: readonly RouteCaptureFact[]): readonly string[] {
       ),
     ),
   ].sort();
+}
+
+function stableParameters(
+  parameters: readonly RouteClosureParameterFact[],
+): readonly RouteClosureParameterFact[] {
+  return [...parameters].sort((left, right) => left.index - right.index);
+}
+
+function parameterFingerprint(parameter: RouteClosureParameterFact): string {
+  return `${parameter.index}:${parameter.name}:${parameter.serviceId}`;
 }
 
 function captureFingerprint(capture: RouteCaptureFact): string {

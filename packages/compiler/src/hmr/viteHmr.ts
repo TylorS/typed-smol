@@ -54,7 +54,15 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
   if (!plan.eligible) return "";
 
   return [
-    'import { getOrCreateHmrState, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime";',
+    [
+      "import {",
+      " getOrCreateHmrState,",
+      " pruneHmrState,",
+      " typedHmrMemoMapKey,",
+      " typedHmrRegistryKey,",
+      " type HmrRegistryEntry",
+      ' } from "@typed/app/runtime";',
+    ].join(""),
     "type __TypedHot = {",
     "  readonly data: Record<string, unknown>;",
     "  readonly accept: () => void;",
@@ -74,6 +82,7 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
     "  __typedHot.accept();",
     "  __typedHot.dispose((data) => {",
     "    data[typedHmrRegistryKey] = (globalThis as Record<string, unknown>)[typedHmrRegistryKey];",
+    "    data[typedHmrMemoMapKey] = (globalThis as Record<string, unknown>)[typedHmrMemoMapKey];",
     "    pruneHmrState((entry) => __typedHmrModules.has(entry.moduleId) && !__typedHasDescriptor(entry));",
     "  });",
     "}",
@@ -83,9 +92,7 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
 function dependencyFingerprintSet(
   dependencies: DependencyHmrResult | undefined,
 ): readonly string[] {
-  return [
-    ...(dependencies?.participants ?? []).map((participant) => participant.fingerprint),
-  ].sort();
+  return (dependencies?.participants ?? []).map((participant) => participant.fingerprint).sort();
 }
 
 function routeContinuationFingerprints(

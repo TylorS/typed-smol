@@ -24,6 +24,24 @@ describe("typedRouteVitePlugin", () => {
     expect(result?.code).toContain("__typedRouteContinuationSerializables");
   });
 
+  it("preserves generated route service metadata in hot data", async () => {
+    const plugin = typedRouteVitePlugin();
+    const result = await transform(
+      plugin,
+      `
+        export const route = Effect.gen(function* route() {
+          const count = yield* RefSubject.make(0);
+          const increment = () => count.onSuccess(1);
+          return html\`<button>\${increment}</button>\`;
+        });
+      `,
+      "/src/routes/counter.ts",
+    );
+
+    expect(result?.code).toContain("__typedRouteGeneratedServices");
+    expect(result?.code).toContain("data.__typedRouteGeneratedServices");
+  });
+
   it("invalidates dev HMR when route diagnostics fail closed", async () => {
     const plugin = typedRouteVitePlugin({ diagnostics: "warn" });
     const sent: unknown[] = [];

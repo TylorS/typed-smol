@@ -82,4 +82,45 @@ describe("transformRouteModule", () => {
     );
     expect(result.sourceText).toContain("export const __typedRouteContinuationSerializables =");
   });
+
+  it("emits generated service metadata for inline RefSubject.make state", () => {
+    const result = transformRouteModule({
+      moduleId: "/src/routes/counter.ts",
+      sourceText: `
+        export const route = Effect.gen(function* route() {
+          const count = yield* RefSubject.make(0);
+          const increment = () => count.onSuccess(1);
+          return html\`<button>\${increment}</button>\`;
+        });
+      `,
+    });
+
+    expect(result.transformed).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.sourceText).toContain("export const __typedRouteGeneratedServices =");
+    expect(result.sourceText).toContain('"serviceId": "/src/routes/counter.ts#count"');
+    expect(result.sourceText).toContain('"initializerSource": "0"');
+    expect(result.sourceText).toContain(
+      'import { getOrCreateHmrMemoEffect as __typedGetOrCreateHmrMemoEffect } from "@typed/app/runtime";',
+    );
+    expect(result.sourceText).toContain(
+      '__typedGetOrCreateHmrMemoEffect("/src/routes/counter.ts#count", () => RefSubject.make(0)',
+    );
+  });
+
+  it("emits generated context service metadata for closure parameters", () => {
+    const result = transformRouteModule({
+      moduleId: "/src/routes/search.ts",
+      sourceText: `
+        const prefix = "/search";
+        const href = (query, page) => prefix + "?q=" + query + "&page=" + page;
+      `,
+    });
+
+    expect(result.transformed).toBe(true);
+    expect(result.sourceText).toContain("export const __typedRouteParameterServices =");
+    expect(result.sourceText).toContain('"serviceId": "/src/routes/search.ts#closure:href:params"');
+    expect(result.sourceText).toContain('"name": "query"');
+    expect(result.sourceText).toContain('"name": "page"');
+  });
 });

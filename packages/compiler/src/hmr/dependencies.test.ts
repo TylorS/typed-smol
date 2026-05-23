@@ -72,7 +72,7 @@ describe("analyzeDependencyHmr", () => {
     expect(result.participants[0]?.reason).toBe("route-companion");
   });
 
-  it("rejects anonymous dependency state", () => {
+  it("promotes inline RefSubject dependency state to generated service participants", () => {
     const result = analyzeDependencyHmr({
       routeModuleId: "/src/routes/counter.ts",
       dependencies: [
@@ -84,13 +84,15 @@ describe("analyzeDependencyHmr", () => {
       ],
     });
 
-    expect(result.participants).toEqual([]);
-    expect(result.rejected).toEqual([
+    expect(result.participants).toEqual([
       {
+        fingerprint: "/src/routes/counter/anonymous.ts:/src/routes/counter/anonymous.ts#count",
         moduleId: "/src/routes/counter/anonymous.ts",
-        reason: "anonymous-refsubject-state",
+        reason: "imported",
+        serviceIds: ["/src/routes/counter/anonymous.ts#count"],
       },
     ]);
+    expect(result.rejected).toEqual([]);
   });
 
   it("honors explicit opt-out", () => {

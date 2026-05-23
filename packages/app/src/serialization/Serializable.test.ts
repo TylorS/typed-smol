@@ -82,4 +82,16 @@ describe("Serializable", () => {
       id: "route#renderTitle",
     });
   });
+
+  it("describes DOM data attribute serialization with DataAttr-compatible shape", () => {
+    const data = { fields: { open: Schema.Boolean } };
+    const descriptor = Serializable.dataAttributes(data, { id: "DisclosureData" });
+
+    expect(descriptor).toEqual({
+      _tag: "DataAttributes",
+      attributePrefix: "data-",
+      data,
+      id: "DisclosureData",
+    });
+  });
 });

@@ -5,9 +5,10 @@ export namespace Serializable {
 
   export type Descriptor<S extends AnySchema = AnySchema> =
     | SchemaDescriptor<S>
+    | DataAttributesDescriptor
     | GeneratedDescriptor<Schema.Schema.Type<S>, S["Encoded"]>;
 
-  export type AnyDescriptor = SchemaDescriptor | GeneratedDescriptor;
+  export type AnyDescriptor = SchemaDescriptor | DataAttributesDescriptor | GeneratedDescriptor;
 
   export type SchemaDescriptor<S extends AnySchema = AnySchema> = {
     readonly _tag: "Schema";
@@ -34,6 +35,17 @@ export namespace Serializable {
   export type GeneratedSchemaSource = {
     readonly fileName: string;
     readonly exportName?: string;
+  };
+
+  export type DataAttrLike<Fields = unknown> = {
+    readonly fields: Fields;
+  };
+
+  export type DataAttributesDescriptor<D extends DataAttrLike = DataAttrLike> = {
+    readonly _tag: "DataAttributes";
+    readonly id?: string;
+    readonly data: D;
+    readonly attributePrefix: "data-";
   };
 
   export type CaptureDescriptor<D extends AnyDescriptor = AnyDescriptor> = {
@@ -66,6 +78,14 @@ export namespace Serializable {
     id: string,
     plan: GeneratedSchemaPlan,
   ): GeneratedDescriptor<A, I> => ({ _tag: "Generated", id, plan });
+
+  export const dataAttributes = <D extends DataAttrLike>(
+    data: D,
+    options: SchemaDescriptorOptions = {},
+  ): DataAttributesDescriptor<D> =>
+    options.id === undefined
+      ? { _tag: "DataAttributes", attributePrefix: "data-", data }
+      : { _tag: "DataAttributes", attributePrefix: "data-", data, id: options.id };
 
   export const capture = <D extends AnyDescriptor>(
     name: string,

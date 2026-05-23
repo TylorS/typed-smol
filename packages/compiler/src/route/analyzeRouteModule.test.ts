@@ -40,12 +40,13 @@ describe("analyzeRouteModule", () => {
     expect(result.diagnostics).toEqual([]);
   });
 
-  it("diagnoses inline RefSubject state and records the migration candidate", () => {
+  it("classifies inline RefSubject state as a generated service capture", () => {
     const result = analyzeRouteModule({
       moduleId: "/src/routes/counter.ts",
       sourceText: `
         export const route = Effect.gen(function* route() {
           const count = yield* RefSubject.make(0);
+          const increment = () => count.onSuccess(1);
           return html\`<p>\${count}</p>\`;
         });
       `,
@@ -59,14 +60,21 @@ describe("analyzeRouteModule", () => {
         serviceId: "/src/routes/counter.ts#count",
       },
     ]);
-    expect(result.diagnostics).toEqual([
-      {
-        code: "anonymous-refsubject-state",
-        message:
-          "Inline RefSubject.make in /src/routes/counter.ts should migrate count to RefSubject.Service for resumable HMR",
-        moduleId: "/src/routes/counter.ts",
-      },
-    ]);
+    expect(result.closures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          captures: [
+            {
+              kind: "refsubject-service",
+              name: "count",
+              serviceId: "/src/routes/counter.ts#count",
+            },
+          ],
+          name: "increment",
+        }),
+      ]),
+    );
+    expect(result.diagnostics).toEqual([]);
   });
 
   it("records Effect service captures used by closures", () => {
@@ -200,6 +208,34 @@ describe("analyzeRouteModule", () => {
           "Cannot rewrite closure increment in /src/routes/mutable.ts: count is mutable-local",
         moduleId: "/src/routes/mutable.ts",
       },
+    ]);
+  });
+
+  it("records closure parameters as generated context service inputs", () => {
+    const result = analyzeRouteModule({
+      moduleId: "/src/routes/search.ts",
+      sourceText: `
+        const prefix = "/search";
+        const href = (query, page) => prefix + "?q=" + query + "&page=" + page;
+      `,
+    });
+
+    expect(result.closures).toEqual([
+      expect.objectContaining({
+        name: "href",
+        parameters: [
+          {
+            index: 0,
+            name: "query",
+            serviceId: "/src/routes/search.ts#closure:href:params",
+          },
+          {
+            index: 1,
+            name: "page",
+            serviceId: "/src/routes/search.ts#closure:href:params",
+          },
+        ],
+      }),
     ]);
   });
 });

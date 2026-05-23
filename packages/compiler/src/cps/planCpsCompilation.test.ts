@@ -154,6 +154,7 @@ describe("planCpsCompilation", () => {
           compatibilityFingerprint: JSON.stringify({
             captures: ["refsubject-service:Count:@app/Count"],
             dependencyFingerprints: [],
+            parameters: [],
             symbolId: "/src/routes/counter.ts#closure:increment",
             version: "test",
           }),
@@ -161,6 +162,7 @@ describe("planCpsCompilation", () => {
           id: "/src/routes/counter.ts#closure:increment",
           kind: "route-closure",
           moduleId: "/src/routes/counter.ts",
+          parameters: [],
           serviceIds: ["@app/Count"],
           symbolId: "/src/routes/counter.ts#closure:increment",
           templateHashes: [],
