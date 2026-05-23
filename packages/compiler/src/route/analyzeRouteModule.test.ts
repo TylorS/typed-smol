@@ -112,4 +112,94 @@ describe("analyzeRouteModule", () => {
       ]),
     );
   });
+
+  it("classifies template, serializable, and context captures used by route closures", () => {
+    const result = analyzeRouteModule({
+      moduleId: "/src/routes/dashboard.ts",
+      sourceText: `
+        import { html } from "@typed/template";
+
+        const title = "Dashboard";
+        const options = { pageSize: 20 };
+        const row = html\`<li>row</li>\`;
+
+        export const route = () => {
+          const renderTitle = () => title;
+          const renderOptions = () => options.pageSize;
+          const renderRow = () => row;
+          return html\`<section>\${renderTitle}\${renderOptions}\${renderRow}</section>\`;
+        };
+      `,
+    });
+
+    expect(result.closures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          captures: [
+            {
+              initializerSource: '"Dashboard"',
+              kind: "serializable-value",
+              name: "title",
+            },
+          ],
+          name: "renderTitle",
+        }),
+        expect.objectContaining({
+          captures: [
+            {
+              initializerSource: "{ pageSize: 20 }",
+              kind: "context-capture",
+              name: "options",
+            },
+          ],
+          name: "renderOptions",
+        }),
+        expect.objectContaining({
+          captures: [
+            {
+              kind: "template-value",
+              name: "row",
+            },
+          ],
+          name: "renderRow",
+        }),
+      ]),
+    );
+  });
+
+  it("diagnoses mutable closure captures as unsupported", () => {
+    const result = analyzeRouteModule({
+      moduleId: "/src/routes/mutable.ts",
+      sourceText: `
+        let count = 0;
+        export const route = () => {
+          const increment = () => count++;
+          return html\`<button>\${increment}</button>\`;
+        };
+      `,
+    });
+
+    expect(result.closures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          captures: [
+            {
+              kind: "unsupported",
+              name: "count",
+              reason: "mutable-local",
+            },
+          ],
+          name: "increment",
+        }),
+      ]),
+    );
+    expect(result.diagnostics).toEqual([
+      {
+        code: "unsupported-closure-capture",
+        message:
+          "Cannot rewrite closure increment in /src/routes/mutable.ts: count is mutable-local",
+        moduleId: "/src/routes/mutable.ts",
+      },
+    ]);
+  });
 });

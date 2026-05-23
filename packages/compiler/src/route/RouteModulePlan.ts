@@ -56,6 +56,25 @@ export type RouteCaptureFact =
       readonly kind: "refsubject-service";
       readonly name: string;
       readonly serviceId: string;
+    }
+  | {
+      readonly kind: "context-capture";
+      readonly name: string;
+      readonly initializerSource: string;
+    }
+  | {
+      readonly kind: "serializable-value";
+      readonly name: string;
+      readonly initializerSource: string;
+    }
+  | {
+      readonly kind: "template-value";
+      readonly name: string;
+    }
+  | {
+      readonly kind: "unsupported";
+      readonly name: string;
+      readonly reason: "mutable-local" | "anonymous-value";
     };
 
 export interface RouteDiagnostic {

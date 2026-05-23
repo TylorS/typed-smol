@@ -48,6 +48,7 @@ interface RouteAnalysisContext {
   readonly closures: RouteClosureFact[];
   readonly diagnostics: RouteDiagnostic[];
   readonly serviceAliases: Map<string, RouteCaptureFact>;
+  readonly captureAliases: Map<string, RouteCaptureFact>;
 }
 
 function createContext(moduleId: string, sourceFile: ts.SourceFile): RouteAnalysisContext {
@@ -61,6 +62,7 @@ function createContext(moduleId: string, sourceFile: ts.SourceFile): RouteAnalys
     closures: [],
     diagnostics: [],
     serviceAliases: new Map(),
+    captureAliases: new Map(),
   };
 }
 
@@ -68,6 +70,7 @@ function collectServices(context: RouteAnalysisContext, node: ts.Node): void {
   if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
     collectRefSubjectService(context, node.name.text, node.initializer);
     collectServiceAlias(context, node.name.text, node.initializer);
+    collectCaptureAlias(context, node);
   } else if (ts.isClassDeclaration(node) && node.name) {
     collectEffectService(context, node.name.text, node.heritageClauses);
   }
@@ -87,6 +90,7 @@ function collectRefSubjectService(
     serviceId,
   });
   context.serviceAliases.set(localName, { kind: "refsubject-service", name: localName, serviceId });
+  context.captureAliases.set(localName, { kind: "refsubject-service", name: localName, serviceId });
 }
 
 function collectEffectService(
@@ -110,7 +114,33 @@ function collectServiceAlias(
   const service = context.effectServices.find((item) => item.localName === yielded.text);
   if (service) {
     context.serviceAliases.set(localName, { kind: "effect-service", name: localName, serviceId: service.serviceId });
+    context.captureAliases.set(localName, { kind: "effect-service", name: localName, serviceId: service.serviceId });
   }
+}
+
+function collectCaptureAlias(context: RouteAnalysisContext, node: ts.VariableDeclaration): void {
+  if (!ts.isIdentifier(node.name) || context.captureAliases.has(node.name.text)) return;
+  const initializer = node.initializer;
+  if (!initializer || isFunctionLike(initializer)) return;
+  const localName = node.name.text;
+  if (!isConstDeclaration(node)) {
+    context.captureAliases.set(localName, {
+      kind: "unsupported",
+      name: localName,
+      reason: "mutable-local",
+    });
+    return;
+  }
+  if (ts.isTaggedTemplateExpression(initializer) && tagText(initializer.tag) === "html") {
+    context.captureAliases.set(localName, { kind: "template-value", name: localName });
+    return;
+  }
+  const initializerSource = initializer.getText(context.sourceFile);
+  context.captureAliases.set(localName, {
+    initializerSource,
+    kind: isSerializableValue(initializer) ? "serializable-value" : "context-capture",
+    name: localName,
+  });
 }
 
 function collectInlineRefSubjects(context: RouteAnalysisContext, node: ts.Node): void {
@@ -154,7 +184,7 @@ function pushClosure(
   closure: ts.FunctionLikeDeclaration,
 ): void {
   context.closures.push({
-    captures: closureCaptures(context, closure),
+    captures: closureCaptures(context, closure, name),
     moduleId: context.moduleId,
     name,
   });
@@ -163,15 +193,30 @@ function pushClosure(
 function closureCaptures(
   context: RouteAnalysisContext,
   closure: ts.FunctionLikeDeclaration,
+  closureName = "anonymous",
 ): readonly RouteCaptureFact[] {
   const declared = declaredNames(closure);
   const captures = new Map<string, RouteCaptureFact>();
-  visit(closure.body, (node) => {
+  visitClosureBody(closure.body, (node) => {
     if (!ts.isIdentifier(node) || declared.has(node.text)) return;
-    const capture = context.serviceAliases.get(node.text);
-    if (capture) captures.set(node.text, capture);
+    const capture = context.captureAliases.get(node.text);
+    if (!capture || captures.has(node.text)) return;
+    captures.set(node.text, capture);
+    if (capture.kind === "unsupported") pushUnsupportedCaptureDiagnostic(context, closureName, capture);
   });
   return [...captures.values()];
+}
+
+function pushUnsupportedCaptureDiagnostic(
+  context: RouteAnalysisContext,
+  closureName: string,
+  capture: Extract<RouteCaptureFact, { kind: "unsupported" }>,
+): void {
+  context.diagnostics.push({
+    code: "unsupported-closure-capture",
+    message: `Cannot rewrite closure ${closureName} in ${context.moduleId}: ${capture.name} is ${capture.reason}`,
+    moduleId: context.moduleId,
+  });
 }
 
 function declaredNames(closure: ts.FunctionLikeDeclaration): Set<string> {
@@ -191,6 +236,24 @@ function collectBindingNames(names: Set<string>, binding: ts.BindingName): void 
       if (!ts.isOmittedExpression(element)) collectBindingNames(names, element.name);
     }
   }
+}
+
+function isConstDeclaration(node: ts.VariableDeclaration): boolean {
+  return ts.isVariableDeclarationList(node.parent) && (node.parent.flags & ts.NodeFlags.Const) !== 0;
+}
+
+function isSerializableValue(expression: ts.Expression): boolean {
+  if (
+    ts.isStringLiteral(expression) ||
+    ts.isNoSubstitutionTemplateLiteral(expression) ||
+    ts.isNumericLiteral(expression)
+  ) {
+    return true;
+  }
+  if (expression.kind === ts.SyntaxKind.TrueKeyword || expression.kind === ts.SyntaxKind.FalseKeyword) {
+    return true;
+  }
+  return expression.kind === ts.SyntaxKind.NullKeyword;
 }
 
 function refSubjectServiceId(expression: ts.Expression | undefined): string | undefined {
@@ -286,4 +349,13 @@ function visit(node: ts.Node | undefined, f: (node: ts.Node) => void): void {
   if (!node) return;
   f(node);
   ts.forEachChild(node, (child) => visit(child, f));
+}
+
+function visitClosureBody(node: ts.Node | undefined, f: (node: ts.Node) => void): void {
+  if (!node) return;
+  f(node);
+  ts.forEachChild(node, (child) => {
+    if (isFunctionLike(child)) return;
+    visitClosureBody(child, f);
+  });
 }

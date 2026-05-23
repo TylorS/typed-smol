@@ -180,9 +180,24 @@ function stableCaptures(captures: readonly RouteCaptureFact[]): readonly RouteCa
 }
 
 function serviceIds(captures: readonly RouteCaptureFact[]): readonly string[] {
-  return [...new Set(captures.map((capture) => capture.serviceId))].sort();
+  return [
+    ...new Set(
+      captures.flatMap((capture) =>
+        capture.kind === "effect-service" || capture.kind === "refsubject-service"
+          ? [capture.serviceId]
+          : [],
+      ),
+    ),
+  ].sort();
 }
 
 function captureFingerprint(capture: RouteCaptureFact): string {
-  return `${capture.kind}:${capture.name}:${capture.serviceId}`;
+  if (capture.kind === "effect-service" || capture.kind === "refsubject-service") {
+    return `${capture.kind}:${capture.name}:${capture.serviceId}`;
+  }
+  if (capture.kind === "context-capture" || capture.kind === "serializable-value") {
+    return `${capture.kind}:${capture.name}:${capture.initializerSource}`;
+  }
+  if (capture.kind === "unsupported") return `${capture.kind}:${capture.name}:${capture.reason}`;
+  return `${capture.kind}:${capture.name}`;
 }
