@@ -300,6 +300,30 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar subagent review for optimized-vs-stateful separation, rejection reason mapping, protocol dependency boundaries, and staged-index hygiene before commit.
 
+### T6 - Compiler Source Analyzer Planning
+
+- requirement_links: FR-32, FR-33, FR-34, FR-35, FR-36, FR-37, FR-41, FR-42, NFR-8, NFR-14, NFR-15, NFR-17, AC-10, AC-11, AC-13.
+- write_set:
+  - `packages/compiler/src/devtools/sourceAnalyzer.ts`
+  - `packages/compiler/src/devtools/sourceAnalyzer.test.ts`
+  - `packages/compiler/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused source Analyzer planner tests importing the planned devtools module before implementation exists.
+  - Run `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts` and capture the missing-module failure.
+- green_step:
+  - Resolve protocol `SourceAnalyzerRequest.resource` against compiler artifacts by resource URL, module id, or source-map/original-resource aliases.
+  - Return protocol `SourceAnalyzerResponse` source facts for compiler-derived component/template, RefSubject, and Fx/closure definitions.
+  - Return explicit `Unavailable` when no compiler/dev-server artifact is available; do not add browser-only AST approximation.
+- verification:
+  - `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts`
+  - `pnpm --filter @typed/compiler build`
+  - `rg -n "effect/unstable/rpc|chrome\\." packages/compiler/src/devtools packages/compiler/src/index.ts` must return no matches.
+  - `git diff --check -- packages/compiler .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for protocol-shape reuse, artifact/resource matching, unavailable-state behavior, and staged-index hygiene before commit.
+
 ## Verification Matrix
 
 | scenario | required commands |

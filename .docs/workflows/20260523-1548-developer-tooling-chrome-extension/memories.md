@@ -44,3 +44,11 @@
 - Dependency and route HMR rejection reasons need protocol mapping at the compiler boundary, not inside Chrome/runtime consumers.
 - Sort HMR service ids by module id and service id before emitting facts so repeated plans are deterministic across input ordering.
 - A route component with no inferred stateful services and no explicit compiler rejection should emit `Unknown`, not `Rejected`.
+
+### T6
+
+- Source Analyzer planning should accept protocol `SourceAnalyzerRequest` and emit protocol `SourceAnalyzerResponse`; compiler-only artifact matching belongs around that protocol boundary.
+- When no compiler artifact matches the DevTools resource/module/source-map alias, return `Unavailable` rather than running a browser-only approximation.
+- Resource matching should compare resource URL, module id, and source-map/original-resource aliases after normalizing file URLs and path separators.
+- Treat protocol Source Analyzer line/column positions as zero-based DevTools coordinates by default; one-based compiler/editor coordinates must opt in at the planner boundary.
+- Source Analyzer definition locations should come from TypeScript declaration name spans, not first textual matches, so comments/imports/template references cannot steal the source location.

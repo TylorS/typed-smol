@@ -154,7 +154,7 @@
   - green: `git diff --check -- packages/compiler .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found staged-index hygiene risk plus non-blocking gaps around canonical service ordering, dependency rejection coverage, and unknown route status; implementation/test gaps were resolved before commit, and `index.ts` will be staged surgically.
 - commit:
-  - pending
+  - `f2055c3 feat(devtools): add compiler hmr facts`
 - deviations_or_replans:
   - none
 - context_updates:
@@ -164,6 +164,31 @@
   - HMR DevTools facts should sort service ids by compiler module id and service id for deterministic payloads.
   - Route components with no inferred HMR services and no explicit rejection remain `Unknown`, not `Rejected`.
 
+### T6 - Compiler Source Analyzer Planning
+
+- task_id: T6
+- requirement_ids: FR-32, FR-33, FR-34, FR-35, FR-36, FR-37, FR-41, FR-42, NFR-8, NFR-14, NFR-15, NFR-17, AC-10, AC-11, AC-13
+- ts_scenarios: TS-10, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts` failed with missing `./sourceAnalyzer.js`.
+  - green: `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts` passed with 5 tests.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm exec oxlint packages/compiler/src/devtools/sourceAnalyzer.ts packages/compiler/src/devtools/sourceAnalyzer.test.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/compiler/src/devtools/sourceAnalyzer.ts packages/compiler/src/devtools/sourceAnalyzer.test.ts` passed.
+  - green: compiler devtools boundary grep for `effect/unstable/rpc` and `chrome.` returned no matches.
+  - green: `git diff --check -- packages/compiler .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found position-base ambiguity, first-text-match source spans, duplicate route analysis, and staged-index hygiene risk; implementation/test gaps were fixed, and final scoped review found no blockers.
+- commit:
+  - pending
+- deviations_or_replans:
+  - none
+- context_updates:
+  - Added active T6 detail to `plan.md`.
+  - Added `planSourceAnalyzerResponse` for protocol request/response planning over compiler artifacts.
+- memory_updates:
+  - Source Analyzer request/range positions default to zero-based DevTools coordinates; one-based compiler/editor positions require an explicit planner option.
+  - RefSubject and Fx source Analyzer facts should use TypeScript declaration name spans, not text search over source content.
+
 ## Deferred Work
 
-- T6 through T12 remain blocked on prior-task completion.
+- T7 through T12 remain blocked on prior-task completion.
