@@ -39,6 +39,14 @@ Status: approved on 2026-05-23.
   - OpenTelemetry overview: `https://opentelemetry.io/docs/reference/specification/overview/`
   - `jagreehal/effect-analyzer`: `https://github.com/jagreehal/effect-analyzer`
   - `effect-analyzer` docs: `https://jagreehal.github.io/effect-analyzer/`
+  - Effect `effect/unstable/rpc` local skill references:
+    - `.cursor/skills/effect-module-unstable-rpc/SKILL.md`
+    - `.cursor/skills/effect-facet-unstable-rpc-rpc/references/api-reference.md`
+    - `.cursor/skills/effect-facet-unstable-rpc-rpcgroup/references/api-reference.md`
+    - `.cursor/skills/effect-facet-unstable-rpc-rpcclient/references/api-reference.md`
+    - `.cursor/skills/effect-facet-unstable-rpc-rpcserver/references/api-reference.md`
+    - `.cursor/skills/effect-facet-unstable-rpc-rpcserialization/references/api-reference.md`
+  - Effect RPC docs via Context7: `/effect-ts/effect`, `packages/rpc/README.md`
 
 ## Functional Requirements
 
@@ -84,6 +92,9 @@ Status: approved on 2026-05-23.
 - FR-40: Storybook fixtures and protocol test fixtures shall be able to consume `@typed/devtools-protocol` without depending on Chrome extension APIs.
 - FR-41: Public DevTools protocol, runtime, compiler, and extension APIs shall preserve TypeScript type safety and inference for Typed ids, protocol payloads, Layers, analyzer requests/results, and event handlers.
 - FR-42: Protocol codecs and runtime bridges shall validate untrusted or cross-boundary data before exposing it as typed values.
+- FR-43: DevTools communication protocols shall be defined with `effect/unstable/rpc` RPC groups and schemas rather than ad-hoc message unions.
+- FR-44: `@typed/devtools-protocol` shall own the RPC group definitions for extension-panel, inspected-page runtime bridge, dev-server/compiler Analyzer bridge, and fixture/test communication.
+- FR-45: Chrome-specific transports, `window.postMessage`, extension messaging, HTTP, WebSocket, and test transports shall be adapters for the shared RPC groups, not separate protocol definitions.
 
 ## Non-Functional Requirements
 
@@ -104,6 +115,7 @@ Status: approved on 2026-05-23.
 - NFR-15: Code quality shall stay high throughout: small focused modules, small atomic functions, no broad `any`/`unknown` leakage in public contracts, deterministic tests, no duplicated protocol shapes, and no hidden framework behavior that bypasses typed surfaces.
 - NFR-16: Type inference shall be an explicit design goal. Users should get inferred protocol/event/request/Layer types from the public APIs without manually threading generic parameters in common usage.
 - NFR-17: Cross-package contracts shall be source-of-truth typed once in `@typed/devtools-protocol` and imported by compiler/runtime/Chrome/Storybook consumers rather than re-declared locally.
+- NFR-18: Because `effect/unstable/rpc` is unstable, direct usage shall be isolated behind `@typed/devtools-protocol` and thin transport adapters; compiler/runtime/application logic shall depend on Typed protocol exports rather than unstable RPC internals.
 
 ## Acceptance Criteria
 
@@ -120,15 +132,16 @@ Status: approved on 2026-05-23.
 - AC-11: (maps to FR-37, FR-40) Storybook or protocol fixtures prove static Analyzer-inspired facts and runtime protocol events can be rendered outside Chrome without Chrome APIs.
 - AC-12: (maps to NFR-10, NFR-11) The implementation plan links each task to requirement IDs and includes semantic-preservation tests for instrumentation.
 - AC-13: (maps to FR-41, FR-42, NFR-15, NFR-16, NFR-17) Type tests or equivalent compile-time fixtures prove protocol payloads, analyzer requests/results, runtime Layers, and extension bridge messages preserve inference and reject invalid shapes without broad casts.
+- AC-14: (maps to FR-43, FR-44, FR-45, NFR-18) RPC fixtures prove DevTools communication is defined through shared `effect/unstable/rpc` groups and can run through at least one in-process/test transport and one browser/dev-server transport adapter without duplicating protocol shapes.
 
 ## Prioritization
 
 - must_have:
   - FR-1 through FR-24
   - FR-25 through FR-37
-  - FR-38 through FR-42
-  - NFR-1 through NFR-17
-  - AC-1 through AC-13
+  - FR-38 through FR-45
+  - NFR-1 through NFR-18
+  - AC-1 through AC-14
 - should_have:
   - NFR-12
   - richer Analyzer diagrams after source-file bridge behavior is proven
@@ -164,3 +177,7 @@ Decision: Source-file Analyzer capabilities are on-demand in the Sources panel a
 ### DD-6: Trace Model
 
 Decision: Preserve OpenTelemetry trace/span identity and attach Typed correlation metadata. Do not define a proprietary trace model.
+
+### DD-7: Communication Protocol
+
+Decision: Define DevTools communication with `effect/unstable/rpc` RPC groups and schemas in `@typed/devtools-protocol`. Chrome, inspected-page, dev-server, and fixture transports adapt to those RPC groups instead of defining separate message unions.
