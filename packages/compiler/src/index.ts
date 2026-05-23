@@ -3,6 +3,7 @@ export * from "./capabilities/compileCapabilities.js";
 export * from "./cps/planCpsCompilation.js";
 export * from "./hmr/analyzeComponentHmr.js";
 export * from "./hmr/closureContext.js";
+export * from "./hmr/dependencyGraph.js";
 export * from "./hmr/dependencies.js";
 export * from "./hmr/options.js";
 export * from "./hmr/viteHmr.js";

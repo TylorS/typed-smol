@@ -249,7 +249,7 @@ feat(compiler): lower route closures into continuations
 - Modify: `packages/compiler/src/hmr/viteHmr.ts`
 - Modify: `packages/compiler/src/hmr/viteHmrFixture.test.ts`
 
-- [ ] **Step 1: Write failing recursive dependency tests**
+- [x] **Step 1: Write failing recursive dependency tests**
 
 Add tests proving:
 
@@ -263,7 +263,7 @@ Run: `pnpm --filter @typed/compiler test -- dependencyGraph dependencies`
 
 Expected: FAIL because recursive dependency graph traversal does not exist.
 
-- [ ] **Step 2: Implement recursive dependency graph traversal**
+- [x] **Step 2: Implement recursive dependency graph traversal**
 
 Implement or extend dependency analysis with:
 
@@ -273,7 +273,7 @@ Implement or extend dependency analysis with:
 - opt-out boundary recording;
 - recursive participant/rejection aggregation.
 
-- [ ] **Step 3: Write failing compatibility tests**
+- [x] **Step 3: Write failing compatibility tests**
 
 Add tests proving compatibility fingerprints include:
 
@@ -288,15 +288,15 @@ Run: `pnpm --filter @typed/compiler test -- compileCapabilities viteHmr`
 
 Expected: FAIL because generated symbol/context fingerprints are not included.
 
-- [ ] **Step 4: Update capability planning**
+- [x] **Step 4: Update capability planning**
 
 Make capability planning include route resumability descriptors alongside template and HMR capabilities, using recursive dependency descriptors.
 
-- [ ] **Step 5: Update Vite HMR runtime emission**
+- [x] **Step 5: Update Vite HMR runtime emission**
 
 Emit guarded HMR code that calls canonical runtime helpers with continuation descriptors. Keep `import.meta.hot.accept(` syntactically visible for Vite static analysis.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run:
 
@@ -306,7 +306,7 @@ pnpm --filter @typed/compiler test -- dependencyGraph dependencies compileCapabi
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Commit message:
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { planRouteCpsCompilation } from "../cps/planCpsCompilation.js";
 import { analyzeComponentHmr } from "./analyzeComponentHmr.js";
 import { analyzeDependencyHmr } from "./dependencies.js";
+import { analyzeRouteModule } from "../route/analyzeRouteModule.js";
 import { emitViteHmrRuntime, planViteHmrBoundary, type ViteHmrServicePlan } from "./viteHmr.js";
 
 describe("Vite HMR fixture", () => {
@@ -39,6 +41,45 @@ describe("Vite HMR fixture", () => {
 
     expect(reloaded).not.toBe(state);
     expect(reloaded.count).toBe(2);
+  });
+
+  it("includes route continuation fingerprints in service compatibility", () => {
+    const routeFacts = analyzeRouteModule({
+      moduleId: "/src/routes/counter.ts",
+      sourceText: `
+        const Count = RefSubject.Service<number>()("@app/Count");
+        export const route = () => {
+          const increment = () => Count.onSuccess(1);
+          return html\`<button onClick=\${increment}>Count</button>\`;
+        };
+      `,
+    });
+    const cps = planRouteCpsCompilation(routeFacts, { version: "test" });
+    const route = analyzeComponentHmr({
+      boundary: "route-component",
+      moduleId: "/src/routes/counter.ts",
+      sourceText: routeFacts.moduleId,
+    });
+    const boundary = planViteHmrBoundary({
+      continuations: cps.continuations,
+      route: {
+        ...route,
+        eligible: true,
+        services: [
+          {
+            kind: "refsubject-service",
+            localName: "Count",
+            serviceId: "@app/Count",
+          },
+        ],
+      },
+      version: "test",
+    });
+
+    expect(boundary.services[0]?.continuationFingerprints).toEqual(
+      cps.continuations.map((continuation) => continuation.compatibilityFingerprint).sort(),
+    );
+    expect(boundary.services[0]?.compatibilityFingerprint).toContain("continuationFingerprints");
   });
 
   it("emits Vite hot accept and dispose hooks backed by the app HMR registry", () => {

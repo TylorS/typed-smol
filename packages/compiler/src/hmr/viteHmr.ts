@@ -1,8 +1,10 @@
+import type { CpsContinuation } from "../cps/planCpsCompilation.js";
 import type { ComponentHmrResult, ComponentHmrServiceDescriptor } from "./analyzeComponentHmr.js";
 import type { DependencyHmrRejected, DependencyHmrResult } from "./dependencies.js";
 
 export interface ViteHmrBoundaryInput {
   readonly route: ComponentHmrResult;
+  readonly continuations?: readonly CpsContinuation[];
   readonly dependencies?: DependencyHmrResult;
   readonly version?: string;
 }
@@ -18,6 +20,7 @@ export interface ViteHmrServicePlan {
   readonly moduleId: string;
   readonly serviceId: string;
   readonly shapeFingerprint: string;
+  readonly continuationFingerprints: readonly string[];
   readonly dependencyFingerprints: readonly string[];
   readonly compatibilityFingerprint: string;
   readonly version: string;
@@ -26,8 +29,13 @@ export interface ViteHmrServicePlan {
 export function planViteHmrBoundary(input: ViteHmrBoundaryInput): ViteHmrBoundaryPlan {
   const version = input.version ?? "1";
   const dependencyFingerprints = dependencyFingerprintSet(input.dependencies);
+  const continuationFingerprints = routeContinuationFingerprints(input.continuations);
   const routeServices = input.route.services.map((service) =>
-    routeService(input.route.moduleId, service, dependencyFingerprints, version),
+    routeService(input.route.moduleId, service, {
+      continuationFingerprints,
+      dependencyFingerprints,
+      version,
+    }),
   );
   const dependencyServices = dependencyServicePlans(input.dependencies, version);
   const services = input.route.eligible
@@ -80,18 +88,31 @@ function dependencyFingerprintSet(
   ].sort();
 }
 
+function routeContinuationFingerprints(
+  continuations: readonly CpsContinuation[] | undefined,
+): readonly string[] {
+  return (continuations ?? [])
+    .filter((continuation) => continuation.kind === "route-closure")
+    .map((continuation) => continuation.compatibilityFingerprint)
+    .sort();
+}
+
 function routeService(
   moduleId: string,
   service: ComponentHmrServiceDescriptor,
-  dependencyFingerprints: readonly string[],
-  version: string,
+  options: {
+    readonly continuationFingerprints: readonly string[];
+    readonly dependencyFingerprints: readonly string[];
+    readonly version: string;
+  },
 ): ViteHmrServicePlan {
   return servicePlan({
-    dependencyFingerprints,
+    continuationFingerprints: options.continuationFingerprints,
+    dependencyFingerprints: options.dependencyFingerprints,
     moduleId,
     serviceId: service.serviceId,
     shapeFingerprint: routeShapeFingerprint(service),
-    version,
+    version: options.version,
   });
 }
 
@@ -102,6 +123,7 @@ function dependencyServicePlans(
   return (dependencies?.participants ?? []).flatMap((participant) =>
     participant.serviceIds.map((serviceId) =>
       servicePlan({
+        continuationFingerprints: [],
         dependencyFingerprints: [],
         moduleId: participant.moduleId,
         serviceId,
@@ -125,6 +147,7 @@ function servicePlan(
   return {
     ...descriptor,
     compatibilityFingerprint: JSON.stringify({
+      continuationFingerprints: [...descriptor.continuationFingerprints].sort(),
       dependencyFingerprints: [...descriptor.dependencyFingerprints].sort(),
       shapeFingerprint: descriptor.shapeFingerprint,
       version: descriptor.version,
