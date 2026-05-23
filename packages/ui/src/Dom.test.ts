@@ -11,13 +11,13 @@ import * as Button from "./Button.js";
 describe("typed/ui/Dom", () => {
   it("maps writable DOM properties to renderable property options", () => {
     expectTypeOf<Dom.ElementProperties<HTMLAnchorElement>>().toMatchTypeOf<{
-      readonly href?: Renderable<string, any, any>;
-      readonly target?: Renderable<string, any, any>;
+      readonly href?: Renderable<string | undefined, any, any>;
+      readonly target?: Renderable<string | undefined, any, any>;
     }>();
 
     expectTypeOf<Dom.ElementProperties<HTMLButtonElement>>().toMatchTypeOf<{
-      readonly disabled?: Renderable<boolean, any, any>;
-      readonly type?: Renderable<string, any, any>;
+      readonly disabled?: Renderable<boolean | undefined, any, any>;
+      readonly type?: Renderable<string | undefined, any, any>;
     }>();
   });
 
@@ -41,12 +41,35 @@ describe("typed/ui/Dom", () => {
 
   it("maps options by tag name", () => {
     expectTypeOf<Dom.OptionsForTag<"a">>().toMatchTypeOf<{
-      readonly href?: Renderable<string, any, any>;
+      readonly href?: Renderable<string | undefined, any, any>;
     }>();
 
     expectTypeOf<Dom.OptionsForTag<"button">>().toMatchTypeOf<{
-      readonly disabled?: Renderable<boolean, any, any>;
+      readonly disabled?: Renderable<boolean | undefined, any, any>;
     }>();
+  });
+
+  it("derives host props from the concrete element or tag name", () => {
+    const buttonProps: Dom.HostPropsForTag<"button"> = {
+      type: "button",
+      disabled: false,
+      "aria-expanded": "false",
+      "data-state": "closed",
+      "?hidden": false,
+      ".data": { open: "false" },
+      ref: () => undefined,
+    };
+    const anchorProps: Dom.HostPropsForTag<"a"> = {
+      href: "/settings",
+      target: "_blank",
+      rel: "noreferrer",
+    };
+
+    expectTypeOf(buttonProps).toExtend<Dom.HostProps<HTMLButtonElement>>();
+    expectTypeOf(anchorProps).toExtend<Dom.HostProps<HTMLAnchorElement>>();
+
+    void buttonProps;
+    void anchorProps;
   });
 
   it("chains event handlers with user-first default-prevented semantics", () =>
@@ -167,5 +190,13 @@ const readonlyProperty: Dom.ElementProperties<HTMLAnchorElement> = { attributes:
 // @ts-expect-error event handler properties are separated from writable property options
 const eventAsProperty: Dom.ElementProperties<HTMLAnchorElement> = { onclick: null };
 
+// @ts-expect-error button host props should not accept anchor-only properties
+const buttonHref: Dom.HostPropsForTag<"button"> = { href: "/nope" };
+
+// @ts-expect-error anchor host props should not accept button-only properties
+const anchorDisabled: Dom.HostPropsForTag<"a"> = { disabled: true };
+
 void readonlyProperty;
 void eventAsProperty;
+void buttonHref;
+void anchorDisabled;

@@ -155,7 +155,7 @@ export function Item<
         yield* selectItem(options.state, yield* id, yield* value);
       }),
     );
-    const props: Record<string, unknown> = {
+    const props: Dom.HostProps<HTMLDivElement> = {
       id,
       "data-value": value,
       role: "radio",

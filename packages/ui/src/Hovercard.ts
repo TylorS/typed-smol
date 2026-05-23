@@ -67,7 +67,10 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
   </span>`;
 }
 
-export interface DisclosureOptions<E = never, R = never> extends AnchorOptions<E, R> {}
+export interface DisclosureOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+  readonly content: Content;
+}
 
 export function Disclosure<const E, const R, const Opts extends DisclosureOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<DisclosureOptions<E, R>, "state">,

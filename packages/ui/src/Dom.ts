@@ -40,15 +40,61 @@ export type WritableKeys<T> = {
 export type ElementProperties<Element extends globalThis.Element> = {
   readonly [K in WritableKeys<Element> as K extends EventHandlerProperty | "ref"
     ? never
-    : K]?: Renderable<Element[K], any, any>;
+    : K]?: Renderable<Element[K] | undefined, any, any>;
 };
 
 export type ElementOptions<Element extends globalThis.Element> = ElementEventHandlers<Element> &
   ElementRef<Element> &
   ElementProperties<Element>;
 
-export type HostProps<Element extends globalThis.Element> = Readonly<Record<string, unknown>> &
-  Partial<ElementRef<Element>>;
+type StringAttributeValue = Renderable<string | null | undefined, any, any>;
+type AttributeValue = Renderable<string | number | boolean | null | undefined, any, any>;
+type BooleanAttributeValue = Renderable<boolean | null | undefined, any, any>;
+type StyleValue = Renderable<string | CSSStyleDeclaration | Partial<CSSStyleDeclaration> | null | undefined, any, any>;
+type PopoverTargetActionValue = Renderable<"toggle" | "show" | "hide" | null | undefined, any, any>;
+
+type HostEventHandlers = {
+  readonly [K in EventHandlerProperty]?:
+    | Effect.Effect<unknown, any, any>
+    | EventHandler.EventHandler<any, any, any>
+    | null;
+};
+
+export type TemplateAttributeProps = {
+  readonly id?: StringAttributeValue;
+  readonly class?: StringAttributeValue;
+  readonly className?: StringAttributeValue;
+  readonly for?: StringAttributeValue;
+  readonly tabindex?: AttributeValue;
+  readonly role?: StringAttributeValue;
+  readonly style?: StyleValue;
+  readonly popover?: StringAttributeValue;
+  readonly popovertarget?: StringAttributeValue;
+  readonly popovertargetaction?: PopoverTargetActionValue;
+  readonly ".data"?: Readonly<Record<string, Renderable<unknown, any, any>>>;
+} & {
+  readonly [K in `aria-${string}`]?: AttributeValue;
+} & {
+  readonly [K in `data-${string}`]?: AttributeValue;
+} & {
+  readonly [K in `?${string}`]?: BooleanAttributeValue;
+};
+
+export type BoundElementProperties<Element extends globalThis.Element> = {
+  readonly [K in keyof Element as K extends string ? `.${K}` : never]?: Renderable<
+    Element[K] | undefined,
+    any,
+    any
+  >;
+};
+
+export type HostProps<Element extends globalThis.Element> = Omit<
+  ElementRef<Element> & ElementProperties<Element>,
+  keyof TemplateAttributeProps
+> &
+  HostEventHandlers &
+  TemplateAttributeProps &
+  BoundElementProperties<Element>;
 
 export type HostRenderer<Element extends globalThis.Element, A = unknown, E = never, R = never> = (
   props: HostProps<Element>,
@@ -61,14 +107,28 @@ export interface HostOptions<Element extends globalThis.Element> {
 }
 
 export type ElementByTagName = HTMLElementTagNameMap &
-  SVGElementTagNameMap &
-  MathMLElementTagNameMap;
+  Omit<SVGElementTagNameMap, keyof HTMLElementTagNameMap> &
+  Omit<MathMLElementTagNameMap, keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap>;
 
 export type OptionsByTagName = {
   readonly [Tag in keyof ElementByTagName]: ElementOptions<ElementByTagName[Tag]>;
 };
 
 export type OptionsForTag<Tag extends keyof ElementByTagName> = OptionsByTagName[Tag];
+
+export type HostPropsByTagName = {
+  readonly [Tag in keyof ElementByTagName]: HostProps<ElementByTagName[Tag]>;
+};
+
+export type HostPropsForTag<Tag extends keyof ElementByTagName> = HostPropsByTagName[Tag];
+
+export type HostRendererForTag<Tag extends keyof ElementByTagName, A = unknown, E = never, R = never> =
+  HostRenderer<ElementByTagName[Tag], A, E, R>;
+
+export interface HostOptionsForTag<Tag extends keyof ElementByTagName> {
+  readonly host?: HostRendererForTag<Tag, any, any, any>;
+  readonly props?: HostPropsForTag<Tag>;
+}
 
 export type EventHandlerInput<Ev extends Event = Event, E = never, R = never> =
   | Effect.Effect<unknown, E, R>
@@ -140,7 +200,7 @@ export function renderHost<Element extends globalThis.Element, const Opts extend
 
 export function splitRef<Element extends globalThis.Element>(
   props: HostProps<Element>,
-): { readonly props: HostProps<Element>; readonly ref: ElementRef<Element>["ref"] | undefined } {
+): { readonly props: Omit<HostProps<Element>, "ref">; readonly ref: ElementRef<Element>["ref"] | undefined } {
   const { ref, ...rest } = props;
   return { props: rest, ref };
 }
