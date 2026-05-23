@@ -26,6 +26,18 @@ Status: approved on 2026-05-22.
 | T-7 | direct execution | T-6 | Update package docs and workflow memory; run focused verification commands selected by discovered package scripts. | Record any dependency/version limitations explicitly. | Revert docs/memory updates if implementation scope changes. |
 | T-8 | direct execution | T-7 | Final local verification and merge readiness summary for `codex/typed-beta`. | Do not merge if critical TS-* scenarios fail. | Loop back to the failing task and update plan. |
 
+## Active Task Detail — T-1 Package Skeleton
+
+- status: completed
+- requirement_links: FR-1, FR-2, AC-1, TS-1
+- substeps:
+  1. Add `packages/storybook/package.json`, `tsconfig.json`, `AGENTS.md`, and a package-boundary test.
+  2. Run `pnpm --filter @typed/storybook test` and confirm the test fails because source entrypoints are missing.
+  3. Add minimal empty source entrypoints for `.`, `./preset`, `./preview.js`, `./testing`, and shared types.
+  4. Re-run `pnpm --filter @typed/storybook test`.
+  5. Run `pnpm --filter @typed/storybook build` for skeleton type/build verification.
+  6. Record validation evidence in `03-execution-log.md` and memory notes.
+
 ## Validation Strategy
 
 - First write failing tests per task before implementation when editing code.

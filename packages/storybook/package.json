@@ -1,0 +1,51 @@
+{
+  "name": "@typed/storybook",
+  "version": "1.0.0-beta.4",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./preset": {
+      "types": "./dist/preset.d.ts",
+      "import": "./dist/preset.js"
+    },
+    "./preview.js": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@typed/app": "workspace:*",
+    "@typed/template": "workspace:*",
+    "@typed/vite-plugin": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "storybook": "^10.0.0",
+    "typescript": ">=5.0.0",
+    "vite": ">=5.0.0"
+  }
+}

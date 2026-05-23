@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "lib": ["DOM", "ESNext"]
+  },
+  "include": ["src"],
+  "exclude": ["**/*.test.ts"],
+  "references": [
+    { "path": "../app" },
+    { "path": "../template" },
+    { "path": "../vite-plugin" }
+  ]
+}
