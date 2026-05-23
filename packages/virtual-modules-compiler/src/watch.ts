@@ -15,6 +15,7 @@ import {
   attachSourceTransformExtensions,
   createProgramContext,
   extensionTypeTargetSpecs,
+  reportExtensionDiagnostics,
   runBeforeProgramCreate,
   type VmcCompilerExtension,
 } from "./extensions.js";
@@ -216,7 +217,7 @@ export function runWatch(params: WatchParams): void {
       });
     }
 
-    return ts.createEmitAndSemanticDiagnosticsBuilderProgram(
+    const builder = ts.createEmitAndSemanticDiagnosticsBuilderProgram(
       currentRootNames,
       currentOptions,
       host,
@@ -224,6 +225,12 @@ export function runWatch(params: WatchParams): void {
       configFileParsingDiagnostics,
       refs ?? projectReferences,
     );
+    reportExtensionDiagnostics(
+      extensions,
+      { ...context, program: builder.getProgram() },
+      reportDiagnostic,
+    );
+    return builder;
   };
 
   const host = ts.createWatchCompilerHost(

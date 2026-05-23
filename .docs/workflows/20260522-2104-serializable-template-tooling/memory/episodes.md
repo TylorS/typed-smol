@@ -24,3 +24,11 @@
 - Supported primitives, literals, objects, optional properties, arrays, tuples, unions, and string/number index signatures.
 - Unsupported shapes fail closed through shared compiler diagnostics.
 - Added descriptor-source emit that references `Serializable.generated(...)`.
+
+## Review Fix - Compiler Extension And Schema Hardening
+
+- Build-mode extension diagnostics now affect the returned exit code.
+- Watch-mode extension diagnostics now report through the configured diagnostic reporter.
+- Source transform host attachment updates existing host state instead of stacking wrappers.
+- Serializable generated descriptor metadata now accepts a plan root, and compiler emit includes it.
+- Bigint literal schema plans preserve bigint values and stable fingerprints.

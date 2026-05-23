@@ -17,3 +17,9 @@
 - Start schema generation from `@typed/virtual-modules` `TypeNode`, not raw TypeScript nodes.
 - Keep schema plans deterministic with sorted object properties and sorted union plan nodes.
 - Emit generated descriptor source through `Serializable.generated(...)` while keeping plan internals compiler-owned.
+
+## 2026-05-22 - Review Fixes
+
+- `vmc` extension diagnostics must fail closed in compile and build mode, and must also report in watch mode.
+- `attachSourceTransformExtensions` must be idempotent per compiler host because watch mode can reuse hosts across rebuilds.
+- Generated serializable descriptor source carries the schema plan root; metadata-only descriptors are not enough for downstream materialization.

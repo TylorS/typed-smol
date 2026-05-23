@@ -79,7 +79,7 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
   - green: `pnpm --filter @typed/compiler exec tsc --noEmit --pretty false` passed.
   - green: `pnpm --filter @typed/compiler build` passed.
   - green: `pnpm exec oxlint packages/compiler/src/schema/schemaPlan.ts packages/compiler/src/schema/schemaPlan.test.ts packages/compiler/src/index.ts` passed.
-- commit: pending
+- commit: `2559966 feat(compiler): add schema planning`
 - deviations_or_replans:
   - Schema planning starts from the existing `@typed/virtual-modules` `TypeNode` boundary.
   - The generated descriptor emitter references `@typed/app` public metadata and does not expose compiler plan internals to runtime descriptors.
@@ -87,3 +87,29 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
 - memory_updates:
   - recorded TypeNode-to-schema-plan boundary in `memory/episodes.md`.
   - added schema-plan fingerprinting as a promotion candidate.
+
+### Review Fix - M2/M3/M4 Hardening
+
+- task_id: review-fix-001
+- requirement_ids: FR-02, FR-03, FR-04, FR-05, NFR-02, NFR-03, NFR-05
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/virtual-modules-compiler test -- extensions` failed because build mode returned `0` for extension error diagnostics and source transform wrappers stacked.
+  - initial red: watch diagnostic regression test failed before `runWatch` reported extension diagnostics.
+  - initial red: `pnpm --filter @typed/compiler test -- schemaPlan` failed before generated descriptor source included the schema plan root and bigint literal planning was corrected.
+  - green: `pnpm --filter @typed/virtual-modules-compiler test` passed, 3 files / 23 tests.
+  - green: `pnpm --filter @typed/compiler test -- schemaPlan` passed, 17 files / 68 tests.
+  - green: `pnpm --filter @typed/app test -- Serializable` passed, 27 files / 363 tests.
+  - green: `pnpm --filter @typed/virtual-modules-compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/app exec tsc --noEmit --pretty false` passed.
+  - green: focused `pnpm exec oxlint ...` over touched files passed.
+  - green: `git diff --check` for touched files passed.
+- commit: `ba3a0f1 fix(compiler): harden extension diagnostics`
+- fixes:
+  - Build mode now returns non-zero when extension diagnostics include errors.
+  - Watch mode now reports extension diagnostics.
+  - Source transform host attachment is idempotent and updates context without stacking wrappers.
+  - Generated serializable descriptor source now includes the plan root.
+  - Bigint literal planning preserves bigint values and fingerprints them deterministically.
+- memory_updates:
+  - recorded extension diagnostic fail-closed behavior in `memory/episodes.md`.

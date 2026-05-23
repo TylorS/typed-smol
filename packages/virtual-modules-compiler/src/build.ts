@@ -11,9 +11,9 @@ import { attachCompilerHostAdapter, ensureTypeTargetBootstrapFile } from "@typed
 import { createVmcArtifactStoreFactory } from "./artifactStore.js";
 import {
   attachSourceTransformExtensions,
-  collectExtensionDiagnostics,
   createProgramContext,
   extensionTypeTargetSpecs,
+  reportExtensionDiagnostics,
   runBeforeProgramCreate,
   type VmcCompilerExtension,
 } from "./extensions.js";
@@ -77,6 +77,7 @@ export function runBuild(params: BuildParams): number {
 
   const projectRoot = sys.getCurrentDirectory();
   const adapters: VirtualModuleAdapterHandle[] = [];
+  let hasExtensionError = false;
 
   const createProgramForSession = (
     rootNames: readonly string[],
@@ -153,9 +154,9 @@ export function runBuild(params: BuildParams): number {
       refs,
     );
     const program = builder.getProgram();
-    for (const diagnostic of collectExtensionDiagnostics(extensions, { ...context, program })) {
-      reportDiagnostic(diagnostic);
-    }
+    hasExtensionError =
+      reportExtensionDiagnostics(extensions, { ...context, program }, reportDiagnostic) ||
+      hasExtensionError;
     return builder;
   };
 
@@ -169,7 +170,7 @@ export function runBuild(params: BuildParams): number {
   const builder = ts.createSolutionBuilder(host, projects, buildOptions);
   try {
     const exitCode = builder.build();
-    return exitCode === ts.ExitStatus.Success ? 0 : 1;
+    return exitCode === ts.ExitStatus.Success && !hasExtensionError ? 0 : 1;
   } finally {
     for (const adapter of adapters.splice(0)) {
       adapter.dispose();

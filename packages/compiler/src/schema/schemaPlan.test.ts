@@ -137,11 +137,43 @@ describe("schemaPlan", () => {
         "  {",
         "    version: 1,",
         '    typeId: "User",',
+        "    root: {",
+        '      kind: "object",',
+        "      properties: [",
+        "        {",
+        '          name: "id",',
+        "          node: {",
+        '            kind: "primitive",',
+        '            name: "string",',
+        "          },",
+        "          optional: false,",
+        "          readonly: true,",
+        "        },",
+        "      ],",
+        "    },",
         `    fingerprint: ${JSON.stringify(result.plan.fingerprint)},`,
         "  },",
         ");",
       ].join("\n"),
     );
+  });
+
+  it("plans bigint literals without degrading them to strings", () => {
+    const result = planSchemaFromTypeNode({
+      typeId: "Version",
+      node: literal("1n"),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      plan: {
+        root: {
+          kind: "literal",
+          text: "1n",
+          value: 1n,
+        },
+      },
+    });
   });
 });
 

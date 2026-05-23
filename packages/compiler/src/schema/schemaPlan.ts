@@ -32,7 +32,7 @@ export type SchemaPrimitivePlan = {
 
 export type SchemaLiteralPlan = {
   readonly kind: "literal";
-  readonly value: string | number | boolean | null;
+  readonly value: string | number | boolean | bigint | null;
   readonly text: string;
 };
 
@@ -152,6 +152,7 @@ export function emitSerializableDescriptorSource(
     "  {",
     "    version: 1,",
     `    typeId: ${JSON.stringify(plan.typeId)},`,
+    `    root: ${toTsValue(plan.root, 4)},`,
     `    fingerprint: ${JSON.stringify(plan.fingerprint)},`,
     "  },",
     ");",
@@ -341,10 +342,11 @@ function unsupportedReason(node: TypeNode): string {
   return `${node.kind} types need explicit Schema support before serialization`;
 }
 
-function parseLiteralText(text: string): string | number | boolean | null {
+function parseLiteralText(text: string): string | number | boolean | bigint | null {
   if (text === "true") return true;
   if (text === "false") return false;
   if (text === "null") return null;
+  if (isBigIntLiteral(text)) return BigInt(text.slice(0, -1));
   if (isQuoted(text)) return text.slice(1, -1);
   const numberValue = Number(text);
   return Number.isNaN(numberValue) ? text : numberValue;
@@ -385,6 +387,7 @@ function isQuoted(text: string): boolean {
 
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (typeof value === "bigint") return `${value}n`;
   if (!isRecord(value)) return JSON.stringify(value);
   const entries = Object.keys(value)
     .sort()
@@ -400,4 +403,36 @@ function assertIdentifier(name: string): void {
   if (!/^[A-Za-z_$][\w$]*$/.test(name)) {
     throw new Error(`Invalid serializable descriptor export name: ${name}`);
   }
+}
+
+function isBigIntLiteral(text: string): boolean {
+  return /^-?\d+n$/.test(text);
+}
+
+function toTsValue(value: unknown, indent: number): string {
+  if (Array.isArray(value)) return toTsArray(value, indent);
+  if (typeof value === "bigint") return `${value}n`;
+  if (!isRecord(value)) return JSON.stringify(value);
+  return toTsObject(value, indent);
+}
+
+function toTsArray(values: readonly unknown[], indent: number): string {
+  if (values.length === 0) return "[]";
+  const nextIndent = indent + 2;
+  const children = values.map((value) => `${spaces(nextIndent)}${toTsValue(value, nextIndent)},`);
+  return `[\n${children.join("\n")}\n${spaces(indent)}]`;
+}
+
+function toTsObject(value: Record<string, unknown>, indent: number): string {
+  const entries = Object.keys(value).filter((key) => value[key] !== undefined);
+  if (entries.length === 0) return "{}";
+  const nextIndent = indent + 2;
+  const children = entries.map(
+    (key) => `${spaces(nextIndent)}${key}: ${toTsValue(value[key], nextIndent)},`,
+  );
+  return `{\n${children.join("\n")}\n${spaces(indent)}}`;
+}
+
+function spaces(size: number): string {
+  return " ".repeat(size);
 }

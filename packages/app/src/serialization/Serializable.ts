@@ -24,6 +24,7 @@ export namespace Serializable {
   export type GeneratedSchemaPlan = {
     readonly version: 1;
     readonly typeId: string;
+    readonly root?: unknown;
     readonly source?: GeneratedSchemaSource;
     readonly fingerprint?: string;
   };

@@ -32,6 +32,21 @@ export interface VmcSourceTransformResult {
   readonly diagnostics?: readonly ts.Diagnostic[];
 }
 
+type SourceTransformInput = {
+  readonly ts: typeof import("typescript");
+  readonly compilerHost: ts.CompilerHost;
+  readonly context: VmcProgramContext;
+  readonly extensions?: readonly VmcCompilerExtension[];
+  readonly reportDiagnostic: ts.DiagnosticReporter;
+};
+
+type SourceTransformHostState = {
+  readonly originalGetSourceFile: ts.CompilerHost["getSourceFile"];
+  input: SourceTransformInput;
+};
+
+const sourceTransformHosts = new WeakMap<ts.CompilerHost, SourceTransformHostState>();
+
 export function extensionTypeTargetSpecs(
   base: readonly TypeTargetSpec[] | undefined,
   extensions: readonly VmcCompilerExtension[] | undefined,
@@ -68,30 +83,43 @@ export function collectExtensionDiagnostics(
   return (extensions ?? []).flatMap((extension) => extension.diagnostics?.(context) ?? []);
 }
 
-export function attachSourceTransformExtensions(input: {
-  readonly ts: typeof import("typescript");
-  readonly compilerHost: ts.CompilerHost;
-  readonly context: VmcProgramContext;
-  readonly extensions?: readonly VmcCompilerExtension[];
-  readonly reportDiagnostic: ts.DiagnosticReporter;
-}): void {
+export function reportExtensionDiagnostics(
+  extensions: readonly VmcCompilerExtension[] | undefined,
+  context: VmcProgramContextWithProgram,
+  reportDiagnostic: ts.DiagnosticReporter,
+): boolean {
+  const diagnostics = collectExtensionDiagnostics(extensions, context);
+  for (const diagnostic of diagnostics) reportDiagnostic(diagnostic);
+  return diagnostics.some(
+    (diagnostic) => diagnostic.category === context.ts.DiagnosticCategory.Error,
+  );
+}
+
+export function attachSourceTransformExtensions(input: SourceTransformInput): void {
   if (!input.extensions || input.extensions.length === 0) return;
+  const existing = sourceTransformHosts.get(input.compilerHost);
+  if (existing) {
+    existing.input = input;
+    return;
+  }
+
   const originalGetSourceFile = input.compilerHost.getSourceFile.bind(input.compilerHost);
+  const state: SourceTransformHostState = {
+    input,
+    originalGetSourceFile,
+  };
+  sourceTransformHosts.set(input.compilerHost, state);
+
   input.compilerHost.getSourceFile = (...args: Parameters<ts.CompilerHost["getSourceFile"]>) => {
-    const sourceFile = originalGetSourceFile(...args);
+    const sourceFile = state.originalGetSourceFile(...args);
     if (!sourceFile || sourceFile.isDeclarationFile) return sourceFile;
-    const transformed = transformSourceFile(input, sourceFile);
+    const transformed = transformSourceFile(state.input, sourceFile);
     return transformed ?? sourceFile;
   };
 }
 
 function transformSourceFile(
-  input: {
-    readonly ts: typeof import("typescript");
-    readonly context: VmcProgramContext;
-    readonly extensions?: readonly VmcCompilerExtension[];
-    readonly reportDiagnostic: ts.DiagnosticReporter;
-  },
+  input: SourceTransformInput,
   sourceFile: ts.SourceFile,
 ): ts.SourceFile | undefined {
   const sourceText = applyTransforms(input, sourceFile);
@@ -105,11 +133,7 @@ function transformSourceFile(
 }
 
 function applyTransforms(
-  input: {
-    readonly context: VmcProgramContext;
-    readonly extensions?: readonly VmcCompilerExtension[];
-    readonly reportDiagnostic: ts.DiagnosticReporter;
-  },
+  input: SourceTransformInput,
   sourceFile: ts.SourceFile,
 ): string {
   let sourceText = sourceFile.text;
