@@ -378,7 +378,7 @@ refactor(app): canonicalize hmr resume registry
   - `packages/compiler/src/template/emitServerTemplate.ts`
   - related template tests
 
-- [ ] **Step 1: Run existing template equivalence tests**
+- [x] **Step 1: Run existing template equivalence tests**
 
 Run:
 
@@ -388,15 +388,15 @@ pnpm --filter @typed/compiler test -- template
 
 Expected: PASS before template changes. If it fails, stop and classify whether the failure is from current branch drift or this plan.
 
-- [ ] **Step 2: Add missing equivalence fixture only if needed**
+- [x] **Step 2: Add missing equivalence fixture only if needed**
 
 If previous tasks changed template facts, add focused fixtures for the changed shape. Do not broaden template work beyond what route resumability needs.
 
-- [ ] **Step 3: Keep server and DOM target behavior aligned**
+- [x] **Step 3: Keep server and DOM target behavior aligned**
 
 If target adapters require changes, make the smallest shared-model update and prove both emitters still match runtime renderer behavior.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -406,7 +406,7 @@ pnpm --filter @typed/compiler test -- emitDomTemplate emitServerTemplate analyze
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit if files changed**
+- [x] **Step 5: Commit if files changed**
 
 Commit message:
 
