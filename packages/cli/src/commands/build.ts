@@ -8,6 +8,7 @@ import { loadProjectConfig, resolve, resolveBoolean } from "../shared/loadConfig
 import { resolveViteInlineConfig } from "../shared/resolveViteConfig.js";
 import { inferClientHtmlEntries, type ClientHtmlEntry } from "../shared/serverEntryClientInputs.js";
 import { runViteBuild } from "../shared/viteHelpers.js";
+import { runVirtualModuleCompiler } from "../shared/vmc.js";
 
 const DEFAULT_OUT_DIR = "dist";
 const CLIENT_OUT = "client";
@@ -78,6 +79,12 @@ export const build = Command.make("build", {
           },
         },
       });
+
+      const vmcExitCode = runVirtualModuleCompiler({ projectRoot, typedConfig: tc });
+      if (vmcExitCode !== 0) {
+        process.exitCode = vmcExitCode;
+        return;
+      }
 
       const hasIndexHtml = yield* Effect.tryPromise(() =>
         fs.promises

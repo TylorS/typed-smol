@@ -48,6 +48,8 @@ describe("typed-realworld package skeleton", () => {
       "@typed/vite-plugin",
       "@types/node",
       "happy-dom",
+      "oxfmt",
+      "oxlint",
       "typescript",
       "vite",
       "vitest",
@@ -57,12 +59,19 @@ describe("typed-realworld package skeleton", () => {
   it("exposes every required local workflow script", () => {
     const pkg = readJson<PackageJson>("package.json");
 
-    expect(pkg.scripts.build).toContain("vmc -p tsconfig.json");
-    expect(pkg.scripts.typecheck).toBe("vmc --noEmit -p tsconfig.json");
+    expect(pkg.scripts.dev).toBe("typed dev");
+    expect(pkg.scripts.build).toBe("typed build");
+    expect(pkg.scripts.check).toBe("typed check");
+    expect(pkg.scripts.preview).toBe("typed preview");
+    expect(pkg.scripts.test).toBe("typed test");
+    expect(pkg.scripts.typecheck).toBe("typed check");
+    expect(pkg.scripts.build).not.toContain("vmc");
+    expect(pkg.scripts.dev).not.toContain("vite");
     expect(pkg.scripts["db:migrate"]).toContain("vmc -p tsconfig.json");
 
     expect(Object.keys(pkg.scripts).sort()).toEqual([
       "build",
+      "check",
       "db:migrate",
       "db:reset",
       "db:seed",

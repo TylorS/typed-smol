@@ -3,12 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "vmc -p tsconfig.json && typed build",
+    "dev": "typed dev",
+    "build": "typed build",
     "preview": "typed preview",
-    "test": "pnpm -r test",
-    "lint": "typed lint",
-    "format": "typed format"
+    "check": "typed check",
+    "test": "typed test"
   },
   "devDependencies": {
     "@typed/app": "^1.0.0-beta.4",
@@ -21,6 +20,8 @@
     "@typed/vite-plugin": "^1.0.0-beta.4",
     "@types/node": "^25.7.0",
     "effect": "4.0.0-beta.66",
+    "oxfmt": "0.49.0",
+    "oxlint": "1.64.0",
     "typescript": "6.0.3",
     "vite": "8.0.12"
   },

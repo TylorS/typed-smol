@@ -106,6 +106,8 @@ describe("typed create", () => {
     expect(rootPackage).toContain('"@typed/virtual-modules-ts-plugin": "^1.0.0-beta.4"');
     expect(rootPackage).toContain('"@typed/vite-plugin": "^1.0.0-beta.4"');
     expect(rootPackage).toContain('"effect": "4.0.0-beta.66"');
+    expect(rootPackage).toContain('"oxfmt": "0.49.0"');
+    expect(rootPackage).toContain('"oxlint": "1.64.0"');
     expect(rootPackage).toContain('"vite": "8.0.12"');
     expect(appPackage).not.toContain("catalog:");
     expect(appPackage).not.toContain('"@typed/app": "workspace:*"');
@@ -118,14 +120,18 @@ describe("typed create", () => {
     expect(appPackage).toContain('"build": "cd ../.. && pnpm build"');
   });
 
-  it("uses the RealWorld-proven build commands", () => {
+  it("uses typed as the complete application lifecycle CLI", () => {
     const root = tempRoot();
     const target = scaffoldTypedWorkspace({ cwd: root, name: "demo-app" });
     const rootPackage = readFileSync(join(target, "package.json"), "utf8");
 
-    expect(rootPackage).toContain('"dev": "vite --host 127.0.0.1"');
-    expect(rootPackage).toContain('"build": "vmc -p tsconfig.json && typed build"');
+    expect(rootPackage).toContain('"dev": "typed dev"');
+    expect(rootPackage).toContain('"build": "typed build"');
     expect(rootPackage).toContain('"preview": "typed preview"');
+    expect(rootPackage).toContain('"check": "typed check"');
+    expect(rootPackage).toContain('"test": "typed test"');
+    expect(rootPackage).not.toContain("vmc -p tsconfig.json");
+    expect(rootPackage).not.toContain("vite --host");
     expect(rootPackage).not.toContain("typed build --entry");
     expect(rootPackage).not.toContain("typed serve --entry");
   });

@@ -14,10 +14,22 @@ describe("typed CLI integration", () => {
   it("prints help for root command", () => {
     const out = runTyped(["--help"]);
     expect(out).toContain("Typed-smol CLI");
+    expect(out).toContain("dev");
     expect(out).toContain("serve");
     expect(out).toContain("build");
     expect(out).toContain("preview");
+    expect(out).toContain("check");
+    expect(out).toContain("test");
+    expect(out).toContain("lint");
+    expect(out).toContain("format");
     expect(out).toContain("run");
+  });
+
+  it("prints help for dev subcommand", () => {
+    const out = runTyped(["dev", "--help"]);
+    expect(out).toContain("Start the development server");
+    expect(out).toContain("--port");
+    expect(out).toContain("--entry");
   });
 
   it("prints help for serve subcommand", () => {
@@ -36,6 +48,13 @@ describe("typed CLI integration", () => {
   it("prints help for preview subcommand", () => {
     const out = runTyped(["preview", "--help"]);
     expect(out).toContain("Preview production build");
+  });
+
+  it("prints help for check subcommand", () => {
+    const out = runTyped(["check", "--help"]);
+    expect(out).toContain("Check type, lint, and format contracts");
+    expect(out).toContain("--skip-lint");
+    expect(out).toContain("--skip-format");
   });
 
   it("prints help for run subcommand", () => {

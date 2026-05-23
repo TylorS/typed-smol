@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@typed/app": "workspace:*",
+    "@typed/virtual-modules-compiler": "workspace:*",
     "@typed/vite-plugin": "workspace:*",
     "effect": "catalog:",
     "vite": "catalog:",

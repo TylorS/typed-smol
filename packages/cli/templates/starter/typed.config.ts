@@ -20,5 +20,11 @@ export default defineConfig({
     port: 4173,
     strictPort: false,
   },
+  test: {
+    include: ["packages/*/src/**/*.{test,spec}.ts"],
+  },
+  lint: {
+    include: ["packages/", "typed.config.ts", "vite.config.ts", "vmc.config.ts"],
+  },
   compression: false,
 });

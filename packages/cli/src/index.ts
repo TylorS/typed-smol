@@ -1,6 +1,17 @@
 /**
  * @typed/cli — Vite 7 CLI with server-side capabilities for typed-smol apps.
- * Commands: typed serve | typed build | typed preview | typed run
+ * Commands: typed dev | typed build | typed preview | typed check | typed test | typed run
  */
 export { typed } from "./commands/typed.js";
-export { serve, build, preview, run, create } from "./commands/index.js";
+export {
+  dev,
+  serve,
+  build,
+  preview,
+  check,
+  test,
+  lint,
+  format,
+  run,
+  create,
+} from "./commands/index.js";

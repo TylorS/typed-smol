@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { loadProjectConfig, resolveBoolean } from "../shared/loadConfig.js";
+import { findBinary } from "../shared/findBinary.js";
 
 const OXLINT_CONFIG_NAMES = [".oxlintrc.json", "oxlint.config.ts", "oxlint.config.js"] as const;
 
@@ -15,10 +16,80 @@ function findOxlintConfig(projectRoot: string): string | undefined {
   return undefined;
 }
 
-function findBinary(name: string, projectRoot: string): string | undefined {
-  const localBin = join(projectRoot, "node_modules", ".bin", name);
-  if (existsSync(localBin)) return localBin;
-  return undefined;
+export interface RunLintOptions {
+  readonly projectRoot: string;
+  readonly fix?: boolean;
+  readonly rule?: string;
+  readonly category?: string;
+  readonly targets?: readonly string[];
+}
+
+export function runLint(options: RunLintOptions): number {
+  const { projectRoot } = options;
+  const bin = findBinary("oxlint", projectRoot);
+  if (!bin) {
+    throw new Error("oxlint is not installed. Run: pnpm add -D oxlint");
+  }
+
+  const loaded = loadProjectConfig(projectRoot);
+  const tc = loaded?.config;
+  const lintConfig = tc?.lint;
+
+  const args: string[] = [];
+
+  const existingConfig = findOxlintConfig(projectRoot);
+  if (existingConfig) {
+    args.push("--config", existingConfig);
+  } else {
+    const categories = lintConfig?.categories ?? {
+      correctness: "warn" as const,
+      suspicious: "warn" as const,
+    };
+    for (const [cat, level] of Object.entries(categories)) {
+      args.push(`--${cat}-category`, level);
+    }
+
+    if (lintConfig?.rules) {
+      for (const [rule, level] of Object.entries(lintConfig.rules)) {
+        args.push("--rule", `${rule}=${String(level)}`);
+      }
+    }
+
+    if (lintConfig?.plugins) {
+      for (const plugin of lintConfig.plugins) {
+        args.push("--plugin", plugin);
+      }
+    }
+  }
+
+  if (options.rule) args.push("--rule", options.rule);
+
+  if (options.category) {
+    const [cat, level] = options.category.split("=");
+    if (cat && level) args.push(`--${cat}-category`, level);
+  }
+
+  if (resolveBoolean(options.fix ?? false, lintConfig?.fix, false)) {
+    args.push("--fix");
+  }
+
+  if (options.targets && options.targets.length > 0) {
+    args.push(...options.targets);
+  } else if (lintConfig?.include && lintConfig.include.length > 0) {
+    args.push(...lintConfig.include);
+  } else {
+    args.push("src/");
+  }
+
+  try {
+    execFileSync(bin, args, {
+      cwd: projectRoot,
+      stdio: "inherit",
+    });
+    return 0;
+  } catch (err: unknown) {
+    return (err as { status?: number }).status ?? 1;
+  }
 }
 
 export const lint = Command.make("lint", {
@@ -37,71 +108,17 @@ export const lint = Command.make("lint", {
   Command.withHandler((flags) =>
     Effect.gen(function* () {
       const projectRoot = process.cwd();
-      const bin = findBinary("oxlint", projectRoot);
-      if (!bin) {
-        return yield* Effect.fail(new Error("oxlint is not installed. Run: pnpm add -D oxlint"));
-      }
-
-      const loaded = loadProjectConfig(projectRoot);
-      const tc = loaded?.config;
-      const lintConfig = tc?.lint;
-
-      const args: string[] = [];
-
-      const existingConfig = findOxlintConfig(projectRoot);
-      if (existingConfig) {
-        args.push("--config", existingConfig);
-      } else {
-        const categories = lintConfig?.categories ?? {
-          correctness: "warn" as const,
-          suspicious: "warn" as const,
-        };
-        for (const [cat, level] of Object.entries(categories)) {
-          args.push(`--${cat}-category`, level);
-        }
-
-        if (lintConfig?.rules) {
-          for (const [rule, level] of Object.entries(lintConfig.rules)) {
-            args.push("--rule", `${rule}=${String(level)}`);
-          }
-        }
-
-        if (lintConfig?.plugins) {
-          for (const plugin of lintConfig.plugins) {
-            args.push("--plugin", plugin);
-          }
-        }
-      }
-
-      const ruleOverride = Option.getOrUndefined(flags.rule ?? Option.none());
-      if (ruleOverride) args.push("--rule", ruleOverride);
-
-      const categoryOverride = Option.getOrUndefined(flags.category ?? Option.none());
-      if (categoryOverride) {
-        const [cat, level] = categoryOverride.split("=");
-        if (cat && level) args.push(`--${cat}-category`, level);
-      }
-
-      if (resolveBoolean(flags.fix, lintConfig?.fix, false)) {
-        args.push("--fix");
-      }
-
-      if (flags.targets.length > 0) {
-        args.push(...flags.targets);
-      } else if (lintConfig?.include && lintConfig.include.length > 0) {
-        args.push(...lintConfig.include);
-      } else {
-        args.push("src/");
-      }
-
       try {
-        execFileSync(bin, args, {
-          cwd: projectRoot,
-          stdio: "inherit",
+        const exitCode = runLint({
+          projectRoot,
+          fix: flags.fix,
+          rule: Option.getOrUndefined(flags.rule ?? Option.none()),
+          category: Option.getOrUndefined(flags.category ?? Option.none()),
+          targets: flags.targets,
         });
-      } catch (err: unknown) {
-        const exitCode = (err as { status?: number }).status ?? 1;
         process.exitCode = exitCode;
+      } catch (err: unknown) {
+        return yield* Effect.fail(err instanceof Error ? err : new Error(String(err)));
       }
     }),
   ),
