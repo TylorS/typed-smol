@@ -189,35 +189,37 @@ Existing packages receive narrow hook points only:
 
 ## Active Task Detail
 
-### T1 - Protocol Package and Branded Ids
+### T2 - Protocol Schemas and Serialization
 
-- requirement_links: FR-1, FR-2, FR-41 through FR-45, NFR-1, NFR-2, NFR-15 through NFR-18, AC-1, AC-13, AC-14.
+- requirement_links: FR-1, FR-2, FR-24, FR-41, FR-42, NFR-2, NFR-6, NFR-15, NFR-16, NFR-17, AC-1, AC-5, AC-13.
 - write_set:
-  - `packages/devtools-protocol/package.json`
-  - `packages/devtools-protocol/tsconfig.json`
-  - `packages/devtools-protocol/tsconfig.test.json`
+  - `packages/devtools-protocol/src/Schemas.ts`
+  - `packages/devtools-protocol/src/Serialization.ts`
+  - `packages/devtools-protocol/src/Serialization.test.ts`
+  - `packages/devtools-protocol/src/typeInference.test.ts`
   - `packages/devtools-protocol/src/Ids.ts`
-  - `packages/devtools-protocol/src/Ids.test.ts`
-  - `packages/devtools-protocol/src/Ids.typecheck.ts`
   - `packages/devtools-protocol/src/index.ts`
-  - `pnpm-lock.yaml`
-  - `scripts/publish-beta.sh`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memory/*`
 - red_step:
-  - Add package shell plus `Ids.test.ts` that imports id constructors/types from `./Ids`.
-  - Run `pnpm --filter @typed/devtools-protocol exec vitest run src/Ids.test.ts` and capture the missing-export or failing-id evidence.
+  - Add serialization and schema tests that import the new modules.
+  - Run `pnpm --filter @typed/devtools-protocol exec vitest run src/Serialization.test.ts src/typeInference.test.ts` and capture the missing-export evidence.
 - green_step:
-  - Implement host-neutral branded string id constructors with deterministic prefix validation.
-  - Export the id surface from `src/index.ts`.
-  - Add a build-included type fixture that proves plain strings and wrong branded ids are rejected.
+  - Implement host-neutral schema contracts for ids, component summaries, DOM bindings, runtime events, source analyzer requests/results, HMR facts, Navigation events, and OTEL trace spans.
+  - Implement bounded JSON-compatible value serialization with redaction for sensitive keys and cyclic/unserializable values.
+  - Export schema and serialization surfaces from `src/index.ts`.
+  - Add type-inference tests that prove protocol payloads keep branded ids and reject invalid shapes.
 - verification:
   - `pnpm --filter @typed/devtools-protocol test`
   - `pnpm --filter @typed/devtools-protocol build`
-  - `rg -n "chrome|devtools-runtime|@typed/devtools-runtime|@typed/fx|@typed/template|@typed/navigation" packages/devtools-protocol` must return no matches.
-  - `rg -n "packages/devtools-protocol" pnpm-lock.yaml scripts/publish-beta.sh` must find both package-manager and release wiring.
+  - `rg -n "from \"(?:chrome|devtools-runtime|@typed/devtools-runtime|@typed/fx|@typed/template|@typed/navigation)|from '@typed/(?:devtools-runtime|fx|template|navigation)|\\bchrome\\." packages/devtools-protocol/src packages/devtools-protocol/package.json` must return no matches.
+  - `pnpm exec oxlint packages/devtools-protocol/src`
+  - `pnpm exec oxfmt --check packages/devtools-protocol/src/Ids.ts packages/devtools-protocol/src/Schemas.ts packages/devtools-protocol/src/Serialization.ts packages/devtools-protocol/src/Serialization.test.ts packages/devtools-protocol/src/typeInference.test.ts packages/devtools-protocol/src/index.ts`
   - `git diff --check -- packages/devtools-protocol .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
 - review:
-  - Run sidecar subagent review for T1 conventions before commit.
-  - Resolve any production-grade findings before marking T1 complete.
+  - Run sidecar subagent review for schema/type inference and serialization boundary risks before commit.
+  - Resolve any schema, redaction, or type-inference gaps before marking T2 complete.
 
 ## Verification Matrix
 

@@ -161,7 +161,16 @@ function assertCanonicalValue(prefix: DevtoolsIdPrefix, value: string): void {
     throw new Error(`Cannot create ${prefix} id from a value with boundary whitespace`);
   }
 
-  if (/[\u0000-\u001f\u007f]/u.test(value)) {
+  if (hasControlCharacter(value)) {
     throw new Error(`Cannot create ${prefix} id from a value with control characters`);
   }
+}
+
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+
+  return false;
 }
