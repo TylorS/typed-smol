@@ -45,7 +45,10 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
     const showDelay = yield* makeRef(options.showDelay ?? 0);
     const hideDelay = yield* makeRef(options.hideDelay ?? options.hoverGrace ?? 0);
     let scheduleVersion = 0;
-    const schedule = (open: boolean, delay: RefSubject.Computed<number | undefined, any, any>) =>
+    const schedule = <E2, R2>(
+      open: boolean,
+      delay: RefSubject.Computed<number | undefined, E2, R2>,
+    ) =>
       Effect.gen(function* () {
         const version = ++scheduleVersion;
         const duration = yield* delay;
@@ -115,7 +118,11 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
 
 export const Tooltip = Content;
 
-export function Arrow<const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>>(
+export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content?: AnyContent;
+}
+
+export function Arrow<const Opts extends ArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { "aria-hidden": "true" });

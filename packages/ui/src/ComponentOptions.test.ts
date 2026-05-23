@@ -264,6 +264,19 @@ describe("typed/ui component option inference", () => {
     expectTypeOf<Fx.Services<typeof button>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
   });
 
+  it("preserves errors and services from component callbacks", () => {
+    const formState = {} as RefSubject.RefSubject<Form.State<{ readonly email: string }>>;
+    const form = Form.Form({
+      state: formState,
+      content: "Save",
+      onValidSubmit: (values) =>
+        Effect.flatMap(OptionService, () => maybeOptionError(values.email)),
+    });
+
+    expectTypeOf<Fx.Error<typeof form>>().toEqualTypeOf<OptionError>();
+    expectTypeOf<Fx.Services<typeof form>>().toExtend<OptionService | RenderTemplate | Scope.Scope>();
+  });
+
   it("keeps user-provided renderable values broad while deriving their concrete channels", () => {
     const items = Effect.flatMap(OptionService, () =>
       maybeOptionError<readonly Combobox.Item[]>([{ id: "apple", value: "apple" }]),

@@ -267,12 +267,12 @@ export function ItemRadio<const E, const R, const Opts extends CheckedItemOption
   </div>`;
 }
 
-export function ItemCheck<
-  const Opts extends {
-    readonly checked: AnyValue<boolean>;
-    readonly content?: AnyContent;
-  } & Dom.HostOptions<HTMLSpanElement>,
->(options: Opts): Component<Opts> {
+export interface ItemCheckOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly checked: AnyValue<boolean>;
+  readonly content?: AnyContent;
+}
+
+export function ItemCheck<const Opts extends ItemCheckOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
     const checked = yield* makeRef(options.checked);
     const hidden = RefSubject.map(checked, (value) => !value);
@@ -285,7 +285,9 @@ export function ItemCheck<
   });
 }
 
-export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {}>(
+export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {}
+
+export function Separator<const Opts extends SeparatorOptions = {}>(
   options = {} as Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "separator" }, "", (props) =>
@@ -296,9 +298,11 @@ export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {
 export const Arrow = MenuArrow;
 export const ButtonArrow = MenuButtonArrow;
 
-export function MenuArrow<
-  const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface MenuArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content?: AnyContent;
+}
+
+export function MenuArrow<const Opts extends MenuArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(
@@ -309,9 +313,11 @@ export function MenuArrow<
   );
 }
 
-export function MenuButtonArrow<
-  const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface MenuButtonArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content?: AnyContent;
+}
+
+export function MenuButtonArrow<const Opts extends MenuButtonArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(
@@ -322,12 +328,12 @@ export function MenuButtonArrow<
   );
 }
 
-export function Group<
-  const Opts extends {
-    readonly content: AnyContent;
-    readonly label?: RequiredString;
-  } & Dom.HostOptions<HTMLDivElement>,
->(options: Opts): Component<Opts> {
+export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+  readonly label?: RequiredString;
+}
+
+export function Group<const Opts extends GroupOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(
     options,
     { role: "group", "aria-label": options.label },
@@ -336,9 +342,11 @@ export function Group<
   );
 }
 
-export function GroupLabel<
-  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface GroupLabelOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content: AnyContent;
+}
+
+export function GroupLabel<const Opts extends GroupLabelOptions>(
   options: Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, options.content, (props, content) =>
@@ -346,12 +354,12 @@ export function GroupLabel<
   );
 }
 
-export function Heading<
-  const Opts extends {
-    readonly content: AnyContent;
-    readonly id?: RequiredString;
-  } & Dom.HostOptions<HTMLDivElement>,
->(options: Opts): Component<Opts> {
+export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+  readonly id?: RequiredString;
+}
+
+export function Heading<const Opts extends HeadingOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(
     options,
     { id: options.id, role: "heading", "aria-level": "1" },
@@ -360,12 +368,12 @@ export function Heading<
   );
 }
 
-export function Description<
-  const Opts extends {
-    readonly content: AnyContent;
-    readonly id?: RequiredString;
-  } & Dom.HostOptions<HTMLParagraphElement>,
->(options: Opts): Component<Opts> {
+export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement> {
+  readonly content: AnyContent;
+  readonly id?: RequiredString;
+}
+
+export function Description<const Opts extends DescriptionOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLParagraphElement, Opts>(
     options,
     { id: options.id },
@@ -374,14 +382,16 @@ export function Description<
   );
 }
 
+export interface DismissOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+  readonly content: AnyContent;
+}
+
 export function Dismiss<
   const E,
   const R,
-  const Opts extends {
-    readonly state: RefSubject.RefSubject<State, E, R>;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts): Component<Opts> {
+  const Opts extends DismissOptions<NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<DismissOptions<E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),

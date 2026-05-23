@@ -20,6 +20,12 @@ export type AnyValue<A> = Value<A, any, any>;
 
 export type AnyContent<A = unknown> = Renderable<A, any, any>;
 
+export type AnyEffect<A = unknown> = Effect.Effect<A, any, any>;
+
+export type AnyStream<A = unknown> = Stream.Stream<A, any, any>;
+
+export type AnyFx<A = unknown> = Fx<A, any, any>;
+
 export type Content<A = unknown> = AnyContent<A>;
 
 export type ErrorOf<T> = Renderable.Error<T>;

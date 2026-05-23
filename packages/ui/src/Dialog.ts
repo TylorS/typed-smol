@@ -157,12 +157,12 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
 
 export const Dialog = Content;
 
-export function Heading<
-  const Opts extends {
-    readonly id?: OptionalString;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLDivElement>,
->(options: Opts): Component<Opts> {
+export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly id?: OptionalString;
+  readonly content: AnyContent;
+}
+
+export function Heading<const Opts extends HeadingOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(
     options,
     { id: options.id, role: "heading", "aria-level": "1" },
@@ -171,12 +171,12 @@ export function Heading<
   );
 }
 
-export function Description<
-  const Opts extends {
-    readonly id?: OptionalString;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLParagraphElement>,
->(options: Opts): Component<Opts> {
+export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement> {
+  readonly id?: OptionalString;
+  readonly content: AnyContent;
+}
+
+export function Description<const Opts extends DescriptionOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLParagraphElement, Opts>(
     options,
     { id: options.id },

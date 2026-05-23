@@ -121,8 +121,8 @@ export interface CheckOptions<E = never, R = never> extends Dom.HostOptions<HTML
   readonly content?: AnyContent;
 }
 
-export function Check<const Opts extends CheckOptions<any, any> | CheckOptions<never, never> | CheckOptions<any, never> | CheckOptions<never, any>>(
-  options: Opts,
+export function Check<const E, const R, const Opts extends CheckOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts & Pick<CheckOptions<E, R>, "state">,
 ): Component<Opts> {
   const hidden = RefSubject.map(options.state, (state) => state.checked !== true);
   if (options.host) return options.host(Dom.mergeProps(options.props, { "aria-hidden": "true", "?hidden": hidden }), options.content ?? "✓") as Component<Opts>;

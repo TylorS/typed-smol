@@ -114,7 +114,11 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
   });
 }
 
-export function Container<const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>>(
+export interface ContainerOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+}
+
+export function Container<const Opts extends ContainerOptions>(
   options: Opts,
 ): Component<Opts> {
   if (options.host) {
@@ -124,7 +128,9 @@ export function Container<const Opts extends { readonly content: AnyContent } & 
   return html`<div role="presentation">${options.content}</div>`;
 }
 
-export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {}>(
+export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {}
+
+export function Separator<const Opts extends SeparatorOptions = {}>(
   options = {} as Opts,
 ): Component<Opts> {
   if (options.host) {

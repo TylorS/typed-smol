@@ -165,7 +165,11 @@ export function Dismiss<const E, const R, const Opts extends DismissOptions<NoIn
   </button>`;
 }
 
-export function Arrow<const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>>(
+export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content?: AnyContent;
+}
+
+export function Arrow<const Opts extends ArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { "aria-hidden": "true" });
@@ -174,9 +178,12 @@ export function Arrow<const Opts extends { readonly content?: AnyContent } & Dom
   return html`<span ...${props}>${options.content ?? ""}</span>`;
 }
 
-export function Heading<
-  const Opts extends { readonly id?: string; readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
->(
+export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly id?: string;
+  readonly content: AnyContent;
+}
+
+export function Heading<const Opts extends HeadingOptions>(
   options: Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, {
@@ -189,9 +196,12 @@ export function Heading<
   return html`<div ...${props}>${options.content}</div>`;
 }
 
-export function Description<
-  const Opts extends { readonly id?: string; readonly content: AnyContent } & Dom.HostOptions<HTMLParagraphElement>,
->(
+export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement> {
+  readonly id?: string;
+  readonly content: AnyContent;
+}
+
+export function Description<const Opts extends DescriptionOptions>(
   options: Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { id: options.id });

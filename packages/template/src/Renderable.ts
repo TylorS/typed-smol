@@ -4,6 +4,8 @@
 import type * as Effect from "effect/Effect";
 import type * as Stream from "effect/Stream";
 import type { Fx } from "@typed/fx";
+import type { RefSubject } from "@typed/fx";
+import type { EventHandler } from "./EventHandler.js";
 import type { RenderEvent } from "./RenderEvent.js";
 
 /**
@@ -55,6 +57,10 @@ export type Renderable<A, E = never, R = never> =
   | Fx.Fx<A, E, R>;
 
 export declare namespace Renderable {
+  export type RefBinding<Element extends globalThis.Element = globalThis.Element, E = never, R = never> = (
+    element: Element,
+  ) => void | Effect.Effect<unknown, E, R>;
+
   /**
    * A type alias for any Renderable value with any error/context.
    */
@@ -62,7 +68,12 @@ export declare namespace Renderable {
     | Renderable<any, any, any>
     | Renderable<any, never, never>
     | Renderable<never, any, any>
-    | Renderable<never, never, any>;
+    | Renderable<never, never, any>
+    | RefSubject.RefSubject<any, any, any>
+    | RefSubject.Computed<any, any, any>
+    | RefSubject.Filtered<any, any, any>
+    | EventHandler<any, any, any>
+    | RefBinding<any, any, any>;
 
   /**
    * The basic primitive types that can be rendered directly.
@@ -82,7 +93,12 @@ export declare namespace Renderable {
    */
   export type Services<T> =
     | Fx.Services<T>
+    | (T extends RefSubject.RefSubject<any, any, infer R> ? R : never)
+    | (T extends RefSubject.Computed<any, any, infer R> ? R : never)
+    | (T extends RefSubject.Filtered<any, any, infer R> ? R : never)
     | (T extends Stream.Stream<any, any, any> ? Stream.Services<T> : never)
+    | (T extends EventHandler<any, any, infer R> ? R : never)
+    | (T extends (...args: ReadonlyArray<any>) => infer Return ? Services<Return> : never)
     | Effect.Services<T>;
 
   /**
@@ -90,7 +106,12 @@ export declare namespace Renderable {
    */
   export type Error<T> =
     | Fx.Error<T>
+    | (T extends RefSubject.RefSubject<any, infer E, any> ? E : never)
+    | (T extends RefSubject.Computed<any, infer E, any> ? E : never)
+    | (T extends RefSubject.Filtered<any, infer E, any> ? E : never)
     | (T extends Stream.Stream<any, any, any> ? Stream.Error<T> : never)
+    | (T extends EventHandler<any, infer E, any> ? E : never)
+    | (T extends (...args: ReadonlyArray<any>) => infer Return ? Error<Return> : never)
     | Effect.Error<T>;
 
   /**

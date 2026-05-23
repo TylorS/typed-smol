@@ -158,22 +158,26 @@ export function removeValue<
   });
 }
 
-export interface FormOptions<Values extends {} = {}, E = never, R = never>
+export type ValidSubmitHandler<Values extends {}, E = never, R = never> = (
+  values: Values,
+  event: SubmitEvent,
+) => void | Effect.Effect<unknown, E, R>;
+
+export interface FormOptions<Values extends {} = {}, E = never, R = never, E2 = never, R2 = never>
   extends Dom.HostOptions<HTMLFormElement> {
   readonly state: RefSubject.RefSubject<State<Values>, E, R>;
   readonly content: AnyContent;
   readonly onsubmit?: Parameters<typeof EventHandler.fromEffectOrEventHandler>[0];
-  readonly onValidSubmit?: (
-    values: Values,
-    event: SubmitEvent,
-  ) => void | Effect.Effect<unknown, any, any>;
+  readonly onValidSubmit?: ValidSubmitHandler<Values, E2, R2>;
 }
 
 export function Form<
   const Values extends {} ,
   const E,
   const R,
-  const Opts extends FormOptions<Values, NoInfer<E>, NoInfer<R>>,
+  const E2,
+  const R2,
+  const Opts extends FormOptions<Values, NoInfer<E>, NoInfer<R>, NoInfer<E2>, NoInfer<R2>>,
 >(options: Opts & Pick<FormOptions<Values, E, R>, "state">): Component<Opts> {
   const internalSubmit = EventHandler.make((event: SubmitEvent) =>
     Effect.gen(function* () {
@@ -268,9 +272,12 @@ export function Label<const Opts extends LabelOptions>(options: Opts): Component
   return html`<label ...${props}>${options.content}</label>`;
 }
 
-export function Description<
-  const Opts extends { readonly id?: string; readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
->(
+export interface DescriptionOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly id?: string;
+  readonly content: AnyContent;
+}
+
+export function Description<const Opts extends DescriptionOptions>(
   options: Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { id: options.id });
@@ -309,9 +316,11 @@ export function Error<
   return Dom.renderDivHost<Opts>(props, content);
 }
 
-export function Submit<
-  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLButtonElement>,
->(
+export interface SubmitOptions extends Dom.HostOptions<HTMLButtonElement> {
+  readonly content: AnyContent;
+}
+
+export function Submit<const Opts extends SubmitOptions>(
   options: Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { type: "submit" });
@@ -320,9 +329,11 @@ export function Submit<
   return html`<button ...${props}>${options.content}</button>`;
 }
 
-export function Reset<
-  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLButtonElement>,
->(
+export interface ResetOptions extends Dom.HostOptions<HTMLButtonElement> {
+  readonly content: AnyContent;
+}
+
+export function Reset<const Opts extends ResetOptions>(
   options: Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { type: "reset" });
@@ -393,9 +404,12 @@ export function Remove<
   return html`<button ...${props}>${options.content}</button>`;
 }
 
-export function Group<
-  const Opts extends { readonly content: AnyContent; readonly label?: string } & Dom.HostOptions<HTMLDivElement>,
->(
+export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+  readonly label?: string;
+}
+
+export function Group<const Opts extends GroupOptions>(
   options: Opts,
 ): Component<Opts> {
   const props = Dom.mergeProps(options.props, { role: "group", "aria-label": options.label });

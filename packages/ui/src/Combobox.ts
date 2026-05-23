@@ -325,9 +325,11 @@ export function Group<const Opts extends GroupOptions>(options: Opts): Component
   return html`<div ...${props}>${options.content}</div>`;
 }
 
-export function GroupLabel<
-  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface GroupLabelOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content: AnyContent;
+}
+
+export function GroupLabel<const Opts extends GroupLabelOptions>(
   options: Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, options.content, (props, content) =>
@@ -335,9 +337,11 @@ export function GroupLabel<
   );
 }
 
-export function Row<
-  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
->(
+export interface RowOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+}
+
+export function Row<const Opts extends RowOptions>(
   options: Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "row" }, options.content, (props, content) =>
@@ -345,7 +349,9 @@ export function Row<
   );
 }
 
-export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {}>(
+export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {}
+
+export function Separator<const Opts extends SeparatorOptions = {}>(
   options = {} as Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "separator" }, "", (props) =>
@@ -353,29 +359,31 @@ export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {
   );
 }
 
+export interface ValueOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+}
+
 export function Value<
   const E,
   const R,
-  const Opts extends {
-    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-  } & Dom.HostOptions<HTMLSpanElement>,
->(
-  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
-): Component<Opts> {
+  const Opts extends ValueOptions<NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<ValueOptions<E, R>, "state">): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => state.value);
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, value, (props, content) =>
     html`<span ...${props}>${content}</span>`,
   );
 }
 
+export interface CancelOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+  readonly content: AnyContent;
+}
+
 export function Cancel<
   const E,
   const R,
-  const Opts extends {
-    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
+  const Opts extends CancelOptions<NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<CancelOptions<E, R>, "state">): Component<Opts> {
   const onClick = EventHandler.make(() => setValue(options.state, ""));
   return Dom.renderHost<HTMLButtonElement, Opts>(
     options,
@@ -385,14 +393,16 @@ export function Cancel<
   );
 }
 
+export interface DisclosureOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+  readonly content: AnyContent;
+}
+
 export function Disclosure<
   const E,
   const R,
-  const Opts extends {
-    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
+  const Opts extends DisclosureOptions<NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<DisclosureOptions<E, R>, "state">): Component<Opts> {
   const open = RefSubject.map(options.state, (state) => state.open);
   const onClick = EventHandler.make(() =>
     Effect.flatMap(options.state, (state) => setOpen(options.state, !state.open)),
@@ -405,12 +415,12 @@ export function Disclosure<
   );
 }
 
-export function ItemCheck<
-  const Opts extends {
-    readonly selected: AnyValue<boolean>;
-    readonly content?: AnyContent;
-  } & Dom.HostOptions<HTMLSpanElement>,
->(options: Opts): Component<Opts> {
+export interface ItemCheckOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly selected: AnyValue<boolean>;
+  readonly content?: AnyContent;
+}
+
+export function ItemCheck<const Opts extends ItemCheckOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
     const selected = yield* makeRef(options.selected);
     const hidden = RefSubject.map(selected, (value) => !value);
@@ -423,9 +433,11 @@ export function ItemCheck<
   });
 }
 
-export function ItemValue<
-  const Opts extends { readonly value: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface ItemValueOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly value: AnyContent;
+}
+
+export function ItemValue<const Opts extends ItemValueOptions>(
   options: Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, options.value, (props, content) =>

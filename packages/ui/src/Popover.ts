@@ -123,31 +123,36 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
   }
 
-  const fallback = html`<div
-    id=${id as any}
-    popover=${mode as any}
-    style=${style as any}
-    .data=${{ open, mode } as any}
-    data-position-anchor=${firstOptionalString(options.positionAnchor) as any}
-    data-position-area=${firstOptionalString(options.positionArea) as any}
-    ontoggle=${onToggle as any}
-    ref=${NativePopover.register(options.state) as any}
+  const positionAnchor = firstOptionalString(options.positionAnchor);
+  const positionArea = firstOptionalString(options.positionArea);
+  const ref = NativePopover.register(options.state);
+
+  return html`<div
+    id=${id}
+    popover=${mode}
+    style=${style}
+    .data=${{ open, mode }}
+    data-position-anchor=${positionAnchor}
+    data-position-area=${positionArea}
+    ontoggle=${onToggle}
+    ref=${ref}
   >
     ${options.content}
   </div>`;
-  return fallback as unknown as Component<Opts>;
 }
 
 export const Popover = Content;
 
+export interface DismissOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+  readonly content: AnyContent;
+}
+
 export function Dismiss<
   const E,
   const R,
-  const Opts extends {
-    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
+  const Opts extends DismissOptions<NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<DismissOptions<E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),
@@ -173,9 +178,11 @@ export function Dismiss<
   </button>`;
 }
 
-export function Arrow<
-  const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content?: AnyContent;
+}
+
+export function Arrow<const Opts extends ArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(
@@ -189,12 +196,12 @@ export function Arrow<
 export const DisclosureArrow = Arrow;
 export const PopoverDisclosureArrow = Arrow;
 
-export function Heading<
-  const Opts extends {
-    readonly id?: string;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLDivElement>,
->(
+export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly id?: string;
+  readonly content: AnyContent;
+}
+
+export function Heading<const Opts extends HeadingOptions>(
   options: Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(
@@ -205,12 +212,12 @@ export function Heading<
   );
 }
 
-export function Description<
-  const Opts extends {
-    readonly id?: string;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLParagraphElement>,
->(options: Opts): Component<Opts> {
+export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement> {
+  readonly id?: string;
+  readonly content: AnyContent;
+}
+
+export function Description<const Opts extends DescriptionOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLParagraphElement, Opts>(
     options,
     { id: options.id },

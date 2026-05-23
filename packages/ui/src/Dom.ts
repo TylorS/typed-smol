@@ -2,10 +2,12 @@ import * as Effect from "effect/Effect";
 import * as Stream from "effect/Stream";
 import { drain, isFx, type Fx } from "@typed/fx/Fx";
 import { EventHandler, html, type Renderable } from "@typed/template";
-import type { Component } from "./Reactive.js";
+import type { AnyEffect, AnyFx, AnyStream, Component } from "./Reactive.js";
 
 export type EventHandlerProperty = `on${string}`;
 type AnyRenderable<A> = Renderable<A, any, any>;
+type AnyTemplateEventHandler<Ev extends Event = any> = EventHandler.EventHandler<Ev, any, any>;
+type AnyHostRenderer<Element extends globalThis.Element> = HostRenderer<Element, any, any, any>;
 
 export type EventOf<Handler> =
   NonNullable<Handler> extends (this: any, event: infer Event, ...args: ReadonlyArray<any>) => any
@@ -16,8 +18,8 @@ export type EventOf<Handler> =
 
 export type ElementEventHandlers<Element extends globalThis.Element> = {
   readonly [K in keyof Element as K extends EventHandlerProperty ? K : never]?:
-    | Effect.Effect<unknown, any, any>
-    | EventHandler.EventHandler<EventOf<Element[K]>, any, any>
+    | AnyEffect
+    | AnyTemplateEventHandler<EventOf<Element[K]>>
     | null;
 };
 
@@ -26,9 +28,9 @@ export type ElementRef<Element extends globalThis.Element> = {
     element: Element,
   ) =>
     | void
-    | Effect.Effect<unknown, any, any>
-    | Stream.Stream<unknown, any, any>
-    | Fx<unknown, any, any>;
+    | AnyEffect
+    | AnyStream
+    | AnyFx;
 };
 
 export type IfEquals<X, Y, Output> =
@@ -56,8 +58,8 @@ type PopoverTargetActionValue = AnyRenderable<"toggle" | "show" | "hide" | null 
 
 type HostEventHandlers = {
   readonly [K in EventHandlerProperty]?:
-    | Effect.Effect<unknown, any, any>
-    | EventHandler.EventHandler<any, any, any>
+    | AnyEffect
+    | AnyTemplateEventHandler
     | null;
 };
 
@@ -101,7 +103,7 @@ export type HostRenderer<Element extends globalThis.Element, A = unknown, E = ne
 ) => Fx<A, E, R> | Effect.Effect<A, E, R>;
 
 export interface HostOptions<Element extends globalThis.Element> {
-  readonly host?: HostRenderer<Element, any, any, any>;
+  readonly host?: AnyHostRenderer<Element>;
   readonly props?: HostProps<Element>;
 }
 
@@ -124,8 +126,10 @@ export type HostPropsForTag<Tag extends keyof ElementByTagName> = HostPropsByTag
 export type HostRendererForTag<Tag extends keyof ElementByTagName, A = unknown, E = never, R = never> =
   HostRenderer<ElementByTagName[Tag], A, E, R>;
 
+type AnyHostRendererForTag<Tag extends keyof ElementByTagName> = HostRendererForTag<Tag, any, any, any>;
+
 export interface HostOptionsForTag<Tag extends keyof ElementByTagName> {
-  readonly host?: HostRendererForTag<Tag, any, any, any>;
+  readonly host?: AnyHostRendererForTag<Tag>;
   readonly props?: HostPropsForTag<Tag>;
 }
 
@@ -209,7 +213,7 @@ export function renderDivHost<const Opts extends HostOptions<HTMLDivElement>>(
   content: AnyRenderable<unknown>,
 ): Component<Opts> {
   const split = splitRef(props);
-  return html`<div ...${split.props as any} ref=${split.ref as any}>${content}</div>` as unknown as Component<Opts>;
+  return html`<div ...${split.props} ref=${split.ref}>${content}</div>` as Component<Opts>;
 }
 
 function toEventHandler<Ev extends Event, E, R>(

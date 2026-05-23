@@ -4,14 +4,16 @@ import type { AnyContent, Component, AnyValue } from "./Reactive.js";
 
 type ButtonType = "button" | "submit" | "reset";
 
-export interface ButtonOptions extends Dom.HostOptions<HTMLButtonElement> {
+export interface ButtonOptions<E = any, R = any> extends Dom.HostOptions<HTMLButtonElement> {
   readonly content: AnyContent;
   readonly type?: AnyValue<ButtonType | undefined>;
   readonly disabled?: AnyValue<boolean | undefined>;
-  readonly onclick?: Dom.EventHandlerInput<Dom.EventOf<HTMLButtonElement["onclick"]>, any, any>;
+  readonly onclick?: Dom.EventHandlerInput<Dom.EventOf<HTMLButtonElement["onclick"]>, E, R>;
 }
 
-export function Button<const Opts extends ButtonOptions>(options: Opts): Component<Opts> {
+export function Button<const E, const R, const Opts extends ButtonOptions<NoInfer<E>, NoInfer<R>>>(
+  options: Opts,
+): Component<Opts> {
   const props = Dom.mergeProps(options.props, {
     type: options.type ?? "button",
     "?disabled": options.disabled ?? false,

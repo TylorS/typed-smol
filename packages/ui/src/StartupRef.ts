@@ -7,6 +7,7 @@ export type RefCallback<E = never, R = never> = (
   element: HTMLElement,
 ) => void | Effect.Effect<void, E, R>;
 
+type AnyRefCallback = RefCallback<any, any>;
 type RefError<Ref> = Ref extends RefCallback<infer E, any> ? E : never;
 type RefServices<Ref> = Ref extends RefCallback<any, infer R> ? R : never;
 
@@ -29,7 +30,7 @@ export function fromData<
     );
 }
 
-export function compose<const Refs extends ReadonlyArray<RefCallback<any, any>>>(
+export function compose<const Refs extends ReadonlyArray<AnyRefCallback>>(
   ...refs: Refs
 ): RefCallback<RefError<Refs[number]>, RefServices<Refs[number]>> {
   return (element) =>

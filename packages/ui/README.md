@@ -32,11 +32,12 @@
 - **Collection:** `Collection.makeState` and `Collection.register` track item metadata. Registration is scoped and unregisters when the owning `Scope` closes.
 - **Composite:** `Composite.makeState`, movement helpers, key movement, typeahead, roving tabindex helpers, and virtual-focus helpers provide reusable APG-style active item behavior.
 - **Disclosure:** `Disclosure.makeState`, `Disclosure.Button`, and `Disclosure.Content` provide headless disclosure state, APG button attributes, `hidden` content, and public `data-open`.
-- **Dialog:** `Dialog.makeState`, `Dialog.Trigger`, `Dialog.Content`, and `Dialog.Close` provide modal dialog semantics, open/close state, focus return to the invoker, and public `data-open`.
+- **Dialog:** `Dialog.makeState`, `Dialog.Trigger`, `Dialog.Content`, and `Dialog.Close` provide native modal/non-modal dialog semantics, open/close state, initial/final focus targets, Escape/outside close policies, focus return to the invoker, and public `data-open`.
 - **Popover:** `Popover.makeState`, `Popover.Trigger`, and `Popover.Content` render native `popovertarget`, `popovertargetaction`, and `popover` attributes, hydrate initially-open state, expose CSS anchor-positioning attributes, and mirror native `toggle` events into state.
 - **Menu:** `Menu.makeState`, `Menu.Trigger`, `Menu.Content`, and `Menu.Item` provide a native-Popover-backed menu layer with APG menu roles, active item state, disabled item data, and composite movement helpers.
 - **Listbox:** `Listbox.makeState`, `Listbox.Root`, and `Listbox.Option` provide single-select listbox semantics with active item movement, selected value state, virtual-focus active descendant support, and public option data attrs.
-- **Combobox:** `Combobox.Input`, `Combobox.Popover`, and `Combobox.Item` link the input to a native popover listbox, keep active item state, and support Arrow/Enter/Escape keyboard flows.
+- **Tooltip:** `Tooltip.Anchor`, `Tooltip.Content`, and `Tooltip.Arrow` provide non-interactive native hint popover semantics with focus/hover triggers, configurable show/hide delays, and hover grace.
+- **Combobox:** `Combobox.Input`, `Combobox.Popover`, and `Combobox.Item` link the input to a native popover listbox, keep active item state, and support filtering, autocomplete modes, typeahead, and Arrow/Enter/Escape keyboard flows.
 - **Select:** `Select.makeState`, `Select.Trigger`, `Select.Content`, and `Select.Option` compose native Popover layering with listbox option semantics; selecting an option updates value state and closes the popup.
 - **Tabs / RadioGroup / Toolbar / Menubar:** Composite-backed widgets with keyboard movement.
 - **SSR:** `ssrForHttp(router, matcher)` registers route handlers on an Effect **HttpRouter** for server-side rendering; `handleHttpServerError(router)` handles HTTP server errors.
@@ -71,11 +72,13 @@ function Link<const Opts extends LinkOptions>(
 
 | Property  | Type                                                                                            | Required | Description                                                       |
 | --------- | ----------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- |
-| `href`    | `Renderable<string, any, any>`                                                                  | Yes      | Target URL.                                                       |
-| `content` | `Renderable<string \| number \| boolean \| null \| undefined \| void \| RenderEvent, any, any>` | Yes      | Link body.                                                        |
+| `href`    | `Reactive.AnyValue<string>`                                                                     | Yes      | Target URL.                                                       |
+| `content` | `Reactive.AnyContent<string \| number \| boolean \| null \| undefined \| void \| RenderEvent>`  | Yes      | Link body.                                                        |
 | `replace` | `boolean`                                                                                       | No       | If `true`, use history replace instead of push. Default: `false`. |
 
 In addition, `LinkOptions` accepts standard anchor event handlers, `ref`, and other writable `HTMLAnchorElement` properties. Custom `onclick` runs first; if the event is not `preventDefault`'d, the built-in navigation handler runs.
+
+All component functions return `Reactive.Component<Opts>`, so error and service channels are inferred from the actual `Renderable`, `Effect`, `Fx`, `Stream`, `RefSubject`, host, `props`, event, and ref values in `Opts`. Broad `Reactive.AnyValue` and `Reactive.AnyContent` aliases mean "accept any user-provided renderable source"; they do not erase the component return type.
 
 ### `ssrForHttp`
 

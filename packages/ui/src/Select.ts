@@ -272,12 +272,12 @@ export function Option<
 
 export const Item = Option;
 
-export function Label<
-  const Opts extends {
-    readonly for?: RequiredString;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLLabelElement>,
->(options: Opts): Component<Opts> {
+export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
+  readonly for?: RequiredString;
+  readonly content: AnyContent;
+}
+
+export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLLabelElement, Opts>(
     options,
     { for: options.for },
@@ -286,15 +286,15 @@ export function Label<
   );
 }
 
+export interface ValueOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+}
+
 export function Value<
   const E,
   const R,
-  const Opts extends {
-    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-  } & Dom.HostOptions<HTMLSpanElement>,
->(
-  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
-): Component<Opts> {
+  const Opts extends ValueOptions<NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<ValueOptions<E, R>, "state">): Component<Opts> {
   const value = RefSubject.map(options.state, (state) => state.value ?? "");
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, value, (props, content) =>
     html`<span ...${props}>${content}</span>`,
@@ -303,7 +303,7 @@ export function Value<
 
 export interface HiddenInputOptions<
   Value extends string = string,
-  Values extends {} = Record<string, unknown>,
+  Values extends {} = {},
   E = never,
   R = never,
   E2 = never,
@@ -347,9 +347,11 @@ export function HiddenInput<
   });
 }
 
-export function Arrow<
-  const Opts extends { readonly content?: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content?: AnyContent;
+}
+
+export function Arrow<const Opts extends ArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(
@@ -360,14 +362,16 @@ export function Arrow<
   );
 }
 
+export interface DismissOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly state: RefSubject.RefSubject<State, E, R>;
+  readonly content: AnyContent;
+}
+
 export function Dismiss<
   const E,
   const R,
-  const Opts extends {
-    readonly state: RefSubject.RefSubject<State, NoInfer<E>, NoInfer<R>>;
-    readonly content: AnyContent;
-  } & Dom.HostOptions<HTMLButtonElement>,
->(options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> }): Component<Opts> {
+  const Opts extends DismissOptions<NoInfer<E>, NoInfer<R>>,
+>(options: Opts & Pick<DismissOptions<E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),
@@ -380,12 +384,12 @@ export function Dismiss<
   );
 }
 
-export function Group<
-  const Opts extends {
-    readonly content: AnyContent;
-    readonly label?: RequiredString;
-  } & Dom.HostOptions<HTMLDivElement>,
->(options: Opts): Component<Opts> {
+export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+  readonly label?: RequiredString;
+}
+
+export function Group<const Opts extends GroupOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(
     options,
     { role: "group", "aria-label": options.label },
@@ -394,9 +398,11 @@ export function Group<
   );
 }
 
-export function GroupLabel<
-  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLSpanElement>,
->(
+export interface GroupLabelOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly content: AnyContent;
+}
+
+export function GroupLabel<const Opts extends GroupLabelOptions>(
   options: Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLSpanElement, Opts>(options, {}, options.content, (props, content) =>
@@ -404,12 +410,12 @@ export function GroupLabel<
   );
 }
 
-export function Heading<
-  const Opts extends {
-    readonly content: AnyContent;
-    readonly id?: RequiredString;
-  } & Dom.HostOptions<HTMLDivElement>,
->(options: Opts): Component<Opts> {
+export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+  readonly id?: RequiredString;
+}
+
+export function Heading<const Opts extends HeadingOptions>(options: Opts): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(
     options,
     { id: options.id, role: "heading", "aria-level": "1" },
@@ -418,12 +424,12 @@ export function Heading<
   );
 }
 
-export function ItemCheck<
-  const Opts extends {
-    readonly selected: AnyValue<boolean>;
-    readonly content?: AnyContent;
-  } & Dom.HostOptions<HTMLSpanElement>,
->(options: Opts): Component<Opts> {
+export interface ItemCheckOptions extends Dom.HostOptions<HTMLSpanElement> {
+  readonly selected: AnyValue<boolean>;
+  readonly content?: AnyContent;
+}
+
+export function ItemCheck<const Opts extends ItemCheckOptions>(options: Opts): Component<Opts> {
   return gen(function* () {
     const selected = yield* makeRef(options.selected);
     const hidden = RefSubject.map(selected, (value) => !value);
@@ -436,9 +442,11 @@ export function ItemCheck<
   });
 }
 
-export function Row<
-  const Opts extends { readonly content: AnyContent } & Dom.HostOptions<HTMLDivElement>,
->(
+export interface RowOptions extends Dom.HostOptions<HTMLDivElement> {
+  readonly content: AnyContent;
+}
+
+export function Row<const Opts extends RowOptions>(
   options: Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "row" }, options.content, (props, content) =>
@@ -446,7 +454,9 @@ export function Row<
   );
 }
 
-export function Separator<const Opts extends Dom.HostOptions<HTMLDivElement> = {}>(
+export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {}
+
+export function Separator<const Opts extends SeparatorOptions = {}>(
   options = {} as Opts,
 ): Component<Opts> {
   return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "separator" }, "", (props) =>

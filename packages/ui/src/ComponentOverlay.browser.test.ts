@@ -2,11 +2,12 @@ import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, render } from "@typed/template";
+import { DomRenderTemplate, html, render } from "@typed/template";
 import * as Combobox from "./Combobox.js";
 import * as Dialog from "./Dialog.js";
 import * as Popover from "./Popover.js";
 import * as Select from "./Select.js";
+import * as Tooltip from "./Tooltip.js";
 import type { Component } from "./Reactive.js";
 
 describe("typed/ui rendered native component flows", () => {
@@ -58,6 +59,79 @@ describe("typed/ui rendered native component flows", () => {
       yield* Effect.sleep(50);
       assert.strictEqual(dialog.open, false);
       assert.isAtLeast(focusCount, 1);
+      root.remove();
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("honors rendered dialog initial focus, final focus, and close policies", () =>
+    Effect.gen(function* () {
+      const root = appendRoot();
+      const state = yield* Dialog.makeState({ open: false });
+      const finalFocus = document.createElement("button");
+      finalFocus.textContent = "Return";
+      const dialog = yield* renderOne<HTMLDialogElement>(
+        Dialog.Content({
+          state,
+          id: "preferences",
+          label: "Preferences",
+          initialFocus: "#first-field",
+          finalFocus,
+          closeOnEscape: false,
+          closeOnOutsideInteraction: true,
+          content: html`<input id="first-field" />`,
+        }),
+        root,
+      );
+      root.append(finalFocus);
+
+      yield* Dialog.setOpen(state, true);
+      yield* Effect.sleep(50);
+      assert.strictEqual(dialog.open, true);
+      assert.strictEqual(document.activeElement?.id, "first-field");
+
+      dialog.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(50);
+      assert.strictEqual((yield* state).open, true);
+      assert.strictEqual(dialog.open, true);
+
+      dialog.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(50);
+      assert.strictEqual((yield* state).open, false);
+      assert.strictEqual(dialog.open, false);
+      assert.strictEqual(document.activeElement, finalFocus);
+      root.remove();
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("honors rendered tooltip delay and hover grace policies", () =>
+    Effect.gen(function* () {
+      const root = appendRoot();
+      const state = yield* Tooltip.makeState({ id: "help-tip", open: false });
+      const anchor = yield* renderOne<HTMLElement>(
+        Tooltip.Anchor({
+          state,
+          content: "Help",
+          showDelay: 20,
+          hideDelay: 40,
+          hoverGrace: 40,
+        }),
+        root,
+      );
+      yield* renderOne<HTMLElement>(Tooltip.Content({ state, content: "Help text" }), root);
+
+      anchor.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(10);
+      assert.strictEqual((yield* state).open, false);
+      yield* Effect.sleep(30);
+      assert.strictEqual((yield* state).open, true);
+
+      anchor.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(20);
+      anchor.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(50);
+      assert.strictEqual((yield* state).open, true);
+
+      anchor.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(60);
+      assert.strictEqual((yield* state).open, false);
       root.remove();
     }).pipe(Effect.scoped, Effect.runPromise));
 

@@ -43,7 +43,7 @@ export interface ButtonOptions<E = never, R = never> extends Dom.HostOptions<HTM
 }
 
 export function Button<const E, const R, const Opts extends ButtonOptions<NoInfer<E>, NoInfer<R>>>(
-  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
+  options: Opts & Pick<ButtonOptions<E, R>, "state">,
 ): Component<Opts> {
   const open = dataOpen(options.state);
   const onClick = EventHandler.make(() => toggle(options.state));
@@ -77,7 +77,7 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
 }
 
 export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
-  options: Opts & { readonly state: RefSubject.RefSubject<State, E, R> },
+  options: Opts & Pick<ContentOptions<E, R>, "state">,
 ): Component<Opts> {
   const open = dataOpen(options.state);
   const hidden = RefSubject.map(options.state, (current) => !current.open);
