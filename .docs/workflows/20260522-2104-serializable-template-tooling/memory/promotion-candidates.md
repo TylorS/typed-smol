@@ -9,3 +9,4 @@
 - Consider keeping `runVmcCli` as the single CLI orchestration layer for `vmc`, `@typed/compiler`, and future framework-specific compiler hosts.
 - Consider keeping `templates: false` as the framework-wide template transform rollback switch across Vite, CLI, and future editor integrations.
 - Consider treating `getTemplateDiagnostics` as the canonical editor/CLI diagnostic source for source-file HTML template analysis.
+- Consider standardizing encoded compiler fix metadata for future VS Code quick fixes; current VS Code provider intentionally stays inert without it.

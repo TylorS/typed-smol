@@ -274,10 +274,10 @@ Goal: Keep VS Code as UX/config layer over TS plugin diagnostics.
 
 Tasks:
 
-1. Configure TS plugin through VS Code TypeScript extension API.
-2. Document template diagnostics support in extension README.
-3. Add code-action provider only for compiler diagnostics carrying fix metadata.
-4. Preserve virtual-module navigation/tree behavior.
+1. [completed] Configure TS plugin through VS Code TypeScript extension API.
+2. [completed] Document template diagnostics support in extension README.
+3. [completed] Add code-action provider only for compiler diagnostics carrying fix metadata.
+4. [completed] Preserve virtual-module navigation/tree behavior.
 
 Traceability:
 

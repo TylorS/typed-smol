@@ -6,7 +6,7 @@ VS Code extension that makes **virtual module imports** first-class in the edito
 
 **Purpose:** Without this extension, Go to Definition and similar features fail on virtual imports because the content doesn't exist on disk. The extension resolves virtual modules via `@typed/virtual-modules` and your configured plugins, then serves content through custom URI schemes and a read-only FileSystemProvider—so the TypeScript language service and editor tooling work correctly.
 
-**Capabilities:** Go to Definition, document links, find references, a sidebar tree of virtual imports, and diagnostic commands. Content refreshes automatically when source files change.
+**Capabilities:** Go to Definition, document links, find references, a sidebar tree of virtual imports, template diagnostics from the shared TypeScript plugin, and diagnostic commands. Content refreshes automatically when source files change.
 
 | Feature                         | Description                                                             |
 | ------------------------------- | ----------------------------------------------------------------------- |
@@ -14,6 +14,7 @@ VS Code extension that makes **virtual module imports** first-class in the edito
 | **Document links**              | Virtual imports are clickable links                                     |
 | **Find references**             | From a virtual module tab, shows all import sites                       |
 | **Virtual Module Imports view** | Explorer sidebar listing discovered virtual imports                     |
+| **Template diagnostics**        | Invalid `@typed/template` HTML is reported through TypeScript diagnostics |
 | **Open from import**            | Right-click import → "Virtual Modules: Open virtual module from import" |
 | **Diagnose**                    | Output channel command for debugging go-to-definition                   |
 
@@ -49,6 +50,10 @@ Then run from the workspace via **Run and Debug** (see [Running the extension](#
 ## Activation
 
 The extension activates on TypeScript and TypeScript React files (`onLanguage:typescript`, `onLanguage:typescriptreact`).
+
+## TypeScript plugin
+
+The extension contributes and configures `@typed/virtual-modules-ts-plugin` through VS Code's TypeScript extension API. That plugin owns editor diagnostics for virtual modules and Typed HTML templates, so diagnostics stay aligned with CLI and Vite compiler behavior.
 
 ## Dependencies
 

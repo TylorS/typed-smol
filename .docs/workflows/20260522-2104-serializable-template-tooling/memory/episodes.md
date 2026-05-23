@@ -59,3 +59,9 @@
 - Added `getTemplateDiagnostics` to `@typed/compiler`; it reuses `analyzeTemplateModule` and converts shared compiler diagnostics to `ts.Diagnostic`.
 - `@typed/virtual-modules-ts-plugin` now appends template diagnostics from `getSemanticDiagnostics` after installing the virtual-module language-service adapter.
 - The TS plugin build bundles `@typed/compiler` so editor hosts do not need to bridge the plugin's CommonJS output to compiler ESM at runtime.
+
+## M9 - VS Code Extension Cooperation
+
+- `@typed/virtual-modules-vscode` contributes and configures `@typed/virtual-modules-ts-plugin` through VS Code's TypeScript extension API.
+- Template diagnostics remain owned by the TS plugin; the VS Code extension only enables/configures that path and documents it.
+- Added a guarded quick-fix provider that returns code actions only when a diagnostic carries encoded compiler fix metadata.

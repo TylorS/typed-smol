@@ -20,6 +20,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@typed/virtual-modules-ts-plugin": "workspace:*",
     "@typed/virtual-modules": "workspace:*"
   },
   "devDependencies": {
@@ -84,6 +85,12 @@
       {
         "view": "typedVirtualModules",
         "contents": "No virtual modules found. Add imports like `import x from 'virtual:foo'` in your TypeScript files."
+      }
+    ],
+    "typescriptServerPlugins": [
+      {
+        "name": "@typed/virtual-modules-ts-plugin",
+        "enableForWorkspaceTypeScriptVersions": true
       }
     ]
   },

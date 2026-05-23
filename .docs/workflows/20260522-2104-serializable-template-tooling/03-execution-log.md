@@ -219,3 +219,25 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
   - `@typed/virtual-modules-ts-plugin` now depends on `@typed/compiler`.
 - memory_updates:
   - recorded the shared compiler diagnostic service and TS plugin semantic diagnostic wrapper in `memory/episodes.md`.
+
+### Task M9 - VS Code Extension Cooperation
+
+- task_id: M9
+- requirement_ids: FR-10, NFR-01, NFR-03, NFR-05
+- ts_scenarios: TS-09, TS-10
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/virtual-modules-vscode test -- typescriptPlugin codeActions` failed because `./typescriptPlugin.js` and `./codeActions.js` did not exist.
+  - green: `pnpm --filter @typed/virtual-modules-vscode test -- typescriptPlugin codeActions` passed, 5 files / 11 tests.
+  - green: `pnpm --filter @typed/virtual-modules-vscode build` passed.
+  - green: `pnpm --filter @typed/virtual-modules-vscode test` passed, 5 files / 11 tests.
+  - green: `pnpm --filter @typed/virtual-modules-ts-plugin test -- plugin -t "appends typed template semantic diagnostics"` passed, 2 files / 14 tests.
+  - green: focused `pnpm exec oxlint ...` over touched VS Code/TS-plugin files passed.
+- commit: current atomic commit `feat(vscode): configure typed ts plugin`
+- deviations_or_replans:
+  - VS Code remains a UX/config layer: template diagnostics still come from `@typed/virtual-modules-ts-plugin`.
+  - Code actions are conservative and only produce quick fixes when diagnostics carry encoded compiler fix metadata.
+- context_updates:
+  - VS Code extension contributes `@typed/virtual-modules-ts-plugin`.
+  - VS Code extension configures the TS plugin with template diagnostics enabled.
+- memory_updates:
+  - recorded VS Code TS-plugin configuration and guarded code action behavior in `memory/episodes.md`.

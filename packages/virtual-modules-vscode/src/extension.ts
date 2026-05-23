@@ -16,6 +16,11 @@ import {
   createVirtualModulesTreeProvider,
   type VirtualModulesTreeProvider,
 } from "./VirtualModulesTreeProvider";
+import { createTypedCompilerCodeActionProvider } from "./codeActions";
+import {
+  configureTypeScriptPlugin,
+  createTypeScriptPluginConfiguration,
+} from "./typescriptPlugin";
 
 const SCHEME = "virtual-module";
 const REFRESH_DEBOUNCE_MS = 150;
@@ -27,6 +32,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
   let refreshDebounceTimer: ReturnType<typeof setTimeout> | undefined;
   let pendingRefreshRoots = new Set<string>();
+
+  void configureTypeScriptPlugin(vscode, createTypeScriptPluginConfiguration());
 
   function cacheVirtualModule(
     projectRoot: string,
@@ -276,6 +283,18 @@ export function activate(context: vscode.ExtensionContext): void {
         { language: "javascript", scheme: VIRTUAL_MODULE_URI_SCHEME },
       ],
       createVirtualModuleReferenceProvider(getProjectRoot),
+    ),
+  );
+  context.subscriptions.push(
+    vscode.languages.registerCodeActionsProvider(
+      [
+        { language: "typescript", scheme: "file" },
+        { language: "typescriptreact", scheme: "file" },
+        { language: "javascript", scheme: "file" },
+        { language: "javascriptreact", scheme: "file" },
+      ],
+      createTypedCompilerCodeActionProvider(vscode),
+      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
     ),
   );
 

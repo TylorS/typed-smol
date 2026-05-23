@@ -637,6 +637,9 @@ importers:
       '@typed/virtual-modules':
         specifier: workspace:*
         version: link:../virtual-modules
+      '@typed/virtual-modules-ts-plugin':
+        specifier: workspace:*
+        version: link:../virtual-modules-ts-plugin
     devDependencies:
       '@types/node':
         specifier: ^25.7.0

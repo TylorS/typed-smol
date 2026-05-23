@@ -70,6 +70,7 @@ import type { PluginCreateInfo } from "./types.js";
 
 interface VirtualModulesTsPluginConfig {
   readonly debounceMs?: number;
+  readonly templateDiagnostics?: boolean;
   /** Path to typed.config.ts (relative to project root or absolute). */
   readonly configPath?: string;
   /** Path to vmc.config.ts (relative to project root or absolute); default file name when omitted. */
@@ -1008,11 +1009,13 @@ function init(modules: { typescript: typeof import("typescript") }): {
       watchHost,
       debounceMs,
     });
-    attachTemplateDiagnostics({
-      ts,
-      languageService: info.languageService,
-      languageServiceHost: info.project as import("typescript").LanguageServiceHost,
-    });
+    if (config.templateDiagnostics !== false) {
+      attachTemplateDiagnostics({
+        ts,
+        languageService: info.languageService,
+        languageServiceHost: info.project as import("typescript").LanguageServiceHost,
+      });
+    }
 
     // Force program rebuild so resolution uses our patched host.
     const projectWithDirty = info.project as {
