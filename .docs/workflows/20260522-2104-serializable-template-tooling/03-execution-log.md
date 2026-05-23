@@ -137,3 +137,30 @@ Execution is proceeding milestone-by-milestone from `plan.md`.
 - memory_updates:
   - recorded template module analysis and transform boundary in `memory/episodes.md`.
   - added hoisted template-plan metadata as a promotion candidate.
+
+### Task M6 - `@typed/compiler` CLI
+
+- task_id: M6
+- requirement_ids: FR-05, FR-06, NFR-01, NFR-03, NFR-05
+- ts_scenarios: TS-06, TS-10
+- validation_evidence:
+  - initial red: `pnpm --filter @typed/virtual-modules-compiler test -- runVmcCli` failed because `./runVmcCli.js` did not exist.
+  - initial red: `pnpm --filter @typed/compiler test -- vmcExtension` failed because `./vmcExtension.js` did not exist.
+  - green: `pnpm --filter @typed/virtual-modules-compiler test -- runVmcCli` passed, 4 files / 26 tests.
+  - green: `pnpm --filter @typed/compiler test -- vmcExtension` passed, 20 files / 76 tests.
+  - green: `pnpm --filter @typed/virtual-modules-compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/compiler exec tsc --noEmit --pretty false` passed.
+  - green: `pnpm --filter @typed/virtual-modules-compiler test` passed, 4 files / 26 tests.
+  - green: `pnpm --filter @typed/compiler test -- vmcExtension transformTemplateModule analyzeTemplateModule` passed, 20 files / 76 tests.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: focused `pnpm exec oxlint ...` over touched CLI/extension files passed.
+  - green: `git diff --check` passed.
+- commit: current atomic commit `feat(compiler): add compiler cli wrapper`
+- deviations_or_replans:
+  - Extracted `runVmcCli` into `@typed/virtual-modules-compiler` so `vmc` and `@typed/compiler` share one argument parsing and compile/build/watch path.
+  - The first Typed compiler extension installs the M5 template module transform. Serialization diagnostics can extend the same extension surface when schema usage is wired into route/template analysis.
+- context_updates:
+  - `@typed/compiler` now exposes a `typed-compiler` bin.
+  - `@typed/virtual-modules-compiler` exports `runVmcCli`.
+- memory_updates:
+  - recorded the reusable CLI runner and Typed compiler extension in `memory/episodes.md`.

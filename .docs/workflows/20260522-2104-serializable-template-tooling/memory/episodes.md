@@ -39,3 +39,10 @@
 - Module analysis records tagged template spans, tag spans, quasi spans, expression spans, local variable names, and existing `TemplatePlan` facts.
 - Added `transformTemplateModule` that hoists template strings with attached `typedTemplatePlan` metadata and rewrites typed tagged templates to equivalent `html(templateStrings, ...values)` calls.
 - Templates without imported typed `html` bindings remain unchanged, preserving the interpreted fallback path.
+
+## M6 - `@typed/compiler` CLI
+
+- Extracted `runVmcCli` from the `vmc` executable so CLI argument parsing, init, compile, build, and watch flows are reusable by Typed compiler hosts.
+- `runVmcCli` accepts compiler extensions and forwards them through compile, build, and watch modes.
+- Added `createTypedCompilerExtension` as the first `@typed/compiler` extension, installing the template module transform into the shared `vmc` compiler host path.
+- Added the `typed-compiler` bin to `@typed/compiler`.

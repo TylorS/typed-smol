@@ -16,6 +16,9 @@
       "import": "./dist/*.js"
     }
   },
+  "bin": {
+    "typed-compiler": "./dist/cli.js"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -28,9 +31,11 @@
     "@typed/fx": "workspace:*",
     "@typed/template": "workspace:*",
     "@typed/virtual-modules": "workspace:*",
+    "@typed/virtual-modules-compiler": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "^25.7.0",
     "happy-dom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

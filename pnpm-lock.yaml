@@ -290,10 +290,16 @@ importers:
       '@typed/virtual-modules':
         specifier: workspace:*
         version: link:../virtual-modules
+      '@typed/virtual-modules-compiler':
+        specifier: workspace:*
+        version: link:../virtual-modules-compiler
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.66
     devDependencies:
+      '@types/node':
+        specifier: ^25.7.0
+        version: 25.7.0
       happy-dom:
         specifier: 'catalog:'
         version: 20.9.0

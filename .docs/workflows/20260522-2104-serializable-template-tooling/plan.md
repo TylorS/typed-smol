@@ -193,11 +193,11 @@ Goal: Add CLI wrapper around `vmc` with Typed compiler extensions installed.
 
 Tasks:
 
-1. Add bin entry to `@typed/compiler`.
-2. Delegate argument parsing/compile/build/watch to `vmc` framework APIs.
-3. Install template transform and serialization diagnostics extension.
-4. Emit shared diagnostics through TypeScript formatting.
-5. Add CLI integration tests for `--noEmit`, `--build`, and watch entrypoint initialization.
+1. [completed] Add bin entry to `@typed/compiler`.
+2. [completed] Delegate argument parsing/compile/build/watch to `vmc` framework APIs.
+3. [completed] Install template transform and serialization diagnostics extension.
+4. [completed] Emit shared diagnostics through TypeScript formatting.
+5. [completed] Add CLI integration tests for `--noEmit`, `--build`, and watch entrypoint initialization.
 
 Traceability:
 

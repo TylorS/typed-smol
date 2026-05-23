@@ -4,3 +4,4 @@ export { compile } from "./compile.js";
 export * from "./extensions.js";
 export { runWatch } from "./watch.js";
 export { runBuild } from "./build.js";
+export { runVmcCli, type RunVmcCliParams } from "./runVmcCli.js";
