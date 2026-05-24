@@ -128,7 +128,7 @@ Create `developer-tooling-handoff.md`:
 - required_before_tooling_edits: explicit handoff from the developer-tooling agent or human approval
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Commit message:
 
@@ -833,7 +833,7 @@ test(realworld): verify functional compliance
 - Create: `examples/realworld/src/tests/presentation/storybook-runtime.test.ts`
 - Do not add broad Storybook features.
 
-- [ ] **Step 1: Add a smoke that exercises generated runtime defaults**
+- [x] **Step 1: Add a smoke that exercises generated runtime defaults**
 
 Create `examples/realworld/src/tests/presentation/storybook-runtime.test.ts`. It should read `examples/realworld/src/Home.stories.ts` and `examples/realworld/src/Shell.stories.ts`, then assert both consume the generated runtime defaults:
 
@@ -852,7 +852,7 @@ expect(generatedRuntimeSource).toContain('apiBaseUrl');
 expect(generatedRuntimeSource).toContain('makeStoryRuntime');
 ```
 
-- [ ] **Step 2: Run Storybook gates**
+- [x] **Step 2: Run Storybook gates**
 
 Run:
 
