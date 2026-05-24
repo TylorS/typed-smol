@@ -144,3 +144,8 @@
 - DevTools Chrome package code should use `chrome.*` APIs directly; Chrome DevTools extension docs say the `browser` namespace is disabled for extensions declaring `devtools_page`.
 - Chrome transport envelope types should derive tags, payloads, and successes from `@typed/devtools-protocol` RPC types instead of redeclaring protocol message unions in the Chrome package.
 - Chrome runtime transport pending requests must retain the expected RPC tag and ignore incomplete responses before settling the request.
+
+### T21
+
+- Chrome panel state should derive entirely from protocol `RuntimeEventStreamItem` values and expose stable `typed://` deep links from protocol ids for view rows.
+- Non-ready runtime replay states should clear or stale-mark accumulated Chrome panel rows before applying retained events.

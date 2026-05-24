@@ -743,6 +743,36 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for MV3 manifest shape, DevTools page API usage, protocol-derived transport typing, package boundary compliance, and publish/package wiring before commit.
 
+### T21 - Chrome Panel State and Initial Views
+
+- requirement_links: FR-30, FR-31, FR-38, FR-39, FR-40, FR-41, FR-42, NFR-9, NFR-10, NFR-12, NFR-15, NFR-17, AC-9, AC-10, AC-11, AC-13.
+- write_set:
+  - `packages/devtools-chrome/src/panel/state.ts`
+  - `packages/devtools-chrome/src/panel/state.test.ts`
+  - `packages/devtools-chrome/src/panel/views/components.ts`
+  - `packages/devtools-chrome/src/panel/views/fx.ts`
+  - `packages/devtools-chrome/src/panel/views/refsubjects.ts`
+  - `packages/devtools-chrome/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add panel state tests before the panel modules exist.
+  - Run `pnpm --filter @typed/devtools-chrome exec vitest run src/panel/state.test.ts` and capture the missing-module failure.
+- green_step:
+  - Accumulate protocol runtime replay/items into panel state for Components/Templates, Fx, and RefSubjects.
+  - Expose small view-model functions for Components, Fx, and RefSubjects so Chrome UI can render from protocol facts without importing runtime/compiler packages.
+  - Preserve stable deep-link ids from protocol identifiers and keep reconnect/replay state visible to the panel model.
+- verification:
+  - `pnpm --filter @typed/devtools-chrome exec vitest run src/panel/state.test.ts`
+  - `pnpm --filter @typed/devtools-chrome test`
+  - `pnpm --filter @typed/devtools-chrome build`
+  - `pnpm exec oxlint packages/devtools-chrome/src`
+  - `pnpm exec oxfmt --check packages/devtools-chrome/src`
+  - `rg -n "from \"@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)|from '@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)'" packages/devtools-chrome/src/panel packages/devtools-chrome/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for protocol-only state derivation, view-model stability, deep-link ids, replay/reconnect handling, and package boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

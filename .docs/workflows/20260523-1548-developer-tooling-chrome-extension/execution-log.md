@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T20, then report task completion.
+- current_scope: execute approved plan task T21, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -643,7 +643,7 @@
   - green: final `git diff --check -- packages/devtools-chrome pnpm-lock.yaml scripts/publish-beta.sh .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Focused re-review found no Critical or Important issues after the response validation fix.
 - commit:
-  - pending
+  - `9c06234 feat(devtools): add chrome devtools shell`
 - context_updates:
   - Added `@typed/devtools-chrome` package shell with Manifest V3 DevTools manifest helper, callback-style DevTools panel registration, and Chrome runtime Port RPC client.
   - Added protocol-derived Chrome runtime transport envelope types using `TypedDevtoolsRpc` tags/payloads/results instead of redeclaring protocol message unions.
@@ -653,3 +653,40 @@
   - DevTools Chrome package code should use `chrome.*` APIs directly; Chrome DevTools extension docs say the `browser` namespace is disabled for extensions declaring `devtools_page`.
   - Chrome transport envelope types should derive tags, payloads, and successes from `@typed/devtools-protocol` RPC types instead of redeclaring protocol message unions in the Chrome package.
   - Chrome runtime transport pending requests must retain the expected RPC tag and ignore incomplete responses before settling the request.
+
+### T21 - Chrome Panel State and Initial Views
+
+- task_id: T21
+- requirement_ids: FR-30, FR-31, FR-38, FR-39, FR-40, FR-41, FR-42, NFR-9, NFR-10, NFR-12, NFR-15, NFR-17, AC-9, AC-10, AC-11, AC-13
+- ts_scenarios: TS-9, TS-11
+- routing_decision:
+  - direct execution for the red-green implementation because target files and dependencies are locked and the state/view model slice has one cohesive write set.
+  - sidecar review-auditor required before commit for protocol-only state derivation, view-model stability, deep-link ids, replay/reconnect handling, and package boundary compliance.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-chrome exec vitest run src/panel/state.test.ts` failed with missing `./state.js`.
+  - green: `pnpm --filter @typed/devtools-chrome exec vitest run src/panel/state.test.ts` passed with 1 test file and 3 tests.
+  - red: `pnpm --filter @typed/devtools-chrome test` initially failed typecheck because the synthetic event array widened literal `_tag` values before reducing through `applyRuntimeStreamItem`.
+  - green: after typing synthetic events as `RuntimeEventStreamItem[]`, `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 2 test files and 9 tests.
+  - green: `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - red: first `pnpm exec oxfmt --check packages/devtools-chrome/src` failed on `src/panel/state.test.ts`.
+  - green: after formatting, `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
+  - green: boundary grep for forbidden non-protocol `@typed/*` imports in panel files returned no matches.
+  - green: `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found Important issues where non-ready replay states left stale rows visible and RefSubject rows dropped the serialized value.
+  - red: non-ready replay/value regressions failed because stale component rows remained after `SessionMismatch` and RefSubject rows omitted `value`.
+  - green: after clearing accumulated rows for non-ready replay states and adding RefSubject row values, `pnpm --filter @typed/devtools-chrome exec vitest run src/panel/state.test.ts` passed with 1 test file and 5 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 2 test files and 11 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: final `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - green: final `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
+  - review: Focused re-review found no Critical or Important issues after replay/value fixes.
+- commit:
+  - pending
+- context_updates:
+  - Added protocol-only panel state accumulation for component, Fx, RefSubject, and replay state events.
+  - Added Components/Templates, Fx, and RefSubjects panel row view models with stable `typed://` deep links derived from protocol ids.
+  - Cleared accumulated rows when replay state is not `Ready`, and exposed serialized RefSubject values in view rows.
+- memory_updates:
+  - Chrome panel state should derive entirely from protocol `RuntimeEventStreamItem` values and expose stable `typed://` deep links from protocol ids for view rows.
+  - Non-ready runtime replay states should clear or stale-mark accumulated Chrome panel rows before applying retained events.
