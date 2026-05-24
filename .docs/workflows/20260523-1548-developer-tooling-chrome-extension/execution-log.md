@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T23, then report task completion.
+- current_scope: execute approved plan task T24, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -764,7 +764,7 @@
   - green: final `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Focused re-review found no Critical or Important issues after the runtime-path and rejection-fallback tests.
 - commit:
-  - pending
+  - `36040d4 feat(devtools): add sources analyzer sidebar`
 - context_updates:
   - Added Sources sidebar registration over `chrome.devtools.panels.sources` with injectable source selection and protocol AnalyzeSource clients.
   - Added protocol-derived SourceFacts/Unavailable sidebar models with stable component, Fx, RefSubject, and source deep links.
@@ -772,3 +772,37 @@
 - memory_updates:
   - Chrome Sources sidebar selection needs an injected source-selection provider because `sources.onSelectionChanged` does not provide resource or cursor payloads.
   - Source Analyzer sidebar models should preserve branded `SourceLocationId` values, including the `src:` prefix, when building source deep links.
+
+### T24 - Chrome DevTools Smoke Coverage and Manual Browser Steps
+
+- task_id: T24
+- requirement_ids: FR-30, FR-31, FR-38, FR-39, FR-40, FR-43, FR-44, FR-45, NFR-9, NFR-10, NFR-11, NFR-12, NFR-17, NFR-18, AC-9, AC-10, AC-11, AC-12, AC-14
+- ts_scenarios: TS-9, TS-11, TS-12
+- routing_decision:
+  - direct execution for the red-green implementation because target files are locked and the slice is test/manual smoke coverage around existing Chrome package exports.
+  - sidecar review-auditor required before commit for smoke coverage adequacy, manual browser step accuracy, reconnect/reload behavior, and package boundary compliance.
+- source_context:
+  - Chrome extension docs: load unpacked testing uses `chrome://extensions`, Developer Mode, and Load unpacked on the extension directory.
+  - Chrome DevTools extension docs: `devtools_page` must be an HTML page local to the extension, and DevTools pages can create panels/sidebars while communicating with runtime/background pages through `chrome.runtime.connect`.
+  - Chrome `devtools.panels` docs: DevTools extension panels and sidebars are separate HTML pages, and sidebar panes can display JSON via `setObject` or extension HTML via `setPage`.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-chrome exec vitest run src/devtoolsSmoke.test.ts` failed because `packages/devtools-chrome/MANUAL_SMOKE.md` did not exist.
+  - green: after adding `MANUAL_SMOKE.md`, `pnpm --filter @typed/devtools-chrome exec vitest run src/devtoolsSmoke.test.ts` passed with 1 test file and 3 tests.
+  - red: `pnpm --filter @typed/devtools-chrome test` failed because `devtoolsSmoke.test.ts` imported Node built-in modules, but the package test typecheck does not include Node built-in module types.
+  - green: after switching the manual doc assertion to a Vite raw Markdown import and adding `src/raw.d.ts`, `pnpm --filter @typed/devtools-chrome exec vitest run src/devtoolsSmoke.test.ts` passed with 1 test file and 3 tests.
+  - green: `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 5 test files and 27 tests.
+  - green: `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
+  - green: boundary grep for forbidden non-protocol `@typed/*` imports in T24 files returned no matches.
+  - green: `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no Critical or Important issues; automated smoke scope, browser blocker honesty, runtime reconnect coverage, package boundary compliance, and `raw.d.ts` were accepted.
+- commit:
+  - pending
+- context_updates:
+  - Added automated smoke coverage for Manifest V3 metadata, DevTools panel registration, Elements sidebar selection rendering, Sources Analyzer runtime RPC rendering, and runtime connect/reconnect.
+  - Added `MANUAL_SMOKE.md` with exact browser smoke steps and an explicit blocker for the missing load-unpacked extension root.
+  - Added a package-local raw Markdown module declaration so smoke tests can assert manual documentation without Node built-in test types.
+- memory_updates:
+  - Chrome package smoke tests should avoid Node built-in imports because `@typed/devtools-chrome` test typecheck does not include Node built-in module types.
+  - Browser load-unpacked smoke remains blocked until `@typed/devtools-chrome` emits a complete extension root with `manifest.json`, DevTools HTML pages, sidebar HTML pages, and icon assets.

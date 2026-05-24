@@ -159,3 +159,8 @@
 
 - Chrome Sources sidebar selection needs an injected source-selection provider because `sources.onSelectionChanged` does not provide resource or cursor payloads.
 - Source Analyzer sidebar models should preserve branded `SourceLocationId` values, including the `src:` prefix, when building source deep links.
+
+### T24
+
+- Chrome package smoke tests should avoid Node built-in imports because `@typed/devtools-chrome` test typecheck does not include Node built-in module types.
+- Browser load-unpacked smoke remains blocked until `@typed/devtools-chrome` emits a complete extension root with `manifest.json`, DevTools HTML pages, sidebar HTML pages, and icon assets.

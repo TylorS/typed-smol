@@ -831,6 +831,33 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for Sources panel API usage, AnalyzeSource protocol boundary, unavailable bridge behavior, stale async selection handling, and package boundary compliance before commit.
 
+### T24 - Chrome DevTools Smoke Coverage and Manual Browser Steps
+
+- requirement_links: FR-30, FR-31, FR-38, FR-39, FR-40, FR-43, FR-44, FR-45, NFR-9, NFR-10, NFR-11, NFR-12, NFR-17, NFR-18, AC-9, AC-10, AC-11, AC-12, AC-14.
+- write_set:
+  - `packages/devtools-chrome/src/devtoolsSmoke.test.ts`
+  - `packages/devtools-chrome/src/raw.d.ts`
+  - `packages/devtools-chrome/MANUAL_SMOKE.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add smoke tests for manifest/panel registration, runtime connect/reconnect, Elements selection, Sources AnalyzeSource, and manual smoke doc coverage.
+  - Run `pnpm --filter @typed/devtools-chrome exec vitest run src/devtoolsSmoke.test.ts` and capture the missing manual doc failure.
+- green_step:
+  - Add `MANUAL_SMOKE.md` with exact browser steps for load-unpacked installation, DevTools panel visibility, Elements sidebar selection, Sources Analyzer sidebar, extension reload/reconnect, and any browser-only assertions.
+  - Keep the automated smoke in test-only fakes that compose existing Chrome package exports; do not add production APIs unless the smoke exposes a real gap.
+  - Ensure the smoke exercises protocol-owned Chrome runtime RPC requests rather than local message unions.
+- verification:
+  - `pnpm --filter @typed/devtools-chrome exec vitest run src/devtoolsSmoke.test.ts`
+  - `pnpm --filter @typed/devtools-chrome test`
+  - `pnpm --filter @typed/devtools-chrome build`
+  - `pnpm exec oxlint packages/devtools-chrome/src`
+  - `pnpm exec oxfmt --check packages/devtools-chrome/src`
+  - `rg -n "from \"@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)|from '@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)'" packages/devtools-chrome/src/devtoolsSmoke.test.ts packages/devtools-chrome/src/raw.d.ts` must return no matches.
+  - `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for smoke coverage adequacy, manual browser step accuracy, reconnect/reload behavior, and package boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |
