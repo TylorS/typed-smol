@@ -2,15 +2,19 @@ import type { DevtoolsSessionId, RuntimeEventEnvelope } from "@typed/devtools-pr
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import { makeRuntimeEventBus, type RuntimeEventBus } from "./EventBus.js";
 
 export interface DevtoolsRuntimeOptions {
   readonly enabled?: boolean;
+  readonly eventBus?: RuntimeEventBus;
+  readonly maxEvents?: number;
   readonly sessionId?: DevtoolsSessionId;
 }
 
 export interface DevtoolsRuntimeService {
   readonly enabled: boolean;
   readonly emit: (event: RuntimeEventEnvelope) => void;
+  readonly eventBus: RuntimeEventBus;
   readonly sessionId?: DevtoolsSessionId;
   readonly snapshot: () => readonly RuntimeEventEnvelope[];
 }
@@ -26,8 +30,10 @@ export function DevtoolsRuntimeLayer(
 }
 
 export function disabledDevtoolsRuntime(): DevtoolsRuntimeService {
+  const eventBus = makeRuntimeEventBus();
   return {
     enabled: false,
+    eventBus,
     emit() {},
     snapshot() {
       return [];
@@ -39,15 +45,24 @@ export function makeDevtoolsRuntime(options: DevtoolsRuntimeOptions = {}): Devto
   const enabled = options.enabled === true;
   if (!enabled) return disabledDevtoolsRuntime();
 
-  const events: RuntimeEventEnvelope[] = [];
+  const eventBus =
+    options.eventBus ??
+    makeRuntimeEventBus({
+      enabled,
+      maxEvents: options.maxEvents,
+      sessionId: options.sessionId,
+    });
+  const sessionId = options.sessionId ?? eventBus.sessionId;
+  assertSessionAgreement(sessionId, eventBus.sessionId);
   return {
     enabled,
+    eventBus,
     emit(event) {
-      events.push(cloneRuntimeEvent(event));
+      eventBus.emit(event);
     },
-    sessionId: options.sessionId,
+    sessionId,
     snapshot() {
-      return events.map(cloneRuntimeEvent);
+      return eventBus.snapshot();
     },
   };
 }
@@ -62,6 +77,15 @@ export function getDevtoolsRuntime(): Effect.Effect<
   return DevtoolsRuntime;
 }
 
-function cloneRuntimeEvent(event: RuntimeEventEnvelope): RuntimeEventEnvelope {
-  return structuredClone(event);
+function assertSessionAgreement(
+  sessionId: DevtoolsSessionId | undefined,
+  eventBusSessionId: DevtoolsSessionId | undefined,
+): void {
+  if (
+    sessionId !== undefined &&
+    eventBusSessionId !== undefined &&
+    sessionId !== eventBusSessionId
+  ) {
+    throw new Error("DevTools runtime session must match the runtime event bus session");
+  }
 }

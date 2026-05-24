@@ -7,13 +7,13 @@
 
 ## Dependency Readiness Matrix
 
-| dependency | readiness | evidence |
-| ---------- | --------- | -------- |
-| Intent and scope | ready | Approved and committed in `2f6fb78`. |
-| Requirements | ready | Approved and committed in `201105f`. |
-| Specification | ready | Approved and committed in `b69f8f0`. |
-| Plan | ready | Approved and committed in `cad5b8e`; duplicate hook cleanup committed in `4a29818`. |
-| Subagent review | active | T1 sidecar review requested before protocol package commit. |
+| dependency       | readiness | evidence                                                                            |
+| ---------------- | --------- | ----------------------------------------------------------------------------------- |
+| Intent and scope | ready     | Approved and committed in `2f6fb78`.                                                |
+| Requirements     | ready     | Approved and committed in `201105f`.                                                |
+| Specification    | ready     | Approved and committed in `b69f8f0`.                                                |
+| Plan             | ready     | Approved and committed in `cad5b8e`; duplicate hook cleanup committed in `4a29818`. |
+| Subagent review  | active    | T1 sidecar review requested before protocol package commit.                         |
 
 ## Task Records
 
@@ -240,6 +240,43 @@
 - memory_updates:
   - Object-form devtools config remains disabled unless `enabled: true`; a `sessionId` alone is not an opt-in.
 
+### T9 - Runtime EventBus and Protocol Bridge
+
+- task_id: T9
+- requirement_ids: FR-3, FR-5, FR-8, FR-9, FR-10, FR-18, FR-38, FR-39, FR-41, FR-42, FR-43, FR-44, FR-45, NFR-3, NFR-4, NFR-5, NFR-13, NFR-15, NFR-17, NFR-18, AC-2, AC-13, AC-14
+- ts_scenarios: TS-2, TS-12
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/EventBus.test.ts src/Bridge.test.ts` failed with missing `./EventBus.js` and `./Bridge.js`.
+  - red: after initial EventBus/Bridge implementation, `pnpm --filter @typed/devtools-runtime exec vitest run src/Bridge.test.ts` failed because events emitted through `DevtoolsRuntimeService` were not visible to the bridge event bus.
+  - red: sidecar review regressions failed before fixes because protocol requests rejected `sinceSequence`, the bridge omitted replay state from streamed items, bridge-advertised session mismatch was not enforced, and EventBus replay still used timestamps.
+  - green: `pnpm --filter @typed/devtools-protocol exec vitest run src/Serialization.test.ts src/Rpc.test.ts` passed with 15 tests.
+  - green: `pnpm --filter @typed/devtools-protocol test` passed with typecheck plus 4 Vitest files and 25 tests.
+  - green: `pnpm --filter @typed/devtools-protocol build` passed.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/EventBus.test.ts src/Bridge.test.ts src/Layer.test.ts` passed with 16 tests.
+  - green: after review fixes, `pnpm --filter @typed/devtools-runtime exec vitest run src/EventBus.test.ts src/Bridge.test.ts src/Layer.test.ts` passed with 19 tests.
+  - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 3 Vitest files and 19 tests.
+  - review: Second sidecar review found custom EventBus session-consistency gaps in runtime and bridge construction.
+  - red: custom EventBus session regression tests failed before fixes because runtime service and bridge did not enforce `sessionId` consistently.
+  - green: after session-consistency fixes, `pnpm --filter @typed/devtools-runtime exec vitest run src/EventBus.test.ts src/Bridge.test.ts src/Layer.test.ts` passed with 21 tests.
+  - green: after session-consistency fixes, `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 3 Vitest files and 21 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-protocol/src packages/devtools-runtime/src` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-protocol/src/Schemas.ts packages/devtools-protocol/src/Rpc.ts packages/devtools-protocol/src/Fixtures.ts packages/devtools-protocol/src/Rpc.test.ts packages/devtools-protocol/src/Serialization.test.ts packages/devtools-runtime/src/EventBus.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/Layer.ts packages/devtools-runtime/src/Layer.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: runtime package boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/devtools-protocol packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Expanded T9 write set to include `Layer.ts` and `Layer.test.ts` so `DevtoolsRuntimeService.emit` and bridge subscriptions share the same EventBus.
+  - Expanded T9 write set to include protocol schemas/RPC/fixtures because replay state has to cross the shared RPC boundary to satisfy reconnect semantics.
+- context_updates:
+  - Added protocol-owned `RuntimeReplayState` and `RuntimeEventStreamItem` for sequence-based replay metadata.
+  - Added bounded `RuntimeEventBus` with clone-on-write protocol decoding, capability-filtered sequence replay, and explicit disabled/ready/partial/session-mismatch replay state.
+  - Added bridge facade and protocol-owned `TypedDevtoolsRpcGroup.of` handlers for handshake, runtime event subscription, DOM binding resolution, and source analysis.
+- memory_updates:
+  - The bridge must consume the same EventBus as `DevtoolsRuntimeService.emit`; separate runtime and bridge stores make later Fx/RefSubject instrumentation invisible to DevTools.
+  - Custom EventBus injection must enforce one consistent session across runtime service, bridge, and bus.
+
 ## Deferred Work
 
-- T9 through T12 remain blocked on prior-task completion.
+- T10 through T12 remain blocked on prior-task completion.

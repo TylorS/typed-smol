@@ -20,6 +20,7 @@ import type {
   DomBindingRequest,
   DomBindingResolution,
   RuntimeEventEnvelope,
+  RuntimeEventStreamItem,
   RuntimeEventSubscriptionRequest,
   SourceAnalyzerRequest,
   SourceAnalyzerResponse,
@@ -69,7 +70,7 @@ const runtimeSubscriptionRequest = {
   capabilities: ["components", "fx", "hmr", "refsubjects"],
   replay: true,
   sessionId: ids.session,
-  since: 0,
+  sinceSequence: 0,
 } as const satisfies RuntimeEventSubscriptionRequest;
 
 const runtimeEvents = [
@@ -94,6 +95,22 @@ const runtimeEvents = [
     timestamp: 3,
   },
 ] as const satisfies readonly RuntimeEventEnvelope[];
+
+const runtimeStreamItems = [
+  {
+    _tag: "RuntimeReplayState",
+    state: {
+      _tag: "Ready",
+      droppedEvents: 0,
+      nextSequence: 4,
+      oldestRetainedSequence: 1,
+      reconnectable: true,
+      retainedEvents: 3,
+      sessionId: ids.session,
+    },
+  },
+  ...runtimeEvents,
+] as const satisfies readonly RuntimeEventStreamItem[];
 
 const domBindingRequest = {
   bindingId: ids.domBinding,
@@ -136,6 +153,7 @@ export const DevtoolsProtocolFixtures = {
   handshakeRequest,
   handshakeResponse,
   runtimeEvents,
+  runtimeStreamItems,
   runtimeSubscriptionRequest,
   sourceAnalyzerRequest,
   sourceAnalyzerResponse,
@@ -146,6 +164,6 @@ export function makeDevtoolsProtocolFixtureHandlers() {
     AnalyzeSource: () => Effect.succeed(sourceAnalyzerResponse),
     Handshake: () => Effect.succeed(handshakeResponse),
     ResolveDomBinding: () => Effect.succeed(domBindingResolution),
-    SubscribeRuntimeEvents: () => Stream.fromIterable(runtimeEvents),
+    SubscribeRuntimeEvents: () => Stream.fromIterable(runtimeStreamItems),
   });
 }

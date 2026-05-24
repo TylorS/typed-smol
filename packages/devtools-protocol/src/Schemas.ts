@@ -180,9 +180,48 @@ export const RuntimeEventSubscriptionRequestSchema = Schema.Struct({
   capabilities: Schema.Array(DevtoolsCapabilitySchema),
   replay: Schema.optional(Schema.Boolean),
   sessionId: DevtoolsSessionIdSchema,
-  since: Schema.optional(FiniteNumberSchema),
+  sinceSequence: Schema.optional(FiniteNumberSchema),
 });
 export type RuntimeEventSubscriptionRequest = typeof RuntimeEventSubscriptionRequestSchema.Type;
+
+export const RuntimeReplayStateSchema = Schema.Union([
+  Schema.Struct({
+    _tag: Schema.Literal("Disabled"),
+    droppedEvents: Schema.Literal(0),
+    nextSequence: FiniteNumberSchema,
+    reconnectable: Schema.Literal(false),
+    retainedEvents: Schema.Literal(0),
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("Ready"),
+    droppedEvents: FiniteNumberSchema,
+    nextSequence: FiniteNumberSchema,
+    oldestRetainedSequence: Schema.optional(FiniteNumberSchema),
+    reconnectable: Schema.Literal(true),
+    retainedEvents: FiniteNumberSchema,
+    sessionId: Schema.optional(DevtoolsSessionIdSchema),
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("Partial"),
+    droppedEvents: FiniteNumberSchema,
+    nextSequence: FiniteNumberSchema,
+    oldestRetainedSequence: Schema.optional(FiniteNumberSchema),
+    reason: Schema.Literal("retention-limit-exceeded"),
+    reconnectable: Schema.Literal(true),
+    retainedEvents: FiniteNumberSchema,
+    sessionId: Schema.optional(DevtoolsSessionIdSchema),
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("SessionMismatch"),
+    droppedEvents: FiniteNumberSchema,
+    nextSequence: FiniteNumberSchema,
+    reconnectable: Schema.Literal(false),
+    requestedSessionId: DevtoolsSessionIdSchema,
+    retainedEvents: FiniteNumberSchema,
+    sessionId: Schema.optional(DevtoolsSessionIdSchema),
+  }),
+]);
+export type RuntimeReplayState = typeof RuntimeReplayStateSchema.Type;
 
 export const RuntimeEventEnvelopeSchema = Schema.Union([
   Schema.Struct({
@@ -240,6 +279,18 @@ export const RuntimeEventEnvelopeSchema = Schema.Union([
   HmrStatusFactSchema,
 ]);
 export type RuntimeEventEnvelope = typeof RuntimeEventEnvelopeSchema.Type;
+
+export const RuntimeReplayStateEnvelopeSchema = Schema.Struct({
+  _tag: Schema.Literal("RuntimeReplayState"),
+  state: RuntimeReplayStateSchema,
+});
+export type RuntimeReplayStateEnvelope = typeof RuntimeReplayStateEnvelopeSchema.Type;
+
+export const RuntimeEventStreamItemSchema = Schema.Union([
+  RuntimeReplayStateEnvelopeSchema,
+  RuntimeEventEnvelopeSchema,
+]);
+export type RuntimeEventStreamItem = typeof RuntimeEventStreamItemSchema.Type;
 
 export const SourceAnalyzerRequestSchema = Schema.Struct({
   column: Schema.optional(FiniteNumberSchema),

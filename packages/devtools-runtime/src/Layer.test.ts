@@ -10,6 +10,7 @@ import {
   makeDevtoolsRuntime,
   type DevtoolsRuntimeService,
 } from "./Layer.js";
+import { makeRuntimeEventBus } from "./EventBus.js";
 
 describe("DevtoolsRuntimeLayer", () => {
   it("is disabled by default and captures no runtime events", async () => {
@@ -118,6 +119,19 @@ describe("DevtoolsRuntimeLayer", () => {
     );
 
     expect(runtime).toEqual([]);
+  });
+
+  it("rejects conflicting runtime service and event bus sessions", () => {
+    expect(() =>
+      makeDevtoolsRuntime({
+        enabled: true,
+        eventBus: makeRuntimeEventBus({
+          enabled: true,
+          sessionId: makeDevtoolsSessionId("bus-session"),
+        }),
+        sessionId: makeDevtoolsSessionId("service-session"),
+      }),
+    ).toThrow("DevTools runtime session must match the runtime event bus session");
   });
 
   it("preserves service type inference", () => {

@@ -5,7 +5,7 @@ import {
   DevtoolsHandshakeResponseSchema,
   DomBindingRequestSchema,
   DomBindingResolutionSchema,
-  RuntimeEventEnvelopeSchema,
+  RuntimeEventStreamItemSchema,
   RuntimeEventSubscriptionRequestSchema,
   SourceAnalyzerRequestSchema,
   SourceAnalyzerResponseSchema,
@@ -31,7 +31,7 @@ export const HandshakeRpc = Rpc.make("Handshake", {
 
 export const SubscribeRuntimeEventsRpc = Rpc.make("SubscribeRuntimeEvents", {
   payload: RuntimeEventSubscriptionRequestSchema,
-  success: RuntimeEventEnvelopeSchema,
+  success: RuntimeEventStreamItemSchema,
   error: DevtoolsRpcErrorSchema,
   stream: true,
 });

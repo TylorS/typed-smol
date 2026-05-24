@@ -65,3 +65,12 @@
 - App config owns only opt-in resolution and explicit Layer construction; runtime capture remains in `@typed/devtools-runtime`.
 - Object-form devtools config must require `enabled: true`; a `sessionId` alone does not enable instrumentation or allocate a runtime session id.
 - Stage app config exports surgically when concurrent config work adds unrelated exports or options in the same files.
+
+### T9
+
+- Runtime event replay state should distinguish disabled, ready, partial retention-window replay, and session mismatch; Chrome/reconnect code should not infer those states from an empty event list.
+- `DevtoolsRuntimeService.emit` and bridge subscriptions must share the same `RuntimeEventBus`; otherwise Fx and RefSubject instrumentation can emit successfully but remain invisible to DevTools clients.
+- Runtime bridge code may call `TypedDevtoolsRpcGroup.of` from the protocol package, but direct `effect/unstable/rpc` imports stay out of runtime.
+- Replay cursors should be sequence-based (`sinceSequence`, `oldestRetainedSequence`, `nextSequence`) rather than timestamp-based, because runtime event timestamps can repeat or arrive out of order.
+- Runtime replay state belongs in `@typed/devtools-protocol` as a stream item so RPC clients can distinguish ready, partial, disabled, and session-mismatch states before consuming events.
+- Custom EventBus injection must not create conflicting session authorities; runtime service, bridge, and bus sessions must agree when defined.

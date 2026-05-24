@@ -11,6 +11,9 @@ import {
   DevtoolsHandshakeRequestSchema,
   HmrStatusFactSchema,
   RuntimeEventEnvelopeSchema,
+  RuntimeEventStreamItemSchema,
+  RuntimeEventSubscriptionRequestSchema,
+  RuntimeReplayStateSchema,
   SourceAnalyzerResponseSchema,
   decodeDevtoolsPayload,
 } from "./Schemas.js";
@@ -254,6 +257,39 @@ describe("DevTools protocol serialization", () => {
       decodeDevtoolsPayload(HmrStatusFactSchema, {
         ...hmrFact,
         stateful: true,
+      }),
+    ).toThrow();
+  });
+
+  it("validates runtime replay state and sequence cursor payloads", () => {
+    const request = {
+      capabilities: ["components"],
+      replay: true,
+      sessionId: makeDevtoolsSessionId("session-1"),
+      sinceSequence: 5,
+    } as const;
+    const state = {
+      _tag: "Partial",
+      droppedEvents: 2,
+      nextSequence: 8,
+      oldestRetainedSequence: 4,
+      reason: "retention-limit-exceeded",
+      reconnectable: true,
+      retainedEvents: 3,
+      sessionId: makeDevtoolsSessionId("session-1"),
+    } as const;
+    const streamItem = {
+      _tag: "RuntimeReplayState",
+      state,
+    } as const;
+
+    expect(decodeDevtoolsPayload(RuntimeEventSubscriptionRequestSchema, request)).toEqual(request);
+    expect(decodeDevtoolsPayload(RuntimeReplayStateSchema, state)).toEqual(state);
+    expect(decodeDevtoolsPayload(RuntimeEventStreamItemSchema, streamItem)).toEqual(streamItem);
+    expect(() =>
+      decodeDevtoolsPayload(RuntimeEventSubscriptionRequestSchema, {
+        ...request,
+        since: 5,
       }),
     ).toThrow();
   });

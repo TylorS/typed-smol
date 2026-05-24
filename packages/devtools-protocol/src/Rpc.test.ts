@@ -4,7 +4,7 @@ import { RpcTest } from "effect/unstable/rpc";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { DevtoolsProtocolFixtures, makeDevtoolsProtocolFixtureHandlers } from "./Fixtures.js";
 import { TypedDevtoolsRpcGroup, type TypedDevtoolsRpcTag } from "./Rpc.js";
-import type { RuntimeEventEnvelope } from "./Schemas.js";
+import type { RuntimeEventStreamItem } from "./Schemas.js";
 
 describe("Typed DevTools RPC protocol", () => {
   it("defines the required protocol RPC tags in one group", () => {
@@ -40,12 +40,12 @@ describe("Typed DevTools RPC protocol", () => {
     expect(result.handshake).toEqual(DevtoolsProtocolFixtures.handshakeResponse);
     expect(result.dom).toEqual(DevtoolsProtocolFixtures.domBindingResolution);
     expect(result.analyzer).toEqual(DevtoolsProtocolFixtures.sourceAnalyzerResponse);
-    expect(result.events).toEqual(DevtoolsProtocolFixtures.runtimeEvents);
+    expect(result.events).toEqual(DevtoolsProtocolFixtures.runtimeStreamItems);
   });
 
-  it("keeps streamed runtime events typed as protocol envelopes", () => {
+  it("keeps streamed runtime events typed as protocol stream items", () => {
     expectTypeOf<
-      (typeof DevtoolsProtocolFixtures.runtimeEvents)[number]
-    >().toExtend<RuntimeEventEnvelope>();
+      (typeof DevtoolsProtocolFixtures.runtimeStreamItems)[number]
+    >().toExtend<RuntimeEventStreamItem>();
   });
 });
