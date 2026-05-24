@@ -171,7 +171,7 @@ describe("transformTemplateModule", () => {
       "import { EventHandler, html } from "@typed/template";
       import type { Component } from "./Reactive.js";
       import * as __typedTemplateEffect from "effect/Effect";
-      import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath, mountDomTemplateBindings } from "@typed/template/compiler-runtime/dom";
+      import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, bootActionResume, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath, mountDomTemplateBindings } from "@typed/template/compiler-runtime/dom";
 
       const __typed_template_0 = defineDomTemplate({
         templateHash: "PcOC4mpyUh8=",
@@ -183,7 +183,7 @@ describe("transformTemplateModule", () => {
         "component": "cmp:/src/Disclosure.ts#Button",
         "event": "click",
         "id": "cmp:/src/Disclosure.ts#Button:action:toggle"
-      })], { concurrency: "unbounded" });
+      }), bootActionResume(instance.root, runtime)], { concurrency: "unbounded" });
         }
       });
 

@@ -363,7 +363,7 @@ function directTemplateDeclarations(
   const effectNamespace = findNamespaceImport(sourceFile, "effect/Effect");
   const importText =
     target === "dom"
-      ? `${effectNamespace ? "" : 'import * as __typedTemplateEffect from "effect/Effect";\n'}import { ${domRuntimeImports(templates)} } from "@typed/template/compiler-runtime/dom";`
+      ? `${effectNamespace ? "" : 'import * as __typedTemplateEffect from "effect/Effect";\n'}import { ${domRuntimeImports(templates, actionDescriptors)} } from "@typed/template/compiler-runtime/dom";`
       : 'import { defineServerTemplate, renderServerChunks } from "@typed/template/compiler-runtime/server";';
   const effectRuntime = effectNamespace ?? "__typedTemplateEffect";
   return [
@@ -386,7 +386,10 @@ function directTemplateDeclarations(
   ].join("\n");
 }
 
-function domRuntimeImports(templates: readonly TemplateModuleTemplate[]): string {
+function domRuntimeImports(
+  templates: readonly TemplateModuleTemplate[],
+  actionDescriptors: ReadonlyMap<string, object>,
+): string {
   return [
     "bindAttr",
     "bindBoolean",
@@ -397,6 +400,9 @@ function domRuntimeImports(templates: readonly TemplateModuleTemplate[]): string
     "bindProperty",
     "bindRef",
     "bindText",
+    ...(templates.some((template) => hasActionResumeDescriptor(template, actionDescriptors))
+      ? ["bootActionResume"]
+      : []),
     ...(templates.some((template) => hasRouteResumeMarker(template.plan)) ? ["bootRouteResume"] : []),
     "defineDomTemplate",
     "getCommentAtPath",
@@ -480,6 +486,17 @@ function componentIdForTemplate(
   return undefined;
 }
 
+function hasActionResumeDescriptor(
+  template: TemplateModuleTemplate,
+  descriptors: ReadonlyMap<string, object>,
+): boolean {
+  return template.plan.parts.some(
+    (part) =>
+      part.kind === "event" &&
+      actionDescriptorForValue(template, part.valueIndex, descriptors) !== undefined,
+  );
+}
+
 function domTemplateDeclaration(
   template: TemplateModuleTemplate,
   binding: string,
@@ -522,6 +539,9 @@ function domTemplateDeclaration(
     if (part.kind === "properties") return `${effectRuntime}.void`;
     return `${effectRuntime}.void`;
     }),
+    ...(hasActionResumeDescriptor(template, actionDescriptors)
+      ? ["bootActionResume(instance.root, runtime)"]
+      : []),
     ...(hasRouteResumeMarker(template.plan) ? ["bootRouteResume(instance.root, runtime)"] : []),
   ];
   return [
@@ -542,9 +562,17 @@ function tableDomTemplateDeclaration(
   actionDescriptors: ReadonlyMap<string, object>,
 ): string {
   const bindingEffect = `mountDomTemplateBindings(instance, values, runtime, ${jsonSource(domBindingTable(template, actionDescriptors))})`;
-  const mountEffect = hasRouteResumeMarker(template.plan)
-    ? `${effectRuntime}.all([${bindingEffect}, bootRouteResume(instance.root, runtime)], { concurrency: "unbounded" })`
-    : bindingEffect;
+  const effects = [
+    bindingEffect,
+    ...(hasActionResumeDescriptor(template, actionDescriptors)
+      ? ["bootActionResume(instance.root, runtime)"]
+      : []),
+    ...(hasRouteResumeMarker(template.plan) ? ["bootRouteResume(instance.root, runtime)"] : []),
+  ];
+  const mountEffect =
+    effects.length > 1
+      ? `${effectRuntime}.all([${effects.join(", ")}], { concurrency: "unbounded" })`
+      : bindingEffect;
   return [
     `const ${binding} = defineDomTemplate({`,
     `  templateHash: ${JSON.stringify(template.plan.templateHash)},`,

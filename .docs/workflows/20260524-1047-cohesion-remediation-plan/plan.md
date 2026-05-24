@@ -46,6 +46,7 @@ pnpm --filter typed-realworld test:hmr:local
 
 ## Execution Rules
 
+- This document is the execution contract, not the source of truth for final completion. If another agent lands commits while this plan is open, the executor must reconcile the commit with the task, rerun that task's verification command, and only then mark the checkbox complete.
 - Do not mark a checkbox complete until the command in that step has been run and its output inspected in the execution turn.
 - Do not skip the red step. If a test unexpectedly passes before implementation, update the test so it proves the missing behavior before editing production code.
 - Do not edit tooling-owned files unless `developer-tooling-handoff.md` says ownership has been handed off or the human explicitly approves that edit.
@@ -168,7 +169,7 @@ pnpm --filter @typed/ui test
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message:
 
@@ -394,7 +395,7 @@ feat(app): pass dom runtime through compiled mounts
 - Modify: `packages/app/src/BrowserVirtualModulePlugin.test.ts`
 - Modify: `packages/compiler/src/template/emitDomTemplate.ts` for the shared compiled-template type signature consumed by `@typed/app`.
 
-- [x] **Step 1: Update generated-source snapshot expectation first**
+- [ ] **Step 1: Update generated-source snapshot expectation first**
 
 Expected generated source should import and use the helper:
 
@@ -427,11 +428,11 @@ pnpm --filter @typed/app exec vitest run src/BrowserVirtualModulePlugin.test.ts
 
 Expected: fail snapshot mismatch before implementation.
 
-- [x] **Step 2: Implement emitted source change**
+- [ ] **Step 2: Implement emitted source change**
 
 Update the generated import and `makeRenderLayer` body in `emitBrowserSource.ts` to match the snapshot.
 
-- [x] **Step 3: Verify generated source typechecks**
+- [ ] **Step 3: Verify generated source typechecks**
 
 Run:
 
@@ -456,7 +457,7 @@ feat(app): hydrate browser templates with dom runtime
 - Modify: `packages/compiler/src/template/transformTemplateModule.ts`
 - Modify: `packages/compiler/src/template/transformTemplateModule.test.ts`
 
-- [ ] **Step 1: Write failing compiler snapshot**
+- [x] **Step 1: Write failing compiler snapshot**
 
 Add or update a transform test with an action descriptor. Expected generated DOM runtime imports include:
 
@@ -502,7 +503,7 @@ pnpm --filter @typed/compiler exec vitest run src/template/transformTemplateModu
 
 Expected: fail because `bootActionResume` is not emitted.
 
-- [ ] **Step 2: Implement action-resume detection**
+- [x] **Step 2: Implement action-resume detection**
 
 Add a helper that checks whether any template event part resolves to an action descriptor:
 
@@ -521,7 +522,7 @@ function hasActionResumeDescriptor(
 
 Use it to include `bootActionResume` in imports and mount effects for direct and table-driven declarations.
 
-- [ ] **Step 3: Verify compiler/template gates**
+- [x] **Step 3: Verify compiler/template gates**
 
 Run:
 
