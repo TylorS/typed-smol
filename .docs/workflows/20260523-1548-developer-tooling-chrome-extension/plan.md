@@ -460,6 +460,34 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar subagent review for render semantic preservation, hook shape type-safety, DOM-node/anchor coverage, and boundary compliance before commit.
 
+### T11 - Runtime DOM Registry
+
+- requirement_links: FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-18, FR-39, FR-41, FR-42, NFR-7, NFR-15, NFR-17, AC-3, AC-13.
+- write_set:
+  - `packages/devtools-runtime/src/DomRegistry.ts`
+  - `packages/devtools-runtime/src/DomRegistry.test.ts`
+  - `packages/devtools-runtime/src/Bridge.test.ts`
+  - `packages/devtools-runtime/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused DOM registry tests before `DomRegistry.ts` exists.
+  - Run `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts` and capture the missing-module failure.
+- green_step:
+  - Add a host-neutral DOM registry backed by `WeakMap<Node, DomNodeRecord>` plus protocol-id lookup for bridge requests.
+  - Consume `@typed/template` compiler-runtime DevTools observer events without importing Chrome APIs.
+  - Resolve selected nodes through nearest DOM ownership, including fragment roots, comment anchors, nested mounts, and unbound nodes.
+  - Return protocol `DomBindingResolution` values with component summaries and template part ids when owner metadata exists.
+- verification:
+  - `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts src/Bridge.test.ts`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `pnpm exec oxlint packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc" packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Sidecar review is required by workflow policy, but current Codex subagent tooling only allows spawning after explicit user authorization; record direct-review rationale if authorization is still absent.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

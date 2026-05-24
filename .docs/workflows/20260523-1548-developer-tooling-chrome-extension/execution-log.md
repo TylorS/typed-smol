@@ -296,7 +296,7 @@
   - green: `git diff --check -- packages/template packages/compiler/src/template/transformTemplateModule.ts packages/compiler/src/template/transformTemplateModule.test.ts .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found eager hook notification, invalid table-driven event/ref metadata, and missing workflow evidence; implementation gaps were fixed before commit.
 - commit:
-  - pending
+  - `b186294 feat(devtools): add template dom hooks`
 - deviations_or_replans:
   - Expanded T10 write set to include `packages/compiler/src/template/transformTemplateModule.ts` and `transformTemplateModule.test.ts` because the compiler table emitter must generate valid metadata consumed by `mountDomTemplateBindings`.
 - context_updates:
@@ -308,6 +308,43 @@
   - DevTools observer failures are swallowed because instrumentation is diagnostic-only.
   - Compiler table-driven DOM bindings must keep `event` and `ref` entries structurally aligned with `DomTemplateBinding`.
 
+### T11 - Runtime DOM Registry
+
+- task_id: T11
+- requirement_ids: FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-18, FR-39, FR-41, FR-42, NFR-7, NFR-15, NFR-17, AC-3, AC-13
+- ts_scenarios: TS-3, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts` failed with missing `./DomRegistry.js`.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts` passed with 5 tests.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts src/Bridge.test.ts` passed with 14 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - red: `pnpm exec oxfmt --check packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` found format issues in the two new DOM registry files.
+  - green: after formatting, `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts src/Bridge.test.ts` passed with 14 tests.
+  - green: after formatting, `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: after formatting, `pnpm exec oxlint packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: after formatting, `pnpm exec oxfmt --check packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found a blocking non-canonical `templatePartId` mapping and a same-template pending-binding ownership race.
+  - red: review regression tests failed before fixes because the registry used runtime binding ids as `templatePartId` values and assigned all same-template pending bindings to the first mounted root.
+  - green: after review fixes, `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts` passed with 6 tests.
+  - green: after review fixes, `pnpm --filter @typed/devtools-runtime exec vitest run src/DomRegistry.test.ts src/Bridge.test.ts` passed with 15 tests.
+  - green: after review fixes and formatting, `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: after review fixes and formatting, `pnpm exec oxlint packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: after review fixes and formatting, `pnpm exec oxfmt --check packages/devtools-runtime/src/DomRegistry.ts packages/devtools-runtime/src/DomRegistry.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: after review fixes and formatting, boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: after review fixes and formatting, `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+- commit:
+  - pending
+- context_updates:
+  - Added `makeDomRegistry` with a template observer, node lookup, protocol binding lookup, component registration, and bridge-compatible resolver.
+  - Added nearest-owner DOM node resolution for comment anchors, fragment roots, nested mounts, and unbound nodes.
+- memory_updates:
+  - DOM registry root ownership should be stored through `WeakMap<Node, DomNodeRecord>` and resolved by walking parent nodes to find the nearest registered owner.
+  - Runtime DOM registry template part ids must match compiler fact ids: `templateHash#runtimePath#valueIndex`.
+  - Same-template pending binding ownership must be assigned by actual mounted node ancestry, not by template hash alone.
+
 ## Deferred Work
 
-- T11 through T12 remain blocked on prior-task completion.
+- T12 remains blocked on prior-task completion.

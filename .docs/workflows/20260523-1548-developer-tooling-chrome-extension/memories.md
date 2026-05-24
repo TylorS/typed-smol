@@ -80,3 +80,10 @@
 - DOM template DevTools binding notifications must be lazy inside the returned mount Effect; constructing an Effect must not fire observer callbacks.
 - DevTools observer failures must not affect template rendering because instrumentation is diagnostic-only.
 - Large-template table-driven DOM metadata must emit `event` without `valueKind` and `ref` with `valueIndex`, matching `DomTemplateBinding`.
+
+### T11
+
+- Runtime DOM registry lookups should store direct template ownership in a `WeakMap<Node, DomNodeRecord>` and resolve selected descendants by walking parent nodes to the nearest registered owner.
+- Template observer binding ids are runtime strings; convert them to protocol `DomBindingId` values, but reconstruct `TemplatePartId` using the compiler fact identity shape `templateHash#runtimePath#valueIndex`.
+- Same-template pending DOM bindings must be associated with the mounted root by node ancestry, not by template hash alone, so concurrent mounts cannot delete each other's active bindings.
+- Unmounted roots can delete bridge-visible binding records while stale weak node entries remain harmless because node resolution must verify the binding id is still active.
