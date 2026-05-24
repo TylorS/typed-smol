@@ -154,3 +154,8 @@
 
 - Chrome inspected-window selected-node transport should decode page-side DOM bridge results through `DomBindingResolutionSchema` and fall back to explicit `Unbound` results for eval failures or invalid payloads.
 - Elements sidebar selection listeners should catch resolver rejections and should apply only the newest async selected-node resolution, using a monotonic request token to avoid stale summaries.
+
+### T23
+
+- Chrome Sources sidebar selection needs an injected source-selection provider because `sources.onSelectionChanged` does not provide resource or cursor payloads.
+- Source Analyzer sidebar models should preserve branded `SourceLocationId` values, including the `src:` prefix, when building source deep links.

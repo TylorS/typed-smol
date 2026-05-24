@@ -5,5 +5,6 @@ export * from "./panel/state.js";
 export * from "./panel/views/components.js";
 export * from "./panel/views/fx.js";
 export * from "./panel/views/refsubjects.js";
+export * from "./sourcesSidebar.js";
 export * from "./transport/chromeRuntime.js";
 export * from "./transport/inspectedWindow.js";

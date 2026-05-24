@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T22, then report task completion.
+- current_scope: execute approved plan task T23, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -724,7 +724,7 @@
   - green: final `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Focused re-review found no Critical or Important issues after the eval/rejection/race fixes.
 - commit:
-  - pending
+  - `072803b feat(devtools): add elements sidebar bridge`
 - context_updates:
   - Added inspected-window selected-node resolver that evaluates a page-side Typed DevTools DOM bridge and decodes the result as protocol `DomBindingResolution`.
   - Added Elements sidebar registration and resolved/unbound sidebar view models with component, template, Fx, and RefSubject deep links.
@@ -732,3 +732,43 @@
 - memory_updates:
   - Chrome inspected-window selected-node transport should decode page-side DOM bridge results through `DomBindingResolutionSchema` and fall back to explicit `Unbound` results for eval failures or invalid payloads.
   - Elements sidebar selection listeners should catch resolver rejections and should apply only the newest async selected-node resolution, using a monotonic request token to avoid stale summaries.
+
+### T23 - Chrome Sources Analyzer Sidebar
+
+- task_id: T23
+- requirement_ids: FR-30, FR-31, FR-32, FR-33, FR-34, FR-35, FR-36, FR-37, FR-38, FR-39, NFR-9, NFR-12, NFR-15, NFR-17, NFR-18, AC-9, AC-10, AC-14
+- ts_scenarios: TS-9, TS-10, TS-12
+- routing_decision:
+  - direct execution for the red-green implementation because target files are locked and the slice is a narrow Chrome-only Sources sidebar adapter.
+  - sidecar review-auditor required before commit for Sources panel API usage, AnalyzeSource protocol boundary, unavailable bridge behavior, stale async selection handling, and package boundary compliance.
+- source_context:
+  - Chrome `devtools.panels` docs: `chrome.devtools.panels.sources.createSidebarPane` creates a Sources panel sidebar, and `sources.onSelectionChanged.addListener` receives a no-argument callback.
+  - Chrome DevTools extension docs: `chrome.devtools.*` APIs are only available to DevTools pages declared through `devtools_page`; the Sources selection callback does not expose resource or cursor payloads, so the adapter uses an injected source-selection provider.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-chrome exec vitest run src/sourcesSidebar.test.ts` failed with missing `./sourcesSidebar.js`.
+  - red: after initial implementation, focused tests found a bad source-location literal in the model expectation; typecheck also found an exported sidebar pane name collision, unsafe `_tag` narrowing on source-selection results, and an over-narrow deferred test type.
+  - green: after correcting the protocol id expectation, renaming the Sources pane interface, adding an explicit unavailable-selection type guard, and widening deferred response types, `pnpm --filter @typed/devtools-chrome exec vitest run src/sourcesSidebar.test.ts` passed with 1 test file and 4 tests.
+  - green: `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 4 test files and 22 tests.
+  - green: `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
+  - green: boundary grep for forbidden non-protocol `@typed/*` imports in T23 files returned no matches.
+  - green: `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found Important coverage gaps for the production `chrome.runtime` AnalyzeSource path and the analyzer rejection fallback.
+  - green: after adding coverage for runtime AnalyzeSource requests and analyzer rejection-to-Unavailable fallback, `pnpm --filter @typed/devtools-chrome exec vitest run src/sourcesSidebar.test.ts` passed with 1 test file and 6 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 4 test files and 24 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: final `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - green: final `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
+  - green: final boundary grep for forbidden non-protocol `@typed/*` imports in T23 files returned no matches.
+  - green: final `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Focused re-review found no Critical or Important issues after the runtime-path and rejection-fallback tests.
+- commit:
+  - pending
+- context_updates:
+  - Added Sources sidebar registration over `chrome.devtools.panels.sources` with injectable source selection and protocol AnalyzeSource clients.
+  - Added protocol-derived SourceFacts/Unavailable sidebar models with stable component, Fx, RefSubject, and source deep links.
+  - Added unavailable bridge handling and monotonic async selection guards for Sources sidebar updates.
+- memory_updates:
+  - Chrome Sources sidebar selection needs an injected source-selection provider because `sources.onSelectionChanged` does not provide resource or cursor payloads.
+  - Source Analyzer sidebar models should preserve branded `SourceLocationId` values, including the `src:` prefix, when building source deep links.

@@ -802,6 +802,35 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for inspected-window eval safety/error handling, protocol decoding, Elements sidebar callback wiring, summary/deep-link completeness, and package boundary compliance before commit.
 
+### T23 - Chrome Sources Analyzer Sidebar
+
+- requirement_links: FR-30, FR-31, FR-32, FR-33, FR-34, FR-35, FR-36, FR-37, FR-38, FR-39, NFR-9, NFR-12, NFR-15, NFR-17, NFR-18, AC-9, AC-10, AC-14.
+- write_set:
+  - `packages/devtools-chrome/src/sourcesSidebar.ts`
+  - `packages/devtools-chrome/src/sourcesSidebar.test.ts`
+  - `packages/devtools-chrome/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add Sources sidebar tests that import `sourcesSidebar.ts` before it exists.
+  - Run `pnpm --filter @typed/devtools-chrome exec vitest run src/sourcesSidebar.test.ts` and capture the missing-module failure.
+- green_step:
+  - Register a Typed sidebar on `chrome.devtools.panels.sources.createSidebarPane` and refresh it from `sources.onSelectionChanged`.
+  - Use an injected source-selection provider because Chrome's Sources selection callback does not expose resource/position payloads.
+  - Call protocol-owned `AnalyzeSource` through an injected analyzer client or a `ChromeRuntimeRpcClient` built from `chrome.runtime`.
+  - Render SourceFacts and Unavailable responses as protocol-derived sidebar models with stable deep links, and catch missing bridge/analyzer failures as explicit unavailable states.
+  - Guard async Sources selection updates with a monotonic request token.
+- verification:
+  - `pnpm --filter @typed/devtools-chrome exec vitest run src/sourcesSidebar.test.ts`
+  - `pnpm --filter @typed/devtools-chrome test`
+  - `pnpm --filter @typed/devtools-chrome build`
+  - `pnpm exec oxlint packages/devtools-chrome/src`
+  - `pnpm exec oxfmt --check packages/devtools-chrome/src`
+  - `rg -n "from \"@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)|from '@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)'" packages/devtools-chrome/src/sourcesSidebar.ts packages/devtools-chrome/src/sourcesSidebar.test.ts packages/devtools-chrome/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for Sources panel API usage, AnalyzeSource protocol boundary, unavailable bridge behavior, stale async selection handling, and package boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |
