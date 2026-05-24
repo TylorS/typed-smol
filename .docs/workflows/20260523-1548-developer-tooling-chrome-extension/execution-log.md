@@ -480,3 +480,25 @@
 - memory_updates:
   - Runtime HMR capture should consume protocol `HmrStatusFact` values directly and avoid importing compiler packages.
   - Runtime HMR capture should reuse `DevtoolsRuntimeService.emit` and EventBus retention instead of keeping a separate HMR history.
+
+### Runtime Package Typecheck Repair
+
+- task_id: validation-repair-runtime-typecheck
+- requirement_ids: NFR-15, NFR-17
+- ts_scenarios: TS-5, TS-11
+- routing_decision:
+  - direct execution because this was a narrow test type-narrowing repair discovered by T16 review.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime run test:typecheck` failed with TS2339 at `src/RefSubjectCapture.test.ts(131,52)` because the test read `.version` on the full `RuntimeEventEnvelope` union.
+  - green: `pnpm --filter @typed/devtools-runtime run test:typecheck` passed.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/RefSubjectCapture.test.ts src/FxCapture.test.ts src/HmrCapture.test.ts` passed with 3 test files and 11 tests.
+  - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 7 test files and 38 tests.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/RefSubjectCapture.test.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/RefSubjectCapture.test.ts` passed.
+  - green: `git diff --check -- packages/devtools-runtime/src/RefSubjectCapture.test.ts` passed.
+- commit:
+  - pending
+- context_updates:
+  - Narrowed bounded RefSubject replay version assertions to RefSubject runtime event variants before reading `version`.
+- memory_updates:
+  - Runtime event tests should narrow `RuntimeEventEnvelope` to a concrete event variant before reading variant-specific fields.

@@ -128,7 +128,7 @@ describe("RefSubjectCapture", () => {
       version: 2,
     });
 
-    expect(runtime.snapshot().map((event) => event.version)).toEqual([1, 2]);
+    expect(runtime.snapshot().map((event) => refSubjectVersionOf(event))).toEqual([1, 2]);
   });
 
   it("preserves public capture type inference", () => {
@@ -152,4 +152,12 @@ function refSubjectIdOf(event: RuntimeEventEnvelope) {
   }
 
   return event.refSubjectId;
+}
+
+function refSubjectVersionOf(event: RuntimeEventEnvelope) {
+  if (event._tag !== "RefSubjectSnapshot" && event._tag !== "RefSubjectUpdated") {
+    throw new Error(`Expected RefSubject event, received ${event._tag}`);
+  }
+
+  return event.version;
 }

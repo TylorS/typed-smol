@@ -116,3 +116,7 @@
 
 - Runtime HMR capture should consume protocol `HmrStatusFact` values directly and avoid importing compiler packages.
 - Runtime HMR capture should reuse `DevtoolsRuntimeService.emit` and EventBus retention instead of keeping a separate HMR history.
+
+### Validation Repairs
+
+- Runtime event tests should narrow `RuntimeEventEnvelope` to a concrete event variant before reading variant-specific fields like `version`, `phase`, or `value`.
