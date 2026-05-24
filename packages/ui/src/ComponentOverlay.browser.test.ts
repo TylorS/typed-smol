@@ -1,6 +1,5 @@
 import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
-import type * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import * as Combobox from "./Combobox.js";
@@ -185,7 +184,7 @@ function key(value: string): KeyboardEvent {
 function renderOne<Element extends globalThis.HTMLElement, Opts extends {} = {}>(
   component: Component<Opts>,
   root: globalThis.HTMLElement,
-): Effect.Effect<Element, never, Scope.Scope> {
+) {
   return render(component, root).pipe(
     Fx.provide(DomRenderTemplate.using(document)),
     Fx.take(1),

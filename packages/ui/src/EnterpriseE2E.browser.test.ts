@@ -1,7 +1,6 @@
 import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import type * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, EventHandler, html, render } from "@typed/template";
 import * as Button from "./Button.js";
@@ -708,7 +707,7 @@ function buttonNamed(root: ParentNode, name: string): HTMLButtonElement {
 function renderOne<Element extends globalThis.HTMLElement, Opts extends {} = {}>(
   component: Component<Opts>,
   root: globalThis.HTMLElement,
-): Effect.Effect<Element, never, Scope.Scope> {
+) {
   return render(component, root).pipe(
     Fx.provide(DomRenderTemplate.using(document)),
     Fx.take(1),
