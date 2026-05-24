@@ -2,6 +2,7 @@ export * as Fx from "./Fx.js";
 export * as Push from "./Push.js";
 export * as RefArray from "./RefSubject/RefArray.js";
 export * as RefAsyncData from "./RefSubject/RefAsyncData.js";
+export * as RefSubjectDevtools from "./RefSubject/devtools.js";
 export * as RefSubject from "./RefSubject/RefSubject.js";
 export * as Sink from "./Sink/index.js";
 export * as Subject from "./Subject.js";

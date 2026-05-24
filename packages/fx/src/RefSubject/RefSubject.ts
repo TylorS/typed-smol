@@ -37,6 +37,11 @@ import * as Sink from "../Sink/Sink.js";
 import * as Subject from "../Subject/Subject.js";
 import * as Versioned from "../Versioned/Versioned.js";
 import { hasProperty } from "effect/Predicate";
+import {
+  notifyRefSubjectDevtools,
+  type RefSubjectDevtoolsEvent,
+  type RefSubjectDevtoolsOptions,
+} from "./devtools.js";
 
 export const RefSubjectTypeId = Symbol.for("@typed/fx/RefSubject");
 export type RefSubjectTypeId = typeof RefSubjectTypeId;
@@ -458,6 +463,7 @@ class RefSubjectCore<A, E, R, R2> {
   readonly services: Context.Context<R2>;
   readonly scope: Scope.Closeable;
   readonly deferredRef: DeferredRef.DeferredRef<E, A>;
+  readonly devtools: RefSubjectDevtoolsOptions<A> | undefined;
   readonly semaphore: Semaphore.Semaphore;
   constructor(
     initial: Effect.Effect<A, E, R>,
@@ -465,6 +471,7 @@ class RefSubjectCore<A, E, R, R2> {
     services: Context.Context<R2>,
     scope: Scope.Closeable,
     deferredRef: DeferredRef.DeferredRef<E, A>,
+    devtools: RefSubjectDevtoolsOptions<A> | undefined,
     semaphore: Semaphore.Semaphore,
   ) {
     this.initial = initial;
@@ -472,6 +479,7 @@ class RefSubjectCore<A, E, R, R2> {
     this.services = services;
     this.scope = scope;
     this.deferredRef = deferredRef;
+    this.devtools = devtools;
     this.semaphore = semaphore;
   }
 
@@ -479,6 +487,7 @@ class RefSubjectCore<A, E, R, R2> {
 }
 
 export interface RefSubjectOptions<A> {
+  readonly devtools?: RefSubjectDevtoolsOptions<A>;
   readonly eq?: Equivalence<A>;
 }
 
@@ -775,6 +784,7 @@ function makeCore<A, E, R>(
       scope,
       deferredRef ??
         DeferredRef.unsafeMake(id, getExitEquivalence(options?.eq ?? equals), subject.lastValue),
+      options?.devtools,
       Semaphore.makeUnsafe(1),
     );
     yield* Scope.addFinalizer(scope, core.subject.interrupt);
@@ -903,10 +913,40 @@ function sendEvent<A, E, R, R2>(
   exit: Exit.Exit<A, E>,
 ): Effect.Effect<unknown, never, Exclude<R, R2>> {
   if (Exit.isSuccess(exit)) {
-    return core.subject.onSuccess(exit.value);
+    return Effect.flatMap(notifyRefSubjectSuccess(core, exit.value), () =>
+      core.subject.onSuccess(exit.value),
+    );
   } else {
     return core.subject.onFailure(exit.cause);
   }
+}
+
+function notifyRefSubjectSuccess<A, E, R, R2>(
+  core: RefSubjectCore<A, E, R, R2>,
+  value: A,
+): Effect.Effect<void, never, Exclude<R, R2>> {
+  if (!core.devtools?.observer) return Effect.void;
+
+  return Effect.map(core.subject.subscriberCount, (subscriberCount) =>
+    notifyRefSubjectDevtools(core.devtools, refSubjectDevtoolsEvent(core, value, subscriberCount)),
+  );
+}
+
+function refSubjectDevtoolsEvent<A, E, R, R2>(
+  core: RefSubjectCore<A, E, R, R2>,
+  value: A,
+  subscriberCount: number,
+): RefSubjectDevtoolsEvent<A> {
+  const version = core.deferredRef.version < 0 ? 0 : core.deferredRef.version;
+  return {
+    _tag: version === 0 ? "Snapshot" : "Updated",
+    ...(core.devtools?.id && { id: core.devtools.id }),
+    ...(core.devtools?.ownerId && { ownerId: core.devtools.ownerId }),
+    ...(core.devtools?.serviceId && { serviceId: core.devtools.serviceId }),
+    subscriberCount,
+    value,
+    version,
+  };
 }
 
 /**
@@ -1356,7 +1396,7 @@ export function Service<Self, A, E = never>() {
         options?: RefSubjectOptions<A> & Partial<Bounds>,
       ): Layer.Layer<Self, never, R> => {
         const bounds = getDefaultBounds(options);
-        return make(value, options).pipe(
+        return make(value, withServiceDevtoolsOptions(options, id)).pipe(
           Effect.map((ref) => (bounds ? slice(ref, bounds.skip, bounds.take) : ref)),
           this.layer,
         );
@@ -1412,6 +1452,19 @@ function getDefaultBounds(options?: Partial<Bounds>): Bounds | undefined {
   }
 
   return { skip: options.skip ?? 0, take: options.take ?? Infinity };
+}
+
+function withServiceDevtoolsOptions<A>(
+  options: (RefSubjectOptions<A> & Partial<Bounds>) | undefined,
+  serviceId: string,
+): RefSubjectOptions<A> & Partial<Bounds> {
+  return {
+    ...options,
+    devtools: {
+      ...options?.devtools,
+      serviceId,
+    },
+  };
 }
 
 /**
@@ -2643,14 +2696,10 @@ class FilteredFromService<R, A, E, R2>
   }
 }
 
-export function isComputed<T>(
-  value: T,
-): value is Extract<T, Computed.Any> {
+export function isComputed<T>(value: T): value is Extract<T, Computed.Any> {
   return hasProperty(value, ComputedTypeId);
 }
 
-export function isFiltered<T>(
-  value: T,
-): value is Extract<T, Filtered.Any> {
+export function isFiltered<T>(value: T): value is Extract<T, Filtered.Any> {
   return hasProperty(value, FilteredTypeId);
 }

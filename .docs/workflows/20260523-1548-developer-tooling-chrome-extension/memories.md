@@ -87,3 +87,9 @@
 - Template observer binding ids are runtime strings; convert them to protocol `DomBindingId` values, but reconstruct `TemplatePartId` using the compiler fact identity shape `templateHash#runtimePath#valueIndex`.
 - Same-template pending DOM bindings must be associated with the mounted root by node ancestry, not by template hash alone, so concurrent mounts cannot delete each other's active bindings.
 - Unmounted roots can delete bridge-visible binding records while stale weak node entries remain harmless because node resolution must verify the binding id is still active.
+
+### T12
+
+- RefSubject DevTools event types should be discriminated unions so snapshot and update observers narrow without casts.
+- Initial RefSubject DevTools notification can observe the `DeferredRef` wakeup before the public version increments; normalize the captured first event in the instrumentation layer rather than changing `DeferredRef`.
+- Keep RefSubject observer failures diagnostic-only: swallow observer exceptions and leave `RefSubject` get/set/run semantics unchanged.

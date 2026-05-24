@@ -488,6 +488,36 @@ Existing packages receive narrow hook points only:
 - review:
   - Sidecar review is required by workflow policy, but current Codex subagent tooling only allows spawning after explicit user authorization; record direct-review rationale if authorization is still absent.
 
+### T12 - RefSubject DevTools Hooks
+
+- requirement_links: FR-18, FR-19, FR-23, FR-24, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13.
+- write_set:
+  - `packages/fx/src/RefSubject/devtools.ts`
+  - `packages/fx/src/RefSubject.devtools.test.ts`
+  - `packages/fx/src/RefSubject/RefSubject.ts`
+  - `packages/fx/src/RefSubject/index.ts`
+  - `packages/fx/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused RefSubject DevTools hook tests before `RefSubject/devtools.ts` exists.
+  - Run `pnpm --filter @typed/fx exec vitest run src/RefSubject.devtools.test.ts src/RefSubject.test.ts` and capture the missing-module failure.
+- green_step:
+  - Add host-neutral RefSubject DevTools observer types for snapshot and update events.
+  - Extend `RefSubjectOptions` with optional DevTools metadata and observer hooks.
+  - Emit diagnostic-only snapshot/update events after value changes, carrying id, service id, value, version, and subscriber count.
+  - Preserve RefSubject semantics: no extra user-visible emissions, equality-skipped writes remain skipped, and observer failures are swallowed.
+  - Propagate `RefSubject.Service(...).make` ids into DevTools metadata when a service owns the ref.
+- verification:
+  - `pnpm --filter @typed/fx exec vitest run src/RefSubject.devtools.test.ts src/RefSubject.test.ts`
+  - `pnpm --filter @typed/fx build`
+  - `pnpm exec oxlint packages/fx/src/RefSubject/devtools.ts packages/fx/src/RefSubject.devtools.test.ts packages/fx/src/RefSubject/RefSubject.ts packages/fx/src/RefSubject/index.ts packages/fx/src/index.ts`
+  - `pnpm exec oxfmt --check packages/fx/src/RefSubject/devtools.ts packages/fx/src/RefSubject.devtools.test.ts packages/fx/src/RefSubject/RefSubject.ts packages/fx/src/RefSubject/index.ts packages/fx/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc|@typed/devtools-protocol" packages/fx/src/RefSubject/devtools.ts packages/fx/src/RefSubject.devtools.test.ts packages/fx/src/RefSubject/RefSubject.ts packages/fx/src/RefSubject/index.ts packages/fx/src/index.ts` must return no matches.
+  - `git diff --check -- packages/fx .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for RefSubject semantic preservation, observer failure isolation, service id propagation, and dependency-boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

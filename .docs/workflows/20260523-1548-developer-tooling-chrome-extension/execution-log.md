@@ -336,7 +336,7 @@
   - green: after review fixes and formatting, boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
   - green: after review fixes and formatting, `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
 - commit:
-  - pending
+  - `1f79752 feat(devtools): add runtime dom registry`
 - context_updates:
   - Added `makeDomRegistry` with a template observer, node lookup, protocol binding lookup, component registration, and bridge-compatible resolver.
   - Added nearest-owner DOM node resolution for comment anchors, fragment roots, nested mounts, and unbound nodes.
@@ -345,6 +345,32 @@
   - Runtime DOM registry template part ids must match compiler fact ids: `templateHash#runtimePath#valueIndex`.
   - Same-template pending binding ownership must be assigned by actual mounted node ancestry, not by template hash alone.
 
+### T12 - RefSubject DevTools Hooks
+
+- task_id: T12
+- requirement_ids: FR-18, FR-19, FR-23, FR-24, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13
+- ts_scenarios: TS-4, TS-5, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/fx exec vitest run src/RefSubject.devtools.test.ts src/RefSubject.test.ts` failed before implementation because RefSubject emitted no DevTools snapshot/update events.
+  - red: after initial implementation, `pnpm --filter @typed/fx exec vitest run src/RefSubject.devtools.test.ts src/RefSubject.test.ts` failed with `TypeError: zipRight is not a function`.
+  - red: after replacing `Effect.zipRight`, the focused test failed because the first captured value emitted as `Updated` with version `-1` instead of `Snapshot` version `0`.
+  - green: `pnpm --filter @typed/fx exec vitest run src/RefSubject.devtools.test.ts src/RefSubject.test.ts` passed with 2 test files and 9 tests.
+  - green: `pnpm --filter @typed/fx build` passed.
+  - green: `pnpm exec oxlint packages/fx/src/RefSubject/devtools.ts packages/fx/src/RefSubject.devtools.test.ts packages/fx/src/RefSubject/RefSubject.ts packages/fx/src/RefSubject/index.ts packages/fx/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/fx/src/RefSubject/devtools.ts packages/fx/src/RefSubject.devtools.test.ts packages/fx/src/RefSubject/RefSubject.ts packages/fx/src/RefSubject/index.ts packages/fx/src/index.ts` passed.
+  - green: boundary grep for `chrome.`, `effect/unstable/rpc`, and `@typed/devtools-protocol` returned no matches.
+  - green: `git diff --check -- packages/fx .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no Critical, Important, or blocking Minor issues.
+- commit:
+  - pending
+- context_updates:
+  - Added host-neutral RefSubject DevTools observer types for snapshot/update events.
+  - Added optional `RefSubjectOptions.devtools` metadata and diagnostic-only observer notifications for successful value changes.
+  - Propagated `RefSubject.Service(...).make` ids into emitted DevTools metadata.
+- memory_updates:
+  - RefSubject DevTools event types should be discriminated unions so snapshot and update observers narrow without casts.
+  - Initial RefSubject DevTools notification can observe the `DeferredRef` wakeup before the public version increments; normalize the captured first event in the instrumentation layer rather than changing `DeferredRef`.
+
 ## Deferred Work
 
-- T12 remains blocked on prior-task completion.
+- T13 remains blocked on prior-task completion.
