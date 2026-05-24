@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Stream from "effect/Stream";
-import { drain, isFx, type Fx } from "@typed/fx/Fx";
-import { EventHandler, html, type Renderable } from "@typed/template";
+import { drain, fromEffect, isFx, type Fx } from "@typed/fx/Fx";
+import { EventHandler, html, type Renderable, type RenderEvent } from "@typed/template";
 import type { AnyEffect, AnyFx, AnyStream, Component } from "./Reactive.js";
 
 export type EventHandlerProperty = `on${string}`;
@@ -53,6 +53,7 @@ export type ElementOptions<Element extends globalThis.Element> = ElementEventHan
 type StringAttributeValue = AnyRenderable<string | null | undefined>;
 type AttributeValue = AnyRenderable<string | number | boolean | null | undefined>;
 type BooleanAttributeValue = AnyRenderable<boolean | null | undefined>;
+type DataAttributeValue = AnyRenderable<unknown>;
 type StyleValue = AnyRenderable<string | CSSStyleDeclaration | Partial<CSSStyleDeclaration> | null | undefined>;
 type PopoverTargetActionValue = AnyRenderable<"toggle" | "show" | "hide" | null | undefined>;
 
@@ -78,7 +79,7 @@ export type TemplateAttributeProps = {
 } & {
   readonly [K in `aria-${string}`]?: AttributeValue;
 } & {
-  readonly [K in `data-${string}`]?: AttributeValue;
+  readonly [K in `data-${string}`]?: DataAttributeValue;
 } & {
   readonly [K in `?${string}`]?: BooleanAttributeValue;
 };
@@ -96,6 +97,12 @@ export type HostProps<Element extends globalThis.Element> = Omit<
   HostEventHandlers &
   TemplateAttributeProps &
   BoundElementProperties<Element>;
+
+type TemplateSpreadInput<Element extends globalThis.Element> = HostProps<Element> & {
+  readonly [K in `data-${string}`]?: DataAttributeValue;
+};
+
+export type TemplateSpreadProps<Element extends globalThis.Element> = Omit<TemplateSpreadInput<Element>, ".data">;
 
 export type HostRenderer<Element extends globalThis.Element, A = unknown, E = never, R = never> = (
   props: HostProps<Element>,
@@ -173,19 +180,21 @@ export function mergeProps<Element extends globalThis.Element>(
   internal: HostProps<Element>,
 ): HostProps<Element> {
   if (!user) return internal;
-  const merged: Record<string, unknown> = { ...user, ...internal };
+  const merged = { ...user, ...internal } satisfies HostProps<Element>;
 
   for (const [key, value] of Object.entries(user)) {
     if (isEventKey(key)) {
-      merged[key] = chainEvent(
-        value as EventHandlerInput<Event, any, any>,
-        internal[key] as EventHandlerInput<Event, any, any>,
-      );
+      Object.assign(merged, {
+        [key]: chainEvent(
+          value as EventHandlerInput<Event, any, any>,
+          internal[key] as EventHandlerInput<Event, any, any>,
+        ),
+      });
     }
   }
 
-  merged.ref = composeRefs(user.ref, internal.ref);
-  return merged as HostProps<Element>;
+  Object.assign(merged, { ref: composeRefs(user.ref, internal.ref) });
+  return merged;
 }
 
 export function renderHost<Element extends globalThis.Element, const Opts extends HostOptions<Element>>(
@@ -193,41 +202,58 @@ export function renderHost<Element extends globalThis.Element, const Opts extend
   internal: HostProps<Element>,
   content: AnyRenderable<unknown>,
   fallback: (
-    props: HostProps<Element>,
+    props: TemplateSpreadProps<Element>,
     content: AnyRenderable<unknown>,
   ) => Component<Opts> | AnyEffect | AnyFx,
 ): Component<Opts> {
   const props = mergeProps(options.props, internal);
-  return (options.host ? options.host(props, content) : fallback(toTemplateSpreadProps(props), content)) as Component<Opts>;
+  const rendered = options.host
+    ? options.host(props, content)
+    : fallback(toTemplateSpreadProps(props), content);
+  return componentBoundary(rendered);
 }
 
 export function splitRef<Element extends globalThis.Element>(
   props: HostProps<Element>,
-): { readonly props: Omit<HostProps<Element>, "ref">; readonly ref: ElementRef<Element>["ref"] | undefined } {
+): { readonly props: Omit<HostProps<Element>, "ref">; readonly ref: ElementRef<Element>["ref"] | undefined };
+export function splitRef<Props extends { readonly ref?: unknown }>(
+  props: Props,
+): { readonly props: Omit<Props, "ref">; readonly ref: Props["ref"] | undefined };
+export function splitRef<Props extends { readonly ref?: unknown }>(
+  props: Props,
+): { readonly props: Omit<Props, "ref">; readonly ref: Props["ref"] | undefined } {
   const { ref, ...rest } = props;
   return { props: rest, ref };
 }
 
 export function renderDivHost<const Opts extends HostOptions<HTMLDivElement>>(
-  props: HostProps<HTMLDivElement>,
+  props: TemplateSpreadInput<HTMLDivElement>,
   content: AnyRenderable<unknown>,
 ): Component<Opts> {
   const split = splitRef(toTemplateSpreadProps(props));
-  return html`<div ...${split.props} ref=${split.ref}>${content}</div>` as Component<Opts>;
+  return componentBoundary(html`<div ...${split.props} ref=${split.ref}>${content}</div>`);
 }
 
 export function toTemplateSpreadProps<Element extends globalThis.Element>(
-  props: HostProps<Element>,
-): HostProps<Element> {
+  props: TemplateSpreadInput<Element>,
+): TemplateSpreadProps<Element> {
   const data = props[".data"];
   if (data === undefined) return props;
 
   const { ".data": _data, ...rest } = props;
-  const spreadProps: Record<string, unknown> = { ...rest };
-  for (const [key, value] of Object.entries(data)) {
-    spreadProps[`data-${key}`] = value;
-  }
-  return spreadProps as HostProps<Element>;
+  const templateProps = { ...rest };
+  Object.assign(
+    templateProps,
+    Object.fromEntries(Object.entries(data).map(([key, value]) => [`data-${key}`, value])),
+  );
+  return templateProps;
+}
+
+function componentBoundary<const Opts extends {}>(
+  value: Component<Opts> | AnyEffect<RenderEvent> | AnyFx<RenderEvent>,
+): Component<Opts> {
+  const fx = Effect.isEffect(value) ? fromEffect(value) : value;
+  return fx as Component<Opts>;
 }
 
 function toEventHandler<Ev extends Event, E, R>(

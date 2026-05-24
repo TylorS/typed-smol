@@ -5,7 +5,7 @@ import * as EffectRuntime from "effect/Effect";
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { EventHandler, type Renderable } from "@typed/template";
+import { EventHandler, HtmlRenderEvent, HtmlRenderTemplate, type Renderable } from "@typed/template";
 import { Fx } from "@typed/fx";
 import type * as Dom from "./Dom.js";
 import * as DomRuntime from "./Dom.js";
@@ -90,7 +90,7 @@ describe("typed/ui/Dom", () => {
       yield* DomRuntime.chainEvent(user, internal)!.handler(event);
 
       assert.deepStrictEqual(calls, ["user"]);
-    }).pipe(EffectRuntime.runPromise));
+    }).pipe(EffectRuntime.scoped, EffectRuntime.runPromise));
 
   it("composes refs with user ref before internal ref", () =>
     EffectRuntime.gen(function* () {
@@ -109,7 +109,7 @@ describe("typed/ui/Dom", () => {
       yield* ref(element);
 
       assert.deepStrictEqual(calls, ["user", "internal"]);
-    }).pipe(EffectRuntime.runPromise));
+    }).pipe(EffectRuntime.scoped, EffectRuntime.runPromise));
 
   it("splits refs from host props for explicit template ref attributes", () => {
     const ref = () => undefined;
@@ -139,34 +139,33 @@ describe("typed/ui/Dom", () => {
   it("centralizes host rendering with merged props", () =>
     EffectRuntime.gen(function* () {
       const calls: string[] = [];
-      const rendered = yield* EffectRuntime.suspend(() =>
-        DomRuntime.renderHost(
-          {
-            props: {
-              onclick: EventHandler.make(() => {
-                calls.push("user");
-              }),
-            },
-            host: (props, content) =>
-              EffectRuntime.gen(function* () {
-                assert(EventHandler.isEventHandler(props.onclick));
-                yield* props.onclick.handler(new Event("click"));
-                return content;
-              }),
-          },
-          {
+      const rendered = yield* DomRuntime.renderHost(
+        {
+          props: {
             onclick: EventHandler.make(() => {
-              calls.push("internal");
+              calls.push("user");
             }),
           },
-          "hosted",
-          () => EffectRuntime.succeed("fallback"),
-        ) as unknown as EffectRuntime.Effect<unknown, never, never>,
-      );
+          host: (props, content) =>
+            EffectRuntime.gen(function* () {
+              void content;
+              assert(EventHandler.isEventHandler(props.onclick));
+              yield* props.onclick.handler(new Event("click"));
+              return HtmlRenderEvent("hosted", true);
+            }),
+        },
+        {
+          onclick: EventHandler.make(() => {
+            calls.push("internal");
+          }),
+        },
+        "hosted",
+        () => EffectRuntime.succeed("fallback"),
+      ).pipe(Fx.provide(HtmlRenderTemplate), Fx.take(1), Fx.collectAll);
 
-      assert.strictEqual(rendered, "hosted");
+      assert.deepStrictEqual(rendered.map(String), ["hosted"]);
       assert.deepStrictEqual(calls, ["user", "internal"]);
-    }).pipe(EffectRuntime.runPromise));
+    }).pipe(EffectRuntime.scoped, EffectRuntime.runPromise));
 
   it("renders div host fallbacks with explicit ref propagation", () => {
     const calls: string[] = [];
@@ -217,6 +216,22 @@ describe("typed/ui/Dom", () => {
       );
 
     assert.deepStrictEqual(erasingImplementations, []);
+  });
+
+  it("keeps host helper casts isolated from the public Dom rendering boundary", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const source = readFileSync(join(sourceDir, "Dom.ts"), "utf8");
+    let inComponentBoundary = false;
+    const renderingBoundaryCasts = source.split("\n").flatMap((line, index) => {
+      if (line.startsWith("function componentBoundary")) inComponentBoundary = true;
+      if (line.startsWith("function toEventHandler")) inComponentBoundary = false;
+      return line.includes("as HostProps") ||
+        (line.includes("as Component") && !inComponentBoundary)
+        ? [`Dom.ts:${index + 1}:${line.trim()}`]
+        : [];
+    });
+
+    assert.deepStrictEqual(renderingBoundaryCasts, []);
   });
 });
 
