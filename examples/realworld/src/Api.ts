@@ -3,9 +3,9 @@ import type * as Effect from "effect/Effect";
 import type * as HttpClient from "effect/unstable/http/HttpClient";
 import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";
 
-export { Api, Client } from "typed:api?dir=./api&mode=client";
+export { Api, Client };
 
-export type RealWorldClient = Effect.Success<typeof Client>;
+export type RealWorldClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>;
 export type ApiClientError = Effect.Error<ReturnType<RealWorldClient["users"]["login"]>>;
 
 export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>

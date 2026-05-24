@@ -85,6 +85,41 @@ describe("virtualModulesVitePlugin", () => {
     warn.mockRestore();
   });
 
+  it("resolveId ignores Vite internal null-byte ids before resolver validation", () => {
+    let shouldResolveCalls = 0;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const manager = new PluginManager([
+      {
+        name: "test",
+        shouldResolve: () => {
+          shouldResolveCalls += 1;
+          return true;
+        },
+        build: () => "export {};",
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager });
+    const resolveId = plugin.resolveId! as ResolveId;
+
+    expect(resolveId("\0virtual:already-resolved", "/app/main.ts")).toBeNull();
+    expect(shouldResolveCalls).toBe(0);
+    expect(warn).not.toHaveBeenCalled();
+
+    warn.mockRestore();
+  });
+
+  it("resolveId stays silent when resolver rejects null-byte payloads", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const manager = new PluginManager();
+    const plugin = virtualModulesVitePlugin({ resolver: manager });
+    const resolveId = plugin.resolveId! as ResolveId;
+
+    expect(resolveId("typed:router?dir=./routes", "\0vite/internal.js")).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
+
+    warn.mockRestore();
+  });
+
   it("resolveId returns encoded id when resolver resolves", () => {
     const manager = new PluginManager([
       {

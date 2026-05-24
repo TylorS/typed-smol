@@ -542,6 +542,9 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).toContain("HttpApiClient.urlBuilder(Api, options)");
     expect(sourceText).toContain("export const makeTypedClient = ");
     expect(sourceText).toContain("Effect.map(makeClient(options), makeTypedClientFromRaw)");
+    expect(sourceText).toContain(
+      "type TypedRawClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>",
+    );
     expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
     expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
     expect(sourceText).not.toContain("HttpApiBuilder");
@@ -658,17 +661,49 @@ export const handler = () => Effect.succeed({ ok: true });
       buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
     );
 
-    expect(sourceText).toContain(
-      'const StatusRoute = StatusRouteRoute.Parse("/status");',
-    );
+    expect(sourceText).toContain('const StatusRoute = StatusRouteRoute.Parse("/status");');
     expect(sourceText).toContain(
       'HttpApiEndpoint.get("status", StatusRoute.path, { success: StatusSuccessSchema.Struct({ status: StatusSuccessSchema.Literal("ok") }), error: StatusErrorSchema.Struct({ message: StatusErrorSchema.String }) })',
     );
     expect(sourceText).not.toContain("params: StatusRoute.pathSchema");
     expect(sourceText).not.toContain("query: StatusRoute.querySchema");
     expect(sourceText).toContain(
-      '"status": () => client["root"]["status"]({} as Parameters<TypedRawClient["root"]["status"]>[0])',
+      '"status": ((request?: Parameters<RawClient["root"]["status"]>[0]) => optionalEndpoint(client["root"]["status"], request)) as OptionalEndpoint<RawClient["root"]["status"]>',
     );
+  });
+
+  it("propagates custom HttpClient error and service channels through typed clients", () => {
+    const fixture = createApiFixture({
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      "src/consumer.ts": `
+import type * as Effect from "effect/Effect";
+import type * as HttpClient from "effect/unstable/http/HttpClient";
+import type * as HttpClientError from "effect/unstable/http/HttpClientError";
+import { makeTypedClientWith } from "./api.generated.js";
+
+type TransportError = { readonly _tag: "TransportError" };
+type TransportService = { readonly _tag: "TransportService" };
+type Assert<T extends true> = T;
+
+declare const httpClient: HttpClient.HttpClient.With<TransportError, TransportService>;
+const clientEffect = makeTypedClientWith(httpClient);
+type Client = Effect.Success<typeof clientEffect>;
+declare const client: Client;
+const result = client.root.status({ responseMode: "decoded-only" });
+
+type ResultError = Effect.Error<typeof result>;
+type ResultServices = Effect.Services<typeof result>;
+type _PropagatesTransportError = Assert<TransportError extends ResultError ? true : false>;
+type _PropagatesHttpClientError = Assert<HttpClientError.HttpClientError extends ResultError ? true : false>;
+type _PropagatesTransportService = Assert<TransportService extends ResultServices ? true : false>;
+`,
+    });
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
+    );
+
+    expect(sourceText).toBeDefined();
+    expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
   });
 
   it("delegates generated server wiring to TypedHttpServer", () => {
@@ -1800,9 +1835,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain(
-        'handlers.handle("raw", Raw.handler)',
-      );
+      expect(sourceText).toContain('handlers.handle("raw", Raw.handler)');
       expect(sourceText).not.toContain("HttpIncomingMessage.schemaBodyJson(Raw.body)");
       expect(sourceText).not.toContain("handleRaw");
     });
@@ -2001,9 +2034,7 @@ export const handler = () => Effect.succeed({ ok: true });
       );
 
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain(
-        'HttpApiEndpoint.post("create", ArticlesCommentsRoute.path,',
-      );
+      expect(sourceText).toContain('HttpApiEndpoint.post("create", ArticlesCommentsRoute.path,');
       expect(sourceText).toContain("params: ArticlesCommentsRoute.pathSchema");
       expect(sourceText).not.toContain(
         "const ArticlesCommentsCreateRoute = Route.Join(ArticlesCommentsRoute",

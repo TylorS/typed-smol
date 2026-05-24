@@ -41,7 +41,9 @@ describe("typed-realworld package skeleton", () => {
 
     expect(Object.keys(pkg.devDependencies).sort()).toEqual([
       "@playwright/test",
+      "@storybook/builder-vite",
       "@typed/cli",
+      "@typed/storybook",
       "@typed/tsconfig",
       "@typed/virtual-modules-compiler",
       "@typed/virtual-modules-ts-plugin",
@@ -50,6 +52,7 @@ describe("typed-realworld package skeleton", () => {
       "happy-dom",
       "oxfmt",
       "oxlint",
+      "storybook",
       "typescript",
       "vite",
       "vitest",
@@ -77,6 +80,8 @@ describe("typed-realworld package skeleton", () => {
       "db:seed",
       "dev",
       "preview",
+      "storybook",
+      "storybook:build",
       "test",
       "test:acceptance:local",
       "test:api:hurl:local",
@@ -86,6 +91,7 @@ describe("typed-realworld package skeleton", () => {
       "test:ssr",
       "test:unit",
       "typecheck",
+      "typecheck:stories",
     ]);
   });
 
@@ -95,13 +101,8 @@ describe("typed-realworld package skeleton", () => {
     expect(readText(".gitignore")).toContain("test-results/");
     expect(readText(".gitignore")).toContain(".hurl/");
 
-    expect(readText("vmc.config.ts")).toContain("createRouterVirtualModulePlugin");
+    expect(readText("vmc.config.ts")).toContain("createTypedVirtualModulePlugins");
     expect(readText("vmc.config.ts")).not.toContain("createRouteHandlersVirtualModulePlugin");
-    expect(readText("vmc.config.ts")).toContain("createHttpApiVirtualModulePlugin");
-    expect(readText("vmc.config.ts")).toContain("createConfigVirtualModulePlugin");
-    expect(readText("vmc.config.ts")).toContain("createHtmlVirtualModulePlugin");
-    expect(readText("vmc.config.ts")).toContain("createBrowserVirtualModulePlugin");
-    expect(readText("vmc.config.ts")).toContain("createServerVirtualModulePlugin");
     expect(readText("vmc.config.ts")).not.toContain('from "@typed/app";');
     expect(existsSync(resolve(projectRoot, "src/types/typed-virtual-modules.d.ts"))).toBe(false);
     expect(readText("vite.config.ts")).toContain("typedVitePlugin");
@@ -229,7 +230,7 @@ describe("typed-realworld package skeleton", () => {
     expect(readText("src/Api.ts")).toContain('from "typed:api?dir=./api&mode=client"');
     expect(readText("src/Api.ts")).not.toContain("OpenApi");
     expect(readText("src/common/BrowserApiClient.ts")).toContain('from "../Api.js"');
-    expect(readText("src/common/routeData.ts")).toContain('from "../Api.js"');
+    expect(readText("src/common/routeData.ts")).toContain("decodedRouteApiClient");
     expect(readText("src/common/State.ts")).toContain('from "../Api.js"');
 
     for (const path of productionSourceFiles()) {

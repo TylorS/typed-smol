@@ -22,8 +22,9 @@
     "db:migrate": "vmc -p tsconfig.json && node dist/types/scripts/db.js migrate",
     "db:seed": "vmc -p tsconfig.json && node dist/types/scripts/db.js seed",
     "db:reset": "vmc -p tsconfig.json && node dist/types/scripts/db.js reset",
-    "storybook": "pnpm --filter @typed/storybook build && storybook dev --config-dir .storybook --port 6006",
-    "storybook:build": "pnpm --filter @typed/storybook build && storybook build --config-dir .storybook --output-dir dist/storybook"
+    "storybook": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && storybook dev --config-dir .storybook --port 6006",
+    "storybook:build": "pnpm --filter @typed/app build && pnpm --filter @typed/vite-plugin build && pnpm --filter @typed/storybook build && storybook build --config-dir .storybook --output-dir dist/storybook",
+    "typecheck:stories": "pnpm storybook:build"
   },
   "dependencies": {
     "@effect/sql-sqlite-node": "4.0.0-beta.66",

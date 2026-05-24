@@ -1,12 +1,11 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import type { RealWorldClient } from "../Api.js";
-import type { ArticlesService } from "../application/Articles.js";
-import type { CommentsService } from "../application/Comments.js";
-import type { ProfilesService } from "../application/Profiles.js";
-import type { TagsService } from "../application/Tags.js";
+import type * as Schema from "effect/Schema";
+import type * as HttpClientError from "effect/unstable/http/HttpClientError";
+import type { ClientResponseMode } from "effect/unstable/httpapi/HttpApiEndpoint";
 import type { Article, ArticlePreview, Comment } from "../domain/Article.js";
+import type { ErrorResponse } from "../domain/Errors.js";
 import type {
   MultipleArticlesResponse,
   MultipleCommentsResponse,
@@ -66,7 +65,82 @@ export interface ProfileViewData {
   readonly favorites: boolean;
 }
 
-export const decodedRouteApiClient = (client: RealWorldClient): RouteApiClient => ({
+type ApiRequest<Params = {}, Query = {}> = {
+  readonly params: Params;
+  readonly query: Query;
+  readonly headers: Readonly<Record<string, string>>;
+};
+
+type ArticleListQuery = {
+  readonly author?: string;
+  readonly favorited?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+  readonly tag?: string;
+};
+
+type MethodError<Method> = Method extends (
+  ...args: ReadonlyArray<any>
+) => Effect.Effect<any, infer Error, any>
+  ? Error
+  : never;
+
+type RouteApiDecoderArticlesGet = (
+  request: ApiRequest<{ readonly slug: string }> & {
+    readonly responseMode?: ClientResponseMode;
+  },
+) => Effect.Effect<SingleArticleResponse, HttpClientError.HttpClientError, never>;
+
+type RouteApiDecoderArticlesList = (
+  request: ApiRequest<{}, ArticleListQuery> & {
+    readonly responseMode?: ClientResponseMode;
+  },
+) => Effect.Effect<MultipleArticlesResponse, HttpClientError.HttpClientError, never>;
+
+type RouteApiDecoderCommentsList = (
+  request: ApiRequest<{ readonly slug: string }> & {
+    readonly responseMode?: ClientResponseMode;
+  },
+) => Effect.Effect<MultipleCommentsResponse, HttpClientError.HttpClientError, never>;
+
+type RouteApiDecoderProfilesGet = (
+  request: ApiRequest<{ readonly username: string }> & {
+    readonly responseMode?: ClientResponseMode;
+  },
+) => Effect.Effect<ProfileResponse, HttpClientError.HttpClientError, never>;
+
+type RouteApiDecoderTagsList = (
+  request: ApiRequest & { readonly responseMode?: ClientResponseMode },
+) => Effect.Effect<TagsResponse, HttpClientError.HttpClientError, never>;
+
+type RouteApiError =
+  | MethodError<RouteApiDecoderArticlesGet>
+  | MethodError<RouteApiDecoderArticlesList>
+  | MethodError<RouteApiDecoderCommentsList>
+  | MethodError<RouteApiDecoderProfilesGet>
+  | MethodError<RouteApiDecoderTagsList>
+  | Schema.SchemaError
+  | ErrorResponse;
+
+type ApiEffect<A> = Effect.Effect<A, RouteApiError, never>;
+
+export type RouteApiClientDecoderInput = {
+  readonly articles: {
+    readonly get: RouteApiDecoderArticlesGet;
+    readonly list: RouteApiDecoderArticlesList;
+  };
+  readonly comments: {
+    readonly list: RouteApiDecoderCommentsList;
+  };
+  readonly profiles: {
+    readonly get: RouteApiDecoderProfilesGet;
+  };
+  readonly tags: {
+    readonly list: RouteApiDecoderTagsList;
+  };
+};
+
+export const decodedRouteApiClient = (client: RouteApiClientDecoderInput): RouteApiClient => ({
   articles: {
     get: (request) => client.articles.get({ ...request, responseMode: "decoded-only" }),
     list: (request) => client.articles.list({ ...request, responseMode: "decoded-only" }),
@@ -160,37 +234,3 @@ const pageFilter = (page: number) => ({
   limit: pageSize,
   offset: (page - 1) * pageSize,
 });
-
-type RouteApiError =
-  | MethodError<RealWorldClient["articles"]["get"]>
-  | MethodError<RealWorldClient["articles"]["list"]>
-  | MethodError<RealWorldClient["comments"]["list"]>
-  | MethodError<RealWorldClient["profiles"]["get"]>
-  | MethodError<RealWorldClient["tags"]["list"]>
-  | Effect.Error<ReturnType<ArticlesService["get"]>>
-  | Effect.Error<ReturnType<ArticlesService["list"]>>
-  | Effect.Error<ReturnType<CommentsService["list"]>>
-  | Effect.Error<ReturnType<ProfilesService["get"]>>
-  | Effect.Error<ReturnType<TagsService["list"]>>;
-
-type ApiEffect<A> = Effect.Effect<A, RouteApiError, never>;
-
-type MethodError<Method> = Method extends (
-  ...args: ReadonlyArray<any>
-) => Effect.Effect<any, infer Error, any>
-  ? Error
-  : never;
-
-type ApiRequest<Params = {}, Query = {}> = {
-  readonly params: Params;
-  readonly query: Query;
-  readonly headers: Readonly<Record<string, string>>;
-};
-
-type ArticleListQuery = {
-  readonly author?: string;
-  readonly favorited?: string;
-  readonly limit?: number;
-  readonly offset?: number;
-  readonly tag?: string;
-};

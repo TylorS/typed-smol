@@ -480,7 +480,9 @@ function renderGroupLayerExpression(
 ): string {
   return groupSpec.directoryCompanions["_dependencies.ts"].reduce((expression, path) => {
     const dependencyLayer = dependencyLayerExpressionByPath.get(path);
-    return dependencyLayer ? `${expression}.pipe(Layer.provideMerge(${dependencyLayer}))` : expression;
+    return dependencyLayer
+      ? `${expression}.pipe(Layer.provideMerge(${dependencyLayer}))`
+      : expression;
   }, groupLayerExpression);
 }
 
@@ -738,9 +740,17 @@ export function emitHttpApiSource(input: {
     "ApiServices",
     "dependencyLayers",
   );
-  const headerExpressionByPath = concernExpressionMap(directoryOptionPaths, "ApiHeaders", "headers");
+  const headerExpressionByPath = concernExpressionMap(
+    directoryOptionPaths,
+    "ApiHeaders",
+    "headers",
+  );
   const errorExpressionByPath = concernExpressionMap(directoryOptionPaths, "ApiErrors", "errors");
-  const prefixExpressionByPath = concernExpressionMap(directoryOptionPaths, "ApiPrefixes", "prefixes");
+  const prefixExpressionByPath = concernExpressionMap(
+    directoryOptionPaths,
+    "ApiPrefixes",
+    "prefixes",
+  );
 
   const importLines: string[] = [
     `import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";`,
@@ -1105,9 +1115,10 @@ function emitHttpApiClientSource(input: {
           imports,
           input.exportExpressionsByPath,
         ).length > 0;
-      const optsParts = (hasRoutePrefix || shouldEmitClientRouteSchemas(literals?.path))
-        ? [`params: ${effectiveRouteExpr}.pathSchema`, `query: ${effectiveRouteExpr}.querySchema`]
-        : [];
+      const optsParts =
+        hasRoutePrefix || shouldEmitClientRouteSchemas(literals?.path)
+          ? [`params: ${effectiveRouteExpr}.pathSchema`, `query: ${effectiveRouteExpr}.querySchema`]
+          : [];
       const optionalPresent =
         input.optionalExportsByPath.get(endpoint.path) ?? new Set<OptionalExport>();
       for (const option of OPTIONAL_ENDPOINT_EXPORTS) {
@@ -1133,11 +1144,7 @@ function emitHttpApiClientSource(input: {
         }
       }
       typedClientEndpoints.push(
-        renderTypedClientEndpoint(
-          groupName,
-          name,
-          endpointNeedsClientRequest(optsParts),
-        ),
+        renderTypedClientEndpoint(groupName, name, endpointNeedsClientRequest(optsParts)),
       );
 
       return renderAnnotatedEndpointExpression(
@@ -1178,18 +1185,37 @@ export const Api = ${apiExpr};
 export const DependenciesLayer = ${dependenciesLayer};
 export const OpenApi = OpenApiModule.fromApi(Api);
 export const Client = HttpApiClient.make(Api);
-type TypedRawClient = typeof Client extends Effect.Effect<infer A, any, any> ? A : never;
+type TypedRawClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>;
+type TypedClientInput = {
+  readonly [Group in keyof TypedRawClient<any, any>]: {
+    readonly [Endpoint in keyof TypedRawClient<any, any>[Group]]: TypedRawClient<any, any>[Group][Endpoint] extends (
+      ...args: infer Args
+    ) => unknown
+      ? (...args: Args) => unknown
+      : never;
+  };
+};
+type OptionalEndpoint<Method extends (...args: ReadonlyArray<any>) => unknown> =
+  (() => ReturnType<Method>) & Method;
 
 export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>
   HttpApiClient.make(Api, options);
 export const makeClientWith = <E, R>(
   httpClient: HttpClient.HttpClient.With<E, R>,
   options?: { readonly baseUrl?: URL | string },
-): Effect.Effect<TypedRawClient, E, R> => HttpApiClient.makeWith(Api, { ...options, httpClient });
+) => HttpApiClient.makeWith(Api, { ...options, httpClient });
 export const makeUrlBuilder = (options?: { readonly baseUrl?: URL | string }) =>
   HttpApiClient.urlBuilder(Api, options);
 
-function makeTypedClientFromRaw(client: TypedRawClient) {
+function optionalEndpoint<Method extends (...args: ReadonlyArray<any>) => unknown>(
+  method: Method,
+  request: Parameters<Method>[0] | undefined,
+): ReturnType<Method> {
+  const input = request === undefined ? ({} as Parameters<Method>[0]) : request;
+  return method(input) as ReturnType<Method>;
+}
+
+function makeTypedClientFromRaw<const RawClient extends TypedClientInput>(client: RawClient) {
   return {
 ${typedClientGroups.map((group) => `    ${group}`).join(",\n")}
   } as const;
@@ -1216,12 +1242,12 @@ function renderTypedClientEndpoint(
 ): string {
   const groupKey = JSON.stringify(groupName);
   const endpointKey = JSON.stringify(endpointName);
-  const methodType = `TypedRawClient[${groupKey}][${endpointKey}]`;
+  const methodType = `RawClient[${groupKey}][${endpointKey}]`;
   const methodCall = `client[${groupKey}][${endpointKey}]`;
   if (requestRequired) {
-    return `${endpointKey}: (request: Parameters<${methodType}>[0]) => ${methodCall}(request)`;
+    return `${endpointKey}: ${methodCall}`;
   }
-  return `${endpointKey}: () => ${methodCall}({} as Parameters<${methodType}>[0])`;
+  return `${endpointKey}: ((request?: Parameters<${methodType}>[0]) => optionalEndpoint(${methodCall}, request)) as OptionalEndpoint<${methodType}>`;
 }
 
 function endpointNeedsClientRequest(optionParts: readonly string[]): boolean {

@@ -14,5 +14,5 @@
     ]
   },
   "include": ["src/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["dist", "node_modules", "src/tests"]
+  "exclude": ["dist", "node_modules", "src/tests", "src/**/*.stories.ts", ".storybook"]
 }

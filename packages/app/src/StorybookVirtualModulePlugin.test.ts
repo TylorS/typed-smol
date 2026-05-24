@@ -49,6 +49,8 @@ describe("StorybookVirtualModulePlugin", () => {
       export const routeModules = [Routes0, Routes1] as const;
       export const apiModules = [Api0] as const;
       export const apiLayers = [Api0.DependenciesLayer] as const;
+      export const makeTypedClient = Api0.makeTypedClient;
+      export const makeTypedClientWith = Api0.makeTypedClientWith;
       export const serverOrigin = "http://127.0.0.1:6174";
       export const proxyPath = "/__typed_storybook_api";
       export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;
@@ -101,6 +103,8 @@ describe("StorybookVirtualModulePlugin", () => {
       export const routeModules = [Routes0] as const;
       export const apiModules = [Api0] as const;
       export const apiLayers = [Api0.DependenciesLayer] as const;
+      export const makeTypedClient = Api0.makeTypedClient;
+      export const makeTypedClientWith = Api0.makeTypedClientWith;
       export const serverOrigin = undefined;
       export const proxyPath = "/__typed_storybook_api";
       export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;
@@ -142,6 +146,8 @@ describe("StorybookVirtualModulePlugin", () => {
       export const routeModules = [Routes0] as const;
       export const apiModules = [Api0] as const;
       export const apiLayers = [Api0.DependenciesLayer] as const;
+      export const makeTypedClient = Api0.makeTypedClient;
+      export const makeTypedClientWith = Api0.makeTypedClientWith;
       export const serverOrigin = undefined;
       export const proxyPath = "/__typed_storybook_api";
       export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;

@@ -50,6 +50,7 @@ function emitRuntimeBody(parsed: RuntimeId): string {
     `export const routeModules = [${routeModules.join(", ")}] as const;`,
     `export const apiModules = [${apiModules.join(", ")}] as const;`,
     `export const apiLayers = [${apiLayers.join(", ")}] as const;`,
+    apiClientExports(apiModules),
     `export const serverOrigin = ${jsonOrUndefined(parsed.serverOrigin)};`,
     `export const proxyPath = ${jsonOrDefault(parsed.proxyPath, "/__typed_storybook_api")};`,
     "export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;",
@@ -100,4 +101,19 @@ function jsonOrUndefined(value: string | undefined): string {
 
 function jsonOrDefault(value: string | undefined, fallback: string): string {
   return JSON.stringify(value ?? fallback);
+}
+
+function apiClientExports(apiModules: readonly string[]): string {
+  if (apiModules.length === 0) {
+    return [
+      "export const makeTypedClient = () => {",
+      '  throw new Error("Storybook runtime has no api targets configured");',
+      "};",
+    ].join("\n");
+  }
+  const primary = apiModules[0]!;
+  return [
+    `export const makeTypedClient = ${primary}.makeTypedClient;`,
+    `export const makeTypedClientWith = ${primary}.makeTypedClientWith;`,
+  ].join("\n");
 }

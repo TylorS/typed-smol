@@ -12,9 +12,12 @@ export default defineTypedStorybookConfig({
         tsconfig: "tsconfig.storybook.json",
       },
       server: {
-        mode: "runtime-harness",
+        mode: "http-server",
         routes: ["./src/routes"],
         api: ["./src/api"],
+        host: "127.0.0.1",
+        port: 6184,
+        proxyPath: "/__typed_storybook_api",
       },
     },
   },

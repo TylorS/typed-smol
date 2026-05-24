@@ -115,6 +115,9 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       id: string,
       importer: string | undefined,
     ): string | null | Promise<string | null> {
+      if (id.includes("\0")) {
+        return null;
+      }
       if (!importer) {
         return null;
       }
@@ -145,6 +148,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         return encoded;
       }
       if (pluginResolution?.status === "error") {
+        if (!shouldWarnDiagnostic(pluginResolution.diagnostic)) return null;
         warnDiagnostic(pluginResolution.diagnostic, warnOnError);
         return null;
       }
@@ -158,8 +162,10 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         contextByResolvedId.set(encoded, context);
         return encoded;
       }
-      if (result.status === "error" && warnOnError) {
-        warnDiagnostic(result.diagnostic, warnOnError);
+      if (result.status === "error") {
+        if (shouldWarnDiagnostic(result.diagnostic)) {
+          warnDiagnostic(result.diagnostic, warnOnError);
+        }
       }
       if (isVirtualId(importer)) {
         return this.resolve(id, effectiveImporter, { skipSelf: true }).then(
@@ -198,7 +204,9 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         return transformVirtualModuleSource(cached.sourceText, parsed.id);
       }
       if (cached.status === "error") {
-        warnDiagnostic(cached.diagnostic, warnOnError, "load ");
+        if (shouldWarnDiagnostic(cached.diagnostic)) {
+          warnDiagnostic(cached.diagnostic, warnOnError, "load ");
+        }
         return null;
       }
 
@@ -220,12 +228,16 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         });
         return transformVirtualModuleSource(sourceText, id);
       }
-      if (result.status === "error" && warnOnError) {
+      if (result.status === "error" && shouldWarnDiagnostic(result.diagnostic)) {
         warnDiagnostic(result.diagnostic, warnOnError, "load ");
       }
       return null;
     },
   };
+}
+
+function shouldWarnDiagnostic(diagnostic: VirtualModuleDiagnostic): boolean {
+  return !(diagnostic.code === "invalid-options" && diagnostic.message.includes("null bytes"));
 }
 
 interface ArtifactRequest {
@@ -435,9 +447,9 @@ const contextFingerprints = (
       ]
     : [];
 
-const shouldFingerprintBuildContext = (
-  context: VirtualModuleBuildContext | undefined,
-): boolean => context !== undefined && !(context.requestedExports.kind === "all" && context.requestedExports.reason === "dev mode");
+const shouldFingerprintBuildContext = (context: VirtualModuleBuildContext | undefined): boolean =>
+  context !== undefined &&
+  !(context.requestedExports.kind === "all" && context.requestedExports.reason === "dev mode");
 
 const fingerprintBuildContext = (context: VirtualModuleBuildContext | undefined): unknown => {
   if (!context) return { requestedExports: "all", reason: "missing context" };
