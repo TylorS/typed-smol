@@ -4,4 +4,5 @@ export * from "./EventBus.js";
 export * from "./FxCapture.js";
 export * from "./HmrCapture.js";
 export * from "./Layer.js";
+export * from "./NavigationCapture.js";
 export * from "./RefSubjectCapture.js";

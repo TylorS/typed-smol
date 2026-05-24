@@ -120,3 +120,9 @@
 ### Validation Repairs
 
 - Runtime event tests should narrow `RuntimeEventEnvelope` to a concrete event variant before reading variant-specific fields like `version`, `phase`, or `value`.
+
+### T17
+
+- Runtime Navigation capture should consume `@typed/navigation` `NavigationEvent` values and expose a `NavigationHandler`-compatible hook for `Navigation.onNavigation`.
+- Navigation runtime event ids can default to `<navigation type>:<destination id>`; custom correlation ids belong behind a `resolveId` option.
+- Runtime Navigation capture failures from id resolution, time sources, or runtime emission must be swallowed because capture is diagnostic-only.

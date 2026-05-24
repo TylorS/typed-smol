@@ -626,6 +626,32 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for optimized-vs-stateful preservation, runtime/compiler dependency boundaries, EventBus reuse, and staged-index hygiene before commit.
 
+### T17 - Runtime Navigation Capture
+
+- requirement_links: FR-27, FR-28, FR-41, FR-42, NFR-6, NFR-14, NFR-15, NFR-17, AC-7, AC-13.
+- write_set:
+  - `packages/devtools-runtime/src/NavigationCapture.ts`
+  - `packages/devtools-runtime/src/NavigationCapture.test.ts`
+  - `packages/devtools-runtime/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused runtime Navigation capture tests before `NavigationCapture.ts` exists.
+  - Run `pnpm --filter @typed/devtools-runtime exec vitest run src/NavigationCapture.test.ts` and capture the missing-module failure.
+- green_step:
+  - Consume `@typed/navigation` `NavigationEvent` values as the canonical runtime source.
+  - Emit protocol `NavigationEvent` envelopes through `DevtoolsRuntimeService.emit` so EventBus retention and bridge capability filtering are reused.
+  - Derive stable Navigation event ids from the navigation type and destination id by default, with an override for callers that need compiler/runtime correlation ids.
+- verification:
+  - `pnpm --filter @typed/devtools-runtime exec vitest run src/NavigationCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `pnpm exec oxlint packages/devtools-runtime/src/NavigationCapture.ts packages/devtools-runtime/src/NavigationCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/NavigationCapture.ts packages/devtools-runtime/src/NavigationCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc" packages/devtools-runtime/src/NavigationCapture.ts packages/devtools-runtime/src/NavigationCapture.test.ts packages/devtools-runtime/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for canonical `@typed/navigation` event usage, id stability, EventBus reuse, and runtime/protocol boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

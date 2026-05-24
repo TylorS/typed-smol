@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T16, then report task completion.
+- current_scope: execute approved plan task T17, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -473,7 +473,7 @@
   - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no Critical or Important issues in the scoped T16 files; it flagged an unrelated package-wide runtime test typecheck failure in `RefSubjectCapture.test.ts` to track before package-wide runtime test health is claimed.
 - commit:
-  - pending
+  - `33f3015 feat(devtools): capture hmr runtime facts`
 - context_updates:
   - Added `makeHmrCapture` for emitting protocol HMR status facts through the runtime service and bridge event bus.
   - Preserved optimized-template status, stateful eligibility, unknown status, and structured rejection reasons exactly as compiler facts provide them.
@@ -497,8 +497,38 @@
   - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/RefSubjectCapture.test.ts` passed.
   - green: `git diff --check -- packages/devtools-runtime/src/RefSubjectCapture.test.ts` passed.
 - commit:
-  - pending
+  - `96c2a01 test(devtools): restore runtime test typecheck`
 - context_updates:
   - Narrowed bounded RefSubject replay version assertions to RefSubject runtime event variants before reading `version`.
 - memory_updates:
   - Runtime event tests should narrow `RuntimeEventEnvelope` to a concrete event variant before reading variant-specific fields.
+
+### T17 - Runtime Navigation Capture
+
+- task_id: T17
+- requirement_ids: FR-27, FR-28, FR-41, FR-42, NFR-6, NFR-14, NFR-15, NFR-17, AC-7, AC-13
+- ts_scenarios: TS-7, TS-11
+- routing_decision:
+  - direct execution for the red-green implementation because target files and ownership are locked in the approved plan.
+  - sidecar review-auditor required before commit for canonical navigation model usage, id stability, EventBus reuse, and boundary risks.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/NavigationCapture.test.ts` failed before implementation with missing `./NavigationCapture.js`.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/NavigationCapture.test.ts` passed with 1 test file and 4 tests.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/NavigationCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts` passed with 3 test files and 19 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/NavigationCapture.ts packages/devtools-runtime/src/NavigationCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/NavigationCapture.ts packages/devtools-runtime/src/NavigationCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 8 test files and 43 tests.
+  - review: Sidecar review found an Important behavior-preservation issue where capture defects could affect `NavigationHandler`; after adding diagnostic failure isolation and regression coverage, re-review found the issue resolved with no blocking findings.
+- commit:
+  - pending
+- context_updates:
+  - Added `makeNavigationCapture` for converting canonical `@typed/navigation` `NavigationEvent` values into protocol runtime events.
+  - Added a `NavigationHandler`-compatible hook for wiring capture through `Navigation.onNavigation`.
+  - Reused DevTools runtime EventBus retention and bridge navigation capability filtering.
+- memory_updates:
+  - Runtime Navigation capture should consume `@typed/navigation` `NavigationEvent` values and expose a `NavigationHandler`-compatible hook for `Navigation.onNavigation`.
+  - Navigation runtime event ids can default to `<navigation type>:<destination id>`; custom correlation ids belong behind a `resolveId` option.
+  - Runtime Navigation capture failures from id resolution, time sources, or runtime emission must be swallowed because capture is diagnostic-only.
