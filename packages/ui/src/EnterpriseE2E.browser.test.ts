@@ -711,5 +711,5 @@ function renderOne<Element extends globalThis.HTMLElement, Opts extends {} = {}>
       return element as Element;
     }),
     Effect.orDie,
-  ) as Effect.Effect<Element, never, Scope.Scope>;
+  );
 }

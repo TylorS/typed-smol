@@ -283,9 +283,15 @@ export const catchCause: {
 export function fromEffectOrEventHandler<Ev extends Event, E = never, R = never>(
   handler: Effect.Effect<unknown, E, R> | EventHandler<Ev, E, R>,
 ): EventHandler<Ev, E, R> {
-  if (Effect.isEffect(handler)) return make(() => handler as Effect.Effect<unknown, E, R>);
+  if (isEffectHandler(handler)) return make(() => handler);
   if (isEventHandler(handler)) return handler;
   return make(() => Effect.void);
+}
+
+function isEffectHandler<Ev extends Event, E, R>(
+  handler: Effect.Effect<unknown, E, R> | EventHandler<Ev, E, R>,
+): handler is Effect.Effect<unknown, E, R> {
+  return Effect.isEffect(handler);
 }
 
 /**

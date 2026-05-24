@@ -29,11 +29,10 @@ export const make = <A, E = never, R = never>(
   read: (formData: globalThis.FormData) => Effect.Effect<A, E, R>,
 ): Field<A, E, R> => ({ [FieldTypeId]: FieldTypeId, read });
 
-export const decode = <F extends Field.Any>(
-  field: F,
+export const decode = <A, E = never, R = never>(
+  field: Field<A, E, R>,
   source: Source,
-): Effect.Effect<Type<F>, Error<F>, Services<F>> =>
-  field.read(toNativeFormData(source)) as Effect.Effect<Type<F>, Error<F>, Services<F>>;
+): Effect.Effect<A, E, R> => field.read(toNativeFormData(source));
 
 export const text = (name: string): Field<string, FormDataError> =>
   make((formData) => readText(formData, name));
@@ -72,14 +71,20 @@ type StructType<Fields extends FieldStruct> = {
 export const struct = <const Fields extends FieldStruct>(
   fields: Fields,
 ): Field<StructType<Fields>, Error<Fields[keyof Fields]>, Services<Fields[keyof Fields]>> =>
-  make(
-    (formData) =>
-      Effect.all(readStructFields(fields, formData)) as Effect.Effect<
-        StructType<Fields>,
-        Error<Fields[keyof Fields]>,
-        Services<Fields[keyof Fields]>
-      >,
-  );
+  make((formData) => {
+    const read: Effect.Effect<
+      StructType<Fields>,
+      Error<Fields[keyof Fields]>,
+      Services<Fields[keyof Fields]>
+    > = Effect.gen(function* () {
+      const output: Partial<StructType<Fields>> = {};
+      for (const key of Object.keys(fields) as Array<keyof Fields>) {
+        output[key] = yield* fields[key].read(formData);
+      }
+      return output as StructType<Fields>;
+    });
+    return read;
+  });
 
 export const schema = <S extends Schema.Top, F extends Field.Any>(
   schema: S,
@@ -106,21 +111,3 @@ const nonEmptyTrimmed = (value: string): string | undefined => {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 };
-
-const readStructFields = <Fields extends FieldStruct>(
-  fields: Fields,
-  formData: globalThis.FormData,
-): {
-  readonly [K in keyof Fields]: Effect.Effect<
-    Type<Fields[K]>,
-    Error<Fields[K]>,
-    Services<Fields[K]>
-  >;
-} =>
-  Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field.read(formData)])) as {
-    readonly [K in keyof Fields]: Effect.Effect<
-      Type<Fields[K]>,
-      Error<Fields[K]>,
-      Services<Fields[K]>
-    >;
-  };

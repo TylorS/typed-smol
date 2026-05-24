@@ -1178,16 +1178,16 @@ export const Api = ${apiExpr};
 export const DependenciesLayer = ${dependenciesLayer};
 export const OpenApi = OpenApiModule.fromApi(Api);
 export const Client = HttpApiClient.make(Api);
+type TypedRawClient = typeof Client extends Effect.Effect<infer A, any, any> ? A : never;
+
 export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>
   HttpApiClient.make(Api, options);
 export const makeClientWith = <E, R>(
   httpClient: HttpClient.HttpClient.With<E, R>,
   options?: { readonly baseUrl?: URL | string },
-) => HttpApiClient.makeWith(Api, { ...options, httpClient });
+): Effect.Effect<TypedRawClient, E, R> => HttpApiClient.makeWith(Api, { ...options, httpClient });
 export const makeUrlBuilder = (options?: { readonly baseUrl?: URL | string }) =>
   HttpApiClient.urlBuilder(Api, options);
-
-type TypedRawClient = typeof Client extends Effect.Effect<infer A, any, any> ? A : never;
 
 function makeTypedClientFromRaw(client: TypedRawClient) {
   return {
@@ -1201,10 +1201,7 @@ export const makeTypedClientWith = <E, R>(
   httpClient: HttpClient.HttpClient.With<E, R>,
   options?: { readonly baseUrl?: URL | string },
 ) =>
-  Effect.map(
-    makeClientWith(httpClient, options) as unknown as Effect.Effect<TypedRawClient, E, R>,
-    makeTypedClientFromRaw,
-  );
+  Effect.map(makeClientWith(httpClient, options), makeTypedClientFromRaw);
 `;
 }
 

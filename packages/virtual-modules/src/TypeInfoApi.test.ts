@@ -799,7 +799,7 @@ export namespace Option {
         main,
         `import * as Effect from "./effect.js"; import * as Option from "./option.js";
 export function fn(): Effect.Effect<Option.Option<string>, never, never> {
-  return {} as Effect.Effect<Option.Option<string>, never, never>;
+  return Effect.succeed(Option.some("typed"));
 }`,
         "utf8",
       );
@@ -1043,7 +1043,7 @@ export namespace Effect { export type Any = Effect<any, any, any>; }`,
         main,
         `import * as Effect from "./effect.js";
 export function fn(): Effect.Effect<string, never, never> {
-  return {} as Effect.Effect<string, never, never>;
+  return Effect.succeed("typed");
 }`,
         "utf8",
       );
@@ -1139,7 +1139,7 @@ export namespace Option { export type Any = Option<any>; }
         main,
         `import * as Effect from "./effect.js"; import * as Option from "./option.js";
 export function fn(): Effect.Effect<Option.Option<string>, never, never> {
-  return {} as Effect.Effect<Option.Option<string>, never, never>;
+  return Effect.succeed(Option.some("typed"));
 }`,
         "utf8",
       );

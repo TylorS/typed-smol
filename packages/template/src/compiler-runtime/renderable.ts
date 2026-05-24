@@ -40,13 +40,7 @@ export interface ServerTemplateRuntime {}
 
 export type RouteResumePayload = Readonly<Record<string, string>>;
 
-export type RouteResumeTrigger =
-  | "load"
-  | "idle"
-  | "visible"
-  | "hover"
-  | "interaction"
-  | "focus";
+export type RouteResumeTrigger = "load" | "idle" | "visible" | "hover" | "interaction" | "focus";
 
 export function runDomBinding<A>(
   kind: RenderableKind,
@@ -128,7 +122,8 @@ export function resolveServerValue<A>(
 
 function toDomFx(kind: RenderableKind, value: unknown): Fx.Fx<unknown, Error, never> {
   if (kind === "plain") return Fx.succeed(value);
-  if (kind === "effect") return Fx.fromEffect(value as Effect.Effect<unknown, Error, never>);
+  if (kind === "effect")
+    return isRuntimeEffect(value) ? Fx.fromEffect(value) : invalidRenderable(kind);
   if (kind === "stream") return Fx.fromStream(value as never);
   if (kind === "fx" || kind === "nested-template") return value as Fx.Fx<unknown, Error, never>;
   return detectDomFx(value);
@@ -138,7 +133,7 @@ function detectDomFx(value: unknown): Fx.Fx<unknown, Error, never> {
   if (value === null || value === undefined) return Fx.succeed(value);
   if (Fx.isFx(value)) return value as Fx.Fx<unknown, Error, never>;
   if (isStream(value)) return Fx.fromStream(value as never);
-  if (Effect.isEffect(value)) return Fx.fromEffect(value as Effect.Effect<unknown, Error, never>);
+  if (Effect.isEffect(value)) return invalidRenderable("effect");
   if (Array.isArray(value)) return Fx.mergeOrdered(...value.map(detectDomFx));
   return Fx.succeed(value);
 }
@@ -146,7 +141,8 @@ function detectDomFx(value: unknown): Fx.Fx<unknown, Error, never> {
 function toServerFx(kind: RenderableKind, value: unknown): Fx.Fx<unknown, Error, never> {
   if (kind === "plain") return Fx.succeed(value);
   if (kind === "html-render-event" || kind === "dom-render-event") return Fx.succeed(value);
-  if (kind === "effect") return effectToServerFx(value as Effect.Effect<unknown, Error, never>);
+  if (kind === "effect")
+    return isRuntimeEffect(value) ? effectToServerFx(value) : invalidRenderable(kind);
   if (kind === "stream") return takeOneIfNotRenderEvent(Fx.fromStream(value as never));
   if (kind === "fx" || kind === "nested-template") {
     return takeOneIfNotRenderEvent(value as Fx.Fx<unknown, Error, never>);
@@ -158,10 +154,17 @@ function detectServerFx(value: unknown): Fx.Fx<unknown, Error, never> {
   if (value === null || value === undefined) return Fx.succeed(value);
   if (Fx.isFx(value)) return takeOneIfNotRenderEvent(value as Fx.Fx<unknown, Error, never>);
   if (isStream(value)) return takeOneIfNotRenderEvent(Fx.fromStream(value as never));
-  if (Effect.isEffect(value))
-    return effectToServerFx(value as Effect.Effect<unknown, Error, never>);
+  if (Effect.isEffect(value)) return invalidRenderable("effect");
   if (Array.isArray(value)) return Fx.mergeOrdered(...value.map(detectServerFx));
   return Fx.succeed(value);
+}
+
+function isRuntimeEffect(value: unknown): value is Effect.Effect<unknown, Error, never> {
+  return Effect.isEffect(value);
+}
+
+function invalidRenderable(kind: RenderableKind): Fx.Fx<unknown, Error, never> {
+  return Fx.fail(new Error(`Typed template ${kind} value requires compiler-proven channels`));
 }
 
 function effectToServerFx(
