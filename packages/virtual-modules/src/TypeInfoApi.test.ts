@@ -125,7 +125,11 @@ const makeProgram = (rootFiles: readonly string[]): ts.Program =>
 describe("createTypeInfoApiSession", () => {
   it("traces Schema.Type aliases back to their schema value export", () => {
     const dir = createTempDir();
-    symlinkSync(join(process.cwd(), "packages", "app", "node_modules"), join(dir, "node_modules"), "dir");
+    symlinkSync(
+      join(process.cwd(), "packages", "app", "node_modules"),
+      join(dir, "node_modules"),
+      "dir",
+    );
     const domain = join(dir, "domain.ts");
     const component = join(dir, "component.ts");
     writeFileSync(
@@ -174,7 +178,11 @@ export const input = (value: MyInput) => value;
 
   it("preserves Schema.Type origins through rest-tuple callable parameters", () => {
     const dir = createTempDir();
-    symlinkSync(join(process.cwd(), "packages", "app", "node_modules"), join(dir, "node_modules"), "dir");
+    symlinkSync(
+      join(process.cwd(), "packages", "app", "node_modules"),
+      join(dir, "node_modules"),
+      "dir",
+    );
     const domain = join(dir, "domain.ts");
     const component = join(dir, "component.ts");
     writeFileSync(

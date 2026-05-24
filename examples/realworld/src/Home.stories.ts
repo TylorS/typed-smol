@@ -2,7 +2,6 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import type { Meta, StoryObj } from "@typed/storybook";
-import type { RealWorldClient } from "./Api.js";
 import { ApiClient, decodedRouteApiClient } from "./common/routeData.js";
 import {
   Routes,
@@ -12,9 +11,7 @@ import {
 } from "typed:storybook/runtime?path=/";
 
 const StorybookApiLayer = ApiClient.layer(
-  Effect.map(makeTypedClient({ baseUrl: apiBaseUrl }), (client) =>
-    decodedRouteApiClient(client as RealWorldClient),
-  ),
+  Effect.map(makeTypedClient({ baseUrl: apiBaseUrl }), decodedRouteApiClient),
 ).pipe(Layer.provideMerge(FetchHttpClient.layer));
 
 const meta = {

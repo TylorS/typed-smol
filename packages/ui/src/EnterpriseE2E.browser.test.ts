@@ -83,8 +83,7 @@ describe("typed/ui enterprise browser e2e", () => {
             })}
             ${Form.Push({ state: form, name: "tags", value: "beta", content: "Add beta" })}
             ${Form.Remove({ state: form, name: "tags", index: 0, content: "Remove first tag" })}
-            ${Form.Submit({ content: "Save" })}
-            ${Form.Reset({ content: "Reset" })}
+            ${Form.Submit({ content: "Save" })} ${Form.Reset({ content: "Reset" })}
           `,
         }),
         appendMount(root),
@@ -168,7 +167,11 @@ describe("typed/ui enterprise browser e2e", () => {
       const root = appendRoot();
       const submitted: Preferences[] = [];
       const dialog = yield* Dialog.makeState({ open: false });
-      const popover = yield* Popover.makeState({ id: "preferences-help", open: false, mode: "auto" });
+      const popover = yield* Popover.makeState({
+        id: "preferences-help",
+        open: false,
+        mode: "auto",
+      });
       const role = yield* Select.makeState<"viewer" | "admin">({
         id: "preferences-role",
         value: "viewer",
@@ -212,8 +215,7 @@ describe("typed/ui enterprise browser e2e", () => {
               positionAnchor: "--preferences-help",
               positionArea: "bottom",
               content: html`
-                Role controls access.
-                ${Popover.Dismiss({ state: popover, content: "Close help" })}
+                Role controls access. ${Popover.Dismiss({ state: popover, content: "Close help" })}
               `,
             })}
           `,
@@ -306,7 +308,8 @@ describe("typed/ui enterprise browser e2e", () => {
           items: commandItems,
           autocomplete: "both",
           autoSelect: true,
-          filter: (item, query) => item.textValue?.toLowerCase().startsWith(query.toLowerCase()) ?? false,
+          filter: (item, query) =>
+            item.textValue?.toLowerCase().startsWith(query.toLowerCase()) ?? false,
         }),
         appendMount(root),
       );
@@ -516,7 +519,8 @@ describe("typed/ui enterprise browser e2e", () => {
           items,
           autocomplete: "both",
           autoSelect: true,
-          filter: (item, query) => item.textValue?.toLowerCase().startsWith(query.toLowerCase()) ?? false,
+          filter: (item, query) =>
+            item.textValue?.toLowerCase().startsWith(query.toLowerCase()) ?? false,
         }),
         root,
       );
@@ -528,7 +532,10 @@ describe("typed/ui enterprise browser e2e", () => {
       input.value = "Pub";
       input.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true }));
       yield* Effect.sleep(30);
-      assert.deepStrictEqual((yield* state).filteredItems.map((item) => item.id), ["published"]);
+      assert.deepStrictEqual(
+        (yield* state).filteredItems.map((item) => item.id),
+        ["published"],
+      );
       assert.strictEqual((yield* state).activeId, "published");
       assert.strictEqual((yield* state).value, "published");
 
@@ -653,9 +660,10 @@ describe("typed/ui enterprise browser e2e", () => {
           content: "Save",
           props: {
             id: "save-button",
-            ref: (element) => Effect.sync(() => {
-              element.dataset.ready = "true";
-            }),
+            ref: (element) =>
+              Effect.sync(() => {
+                element.dataset.ready = "true";
+              }),
           },
           host: (props, content) => {
             const split = Dom.splitRef(props);

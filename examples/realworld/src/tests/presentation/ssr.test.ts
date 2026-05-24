@@ -12,6 +12,7 @@ const testDatabasePath = resolve(defaultDataDirectory, "ssr-test.sqlite");
 const TestLayer = ServerPageTestLayer({ databasePath: testDatabasePath });
 
 const run = makeLayerRunner(TestLayer);
+const renderStatic = makeLayerRunner(StaticHtmlRenderTemplate);
 
 const render = (url: string): Promise<string> => run(renderUrl(url));
 
@@ -104,12 +105,7 @@ describe("realworld SSR pages", () => {
 
   it("renders settings route template directly as static html", async () => {
     const settings = await Promise.race([
-      Effect.runPromise(
-        renderToHtmlString(settingsTemplate).pipe(
-          Effect.provide(StaticHtmlRenderTemplate),
-          Effect.scoped,
-        ),
-      ),
+      renderStatic(renderToHtmlString(settingsTemplate).pipe(Effect.scoped)),
       new Promise<string>((_, reject) =>
         setTimeout(() => reject(new Error("settings static render did not finish")), 2000),
       ),
