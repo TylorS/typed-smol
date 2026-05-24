@@ -879,7 +879,7 @@ test(storybook): smoke generated typed runtime
 - Create: `.docs/workflows/20260524-1047-cohesion-remediation-plan/memories.md`
 - Modify: `.docs/workflows/20260524-1047-cohesion-remediation-plan/developer-tooling-handoff.md`
 
-- [ ] **Step 1: Run focused gates**
+- [x] **Step 1: Run focused gates**
 
 Run:
 
@@ -901,7 +901,9 @@ pnpm --filter typed-realworld test:hmr:local
 
 Expected: pass.
 
-- [ ] **Step 2: Run final gates**
+Actual: all listed focused gates passed except `typed-realworld test:acceptance:local` and `typed-realworld test:hmr:local`, which were not run because Task 8 stopped at the missing Hurl prerequisite.
+
+- [x] **Step 2: Run final gates**
 
 Run:
 
@@ -913,7 +915,7 @@ git status -sb
 
 Expected: build and diff check pass; status contains only intended branch changes.
 
-- [ ] **Step 3: Record residual developer-tooling items**
+- [x] **Step 3: Record residual developer-tooling items**
 
 If no handoff happened, record the following as external-agent or follow-up items:
 
