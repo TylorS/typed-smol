@@ -230,7 +230,7 @@
   - green: `git diff --check -- packages/app pnpm-lock.yaml .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no blockers and called out staged-index hygiene risks in shared config files; both were handled with partial staging.
 - commit:
-  - pending
+  - `dcd0c05 feat(devtools): add app config wiring`
 - deviations_or_replans:
   - Expanded T8 write set to include `packages/app/package.json`, `packages/app/src/config/index.ts`, `packages/app/src/runtime/devtools.ts`, and `pnpm-lock.yaml` so the app can depend on the explicit runtime Layer package.
   - `packages/app/src/config/TypedConfig.ts` and `packages/app/src/config/index.ts` have unrelated concurrent config additions; stage only DevTools-owned hunks for this task.
@@ -265,7 +265,7 @@
   - green: runtime package boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
   - green: `git diff --check -- packages/devtools-protocol packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
 - commit:
-  - pending
+  - `21348e5 feat(devtools): add runtime event bridge`
 - deviations_or_replans:
   - Expanded T9 write set to include `Layer.ts` and `Layer.test.ts` so `DevtoolsRuntimeService.emit` and bridge subscriptions share the same EventBus.
   - Expanded T9 write set to include protocol schemas/RPC/fixtures because replay state has to cross the shared RPC boundary to satisfy reconnect semantics.
@@ -277,6 +277,37 @@
   - The bridge must consume the same EventBus as `DevtoolsRuntimeService.emit`; separate runtime and bridge stores make later Fx/RefSubject instrumentation invisible to DevTools.
   - Custom EventBus injection must enforce one consistent session across runtime service, bridge, and bus.
 
+### T10 - Template DOM DevTools Hook Points
+
+- task_id: T10
+- requirement_ids: FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-41, FR-42, NFR-7, NFR-15, NFR-17, AC-3, AC-13
+- ts_scenarios: TS-3, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/template exec vitest run src/compiler-runtime/devtools.test.ts src/compiler-runtime/dom.test.ts` failed with missing `./devtools.js`; existing `dom.test.ts` passed.
+  - red: sidecar review regressions failed before fixes because binding notifications were eager and observer throws changed render behavior.
+  - red: compiler table-driven fixture failed before fixes because large template event/ref entries emitted invalid metadata.
+  - green: `pnpm --filter @typed/template exec vitest run src/compiler-runtime/devtools.test.ts src/compiler-runtime/dom.test.ts` passed with 9 tests.
+  - green: `pnpm --filter @typed/compiler exec vitest run src/template/transformTemplateModule.test.ts` passed with 13 tests.
+  - green: `pnpm --filter @typed/template build` passed.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm exec oxlint packages/template/src/compiler-runtime/devtools.ts packages/template/src/compiler-runtime/devtools.test.ts packages/template/src/compiler-runtime/dom.ts packages/template/src/compiler-runtime/dom.test.ts packages/template/src/compiler-runtime/renderable.ts packages/compiler/src/template/transformTemplateModule.ts packages/compiler/src/template/transformTemplateModule.test.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/template/src/compiler-runtime/devtools.ts packages/template/src/compiler-runtime/devtools.test.ts packages/template/src/compiler-runtime/dom.ts packages/template/src/compiler-runtime/dom.test.ts packages/template/src/compiler-runtime/renderable.ts packages/compiler/src/template/transformTemplateModule.ts packages/compiler/src/template/transformTemplateModule.test.ts` passed.
+  - green: template/compiler boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/template packages/compiler/src/template/transformTemplateModule.ts packages/compiler/src/template/transformTemplateModule.test.ts .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found eager hook notification, invalid table-driven event/ref metadata, and missing workflow evidence; implementation gaps were fixed before commit.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Expanded T10 write set to include `packages/compiler/src/template/transformTemplateModule.ts` and `transformTemplateModule.test.ts` because the compiler table emitter must generate valid metadata consumed by `mountDomTemplateBindings`.
+- context_updates:
+  - Added host-neutral DOM template DevTools observer hooks for binding, mount, and unmount metadata.
+  - Added lazy, diagnostic-only binding notifications that do not change template render semantics when observers throw.
+  - Fixed table-driven compiler metadata for large template `event` and `ref` parts.
+- memory_updates:
+  - DOM template DevTools hooks must be lazy inside the returned mount Effect; construction must not fire observer callbacks.
+  - DevTools observer failures are swallowed because instrumentation is diagnostic-only.
+  - Compiler table-driven DOM bindings must keep `event` and `ref` entries structurally aligned with `DomTemplateBinding`.
+
 ## Deferred Work
 
-- T10 through T12 remain blocked on prior-task completion.
+- T11 through T12 remain blocked on prior-task completion.

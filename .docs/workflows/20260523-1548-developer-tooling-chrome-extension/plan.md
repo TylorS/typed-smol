@@ -431,6 +431,35 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar subagent review for bounded retention, reconnect state semantics, protocol handler typing, JSON compatibility, and boundary compliance before commit.
 
+### T10 - Template DOM DevTools Hook Points
+
+- requirement_links: FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-41, FR-42, NFR-7, NFR-15, NFR-17, AC-3, AC-13.
+- write_set:
+  - `packages/template/src/compiler-runtime/devtools.ts`
+  - `packages/template/src/compiler-runtime/devtools.test.ts`
+  - `packages/template/src/compiler-runtime/dom.ts`
+  - `packages/template/src/compiler-runtime/dom.test.ts`
+  - `packages/template/src/compiler-runtime/renderable.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add compiler-runtime DevTools hook tests before `devtools.ts` exists.
+  - Run `pnpm --filter @typed/template exec vitest run src/compiler-runtime/devtools.test.ts src/compiler-runtime/dom.test.ts` and capture the missing-module failure.
+- green_step:
+  - Add host-neutral DOM template DevTools event/types for template mount, unmount, and binding metadata.
+  - Allow `renderInto` callers to provide runtime DevTools hooks without changing default render behavior.
+  - Notify bindings mounted through `mountDomTemplateBindings` with template hash, path, kind, value index, optional name, and the concrete node/anchor.
+  - Preserve existing compiled DOM output and long-lived binding semantics.
+- verification:
+  - `pnpm --filter @typed/template exec vitest run src/compiler-runtime/devtools.test.ts src/compiler-runtime/dom.test.ts`
+  - `pnpm --filter @typed/template build`
+  - `pnpm exec oxlint packages/template/src/compiler-runtime/devtools.ts packages/template/src/compiler-runtime/devtools.test.ts packages/template/src/compiler-runtime/dom.ts packages/template/src/compiler-runtime/dom.test.ts packages/template/src/compiler-runtime/renderable.ts`
+  - `pnpm exec oxfmt --check packages/template/src/compiler-runtime/devtools.ts packages/template/src/compiler-runtime/devtools.test.ts packages/template/src/compiler-runtime/dom.ts packages/template/src/compiler-runtime/dom.test.ts packages/template/src/compiler-runtime/renderable.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc" packages/template/src/compiler-runtime/devtools.ts packages/template/src/compiler-runtime/dom.ts packages/template/src/compiler-runtime/renderable.ts` must return no matches.
+  - `git diff --check -- packages/template .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar subagent review for render semantic preservation, hook shape type-safety, DOM-node/anchor coverage, and boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

@@ -7,6 +7,7 @@ import { Fx, Sink } from "@typed/fx";
 import { renderToString } from "../internal/encoding.js";
 import { takeOneIfNotRenderEvent } from "../internal/takeOneIfNotRenderEvent.js";
 import { HtmlRenderEvent, isHtmlRenderEvent } from "../RenderEvent.js";
+import type { DomTemplateDevtoolsObserver } from "./devtools.js";
 
 export type RenderableKind =
   | "plain"
@@ -19,6 +20,7 @@ export type RenderableKind =
   | "unknown";
 
 export interface DomTemplateRuntime {
+  readonly devtools?: DomTemplateDevtoolsObserver;
   readonly scope?: Scope;
   readonly onError?: (error: unknown) => Effect.Effect<void>;
 }
@@ -45,7 +47,11 @@ function bindingEffect<A>(
   return toDomFx(kind, value).run(
     Sink.make(
       (error) => runtime.onError?.(error) ?? Effect.die(error),
-      (next) => Effect.flatMap(Effect.sync(() => sink(next)), () => onValue),
+      (next) =>
+        Effect.flatMap(
+          Effect.sync(() => sink(next)),
+          () => onValue,
+        ),
     ),
   );
 }
@@ -131,7 +137,8 @@ function detectServerFx(value: unknown): Fx.Fx<unknown, unknown, never> {
   if (value === null || value === undefined) return Fx.succeed(value);
   if (Fx.isFx(value)) return takeOneIfNotRenderEvent(value as Fx.Fx<unknown, unknown, never>);
   if (isStream(value)) return takeOneIfNotRenderEvent(Fx.fromStream(value as never));
-  if (Effect.isEffect(value)) return effectToServerFx(value as Effect.Effect<unknown, unknown, never>);
+  if (Effect.isEffect(value))
+    return effectToServerFx(value as Effect.Effect<unknown, unknown, never>);
   if (Array.isArray(value)) return Fx.mergeOrdered(...value.map(detectServerFx));
   return Fx.succeed(value);
 }
@@ -145,5 +152,7 @@ function effectToServerFx(
 function renderServerValues(values: readonly unknown[]): unknown {
   if (values.length === 0) return "";
   if (values.length === 1 && !isHtmlRenderEvent(values[0])) return values[0];
-  return values.map((value) => (isHtmlRenderEvent(value) ? value.html : renderToString(value, ""))).join("");
+  return values
+    .map((value) => (isHtmlRenderEvent(value) ? value.html : renderToString(value, "")))
+    .join("");
 }

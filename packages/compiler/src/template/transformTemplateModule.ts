@@ -127,7 +127,11 @@ function findTaggedTemplate(
   let found: ts.TaggedTemplateExpression | null = null;
   const visit = (node: ts.Node): void => {
     if (found !== null) return;
-    if (ts.isTaggedTemplateExpression(node) && node.getStart(sourceFile) === start && node.end === end) {
+    if (
+      ts.isTaggedTemplateExpression(node) &&
+      node.getStart(sourceFile) === start &&
+      node.end === end
+    ) {
       found = node;
       return;
     }
@@ -170,7 +174,9 @@ function directTargetFor(
   target: "dom" | "server",
   templates: readonly TemplateModuleTemplate[],
 ): "dom" | "server" | null {
-  return templates.every((template) => canEmitDirectTemplate(template.plan, target)) ? target : null;
+  return templates.every((template) => canEmitDirectTemplate(template.plan, target))
+    ? target
+    : null;
 }
 
 function canEmitDirectTemplate(plan: TemplatePlan, target: "dom" | "server"): boolean {
@@ -218,7 +224,8 @@ function createTemplateBindings(
 
 function nextBindingName(sourceText: string, bindings: readonly string[], index: number): string {
   let candidate = `__typed_template_${index}`;
-  while (sourceText.includes(candidate) || bindings.includes(candidate)) candidate = `${candidate}_`;
+  while (sourceText.includes(candidate) || bindings.includes(candidate))
+    candidate = `${candidate}_`;
   return candidate;
 }
 
@@ -297,7 +304,7 @@ function directTemplateDeclarations(
   const effectNamespace = findNamespaceImport(sourceFile, "effect/Effect");
   const importText =
     target === "dom"
-      ? `${effectNamespace ? "" : 'import * as __typedTemplateEffect from "effect/Effect";\n'}import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath } from "@typed/template/compiler-runtime/dom";`
+      ? `${effectNamespace ? "" : 'import * as __typedTemplateEffect from "effect/Effect";\n'}import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath, mountDomTemplateBindings } from "@typed/template/compiler-runtime/dom";`
       : 'import { defineServerTemplate, renderServerChunks } from "@typed/template/compiler-runtime/server";';
   const effectRuntime = effectNamespace ?? "__typedTemplateEffect";
   return [
@@ -332,6 +339,7 @@ function domTemplateDeclaration(
   binding: string,
   effectRuntime: string,
 ): string {
+  if (template.plan.parts.length > 32) return tableDomTemplateDeclaration(template, binding);
   const effects = template.plan.parts.map((part) => {
     if (part.kind === "node") {
       const anchorPath = nodePartAnchorPath(template.plan, part.valueIndex) ?? part.path;
@@ -375,6 +383,68 @@ function domTemplateDeclaration(
   ].join("\n");
 }
 
+function tableDomTemplateDeclaration(template: TemplateModuleTemplate, binding: string): string {
+  return [
+    `const ${binding} = defineDomTemplate({`,
+    `  templateHash: ${JSON.stringify(template.plan.templateHash)},`,
+    `  html: ${JSON.stringify(domStaticHtml(template.plan))},`,
+    "  mount(instance, values, runtime) {",
+    `    return mountDomTemplateBindings(instance, values, runtime, ${jsonSource(domBindingTable(template.plan))});`,
+    "  }",
+    "});",
+  ].join("\n");
+}
+
+function domBindingTable(plan: TemplatePlan): readonly object[] {
+  return plan.parts.map((part) => {
+    if (part.kind === "node") {
+      return {
+        kind: "node",
+        path: nodePartAnchorPath(plan, part.valueIndex) ?? part.path,
+        valueIndex: part.valueIndex,
+        valueKind: "unknown",
+      };
+    }
+    if (part.kind === "text" || part.kind === "comment") {
+      return {
+        kind: part.kind,
+        path: part.path,
+        valueIndex: part.valueIndex,
+        valueKind: "unknown",
+      };
+    }
+    if (part.kind === "attr" || part.kind === "boolean" || part.kind === "property") {
+      return {
+        kind: part.kind,
+        name: part.name,
+        path: part.path,
+        valueIndex: part.valueIndex,
+        valueKind: "unknown",
+      };
+    }
+    if (part.kind === "className" || part.kind === "data" || part.kind === "properties") {
+      return {
+        kind: part.kind,
+        path: part.path,
+        valueIndex: part.valueIndex,
+        valueKind: "unknown",
+      };
+    }
+    if (part.kind === "event") {
+      return {
+        kind: part.kind,
+        name: part.name,
+        path: part.path,
+        valueIndex: part.valueIndex,
+      };
+    }
+    if (part.kind === "ref") {
+      return { kind: part.kind, path: part.path, valueIndex: part.valueIndex };
+    }
+    return { kind: part.kind, path: part.path, valueKind: "unknown" };
+  });
+}
+
 function serverTemplateDeclaration(template: TemplateModuleTemplate, binding: string): string {
   const chunks = serverChunks(template.plan);
   return [
@@ -405,7 +475,9 @@ function domNodeHtml(node: TemplatePlanNode): string {
     case "text":
       return escapeHtml(node.value);
     case "sparseText":
-      return node.nodes.map((part) => (part.kind === "text" ? escapeHtml(part.value) : "")).join("");
+      return node.nodes
+        .map((part) => (part.kind === "text" ? escapeHtml(part.value) : ""))
+        .join("");
     case "part":
       return `<!--n_${node.valueIndex}-->`;
     case "commentPart":
@@ -457,7 +529,11 @@ function serverNodeChunks(node: TemplatePlanNode): readonly object[] {
         textChunk(`</${node.tagName}>`),
       ];
     case "selfClosingElement":
-      return [textChunk(`<${node.tagName}`), ...serverAttributeChunks(node.attributes), textChunk("/>")];
+      return [
+        textChunk(`<${node.tagName}`),
+        ...serverAttributeChunks(node.attributes),
+        textChunk("/>"),
+      ];
     case "textOnlyElement":
       return [
         textChunk(`<${node.tagName}`),
@@ -487,9 +563,7 @@ function serverNodeChunks(node: TemplatePlanNode): readonly object[] {
   }
 }
 
-function serverTextContentChunks(
-  node: TemplatePlanTextContent,
-): readonly object[] {
+function serverTextContentChunks(node: TemplatePlanTextContent): readonly object[] {
   if (node.kind === "text") return [textChunk(node.value)];
   if (node.kind === "sparseText") return sparseChunks(node.nodes);
   if (node.kind === "part") return [slotChunk(node.valueIndex)];
@@ -504,12 +578,15 @@ function sparseChunks(parts: readonly TemplatePlanSparsePart[]): readonly object
 
 function serverAttributeChunks(attributes: readonly TemplatePlanAttribute[]): readonly object[] {
   return attributes.flatMap((attribute) => {
-    if (attribute.kind === "attribute") return [textChunk(` ${attribute.name}="${attribute.value}"`)];
+    if (attribute.kind === "attribute")
+      return [textChunk(` ${attribute.name}="${attribute.value}"`)];
     if (attribute.kind === "dynamicAttribute" || attribute.kind === "className") {
       return [slotChunk(attribute.valueIndex, "attr", attribute.name)];
     }
-    if (attribute.kind === "boolean") return [slotChunk(attribute.valueIndex, "boolean", attribute.name)];
-    if (attribute.kind === "property") return [slotChunk(attribute.valueIndex, "attr", attribute.name)];
+    if (attribute.kind === "boolean")
+      return [slotChunk(attribute.valueIndex, "boolean", attribute.name)];
+    if (attribute.kind === "property")
+      return [slotChunk(attribute.valueIndex, "attr", attribute.name)];
     return [];
   });
 }

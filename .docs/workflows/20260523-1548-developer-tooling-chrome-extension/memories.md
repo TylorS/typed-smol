@@ -74,3 +74,9 @@
 - Replay cursors should be sequence-based (`sinceSequence`, `oldestRetainedSequence`, `nextSequence`) rather than timestamp-based, because runtime event timestamps can repeat or arrive out of order.
 - Runtime replay state belongs in `@typed/devtools-protocol` as a stream item so RPC clients can distinguish ready, partial, disabled, and session-mismatch states before consuming events.
 - Custom EventBus injection must not create conflicting session authorities; runtime service, bridge, and bus sessions must agree when defined.
+
+### T10
+
+- DOM template DevTools binding notifications must be lazy inside the returned mount Effect; constructing an Effect must not fire observer callbacks.
+- DevTools observer failures must not affect template rendering because instrumentation is diagnostic-only.
+- Large-template table-driven DOM metadata must emit `event` without `valueKind` and `ref` with `valueIndex`, matching `DomTemplateBinding`.
