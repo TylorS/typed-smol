@@ -518,6 +518,33 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for RefSubject semantic preservation, observer failure isolation, service id propagation, and dependency-boundary compliance before commit.
 
+### T13 - Runtime RefSubject Capture
+
+- requirement_links: FR-18, FR-19, FR-23, FR-24, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13.
+- write_set:
+  - `packages/devtools-runtime/src/RefSubjectCapture.ts`
+  - `packages/devtools-runtime/src/RefSubjectCapture.test.ts`
+  - `packages/devtools-runtime/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused runtime capture tests before `RefSubjectCapture.ts` exists.
+  - Run `pnpm --filter @typed/devtools-runtime exec vitest run src/RefSubjectCapture.test.ts` and capture the missing-module failure.
+- green_step:
+  - Convert `@typed/fx` RefSubject DevTools snapshot/update events into protocol `RuntimeEventEnvelope` values.
+  - Serialize and redact raw RefSubject values with protocol serialization before emitting to the runtime bus.
+  - Use stable RefSubject ids from explicit ids, service ids, or owner-qualified ids; skip unidentifiable events instead of inventing colliding anonymous ids.
+  - Reuse the runtime EventBus for bounded history and bridge visibility.
+- verification:
+  - `pnpm --filter @typed/devtools-runtime exec vitest run src/RefSubjectCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `pnpm exec oxlint packages/devtools-runtime/src/RefSubjectCapture.ts packages/devtools-runtime/src/RefSubjectCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/RefSubjectCapture.ts packages/devtools-runtime/src/RefSubjectCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc" packages/devtools-runtime/src/RefSubjectCapture.ts packages/devtools-runtime/src/RefSubjectCapture.test.ts packages/devtools-runtime/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for redaction, identity stability, bounded-history behavior, and runtime/protocol boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

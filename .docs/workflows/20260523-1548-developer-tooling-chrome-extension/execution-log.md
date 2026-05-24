@@ -362,7 +362,7 @@
   - green: `git diff --check -- packages/fx .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no Critical, Important, or blocking Minor issues.
 - commit:
-  - pending
+  - `23ec78c feat(devtools): add refsubject devtools hooks`
 - context_updates:
   - Added host-neutral RefSubject DevTools observer types for snapshot/update events.
   - Added optional `RefSubjectOptions.devtools` metadata and diagnostic-only observer notifications for successful value changes.
@@ -371,6 +371,31 @@
   - RefSubject DevTools event types should be discriminated unions so snapshot and update observers narrow without casts.
   - Initial RefSubject DevTools notification can observe the `DeferredRef` wakeup before the public version increments; normalize the captured first event in the instrumentation layer rather than changing `DeferredRef`.
 
+### T13 - Runtime RefSubject Capture
+
+- task_id: T13
+- requirement_ids: FR-18, FR-19, FR-23, FR-24, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13
+- ts_scenarios: TS-5, TS-11
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/RefSubjectCapture.test.ts` failed before implementation with missing `./RefSubjectCapture.js`.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/RefSubjectCapture.test.ts` passed with 1 test file and 4 tests.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/RefSubjectCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts` passed with 3 test files and 19 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/RefSubjectCapture.ts packages/devtools-runtime/src/RefSubjectCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/RefSubjectCapture.ts packages/devtools-runtime/src/RefSubjectCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no Critical, Important, or blocking Minor issues.
+- commit:
+  - pending
+- context_updates:
+  - Added `makeRefSubjectCapture` for converting RefSubject DevTools observer events into protocol runtime events.
+  - Added value serialization/redaction before events enter the runtime bridge event bus.
+  - Added identity handling that uses service ids, owner-qualified local ids, or explicit ids and skips unidentifiable events.
+- memory_updates:
+  - Runtime RefSubject capture must serialize values before calling `DevtoolsRuntimeService.emit`; raw values should not reach the bridge bus.
+  - RefSubject capture should prefer service ids, then owner-qualified local ids, then explicit ids; missing identity should be skipped instead of mapped to a shared anonymous id.
+
 ## Deferred Work
 
-- T13 remains blocked on prior-task completion.
+- T14 remains blocked on prior-task completion.

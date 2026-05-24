@@ -93,3 +93,9 @@
 - RefSubject DevTools event types should be discriminated unions so snapshot and update observers narrow without casts.
 - Initial RefSubject DevTools notification can observe the `DeferredRef` wakeup before the public version increments; normalize the captured first event in the instrumentation layer rather than changing `DeferredRef`.
 - Keep RefSubject observer failures diagnostic-only: swallow observer exceptions and leave `RefSubject` get/set/run semantics unchanged.
+
+### T13
+
+- Runtime RefSubject capture must serialize values before calling `DevtoolsRuntimeService.emit`; raw values should not reach the bridge bus.
+- RefSubject capture should prefer service ids, then owner-qualified local ids, then explicit ids; missing identity should be skipped instead of mapped to a shared anonymous id.
+- Bounded RefSubject capture history should reuse `RuntimeEventBus` retention instead of keeping a separate per-capture history store.
