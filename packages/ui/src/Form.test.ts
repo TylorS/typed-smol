@@ -5,6 +5,7 @@ import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
 import * as Form from "./Form.js";
+import * as Select from "./Select.js";
 
 describe("typed/ui/Form", () => {
   it("validates values with a schema and exposes errors", () =>
@@ -176,6 +177,64 @@ describe("typed/ui/Form", () => {
       expect(submitted).toEqual(["typed@example.com"]);
       expect((yield* state).submitting).toBe(false);
       expect((yield* state).errors).toEqual({});
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("renders form-first field wrappers around canonical controls", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const state = yield* Form.makeState({
+        values: {
+          age: 1,
+          marketing: false,
+          role: "viewer",
+          tags: ["core"] as string[],
+        },
+      });
+      const select = yield* Select.makeState({
+        id: "role-select",
+        value: "viewer",
+      });
+      yield* render(
+        Form.Form({
+          state,
+          content: html`
+            ${Form.Input(state, "age", {
+              codec: Schema.NumberFromString,
+              id: "age",
+            })}
+            ${Form.Checkbox(state, "marketing", { value: "yes" })}
+            ${Form.Select(state, "role", { state: select })}
+            ${Form.Push(state, "tags", { value: "typed", content: "Add" })}
+            ${Form.Remove(state, "tags", { index: 0, content: "Remove" })}
+          `,
+        }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+
+      const age = window.document.getElementById("age");
+      const marketing = window.document.querySelector<HTMLInputElement>("input[name=marketing]");
+      const hiddenRole = window.document.querySelector<HTMLInputElement>("input[name=role]");
+      const buttons = Array.from(window.document.querySelectorAll("button"));
+      assert(age instanceof window.HTMLInputElement);
+      assert(marketing instanceof window.HTMLInputElement);
+      assert(hiddenRole instanceof window.HTMLInputElement);
+
+      age.value = "42";
+      age.dispatchEvent(new window.InputEvent("input", { bubbles: true }));
+      marketing.checked = true;
+      marketing.dispatchEvent(new window.Event("change", { bubbles: true, cancelable: true }));
+      yield* Select.select(select, "admin", "admin");
+      buttons.find((button) => button.textContent === "Add")?.click();
+      buttons.find((button) => button.textContent === "Remove")?.click();
+      yield* Effect.sleep(20);
+
+      expect((yield* state).values).toEqual({
+        age: 42,
+        marketing: true,
+        role: "admin",
+        tags: ["typed"],
+      });
+      expect(hiddenRole.value).toBe("admin");
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

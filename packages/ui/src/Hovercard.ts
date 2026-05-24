@@ -1,7 +1,9 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
+import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
+import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import * as NativePopover from "./NativePopover.js";
 import type { AnyContent, Component } from "./Reactive.js";
@@ -15,6 +17,13 @@ export interface InitialState {
   readonly id: string;
   readonly open?: boolean;
 }
+
+export const data = DataAttr.schema({
+  id: Schema.String,
+  open: Schema.Boolean,
+});
+
+export const component = "typed/ui/Hovercard";
 
 export function makeState(
   initial: InitialState,
@@ -47,6 +56,7 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
   const props = Dom.mergeProps(options.props, {
     "aria-controls": id,
     "aria-expanded": open,
+    "data-ui": component,
     onfocus: onFocus,
     onblur: onBlur,
     onmouseenter: onMouseEnter,
@@ -122,6 +132,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     id,
     role: "dialog",
     popover: "auto",
+    "data-ui": component,
     "data-open": open,
     ontoggle: onToggle,
     ref: NativePopover.register(options.state),

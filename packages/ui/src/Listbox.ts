@@ -35,11 +35,22 @@ export interface Item<Value extends string = string> extends Collection.Item<Val
   readonly value: Value;
 }
 
+export const data = DataAttr.schema({
+  value: Schema.optionalKey(Schema.String),
+  activeId: Schema.optionalKey(Schema.String),
+  orientation: Schema.optionalKey(Schema.Literals(["horizontal", "vertical", "both"])),
+  loop: Schema.optionalKey(Schema.Boolean),
+  rtl: Schema.optionalKey(Schema.Boolean),
+  virtualFocus: Schema.optionalKey(Schema.Boolean),
+});
+
 export const optionData = DataAttr.schema({
   active: Schema.Boolean,
   disabled: Schema.Boolean,
   selected: Schema.Boolean,
 });
+
+export const component = "typed/ui/Listbox";
 
 export function makeState<Value extends string = string>(
   initial: InitialState<NoInfer<Value>> = {},
@@ -123,6 +134,7 @@ export function Root<
     "aria-label": options.label,
     "aria-orientation": orientation,
     "aria-activedescendant": activeDescendant,
+    "data-ui": component,
     onkeydown: onKeyDown,
   });
 
@@ -171,6 +183,7 @@ export function Option<
       id,
       "data-value": value,
       role: "option",
+      "data-ui-item": "typed/ui/Listbox.Option",
       "aria-disabled": boolString(disabled),
       "aria-selected": selected,
       tabindex: RefSubject.mapEffect(options.state, (state) =>
@@ -203,38 +216,20 @@ function isSelected<Value extends string, E, R, E2, R2>(
 function dataActive<Value extends string, E, R, E2, R2, E3, R3>(
   state: RefSubject.RefSubject<State<Value>, E, R>,
   id: RefSubject.Computed<string, E2, R2>,
-  disabled: RefSubject.Computed<boolean, E3, R3>,
+  _disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.gen(function* () {
-      const itemId = yield* id;
-      const itemDisabled = yield* disabled;
-      const encoded = yield* DataAttr.encode(optionData, {
-        active: current.activeId === itemId,
-        disabled: itemDisabled,
-        selected: false,
-      });
-      return encoded.active ?? "false";
-    }),
+    Effect.map(id, (itemId) => DataAttr.boolean(current.activeId === itemId)),
   );
 }
 
 function dataSelected<Value extends string, E, R, E2, R2, E3, R3>(
   state: RefSubject.RefSubject<State<Value>, E, R>,
   value: RefSubject.Computed<Value, E2, R2>,
-  disabled: RefSubject.Computed<boolean, E3, R3>,
+  _disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.gen(function* () {
-      const itemValue = yield* value;
-      const itemDisabled = yield* disabled;
-      const encoded = yield* DataAttr.encode(optionData, {
-        active: false,
-        disabled: itemDisabled,
-        selected: current.value === itemValue,
-      });
-      return encoded.selected ?? "false";
-    }),
+    Effect.map(value, (itemValue) => DataAttr.boolean(current.value === itemValue)),
   );
 }
 

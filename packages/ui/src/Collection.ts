@@ -1,6 +1,8 @@
 import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
+import * as DataAttr from "./DataAttr.js";
 
 export interface Item<Value = unknown> {
   readonly id: string;
@@ -11,6 +13,12 @@ export interface Item<Value = unknown> {
 }
 
 export type State<Value = unknown> = readonly Item<Value>[];
+
+export const data = DataAttr.schema({
+  size: Schema.NumberFromString,
+});
+
+export const component = "typed/ui/Collection";
 
 export function makeState<Value = unknown>(
   initial: State<Value> = [],

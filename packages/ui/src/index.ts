@@ -22,6 +22,7 @@ export * as Popover from "./Popover.js";
 export * as Radio from "./Radio.js";
 export * as RadioGroup from "./RadioGroup.js";
 export * as Reactive from "./Reactive.js";
+export * as Resumability from "./Resumability.js";
 export * as Role from "./Role.js";
 export * as Select from "./Select.js";
 export * as Separator from "./Separator.js";

@@ -342,6 +342,34 @@ describe("typed/ui component option inference", () => {
     // @ts-expect-error email is not an array field
     Form.Remove({ state: form, name: "email", index: 0, content: "Remove" });
   });
+
+  it("keeps form-first field wrappers keyed to compatible field value types", () => {
+    const form = {} as RefSubject.RefSubject<
+      Form.State<{
+        readonly email: string;
+        readonly marketing: boolean;
+        readonly role: "viewer" | "admin";
+        readonly tags: readonly string[];
+      }>
+    >;
+    const select = {} as RefSubject.RefSubject<Select.State<"viewer" | "admin">>;
+
+    const _typecheck = () => {
+      Form.Input(form, "email");
+      Form.Checkbox(form, "marketing");
+      Form.Select(form, "role", { state: select });
+      Form.Push(form, "tags", { value: "typed", content: "Add" });
+      Form.Remove(form, "tags", { index: 0, content: "Remove" });
+
+      // @ts-expect-error checkbox fields must be boolean values
+      Form.Checkbox(form, "email");
+      // @ts-expect-error select fields must be string values
+      Form.Select(form, "marketing", { state: select });
+      // @ts-expect-error role array item type is constrained by the field value
+      Form.Push(form, "tags", { value: 123, content: "Add" });
+    };
+    void _typecheck;
+  });
 });
 
 function maybeOptionError<A>(value: A): Effect.Effect<A, OptionError> {

@@ -41,14 +41,21 @@ export interface InitialState {
 export interface Item<Value = unknown> extends Collection.Item<Value> {}
 
 export const data = DataAttr.schema({
-  open: Schema.Boolean,
-  mode: Schema.Literals(["auto", "hint", "manual"]),
+  open: Schema.optionalKey(Schema.Boolean),
+  mode: Schema.optionalKey(Schema.Literals(["auto", "hint", "manual"])),
+  activeId: Schema.optionalKey(Schema.String),
+  orientation: Schema.optionalKey(Schema.Literals(["horizontal", "vertical", "both"])),
+  loop: Schema.optionalKey(Schema.Boolean),
+  rtl: Schema.optionalKey(Schema.Boolean),
+  virtualFocus: Schema.optionalKey(Schema.Boolean),
 });
 
 export const itemData = DataAttr.schema({
   active: Schema.Boolean,
   disabled: Schema.Boolean,
 });
+
+export const component = "typed/ui/Menu";
 
 export function makeState(
   initial: InitialState,
@@ -107,6 +114,7 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
     popovertargetaction: "toggle",
     "aria-haspopup": "menu",
     "aria-expanded": open,
+    "data-ui": component,
     ".data": { open },
   });
 
@@ -173,6 +181,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     "aria-label": options.label,
     "aria-orientation": orientation,
     "aria-activedescendant": activeDescendant,
+    "data-ui": component,
     ".data": { open },
     ontoggle: onToggle,
     onkeydown: onKeyDown,
@@ -201,11 +210,12 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
     const id = yield* makeRef(options.id);
     const disabledValue = yield* makeRef(options.disabled ?? false);
     const disabled = isDisabled(disabledValue);
-    const data = dataEncoded(options.state, id, disabled);
+    const active = isActive(options.state, id);
 
     const props = {
       id,
       role: "menuitem",
+      "data-ui-item": "typed/ui/Menu.Item",
       "aria-disabled": boolString(disabled),
       tabindex: RefSubject.mapEffect(options.state, (state) =>
         Effect.gen(function* () {
@@ -214,8 +224,8 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
           return state.activeId === itemId && !itemDisabled ? 0 : -1;
         }),
       ),
-      "data-active": RefSubject.map(data, (value) => value.active ?? "false"),
-      "data-disabled": RefSubject.map(data, (value) => value.disabled ?? "false"),
+      "data-active": boolString(active),
+      "data-disabled": boolString(disabled),
     } as const;
 
     if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
@@ -483,31 +493,19 @@ interface ToggleEventLike extends Event {
 }
 
 function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
-  );
+  return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
 }
 
 function dataMode<E, R>(state: RefSubject.RefSubject<State, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.mode ?? "auto")),
-  );
+  return RefSubject.map(state, (value) => value.mode);
 }
 
-function dataEncoded<E, R, E2, R2, E3, R3>(
+function isActive<E, R, E2, R2>(
   state: RefSubject.RefSubject<State, E, R>,
   id: RefSubject.Computed<string, E2, R2>,
-  disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.gen(function* () {
-      const itemId = yield* id;
-      const itemDisabled = yield* disabled;
-      return yield* DataAttr.encode(itemData, {
-        active: current.activeId === itemId,
-        disabled: itemDisabled,
-      });
-    }),
+    Effect.map(id, (itemId) => current.activeId === itemId),
   );
 }
 

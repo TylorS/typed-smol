@@ -13,6 +13,8 @@ export type Encoded<Fields extends DataFields> = Readonly<
   Partial<Record<keyof Fields & string, string>>
 >;
 
+export type BooleanString = "true" | "false";
+
 export function schema<const Fields extends DataFields>(fields: Fields): DataAttr<Fields> {
   return { fields };
 }
@@ -36,12 +38,63 @@ export function encode<const Fields extends DataFields>(
   });
 }
 
+export function snapshot<const Fields extends DataFields>(
+  data: DataAttr<Fields>,
+  value: Type<Fields>,
+): Effect.Effect<Encoded<Fields>, Schema.SchemaError, Schema.Struct.EncodingServices<Fields>> {
+  return encode(data, value);
+}
+
+export function restore<Fields extends {}, State extends Fields>(
+  state: State,
+  fields: Fields,
+): State {
+  return Object.assign({}, state, fields);
+}
+
+export function props<const Fields extends DataFields>(
+  data: DataAttr<Fields>,
+  value: Type<Fields>,
+): Effect.Effect<
+  Readonly<Record<`data-${string}`, string>>,
+  Schema.SchemaError,
+  Schema.Struct.EncodingServices<Fields>
+> {
+  return Effect.map(encode(data, value), (encoded) => {
+    const output: Record<`data-${string}`, string> = {};
+
+    for (const [key, fieldValue] of Object.entries(encoded)) {
+      if (fieldValue !== undefined) output[`data-${kebabCase(key)}`] = fieldValue;
+    }
+
+    return output;
+  });
+}
+
+export function mergeEncoded(
+  ...values: readonly Readonly<Record<string, string | undefined>>[]
+): Readonly<Record<string, string>> {
+  const output: Record<string, string> = {};
+
+  for (const value of values) {
+    for (const [key, fieldValue] of Object.entries(value)) {
+      if (fieldValue !== undefined) output[key] = fieldValue;
+    }
+  }
+
+  return output;
+}
+
+export function boolean(value: boolean): BooleanString {
+  return value ? "true" : "false";
+}
+
 export function decode<const Fields extends DataFields>(
   data: DataAttr<Fields>,
-  source: DatasetSource | Readonly<Record<string, string | undefined>>,
+  source: DatasetSource | Element | Readonly<Record<string, string | undefined>>,
 ): Effect.Effect<Type<Fields>, Schema.SchemaError, Schema.Struct.DecodingServices<Fields>> {
   return Effect.gen(function* () {
-    const input = hasDataset(source) ? source.dataset : source;
+    const input = hasDataset(source) ? source.dataset : isElement(source) ? {} : source;
     const output: Record<string, unknown> = {};
 
     for (const key of Object.keys(data.fields)) {
@@ -65,7 +118,17 @@ function coerceDatasetValue(value: string | undefined): unknown {
 }
 
 function hasDataset(
-  source: DatasetSource | Readonly<Record<string, string | undefined>>,
+  source: DatasetSource | Element | Readonly<Record<string, string | undefined>>,
 ): source is DatasetSource {
   return "dataset" in source && typeof source.dataset === "object";
+}
+
+function isElement(
+  source: DatasetSource | Element | Readonly<Record<string, string | undefined>>,
+): source is Element {
+  return "nodeType" in source;
+}
+
+function kebabCase(value: string): string {
+  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }

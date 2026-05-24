@@ -47,8 +47,14 @@ export interface Item<Value extends string = string> extends Collection.Item<Val
 }
 
 export const data = DataAttr.schema({
-  open: Schema.Boolean,
-  mode: Schema.Literals(["auto", "hint", "manual"]),
+  open: Schema.optionalKey(Schema.Boolean),
+  mode: Schema.optionalKey(Schema.Literals(["auto", "hint", "manual"])),
+  value: Schema.optionalKey(Schema.String),
+  activeId: Schema.optionalKey(Schema.String),
+  orientation: Schema.optionalKey(Schema.Literals(["horizontal", "vertical", "both"])),
+  loop: Schema.optionalKey(Schema.Boolean),
+  rtl: Schema.optionalKey(Schema.Boolean),
+  virtualFocus: Schema.optionalKey(Schema.Boolean),
 });
 
 export const optionData = DataAttr.schema({
@@ -63,6 +69,8 @@ const hiddenInputRefs = new WeakMap<object, unknown>();
 interface SelectFormBinding {
   readonly setValue: (value: unknown) => Effect.Effect<void, never, never>;
 }
+
+export const component = "typed/ui/Select";
 
 export function makeState<Value extends string = string>(
   initial: InitialState<NoInfer<Value>>,
@@ -131,6 +139,7 @@ export function Trigger<
     popovertargetaction: "toggle",
     "aria-haspopup": "listbox",
     "aria-expanded": open,
+    "data-ui": component,
     ".data": { open },
   } as const;
 
@@ -163,36 +172,43 @@ export function Content<
   const activeDescendant = RefSubject.map(options.state, (current) =>
     current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
-  const onToggle = EventHandler.make((event: ToggleEventLike) =>
-    NativePopover.syncToggle(options.state, event),
+  const onToggle = EventHandler.action(
+    actionId("syncToggle"),
+    "toggle",
+    (event: ToggleEventLike) => NativePopover.syncToggle(options.state, event),
+    { component },
   );
   const items = options.items;
   const onKeyDown =
     items === undefined
       ? undefined
-      : EventHandler.make((event: KeyboardEvent) =>
-          Effect.gen(function* () {
-            const current = yield* options.state;
-            const typeaheadKey = Composite.typeaheadKey(event);
-            const typeaheadId =
-              typeaheadKey &&
-              Composite.typeahead(items, typeaheadKey, (item) => item.textValue ?? item.value);
+      : EventHandler.action(
+          actionId("move"),
+          "keydown",
+          (event: KeyboardEvent) =>
+            Effect.gen(function* () {
+              const current = yield* options.state;
+              const typeaheadKey = Composite.typeaheadKey(event);
+              const typeaheadId =
+                typeaheadKey &&
+                Composite.typeahead(items, typeaheadKey, (item) => item.textValue ?? item.value);
 
-            if (typeaheadId) {
+              if (typeaheadId) {
+                event.preventDefault();
+                yield* RefSubject.update(options.state, (value) => ({
+                  ...value,
+                  activeId: typeaheadId,
+                }));
+                return;
+              }
+
+              const direction = Composite.keyMove(event, current);
+              if (!direction) return;
+
               event.preventDefault();
-              yield* RefSubject.update(options.state, (value) => ({
-                ...value,
-                activeId: typeaheadId,
-              }));
-              return;
-            }
-
-            const direction = Composite.keyMove(event, current);
-            if (!direction) return;
-
-            event.preventDefault();
-            yield* move(options.state, items, direction);
-          }),
+              yield* move(options.state, items, direction);
+            }),
+          { component },
         );
   const props = {
     id,
@@ -201,6 +217,7 @@ export function Content<
     "aria-label": options.label,
     "aria-orientation": orientation,
     "aria-activedescendant": activeDescendant,
+    "data-ui": component,
     ".data": { open },
     ontoggle: onToggle,
     onkeydown: onKeyDown,
@@ -237,17 +254,22 @@ export function Option<
     const disabledValue = yield* makeRef(options.disabled ?? false);
     const disabled = isDisabled(disabledValue);
     const selected = isSelected(options.state, value);
-    const onClick = EventHandler.make((event: Event) =>
-      Effect.gen(function* () {
-        if (yield* disabled) return;
-        yield* select(options.state, yield* id, yield* value);
-        yield* NativePopover.hideFromEvent(options.state, event);
-      }),
+    const onClick = EventHandler.action(
+      actionId("select"),
+      "click",
+      (event: Event) =>
+        Effect.gen(function* () {
+          if (yield* disabled) return;
+          yield* select(options.state, yield* id, yield* value);
+          yield* NativePopover.hideFromEvent(options.state, event);
+        }),
+      { component },
     );
     const props = {
       id,
       "data-value": value,
       role: "option",
+      "data-ui-item": "typed/ui/Select.Option",
       "aria-disabled": boolString(disabled),
       "aria-selected": selected,
       tabindex: RefSubject.mapEffect(options.state, (state) =>
@@ -373,8 +395,11 @@ export function Dismiss<
   const Opts extends DismissOptions<NoInfer<E>, NoInfer<R>>,
 >(options: Opts & Pick<DismissOptions<E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
-  const onClick = EventHandler.make((event: Event) =>
-    NativePopover.hideFromEvent(options.state, event),
+  const onClick = EventHandler.action(
+    actionId("hide"),
+    "click",
+    (event: Event) => NativePopover.hideFromEvent(options.state, event),
+    { component },
   );
   return Dom.renderHost<HTMLButtonElement, Opts>(
     options,
@@ -469,33 +494,20 @@ interface ToggleEventLike extends Event {
 }
 
 function dataOpen<Value extends string, E, R>(state: RefSubject.RefSubject<State<Value>, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
-  );
+  return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
 }
 
 function dataMode<Value extends string, E, R>(state: RefSubject.RefSubject<State<Value>, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.mode ?? "auto")),
-  );
+  return RefSubject.map(state, (value) => value.mode);
 }
 
 function dataActive<Value extends string, E, R, E2, R2, E3, R3>(
   state: RefSubject.RefSubject<State<Value>, E, R>,
   id: RefSubject.Computed<string, E2, R2>,
-  disabled: RefSubject.Computed<boolean, E3, R3>,
+  _disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.gen(function* () {
-      const itemId = yield* id;
-      const itemDisabled = yield* disabled;
-      const encoded = yield* DataAttr.encode(optionData, {
-        active: current.activeId === itemId,
-        disabled: itemDisabled,
-        selected: false,
-      });
-      return encoded.active ?? "false";
-    }),
+    Effect.map(id, (itemId) => DataAttr.boolean(current.activeId === itemId)),
   );
 }
 
@@ -511,19 +523,10 @@ function isSelected<Value extends string, E, R, E2, R2>(
 function dataSelected<Value extends string, E, R, E2, R2, E3, R3>(
   state: RefSubject.RefSubject<State<Value>, E, R>,
   value: RefSubject.Computed<Value, E2, R2>,
-  disabled: RefSubject.Computed<boolean, E3, R3>,
+  _disabled: RefSubject.Computed<boolean, E3, R3>,
 ) {
   return RefSubject.mapEffect(state, (current) =>
-    Effect.gen(function* () {
-      const itemValue = yield* value;
-      const itemDisabled = yield* disabled;
-      const encoded = yield* DataAttr.encode(optionData, {
-        active: false,
-        disabled: itemDisabled,
-        selected: current.value === itemValue,
-      });
-      return encoded.selected ?? "false";
-    }),
+    Effect.map(value, (itemValue) => DataAttr.boolean(current.value === itemValue)),
   );
 }
 
@@ -533,6 +536,10 @@ function isDisabled<E, R>(disabled: RefSubject.Computed<boolean | undefined, E, 
 
 function boolString<E, R>(value: RefSubject.Computed<boolean, E, R>) {
   return RefSubject.map(value, String);
+}
+
+function actionId(name: string): string {
+  return `${component}:action:${name}`;
 }
 
 function registerFormBinding<Value extends string, Values extends {}, E, R, E2, R2>(

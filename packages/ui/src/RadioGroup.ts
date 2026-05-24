@@ -1,10 +1,12 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
+import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
@@ -29,6 +31,16 @@ export interface InitialState<Value extends string = string> {
 export interface Item<Value extends string = string> extends Collection.Item<Value> {
   readonly value: Value;
 }
+
+export const data = DataAttr.schema({
+  value: Schema.String,
+  activeId: Schema.String,
+  orientation: Schema.Literals(["horizontal", "vertical", "both"]),
+  loop: Schema.Boolean,
+  toolbar: Schema.Boolean,
+});
+
+export const component = "typed/ui/RadioGroup";
 
 export function makeState<Value extends string>(
   initial: InitialState<Value>,
@@ -121,6 +133,7 @@ export function Root<
     role: "radiogroup",
     "aria-label": options.label,
     "aria-orientation": orientation,
+    "data-ui": component,
     onkeydown: onKeyDown,
   });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
@@ -164,6 +177,7 @@ export function Item<
       id,
       "data-value": value,
       role: "radio",
+      "data-ui-item": "typed/ui/RadioGroup.Item",
       "aria-checked": checked,
       tabindex: RefSubject.map(checked, (value) => (value ? 0 : -1)),
       "data-checked": checked,

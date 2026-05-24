@@ -17,6 +17,8 @@ export const data = DataAttr.schema({
   open: Schema.Boolean,
 });
 
+export const component = "typed/ui/Disclosure";
+
 export function makeState(
   initial: State,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -46,11 +48,14 @@ export function Button<const E, const R, const Opts extends ButtonOptions<NoInfe
   options: Opts & Pick<ButtonOptions<E, R>, "state">,
 ): Component<Opts> {
   const open = dataOpen(options.state);
-  const onClick = EventHandler.make(() => toggle(options.state));
+  const onClick = EventHandler.action(actionId("toggle"), "click", () => toggle(options.state), {
+    component,
+  });
   const props = Dom.mergeProps(options.props, {
     type: "button",
     "aria-expanded": open,
     "aria-controls": options.controls,
+    "data-ui": component,
     ".data": { open },
     onclick: onClick,
   });
@@ -61,6 +66,7 @@ export function Button<const E, const R, const Opts extends ButtonOptions<NoInfe
     type="button"
     aria-expanded=${open}
     aria-controls=${options.controls}
+    data-ui=${component}
     .data=${{ open }}
     onclick=${onClick}
   >
@@ -81,14 +87,26 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
 ): Component<Opts> {
   const open = dataOpen(options.state);
   const hidden = RefSubject.map(options.state, (current) => !current.open);
-  const props = Dom.mergeProps(options.props, { id: options.id, "?hidden": hidden, ".data": { open } });
+  const props = Dom.mergeProps(options.props, {
+    id: options.id,
+    "?hidden": hidden,
+    "data-ui": component,
+    ".data": { open },
+  });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
 
-  return html`<div id=${options.id} ?hidden=${hidden} .data=${{ open }}>${options.content}</div>`;
+  return html`<div
+    id=${options.id}
+    ?hidden=${hidden}
+    data-ui=${component}
+    .data=${{ open }}
+  >${options.content}</div>`;
 }
 
 function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
-  );
+  return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
+}
+
+function actionId(name: string): string {
+  return `${component}:action:${name}`;
 }

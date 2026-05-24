@@ -66,4 +66,43 @@ describe("typed/ui/DataAttr", () => {
       const exit = yield* DataAttr.decode(data, { open: "sometimes" }).pipe(Effect.exit);
       assert.strictEqual(Exit.isFailure(exit), true);
     }).pipe(Effect.runPromise));
+
+  it("encodes schema fields as data-* template props", () =>
+    Effect.gen(function* () {
+      const data = DataAttr.schema({
+        open: Schema.Boolean,
+        mode: Schema.Literals(["auto", "manual"]),
+      });
+
+      assert.deepStrictEqual(yield* DataAttr.props(data, { open: true, mode: "auto" }), {
+        "data-open": "true",
+        "data-mode": "auto",
+      });
+    }).pipe(Effect.runPromise));
+
+  it("uses schema encode as the snapshot operation", () =>
+    Effect.gen(function* () {
+      const data = DataAttr.schema({ open: Schema.Boolean });
+
+      assert.deepStrictEqual(yield* DataAttr.snapshot(data, { open: true }), {
+        open: "true",
+      });
+    }).pipe(Effect.runPromise));
+
+  it("restores decoded data fields by merging them into existing state", () => {
+    assert.deepStrictEqual(
+      DataAttr.restore({ id: "dialog", open: false }, { open: true }),
+      { id: "dialog", open: true },
+    );
+  });
+
+  it("merges encoded data attr maps while omitting undefined values", () => {
+    assert.deepStrictEqual(
+      DataAttr.mergeEncoded(
+        { open: "true", mode: undefined },
+        { component: "typed/ui/Popover", open: "false" },
+      ),
+      { component: "typed/ui/Popover", open: "false" },
+    );
+  });
 });

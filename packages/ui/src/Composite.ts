@@ -1,7 +1,9 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
+import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import * as Collection from "./Collection.js";
+import * as DataAttr from "./DataAttr.js";
 
 export type Orientation = "horizontal" | "vertical" | "both";
 export type Move = "next" | "previous" | "first" | "last";
@@ -41,6 +43,16 @@ export interface TypeaheadBuffer {
   readonly value: string;
   readonly updatedAt: number;
 }
+
+export const data = DataAttr.schema({
+  activeId: Schema.optionalKey(Schema.String),
+  orientation: Schema.Literals(["horizontal", "vertical", "both"]),
+  loop: Schema.Boolean,
+  rtl: Schema.Boolean,
+  virtualFocus: Schema.Boolean,
+});
+
+export const component = "typed/ui/Composite";
 
 export function makeState(
   initial: InitialState = {},

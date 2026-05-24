@@ -31,13 +31,18 @@ export interface Item<Value extends string = string> extends Collection.Item<Val
 }
 
 export const data = DataAttr.schema({
-  active: Schema.Boolean,
-  open: Schema.Boolean,
-  selected: Schema.Boolean,
+  id: Schema.optionalKey(Schema.String),
+  value: Schema.optionalKey(Schema.String),
+  open: Schema.optionalKey(Schema.Boolean),
+  activeId: Schema.optionalKey(Schema.String),
+  active: Schema.optionalKey(Schema.Boolean),
+  selected: Schema.optionalKey(Schema.Boolean),
 });
 
 type OptionalString = AnyValue<string | undefined>;
 type RequiredString = AnyValue<string>;
+
+export const component = "typed/ui/Combobox";
 
 export function makeState<Value extends string = string>(
   initial: InitialState<NoInfer<Value>> = {},
@@ -132,6 +137,7 @@ function inputProps<Value extends string, E, R, E2, R2>(
   return {
     id: options.id,
     role: "combobox",
+    "data-ui": component,
     "aria-autocomplete": ariaAutocomplete(options.autocomplete),
     "aria-controls": RefSubject.map(options.state, (state) => state.id),
     "aria-expanded": RefSubject.map(options.state, (state) => state.open),
@@ -237,7 +243,12 @@ export function List<
   const open = dataOpen(options.state);
   if (options.host) {
     return options.host(
-      Dom.mergeProps(options.props, { id, role: options.role ?? "listbox", ".data": { open } }),
+      Dom.mergeProps(options.props, {
+        id,
+        role: options.role ?? "listbox",
+        "data-ui": component,
+        ".data": { open },
+      }),
       options.content,
     ) as Component<Opts>;
   }
@@ -259,6 +270,7 @@ export function Popover<
     id,
     role: options.role ?? "listbox",
     popover: "auto",
+    "data-ui": component,
     ".data": { open },
     ontoggle: onToggle,
     ref: NativePopover.register(options.state),
@@ -302,6 +314,7 @@ export function Item<
     const props = Dom.mergeProps(options.props, {
       id,
       role: "option",
+      "data-ui-item": "typed/ui/Combobox.Item",
       "aria-selected": selected,
       "data-active-item": active,
       ".data": { selected },
@@ -454,13 +467,7 @@ interface ToggleEventLike extends Event {
 }
 
 function dataOpen<Value extends string, E, R>(state: RefSubject.RefSubject<State<Value>, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, {
-      active: false,
-      open: value.open,
-      selected: false,
-    }).pipe(Effect.map((encoded) => encoded.open ?? "false")),
-  );
+  return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
 }
 
 function filterItems<Value extends string>(

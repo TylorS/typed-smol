@@ -22,6 +22,8 @@ export const data = DataAttr.schema({
   open: Schema.Boolean,
 });
 
+export const component = "typed/ui/Dialog";
+
 export function makeState(
   initial: State,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -51,17 +53,22 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
   options: Opts & Pick<TriggerOptions<E, R>, "state">,
 ): Component<Opts> {
   const open = dataOpen(options.state);
-  const onClick = EventHandler.make((event: MouseEvent) =>
-    NativeDialog.showModal(
-      options.state,
-      (event.currentTarget ?? event.target) as HTMLButtonElement,
-    ),
+  const onClick = EventHandler.action(
+    actionId("showModal"),
+    "click",
+    (event: MouseEvent) =>
+      NativeDialog.showModal(
+        options.state,
+        (event.currentTarget ?? event.target) as HTMLButtonElement,
+      ),
+    { component },
   );
   const props = {
     type: "button",
     "aria-haspopup": "dialog",
     "aria-expanded": open,
     "aria-controls": options.controls,
+    "data-ui": component,
     ".data": { open },
     onclick: onClick,
   } as const;
@@ -79,7 +86,9 @@ export interface CloseOptions<E = never, R = never> extends Dom.HostOptions<HTML
 export function Close<const E, const R, const Opts extends CloseOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<CloseOptions<E, R>, "state">,
 ): Component<Opts> {
-  const onClick = EventHandler.make(() => close(options.state));
+  const onClick = EventHandler.action(actionId("close"), "click", () => close(options.state), {
+    component,
+  });
   const props = { type: "button", onclick: onClick } as const;
 
   return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
@@ -112,26 +121,40 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     const closeOnEscape = yield* makeRef(options.closeOnEscape ?? true);
     const closeOnOutsideInteraction = yield* makeRef(options.closeOnOutsideInteraction ?? false);
     const open = dataOpen(options.state);
-    const onClose = EventHandler.make(() => NativeDialog.syncClosed(options.state));
-    const onCancel = EventHandler.make((event: Event) =>
-      Effect.gen(function* () {
-        if ((yield* closeOnEscape) === false) {
-          event.preventDefault();
-          return;
-        }
-        yield* NativeDialog.close(options.state);
-      }),
+    const onClose = EventHandler.action(
+      actionId("syncClosed"),
+      "close",
+      () => NativeDialog.syncClosed(options.state),
+      { component },
     );
-    const onClick = EventHandler.make((event: MouseEvent) =>
-      Effect.gen(function* () {
-        if ((yield* closeOnOutsideInteraction) !== true) return;
-        if (event.target !== event.currentTarget) return;
-        yield* NativeDialog.close(options.state);
-      }),
+    const onCancel = EventHandler.action(
+      actionId("close"),
+      "cancel",
+      (event: Event) =>
+        Effect.gen(function* () {
+          if ((yield* closeOnEscape) === false) {
+            event.preventDefault();
+            return;
+          }
+          yield* NativeDialog.close(options.state);
+        }),
+      { component },
+    );
+    const onClick = EventHandler.action(
+      actionId("close"),
+      "click",
+      (event: MouseEvent) =>
+        Effect.gen(function* () {
+          if ((yield* closeOnOutsideInteraction) !== true) return;
+          if (event.target !== event.currentTarget) return;
+          yield* NativeDialog.close(options.state);
+        }),
+      { component },
     );
     const props = {
       id: options.id,
       "aria-label": options.label,
+      "data-ui": component,
       ".data": { open },
       onclose: onClose,
       oncancel: onCancel,
@@ -186,7 +209,9 @@ export function Description<const Opts extends DescriptionOptions>(options: Opts
 }
 
 function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
-  );
+  return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
+}
+
+function actionId(name: string): string {
+  return `${component}:action:${name}`;
 }

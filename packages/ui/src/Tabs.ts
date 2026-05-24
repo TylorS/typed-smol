@@ -1,10 +1,12 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
+import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
@@ -30,6 +32,17 @@ export interface InitialState {
   readonly loop?: boolean;
   readonly rtl?: boolean;
 }
+
+export const data = DataAttr.schema({
+  selectedId: Schema.String,
+  activeId: Schema.String,
+  activationMode: Schema.Literals(["automatic", "manual"]),
+  orientation: Schema.Literals(["horizontal", "vertical"]),
+  loop: Schema.Boolean,
+  rtl: Schema.Boolean,
+});
+
+export const component = "typed/ui/Tabs";
 
 export function makeState(
   initial: InitialState,
@@ -109,6 +122,7 @@ export function List<const E, const R, const Opts extends ListOptions<NoInfer<E>
     role: "tablist",
     "aria-label": options.label,
     "aria-orientation": orientation,
+    "data-ui": component,
     onkeydown: onKeyDown,
   });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
@@ -146,6 +160,7 @@ export function Tab<const E, const R, const Opts extends TabOptions<NoInfer<E>, 
       id,
       type: "button",
       role: "tab",
+      "data-ui-item": "typed/ui/Tabs.Tab",
       "aria-controls": panelId,
       "aria-selected": selected,
       tabindex: RefSubject.map(selected, (value) => (value ? 0 : -1)),
@@ -175,6 +190,7 @@ export function Panel<const E, const R, const Opts extends PanelOptions<NoInfer<
     const props = {
       id,
       role: "tabpanel",
+      "data-ui-item": "typed/ui/Tabs.Panel",
       "aria-labelledby": tabId,
       "data-selected": selected,
     } as const;

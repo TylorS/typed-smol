@@ -1,14 +1,26 @@
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
+import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
 import { gen } from "@typed/fx/Fx";
 import { EventHandler, html } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
+import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
 import { makeRef, type AnyContent, type Component, type AnyValue } from "./Reactive.js";
 
 export interface State extends Composite.State {}
+
+export const data = DataAttr.schema({
+  activeId: Schema.optionalKey(Schema.String),
+  orientation: Schema.Literals(["horizontal", "vertical", "both"]),
+  loop: Schema.Boolean,
+  rtl: Schema.Boolean,
+  virtualFocus: Schema.Boolean,
+});
+
+export const component = "typed/ui/Menubar";
 
 export function makeState(
   initial: Composite.InitialState = { orientation: "horizontal" },
@@ -66,6 +78,7 @@ export function Root<const E, const R, const Opts extends RootOptions<NoInfer<E>
     role: "menubar",
     "aria-label": options.label,
     "aria-orientation": orientation,
+    "data-ui": component,
     onkeydown: onKeyDown,
   });
 
@@ -105,6 +118,7 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
     const props = {
       id,
       role: "menuitem",
+      "data-ui-item": "typed/ui/Menubar.Item",
       tabindex: RefSubject.map(active, (value) => (value ? 0 : -1)),
       onfocus: onFocus,
     } as const;

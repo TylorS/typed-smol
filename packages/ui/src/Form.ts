@@ -4,7 +4,10 @@ import * as Schema from "effect/Schema";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
+import * as CheckboxPrimitive from "./Checkbox.js";
+import * as DataAttr from "./DataAttr.js";
 import * as Dom from "./Dom.js";
+import * as SelectPrimitive from "./Select.js";
 import type { AnyContent, Component, AnyValue } from "./Reactive.js";
 
 export interface State<out Values extends {} = {}> {
@@ -25,6 +28,18 @@ export interface InitialState<Values extends {} = {}> {
   readonly schema?: Schema.Optic<Values, unknown>;
 }
 
+export const data = DataAttr.schema({
+  submitting: Schema.Boolean,
+});
+
+export const component = "typed/ui/Form";
+
+export interface Result<Values extends {}> {
+  readonly values?: Partial<Values>;
+  readonly errors?: Partial<Record<keyof Values & string, string>>;
+  readonly formError?: string;
+}
+
 export interface FieldMeta {
   readonly dirty: boolean;
   readonly touched: boolean;
@@ -33,6 +48,14 @@ export interface FieldMeta {
 export type FieldMetaByName<Values extends {}> = Partial<
   Record<keyof Values & string, FieldMeta>
 >;
+
+export interface FieldData<Name extends string = string> {
+  readonly field: Name;
+  readonly dirty: boolean;
+  readonly touched: boolean;
+  readonly invalid: boolean;
+  readonly submitting: boolean;
+}
 
 export function makeState<Values extends {}>(
   initial: InitialState<Values>,
@@ -100,6 +123,31 @@ export function fieldMeta<Values extends {}>(
   return state.meta[name] ?? { dirty: false, touched: false };
 }
 
+export function fieldData<Values extends {}>(
+  state: State<Values>,
+  name: keyof Values & string,
+): FieldData<keyof Values & string> {
+  const meta = fieldMeta(state, name);
+  return {
+    field: name,
+    dirty: meta.dirty,
+    touched: meta.touched,
+    invalid: state.errors[name] !== undefined,
+    submitting: state.submitting,
+  };
+}
+
+export function applyResult<Values extends {}, E, R>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+  result: Result<Values>,
+): Effect.Effect<State<Values>, E, R> {
+  return RefSubject.update(state, (current) => ({
+    ...current,
+    values: result.values === undefined ? current.values : { ...current.values, ...result.values },
+    errors: result.errors === undefined ? current.errors : { ...current.errors, ...result.errors },
+  }));
+}
+
 export function decodeDomValue<A>(
   codec: Schema.Schema<A>,
   value: string,
@@ -116,6 +164,14 @@ export function encodeDomValue<A>(
 
 export type ArrayFieldName<Values extends {}> = {
   readonly [Name in keyof Values & string]: Values[Name] extends readonly unknown[] ? Name : never;
+}[keyof Values & string];
+
+export type BooleanFieldName<Values extends {}> = {
+  readonly [Name in keyof Values & string]: Values[Name] extends boolean ? Name : never;
+}[keyof Values & string];
+
+export type StringFieldName<Values extends {}> = {
+  readonly [Name in keyof Values & string]: Values[Name] extends string ? Name : never;
 }[keyof Values & string];
 
 export type ArrayFieldValue<
@@ -208,7 +264,11 @@ export function Form<
       )
     : internalSubmit;
   const onReset = EventHandler.make(() => reset(options.state), { preventDefault: true });
-  const props = Dom.mergeProps(options.props, { onsubmit: onSubmit, onreset: onReset });
+  const props = Dom.mergeProps(options.props, {
+    "data-ui": component,
+    onsubmit: onSubmit,
+    onreset: onReset,
+  });
   if (options.host) return options.host(props, options.content) as Component<Opts>;
 
   return html`<form ...${props}>${options.content}</form>`;
@@ -227,41 +287,142 @@ export interface InputOptions<
   readonly type?: AnyValue<string | undefined>;
 }
 
+export type FieldBinding<Values extends {}, Name extends keyof Values & string, E, R> = {
+  readonly state: RefSubject.RefSubject<State<Values>, E, R>;
+  readonly name: Name;
+};
+
+export interface FieldInputOptions<
+  Values extends {} = {},
+  Name extends keyof Values & string = keyof Values & string,
+  E = never,
+  R = never,
+> extends Omit<InputOptions<Values, Name, E, R>, "state" | "name"> {}
+
 export function Input<
   const Values extends {},
   const Name extends keyof Values & string,
   const E,
   const R,
   const Opts extends InputOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
->(options: Opts & Pick<InputOptions<Values, Name, E, R>, "state">): Component<Opts> {
+>(options: Opts & Pick<InputOptions<Values, Name, E, R>, "state">): Component<Opts>;
+export function Input<
+  const Values extends {},
+  const Name extends keyof Values & string,
+  const E,
+  const R,
+  const Opts extends FieldInputOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
+>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+  name: Name,
+  options?: Opts,
+): Component<Opts & FieldBinding<Values, Name, E, R>>;
+export function Input(...args: ReadonlyArray<any>): any {
+  const [optionsOrState, name, fieldOptions = {}] = args;
+  const options: any =
+    typeof name === "string"
+      ? { ...fieldOptions, state: optionsOrState, name }
+      : optionsOrState;
   const value = options.codec
-    ? RefSubject.mapEffect(options.state, (state) =>
+    ? RefSubject.mapEffect(options.state, (state: any) =>
         encodeDomValue(options.codec!, state.values[options.name]),
       )
-    : RefSubject.map(options.state, (state) => String(state.values[options.name] ?? ""));
-  const describedBy = RefSubject.map(options.state, (state) =>
+    : RefSubject.map(options.state, (state: any) => String(state.values[options.name] ?? ""));
+  const describedBy = RefSubject.map(options.state, (state: any) =>
     state.errors[options.name] ? `${options.name}-error` : undefined,
   );
   const onInput = EventHandler.make((event: InputEventLike) =>
     options.codec
       ? Effect.matchEffect(decodeDomValue(options.codec, event.currentTarget.value), {
-          onFailure: (error) => setFieldError(options.state, options.name, error),
-          onSuccess: (value) => setValue(options.state, options.name, value),
+          onFailure: (error) => setAnyFieldError(options.state, options.name, error),
+          onSuccess: (value) => setAnyValue(options.state, options.name, value),
         })
-      : setValue(options.state, options.name, event.currentTarget.value),
+      : setAnyValue(options.state, options.name, event.currentTarget.value),
   );
-  const props = Dom.mergeProps(options.props, {
+  const props = Dom.mergeProps<HTMLInputElement>(options.props, {
     id: options.id,
     name: options.name,
     type: options.type ?? "text",
+    ...fieldDataAttrs(options.state, options.name, "typed/ui/Form.Input"),
     "aria-describedby": describedBy,
     ".value": value,
     oninput: onInput,
   });
 
-  if (options.host) return options.host(props, "") as Component<Opts>;
+  if (options.host) return options.host(props, "");
 
   return html`<input ...${props} />`;
+}
+
+export interface CheckboxOptions extends Omit<CheckboxPrimitive.InputViewOptions, "name"> {}
+
+export function Checkbox<
+  const Values extends {},
+  const Name extends BooleanFieldName<Values>,
+  const E,
+  const R,
+  const Opts extends CheckboxOptions,
+>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+  name: Name,
+  options = {} as Opts,
+): Component<Opts & FieldBinding<Values, Name, E, R>> {
+  const checked = RefSubject.map(state, (current) => current.values[name] === true);
+  const checkboxState: CheckboxPrimitive.InputViewState<E, R> = {
+    checked,
+    checkedValue: checked,
+    indeterminate: RefSubject.map(checked, () => false),
+  };
+  const onChange = EventHandler.make((event: CheckboxPrimitive.CheckboxChangeEvent) => {
+    event.preventDefault();
+    return setValue(state, name, event.currentTarget.checked);
+  });
+
+  const props = Dom.mergeProps<HTMLInputElement>(
+    options.props,
+    fieldDataAttrs(state, name, "typed/ui/Form.Checkbox"),
+  );
+
+  return CheckboxPrimitive.InputView({ ...options, name, props }, checkboxState, onChange) as Component<
+    Opts & FieldBinding<Values, Name, E, R>
+  >;
+}
+
+export interface SelectOptions<
+  Value extends string = string,
+  Values extends {} = {},
+  E = never,
+  R = never,
+  E2 = never,
+  R2 = never,
+> extends Omit<
+    SelectPrimitive.HiddenInputOptions<Value, Values, E, R, E2, R2>,
+    "formState" | "name"
+  > {}
+
+export function Select<
+  const Values extends {},
+  const Name extends StringFieldName<Values>,
+  const E,
+  const R,
+  const E2,
+  const R2,
+  const Value extends Values[Name] & string,
+  const Opts extends SelectOptions<Value, Values, NoInfer<E2>, NoInfer<R2>, NoInfer<E>, NoInfer<R>>,
+>(
+  formState: RefSubject.RefSubject<State<Values>, E, R>,
+  name: Name,
+  options: Opts & Pick<SelectOptions<Value, Values, E2, R2, E, R>, "state">,
+): Component<Opts & FieldBinding<Values, Name, E, R>> {
+  return SelectPrimitive.HiddenInput({
+    ...options,
+    formState,
+    name,
+    props: Dom.mergeProps<HTMLInputElement>(
+      options.props,
+      fieldDataAttrs(formState, name, "typed/ui/Form.Select"),
+    ),
+  }) as Component<Opts & FieldBinding<Values, Name, E, R>>;
 }
 
 export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
@@ -364,10 +525,27 @@ export function Push<
   const E,
   const R,
   const Opts extends PushOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
->(options: Opts & Pick<PushOptions<Values, Name, E, R>, "state">): Component<Opts> {
+>(options: Opts & Pick<PushOptions<Values, Name, E, R>, "state">): Component<Opts>;
+export function Push<
+  const Values extends {} ,
+  const Name extends ArrayFieldName<Values>,
+  const E,
+  const R,
+  const Opts extends Omit<PushOptions<Values, Name, NoInfer<E>, NoInfer<R>>, "state" | "name">,
+>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+  name: Name,
+  options: Opts,
+): Component<Opts & FieldBinding<Values, Name, E, R>>;
+export function Push(...args: ReadonlyArray<any>): any {
+  const [optionsOrState, name, fieldOptions] = args;
+  const options =
+    typeof name === "string"
+      ? { ...fieldOptions, state: optionsOrState, name } as PushOptions
+      : optionsOrState as PushOptions;
   const onClick = EventHandler.make(() => pushValue(options.state, options.name, options.value));
   const props = Dom.mergeProps(options.props, { type: "button", onclick: onClick });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  if (options.host) return options.host(props, options.content);
 
   return html`<button ...${props}>${options.content}</button>`;
 }
@@ -390,7 +568,24 @@ export function Remove<
   const E,
   const R,
   const Opts extends RemoveOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
->(options: Opts & Pick<RemoveOptions<Values, Name, E, R>, "state">): Component<Opts> {
+>(options: Opts & Pick<RemoveOptions<Values, Name, E, R>, "state">): Component<Opts>;
+export function Remove<
+  const Values extends {} ,
+  const Name extends ArrayFieldName<Values>,
+  const E,
+  const R,
+  const Opts extends Omit<RemoveOptions<Values, Name, NoInfer<E>, NoInfer<R>>, "state" | "name">,
+>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+  name: Name,
+  options: Opts,
+): Component<Opts & FieldBinding<Values, Name, E, R>>;
+export function Remove(...args: ReadonlyArray<any>): any {
+  const [optionsOrState, name, fieldOptions] = args;
+  const options =
+    typeof name === "string"
+      ? { ...fieldOptions, state: optionsOrState, name } as RemoveOptions
+      : optionsOrState as RemoveOptions;
   const onClick = EventHandler.make(() => {
     if (typeof options.index === "number") {
       return removeValue(options.state, options.name, options.index);
@@ -403,7 +598,7 @@ export function Remove<
     );
   });
   const props = Dom.mergeProps(options.props, { type: "button", onclick: onClick });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  if (options.host) return options.host(props, options.content);
 
   return html`<button ...${props}>${options.content}</button>`;
 }
@@ -425,12 +620,67 @@ export function Group<const Opts extends GroupOptions>(
 export const GroupLabel = Label;
 export const Control = Input;
 export const Field = Input;
-export const Checkbox = Input;
-export const Radio = Input;
-export const RadioGroup = Group;
 
 interface InputEventLike extends Event {
   readonly currentTarget: HTMLInputElement;
+}
+
+function fieldDataAttrs<Values extends {}, Name extends keyof Values & string, E, R>(
+  state: RefSubject.RefSubject<State<Values>, E, R>,
+  name: Name,
+  component: string,
+): Dom.HostProps<HTMLInputElement>;
+function fieldDataAttrs<E, R>(
+  state: RefSubject.RefSubject<State<any>, E, R>,
+  name: string,
+  component: string,
+): Dom.HostProps<HTMLInputElement>;
+function fieldDataAttrs<E, R>(
+  state: RefSubject.RefSubject<State<any>, E, R>,
+  name: string,
+  component: string,
+) {
+  const fields = RefSubject.proxy(state);
+  const meta = RefSubject.map(fields.meta, (value) => value[name] ?? cleanFieldMeta);
+  const dirty = RefSubject.map(meta, (value) => value.dirty);
+  const touched = RefSubject.map(meta, (value) => value.touched);
+  const invalid = RefSubject.map(fields.errors, (value) => value[name] !== undefined);
+  return {
+    "data-ui": component,
+    "data-field": name,
+    "data-dirty": dirty,
+    "data-touched": touched,
+    "data-invalid": invalid,
+    "data-submitting": fields.submitting,
+  };
+}
+
+const cleanFieldMeta: FieldMeta = { dirty: false, touched: false };
+
+function setAnyValue<E, R>(
+  state: RefSubject.RefSubject<State<any>, E, R>,
+  name: string,
+  value: unknown,
+): Effect.Effect<State<any>, E, R> {
+  return RefSubject.update(state, (current) => updateField(current, name, value));
+}
+
+function setAnyFieldError<E, R>(
+  state: RefSubject.RefSubject<State<any>, E, R>,
+  name: string,
+  error: Schema.SchemaError,
+): Effect.Effect<State<any>, E, R> {
+  return RefSubject.update(state, (current) => ({
+    ...current,
+    errors: { ...current.errors, [name]: String(error) },
+    meta: {
+      ...current.meta,
+      [name]: {
+        dirty: !sameValue(current.defaultValues[name], current.values[name]),
+        touched: true,
+      },
+    },
+  }));
 }
 
 function errorsForValues<Values extends {} >(
@@ -463,24 +713,6 @@ function updateField<Values extends {} >(
       },
     },
   };
-}
-
-function setFieldError<Values extends {}, E, R>(
-  state: RefSubject.RefSubject<State<Values>, E, R>,
-  name: keyof Values & string,
-  error: Schema.SchemaError,
-): Effect.Effect<State<Values>, E, R> {
-  return RefSubject.update(state, (current) => ({
-    ...current,
-    errors: { ...current.errors, [name]: String(error) },
-    meta: {
-      ...current.meta,
-      [name]: {
-        dirty: !sameValue(current.defaultValues[name], current.values[name]),
-        touched: true,
-      },
-    },
-  }));
 }
 
 function sameValue(left: unknown, right: unknown): boolean {

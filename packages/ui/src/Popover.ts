@@ -24,6 +24,8 @@ export const data = DataAttr.schema({
   mode: Schema.Literals(["auto", "hint", "manual"]),
 });
 
+export const component = "typed/ui/Popover";
+
 export function makeState(
   initial: State,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -52,6 +54,7 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
     popovertarget: id,
     popovertargetaction: "toggle",
     "aria-expanded": open,
+    "data-ui": component,
     ".data": { open },
   } as const;
 
@@ -64,6 +67,7 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
     popovertarget=${id}
     popovertargetaction="toggle"
     aria-expanded=${open}
+    data-ui=${component}
     .data=${{ open }}
   >
     ${options.content}
@@ -105,13 +109,17 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
   const mode = dataMode(options.state);
   const open = dataOpen(options.state);
   const style = positionStyleValue(options.positionAnchor, options.positionArea);
-  const onToggle = EventHandler.make((event: ToggleEventLike) =>
-    NativePopover.syncToggle(options.state, event),
+  const onToggle = EventHandler.action(
+    actionId("syncToggle"),
+    "toggle",
+    (event: ToggleEventLike) => NativePopover.syncToggle(options.state, event),
+    { component },
   );
   const props = {
     id,
     popover: mode,
     style,
+    "data-ui": component,
     ".data": { open, mode },
     "data-position-anchor": firstOptionalString(options.positionAnchor),
     "data-position-area": firstOptionalString(options.positionArea),
@@ -131,6 +139,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     id=${id}
     popover=${mode}
     style=${style}
+    data-ui=${component}
     .data=${{ open, mode }}
     data-position-anchor=${positionAnchor}
     data-position-area=${positionArea}
@@ -154,8 +163,11 @@ export function Dismiss<
   const Opts extends DismissOptions<NoInfer<E>, NoInfer<R>>,
 >(options: Opts & Pick<DismissOptions<E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
-  const onClick = EventHandler.make((event: Event) =>
-    NativePopover.hideFromEvent(options.state, event),
+  const onClick = EventHandler.action(
+    actionId("hide"),
+    "click",
+    (event: Event) => NativePopover.hideFromEvent(options.state, event),
+    { component },
   );
   const props = {
     type: "button",
@@ -231,15 +243,15 @@ interface ToggleEventLike extends Event {
 }
 
 function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.open ?? "false")),
-  );
+  return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
+}
+
+function actionId(name: string): string {
+  return `${component}:action:${name}`;
 }
 
 function dataMode<E, R>(state: RefSubject.RefSubject<State, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.mode ?? "auto")),
-  );
+  return RefSubject.map(state, (value) => value.mode);
 }
 
 function anchorStyle(anchorName: string | undefined): string | undefined {

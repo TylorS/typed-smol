@@ -22,6 +22,8 @@ export const data = DataAttr.schema({
   checked: Schema.Union([Schema.Boolean, Schema.Literal("mixed")]),
 });
 
+export const component = "typed/ui/Checkbox";
+
 type OptionalBoolean = AnyValue<boolean | undefined>;
 type OptionalString = AnyValue<string | undefined>;
 type RequiredString = AnyValue<string>;
@@ -57,50 +59,52 @@ export interface InputOptions<E = never, R = never> extends Dom.HostOptions<HTML
   readonly required?: OptionalBoolean;
 }
 
+export interface InputViewOptions extends Dom.HostOptions<HTMLInputElement> {
+  readonly id?: OptionalString;
+  readonly name?: OptionalString;
+  readonly value?: RequiredString;
+  readonly disabled?: OptionalBoolean;
+  readonly required?: OptionalBoolean;
+}
+
+export interface InputViewState<E = never, R = never> {
+  readonly checked: RefSubject.Computed<boolean, E, R>;
+  readonly checkedValue: RefSubject.Computed<Checked, E, R>;
+  readonly indeterminate: RefSubject.Computed<boolean, E, R>;
+}
+
 export function Input<const E, const R, const Opts extends InputOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<InputOptions<E, R>, "state">,
 ): Component<Opts> {
-  return gen(function* () {
-    const disabledValue = yield* makeRef(options.disabled ?? false);
-    const requiredValue = yield* makeRef(options.required ?? false);
-    const disabled = RefSubject.map(disabledValue, (value) => value === true);
-    const required = RefSubject.map(requiredValue, (value) => value === true);
-    const checked = RefSubject.map(options.state, (current) => current.checked === true);
-    const indeterminate = RefSubject.map(options.state, (current) => current.checked === "mixed");
-    const checkedValue = RefSubject.map(options.state, (current) => current.checked);
-    const onChange = EventHandler.make((event: CheckboxChangeEvent) =>
-      setChecked(options.state, event.currentTarget.checked),
-    );
+  const state = inputViewState(options.state);
+  const onChange = EventHandler.action(
+    actionId("setChecked"),
+    "change",
+    (event: CheckboxChangeEvent) => setChecked(options.state, event.currentTarget.checked),
+    { component },
+  );
 
-    const props = Dom.mergeProps(options.props, {
-      id: options.id,
-      name: options.name,
-      value: options.value,
-      type: "checkbox",
-      "aria-checked": checkedValue,
-      "?checked": checked,
-      "?disabled": disabled,
-      "?required": required,
-      ".indeterminate": indeterminate,
-      ".data": { checked: dataChecked(options.state) },
-      onchange: onChange,
-    });
+  return InputView(options, state, onChange);
+}
+
+export function InputView<
+  const Opts extends InputViewOptions,
+  const E,
+  const R,
+  const E2,
+  const R2,
+>(
+  options: Opts,
+  state: InputViewState<E, R>,
+  onChange: EventHandler.EventHandler<CheckboxChangeEvent, E2, R2>,
+): Component<Opts> {
+  return gen(function* () {
+    const disabled = RefSubject.map(yield* makeRef(options.disabled ?? false), (value) => value === true);
+    const required = RefSubject.map(yield* makeRef(options.required ?? false), (value) => value === true);
+    const props = Dom.mergeProps(options.props, inputProps(options, state, disabled, required, onChange));
 
     if (options.host) return options.host(props, "") as Component<Opts>;
-
-    return html`<input
-      id=${options.id}
-      name=${options.name}
-      value=${options.value}
-      type="checkbox"
-      aria-checked=${checkedValue}
-      ?checked=${checked}
-      ?disabled=${disabled}
-      ?required=${required}
-      .indeterminate=${indeterminate}
-      .data=${{ checked: dataChecked(options.state) }}
-      onchange=${onChange}
-    />`;
+    return html`<input ...${props} />`;
   });
 }
 
@@ -129,12 +133,47 @@ export function Check<const E, const R, const Opts extends CheckOptions<NoInfer<
   return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>` as Component<Opts>;
 }
 
-interface CheckboxChangeEvent extends Event {
+export interface CheckboxChangeEvent extends Event {
   readonly currentTarget: HTMLInputElement;
 }
 
-function dataChecked<E, R>(state: RefSubject.RefSubject<State, E, R>) {
-  return RefSubject.mapEffect(state, (value) =>
-    DataAttr.encode(data, value).pipe(Effect.map((encoded) => encoded.checked ?? "false")),
-  );
+export function inputViewState<E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+): InputViewState<E, R> {
+  return {
+    checked: RefSubject.map(state, (current) => current.checked === true),
+    checkedValue: RefSubject.map(state, (current) => current.checked),
+    indeterminate: RefSubject.map(state, (current) => current.checked === "mixed"),
+  };
+}
+
+function inputProps<E, R, E2, R2, E3, R3, E4, R4>(
+  options: InputViewOptions,
+  state: InputViewState<E, R>,
+  disabled: RefSubject.Computed<boolean, E3, R3>,
+  required: RefSubject.Computed<boolean, E4, R4>,
+  onChange: EventHandler.EventHandler<CheckboxChangeEvent, E2, R2>,
+): Dom.HostProps<HTMLInputElement> {
+  return {
+    id: options.id,
+    name: options.name,
+    value: options.value,
+    type: "checkbox",
+    "data-ui": component,
+    "aria-checked": state.checkedValue,
+    "?checked": state.checked,
+    "?disabled": disabled,
+    "?required": required,
+    ".indeterminate": state.indeterminate,
+    ".data": { checked: dataCheckedValue(state.checkedValue) },
+    onchange: onChange,
+  };
+}
+
+function dataCheckedValue<E, R>(checked: RefSubject.Computed<Checked, E, R>) {
+  return RefSubject.map(checked, String);
+}
+
+function actionId(name: string): string {
+  return `${component}:action:${name}`;
 }
