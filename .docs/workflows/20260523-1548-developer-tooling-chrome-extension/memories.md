@@ -149,3 +149,8 @@
 
 - Chrome panel state should derive entirely from protocol `RuntimeEventStreamItem` values and expose stable `typed://` deep links from protocol ids for view rows.
 - Non-ready runtime replay states should clear or stale-mark accumulated Chrome panel rows before applying retained events.
+
+### T22
+
+- Chrome inspected-window selected-node transport should decode page-side DOM bridge results through `DomBindingResolutionSchema` and fall back to explicit `Unbound` results for eval failures or invalid payloads.
+- Elements sidebar selection listeners should catch resolver rejections and should apply only the newest async selected-node resolution, using a monotonic request token to avoid stale summaries.

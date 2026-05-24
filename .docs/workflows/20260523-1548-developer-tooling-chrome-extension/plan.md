@@ -773,6 +773,35 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for protocol-only state derivation, view-model stability, deep-link ids, replay/reconnect handling, and package boundary compliance before commit.
 
+### T22 - Chrome Elements Sidebar and Inspected Window Transport
+
+- requirement_links: FR-30, FR-31, FR-38, FR-39, FR-41, FR-42, FR-43, FR-44, FR-45, NFR-9, NFR-12, NFR-15, NFR-17, NFR-18, AC-9, AC-10, AC-13, AC-14.
+- write_set:
+  - `packages/devtools-chrome/src/elementsSidebar.ts`
+  - `packages/devtools-chrome/src/transport/inspectedWindow.ts`
+  - `packages/devtools-chrome/src/transport/inspectedWindow.test.ts`
+  - `packages/devtools-chrome/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add inspected-window and Elements sidebar tests before implementation modules exist.
+  - Run `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/inspectedWindow.test.ts` and capture the missing-module failure.
+- green_step:
+  - Add a callback-style `chrome.devtools.inspectedWindow.eval` adapter that resolves the selected `$0` node through a page-side Typed DevTools DOM bridge and decodes the result as `DomBindingResolution`.
+  - Add Elements sidebar registration and view model helpers that summarize component/template/Fx/RefSubject links from protocol `DomBindingResolution`.
+  - Convert eval throws, resolver rejections, and invalid bridge payloads into explicit `Unbound` sidebar results, and ignore stale async selection resolutions.
+  - Keep Chrome APIs and inspected-window code inside `@typed/devtools-chrome`, with no runtime/compiler imports.
+- verification:
+  - `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/inspectedWindow.test.ts`
+  - `pnpm --filter @typed/devtools-chrome test`
+  - `pnpm --filter @typed/devtools-chrome build`
+  - `pnpm exec oxlint packages/devtools-chrome/src`
+  - `pnpm exec oxfmt --check packages/devtools-chrome/src`
+  - `rg -n "from \"@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)|from '@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)'" packages/devtools-chrome/src/elementsSidebar.ts packages/devtools-chrome/src/transport/inspectedWindow.ts packages/devtools-chrome/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for inspected-window eval safety/error handling, protocol decoding, Elements sidebar callback wiring, summary/deep-link completeness, and package boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

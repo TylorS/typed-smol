@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T21, then report task completion.
+- current_scope: execute approved plan task T22, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -682,7 +682,7 @@
   - green: final `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
   - review: Focused re-review found no Critical or Important issues after replay/value fixes.
 - commit:
-  - pending
+  - `84a96d6 feat(devtools): add chrome panel state`
 - context_updates:
   - Added protocol-only panel state accumulation for component, Fx, RefSubject, and replay state events.
   - Added Components/Templates, Fx, and RefSubjects panel row view models with stable `typed://` deep links derived from protocol ids.
@@ -690,3 +690,45 @@
 - memory_updates:
   - Chrome panel state should derive entirely from protocol `RuntimeEventStreamItem` values and expose stable `typed://` deep links from protocol ids for view rows.
   - Non-ready runtime replay states should clear or stale-mark accumulated Chrome panel rows before applying retained events.
+
+### T22 - Chrome Elements Sidebar and Inspected Window Transport
+
+- task_id: T22
+- requirement_ids: FR-30, FR-31, FR-38, FR-39, FR-41, FR-42, FR-43, FR-44, FR-45, NFR-9, NFR-12, NFR-15, NFR-17, NFR-18, AC-9, AC-10, AC-13, AC-14
+- ts_scenarios: TS-9, TS-12
+- routing_decision:
+  - direct execution for the red-green implementation because target files are locked and the slice is a narrow Chrome-only adapter/sidebar feature.
+  - sidecar review-auditor required before commit for inspected-window eval safety/error handling, protocol decoding, Elements sidebar callback wiring, summary/deep-link completeness, and package boundary compliance.
+- source_context:
+  - Chrome inspected-window docs: `chrome.devtools.inspectedWindow.eval` executes in the inspected page context, returns JSON-compatible values, and reports DevTools-side or JavaScript exceptions through the callback.
+  - Chrome DevTools docs: `chrome.devtools.*` APIs are available only to pages loaded in DevTools, and DevTools extensions declaring `devtools_page` should keep using `chrome.*`.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/inspectedWindow.test.ts` failed with missing `../elementsSidebar.js`.
+  - green: `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/inspectedWindow.test.ts` passed with 1 test file and 4 tests.
+  - red: `pnpm --filter @typed/devtools-chrome test` initially failed typecheck and lint because `DomBindingResolution` was imported but unused in `inspectedWindow.test.ts`.
+  - green: after removing the unused import, `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 3 test files and 15 tests.
+  - green: `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - red: first `pnpm exec oxfmt --check packages/devtools-chrome/src` failed on `src/transport/inspectedWindow.test.ts`.
+  - green: after formatting, `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
+  - green: boundary grep for forbidden non-protocol `@typed/*` imports in T22 files returned no matches.
+  - green: `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found Important issues where synchronous `inspectedWindow.eval` throws and resolver rejections escaped as promise failures, and stale async selection resolutions could overwrite newer sidebar summaries.
+  - red: new regressions failed because sync `eval` throws rejected the resolver, resolver rejections escaped the sidebar listener, and older delayed selections were still rendered after newer selections.
+  - green: after converting throws/rejections to explicit `Unbound` results and guarding sidebar updates with a monotonic request token, `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/inspectedWindow.test.ts` passed with 1 test file and 7 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 3 test files and 18 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: final `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - green: final `pnpm exec oxfmt --check packages/devtools-chrome/src` passed.
+  - green: final boundary grep for forbidden non-protocol `@typed/*` imports in T22 files returned no matches.
+  - green: final `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Focused re-review found no Critical or Important issues after the eval/rejection/race fixes.
+- commit:
+  - pending
+- context_updates:
+  - Added inspected-window selected-node resolver that evaluates a page-side Typed DevTools DOM bridge and decodes the result as protocol `DomBindingResolution`.
+  - Added Elements sidebar registration and resolved/unbound sidebar view models with component, template, Fx, and RefSubject deep links.
+  - Hardened Elements selection updates so rejected or throwing bridges render explicit unbound results and delayed stale selections cannot overwrite the latest summary.
+- memory_updates:
+  - Chrome inspected-window selected-node transport should decode page-side DOM bridge results through `DomBindingResolutionSchema` and fall back to explicit `Unbound` results for eval failures or invalid payloads.
+  - Elements sidebar selection listeners should catch resolver rejections and should apply only the newest async selected-node resolution, using a monotonic request token to avoid stale summaries.
