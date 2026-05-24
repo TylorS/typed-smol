@@ -1,6 +1,5 @@
 import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
-import * as Fiber from "effect/Fiber";
 import * as Option from "effect/Option";
 import { CurrentPath, Navigation } from "@typed/navigation";
 import * as Router from "./Router.js";

@@ -23,4 +23,9 @@ export default defineConfig({
     strictPort: false,
   },
   compression: false,
+  storybook: {
+    routes: ["./src/routes"],
+    api: ["./src/api"],
+    proxyPath: "/__typed_storybook_api",
+  },
 });

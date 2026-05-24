@@ -21,7 +21,9 @@
     "test:api:hurl:local": "vmc -p tsconfig.json && node dist/types/scripts/run-hurl-local.js",
     "db:migrate": "vmc -p tsconfig.json && node dist/types/scripts/db.js migrate",
     "db:seed": "vmc -p tsconfig.json && node dist/types/scripts/db.js seed",
-    "db:reset": "vmc -p tsconfig.json && node dist/types/scripts/db.js reset"
+    "db:reset": "vmc -p tsconfig.json && node dist/types/scripts/db.js reset",
+    "storybook": "pnpm --filter @typed/storybook build && storybook dev --config-dir .storybook --port 6006",
+    "storybook:build": "pnpm --filter @typed/storybook build && storybook build --config-dir .storybook --output-dir dist/storybook"
   },
   "dependencies": {
     "@effect/sql-sqlite-node": "4.0.0-beta.66",
@@ -38,7 +40,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@storybook/builder-vite": "10.4.1",
     "@typed/cli": "workspace:*",
+    "@typed/storybook": "workspace:*",
     "@typed/tsconfig": "workspace:*",
     "@typed/virtual-modules-compiler": "workspace:*",
     "@typed/virtual-modules-ts-plugin": "workspace:*",
@@ -47,6 +51,7 @@
     "happy-dom": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "storybook": "10.4.1",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

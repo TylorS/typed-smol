@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src/**/*.stories.ts", "src/storyLayers.ts", ".storybook/**/*.ts"],
+  "exclude": ["dist", "node_modules", "src/tests"]
+}

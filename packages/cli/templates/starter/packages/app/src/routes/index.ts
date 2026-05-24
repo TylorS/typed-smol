@@ -5,6 +5,6 @@ import { message } from "@__APP_NAME__/shared";
 import type { Handler } from "./$route-types";
 
 export const route = Route.Slash;
-export const template = Fx.fn("Home")(function* () {
+export const template = Fx.fn("Home")(() => {
   return html`<main id="home">${message}</main>`;
 }) satisfies Handler;
