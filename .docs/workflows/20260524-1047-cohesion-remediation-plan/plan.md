@@ -132,7 +132,7 @@ pnpm --filter @typed/ui test
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message:
 
@@ -147,7 +147,7 @@ docs(ui): align package instructions with headless primitives
 - Create: `packages/app/src/runtime/domTemplateRuntime.test.ts`
 - Modify: `packages/app/src/runtime/index.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Test that the helper includes route resume, action resume, and devtools observer when enabled:
 
@@ -195,7 +195,7 @@ pnpm --filter @typed/app exec vitest run src/runtime/domTemplateRuntime.test.ts
 
 Expected: fail because `createAppDomTemplateRuntime` is missing.
 
-- [ ] **Step 2: Implement helper**
+- [x] **Step 2: Implement helper**
 
 Implement a narrow helper that returns `Omit<DomTemplateRuntime, "scope">`:
 
@@ -237,7 +237,7 @@ export function createAppDomTemplateRuntime(
 }
 ```
 
-- [ ] **Step 3: Export helper**
+- [x] **Step 3: Export helper**
 
 Add to `packages/app/src/runtime/index.ts`:
 
@@ -245,7 +245,7 @@ Add to `packages/app/src/runtime/index.ts`:
 export * from "./domTemplateRuntime.js";
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
