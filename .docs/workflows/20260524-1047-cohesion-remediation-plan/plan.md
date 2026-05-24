@@ -443,7 +443,7 @@ pnpm --filter @typed/app build
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message:
 
@@ -552,7 +552,7 @@ feat(compiler): boot action resume for compiled templates
 - Modify: `packages/app/src/internal/emitBrowserSource.ts`
 - Modify: `packages/app/src/BrowserVirtualModulePlugin.test.ts`
 
-- [ ] **Step 1: Write failing bridge tests**
+- [x] **Step 1: Write failing bridge tests**
 
 Test enabled and disabled behavior:
 
@@ -597,7 +597,7 @@ pnpm --filter @typed/app exec vitest run src/runtime/devtoolsBridge.test.ts
 
 Expected: fail because the bridge installer is missing.
 
-- [ ] **Step 2: Implement bridge installer**
+- [x] **Step 2: Implement bridge installer**
 
 Implement the smallest global contract Chrome already expects:
 
@@ -622,7 +622,7 @@ export function installTypedDevtoolsBridge(options: TypedDevtoolsBridgeOptions):
 }
 ```
 
-- [ ] **Step 3: Emit bridge installation from typed:browser**
+- [x] **Step 3: Emit bridge installation from typed:browser**
 
 Update `emitBrowserSource.ts` so generated `typed:browser` source imports `makeDomRegistry` from `@typed/devtools-runtime` and imports `installTypedDevtoolsBridge` from `@typed/app/runtime`.
 
@@ -659,7 +659,7 @@ Update `hydrateFromOptions` to call:
 const renderLayer = makeRenderLayer(win, root, options);
 ```
 
-- [ ] **Step 4: Verify app and Chrome transport tests**
+- [x] **Step 4: Verify app and Chrome transport tests**
 
 Run:
 

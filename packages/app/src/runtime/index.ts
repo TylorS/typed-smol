@@ -8,6 +8,7 @@ export {
   type RouteResumeRegistry,
 } from "../resumability.js";
 export * from "./domTemplateRuntime.js";
+export * from "./devtoolsBridge.js";
 export * from "./devtools.js";
 export * from "./hmrRegistry.js";
 export * from "./hydrate.js";

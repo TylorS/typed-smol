@@ -60,7 +60,8 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { makeDomRegistry } from "@typed/devtools-runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./pages";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -73,6 +74,7 @@ describe("BrowserVirtualModulePlugin", () => {
       type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
       type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
       interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly devtools?: boolean;
         readonly window?: Window;
         readonly root?: string | HTMLElement;
         readonly layers?: Layers;
@@ -91,8 +93,18 @@ describe("BrowserVirtualModulePlugin", () => {
         name: "web",
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement) {
-        const domRuntime = createAppDomTemplateRuntime();
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+        const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
+        installTypedDevtoolsBridge({
+          enabled: options.devtools === true,
+          ...(domRegistry ? { domRegistry } : {}),
+          globalObject: win as unknown as Record<PropertyKey, unknown>,
+        });
+        const domRuntime = createAppDomTemplateRuntime(
+          domRegistry
+            ? { devtools: { enabled: true, domRegistry } }
+            : { devtools: { enabled: false } },
+        );
         return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
@@ -105,7 +117,7 @@ describe("BrowserVirtualModulePlugin", () => {
       function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const win = options.window ?? window;
         const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
-        const renderLayer = makeRenderLayer(win, root);
+        const renderLayer = makeRenderLayer(win, root, options);
         return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
       }
       export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
@@ -139,7 +151,8 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { makeDomRegistry } from "@typed/devtools-runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=*";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -152,6 +165,7 @@ describe("BrowserVirtualModulePlugin", () => {
       type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
       type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
       interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly devtools?: boolean;
         readonly window?: Window;
         readonly root?: string | HTMLElement;
         readonly layers?: Layers;
@@ -169,8 +183,18 @@ describe("BrowserVirtualModulePlugin", () => {
         name: undefined,
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement) {
-        const domRuntime = createAppDomTemplateRuntime();
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+        const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
+        installTypedDevtoolsBridge({
+          enabled: options.devtools === true,
+          ...(domRegistry ? { domRegistry } : {}),
+          globalObject: win as unknown as Record<PropertyKey, unknown>,
+        });
+        const domRuntime = createAppDomTemplateRuntime(
+          domRegistry
+            ? { devtools: { enabled: true, domRegistry } }
+            : { devtools: { enabled: false } },
+        );
         return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
@@ -183,7 +207,7 @@ describe("BrowserVirtualModulePlugin", () => {
       function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const win = options.window ?? window;
         const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
-        const renderLayer = makeRenderLayer(win, root);
+        const renderLayer = makeRenderLayer(win, root, options);
         return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
       }
       export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
@@ -221,8 +245,14 @@ describe("BrowserVirtualModulePlugin", () => {
         "  export type LayerOrGroup = LayerAny;",
         "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
-        "  export function createAppDomTemplateRuntime(): unknown;",
+        "  export function createAppDomTemplateRuntime(options?: unknown): unknown;",
+        "  export function installTypedDevtoolsBridge(options: unknown): void;",
         "  export function mount(input: any, options: { readonly root: HTMLElement; readonly runtime?: unknown }): Effect.Effect<unknown, never, never>;",
+        "}",
+      ].join("\n"),
+      "src/typed-devtools-runtime.d.ts": [
+        'declare module "@typed/devtools-runtime" {',
+        "  export function makeDomRegistry(): unknown;",
         "}",
       ].join("\n"),
     });
@@ -235,10 +265,12 @@ describe("BrowserVirtualModulePlugin", () => {
         fixture.importer,
         join(fixture.root, "src/routes.ts"),
         join(fixture.root, "src/typed-app.d.ts"),
+        join(fixture.root, "src/typed-devtools-runtime.d.ts"),
       ],
       moduleFallbacks: {
         "typed:router?dir=./routes": join(fixture.root, "src/routes.ts"),
         "@typed/app/runtime": join(fixture.root, "src/typed-app.d.ts"),
+        "@typed/devtools-runtime": join(fixture.root, "src/typed-devtools-runtime.d.ts"),
       },
     });
 
@@ -255,7 +287,8 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { makeDomRegistry } from "@typed/devtools-runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./main";
       import Routes1 from "typed:router?dir=./admin";
@@ -269,6 +302,7 @@ describe("BrowserVirtualModulePlugin", () => {
       type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
       type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
       interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly devtools?: boolean;
         readonly window?: Window;
         readonly root?: string | HTMLElement;
         readonly layers?: Layers;
@@ -286,8 +320,18 @@ describe("BrowserVirtualModulePlugin", () => {
         name: undefined,
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement) {
-        const domRuntime = createAppDomTemplateRuntime();
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+        const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
+        installTypedDevtoolsBridge({
+          enabled: options.devtools === true,
+          ...(domRegistry ? { domRegistry } : {}),
+          globalObject: win as unknown as Record<PropertyKey, unknown>,
+        });
+        const domRuntime = createAppDomTemplateRuntime(
+          domRegistry
+            ? { devtools: { enabled: true, domRegistry } }
+            : { devtools: { enabled: false } },
+        );
         return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
@@ -300,7 +344,7 @@ describe("BrowserVirtualModulePlugin", () => {
       function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const win = options.window ?? window;
         const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
-        const renderLayer = makeRenderLayer(win, root);
+        const renderLayer = makeRenderLayer(win, root, options);
         return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
       }
       export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
@@ -336,7 +380,8 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { makeDomRegistry } from "@typed/devtools-runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./routes";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -349,6 +394,7 @@ describe("BrowserVirtualModulePlugin", () => {
       type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
       type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
       interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly devtools?: boolean;
         readonly window?: Window;
         readonly root?: string | HTMLElement;
         readonly layers?: Layers;
@@ -367,8 +413,18 @@ describe("BrowserVirtualModulePlugin", () => {
         name: "admin",
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement) {
-        const domRuntime = createAppDomTemplateRuntime();
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+        const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
+        installTypedDevtoolsBridge({
+          enabled: options.devtools === true,
+          ...(domRegistry ? { domRegistry } : {}),
+          globalObject: win as unknown as Record<PropertyKey, unknown>,
+        });
+        const domRuntime = createAppDomTemplateRuntime(
+          domRegistry
+            ? { devtools: { enabled: true, domRegistry } }
+            : { devtools: { enabled: false } },
+        );
         return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
@@ -381,7 +437,7 @@ describe("BrowserVirtualModulePlugin", () => {
       function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const win = options.window ?? window;
         const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
-        const renderLayer = makeRenderLayer(win, root);
+        const renderLayer = makeRenderLayer(win, root, options);
         return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
       }
       export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
@@ -420,7 +476,8 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { makeDomRegistry } from "@typed/devtools-runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./routes";
       import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";
@@ -436,6 +493,7 @@ describe("BrowserVirtualModulePlugin", () => {
       type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
       type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
       interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly devtools?: boolean;
         readonly window?: Window;
         readonly root?: string | HTMLElement;
         readonly layers?: Layers;
@@ -453,8 +511,18 @@ describe("BrowserVirtualModulePlugin", () => {
         name: undefined,
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement) {
-        const domRuntime = createAppDomTemplateRuntime();
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+        const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
+        installTypedDevtoolsBridge({
+          enabled: options.devtools === true,
+          ...(domRegistry ? { domRegistry } : {}),
+          globalObject: win as unknown as Record<PropertyKey, unknown>,
+        });
+        const domRuntime = createAppDomTemplateRuntime(
+          domRegistry
+            ? { devtools: { enabled: true, domRegistry } }
+            : { devtools: { enabled: false } },
+        );
         return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
@@ -467,7 +535,7 @@ describe("BrowserVirtualModulePlugin", () => {
       function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const win = options.window ?? window;
         const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
-        const renderLayer = makeRenderLayer(win, root);
+        const renderLayer = makeRenderLayer(win, root, options);
         return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])] as BrowserAllLayers<BrowserLayerInputs>);
       }
       export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
