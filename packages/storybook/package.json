@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@typed/app": "workspace:*",
+    "@typed/devtools-protocol": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/router": "workspace:*",
     "@typed/template": "workspace:*",

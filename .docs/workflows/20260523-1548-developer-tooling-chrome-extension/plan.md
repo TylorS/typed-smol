@@ -858,6 +858,37 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for smoke coverage adequacy, manual browser step accuracy, reconnect/reload behavior, and package boundary compliance before commit.
 
+### T25 - Host-Neutral Storybook DevTools Fixtures
+
+- requirement_links: FR-40, FR-41, FR-42, NFR-10, NFR-11, NFR-15, NFR-17, AC-11, AC-12, AC-13.
+- write_set:
+  - `packages/storybook/src/devtoolsFixtures.ts`
+  - `packages/storybook/src/devtoolsFixtures.test.ts`
+  - `packages/storybook/src/index.ts`
+  - `packages/storybook/package.json`
+  - `packages/devtools-protocol/src/Fixtures.ts`
+  - `pnpm-lock.yaml`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add Storybook fixture tests that import `devtoolsFixtures.ts` before it exists.
+  - Run `pnpm --filter @typed/storybook exec vitest run src/devtoolsFixtures.test.ts` and capture the missing-module failure.
+- green_step:
+  - Add protocol-owned Storybook fixture data under `DevtoolsProtocolFixtures` so Storybook consumes protocol runtime facts rather than redeclaring message shapes.
+  - Add Storybook view-model helpers that render component, Fx, RefSubject, and HMR facts from protocol `RuntimeEventStreamItem` values without Chrome APIs.
+  - Add `@typed/devtools-protocol` as a direct Storybook dependency because the new Storybook source imports protocol fixtures at runtime.
+- verification:
+  - `pnpm --filter @typed/storybook exec vitest run src/devtoolsFixtures.test.ts`
+  - `pnpm --filter @typed/devtools-protocol test`
+  - `pnpm --filter @typed/devtools-protocol build`
+  - `pnpm --filter @typed/storybook build`
+  - `pnpm exec oxlint packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts packages/devtools-protocol/src/Fixtures.ts`
+  - `pnpm exec oxfmt --check packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts packages/devtools-protocol/src/Fixtures.ts`
+  - `rg -n "\\bchrome\\.|from \"@typed/(?:devtools-runtime|compiler|template|fx|navigation|app)|from '@typed/(?:devtools-runtime|compiler|template|fx|navigation|app)'" packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts packages/storybook/src/index.ts` must return no matches.
+  - `git diff --check -- packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts packages/storybook/src/index.ts packages/storybook/package.json packages/devtools-protocol/src/Fixtures.ts pnpm-lock.yaml .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for host-neutral fixture shape, protocol-boundary compliance, Storybook dependency correctness, and runtime fact coverage before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

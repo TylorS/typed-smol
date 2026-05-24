@@ -112,6 +112,49 @@ const runtimeStreamItems = [
   ...runtimeEvents,
 ] as const satisfies readonly RuntimeEventStreamItem[];
 
+const storybookRuntimeEvents = [
+  runtimeEvents[0],
+  {
+    _tag: "RefSubjectSnapshot",
+    refSubjectId: ids.refSubject,
+    subscriberCount: 1,
+    timestamp: 2,
+    value: serializeDevtoolsValue({ name: "Ada" }),
+    version: 1,
+  },
+  {
+    _tag: "FxNodeEvent",
+    fxNodeId: ids.fxNode,
+    phase: "emitted",
+    timestamp: 3,
+    value: serializeDevtoolsValue({ loaded: true }),
+  },
+  {
+    _tag: "HmrStatus",
+    boundaryId: ids.hmrBoundary,
+    moduleId: "/src/App.tsx",
+    stateful: { _tag: "Eligible", serviceIds: ["UserSession"] },
+    template: { optimized: true, templateHash: ids.templateHash },
+    timestamp: 4,
+  },
+] as const satisfies readonly RuntimeEventEnvelope[];
+
+const storybookRuntimeStreamItems = [
+  {
+    _tag: "RuntimeReplayState",
+    state: {
+      _tag: "Ready",
+      droppedEvents: 0,
+      nextSequence: 5,
+      oldestRetainedSequence: 1,
+      reconnectable: true,
+      retainedEvents: storybookRuntimeEvents.length,
+      sessionId: ids.session,
+    },
+  },
+  ...storybookRuntimeEvents,
+] as const satisfies readonly RuntimeEventStreamItem[];
+
 const domBindingRequest = {
   bindingId: ids.domBinding,
   includeRelated: true,
@@ -145,6 +188,12 @@ const sourceAnalyzerResponse = {
   resource: "file:///workspace/src/App.tsx",
 } as const satisfies SourceAnalyzerResponse;
 
+const storybookDevtoolsFixture = {
+  peer: "storybook-fixture",
+  runtimeEvents: storybookRuntimeEvents,
+  runtimeStreamItems: storybookRuntimeStreamItems,
+} as const;
+
 export const DevtoolsProtocolFixtures = {
   ids,
   componentSummary,
@@ -157,6 +206,7 @@ export const DevtoolsProtocolFixtures = {
   runtimeSubscriptionRequest,
   sourceAnalyzerRequest,
   sourceAnalyzerResponse,
+  storybook: storybookDevtoolsFixture,
 } as const;
 
 export function makeDevtoolsProtocolFixtureHandlers() {

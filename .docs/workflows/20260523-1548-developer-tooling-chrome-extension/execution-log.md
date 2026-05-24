@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T24, then report task completion.
+- current_scope: execute approved plan task T25, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -798,7 +798,7 @@
   - green: `git diff --check -- packages/devtools-chrome .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no Critical or Important issues; automated smoke scope, browser blocker honesty, runtime reconnect coverage, package boundary compliance, and `raw.d.ts` were accepted.
 - commit:
-  - pending
+  - `68316a4 test(devtools): add chrome smoke coverage`
 - context_updates:
   - Added automated smoke coverage for Manifest V3 metadata, DevTools panel registration, Elements sidebar selection rendering, Sources Analyzer runtime RPC rendering, and runtime connect/reconnect.
   - Added `MANUAL_SMOKE.md` with exact browser smoke steps and an explicit blocker for the missing load-unpacked extension root.
@@ -806,3 +806,32 @@
 - memory_updates:
   - Chrome package smoke tests should avoid Node built-in imports because `@typed/devtools-chrome` test typecheck does not include Node built-in module types.
   - Browser load-unpacked smoke remains blocked until `@typed/devtools-chrome` emits a complete extension root with `manifest.json`, DevTools HTML pages, sidebar HTML pages, and icon assets.
+
+### T25 - Host-Neutral Storybook DevTools Fixtures
+
+- task_id: T25
+- requirement_ids: FR-40, FR-41, FR-42, NFR-10, NFR-11, NFR-15, NFR-17, AC-11, AC-12, AC-13
+- ts_scenarios: TS-11
+- routing_decision:
+  - direct execution for the red-green implementation because target files are locked and the slice is a narrow host-neutral fixture adapter.
+  - sidecar review-auditor required before commit for host-neutral fixture shape, protocol-boundary compliance, Storybook dependency correctness, and runtime fact coverage.
+- source_context:
+  - `@typed/storybook` does not currently declare `@typed/devtools-protocol`; T25 adds that dependency because Storybook source must consume protocol fixture values at runtime.
+  - Existing Storybook dirty files are unrelated to T25 and must not be staged.
+- validation_evidence:
+  - RED: `pnpm --filter @typed/storybook exec vitest run src/devtoolsFixtures.test.ts` failed before `devtoolsFixtures.ts` existed.
+  - GREEN: `pnpm --filter @typed/storybook exec vitest run src/devtoolsFixtures.test.ts` passed with 1 file and 3 tests.
+  - GREEN: `pnpm --filter @typed/devtools-protocol test` passed with 4 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/devtools-protocol build` passed.
+  - GREEN: `pnpm --filter @typed/storybook build` passed.
+  - LINT: `pnpm exec oxlint packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts packages/devtools-protocol/src/Fixtures.ts` passed with 0 warnings and 0 errors.
+  - FORMAT: `pnpm exec oxfmt --check packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts packages/devtools-protocol/src/Fixtures.ts` passed.
+  - BOUNDARY: `rg -n "\\bchrome\\.|from \"@typed/(?:devtools-runtime|compiler|template|fx|navigation|app)|from '@typed/(?:devtools-runtime|compiler|template|fx|navigation|app)'" packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts` returned no matches.
+- commit:
+  - pending
+- context_updates:
+  - Added protocol-owned Storybook runtime stream fixtures under `DevtoolsProtocolFixtures.storybook`.
+  - Added host-neutral Storybook view-model helpers for components, Fx, RefSubject, HMR, and replay state.
+  - Exported the fixture helper from `@typed/storybook` and added `@typed/devtools-protocol` as a direct runtime dependency.
+- memory_updates:
+  - Storybook DevTools fixtures must consume protocol-owned runtime facts and avoid Chrome/devtools-runtime/compiler/template/app imports.

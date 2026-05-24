@@ -164,3 +164,4 @@
 
 - Chrome package smoke tests should avoid Node built-in imports because `@typed/devtools-chrome` test typecheck does not include Node built-in module types.
 - Browser load-unpacked smoke remains blocked until `@typed/devtools-chrome` emits a complete extension root with `manifest.json`, DevTools HTML pages, sidebar HTML pages, and icon assets.
+- Storybook DevTools fixtures are host-neutral: protocol-owned runtime facts live in `@typed/devtools-protocol`, and `@typed/storybook` fixture helpers must not import Chrome APIs, devtools runtime, compiler, template, Fx, navigation, or app packages.

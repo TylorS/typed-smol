@@ -488,6 +488,9 @@ importers:
       '@typed/app':
         specifier: workspace:*
         version: link:../app
+      '@typed/devtools-protocol':
+        specifier: workspace:*
+        version: link:../devtools-protocol
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx
