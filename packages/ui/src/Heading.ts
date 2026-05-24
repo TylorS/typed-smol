@@ -9,14 +9,14 @@ export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 
 export function Heading<const Opts extends HeadingOptions>(options: Opts): Component<Opts> {
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "heading",
     "aria-level": options.level ?? 1,
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div ...${props}>${options.content}</div>`;
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export const Level = Heading;

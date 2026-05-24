@@ -9,8 +9,8 @@ export interface RoleOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 
 export function Role<const Opts extends RoleOptions>(options: Opts): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { id: options.id, role: options.role });
-  if (options.host) return options.host(props, options.content ?? "") as Component<Opts>;
-
-  return html`<div ...${props}>${options.content}</div>`;
+  const props = { id: options.id, role: options.role };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content ?? "", (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }

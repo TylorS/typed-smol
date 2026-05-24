@@ -9,11 +9,11 @@ export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {
 export function Separator<const Opts extends SeparatorOptions = {}>(
   options = {} as Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     role: "separator",
     "aria-orientation": options.orientation ?? "horizontal",
-  });
-  if (options.host) return options.host(props, "") as Component<Opts>;
-
-  return html`<div ...${props}></div>`;
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, "", (props) =>
+    html`<div ...${props}></div>`,
+  );
 }

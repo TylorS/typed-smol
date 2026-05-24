@@ -121,12 +121,12 @@ export function Input<
 ): Component<Opts> {
   return gen(function* () {
     const items = options.items === undefined ? undefined : yield* makeRef(options.items);
-    const props = Dom.mergeProps(options.props, inputProps(options, items));
+    const props = inputProps(options, items);
 
-    if (options.host) return options.host(props, "") as Component<Opts>;
-
-    const split = Dom.splitRef(props);
-    return html`<input ...${split.props} ref=${split.ref} />`;
+    return Dom.renderHost<HTMLInputElement, Opts>(options, props, "", (props) => {
+      const split = Dom.splitRef(props);
+      return html`<input ...${split.props} ref=${split.ref} />`;
+    });
   });
 }
 
@@ -222,8 +222,12 @@ export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
-  if (options.host) return options.host(Dom.mergeProps(options.props, { for: options.for }), options.content) as Component<Opts>;
-  return html`<label for=${options.for}>${options.content}</label>`;
+  return Dom.renderHost<HTMLLabelElement, Opts>(
+    options,
+    { for: options.for },
+    options.content,
+    (props, content) => html`<label ...${props}>${content}</label>`,
+  );
 }
 
 export interface PopupOptions<Value extends string = string, E = never, R = never>
@@ -241,18 +245,13 @@ export function List<
 >(options: Opts & Pick<PopupOptions<Value, E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (state) => state.id);
   const open = dataOpen(options.state);
-  if (options.host) {
-    return options.host(
-      Dom.mergeProps(options.props, {
-        id,
-        role: options.role ?? "listbox",
-        "data-ui": component,
-        ".data": { open },
-      }),
-      options.content,
-    ) as Component<Opts>;
-  }
-  return html`<div id=${id} role=${options.role ?? "listbox"} .data=${{ open }}>${options.content}</div>`;
+  const props = {
+    id,
+    role: options.role ?? "listbox",
+    "data-ui": component,
+    ".data": { open },
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export function Popover<
@@ -266,7 +265,7 @@ export function Popover<
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     NativePopover.syncToggle(options.state, event),
   );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id,
     role: options.role ?? "listbox",
     popover: "auto",
@@ -274,9 +273,8 @@ export function Popover<
     ".data": { open },
     ontoggle: onToggle,
     ref: NativePopover.register(options.state),
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return Dom.renderDivHost<Opts>(props, options.content);
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export interface ItemOptions<Value extends string = string, E = never, R = never>
@@ -311,7 +309,7 @@ export function Item<
       }),
     );
 
-    const props = Dom.mergeProps(options.props, {
+    const props = {
       id,
       role: "option",
       "data-ui-item": "typed/ui/Combobox.Item",
@@ -319,10 +317,11 @@ export function Item<
       "data-active-item": active,
       ".data": { selected },
       onclick: onClick,
-    });
+    };
     const content = options.content ?? value;
-    if (options.host) return options.host(props, content) as Component<Opts>;
-    return html`<div ...${props}>${content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(options, props, content, (props, content) =>
+      html`<div ...${props}>${content}</div>`,
+    );
   });
 }
 
@@ -332,10 +331,12 @@ export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 
 export function Group<const Opts extends GroupOptions>(options: Opts): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { role: "group", "aria-label": options.label });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div ...${props}>${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { role: "group", "aria-label": options.label },
+    options.content,
+    (props, content) => html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export interface GroupLabelOptions extends Dom.HostOptions<HTMLSpanElement> {

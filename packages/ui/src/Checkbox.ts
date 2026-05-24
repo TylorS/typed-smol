@@ -22,8 +22,6 @@ export const data = DataAttr.schema({
   checked: Schema.Union([Schema.Boolean, Schema.Literal("mixed")]),
 });
 
-export const component = "typed/ui/Checkbox";
-
 type OptionalBoolean = AnyValue<boolean | undefined>;
 type OptionalString = AnyValue<string | undefined>;
 type RequiredString = AnyValue<string>;
@@ -78,10 +76,9 @@ export function Input<const E, const R, const Opts extends InputOptions<NoInfer<
 ): Component<Opts> {
   const state = inputViewState(options.state);
   const onChange = EventHandler.action(
-    actionId("setChecked"),
+    "setChecked",
     "change",
     (event: CheckboxChangeEvent) => setChecked(options.state, event.currentTarget.checked),
-    { component },
   );
 
   return InputView(options, state, onChange);
@@ -101,10 +98,12 @@ export function InputView<
   return gen(function* () {
     const disabled = RefSubject.map(yield* makeRef(options.disabled ?? false), (value) => value === true);
     const required = RefSubject.map(yield* makeRef(options.required ?? false), (value) => value === true);
-    const props = Dom.mergeProps(options.props, inputProps(options, state, disabled, required, onChange));
+    const props = inputProps(options, state, disabled, required, onChange);
 
-    if (options.host) return options.host(props, "") as Component<Opts>;
-    return html`<input ...${props} />`;
+    return Dom.renderHost<HTMLInputElement, Opts>(options, props, "", (props) => {
+      const split = Dom.splitRef(props);
+      return html`<input ...${split.props} ref=${split.ref} />`;
+    });
   });
 }
 
@@ -116,8 +115,12 @@ export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
-  if (options.host) return options.host(Dom.mergeProps(options.props, { for: options.for }), options.content) as Component<Opts>;
-  return html`<label for=${options.for}>${options.content}</label>`;
+  return Dom.renderHost<HTMLLabelElement, Opts>(
+    options,
+    { for: options.for },
+    options.content,
+    (props, content) => html`<label ...${props}>${content}</label>`,
+  );
 }
 
 export interface CheckOptions<E = never, R = never> extends Dom.HostOptions<HTMLSpanElement> {
@@ -129,8 +132,12 @@ export function Check<const E, const R, const Opts extends CheckOptions<NoInfer<
   options: Opts & Pick<CheckOptions<E, R>, "state">,
 ): Component<Opts> {
   const hidden = RefSubject.map(options.state, (state) => state.checked !== true);
-  if (options.host) return options.host(Dom.mergeProps(options.props, { "aria-hidden": "true", "?hidden": hidden }), options.content ?? "✓") as Component<Opts>;
-  return html`<span aria-hidden="true" ?hidden=${hidden}>${options.content ?? "✓"}</span>` as Component<Opts>;
+  return Dom.renderHost<HTMLSpanElement, Opts>(
+    options,
+    { "aria-hidden": "true", "?hidden": hidden },
+    options.content ?? "✓",
+    (props, content) => html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export interface CheckboxChangeEvent extends Event {
@@ -159,7 +166,6 @@ function inputProps<E, R, E2, R2, E3, R3, E4, R4>(
     name: options.name,
     value: options.value,
     type: "checkbox",
-    "data-ui": component,
     "aria-checked": state.checkedValue,
     "?checked": state.checked,
     "?disabled": disabled,
@@ -172,8 +178,4 @@ function inputProps<E, R, E2, R2, E3, R3, E4, R4>(
 
 function dataCheckedValue<E, R>(checked: RefSubject.Computed<Checked, E, R>) {
   return RefSubject.map(checked, String);
-}
-
-function actionId(name: string): string {
-  return `${component}:action:${name}`;
 }

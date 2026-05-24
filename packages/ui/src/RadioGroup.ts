@@ -128,24 +128,15 @@ export function Root<
             yield* move(options.state, items, direction);
           }),
         );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "radiogroup",
     "aria-label": options.label,
     "aria-orientation": orientation,
     "data-ui": component,
     onkeydown: onKeyDown,
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<div
-    id=${options.id}
-    role="radiogroup"
-    aria-label=${options.label}
-    aria-orientation=${orientation}
-    onkeydown=${onKeyDown}
-  >
-    ${options.content}
-  </div>`;
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export interface ItemOptions<Value extends string = string, E = never, R = never>
@@ -184,8 +175,9 @@ export function Item<
       onclick: onClick,
     };
 
-    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-    return html`<div ...${props}>${options.content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+      html`<div ...${props}>${content}</div>`,
+    );
   });
 }
 

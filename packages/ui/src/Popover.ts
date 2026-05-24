@@ -24,8 +24,6 @@ export const data = DataAttr.schema({
   mode: Schema.Literals(["auto", "hint", "manual"]),
 });
 
-export const component = "typed/ui/Popover";
-
 export function makeState(
   initial: State,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -54,24 +52,13 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
     popovertarget: id,
     popovertargetaction: "toggle",
     "aria-expanded": open,
-    "data-ui": component,
+    "data-ui": "typed/ui/Popover",
     ".data": { open },
   } as const;
 
-  if (options.host) {
-    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-  }
-
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="toggle"
-    aria-expanded=${open}
-    data-ui=${component}
-    .data=${{ open }}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export const Disclosure = Trigger;
@@ -88,11 +75,9 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
   const id = RefSubject.map(options.state, (current) => current.id);
   const style = anchorStyleValue(options.anchorName);
   const props = { popovertarget: id, style } as const;
-  if (options.host) {
-    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-  }
-
-  return html`<span popovertarget=${id} style=${style}>${options.content}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(options, props, options.content, (props, content) =>
+    html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
@@ -110,16 +95,15 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
   const open = dataOpen(options.state);
   const style = positionStyleValue(options.positionAnchor, options.positionArea);
   const onToggle = EventHandler.action(
-    actionId("syncToggle"),
+    "typed/ui/Popover:action:syncToggle",
     "toggle",
     (event: ToggleEventLike) => NativePopover.syncToggle(options.state, event),
-    { component },
   );
   const props = {
     id,
     popover: mode,
     style,
-    "data-ui": component,
+    "data-ui": "typed/ui/Popover",
     ".data": { open, mode },
     "data-position-anchor": firstOptionalString(options.positionAnchor),
     "data-position-area": firstOptionalString(options.positionArea),
@@ -127,27 +111,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     ref: NativePopover.register(options.state),
   } as const;
 
-  if (options.host) {
-    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-  }
-
-  const positionAnchor = firstOptionalString(options.positionAnchor);
-  const positionArea = firstOptionalString(options.positionArea);
-  const ref = NativePopover.register(options.state);
-
-  return html`<div
-    id=${id}
-    popover=${mode}
-    style=${style}
-    data-ui=${component}
-    .data=${{ open, mode }}
-    data-position-anchor=${positionAnchor}
-    data-position-area=${positionArea}
-    ontoggle=${onToggle}
-    ref=${ref}
-  >
-    ${options.content}
-  </div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export const Popover = Content;
@@ -164,10 +128,9 @@ export function Dismiss<
 >(options: Opts & Pick<DismissOptions<E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.action(
-    actionId("hide"),
+    "typed/ui/Popover:action:hide",
     "click",
     (event: Event) => NativePopover.hideFromEvent(options.state, event),
-    { component },
   );
   const props = {
     type: "button",
@@ -176,18 +139,9 @@ export function Dismiss<
     onclick: onClick,
   } as const;
 
-  if (options.host) {
-    return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-  }
-
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="hide"
-    onclick=${onClick}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
@@ -244,10 +198,6 @@ interface ToggleEventLike extends Event {
 
 function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
   return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
-}
-
-function actionId(name: string): string {
-  return `${component}:action:${name}`;
 }
 
 function dataMode<E, R>(state: RefSubject.RefSubject<State, E, R>) {

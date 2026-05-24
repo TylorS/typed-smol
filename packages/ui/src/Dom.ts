@@ -195,10 +195,10 @@ export function renderHost<Element extends globalThis.Element, const Opts extend
   fallback: (
     props: HostProps<Element>,
     content: AnyRenderable<unknown>,
-  ) => Component<Opts> | Effect.Effect<unknown, any, any>,
+  ) => Component<Opts> | AnyEffect | AnyFx,
 ): Component<Opts> {
   const props = mergeProps(options.props, internal);
-  return (options.host ? options.host(props, content) : fallback(props, content)) as Component<Opts>;
+  return (options.host ? options.host(props, content) : fallback(toTemplateSpreadProps(props), content)) as Component<Opts>;
 }
 
 export function splitRef<Element extends globalThis.Element>(
@@ -212,8 +212,22 @@ export function renderDivHost<const Opts extends HostOptions<HTMLDivElement>>(
   props: HostProps<HTMLDivElement>,
   content: AnyRenderable<unknown>,
 ): Component<Opts> {
-  const split = splitRef(props);
+  const split = splitRef(toTemplateSpreadProps(props));
   return html`<div ...${split.props} ref=${split.ref}>${content}</div>` as Component<Opts>;
+}
+
+export function toTemplateSpreadProps<Element extends globalThis.Element>(
+  props: HostProps<Element>,
+): HostProps<Element> {
+  const data = props[".data"];
+  if (data === undefined) return props;
+
+  const { ".data": _data, ...rest } = props;
+  const spreadProps: Record<string, unknown> = { ...rest };
+  for (const [key, value] of Object.entries(data)) {
+    spreadProps[`data-${key}`] = value;
+  }
+  return spreadProps as HostProps<Element>;
 }
 
 function toEventHandler<Ev extends Event, E, R>(

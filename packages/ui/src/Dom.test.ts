@@ -2,6 +2,9 @@ import { assert, describe, expectTypeOf, it } from "vitest";
 import * as Context from "effect/Context";
 import type { Effect } from "effect";
 import * as EffectRuntime from "effect/Effect";
+import { readFileSync, readdirSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { EventHandler, type Renderable } from "@typed/template";
 import { Fx } from "@typed/fx";
 import type * as Dom from "./Dom.js";
@@ -179,6 +182,41 @@ describe("typed/ui/Dom", () => {
 
     expectTypeOf(rendered).toExtend<Fx.Fx<unknown, unknown, unknown>>();
     assert.deepStrictEqual(calls, []);
+  });
+
+  it("keeps primitive host rendering behind Dom.renderHost", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const directHostCalls = readdirSync(sourceDir)
+      .filter((fileName) => fileName.endsWith(".ts") && !fileName.endsWith(".test.ts"))
+      .filter((fileName) => fileName !== "Dom.ts")
+      .flatMap((fileName) =>
+        readFileSync(join(sourceDir, fileName), "utf8")
+          .split("\n")
+          .flatMap((line, index) =>
+            line.includes("options.host(")
+              ? [`${basename(fileName)}:${index + 1}:${line.trim()}`]
+              : [],
+          ),
+      );
+
+    assert.deepStrictEqual(directHostCalls, []);
+  });
+
+  it("keeps overloaded primitive implementations from erasing argument and return types", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const erasingImplementations = readdirSync(sourceDir)
+      .filter((fileName) => fileName.endsWith(".ts") && !fileName.endsWith(".test.ts"))
+      .flatMap((fileName) =>
+        readFileSync(join(sourceDir, fileName), "utf8")
+          .split("\n")
+          .flatMap((line, index) =>
+            line.includes("ReadonlyArray<any>): any") || line.includes("const options: any")
+              ? [`${basename(fileName)}:${index + 1}:${line.trim()}`]
+              : [],
+          ),
+      );
+
+    assert.deepStrictEqual(erasingImplementations, []);
   });
 });
 

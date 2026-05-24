@@ -17,8 +17,6 @@ export const data = DataAttr.schema({
   open: Schema.Boolean,
 });
 
-export const component = "typed/ui/Disclosure";
-
 export function makeState(
   initial: State,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -48,30 +46,18 @@ export function Button<const E, const R, const Opts extends ButtonOptions<NoInfe
   options: Opts & Pick<ButtonOptions<E, R>, "state">,
 ): Component<Opts> {
   const open = dataOpen(options.state);
-  const onClick = EventHandler.action(actionId("toggle"), "click", () => toggle(options.state), {
-    component,
-  });
-  const props = Dom.mergeProps(options.props, {
+  const onClick = EventHandler.action("toggle", "click", () => toggle(options.state));
+  const props = {
     type: "button",
     "aria-expanded": open,
     "aria-controls": options.controls,
-    "data-ui": component,
     ".data": { open },
     onclick: onClick,
-  });
+  } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<button
-    type="button"
-    aria-expanded=${open}
-    aria-controls=${options.controls}
-    data-ui=${component}
-    .data=${{ open }}
-    onclick=${onClick}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export const Disclosure = Button;
@@ -87,26 +73,15 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
 ): Component<Opts> {
   const open = dataOpen(options.state);
   const hidden = RefSubject.map(options.state, (current) => !current.open);
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     "?hidden": hidden,
-    "data-ui": component,
     ".data": { open },
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  } as const;
 
-  return html`<div
-    id=${options.id}
-    ?hidden=${hidden}
-    data-ui=${component}
-    .data=${{ open }}
-  >${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 function dataOpen<E, R>(state: RefSubject.RefSubject<State, E, R>) {
   return RefSubject.map(state, (value) => DataAttr.boolean(value.open));
-}
-
-function actionId(name: string): string {
-  return `${component}:action:${name}`;
 }

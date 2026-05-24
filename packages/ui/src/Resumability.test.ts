@@ -75,6 +75,21 @@ describe("typed/ui/Resumability", () => {
     ).toEqual([]);
   });
 
+  it("does not allow first resumable primitives to hand-author component identity", () => {
+    expect(
+      ["Checkbox.ts", "Disclosure.ts", "Dialog.ts", "Popover.ts", "Select.ts"].flatMap((fileName) => {
+        const source = readUiSource(fileName);
+        return [
+          source.includes("export const component") ? `${fileName}:component` : undefined,
+          source.includes("function actionId") ? `${fileName}:actionId` : undefined,
+          source.includes("{ component }") ? `${fileName}:action-options` : undefined,
+        ].filter((value): value is string => value !== undefined);
+      }),
+    ).toMatchInlineSnapshot(`
+      []
+    `);
+  });
+
   it("derives resumability state from component source at compile time", () => {
     expect(statefulModules.map(deriveComponentSource)).toMatchInlineSnapshot(`
       [
@@ -359,7 +374,12 @@ function exportedStringConst(file: ts.SourceFile, name: string): string {
       }
     }
   }
+  if (name === "component") return derivedComponentId(file.fileName);
   throw new Error(`Missing exported string const ${name} in ${file.fileName}`);
+}
+
+function derivedComponentId(fileName: string): string {
+  return `typed/ui/${fileName.replace(/\.ts$/u, "")}`;
 }
 
 function exportedDataFields(file: ts.SourceFile): readonly string[] {

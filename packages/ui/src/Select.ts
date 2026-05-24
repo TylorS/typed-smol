@@ -70,8 +70,6 @@ interface SelectFormBinding {
   readonly setValue: (value: unknown) => Effect.Effect<void, never, never>;
 }
 
-export const component = "typed/ui/Select";
-
 export function makeState<Value extends string = string>(
   initial: InitialState<NoInfer<Value>>,
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
@@ -139,7 +137,6 @@ export function Trigger<
     popovertargetaction: "toggle",
     "aria-haspopup": "listbox",
     "aria-expanded": open,
-    "data-ui": component,
     ".data": { open },
   } as const;
 
@@ -173,17 +170,16 @@ export function Content<
     current.virtualFocus && current.activeId ? current.activeId : undefined,
   );
   const onToggle = EventHandler.action(
-    actionId("syncToggle"),
+    "syncToggle",
     "toggle",
     (event: ToggleEventLike) => NativePopover.syncToggle(options.state, event),
-    { component },
   );
   const items = options.items;
   const onKeyDown =
     items === undefined
       ? undefined
       : EventHandler.action(
-          actionId("move"),
+          "move",
           "keydown",
           (event: KeyboardEvent) =>
             Effect.gen(function* () {
@@ -208,7 +204,6 @@ export function Content<
               event.preventDefault();
               yield* move(options.state, items, direction);
             }),
-          { component },
         );
   const props = {
     id,
@@ -217,7 +212,6 @@ export function Content<
     "aria-label": options.label,
     "aria-orientation": orientation,
     "aria-activedescendant": activeDescendant,
-    "data-ui": component,
     ".data": { open },
     ontoggle: onToggle,
     onkeydown: onKeyDown,
@@ -255,7 +249,7 @@ export function Option<
     const disabled = isDisabled(disabledValue);
     const selected = isSelected(options.state, value);
     const onClick = EventHandler.action(
-      actionId("select"),
+      "select",
       "click",
       (event: Event) =>
         Effect.gen(function* () {
@@ -263,7 +257,6 @@ export function Option<
           yield* select(options.state, yield* id, yield* value);
           yield* NativePopover.hideFromEvent(options.state, event);
         }),
-      { component },
     );
     const props = {
       id,
@@ -396,10 +389,9 @@ export function Dismiss<
 >(options: Opts & Pick<DismissOptions<E, R>, "state">): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const onClick = EventHandler.action(
-    actionId("hide"),
+    "hide",
     "click",
     (event: Event) => NativePopover.hideFromEvent(options.state, event),
-    { component },
   );
   return Dom.renderHost<HTMLButtonElement, Opts>(
     options,
@@ -536,10 +528,6 @@ function isDisabled<E, R>(disabled: RefSubject.Computed<boolean | undefined, E, 
 
 function boolString<E, R>(value: RefSubject.Computed<boolean, E, R>) {
   return RefSubject.map(value, String);
-}
-
-function actionId(name: string): string {
-  return `${component}:action:${name}`;
 }
 
 function registerFormBinding<Value extends string, Values extends {}, E, R, E2, R2>(

@@ -264,14 +264,15 @@ export function Form<
       )
     : internalSubmit;
   const onReset = EventHandler.make(() => reset(options.state), { preventDefault: true });
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     "data-ui": component,
     onsubmit: onSubmit,
     onreset: onReset,
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
+  };
 
-  return html`<form ...${props}>${options.content}</form>`;
+  return Dom.renderHost<HTMLFormElement, Opts>(options, props, options.content, (props, content) =>
+    html`<form ...${props}>${content}</form>`,
+  );
 }
 
 export interface InputOptions<
@@ -299,6 +300,19 @@ export interface FieldInputOptions<
   R = never,
 > extends Omit<InputOptions<Values, Name, E, R>, "state" | "name"> {}
 
+type InputArgs<
+  Values extends {},
+  Name extends keyof Values & string,
+  E,
+  R,
+> =
+  | readonly [options: InputOptions<Values, Name, E, R>]
+  | readonly [
+      state: RefSubject.RefSubject<State<Values>, E, R>,
+      name: Name,
+      options?: FieldInputOptions<Values, Name, E, R>,
+    ];
+
 export function Input<
   const Values extends {},
   const Name extends keyof Values & string,
@@ -317,18 +331,19 @@ export function Input<
   name: Name,
   options?: Opts,
 ): Component<Opts & FieldBinding<Values, Name, E, R>>;
-export function Input(...args: ReadonlyArray<any>): any {
-  const [optionsOrState, name, fieldOptions = {}] = args;
-  const options: any =
-    typeof name === "string"
-      ? { ...fieldOptions, state: optionsOrState, name }
-      : optionsOrState;
+export function Input<
+  Values extends {},
+  Name extends keyof Values & string,
+  E,
+  R,
+>(...args: InputArgs<Values, Name, E, R>): Component<Dom.HostOptions<HTMLInputElement>> {
+  const options = normalizeInputOptions(args);
   const value = options.codec
-    ? RefSubject.mapEffect(options.state, (state: any) =>
+    ? RefSubject.mapEffect(options.state, (state) =>
         encodeDomValue(options.codec!, state.values[options.name]),
       )
-    : RefSubject.map(options.state, (state: any) => String(state.values[options.name] ?? ""));
-  const describedBy = RefSubject.map(options.state, (state: any) =>
+    : RefSubject.map(options.state, (state) => String(state.values[options.name] ?? ""));
+  const describedBy = RefSubject.map(options.state, (state) =>
     state.errors[options.name] ? `${options.name}-error` : undefined,
   );
   const onInput = EventHandler.make((event: InputEventLike) =>
@@ -339,7 +354,7 @@ export function Input(...args: ReadonlyArray<any>): any {
         })
       : setAnyValue(options.state, options.name, event.currentTarget.value),
   );
-  const props = Dom.mergeProps<HTMLInputElement>(options.props, {
+  const props = {
     id: options.id,
     name: options.name,
     type: options.type ?? "text",
@@ -347,11 +362,28 @@ export function Input(...args: ReadonlyArray<any>): any {
     "aria-describedby": describedBy,
     ".value": value,
     oninput: onInput,
-  });
+  };
 
-  if (options.host) return options.host(props, "");
+  return Dom.renderHost<HTMLInputElement, Dom.HostOptions<HTMLInputElement>>(
+    options,
+    props,
+    "",
+    (props) => {
+      const split = Dom.splitRef(props);
+      return html`<input ...${split.props} ref=${split.ref} />`;
+    },
+  );
+}
 
-  return html`<input ...${props} />`;
+function normalizeInputOptions<
+  Values extends {},
+  Name extends keyof Values & string,
+  E,
+  R,
+>(args: InputArgs<Values, Name, E, R>): InputOptions<Values, Name, E, R> {
+  if (args.length === 1) return args[0];
+  const [state, name, options = {}] = args;
+  return { ...options, state, name };
 }
 
 export interface CheckboxOptions extends Omit<CheckboxPrimitive.InputViewOptions, "name"> {}
@@ -431,10 +463,12 @@ export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
 }
 
 export function Label<const Opts extends LabelOptions>(options: Opts): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { for: options.for });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<label ...${props}>${options.content}</label>`;
+  return Dom.renderHost<HTMLLabelElement, Opts>(
+    options,
+    { for: options.for },
+    options.content,
+    (props, content) => html`<label ...${props}>${content}</label>`,
+  );
 }
 
 export interface DescriptionOptions extends Dom.HostOptions<HTMLDivElement> {
@@ -445,10 +479,12 @@ export interface DescriptionOptions extends Dom.HostOptions<HTMLDivElement> {
 export function Description<const Opts extends DescriptionOptions>(
   options: Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { id: options.id });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div ...${props}>${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { id: options.id },
+    options.content,
+    Dom.renderDivHost,
+  );
 }
 
 export interface ErrorOptions<
@@ -469,16 +505,13 @@ export function Error<
   const Opts extends ErrorOptions<Values, Name, NoInfer<E>, NoInfer<R>>,
 >(options: Opts & Pick<ErrorOptions<Values, Name, E, R>, "state">): Component<Opts> {
   const id = `${options.name}-error`;
-  const props = Dom.mergeProps(options.props, { id, role: "alert" });
-  if (options.host) {
-    return options.host(
-      props,
-      RefSubject.map(options.state, (state) => state.errors[options.name] ?? ""),
-    ) as Component<Opts>;
-  }
-
   const content = RefSubject.map(options.state, (state) => state.errors[options.name] ?? "");
-  return Dom.renderDivHost<Opts>(props, content);
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { id, role: "alert" },
+    content,
+    Dom.renderDivHost,
+  );
 }
 
 export interface SubmitOptions extends Dom.HostOptions<HTMLButtonElement> {
@@ -488,10 +521,12 @@ export interface SubmitOptions extends Dom.HostOptions<HTMLButtonElement> {
 export function Submit<const Opts extends SubmitOptions>(
   options: Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { type: "submit" });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<button ...${props}>${options.content}</button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(
+    options,
+    { type: "submit" },
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export interface ResetOptions extends Dom.HostOptions<HTMLButtonElement> {
@@ -501,10 +536,12 @@ export interface ResetOptions extends Dom.HostOptions<HTMLButtonElement> {
 export function Reset<const Opts extends ResetOptions>(
   options: Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { type: "reset" });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<button ...${props}>${options.content}</button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(
+    options,
+    { type: "reset" },
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export interface PushOptions<
@@ -537,17 +574,46 @@ export function Push<
   name: Name,
   options: Opts,
 ): Component<Opts & FieldBinding<Values, Name, E, R>>;
-export function Push(...args: ReadonlyArray<any>): any {
-  const [optionsOrState, name, fieldOptions] = args;
-  const options =
-    typeof name === "string"
-      ? { ...fieldOptions, state: optionsOrState, name } as PushOptions
-      : optionsOrState as PushOptions;
+export function Push<
+  Values extends {},
+  Name extends ArrayFieldName<Values>,
+  E,
+  R,
+>(...args: PushArgs<Values, Name, E, R>): Component<
+  Dom.HostOptions<HTMLButtonElement> & { readonly content: AnyContent }
+> {
+  const options = normalizePushOptions(args);
   const onClick = EventHandler.make(() => pushValue(options.state, options.name, options.value));
-  const props = Dom.mergeProps(options.props, { type: "button", onclick: onClick });
-  if (options.host) return options.host(props, options.content);
+  return Dom.renderHost<HTMLButtonElement, Dom.HostOptions<HTMLButtonElement> & { readonly content: AnyContent }>(
+    options,
+    { type: "button", onclick: onClick },
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
+}
 
-  return html`<button ...${props}>${options.content}</button>`;
+type PushArgs<
+  Values extends {},
+  Name extends ArrayFieldName<Values>,
+  E,
+  R,
+> =
+  | readonly [options: PushOptions<Values, Name, E, R>]
+  | readonly [
+      state: RefSubject.RefSubject<State<Values>, E, R>,
+      name: Name,
+      options: Omit<PushOptions<Values, Name, E, R>, "state" | "name">,
+    ];
+
+function normalizePushOptions<
+  Values extends {},
+  Name extends ArrayFieldName<Values>,
+  E,
+  R,
+>(args: PushArgs<Values, Name, E, R>): PushOptions<Values, Name, E, R> {
+  if (args.length === 1) return args[0];
+  const [state, name, options] = args;
+  return { ...options, state, name };
 }
 
 export interface RemoveOptions<
@@ -580,12 +646,15 @@ export function Remove<
   name: Name,
   options: Opts,
 ): Component<Opts & FieldBinding<Values, Name, E, R>>;
-export function Remove(...args: ReadonlyArray<any>): any {
-  const [optionsOrState, name, fieldOptions] = args;
-  const options =
-    typeof name === "string"
-      ? { ...fieldOptions, state: optionsOrState, name } as RemoveOptions
-      : optionsOrState as RemoveOptions;
+export function Remove<
+  Values extends {},
+  Name extends ArrayFieldName<Values>,
+  E,
+  R,
+>(...args: RemoveArgs<Values, Name, E, R>): Component<
+  Dom.HostOptions<HTMLButtonElement> & { readonly content: AnyContent }
+> {
+  const options = normalizeRemoveOptions(args);
   const onClick = EventHandler.make(() => {
     if (typeof options.index === "number") {
       return removeValue(options.state, options.name, options.index);
@@ -597,10 +666,36 @@ export function Remove(...args: ReadonlyArray<any>): any {
       ),
     );
   });
-  const props = Dom.mergeProps(options.props, { type: "button", onclick: onClick });
-  if (options.host) return options.host(props, options.content);
+  return Dom.renderHost<HTMLButtonElement, Dom.HostOptions<HTMLButtonElement> & { readonly content: AnyContent }>(
+    options,
+    { type: "button", onclick: onClick },
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
+}
 
-  return html`<button ...${props}>${options.content}</button>`;
+type RemoveArgs<
+  Values extends {},
+  Name extends ArrayFieldName<Values>,
+  E,
+  R,
+> =
+  | readonly [options: RemoveOptions<Values, Name, E, R>]
+  | readonly [
+      state: RefSubject.RefSubject<State<Values>, E, R>,
+      name: Name,
+      options: Omit<RemoveOptions<Values, Name, E, R>, "state" | "name">,
+    ];
+
+function normalizeRemoveOptions<
+  Values extends {},
+  Name extends ArrayFieldName<Values>,
+  E,
+  R,
+>(args: RemoveArgs<Values, Name, E, R>): RemoveOptions<Values, Name, E, R> {
+  if (args.length === 1) return args[0];
+  const [state, name, options] = args;
+  return { ...options, state, name };
 }
 
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
@@ -611,10 +706,12 @@ export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
 export function Group<const Opts extends GroupOptions>(
   options: Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { role: "group", "aria-label": options.label });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div ...${props}>${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { role: "group", "aria-label": options.label },
+    options.content,
+    Dom.renderDivHost,
+  );
 }
 
 export const GroupLabel = Label;

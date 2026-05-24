@@ -128,7 +128,7 @@ export function Root<
             yield* move(options.state, items, direction);
           }),
         );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "listbox",
     "aria-label": options.label,
@@ -136,20 +136,9 @@ export function Root<
     "aria-activedescendant": activeDescendant,
     "data-ui": component,
     onkeydown: onKeyDown,
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div
-    id=${options.id}
-    role="listbox"
-    aria-label=${options.label}
-    aria-orientation=${orientation}
-    aria-activedescendant=${activeDescendant}
-    onkeydown=${onKeyDown}
-  >
-    ${options.content}
-  </div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export interface OptionOptions<Value extends string = string, E = never, R = never>
@@ -199,8 +188,9 @@ export function Option<
       onclick: onClick,
     } as const;
 
-    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-    return html`<div ...${props}>${options.content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+      html`<div ...${props}>${content}</div>`,
+    );
   });
 }
 

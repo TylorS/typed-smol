@@ -77,26 +77,16 @@ export function Root<const E, const R, const Opts extends RootOptions<NoInfer<E>
             yield* move(options.state, items, direction);
           }),
         );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "toolbar",
     "aria-label": options.label,
     "aria-orientation": orientation,
     "data-ui": component,
     onkeydown: onKeyDown,
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div
-    id=${options.id}
-    role="toolbar"
-    aria-label=${options.label}
-    aria-orientation=${orientation}
-    onkeydown=${onKeyDown}
-  >
-    ${options.content}
-  </div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export const Toolbar = Root;
@@ -115,16 +105,16 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
     const tabIndex = RefSubject.mapEffect(id, (itemId) =>
       Effect.map(options.state, (state) => (state.activeId === itemId ? 0 : -1)),
     );
-    const props = Dom.mergeProps(options.props, {
+    const props = {
       id,
       role: "button",
       "data-ui-item": "typed/ui/Toolbar.Item",
       tabindex: tabIndex,
-    });
+    };
 
-    if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-    return html`<div ...${props}>${options.content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+      html`<div ...${props}>${content}</div>`,
+    );
   });
 }
 
@@ -135,11 +125,12 @@ export interface ContainerOptions extends Dom.HostOptions<HTMLDivElement> {
 export function Container<const Opts extends ContainerOptions>(
   options: Opts,
 ): Component<Opts> {
-  if (options.host) {
-    return options.host(Dom.mergeProps(options.props, { role: "presentation" }), options.content) as Component<Opts>;
-  }
-
-  return html`<div role="presentation">${options.content}</div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(
+    options,
+    { role: "presentation" },
+    options.content,
+    (props, content) => html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {}
@@ -147,9 +138,7 @@ export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {}
 export function Separator<const Opts extends SeparatorOptions = {}>(
   options = {} as Opts,
 ): Component<Opts> {
-  if (options.host) {
-    return options.host(Dom.mergeProps(options.props, { role: "separator" }), "") as Component<Opts>;
-  }
-
-  return html`<div role="separator"></div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, { role: "separator" }, "", (props) =>
+    html`<div ...${props}></div>`,
+  );
 }

@@ -108,7 +108,7 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
 ): Component<Opts> {
   const id = RefSubject.map(options.state, (current) => current.id);
   const open = dataOpen(options.state);
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     type: "button",
     popovertarget: id,
     popovertargetaction: "toggle",
@@ -116,20 +116,11 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
     "aria-expanded": open,
     "data-ui": component,
     ".data": { open },
-  });
+  } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="toggle"
-    aria-haspopup="menu"
-    aria-expanded=${open}
-    .data=${{ open }}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export const Button = Trigger;
@@ -174,7 +165,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
             yield* move(options.state, items, direction);
           }),
         );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id,
     role: "menu",
     popover: mode,
@@ -186,11 +177,9 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     ontoggle: onToggle,
     onkeydown: onKeyDown,
     ref: NativePopover.register(options.state),
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return Dom.renderDivHost<Opts>(props, options.content);
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export const List = Content;
@@ -228,8 +217,9 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
       "data-disabled": boolString(disabled),
     } as const;
 
-    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-    return html`<div ...${props}>${options.content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+      html`<div ...${props}>${content}</div>`,
+    );
   });
 }
 
@@ -240,41 +230,29 @@ export interface CheckedItemOptions<E = never, R = never> extends ItemOptions<E,
 export function ItemCheckbox<const E, const R, const Opts extends CheckedItemOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<CheckedItemOptions<E, R>, "state">,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "menuitemcheckbox",
     "aria-checked": options.checked,
     "data-checked": options.checked,
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<div
-    id=${options.id}
-    role="menuitemcheckbox"
-    aria-checked=${options.checked}
-    data-checked=${options.checked}
-  >
-    ${options.content}
-  </div>`;
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export function ItemRadio<const E, const R, const Opts extends CheckedItemOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<CheckedItemOptions<E, R>, "state">,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "menuitemradio",
     "aria-checked": options.checked,
     "data-checked": options.checked,
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<div
-    id=${options.id}
-    role="menuitemradio"
-    aria-checked=${options.checked}
-    data-checked=${options.checked}
-  >
-    ${options.content}
-  </div>`;
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export interface ItemCheckOptions extends Dom.HostOptions<HTMLSpanElement> {
@@ -406,21 +384,15 @@ export function Dismiss<
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),
   );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     type: "button",
     popovertarget: id,
     popovertargetaction: "hide",
     onclick: onClick,
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="hide"
-    onclick=${onClick}
-  >
-    ${options.content}
-  </button>`;
+  } as const;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export interface SubmenuTriggerOptions<E = never, R = never, E2 = never, R2 = never>
@@ -459,7 +431,7 @@ export function SubmenuTrigger<
       return setOpen(options.submenu, true);
     }
   });
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     type: "button",
     popovertarget: id,
     popovertargetaction: "toggle",
@@ -468,22 +440,11 @@ export function SubmenuTrigger<
     onpointerenter: onPointerEnter,
     onpointerleave: onPointerLeave,
     onkeydown: onKeyDown,
-  });
+  } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="toggle"
-    aria-haspopup="menu"
-    aria-expanded=${open}
-    onpointerenter=${onPointerEnter}
-    onpointerleave=${onPointerLeave}
-    onkeydown=${onKeyDown}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export const Submenu = Content;

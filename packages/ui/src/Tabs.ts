@@ -117,24 +117,15 @@ export function List<const E, const R, const Opts extends ListOptions<NoInfer<E>
             yield* move(options.state, items, direction);
           }),
         );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "tablist",
     "aria-label": options.label,
     "aria-orientation": orientation,
     "data-ui": component,
     onkeydown: onKeyDown,
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<div
-    id=${options.id}
-    role="tablist"
-    aria-label=${options.label}
-    aria-orientation=${orientation}
-    onkeydown=${onKeyDown}
-  >
-    ${options.content}
-  </div>`;
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export interface TabOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
@@ -168,8 +159,9 @@ export function Tab<const E, const R, const Opts extends TabOptions<NoInfer<E>, 
       onclick: onClick,
     } as const;
 
-    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-    return html`<button ...${props}>${options.content}</button>`;
+    return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+      html`<button ...${props}>${content}</button>`,
+    );
   });
 }
 
@@ -196,9 +188,12 @@ export function Panel<const E, const R, const Opts extends PanelOptions<NoInfer<
     } as const;
     const hidden = RefSubject.map(selected, (value) => !value);
 
-    const mergedProps = Dom.mergeProps(options.props, { ...props, "?hidden": hidden });
-    if (options.host) return options.host(mergedProps, options.content) as Component<Opts>;
-    return html`<div ...${props} ?hidden=${hidden}>${options.content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(
+      options,
+      { ...props, "?hidden": hidden },
+      options.content,
+      Dom.renderDivHost,
+    );
   });
 }
 

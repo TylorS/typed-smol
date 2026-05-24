@@ -74,24 +74,17 @@ export function Root<const E, const R, const Opts extends RootOptions<NoInfer<E>
             yield* move(options.state, items, direction);
           }),
         );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     role: "menubar",
     "aria-label": options.label,
     "aria-orientation": orientation,
     "data-ui": component,
     onkeydown: onKeyDown,
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div
-    role="menubar"
-    aria-label=${options.label}
-    aria-orientation=${orientation}
-    onkeydown=${onKeyDown}
-  >
-    ${options.content}
-  </div>`;
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export const Menubar = Root;
@@ -123,8 +116,8 @@ export function Item<const E, const R, const Opts extends ItemOptions<NoInfer<E>
       onfocus: onFocus,
     } as const;
 
-    if (options.host) return options.host(Dom.mergeProps(options.props, props), options.content) as Component<Opts>;
-
-    return html`<div ...${props}>${options.content}</div>`;
+    return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+      html`<div ...${props}>${content}</div>`,
+    );
   });
 }

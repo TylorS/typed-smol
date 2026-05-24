@@ -71,26 +71,18 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
     const onMouseEnter = EventHandler.make(() => schedule(true, showDelay));
     const onMouseLeave = EventHandler.make(() => schedule(false, hideDelay));
 
-    const props = Dom.mergeProps(options.props, {
+    const props = {
       "aria-describedby": id,
       "data-ui": component,
       onfocus: onFocus,
       onblur: onBlur,
       onmouseenter: onMouseEnter,
       onmouseleave: onMouseLeave,
-    });
+    };
 
-    if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-    return html`<span
-      aria-describedby=${id}
-      onfocus=${onFocus}
-      onblur=${onBlur}
-      onmouseenter=${onMouseEnter}
-      onmouseleave=${onMouseLeave}
-    >
-      ${options.content}
-    </span>`;
+    return Dom.renderHost<HTMLSpanElement, Opts>(options, props, options.content, (props, content) =>
+      html`<span ...${props}>${content}</span>`,
+    );
   });
 }
 
@@ -110,7 +102,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     NativePopover.syncToggle(options.state, event),
   );
 
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id,
     role: "tooltip",
     popover: "hint",
@@ -120,11 +112,9 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     "?hidden": hidden,
     ontoggle: onToggle,
     ref: NativePopover.register(options.state),
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return Dom.renderDivHost<Opts>(props, options.content);
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export const Tooltip = Content;
@@ -136,10 +126,12 @@ export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
 export function Arrow<const Opts extends ArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { "aria-hidden": "true" });
-  if (options.host) return options.host(props, options.content ?? "") as Component<Opts>;
-
-  return html`<span ...${props}>${options.content ?? ""}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(
+    options,
+    { "aria-hidden": "true" },
+    options.content ?? "",
+    (props, content) => html`<span ...${props}>${content}</span>`,
+  );
 }
 
 interface ToggleEventLike extends Event {

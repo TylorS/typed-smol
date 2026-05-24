@@ -14,12 +14,13 @@ export interface ButtonOptions<E = any, R = any> extends Dom.HostOptions<HTMLBut
 export function Button<const E, const R, const Opts extends ButtonOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     type: options.type ?? "button",
     "?disabled": options.disabled ?? false,
     onclick: options.onclick,
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-  return html`<button ...${props}>${options.content}</button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }

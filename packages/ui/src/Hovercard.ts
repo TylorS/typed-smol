@@ -53,7 +53,7 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
   const onMouseEnter = EventHandler.make(() => setOpen(options.state, true));
   const onMouseLeave = EventHandler.make(() => setOpen(options.state, false));
 
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     "aria-controls": id,
     "aria-expanded": open,
     "data-ui": component,
@@ -61,20 +61,11 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
     onblur: onBlur,
     onmouseenter: onMouseEnter,
     onmouseleave: onMouseLeave,
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<span
-    aria-controls=${id}
-    aria-expanded=${open}
-    onfocus=${onFocus}
-    onblur=${onBlur}
-    onmouseenter=${onMouseEnter}
-    onmouseleave=${onMouseLeave}
-  >
-    ${options.content}
-  </span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(options, props, options.content, (props, content) =>
+    html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export interface DisclosureOptions<E = never, R = never> extends Dom.HostOptions<HTMLButtonElement> {
@@ -91,27 +82,18 @@ export function Disclosure<const E, const R, const Opts extends DisclosureOption
     Effect.flatMap(options.state, (state) => setOpen(options.state, !state.open)),
   );
 
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     type: "button",
     popovertarget: id,
     popovertargetaction: "toggle",
     "aria-controls": id,
     "aria-expanded": open,
     onclick: onClick,
-  });
+  } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="toggle"
-    aria-controls=${id}
-    aria-expanded=${open}
-    onclick=${onClick}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HTMLDivElement> {
@@ -128,7 +110,7 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     NativePopover.syncToggle(options.state, event),
   );
 
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id,
     role: "dialog",
     popover: "auto",
@@ -136,11 +118,9 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     "data-open": open,
     ontoggle: onToggle,
     ref: NativePopover.register(options.state),
-  });
+  };
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return Dom.renderDivHost<Opts>(props, options.content);
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
 }
 
 export const Hovercard = Content;
@@ -157,23 +137,16 @@ export function Dismiss<const E, const R, const Opts extends DismissOptions<NoIn
   const onClick = EventHandler.make((event: Event) =>
     NativePopover.hideFromEvent(options.state, event),
   );
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     type: "button",
     popovertarget: id,
     popovertargetaction: "hide",
     onclick: onClick,
-  });
+  } as const;
 
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<button
-    type="button"
-    popovertarget=${id}
-    popovertargetaction="hide"
-    onclick=${onClick}
-  >
-    ${options.content}
-  </button>`;
+  return Dom.renderHost<HTMLButtonElement, Opts>(options, props, options.content, (props, content) =>
+    html`<button ...${props}>${content}</button>`,
+  );
 }
 
 export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
@@ -183,10 +156,12 @@ export interface ArrowOptions extends Dom.HostOptions<HTMLSpanElement> {
 export function Arrow<const Opts extends ArrowOptions>(
   options = {} as Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { "aria-hidden": "true" });
-  if (options.host) return options.host(props, options.content ?? "") as Component<Opts>;
-
-  return html`<span ...${props}>${options.content ?? ""}</span>`;
+  return Dom.renderHost<HTMLSpanElement, Opts>(
+    options,
+    { "aria-hidden": "true" },
+    options.content ?? "",
+    (props, content) => html`<span ...${props}>${content}</span>`,
+  );
 }
 
 export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
@@ -197,14 +172,14 @@ export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
 export function Heading<const Opts extends HeadingOptions>(
   options: Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, {
+  const props = {
     id: options.id,
     role: "heading",
     "aria-level": "1",
-  });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<div ...${props}>${options.content}</div>`;
+  };
+  return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, (props, content) =>
+    html`<div ...${props}>${content}</div>`,
+  );
 }
 
 export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement> {
@@ -215,10 +190,12 @@ export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement
 export function Description<const Opts extends DescriptionOptions>(
   options: Opts,
 ): Component<Opts> {
-  const props = Dom.mergeProps(options.props, { id: options.id });
-  if (options.host) return options.host(props, options.content) as Component<Opts>;
-
-  return html`<p ...${props}>${options.content}</p>`;
+  return Dom.renderHost<HTMLParagraphElement, Opts>(
+    options,
+    { id: options.id },
+    options.content,
+    (props, content) => html`<p ...${props}>${content}</p>`,
+  );
 }
 
 interface ToggleEventLike extends Event {
