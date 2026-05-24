@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T15, then report task completion.
+- current_scope: execute approved plan task T16, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -444,7 +444,7 @@
   - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no Critical or Important issues; it noted only a non-blocking suggestion for more focused serialized `Cause` payload assertions.
 - commit:
-  - pending
+  - `e81996d feat(devtools): capture fx runtime events`
 - context_updates:
   - Added `makeFxCapture` for converting Fx DevTools observer events into protocol `FxNodeEvent` runtime events.
   - Added value and cause serialization/redaction before Fx events enter the runtime bridge event bus.
@@ -453,3 +453,30 @@
   - Runtime Fx capture should serialize emitted values and failure/interruption causes before calling `DevtoolsRuntimeService.emit`.
   - Fx node ids should prefer owner-qualified ids, then RefSubject-qualified ids, then explicit unowned ids; missing identity should be skipped.
   - Type helpers for protocol runtime events should narrow to the `FxNodeEvent` union member before reading phase/value fields.
+
+### T16 - Runtime HMR Capture
+
+- task_id: T16
+- requirement_ids: FR-17, FR-25, FR-26, FR-41, FR-42, NFR-6, NFR-8, NFR-15, NFR-17, AC-6, AC-13
+- ts_scenarios: TS-6, TS-11
+- routing_decision:
+  - direct execution for the red-green implementation because target files and ownership are locked in the approved plan.
+  - sidecar review-auditor required before commit for HMR status preservation, EventBus reuse, and runtime/compiler boundary risks.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/HmrCapture.test.ts` failed before implementation with missing `./HmrCapture.js`.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/HmrCapture.test.ts` passed with 1 test file and 3 tests.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/HmrCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts` passed with 3 test files and 18 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/HmrCapture.ts packages/devtools-runtime/src/HmrCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/HmrCapture.ts packages/devtools-runtime/src/HmrCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: boundary grep for `chrome.`, `effect/unstable/rpc`, and `@typed/compiler` returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no Critical or Important issues in the scoped T16 files; it flagged an unrelated package-wide runtime test typecheck failure in `RefSubjectCapture.test.ts` to track before package-wide runtime test health is claimed.
+- commit:
+  - pending
+- context_updates:
+  - Added `makeHmrCapture` for emitting protocol HMR status facts through the runtime service and bridge event bus.
+  - Preserved optimized-template status, stateful eligibility, unknown status, and structured rejection reasons exactly as compiler facts provide them.
+- memory_updates:
+  - Runtime HMR capture should consume protocol `HmrStatusFact` values directly and avoid importing compiler packages.
+  - Runtime HMR capture should reuse `DevtoolsRuntimeService.emit` and EventBus retention instead of keeping a separate HMR history.

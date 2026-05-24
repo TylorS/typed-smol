@@ -600,6 +600,32 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for Fx identity stability, value/cause serialization, bounded-history behavior, lifecycle phase mapping, and runtime/protocol boundary compliance before commit.
 
+### T16 - Runtime HMR Capture
+
+- requirement_links: FR-17, FR-25, FR-26, FR-41, FR-42, NFR-6, NFR-8, NFR-15, NFR-17, AC-6, AC-13.
+- write_set:
+  - `packages/devtools-runtime/src/HmrCapture.ts`
+  - `packages/devtools-runtime/src/HmrCapture.test.ts`
+  - `packages/devtools-runtime/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused runtime HMR capture tests before `HmrCapture.ts` exists.
+  - Run `pnpm --filter @typed/devtools-runtime exec vitest run src/HmrCapture.test.ts` and capture the missing-module failure.
+- green_step:
+  - Consume protocol `HmrStatusFact` values produced by compiler fact emitters without importing compiler packages.
+  - Emit HMR status facts through `DevtoolsRuntimeService.emit` so EventBus retention and bridge capability filtering are reused.
+  - Preserve template optimization status, stateful eligibility, unknown state, and structured rejection reasons exactly.
+- verification:
+  - `pnpm --filter @typed/devtools-runtime exec vitest run src/HmrCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `pnpm exec oxlint packages/devtools-runtime/src/HmrCapture.ts packages/devtools-runtime/src/HmrCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/HmrCapture.ts packages/devtools-runtime/src/HmrCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc|@typed/compiler" packages/devtools-runtime/src/HmrCapture.ts packages/devtools-runtime/src/HmrCapture.test.ts packages/devtools-runtime/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for optimized-vs-stateful preservation, runtime/compiler dependency boundaries, EventBus reuse, and staged-index hygiene before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

@@ -111,3 +111,8 @@
 - Runtime Fx capture should serialize emitted values and failure/interruption causes before calling `DevtoolsRuntimeService.emit`.
 - Fx node ids should prefer owner-qualified ids, then RefSubject-qualified ids, then explicit unowned ids; missing identity should be skipped.
 - Type helpers for protocol runtime events should narrow to the `FxNodeEvent` union member before reading phase/value fields.
+
+### T16
+
+- Runtime HMR capture should consume protocol `HmrStatusFact` values directly and avoid importing compiler packages.
+- Runtime HMR capture should reuse `DevtoolsRuntimeService.emit` and EventBus retention instead of keeping a separate HMR history.
