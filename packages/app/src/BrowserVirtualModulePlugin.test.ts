@@ -60,7 +60,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./pages";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -92,7 +92,8 @@ describe("BrowserVirtualModulePlugin", () => {
         companionLayers,
       };
       function makeRenderLayer(win: Window, root: HTMLElement) {
-        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+        const domRuntime = createAppDomTemplateRuntime();
+        return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
       }
@@ -138,7 +139,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=*";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -169,7 +170,8 @@ describe("BrowserVirtualModulePlugin", () => {
         companionLayers,
       };
       function makeRenderLayer(win: Window, root: HTMLElement) {
-        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+        const domRuntime = createAppDomTemplateRuntime();
+        return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
       }
@@ -219,7 +221,8 @@ describe("BrowserVirtualModulePlugin", () => {
         "  export type LayerOrGroup = LayerAny;",
         "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
-        "  export function mount(input: any, options: { readonly root: HTMLElement }): Effect.Effect<unknown, never, never>;",
+        "  export function createAppDomTemplateRuntime(): unknown;",
+        "  export function mount(input: any, options: { readonly root: HTMLElement; readonly runtime?: unknown }): Effect.Effect<unknown, never, never>;",
         "}",
       ].join("\n"),
     });
@@ -252,7 +255,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./main";
       import Routes1 from "typed:router?dir=./admin";
@@ -284,7 +287,8 @@ describe("BrowserVirtualModulePlugin", () => {
         companionLayers,
       };
       function makeRenderLayer(win: Window, root: HTMLElement) {
-        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+        const domRuntime = createAppDomTemplateRuntime();
+        return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
       }
@@ -332,7 +336,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./routes";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -364,7 +368,8 @@ describe("BrowserVirtualModulePlugin", () => {
         companionLayers,
       };
       function makeRenderLayer(win: Window, root: HTMLElement) {
-        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+        const domRuntime = createAppDomTemplateRuntime();
+        return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
       }
@@ -415,7 +420,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./routes";
       import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";
@@ -449,7 +454,8 @@ describe("BrowserVirtualModulePlugin", () => {
         companionLayers,
       };
       function makeRenderLayer(win: Window, root: HTMLElement) {
-        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+        const domRuntime = createAppDomTemplateRuntime();
+        return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
       }

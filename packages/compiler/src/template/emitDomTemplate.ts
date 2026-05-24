@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect";
 import { EventHandler } from "@typed/template";
+import type { DomTemplateRuntime } from "@typed/template/compiler-runtime/renderable";
 import type {
   TemplatePlan,
   TemplatePlanAttribute,
@@ -10,7 +11,11 @@ import type {
 
 export interface CompiledDomTemplate {
   readonly plan: TemplatePlan;
-  readonly renderInto: (root: HTMLElement, values?: ArrayLike<unknown>) => Promise<readonly Node[]>;
+  readonly renderInto: (
+    root: HTMLElement,
+    values?: ArrayLike<unknown>,
+    runtime?: Omit<DomTemplateRuntime, "scope">,
+  ) => Promise<readonly Node[]>;
 }
 
 export function emitDomTemplate(plan: TemplatePlan): CompiledDomTemplate {
