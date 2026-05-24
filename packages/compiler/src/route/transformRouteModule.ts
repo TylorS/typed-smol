@@ -518,7 +518,9 @@ function generatedServiceId(
 }
 
 function serviceShape(capture: RouteCaptureFact): string {
-  return "typeText" in capture && capture.typeText ? capture.typeText : "unknown";
+  if (!("typeText" in capture) || !capture.typeText || capture.typeText === "unknown")
+    return "never";
+  return capture.typeText;
 }
 
 function containsNode(parent: ts.Node, child: ts.Node): boolean {

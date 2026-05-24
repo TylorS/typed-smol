@@ -76,10 +76,9 @@ export async function viteFinal(
       },
     },
   };
-  const httpServerPlugin =
-    isHttpServerOptions(serverOptions)
-      ? maybeCreateHttpServerPlugin(config.plugins, serverOptions)
-      : [];
+  const httpServerPlugin = isHttpServerOptions(serverOptions)
+    ? maybeCreateHttpServerPlugin(config.plugins, serverOptions)
+    : [];
   config.build = withStorybookBuildDefaults(config.build);
   config.plugins = [
     ...(config.plugins ?? []),
@@ -92,8 +91,7 @@ export async function viteFinal(
 function withStorybookBuildDefaults(build: InlineConfig["build"]): InlineConfig["build"] {
   return {
     ...build,
-    chunkSizeWarningLimit:
-      build?.chunkSizeWarningLimit ?? DEFAULT_STORYBOOK_CHUNK_WARNING_LIMIT_KB,
+    chunkSizeWarningLimit: build?.chunkSizeWarningLimit ?? DEFAULT_STORYBOOK_CHUNK_WARNING_LIMIT_KB,
     rolldownOptions: {
       ...build?.rolldownOptions,
       checks: {
@@ -108,9 +106,7 @@ function maybeCreateTypedVitePlugins(
   plugins: InlineConfig["plugins"],
   options: Parameters<typeof typedVitePlugin>[0],
 ): PluginOption[] {
-  return hasPluginNamed(plugins, TYPED_VITE_PATHS_PLUGIN)
-    ? []
-    : typedVitePlugin(options);
+  return hasPluginNamed(plugins, TYPED_VITE_PATHS_PLUGIN) ? [] : typedVitePlugin(options);
 }
 
 function maybeCreateHttpServerPlugin(
@@ -182,9 +178,11 @@ export function createTypedStorybookHttpServerPlugin(
       let startPromise: Promise<void> | undefined;
       const start = async () => {
         if (startPromise) return startPromise;
-        startPromise = startTypedHttpServer(server, typedServerId, host, port).then((startedFiber) => {
-          fiber = startedFiber;
-        });
+        startPromise = startTypedHttpServer(server, typedServerId, host, port).then(
+          (startedFiber) => {
+            fiber = startedFiber;
+          },
+        );
         return startPromise;
       };
       server.middlewares.use((request, response, next) => {
@@ -228,7 +226,7 @@ async function startTypedHttpServer(
     readonly run?: (options: {
       readonly host: string;
       readonly port: number;
-    }) => Effect.Effect<never, unknown, never>;
+    }) => Effect.Effect<never, Error, never>;
   };
   if (typeof mod.run !== "function") {
     throw new TypeError(`Expected ${typedServerId} to export run()`);

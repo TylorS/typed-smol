@@ -17,8 +17,9 @@ import * as Matcher from "./Matcher.js";
 import * as Route from "./Route.js";
 import { ServerRouter } from "./Router.js";
 
-/** Runs a fully-scoped Effect in tests; `as any` avoids R-channel mismatch with `Effect.runPromise`. */
-const runEff = (eff: Effect.Effect<unknown, unknown, unknown>) => Effect.runPromise(eff as any);
+/** Runs a fully-scoped Effect in tests; the caller provides services before execution. */
+const runEff = <A, E, R>(eff: Effect.Effect<A, E, R>) =>
+  Effect.runPromise(eff as Effect.Effect<A, E, never>);
 
 class TestError extends Data.TaggedError("TestError")<{ readonly message: string }> {}
 

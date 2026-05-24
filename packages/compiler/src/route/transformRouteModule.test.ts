@@ -538,6 +538,7 @@ describe("transformRouteModule", () => {
     });
 
     expect(result.transformed).toBe(true);
+    expect(result.sourceText).not.toContain("Service<__typed_route_context_0_0, unknown>");
     expect(result.sourceText).toMatchInlineSnapshot(`
       "import * as __typedRouteContext from "effect/Context";
       import * as __typedRouteEffect from "effect/Effect";
@@ -550,7 +551,7 @@ describe("transformRouteModule", () => {
         readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
         readonly invalidate: (message?: string) => void;
       };
-      export const __typedRouteCompatibilityFingerprint = "{\\"continuations\\":[\\"{\\\\\\"captureFingerprint\\\\\\":\\\\\\"captures:inline-refsubject-migration:count:/src/routes/counter.ts#count\\\\\\",\\\\\\"contextFingerprint\\\\\\":\\\\\\"context:inline-refsubject-migration:count:unknown\\\\\\",\\\\\\"dependencyFingerprints\\\\\\":[],\\\\\\"symbolId\\\\\\":\\\\\\"/src/routes/counter.ts#closure:render\\\\\\",\\\\\\"templateHashes\\\\\\":[],\\\\\\"version\\\\\\":\\\\\\"1\\\\\\"}\\"],\\"version\\":\\"1\\"}";
+      export const __typedRouteCompatibilityFingerprint = "{\\"continuations\\":[\\"{\\\\\\"captureFingerprint\\\\\\":\\\\\\"captures:inline-refsubject-migration:count:/src/routes/counter.ts#count\\\\\\",\\\\\\"contextFingerprint\\\\\\":\\\\\\"context:inline-refsubject-migration:count:never\\\\\\",\\\\\\"dependencyFingerprints\\\\\\":[],\\\\\\"symbolId\\\\\\":\\\\\\"/src/routes/counter.ts#closure:render\\\\\\",\\\\\\"templateHashes\\\\\\":[],\\\\\\"version\\\\\\":\\\\\\"1\\\\\\"}\\"],\\"version\\":\\"1\\"}";
       const __typedRouteHmrKey = "__typed_route_hmr:/src/routes/counter.ts";
       const __typedRouteHot = (import.meta as ImportMeta & { readonly hot?: __TypedRouteHot }).hot;
       const __typedPreviousFingerprint = __typedRouteHot?.data[__typedRouteHmrKey];
@@ -568,26 +569,26 @@ describe("transformRouteModule", () => {
           __typedRouteHot.invalidate("Typed route HMR compatibility changed for /src/routes/counter.ts");
         }
       }
-      class __typed_route_context_0_0 extends __typedRouteContext.Service<__typed_route_context_0_0, unknown>()("/src/routes/counter.ts#render:inline-refsubject-migration:count") {}
+      class __typed_route_context_0_0 extends __typedRouteContext.Service<__typed_route_context_0_0, never>()("/src/routes/counter.ts#render:inline-refsubject-migration:count") {}
       const __typed_route_context_0 = {
         "captures": [
           {
             "name": "count",
             "serviceId": "/src/routes/counter.ts#render:inline-refsubject-migration:count",
-            "type": "unknown"
+            "type": "never"
           }
         ],
-        "fingerprint": "context:inline-refsubject-migration:count:unknown"
+        "fingerprint": "context:inline-refsubject-migration:count:never"
       };
       const __typed_route_descriptor_0 = {
         "_tag": "Continuation",
         "captures": [],
         "captureFingerprint": "captures:inline-refsubject-migration:count:/src/routes/counter.ts#count",
         "closureName": "render",
-        "compatibilityFingerprint": "{\\"captureFingerprint\\":\\"captures:inline-refsubject-migration:count:/src/routes/counter.ts#count\\",\\"contextFingerprint\\":\\"context:inline-refsubject-migration:count:unknown\\",\\"dependencyFingerprints\\":[],\\"symbolId\\":\\"/src/routes/counter.ts#closure:render\\",\\"templateHashes\\":[],\\"version\\":\\"1\\"}",
-        "contextFingerprint": "context:inline-refsubject-migration:count:unknown",
+        "compatibilityFingerprint": "{\\"captureFingerprint\\":\\"captures:inline-refsubject-migration:count:/src/routes/counter.ts#count\\",\\"contextFingerprint\\":\\"context:inline-refsubject-migration:count:never\\",\\"dependencyFingerprints\\":[],\\"symbolId\\":\\"/src/routes/counter.ts#closure:render\\",\\"templateHashes\\":[],\\"version\\":\\"1\\"}",
+        "contextFingerprint": "context:inline-refsubject-migration:count:never",
         "dependencyFingerprints": [],
-        "fingerprint": "{\\"captureFingerprint\\":\\"captures:inline-refsubject-migration:count:/src/routes/counter.ts#count\\",\\"contextFingerprint\\":\\"context:inline-refsubject-migration:count:unknown\\",\\"dependencyFingerprints\\":[],\\"symbolId\\":\\"/src/routes/counter.ts#closure:render\\",\\"templateHashes\\":[],\\"version\\":\\"1\\"}",
+        "fingerprint": "{\\"captureFingerprint\\":\\"captures:inline-refsubject-migration:count:/src/routes/counter.ts#count\\",\\"contextFingerprint\\":\\"context:inline-refsubject-migration:count:never\\",\\"dependencyFingerprints\\":[],\\"symbolId\\":\\"/src/routes/counter.ts#closure:render\\",\\"templateHashes\\":[],\\"version\\":\\"1\\"}",
         "id": "/src/routes/counter.ts#closure:render",
         "moduleId": "/src/routes/counter.ts",
         "serviceKeys": {
@@ -602,7 +603,7 @@ describe("transformRouteModule", () => {
             "id": "/src/routes/counter.ts#render:inline-refsubject-migration:count",
             "kind": "inline-refsubject-service",
             "name": "count",
-            "typeText": "unknown"
+            "typeText": "never"
           }
         ],
         "symbolId": "/src/routes/counter.ts#closure:render",

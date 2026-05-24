@@ -385,14 +385,14 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/_dependencies.ts":
         'import * as Layer from "effect/Layer"; export default Layer.empty;',
       "src/routes/api/_layout.ts":
-        'import * as Fx from "@typed/fx/Fx"; export const layout = ({ content }: { content: Fx.Fx<unknown, unknown, unknown> }) => content;',
+        'import * as Fx from "@typed/fx/Fx"; export const layout = ({ content }: { content: Fx.Fx<unknown, never, never> }) => content;',
       "src/routes/api/item.ts": route("/api/item", "export const handler = 1;"),
       "src/routes/api/item.catch.ts": "export const catchFn = (_error: unknown) => null;",
       "src/routes/api/item.dependencies.ts":
         'import * as Layer from "effect/Layer"; export const dependencies = Layer.empty;',
       "src/routes/api/item.guard.ts": validGuardExport,
       "src/routes/api/item.layout.ts":
-        'import * as Fx from "@typed/fx/Fx"; export const layout = ({ content }: { content: Fx.Fx<unknown, unknown, unknown> }) => content;',
+        'import * as Fx from "@typed/fx/Fx"; export const layout = ({ content }: { content: Fx.Fx<unknown, never, never> }) => content;',
     });
 
     expectRouterGeneratedSourceToTypeCheck(fixture, "src/router-concerns.generated.ts");

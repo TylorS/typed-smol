@@ -2,10 +2,17 @@ import { assert, describe, expectTypeOf, it } from "vitest";
 import * as Context from "effect/Context";
 import type { Effect } from "effect";
 import * as EffectRuntime from "effect/Effect";
+import type * as Scope from "effect/Scope";
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { EventHandler, HtmlRenderEvent, HtmlRenderTemplate, type Renderable } from "@typed/template";
+import {
+  EventHandler,
+  HtmlRenderEvent,
+  HtmlRenderTemplate,
+  type Renderable,
+  type RenderTemplate,
+} from "@typed/template";
 import { Fx } from "@typed/fx";
 import type * as Dom from "./Dom.js";
 import * as DomRuntime from "./Dom.js";
@@ -127,13 +134,17 @@ describe("typed/ui/Dom", () => {
 
   it("preserves host renderer service types at the option boundary", () => {
     const host = () => EffectRuntime.flatMap(HostService, () => EffectRuntime.succeed("hosted"));
-    const button = Button.Button({
+    const options = {
       content: "Save",
       host,
-    });
+    };
+    const button = Button.Button(options);
 
     expectTypeOf<EffectRuntime.Services<ReturnType<typeof host>>>().toExtend<HostService>();
-    expectTypeOf(button).toExtend<Fx.Fx<unknown, unknown, unknown>>();
+    expectTypeOf<Fx.Error<typeof button>>().toEqualTypeOf<never>();
+    expectTypeOf<Fx.Services<typeof button>>().toExtend<
+      HostService | RenderTemplate | Scope.Scope
+    >();
   });
 
   it("centralizes host rendering with merged props", () =>
@@ -179,7 +190,8 @@ describe("typed/ui/Dom", () => {
       "content",
     );
 
-    expectTypeOf(rendered).toExtend<Fx.Fx<unknown, unknown, unknown>>();
+    expectTypeOf<Fx.Error<typeof rendered>>().toEqualTypeOf<never>();
+    expectTypeOf<Fx.Services<typeof rendered>>().toExtend<RenderTemplate | Scope.Scope>();
     assert.deepStrictEqual(calls, []);
   });
 
@@ -220,16 +232,25 @@ describe("typed/ui/Dom", () => {
 
   it("keeps host helper casts isolated from the public Dom rendering boundary", () => {
     const sourceDir = dirname(fileURLToPath(import.meta.url));
-    const source = readFileSync(join(sourceDir, "Dom.ts"), "utf8");
-    let inComponentBoundary = false;
-    const renderingBoundaryCasts = source.split("\n").flatMap((line, index) => {
-      if (line.startsWith("function componentBoundary")) inComponentBoundary = true;
-      if (line.startsWith("function toEventHandler")) inComponentBoundary = false;
-      return line.includes("as HostProps") ||
-        (line.includes("as Component") && !inComponentBoundary)
-        ? [`Dom.ts:${index + 1}:${line.trim()}`]
-        : [];
-    });
+    const renderingBoundaryCasts = readdirSync(sourceDir)
+      .filter((fileName) => fileName.endsWith(".ts") && !fileName.endsWith(".test.ts"))
+      .flatMap((fileName) => {
+        let inComponentBoundary = false;
+        return readFileSync(join(sourceDir, fileName), "utf8")
+          .split("\n")
+          .flatMap((line, index) => {
+            if (fileName === "Dom.ts" && line.startsWith("function componentBoundary")) {
+              inComponentBoundary = true;
+            }
+            if (fileName === "Dom.ts" && line.startsWith("function toEventHandler")) {
+              inComponentBoundary = false;
+            }
+            return line.includes("as HostProps") ||
+              (line.includes("as Component") && !inComponentBoundary)
+              ? [`${basename(fileName)}:${index + 1}:${line.trim()}`]
+              : [];
+          });
+      });
 
     assert.deepStrictEqual(renderingBoundaryCasts, []);
   });

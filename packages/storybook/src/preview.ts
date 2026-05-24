@@ -1,10 +1,7 @@
 import { Fx as FxRuntime } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
 import * as Effect from "effect/Effect";
-import {
-  runWithTypedStoryRuntime,
-  typedStoryRuntimeFromParameters,
-} from "./runtime.js";
+import { runWithTypedStoryRuntime, typedStoryRuntimeFromParameters } from "./runtime.js";
 import type { Preview } from "./types.js";
 import type { RenderContext, TypedRenderer, TypedStoryResult } from "./types.js";
 
@@ -47,18 +44,21 @@ function mountStory(
 function mountStoryResult(
   storyResult: TypedStoryResult,
   root: HTMLElement,
-): Effect.Effect<MountedStory, unknown, unknown> {
+): Effect.Effect<MountedStory, Error, never> {
   if (isCompiledDomTemplate(storyResult)) {
     return Effect.map(
-      Effect.promise(() => storyResult.renderInto(root, [])),
+      Effect.tryPromise({
+        try: () => storyResult.renderInto(root, []),
+        catch: toError,
+      }),
       () => mountedStory(root),
     );
   }
   if (isTemplateFallback(storyResult)) {
-    return mountFx(storyResult.render(), root);
+    return storyRuntimeEffect(mountFx(storyResult.render(), root).pipe(Effect.mapError(toError)));
   }
   if (FxRuntime.isFx(storyResult)) {
-    return mountFx(storyResult, root);
+    return storyRuntimeEffect(mountFx(storyResult, root).pipe(Effect.mapError(toError)));
   }
   return Effect.die(new TypeError("Expected a Typed DOM template or Fx story result"));
 }
@@ -97,4 +97,12 @@ function mountedStory(root: HTMLElement): MountedStory {
   return {
     dispose: Effect.sync(() => root.replaceChildren()),
   };
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function storyRuntimeEffect<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, never> {
+  return effect as Effect.Effect<A, E, never>;
 }

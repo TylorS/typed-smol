@@ -5,7 +5,7 @@ import { Fx } from "@typed/fx";
 import { HtmlRenderEvent } from "../RenderEvent.js";
 import { runServerSlot } from "./renderable.js";
 
-const collectHtml = (fx: Fx.Fx<HtmlRenderEvent, unknown, never>) =>
+const collectHtml = (fx: Fx.Fx<HtmlRenderEvent, Error, never>) =>
   Effect.runPromise(Effect.map(Fx.collectAll(fx), (events) => events.map((event) => event.html)));
 
 describe("compiler-runtime renderable helpers", () => {

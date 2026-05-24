@@ -87,6 +87,7 @@ export type RouteCaptureFact =
       readonly name: string;
       readonly serviceId: string;
       readonly initializerSource: string;
+      readonly typeText: string;
     }
   | {
       readonly kind: "unsupported";

@@ -405,6 +405,7 @@ function inlineRefSubjectMigration(
     kind: "inline-refsubject-migration",
     name: declaration.name,
     serviceId: `${context.moduleId}#${declaration.name}`,
+    typeText: typeText(context, declaration.node),
   };
 }
 

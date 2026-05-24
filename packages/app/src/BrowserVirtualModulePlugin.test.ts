@@ -55,7 +55,8 @@ describe("BrowserVirtualModulePlugin", () => {
     });
 
     expect(plugin.shouldResolve("typed:browser", "/project/src/entry.ts")).toBe(true);
-    expect(plugin.build("typed:browser", "/project/src/entry.ts", {} as never)).toMatchInlineSnapshot(`
+    expect(plugin.build("typed:browser", "/project/src/entry.ts", {} as never))
+      .toMatchInlineSnapshot(`
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
@@ -214,7 +215,7 @@ describe("BrowserVirtualModulePlugin", () => {
         'declare module "@typed/app/runtime" {',
         '  import type * as Effect from "effect/Effect";',
         '  import type * as Layer from "effect/Layer";',
-        "  export type LayerAny = Layer.Layer<never, unknown, unknown>;",
+        "  export type LayerAny = Layer.Any;",
         "  export type LayerOrGroup = LayerAny;",
         "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",

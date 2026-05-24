@@ -36,8 +36,8 @@ export function typedStoryRuntimeFromParameters(
   return isTypedStoryRuntimeOptions(runtime) ? runtime : {};
 }
 
-export function runWithTypedStoryRuntime<A, E>(
-  effect: Effect.Effect<A, E, unknown>,
+export function runWithTypedStoryRuntime<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
   runtime: TypedStoryRuntimeOptions,
 ): Promise<A> {
   const layers = runtimeLayers(runtime);
@@ -46,9 +46,9 @@ export function runWithTypedStoryRuntime<A, E>(
   }
 
   const layer = composeStorybookLayers(layers);
-  const provided = Effect.provide(effect, layer as StorybookLayer);
+  const provided = Effect.provide(effect, layer as Layer.Layer<R, never, never>);
 
-  return Effect.runPromise(provided as Effect.Effect<A, E | unknown, never>);
+  return Effect.runPromise(provided as Effect.Effect<A, E, never>);
 }
 
 function isTypedStoryRuntimeOptions(value: unknown): value is TypedStoryRuntimeOptions {

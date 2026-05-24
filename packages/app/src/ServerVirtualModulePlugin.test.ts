@@ -836,7 +836,7 @@ describe("ServerVirtualModulePlugin", () => {
       "src/typed-app.d.ts": [
         'declare module "@typed/app/runtime" {',
         '  import type * as Layer from "effect/Layer";',
-        "  export type LayerAny = Layer.Layer<never, unknown, unknown>;",
+        "  export type LayerAny = Layer.Any;",
         "  export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];",
         "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
@@ -846,7 +846,7 @@ describe("ServerVirtualModulePlugin", () => {
         'declare module "@typed/app/TypedHttpServer" {',
         '  import type * as HttpServer from "effect/unstable/http/HttpServer";',
         '  import type * as Layer from "effect/Layer";',
-        "  export type LayerAny = Layer.Layer<never, unknown, unknown>;",
+        "  export type LayerAny = Layer.Any;",
         "  export const TypedHttpServer: {",
         "    readonly staticAssets: (options: { readonly projectRoot: string; readonly clientOutDir?: string; readonly dev: boolean }) => Layer.Layer<never, never, never>;",
         "    readonly layer: (options: { readonly projectRoot: string; readonly dev: boolean; readonly host?: string; readonly port?: number }) => Layer.Layer<HttpServer.HttpServer, never, never>;",

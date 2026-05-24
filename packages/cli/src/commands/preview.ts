@@ -15,7 +15,7 @@ interface BuiltServerRunOptions {
 }
 
 interface BuiltServerModule {
-  readonly run?: (options?: BuiltServerRunOptions) => Effect.Effect<never, unknown, never>;
+  readonly run?: (options?: BuiltServerRunOptions) => Effect.Effect<never, Error, never>;
 }
 
 export const preview = Command.make("preview", {
