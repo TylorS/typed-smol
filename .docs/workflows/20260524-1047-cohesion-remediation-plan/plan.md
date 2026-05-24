@@ -91,7 +91,7 @@ Create `developer-tooling-handoff.md`:
 - required_before_tooling_edits: explicit handoff from the developer-tooling agent or human approval
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Commit message:
 
@@ -104,7 +104,7 @@ docs: record cohesion remediation coordination
 **Files:**
 - Modify: `packages/ui/AGENTS.md`
 
-- [ ] **Step 1: Update instructions**
+- [x] **Step 1: Update instructions**
 
 Replace the Link/SSR-only intent with this package-local contract:
 
@@ -112,7 +112,7 @@ Replace the Link/SSR-only intent with this package-local contract:
 `@typed/ui` is the web integration and headless component layer for `@typed/router` and `@typed/template`. It owns Link, SSR wiring, RefSubject-backed state primitives, Schema-backed `data-*` state, StartupRef hydration, Collection/Composite substrate, and native Dialog/Popover-first layered widgets.
 ```
 
-- [ ] **Step 2: Verify no stale wording remains**
+- [x] **Step 2: Verify no stale wording remains**
 
 Run:
 
@@ -122,7 +122,7 @@ rg -n "web integration layer|Link components that avoid full page reloads|SSR wi
 
 Expected: no Link/SSR-only framing remains; Link and SSR can still appear as capabilities.
 
-- [ ] **Step 3: Run package docs-adjacent gate**
+- [x] **Step 3: Run package docs-adjacent gate**
 
 Run:
 
