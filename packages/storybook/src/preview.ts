@@ -1,7 +1,11 @@
 import { Fx as FxRuntime } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
 import * as Effect from "effect/Effect";
-import { runWithTypedStoryRuntime, typedStoryRuntimeFromParameters } from "./runtime.js";
+import {
+  provideTypedStoryRuntime,
+  runWithTypedStoryRuntime,
+  typedStoryRuntimeFromParameters,
+} from "./runtime.js";
 import type { Preview } from "./types.js";
 import type { RenderContext, TypedRenderer, TypedStoryResult } from "./types.js";
 
@@ -36,7 +40,7 @@ function mountStory(
   root: HTMLElement,
   runtime: ReturnType<typeof typedStoryRuntimeFromParameters>,
 ) {
-  const effect = mountStoryResult(storyResult, root);
+  const effect = mountStoryResult(storyResult, root, runtime);
 
   return runWithTypedStoryRuntime(effect, runtime);
 }
@@ -44,6 +48,7 @@ function mountStory(
 function mountStoryResult(
   storyResult: TypedStoryResult,
   root: HTMLElement,
+  runtime: ReturnType<typeof typedStoryRuntimeFromParameters>,
 ): Effect.Effect<MountedStory, Error, never> {
   if (isCompiledDomTemplate(storyResult)) {
     return Effect.map(
@@ -55,21 +60,27 @@ function mountStoryResult(
     );
   }
   if (isTemplateFallback(storyResult)) {
-    return storyRuntimeEffect(mountFx(storyResult.render(), root).pipe(Effect.mapError(toError)));
+    return mountFx(storyResult.render(), root, runtime);
   }
   if (FxRuntime.isFx(storyResult)) {
-    return storyRuntimeEffect(mountFx(storyResult, root).pipe(Effect.mapError(toError)));
+    return mountFx(storyResult, root, runtime);
   }
   return Effect.die(new TypeError("Expected a Typed DOM template or Fx story result"));
 }
 
-function mountFx(fx: Parameters<typeof render>[0], root: HTMLElement) {
+function mountFx(
+  fx: Parameters<typeof render>[0],
+  root: HTMLElement,
+  runtime: ReturnType<typeof typedStoryRuntimeFromParameters>,
+) {
   return Effect.map(
     render(fx, root).pipe(
       FxRuntime.provide(DomRenderTemplate.using(root.ownerDocument)),
+      (fx) => provideTypedStoryRuntime(fx, runtime),
       FxRuntime.take(1),
       FxRuntime.collectAll,
       Effect.scoped,
+      Effect.mapError(toError),
     ),
     () => mountedStory(root),
   );
@@ -101,8 +112,4 @@ function mountedStory(root: HTMLElement): MountedStory {
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
-}
-
-function storyRuntimeEffect<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, never> {
-  return effect as Effect.Effect<A, E, never>;
 }

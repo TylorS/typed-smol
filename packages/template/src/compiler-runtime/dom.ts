@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Scope from "effect/Scope";
+import type * as Context from "effect/Context";
 import * as EventHandler from "../EventHandler.js";
 import { renderEventToArray } from "../internal/dom.js";
 import { renderToString } from "../internal/encoding.js";
@@ -46,8 +47,8 @@ export type DomSparsePart = string | { readonly valueIndex: number };
 
 export type RouteResumePayload = Readonly<Record<string, string>>;
 
-export interface RouteResumeServiceProvider {
-  readonly tag: unknown;
+export interface RouteResumeServiceProvider<R = never> {
+  readonly tag: Context.Key<R, unknown>;
   readonly valueIndex: number;
 }
 
@@ -335,16 +336,32 @@ export function bootActionResume(
   });
 }
 
+export function provideRouteResumeServices<A, E>(
+  effect: Effect.Effect<A, E, never>,
+  values: readonly unknown[],
+  providers: readonly [],
+): Effect.Effect<A, E, never>;
 export function provideRouteResumeServices<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   values: readonly unknown[],
-  providers: readonly RouteResumeServiceProvider[],
-): Effect.Effect<A, E, never> {
-  return providers.reduce(
-    (current, provider) =>
-      current.pipe(Effect.provideService(provider.tag as never, values[provider.valueIndex] as never)),
-    effect as Effect.Effect<A, E, never>,
-  );
+  providers: readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
+): Effect.Effect<A, E, never>;
+export function provideRouteResumeServices<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  values: readonly unknown[],
+  providers:
+    | readonly []
+    | readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
+) {
+  if (providers.length === 0) return effect;
+  const [first, ...rest] = providers;
+  let current = effect.pipe(Effect.provideService(first.tag, values[first.valueIndex]));
+
+  for (const provider of rest) {
+    current = current.pipe(Effect.provideService(provider.tag, values[provider.valueIndex]));
+  }
+
+  return current;
 }
 
 function routeResumeAttributeKey(attributeName: string): string | undefined {
@@ -492,7 +509,9 @@ export function bindRef(element: Element, value: unknown): Effect.Effect<void, E
   return Effect.gen(function* () {
     if (typeof value !== "function") return;
     const result = value(element);
-    if (Effect.isEffect(result)) yield* result as Effect.Effect<void, Error, never>;
+    if (Effect.isEffect(result)) {
+      return yield* Effect.fail(new Error("Effect refs require a typed compiled binding"));
+    }
   });
 }
 

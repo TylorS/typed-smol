@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect";
+import type * as Context from "effect/Context";
 import { pipe } from "effect/Function";
 import * as Schema from "effect/Schema";
 import type * as EventHandler from "@typed/template/EventHandler";
@@ -40,8 +41,8 @@ export interface RouteResumeDataAttrKeys {
   readonly values: readonly string[];
 }
 
-export interface RouteResumeServiceProvider {
-  readonly tag: unknown;
+export interface RouteResumeServiceProvider<R = never> {
+  readonly tag: Context.Key<R, unknown>;
   readonly valueIndex: number;
 }
 
@@ -175,18 +176,32 @@ export function resumeRouteFromPayload(
   });
 }
 
+export function provideRouteResumeServices<A, E>(
+  effect: Effect.Effect<A, E, never>,
+  values: readonly unknown[],
+  providers: readonly [],
+): Effect.Effect<A, E, never>;
 export function provideRouteResumeServices<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   values: readonly unknown[],
-  providers: readonly RouteResumeServiceProvider[],
-): Effect.Effect<A, E, never> {
-  return providers.reduce(
-    (current, provider) =>
-      current.pipe(
-        Effect.provideService(provider.tag as never, values[provider.valueIndex] as never),
-      ),
-    effect as Effect.Effect<A, E, never>,
-  );
+  providers: readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
+): Effect.Effect<A, E, never>;
+export function provideRouteResumeServices<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  values: readonly unknown[],
+  providers:
+    | readonly []
+    | readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
+) {
+  if (providers.length === 0) return effect;
+  const [first, ...rest] = providers;
+  let current = effect.pipe(Effect.provideService(first.tag, values[first.valueIndex]));
+
+  for (const provider of rest) {
+    current = current.pipe(Effect.provideService(provider.tag, values[provider.valueIndex]));
+  }
+
+  return current;
 }
 
 export function encodeRouteResumePayload(
@@ -319,7 +334,7 @@ function decodeSchemaServiceValue(
   return pipe(
     Schema.decodeUnknownEffect(schema)(value),
     Effect.mapError(() => routeResumeError(`service-value-schema-decode-failed:${service.name}`)),
-  ) as Effect.Effect<unknown, Error, never>;
+  );
 }
 
 function decodeGeneratedServiceValue(

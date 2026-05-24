@@ -1,4 +1,5 @@
 import { type LayerOrGroup } from "@typed/app/runtime";
+import { Fx } from "@typed/fx";
 import * as TypedRouter from "@typed/router";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -36,19 +37,20 @@ export function typedStoryRuntimeFromParameters(
   return isTypedStoryRuntimeOptions(runtime) ? runtime : {};
 }
 
-export function runWithTypedStoryRuntime<A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-  runtime: TypedStoryRuntimeOptions,
+export function runWithTypedStoryRuntime<A, E>(
+  effect: Effect.Effect<A, E, never>,
+  _runtime: TypedStoryRuntimeOptions,
 ): Promise<A> {
+  return Effect.runPromise(effect);
+}
+
+export function provideTypedStoryRuntime<A, E, R>(
+  fx: Fx.Fx<A, E, R>,
+  runtime: TypedStoryRuntimeOptions,
+): Fx.Fx<A, E | Error, never> {
   const layers = runtimeLayers(runtime);
-  if (layers.length === 0) {
-    return Effect.runPromise(effect as Effect.Effect<A, E, never>);
-  }
-
   const layer = composeStorybookLayers(layers);
-  const provided = Effect.provide(effect, layer as Layer.Layer<R, never, never>);
-
-  return Effect.runPromise(provided as Effect.Effect<A, E, never>);
+  return Fx.provide(fx, layer as Layer.Layer<R, Error, never>);
 }
 
 function isTypedStoryRuntimeOptions(value: unknown): value is TypedStoryRuntimeOptions {

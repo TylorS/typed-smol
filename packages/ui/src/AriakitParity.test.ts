@@ -1,5 +1,6 @@
 import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
+import type * as Scope from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { Window } from "happy-dom";
@@ -167,6 +168,6 @@ function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {
   return [window, layer] as const;
 }
 
-function runScoped<E, R>(effect: Effect.Effect<void, E, R>) {
-  return Effect.runPromise(Effect.scoped(effect as Effect.Effect<void, E, never>));
+function runScoped<E>(effect: Effect.Effect<void, E, Scope.Scope>) {
+  return Effect.runPromise(Effect.scoped(effect));
 }
