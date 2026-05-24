@@ -60,8 +60,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { makeDomRegistry } from "@typed/devtools-runtime";
-      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, makeDomRegistry, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./pages";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -93,7 +92,7 @@ describe("BrowserVirtualModulePlugin", () => {
         name: "web",
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
         installTypedDevtoolsBridge({
           enabled: options.devtools === true,
@@ -151,8 +150,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { makeDomRegistry } from "@typed/devtools-runtime";
-      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, makeDomRegistry, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=*";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -183,7 +181,7 @@ describe("BrowserVirtualModulePlugin", () => {
         name: undefined,
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
         installTypedDevtoolsBridge({
           enabled: options.devtools === true,
@@ -247,12 +245,8 @@ describe("BrowserVirtualModulePlugin", () => {
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
         "  export function createAppDomTemplateRuntime(options?: unknown): unknown;",
         "  export function installTypedDevtoolsBridge(options: unknown): void;",
-        "  export function mount(input: any, options: { readonly root: HTMLElement; readonly runtime?: unknown }): Effect.Effect<unknown, never, never>;",
-        "}",
-      ].join("\n"),
-      "src/typed-devtools-runtime.d.ts": [
-        'declare module "@typed/devtools-runtime" {',
         "  export function makeDomRegistry(): unknown;",
+        "  export function mount(input: any, options: { readonly root: HTMLElement; readonly runtime?: unknown }): Effect.Effect<unknown, never, never>;",
         "}",
       ].join("\n"),
     });
@@ -265,12 +259,10 @@ describe("BrowserVirtualModulePlugin", () => {
         fixture.importer,
         join(fixture.root, "src/routes.ts"),
         join(fixture.root, "src/typed-app.d.ts"),
-        join(fixture.root, "src/typed-devtools-runtime.d.ts"),
       ],
       moduleFallbacks: {
         "typed:router?dir=./routes": join(fixture.root, "src/routes.ts"),
         "@typed/app/runtime": join(fixture.root, "src/typed-app.d.ts"),
-        "@typed/devtools-runtime": join(fixture.root, "src/typed-devtools-runtime.d.ts"),
       },
     });
 
@@ -287,8 +279,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { makeDomRegistry } from "@typed/devtools-runtime";
-      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, makeDomRegistry, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./main";
       import Routes1 from "typed:router?dir=./admin";
@@ -320,7 +311,7 @@ describe("BrowserVirtualModulePlugin", () => {
         name: undefined,
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
         installTypedDevtoolsBridge({
           enabled: options.devtools === true,
@@ -380,8 +371,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { makeDomRegistry } from "@typed/devtools-runtime";
-      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, makeDomRegistry, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./routes";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -413,7 +403,7 @@ describe("BrowserVirtualModulePlugin", () => {
         name: "admin",
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
         installTypedDevtoolsBridge({
           enabled: options.devtools === true,
@@ -476,8 +466,7 @@ describe("BrowserVirtualModulePlugin", () => {
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { makeDomRegistry } from "@typed/devtools-runtime";
-      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, makeDomRegistry, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./routes";
       import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";
@@ -511,7 +500,7 @@ describe("BrowserVirtualModulePlugin", () => {
         name: undefined,
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<BrowserLayerInputs>) {
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;
         installTypedDevtoolsBridge({
           enabled: options.devtools === true,

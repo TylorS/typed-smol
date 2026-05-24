@@ -1,5 +1,9 @@
 export * from "./RuntimeTemplate.js";
 export {
+  makeDomRegistry,
+  type DomRegistry,
+} from "@typed/devtools-runtime";
+export {
   createActionResumeRegistry,
   createRouteResumeRegistry,
   getDefaultActionResumeRegistry,
