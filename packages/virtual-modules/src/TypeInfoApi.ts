@@ -247,9 +247,7 @@ const schemaOriginFromDeclaration = (
   const typeNode = declarationTypeNode(declaration, tsMod);
   if (!typeNode || !tsMod.isTypeReferenceNode(typeNode)) return undefined;
   const symbol = checker.getSymbolAtLocation(typeNode.typeName);
-  const symbolOrigin = symbol
-    ? schemaOriginFromTypeAliasSymbol(symbol, checker, tsMod)
-    : undefined;
+  const symbolOrigin = symbol ? schemaOriginFromTypeAliasSymbol(symbol, checker, tsMod) : undefined;
   if (symbolOrigin) return symbolOrigin;
   return (
     schemaOriginFromTypeNodeReference(typeNode, checker, tsMod) ??
@@ -296,11 +294,12 @@ const propertyDeclarationFromContainer = (
   propertyName: string,
   tsMod: typeof import("typescript"),
 ): ts.PropertySignature | ts.PropertyDeclaration | undefined => {
-  const members = tsMod.isTypeAliasDeclaration(declaration) && tsMod.isTypeLiteralNode(declaration.type)
-    ? declaration.type.members
-    : tsMod.isInterfaceDeclaration(declaration)
-      ? declaration.members
-      : undefined;
+  const members =
+    tsMod.isTypeAliasDeclaration(declaration) && tsMod.isTypeLiteralNode(declaration.type)
+      ? declaration.type.members
+      : tsMod.isInterfaceDeclaration(declaration)
+        ? declaration.members
+        : undefined;
   if (!members) return undefined;
 
   for (const member of members) {
@@ -343,9 +342,11 @@ const schemaOriginFromTypeNodeReference = (
   checker: ts.TypeChecker,
   tsMod: typeof import("typescript"),
 ): SchemaOriginInfo | undefined => {
-  const getTypeFromTypeNode = (checker as ts.TypeChecker & {
-    getTypeFromTypeNode?: (node: ts.TypeNode) => ts.Type;
-  }).getTypeFromTypeNode;
+  const getTypeFromTypeNode = (
+    checker as ts.TypeChecker & {
+      getTypeFromTypeNode?: (node: ts.TypeNode) => ts.Type;
+    }
+  ).getTypeFromTypeNode;
   const type = getTypeFromTypeNode?.call(checker, node);
   const symbols = [type?.aliasSymbol, type?.getSymbol()].filter(
     (symbol): symbol is ts.Symbol => symbol !== undefined,
@@ -1363,7 +1364,15 @@ const createFileSnapshot = (
     ? checker
         .getExportsOfModule(moduleSymbol)
         .map((value) =>
-          serializeExport(value, checker, tsMod, maxDepth, onInternalError, registry, schemaOrigins),
+          serializeExport(
+            value,
+            checker,
+            tsMod,
+            maxDepth,
+            onInternalError,
+            registry,
+            schemaOrigins,
+          ),
         )
         .sort(compareByName)
     : [];
@@ -1750,9 +1759,7 @@ export const createTypeInfoApiSession = (
     return name ? checker.getSymbolAtLocation(name) : undefined;
   };
 
-  const schemaValueNameFromTypeQuery = (
-    name: ts.EntityName,
-  ): ts.Identifier | undefined => {
+  const schemaValueNameFromTypeQuery = (name: ts.EntityName): ts.Identifier | undefined => {
     if (options.ts.isIdentifier(name)) return name;
     if (name.right.text !== "Type") return undefined;
     return options.ts.isIdentifier(name.left) ? name.left : undefined;
@@ -1775,7 +1782,10 @@ export const createTypeInfoApiSession = (
     if (!moduleSymbol) return undefined;
     for (const exported of checker.getExportsOfModule(moduleSymbol)) {
       const resolvedExport = resolveAliasedSymbol(exported, checker, options.ts);
-      if (resolvedExport === symbol || resolvedExport.valueDeclaration === symbol.valueDeclaration) {
+      if (
+        resolvedExport === symbol ||
+        resolvedExport.valueDeclaration === symbol.valueDeclaration
+      ) {
         return exported.getName();
       }
     }

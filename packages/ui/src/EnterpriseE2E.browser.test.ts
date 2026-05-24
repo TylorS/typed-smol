@@ -159,6 +159,111 @@ describe("typed/ui enterprise browser e2e", () => {
       root.remove();
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("runs a dialog form with Form wrappers, Select state, Checkbox state, and Popover help", () =>
+    Effect.gen(function* () {
+      type Preferences = {
+        readonly marketing: boolean;
+        readonly role: "viewer" | "admin";
+      };
+      const root = appendRoot();
+      const submitted: Preferences[] = [];
+      const dialog = yield* Dialog.makeState({ open: false });
+      const popover = yield* Popover.makeState({ id: "preferences-help", open: false, mode: "auto" });
+      const role = yield* Select.makeState<"viewer" | "admin">({
+        id: "preferences-role",
+        value: "viewer",
+      });
+      const form = yield* Form.makeState<Preferences>({
+        values: { marketing: false, role: "viewer" },
+        schema: Schema.Struct({
+          marketing: Schema.Boolean,
+          role: Schema.Literals(["viewer", "admin"]),
+        }),
+      });
+      const trigger = yield* renderOne<HTMLButtonElement>(
+        Dialog.Trigger({ state: dialog, controls: "preferences-dialog", content: "Preferences" }),
+        appendMount(root),
+      );
+      const dialogElement = yield* renderOne<HTMLDialogElement>(
+        Dialog.Content({
+          state: dialog,
+          id: "preferences-dialog",
+          label: "Preferences",
+          finalFocus: trigger,
+          content: html`
+            ${Form.Form({
+              state: form,
+              onValidSubmit: (values) =>
+                Effect.sync(() => {
+                  submitted.push(values);
+                }),
+              content: html`
+                ${Form.Checkbox(form, "marketing", {
+                  id: "marketing",
+                  value: "yes",
+                })}
+                ${Form.Select(form, "role", { state: role })}
+                ${Popover.Trigger({ state: popover, content: "Why role matters" })}
+                ${Form.Submit({ content: "Save preferences" })}
+              `,
+            })}
+            ${Popover.Content({
+              state: popover,
+              positionAnchor: "--preferences-help",
+              positionArea: "bottom",
+              content: html`
+                Role controls access.
+                ${Popover.Dismiss({ state: popover, content: "Close help" })}
+              `,
+            })}
+          `,
+        }),
+        appendMount(root),
+      );
+      const adminOption = yield* renderOne<HTMLElement>(
+        Select.Option({ state: role, id: "admin", value: "admin", content: "Admin" }),
+        appendMount(root),
+      );
+      yield* Effect.sleep(30);
+
+      trigger.focus();
+      trigger.click();
+      yield* Effect.sleep(50);
+      assert.strictEqual(dialogElement.open, true);
+
+      const formElement = dialogElement.querySelector("form");
+      const marketing = dialogElement.querySelector<HTMLInputElement>("#marketing");
+      const hiddenRole = dialogElement.querySelector<HTMLInputElement>("input[name=role]");
+      const helpContent = dialogElement.querySelector<HTMLElement>("#preferences-help");
+      assert(formElement instanceof HTMLFormElement);
+      assert(marketing instanceof HTMLInputElement);
+      assert(hiddenRole instanceof HTMLInputElement);
+      assert(helpContent instanceof HTMLElement);
+
+      buttonNamed(dialogElement, "Why role matters").click();
+      yield* Effect.sleep(50);
+      assert.strictEqual((yield* popover).open, true);
+      assert.strictEqual(helpContent.dataset.open, "true");
+
+      buttonNamed(helpContent, "Close help").click();
+      marketing.click();
+      adminOption.click();
+      yield* Effect.sleep(50);
+
+      assert.deepStrictEqual((yield* form).values, { marketing: true, role: "admin" });
+      assert.strictEqual(hiddenRole.value, "admin");
+      assert.strictEqual(new FormData(formElement).get("role"), "admin");
+
+      buttonNamed(formElement, "Save preferences").click();
+      yield* Effect.sleep(50);
+      assert.deepStrictEqual(submitted, [{ marketing: true, role: "admin" }]);
+
+      yield* Dialog.close(dialog);
+      yield* Effect.sleep(150);
+      assert.strictEqual(document.activeElement, trigger);
+      root.remove();
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("runs a command surface with native menu trigger, disabled-item navigation, and Fx combobox items", () =>
     Effect.gen(function* () {
       const root = appendRoot();

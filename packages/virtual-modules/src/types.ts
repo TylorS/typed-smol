@@ -344,11 +344,6 @@ export interface TypeInfoApi {
     projection?: readonly TypeProjectionStep[],
   ): boolean;
   /**
-   * Project a serialized type node through TypeScript-backed projection steps and
-   * return the projected serialized type when every step resolves.
-   */
-  project(node: TypeNode, projection: readonly TypeProjectionStep[]): TypeNode | undefined;
-  /**
    * Return a user-authored schema export that originated this type when known.
    * Undefined means callers should use generated schemas or diagnostics.
    */
@@ -466,15 +461,6 @@ export interface VirtualModulePlugin {
    */
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
-
-export interface VirtualModuleBuildContext {
-  readonly rootImporter?: string;
-  readonly requestedExports: RequestedVirtualModuleExports;
-}
-
-export type RequestedVirtualModuleExports =
-  | { readonly kind: "all" }
-  | { readonly kind: "named"; readonly names: readonly string[] };
 
 export interface VirtualModuleDiagnostic {
   readonly code:
