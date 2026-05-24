@@ -239,7 +239,7 @@ function setupEvent(element: HTMLElement, name: string, value: unknown): void {
   element.addEventListener(
     name,
     (event) => {
-      void Effect.runPromise(handler.handler(event) as Effect.Effect<unknown, never, never>);
+      void Effect.runPromise(handler.handler(event));
     },
     handler.options,
   );
@@ -249,8 +249,7 @@ async function setupRef(element: HTMLElement, value: unknown): Promise<void> {
   if (value === null || value === undefined) return;
   if (typeof value !== "function") throw new Error("Invalid value provided to ref part");
   const result = value(element);
-  if (Effect.isEffect(result))
-    await Effect.runPromise(result as Effect.Effect<unknown, never, never>);
+  if (Effect.isEffect(result)) throw new Error("Effect refs require a typed compiled binding");
 }
 
 async function renderSparse(
@@ -281,8 +280,7 @@ async function renderValue(value: unknown): Promise<string> {
 }
 
 async function resolveValue(value: unknown): Promise<unknown> {
-  if (Effect.isEffect(value))
-    return Effect.runPromise(value as Effect.Effect<unknown, never, never>);
+  if (Effect.isEffect(value)) throw new Error("Effect values require a typed compiled binding");
   return value;
 }
 

@@ -344,7 +344,10 @@ export function provideRouteResumeServices<A, E>(
 export function provideRouteResumeServices<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   values: readonly unknown[],
-  providers: readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
+  providers: readonly [
+    RouteResumeServiceProvider<R>,
+    ...ReadonlyArray<RouteResumeServiceProvider<never>>,
+  ],
 ): Effect.Effect<A, E, never>;
 export function provideRouteResumeServices<A, E, R>(
   effect: Effect.Effect<A, E, R>,
@@ -353,11 +356,11 @@ export function provideRouteResumeServices<A, E, R>(
     | readonly []
     | readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
 ) {
-  if (providers.length === 0) return effect;
-  const [first, ...rest] = providers;
+  const first = providers[0];
+  if (!first) return effect;
   let current = effect.pipe(Effect.provideService(first.tag, values[first.valueIndex]));
 
-  for (const provider of rest) {
+  for (const provider of providers.slice(1)) {
     current = current.pipe(Effect.provideService(provider.tag, values[provider.valueIndex]));
   }
 
@@ -379,13 +382,14 @@ function isElementNode(value: ParentNode): value is Element {
 }
 
 function attachRouteResumeTriggers(element: Element, runtime: DomTemplateRuntime): void {
-  for (const trigger of routeResumeTriggers(element)) attachRouteResumeTrigger(element, runtime, trigger);
+  for (const trigger of routeResumeTriggers(element))
+    attachRouteResumeTrigger(element, runtime, trigger);
 }
 
 function routeResumeTriggers(element: Element): readonly RouteResumeTrigger[] {
   return (element.getAttribute("data-typed-resume") ?? "")
     .split(/[\s,]+/u)
-    .flatMap((value) => isRouteResumeTrigger(value) ? [value] : []);
+    .flatMap((value) => (isRouteResumeTrigger(value) ? [value] : []));
 }
 
 function isRouteResumeTrigger(value: string): value is RouteResumeTrigger {
@@ -407,8 +411,11 @@ function attachRouteResumeTrigger(
   if (trigger === "load") return scheduleTask(() => runRouteResume(element, runtime, trigger));
   if (trigger === "idle") return scheduleIdle(() => runRouteResume(element, runtime, trigger));
   if (trigger === "visible") return attachVisibleResume(element, runtime);
-  const eventName = trigger === "hover" ? "pointerenter" : trigger === "focus" ? "focusin" : "pointerdown";
-  element.addEventListener(eventName, () => runRouteResume(element, runtime, trigger), { once: true });
+  const eventName =
+    trigger === "hover" ? "pointerenter" : trigger === "focus" ? "focusin" : "pointerdown";
+  element.addEventListener(eventName, () => runRouteResume(element, runtime, trigger), {
+    once: true,
+  });
 }
 
 function attachVisibleResume(element: Element, runtime: DomTemplateRuntime): void {
@@ -457,7 +464,9 @@ function actionResumeSelector(): string {
 
 function attachActionResumeListeners(element: Element, runtime: DomTemplateRuntime): void {
   for (const descriptor of elementActionDescriptors(element)) {
-    element.addEventListener(descriptor.event, (event) => runActionResume(element, runtime, descriptor, event));
+    element.addEventListener(descriptor.event, (event) =>
+      runActionResume(element, runtime, descriptor, event),
+    );
   }
 }
 
@@ -571,7 +580,9 @@ function writeEventActionDataAttributes(
   value: unknown,
   action?: EventHandler.EventActionDescriptor,
 ): void {
-  for (const [key, child] of Object.entries(EventHandler.actionDataAttributes(name, value, action))) {
+  for (const [key, child] of Object.entries(
+    EventHandler.actionDataAttributes(name, value, action),
+  )) {
     element.setAttribute(`data-${key}`, child);
   }
 }

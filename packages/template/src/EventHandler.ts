@@ -47,8 +47,11 @@ export interface EventHandler<Ev extends Event = Event, E = never, R = never> ex
   readonly options: (AddEventListenerOptions & EventOptions) | undefined;
 }
 
-export interface ActionEventHandler<Ev extends Event = Event, E = never, R = never>
-  extends EventHandler<Ev, E, R> {
+export interface ActionEventHandler<
+  Ev extends Event = Event,
+  E = never,
+  R = never,
+> extends EventHandler<Ev, E, R> {
   readonly action: EventActionDescriptor;
 }
 
@@ -73,9 +76,10 @@ export type EventOptions = {
   readonly stopImmediatePropagation?: boolean;
 };
 
-export type EventActionOptions = AddEventListenerOptions & EventOptions & {
-  readonly component?: string;
-};
+export type EventActionOptions = AddEventListenerOptions &
+  EventOptions & {
+    readonly component?: string;
+  };
 
 /**
  * Creates a new `EventHandler`.
@@ -129,11 +133,7 @@ export function action<Ev extends Event, E = never, R = never>(
 ): ActionEventHandler<Ev, E, R> {
   const { component, eventOptions } = splitActionOptions(options);
   const descriptor = actionDescriptor(id, event, component);
-  return makeEventHandler(handler, eventOptions, descriptor) as ActionEventHandler<
-    Ev,
-    E,
-    R
-  >;
+  return makeEventHandler(handler, eventOptions, descriptor) as ActionEventHandler<Ev, E, R>;
 }
 
 function makeEventHandler<Ev extends Event, E = never, R = never>(
@@ -283,8 +283,9 @@ export const catchCause: {
 export function fromEffectOrEventHandler<Ev extends Event, E = never, R = never>(
   handler: Effect.Effect<unknown, E, R> | EventHandler<Ev, E, R>,
 ): EventHandler<Ev, E, R> {
+  if (Effect.isEffect(handler)) return make(() => handler as Effect.Effect<unknown, E, R>);
   if (isEventHandler(handler)) return handler;
-  return make(() => handler as Effect.Effect<unknown, E, R>);
+  return make(() => Effect.void);
 }
 
 /**

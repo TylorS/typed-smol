@@ -1,7 +1,7 @@
 import type * as Schema from "effect/Schema";
 
 export namespace Serializable {
-  export type AnySchema = Schema.Top;
+  export type AnySchema = Schema.Codec<unknown, unknown, never, never>;
 
   export type Descriptor<S extends AnySchema = AnySchema> =
     | SchemaDescriptor<S>

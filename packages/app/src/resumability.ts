@@ -1,6 +1,5 @@
 import * as Effect from "effect/Effect";
 import type * as Context from "effect/Context";
-import { pipe } from "effect/Function";
 import * as Schema from "effect/Schema";
 import type * as EventHandler from "@typed/template/EventHandler";
 import { Serializable } from "./serialization/Serializable.js";
@@ -46,11 +45,20 @@ export interface RouteResumeServiceProvider<R = never> {
   readonly valueIndex: number;
 }
 
-export interface RouteContinuationRegistration<A = unknown, E extends Error = Error, R = never> {
-  readonly descriptor: RouteContinuationDescriptor;
-  readonly continuation: Effect.Effect<A, E, R>;
-  readonly providers: readonly RouteResumeServiceProvider[];
-}
+export type RouteContinuationRegistration<A = unknown, E extends Error = Error, R = never> =
+  | {
+      readonly descriptor: RouteContinuationDescriptor;
+      readonly continuation: Effect.Effect<A, E, never>;
+      readonly providers: readonly [];
+    }
+  | {
+      readonly descriptor: RouteContinuationDescriptor;
+      readonly continuation: Effect.Effect<A, E, R>;
+      readonly providers: readonly [
+        RouteResumeServiceProvider<R>,
+        ...ReadonlyArray<RouteResumeServiceProvider<never>>,
+      ];
+    };
 
 export interface RouteResumeRegistry {
   readonly continuations: Map<string, RouteContinuationRegistration<unknown, Error, unknown>>;
@@ -168,12 +176,28 @@ export function resumeRouteFromPayload(
     }
 
     const values = yield* decodeRouteResumePayload(registration.descriptor, object);
+    if (!hasRouteResumeProviders(registration)) return yield* registration.continuation;
+
     return yield* provideRouteResumeServices(
       registration.continuation,
       values,
       registration.providers,
     );
   });
+}
+
+function hasRouteResumeProviders<A, E extends Error, R>(
+  registration: RouteContinuationRegistration<A, E, R>,
+): registration is Extract<
+  RouteContinuationRegistration<A, E, R>,
+  {
+    readonly providers: readonly [
+      RouteResumeServiceProvider<R>,
+      ...ReadonlyArray<RouteResumeServiceProvider<never>>,
+    ];
+  }
+> {
+  return registration.providers.length > 0;
 }
 
 export function provideRouteResumeServices<A, E>(
@@ -184,7 +208,10 @@ export function provideRouteResumeServices<A, E>(
 export function provideRouteResumeServices<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   values: readonly unknown[],
-  providers: readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
+  providers: readonly [
+    RouteResumeServiceProvider<R>,
+    ...ReadonlyArray<RouteResumeServiceProvider<never>>,
+  ],
 ): Effect.Effect<A, E, never>;
 export function provideRouteResumeServices<A, E, R>(
   effect: Effect.Effect<A, E, R>,
@@ -193,11 +220,11 @@ export function provideRouteResumeServices<A, E, R>(
     | readonly []
     | readonly [RouteResumeServiceProvider<R>, ...ReadonlyArray<RouteResumeServiceProvider<never>>],
 ) {
-  if (providers.length === 0) return effect;
-  const [first, ...rest] = providers;
+  const first = providers[0];
+  if (!first) return effect;
   let current = effect.pipe(Effect.provideService(first.tag, values[first.valueIndex]));
 
-  for (const provider of rest) {
+  for (const provider of providers.slice(1)) {
     current = current.pipe(Effect.provideService(provider.tag, values[provider.valueIndex]));
   }
 
@@ -331,10 +358,10 @@ function decodeSchemaServiceValue(
   schema: Serializable.AnySchema,
   value: unknown,
 ): Effect.Effect<unknown, Error, never> {
-  return pipe(
-    Schema.decodeUnknownEffect(schema)(value),
-    Effect.mapError(() => routeResumeError(`service-value-schema-decode-failed:${service.name}`)),
-  );
+  return Effect.try({
+    try: () => Schema.decodeUnknownSync(schema)(value),
+    catch: () => routeResumeError(`service-value-schema-decode-failed:${service.name}`),
+  });
 }
 
 function decodeGeneratedServiceValue(
