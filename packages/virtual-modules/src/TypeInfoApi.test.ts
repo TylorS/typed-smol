@@ -37,10 +37,20 @@ describe("createTypeTargetBootstrapContent", () => {
       { id: "Schema", module: "effect/Schema", exportName: "Schema" },
     ];
     const content = createTypeTargetBootstrapContent(specs);
-    expect(content).toContain('import * as _effect_Effect from "effect/Effect";');
-    expect(content).toContain('import * as __typed_router from "@typed/router";');
-    expect(content).toContain('import * as _effect_Schema from "effect/Schema";');
-    expect(content).toContain("export {};");
+    expect(content).toMatchInlineSnapshot(`
+      "/**
+       * Auto-generated bootstrap for type target resolution.
+       * Imports canonical modules so resolveTypeTargetsFromSpecs can find types.
+       * Include in program rootNames when using typeTargetSpecs without user imports.
+       */
+      import * as _effect_Effect from "effect/Effect";
+      void _effect_Effect;
+      import * as __typed_router from "@typed/router";
+      void __typed_router;
+      import * as _effect_Schema from "effect/Schema";
+      void _effect_Schema;
+      export {};"
+    `);
   });
 
   it("dedupes modules when multiple specs share the same module", () => {
@@ -113,6 +123,107 @@ const makeProgram = (rootFiles: readonly string[]): ts.Program =>
   });
 
 describe("createTypeInfoApiSession", () => {
+  it("traces Schema.Type aliases back to their schema value export", () => {
+    const dir = createTempDir();
+    symlinkSync(join(process.cwd(), "packages", "app", "node_modules"), join(dir, "node_modules"), "dir");
+    const domain = join(dir, "domain.ts");
+    const component = join(dir, "component.ts");
+    writeFileSync(
+      domain,
+      `
+import * as Schema from "effect/Schema";
+
+export const MyType = Schema.Struct({ name: Schema.String });
+export type MyType = typeof MyType.Type;
+`,
+      "utf8",
+    );
+    writeFileSync(
+      component,
+      `
+import type { MyType } from "./domain.js";
+
+export type MyInput = {
+  readonly my: MyType;
+  readonly other: number;
+};
+
+export const input = (value: MyInput) => value;
+`,
+      "utf8",
+    );
+
+    const program = makeProgram([domain, component]);
+    const session = createTypeInfoApiSession({ ts, program });
+    const result = session.api.file("./component.ts", { baseDir: dir });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const input = result.snapshot.exports.find((entry) => entry.name === "input");
+    expect(input).toBeDefined();
+    const inputParam = session.api.project(input!.type, [{ kind: "param", index: 0 }]);
+    expect(inputParam?.kind).toBe("object");
+    if (inputParam?.kind !== "object") return;
+    const my = inputParam.properties.find((property) => property.name === "my")?.type;
+    expect(my).toBeDefined();
+    expect(session.api.schemaOrigin(my!)).toEqual({
+      kind: "schema-value",
+      filePath: domain,
+      exportName: "MyType",
+    });
+  });
+
+  it("preserves Schema.Type origins through rest-tuple callable parameters", () => {
+    const dir = createTempDir();
+    symlinkSync(join(process.cwd(), "packages", "app", "node_modules"), join(dir, "node_modules"), "dir");
+    const domain = join(dir, "domain.ts");
+    const component = join(dir, "component.ts");
+    writeFileSync(
+      domain,
+      `
+import * as Schema from "effect/Schema";
+
+export const MyType = Schema.Struct({ name: Schema.String });
+export type MyType = typeof MyType.Type;
+`,
+      "utf8",
+    );
+    writeFileSync(
+      component,
+      `
+import type { MyType } from "./domain.js";
+
+export type MyInput = {
+  readonly my: MyType;
+};
+
+export const input = (...args: [input: MyInput]) => args[0];
+`,
+      "utf8",
+    );
+
+    const program = makeProgram([domain, component]);
+    const session = createTypeInfoApiSession({ ts, program });
+    const result = session.api.file("./component.ts", { baseDir: dir });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const input = result.snapshot.exports.find((entry) => entry.name === "input");
+    expect(input?.type.kind).toBe("function");
+    if (input?.type.kind !== "function") return;
+    const rest = input.type.parameters[0]?.type;
+    expect(rest?.kind).toBe("tuple");
+    if (rest?.kind !== "tuple") return;
+    const inputObject = rest.elements[0];
+    expect(inputObject?.kind).toBe("object");
+    if (inputObject?.kind !== "object") return;
+    const my = inputObject.properties.find((property) => property.name === "my")?.type;
+    expect(my).toBeDefined();
+    expect(session.api.schemaOrigin(my!)).toEqual({
+      kind: "schema-value",
+      filePath: domain,
+      exportName: "MyType",
+    });
+  });
+
   it("serializes rich structural type information", () => {
     const dir = createTempDir();
     const filePath = join(dir, "types.ts");
@@ -960,6 +1071,101 @@ export function fn(): Effect.Effect<string, never, never> {
           },
         ]),
       ).toBe(true);
+    });
+
+    it("projects callable parameter properties without serialized text matching", () => {
+      const dir = createTempDir();
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        main,
+        `
+export const withBody = (request: { readonly body: { readonly name: string } }) => request.body.name;
+export const withoutBody = (request: { readonly params: { readonly id: string } }) => request.params.id;
+`,
+        "utf8",
+      );
+      const program = makeProgram([main]);
+      const session = createTypeInfoApiSession({ ts, program });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const withBody = result.snapshot.exports.find((e) => e.name === "withBody");
+      const withoutBody = result.snapshot.exports.find((e) => e.name === "withoutBody");
+      expect(withBody).toBeDefined();
+      expect(withoutBody).toBeDefined();
+
+      expect(
+        session.api.project(withBody!.type, [
+          { kind: "param", index: 0 },
+          { kind: "property", name: "body" },
+        ]),
+      ).toMatchObject({ kind: "object" });
+      expect(
+        session.api.project(withoutBody!.type, [
+          { kind: "param", index: 0 },
+          { kind: "property", name: "body" },
+        ]),
+      ).toBeUndefined();
+    });
+
+    it("projects alias type arguments through the checker", () => {
+      const dir = createTempDir();
+      const effectMod = join(dir, "effect.ts");
+      const optionMod = join(dir, "option.ts");
+      const bootstrap = join(dir, "bootstrap.ts");
+      const main = join(dir, "main.ts");
+      writeFileSync(
+        effectMod,
+        `
+export interface Effect<A, E, R> { readonly _tag: "Effect"; readonly _A: A; readonly _E: E; readonly _R: R }
+export namespace Effect { export type Any = Effect<any, any, any>; }
+`,
+        "utf8",
+      );
+      writeFileSync(
+        optionMod,
+        `
+export interface Option<A> { readonly _tag: "Option"; readonly _A: A }
+export namespace Option { export type Any = Option<any>; }
+`,
+        "utf8",
+      );
+      writeFileSync(
+        bootstrap,
+        `import * as Effect from "./effect.js"; import * as Option from "./option.js"; void Effect; void Option; export {};`,
+        "utf8",
+      );
+      writeFileSync(
+        main,
+        `import * as Effect from "./effect.js"; import * as Option from "./option.js";
+export function fn(): Effect.Effect<Option.Option<string>, never, never> {
+  return {} as Effect.Effect<Option.Option<string>, never, never>;
+}`,
+        "utf8",
+      );
+      const program = makeProgram([bootstrap, main]);
+      const session = createTypeInfoApiSession({
+        ts,
+        program,
+        typeTargetSpecs: [
+          { id: "Effect", module: "./effect.js", exportName: "Effect", typeMember: "Any" },
+          { id: "Option", module: "./option.js", exportName: "Option", typeMember: "Any" },
+        ],
+        failWhenNoTargetsResolved: false,
+      });
+      const result = session.api.file("./main.ts", { baseDir: dir });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const fnExport = result.snapshot.exports.find((e) => e.name === "fn");
+      expect(fnExport).toBeDefined();
+
+      expect(
+        session.api.project(fnExport!.type, [
+          { kind: "returnType" },
+          { kind: "ensure", targetId: "Effect" },
+          { kind: "typeArg", index: 0 },
+        ]),
+      ).toMatchObject({ kind: "reference" });
     });
   });
 

@@ -15,14 +15,20 @@ export default defineTypedStorybookConfig({
   framework: {
     name: TYPED_STORYBOOK_FRAMEWORK,
     options: {
-      server: { mode: "runtime-harness" },
+      server: {
+        mode: "http-server",
+        routes: ["./src/routes"],
+        api: ["./src/api"],
+      },
     },
   },
 });
 ```
 
 The preset selects Storybook's Vite builder and appends `typedVitePlugin()` so
-stories use Typed's normal virtual-module path.
+stories use Typed's normal virtual-module path. In HTTP-server mode, these
+framework options also become the defaults for Storybook runtime virtual modules,
+so stories can use short imports instead of repeating route/API/proxy metadata.
 
 ## Path-Based Runtime
 
@@ -30,7 +36,7 @@ Stories can import generated route/API metadata from `@typed/app` Storybook
 virtual modules:
 
 ```ts
-import { parameters, Routes } from "typed:storybook/runtime?routes=./routes&api=./api&path=/dashboard";
+import { parameters, Routes } from "typed:storybook/runtime?path=/dashboard";
 import type { Meta, StoryObj } from "@typed/storybook";
 
 const meta = {
@@ -45,16 +51,51 @@ export const Dashboard = {
 } satisfies StoryObj;
 ```
 
-Supported runtime options are `routes`, `api`, `path`, `layers`, `testLayers`,
-`serverOrigin`, and `proxyPath`. There is no `url` option. `path` is only the
-initial in-memory route path for `TypedRouter.TestRouter`.
+Supported runtime query options are `routes`, `api`, `path`, `serverOrigin`,
+and `proxyPath`. There is no `url` option. `path` is only the initial
+in-memory route path for `TypedRouter.TestRouter`.
+
+Prefer `typed:storybook/runtime?path=/...` in stories. Use explicit
+`routes=./routes&api=./api` only when a story intentionally targets a different
+route/API tree than the framework defaults.
+
+## Component Stories
+
+Component-level stories can import generated input/schema helpers from
+`typed:component`. The default export is used unless an `export=` query option
+is provided:
+
+```ts
+import {
+  InputArbitrary,
+  InputSchema,
+  makeComponentStory,
+  type Input,
+} from "typed:component?path=./components/UserCard.ts";
+
+const input: Input = {
+  user: { name: "Ada Lovelace", role: "admin" },
+  visits: 42,
+};
+
+export const UserCard = makeComponentStory({ input });
+
+void InputSchema;
+void InputArbitrary;
+```
+
+When input properties are derived from local `effect/Schema` values, the
+component VM reuses those schema exports. Missing primitive/object fields are
+generated from TypeInfo, and the VM also exports arbitrary, lazy arbitrary,
+equivalence, formatter, representation, JSON Schema, and Standard Schema
+conveniences for component testing.
 
 `testLayers` are applied with override precedence in portable/executable
 stories:
 
 ```ts
 import * as Layer from "effect/Layer";
-import { makeStoryRuntime } from "typed:storybook/runtime?routes=./routes";
+import { makeStoryRuntime } from "typed:storybook/runtime?path=/dashboard";
 
 export const WithFakeRepo = {
   parameters: {
@@ -94,7 +135,7 @@ Stories should call APIs through generated `typed:api` clients:
 ```ts
 import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
-import { apiBaseUrl } from "typed:storybook/runtime?routes=./routes&api=./api";
+import { apiBaseUrl } from "typed:storybook/runtime?path=/dashboard";
 import { makeTypedClient } from "typed:api?dir=./api&mode=client";
 
 const message = Effect.gen(function* () {

@@ -4,6 +4,7 @@ import {
   type CreateTypeInfoApiSession,
   type ExportedTypeInfo,
   type FileSnapshotResult,
+  type SchemaOriginInfo,
   type TypeInfoApi,
   type TypeInfoApiSession,
   type TypeInfoFileQueryOptions,
@@ -45,6 +46,7 @@ import {
   getBaseTypes as getBaseTypesInternal,
   getIndexInfosOfType,
   getSymbolExports,
+  getTypeArguments,
   getTypeReferenceTarget,
   getTypeSymbol,
   FALLBACK_OBJECT_FLAGS_MAPPED,
@@ -146,26 +148,31 @@ const serializeFunctionSignature = (
   visited: Set<string>,
   onInternalError?: (err: unknown, context: string) => void,
   registry?: WeakMap<TypeNode, ts.Type>,
+  schemaOrigins?: WeakMap<TypeNode, SchemaOriginInfo>,
 ): { parameters: readonly TypeParameter[]; returnType: TypeNode } => {
   const parameters: TypeParameter[] = signature.getParameters().map((parameter) => {
     const declaration = parameter.valueDeclaration ?? parameter.declarations?.[0];
     const parameterType = declaration
       ? checker.getTypeOfSymbolAtLocation(parameter, declaration)
       : checker.getDeclaredTypeOfSymbol(parameter);
+    const parameterNode = serializeTypeNode(
+      parameterType,
+      checker,
+      tsMod,
+      depth + 1,
+      maxDepth,
+      visited,
+      onInternalError,
+      registry,
+      schemaOrigins,
+    );
+    const origin = schemaOriginFromDeclaration(declaration, checker, tsMod);
+    if (origin) schemaOrigins?.set(parameterNode, origin);
 
     return {
       name: parameter.getName(),
       optional: toOptionalFlag(parameter, tsMod),
-      type: serializeTypeNode(
-        parameterType,
-        checker,
-        tsMod,
-        depth + 1,
-        maxDepth,
-        visited,
-        onInternalError,
-        registry,
-      ),
+      type: parameterNode,
     };
   });
 
@@ -178,6 +185,7 @@ const serializeFunctionSignature = (
     visited,
     onInternalError,
     registry,
+    schemaOrigins,
   );
 
   return {
@@ -195,6 +203,7 @@ const serializeObjectProperties = (
   visited: Set<string>,
   onInternalError?: (err: unknown, context: string) => void,
   registry?: WeakMap<TypeNode, ts.Type>,
+  schemaOrigins?: WeakMap<TypeNode, SchemaOriginInfo>,
 ): readonly ObjectProperty[] => {
   const properties = checker.getPropertiesOfType(type);
   const snapshots = properties.map((property): ObjectProperty => {
@@ -202,25 +211,250 @@ const serializeObjectProperties = (
     const propertyType = declaration
       ? checker.getTypeOfSymbolAtLocation(property, declaration)
       : checker.getDeclaredTypeOfSymbol(property);
+    const propertyNode = serializeTypeNode(
+      propertyType,
+      checker,
+      tsMod,
+      depth + 1,
+      maxDepth,
+      visited,
+      onInternalError,
+      registry,
+      schemaOrigins,
+    );
+    const origin =
+      schemaOriginFromDeclaration(declaration, checker, tsMod) ??
+      schemaOriginFromParentProperty(type, property.getName(), checker, tsMod);
+    if (origin) schemaOrigins?.set(propertyNode, origin);
 
     return {
       name: property.getName(),
       optional: toOptionalFlag(property, tsMod),
       readonly: hasReadonlyModifier(declaration, tsMod),
-      type: serializeTypeNode(
-        propertyType,
-        checker,
-        tsMod,
-        depth + 1,
-        maxDepth,
-        visited,
-        onInternalError,
-        registry,
-      ),
+      type: propertyNode,
     };
   });
 
   return snapshots.sort(compareByName);
+};
+
+const schemaOriginFromDeclaration = (
+  declaration: ts.Declaration | undefined,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): SchemaOriginInfo | undefined => {
+  if (!declaration) return undefined;
+  const typeNode = declarationTypeNode(declaration, tsMod);
+  if (!typeNode || !tsMod.isTypeReferenceNode(typeNode)) return undefined;
+  const symbol = checker.getSymbolAtLocation(typeNode.typeName);
+  const symbolOrigin = symbol
+    ? schemaOriginFromTypeAliasSymbol(symbol, checker, tsMod)
+    : undefined;
+  if (symbolOrigin) return symbolOrigin;
+  return (
+    schemaOriginFromTypeNodeReference(typeNode, checker, tsMod) ??
+    schemaOriginFromImportedTypeReference(typeNode, checker, tsMod)
+  );
+};
+
+const declarationTypeNode = (
+  declaration: ts.Declaration,
+  tsMod: typeof import("typescript"),
+): ts.TypeNode | undefined => {
+  if (tsMod.isPropertySignature(declaration) || tsMod.isPropertyDeclaration(declaration)) {
+    return declaration.type;
+  }
+  if (tsMod.isParameter(declaration)) return declaration.type;
+  return undefined;
+};
+
+const schemaOriginFromParentProperty = (
+  type: ts.Type,
+  propertyName: string,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): SchemaOriginInfo | undefined => {
+  const symbols = [type.aliasSymbol, type.getSymbol()].filter(
+    (symbol): symbol is ts.Symbol => symbol !== undefined,
+  );
+
+  for (const symbol of symbols) {
+    const resolved = resolveAliasedSymbol(symbol, checker, tsMod);
+    for (const declaration of resolved.declarations ?? []) {
+      const property = propertyDeclarationFromContainer(declaration, propertyName, tsMod);
+      if (!property) continue;
+      const origin = schemaOriginFromDeclaration(property, checker, tsMod);
+      if (origin) return origin;
+    }
+  }
+
+  return undefined;
+};
+
+const propertyDeclarationFromContainer = (
+  declaration: ts.Declaration,
+  propertyName: string,
+  tsMod: typeof import("typescript"),
+): ts.PropertySignature | ts.PropertyDeclaration | undefined => {
+  const members = tsMod.isTypeAliasDeclaration(declaration) && tsMod.isTypeLiteralNode(declaration.type)
+    ? declaration.type.members
+    : tsMod.isInterfaceDeclaration(declaration)
+      ? declaration.members
+      : undefined;
+  if (!members) return undefined;
+
+  for (const member of members) {
+    if (!tsMod.isPropertySignature(member) && !tsMod.isPropertyDeclaration(member)) continue;
+    if (propertyDeclarationName(member.name, tsMod) === propertyName) return member;
+  }
+
+  return undefined;
+};
+
+const propertyDeclarationName = (
+  name: ts.PropertyName,
+  tsMod: typeof import("typescript"),
+): string | undefined => {
+  if (tsMod.isIdentifier(name) || tsMod.isStringLiteral(name) || tsMod.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return undefined;
+};
+
+const schemaOriginFromTypeAliasSymbol = (
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): SchemaOriginInfo | undefined => {
+  const resolved = resolveAliasedSymbol(symbol, checker, tsMod);
+  const declarations = [...(symbol.declarations ?? []), ...(resolved.declarations ?? [])];
+  for (const declaration of declarations) {
+    if (!tsMod.isTypeAliasDeclaration(declaration)) continue;
+    const schemaSymbol = schemaSymbolFromTypeNode(declaration.type, checker, tsMod);
+    if (!schemaSymbol) continue;
+    const origin = schemaOriginFromSchemaSymbol(schemaSymbol, checker, tsMod);
+    if (origin) return origin;
+  }
+  return undefined;
+};
+
+const schemaOriginFromTypeNodeReference = (
+  node: ts.TypeReferenceNode,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): SchemaOriginInfo | undefined => {
+  const getTypeFromTypeNode = (checker as ts.TypeChecker & {
+    getTypeFromTypeNode?: (node: ts.TypeNode) => ts.Type;
+  }).getTypeFromTypeNode;
+  const type = getTypeFromTypeNode?.call(checker, node);
+  const symbols = [type?.aliasSymbol, type?.getSymbol()].filter(
+    (symbol): symbol is ts.Symbol => symbol !== undefined,
+  );
+
+  for (const symbol of symbols) {
+    const origin = schemaOriginFromTypeAliasSymbol(symbol, checker, tsMod);
+    if (origin) return origin;
+  }
+
+  return undefined;
+};
+
+const schemaOriginFromImportedTypeReference = (
+  node: ts.TypeReferenceNode,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): SchemaOriginInfo | undefined => {
+  if (!tsMod.isIdentifier(node.typeName)) return undefined;
+  const localName = node.typeName.text;
+  const sourceFile = node.getSourceFile();
+
+  for (const statement of sourceFile.statements) {
+    if (!tsMod.isImportDeclaration(statement)) continue;
+    const clause = statement.importClause;
+    const bindings = clause?.namedBindings;
+    if (!bindings || !tsMod.isNamedImports(bindings)) continue;
+
+    for (const element of bindings.elements) {
+      if (element.name.text !== localName) continue;
+      const moduleSymbol = checker.getSymbolAtLocation(statement.moduleSpecifier);
+      if (!moduleSymbol) continue;
+      const exportedName = element.propertyName?.text ?? element.name.text;
+      const exported = checker
+        .getExportsOfModule(moduleSymbol)
+        .find((candidate) => candidate.getName() === exportedName);
+      if (!exported) continue;
+      const origin = schemaOriginFromTypeAliasSymbol(exported, checker, tsMod);
+      if (origin) return origin;
+    }
+  }
+
+  return undefined;
+};
+
+const schemaSymbolFromTypeNode = (
+  node: ts.TypeNode,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): ts.Symbol | undefined => {
+  if (tsMod.isTypeReferenceNode(node)) {
+    const firstArg = node.typeArguments?.[0];
+    return firstArg && tsMod.isTypeQueryNode(firstArg)
+      ? schemaSymbolFromTypeQuery(firstArg, checker, tsMod)
+      : undefined;
+  }
+  if (tsMod.isTypeQueryNode(node)) return schemaSymbolFromTypeQuery(node, checker, tsMod);
+  return undefined;
+};
+
+const schemaSymbolFromTypeQuery = (
+  node: ts.TypeQueryNode,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): ts.Symbol | undefined => {
+  const name = schemaValueNameFromTypeQuery(node.exprName, tsMod);
+  return name ? checker.getSymbolAtLocation(name) : undefined;
+};
+
+const schemaValueNameFromTypeQuery = (
+  name: ts.EntityName,
+  tsMod: typeof import("typescript"),
+): ts.Identifier | undefined => {
+  if (tsMod.isIdentifier(name)) return name;
+  if (name.right.text !== "Type") return undefined;
+  return tsMod.isIdentifier(name.left) ? name.left : undefined;
+};
+
+const schemaOriginFromSchemaSymbol = (
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): SchemaOriginInfo | undefined => {
+  const resolved = resolveAliasedSymbol(symbol, checker, tsMod);
+  const declaration = resolved.valueDeclaration ?? resolved.declarations?.[0];
+  if (!declaration) return undefined;
+  const sourceFile = declaration.getSourceFile();
+  return {
+    kind: "schema-value",
+    filePath: sourceFile.fileName,
+    exportName: exportedNameForSymbol(sourceFile, resolved, checker, tsMod) ?? resolved.getName(),
+  };
+};
+
+const exportedNameForSymbol = (
+  sourceFile: ts.SourceFile,
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker,
+  tsMod: typeof import("typescript"),
+): string | undefined => {
+  const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
+  if (!moduleSymbol) return undefined;
+  for (const exported of checker.getExportsOfModule(moduleSymbol)) {
+    const resolvedExport = resolveAliasedSymbol(exported, checker, tsMod);
+    if (resolvedExport === symbol || resolvedExport.valueDeclaration === symbol.valueDeclaration) {
+      return exported.getName();
+    }
+  }
+  return undefined;
 };
 
 const serializeIndexSignature = (
@@ -303,6 +537,7 @@ const serializeTypeNode = (
   visited: Set<string>,
   onInternalError?: (err: unknown, context: string) => void,
   registry?: WeakMap<TypeNode, ts.Type>,
+  schemaOrigins?: WeakMap<TypeNode, SchemaOriginInfo>,
 ): TypeNode => {
   const text = checker.typeToString(type);
   const reg = <T extends TypeNode>(node: T): T => {
@@ -336,6 +571,7 @@ const serializeTypeNode = (
           visited,
           onInternalError,
           registry,
+          schemaOrigins,
         ),
       ),
     };
@@ -356,6 +592,7 @@ const serializeTypeNode = (
           visited,
           onInternalError,
           registry,
+          schemaOrigins,
         ),
       ),
     };
@@ -440,6 +677,7 @@ const serializeTypeNode = (
         visited,
         onInternalError,
         registry,
+        schemaOrigins,
       ),
       extendsType: serializeTypeNode(
         ct.extendsType,
@@ -450,6 +688,7 @@ const serializeTypeNode = (
         visited,
         onInternalError,
         registry,
+        schemaOrigins,
       ),
       trueType: trueType
         ? serializeTypeNode(
@@ -461,6 +700,7 @@ const serializeTypeNode = (
             visited,
             onInternalError,
             registry,
+            schemaOrigins,
           )
         : UNKNOWN_NODE,
       falseType: falseType
@@ -473,6 +713,7 @@ const serializeTypeNode = (
             visited,
             onInternalError,
             registry,
+            schemaOrigins,
           )
         : UNKNOWN_NODE,
     };
@@ -493,6 +734,7 @@ const serializeTypeNode = (
         visited,
         onInternalError,
         registry,
+        schemaOrigins,
       ),
       indexType: serializeTypeNode(
         iat.indexType,
@@ -503,6 +745,7 @@ const serializeTypeNode = (
         visited,
         onInternalError,
         registry,
+        schemaOrigins,
       ),
     };
     return reg(indexed);
@@ -526,6 +769,7 @@ const serializeTypeNode = (
           visited,
           onInternalError,
           registry,
+          schemaOrigins,
         ),
       ),
     };
@@ -558,6 +802,7 @@ const serializeTypeNode = (
             visited,
             onInternalError,
             registry,
+            schemaOrigins,
           )
         : UNKNOWN_NODE,
       mappedType: mappedType
@@ -570,6 +815,7 @@ const serializeTypeNode = (
             visited,
             onInternalError,
             registry,
+            schemaOrigins,
           )
         : UNKNOWN_NODE,
     };
@@ -591,6 +837,7 @@ const serializeTypeNode = (
         visited,
         onInternalError,
         registry,
+        schemaOrigins,
       ),
     };
     return reg(typeOperator);
@@ -611,6 +858,7 @@ const serializeTypeNode = (
           visited,
           onInternalError,
           registry,
+          schemaOrigins,
         ),
       ),
     };
@@ -634,6 +882,7 @@ const serializeTypeNode = (
               visited,
               onInternalError,
               registry,
+              schemaOrigins,
             ),
           ]
         : [UNKNOWN_NODE],
@@ -656,6 +905,7 @@ const serializeTypeNode = (
           visited,
           onInternalError,
           registry,
+          schemaOrigins,
         ),
       ),
     };
@@ -673,6 +923,7 @@ const serializeTypeNode = (
       visited,
       onInternalError,
       registry,
+      schemaOrigins,
     );
     const ctor: ConstructorTypeNode = {
       kind: "constructor",
@@ -696,6 +947,7 @@ const serializeTypeNode = (
           visited,
           onInternalError,
           registry,
+          schemaOrigins,
         );
         return { parameters: serialized.parameters, returnType: serialized.returnType };
       });
@@ -711,6 +963,7 @@ const serializeTypeNode = (
       visited,
       onInternalError,
       registry,
+      schemaOrigins,
     );
     const fn: FunctionTypeNode = {
       kind: "function",
@@ -743,6 +996,7 @@ const serializeTypeNode = (
       visited,
       onInternalError,
       registry,
+      schemaOrigins,
     ),
     ...(indexSig !== undefined && { indexSignature: indexSig }),
   };
@@ -981,6 +1235,10 @@ const isAssignableTo = (
     return true;
   }
 
+  if (target.isUnion()) {
+    return target.types.some((t) => isAssignableTo(source, t, checker, tsMod, mode));
+  }
+
   const srcBase = getGenericBase(source, checker);
   if (srcBase?.symbol && matchSymbol(srcBase.symbol)) return true;
 
@@ -1018,6 +1276,7 @@ const serializeExport = (
   maxDepth: number,
   onInternalError?: (err: unknown, context: string) => void,
   registry?: WeakMap<TypeNode, ts.Type>,
+  schemaOrigins?: WeakMap<TypeNode, SchemaOriginInfo>,
 ): ExportedTypeInfo => {
   const resolved = resolveExportSymbol(symbol, checker, tsMod);
   const declaration = resolved.valueDeclaration ?? resolved.declarations?.[0];
@@ -1044,6 +1303,7 @@ const serializeExport = (
       new Set(),
       onInternalError,
       registry,
+      schemaOrigins,
     ),
   };
 };
@@ -1095,13 +1355,16 @@ const createFileSnapshot = (
   includeImports: boolean,
   onInternalError?: (err: unknown, context: string) => void,
   registry?: WeakMap<TypeNode, ts.Type>,
+  schemaOrigins?: WeakMap<TypeNode, SchemaOriginInfo>,
 ): TypeInfoFileSnapshot => {
   const filePath = sourceFile.fileName;
   const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
   const exports = moduleSymbol
     ? checker
         .getExportsOfModule(moduleSymbol)
-        .map((value) => serializeExport(value, checker, tsMod, maxDepth, onInternalError, registry))
+        .map((value) =>
+          serializeExport(value, checker, tsMod, maxDepth, onInternalError, registry, schemaOrigins),
+        )
         .sort(compareByName)
     : [];
   const imports = includeImports ? collectImports(sourceFile, program, tsMod) : undefined;
@@ -1153,7 +1416,7 @@ const applyProjection = (
           break;
         }
         case "typeArg": {
-          const args = checker.getTypeArguments(current as ts.TypeReference);
+          const args = getTypeArguments(current, checker);
           if (step.index < 0 || step.index >= args.length) return undefined;
           current = args[step.index];
           break;
@@ -1226,6 +1489,7 @@ export const createTypeInfoApiSession = (
   const maxDepth = options.maxTypeDepth ?? DEFAULT_MAX_DEPTH;
   const assignabilityMode: AssignabilityMode = options.assignabilityMode ?? "compatibility";
   const typeNodeRegistry = new WeakMap<TypeNode, ts.Type>();
+  const schemaOriginRegistry = new WeakMap<TypeNode, SchemaOriginInfo>();
   const targetsByIdMap = new Map<string, ts.Type>(
     (effectiveTypeTargets ?? []).map((t) => [t.id, t.type]),
   );
@@ -1298,6 +1562,7 @@ export const createTypeInfoApiSession = (
       true,
       options.onInternalError,
       typeNodeRegistry,
+      schemaOriginRegistry,
     );
     snapshotCache.set(absolutePath, snapshot);
     return { ok: true, snapshot };
@@ -1372,6 +1637,7 @@ export const createTypeInfoApiSession = (
             true,
             options.onInternalError,
             typeNodeRegistry,
+            schemaOriginRegistry,
           ),
         ];
       } catch (err) {
@@ -1414,10 +1680,7 @@ export const createTypeInfoApiSession = (
     return isAssignableTo(projected, targetType, checker, options.ts, assignabilityMode);
   };
 
-  const project = (
-    node: TypeNode,
-    projection: readonly TypeProjectionStep[],
-  ): TypeNode | undefined => {
+  const project: TypeInfoApi["project"] = (node, projection) => {
     const sourceType = typeNodeRegistry.get(node);
     if (!sourceType) return undefined;
     const projected = applyProjection(sourceType, projection, checker, options.ts, {
@@ -1436,7 +1699,87 @@ export const createTypeInfoApiSession = (
       new Set(),
       options.onInternalError,
       typeNodeRegistry,
+      schemaOriginRegistry,
     );
+  };
+
+  const schemaOrigin: TypeInfoApi["schemaOrigin"] = (node) => {
+    const registered = schemaOriginRegistry.get(node);
+    if (registered) return registered;
+    const sourceType = typeNodeRegistry.get(node);
+    if (!sourceType) return undefined;
+    return schemaOriginFromType(sourceType);
+  };
+
+  const schemaOriginFromType = (type: ts.Type): SchemaOriginInfo | undefined => {
+    const symbols = [type.aliasSymbol, type.getSymbol()].filter(
+      (symbol): symbol is ts.Symbol => symbol !== undefined,
+    );
+    for (const symbol of symbols) {
+      const origin = schemaOriginFromSymbol(symbol);
+      if (origin) return origin;
+    }
+    return undefined;
+  };
+
+  const schemaOriginFromSymbol = (symbol: ts.Symbol): SchemaOriginInfo | undefined => {
+    const resolved = resolveAliasedSymbol(symbol, checker, options.ts);
+    for (const declaration of resolved.declarations ?? []) {
+      if (!options.ts.isTypeAliasDeclaration(declaration)) continue;
+      const schemaSymbol = schemaSymbolFromTypeNode(declaration.type);
+      if (!schemaSymbol) continue;
+      const origin = schemaOriginFromSchemaSymbol(schemaSymbol);
+      if (origin) return origin;
+    }
+    return undefined;
+  };
+
+  const schemaSymbolFromTypeNode = (node: ts.TypeNode): ts.Symbol | undefined => {
+    if (options.ts.isTypeReferenceNode(node)) {
+      const firstArg = node.typeArguments?.[0];
+      return firstArg && options.ts.isTypeQueryNode(firstArg)
+        ? schemaSymbolFromTypeQuery(firstArg)
+        : undefined;
+    }
+    if (options.ts.isTypeQueryNode(node)) return schemaSymbolFromTypeQuery(node);
+    return undefined;
+  };
+
+  const schemaSymbolFromTypeQuery = (node: ts.TypeQueryNode): ts.Symbol | undefined => {
+    const name = schemaValueNameFromTypeQuery(node.exprName);
+    return name ? checker.getSymbolAtLocation(name) : undefined;
+  };
+
+  const schemaValueNameFromTypeQuery = (
+    name: ts.EntityName,
+  ): ts.Identifier | undefined => {
+    if (options.ts.isIdentifier(name)) return name;
+    if (name.right.text !== "Type") return undefined;
+    return options.ts.isIdentifier(name.left) ? name.left : undefined;
+  };
+
+  const schemaOriginFromSchemaSymbol = (symbol: ts.Symbol): SchemaOriginInfo | undefined => {
+    const resolved = resolveAliasedSymbol(symbol, checker, options.ts);
+    const declaration = resolved.valueDeclaration ?? resolved.declarations?.[0];
+    if (!declaration) return undefined;
+    const sourceFile = declaration.getSourceFile();
+    const exportName = exportedNameForSymbol(sourceFile, resolved) ?? resolved.getName();
+    return { kind: "schema-value", filePath: sourceFile.fileName, exportName };
+  };
+
+  const exportedNameForSymbol = (
+    sourceFile: ts.SourceFile,
+    symbol: ts.Symbol,
+  ): string | undefined => {
+    const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
+    if (!moduleSymbol) return undefined;
+    for (const exported of checker.getExportsOfModule(moduleSymbol)) {
+      const resolvedExport = resolveAliasedSymbol(exported, checker, options.ts);
+      if (resolvedExport === symbol || resolvedExport.valueDeclaration === symbol.valueDeclaration) {
+        return exported.getName();
+      }
+    }
+    return undefined;
   };
 
   return {
@@ -1444,9 +1787,9 @@ export const createTypeInfoApiSession = (
       file,
       directory,
       resolveExport,
-      isAssignableTo: apiIsAssignableTo,
       project,
-      schemaOrigin: () => undefined,
+      isAssignableTo: apiIsAssignableTo,
+      schemaOrigin,
     },
     consumeDependencies: () => [...descriptors.values()],
   };

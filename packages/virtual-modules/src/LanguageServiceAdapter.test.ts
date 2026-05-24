@@ -739,6 +739,7 @@ export const value: Foo = { n: 1 };
             resolveExport: () => {
               throw new Error("not implemented");
             },
+            project: () => undefined,
             isAssignableTo: () => {
               throw new Error("not implemented");
             },

@@ -1,5 +1,5 @@
 import type * as ts from "typescript";
-import { dirname, relative, resolve } from "node:path";
+import { dirname, relative } from "node:path";
 import type {
   ResolveVirtualModuleOptions,
   VirtualArtifactStoreFactory,
@@ -576,20 +576,6 @@ const materializeRecordSource = (
     };
   }
 };
-
-const rewriteNestedVirtualModuleSpecifiers = (
-  options: VirtualRecordStoreOptions,
-  sourceText: string,
-  importer: string,
-  virtualFileName: string,
-  resolveNestedVirtualModule: ((id: string) => string | undefined) | undefined,
-): string =>
-  rewriteSourceForPreviewLocation(
-    sourceText,
-    importer,
-    virtualFileName,
-    nestedVirtualModuleRewriter(options, importer, virtualFileName, resolveNestedVirtualModule),
-  );
 
 const nestedVirtualModuleRewriter = (
   options: VirtualRecordStoreOptions,

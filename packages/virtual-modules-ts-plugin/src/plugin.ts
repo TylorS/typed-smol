@@ -948,6 +948,10 @@ function init(modules: { typescript: typeof import("typescript") }): {
             apiUsed = true;
             return getSession().api.resolveExport(baseDir, filePath, exportName);
           },
+          project: (node: unknown, projection: readonly unknown[]) => {
+            apiUsed = true;
+            return getSession().api.project(node as never, projection as never);
+          },
           isAssignableTo: (node: unknown, targetId: string, projection?: readonly unknown[]) => {
             apiUsed = true;
             return getSession().api.isAssignableTo(node as never, targetId, projection as never);

@@ -126,3 +126,33 @@ Handoff contract between agents (canonical definition in `.cursor/rules/agent-co
 5. Recommended next action
 
 Keep handoffs short, concrete, and directly actionable.
+
+## Learned User Preferences
+
+- Do not edit attached plan files during implementation; execute plans as written.
+- Complete all plan todos; mark items in progress as work proceeds.
+- Fix lint warnings/errors and ensure type-check passes before claiming work is done.
+- Route virtual-module hardening through specialist subagents (refactor-surgeon, review-auditor, security-sentinel, test-strategist).
+- Include mermaid architecture diagrams in durable specifications for key systems.
+- README and user-facing docs should be tutorial-style, emphasizing app + vite-plugin framework experience; de-emphasize internal architecture.
+- Product niche: best-in-class for Effect-native, push-based, full-stack web applications.
+- Roadmap priority: Rpc first (substrate for Cluster), then Cluster, Workflow, Alchemy, and stack integration; deprioritize whimsical VM concepts over practical Effect pillars.
+- TypeInfoApi design centers on checker-backed structural assignability (`isAssignableTo`), not schema-out or AST-only codegen.
+- Virtual module plugins should support `relativeGlobs` for directory discovery, not only a single `relativePath`.
+- Delete deprecated code paths rather than leaving deprecated shims in place.
+- Go-to-definition must resolve virtual imports through generated modules to the underlying exported symbols.
+
+## Learned Workspace Facts
+
+- typed-smol is an Effect-native, push-based (Fx/RefSubject), full-stack web framework; `@typed/virtual-modules` (TypeInfoApi) is the broader compile-time type-safe codegen platform.
+- `@typed/app` composable virtual module plugins (router, HttpApi, and siblings) should always be enabled by default in vite-plugin.
+- Virtual module type-target bootstrap artifacts belong under `node_modules`, not project filesystem paths like `.typed/`.
+- `@typed/virtual-modules` core plugin API is entirely synchronous.
+- Virtual module source file names are not significant; discovery is by export assignability.
+- `examples/realworld` is the flagship integration example for end-to-end validation.
+- Push UI uses Fx as the sole push-based abstraction; templates are Fx streams, not VDOM.
+- TypeInfoApi loop: snapshot exports → project types → `isAssignableTo` → emit generated modules into the TS program.
+- Rpc VM is the strategic foundation for Cluster entity plugins (shared RpcGroup/handler/client pattern).
+- Router codegen favors positional overloads for cleaner emitted output.
+- Language service adapter must not write manifest/files to disk; adapter state is bounded to importing files.
+- `@typed/vite-plugin` should auto-provide a language-service-backed TypeInfoApi session for build and dev parity.

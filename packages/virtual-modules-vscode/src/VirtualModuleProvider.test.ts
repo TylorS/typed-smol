@@ -39,8 +39,7 @@ describe("createVirtualModuleProvider", () => {
     );
 
     expect(roots).toEqual(["/workspace/packages/app"]);
-    expect(content).toContain("virtual:routes");
-    expect(content).toContain("/workspace/packages/app/src/entry.ts");
+    expect(content).toMatchInlineSnapshot(`"export const seen = {"id":"virtual:routes","importer":"/workspace/packages/app/src/entry.ts"};"`);
   });
 });
 

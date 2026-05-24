@@ -370,6 +370,38 @@ describe("typed/ui component option inference", () => {
     };
     void _typecheck;
   });
+
+  it("preserves form wrapper host, prop, ref, event, and state channels", () => {
+    const form = {} as RefSubject.RefSubject<
+      Form.State<{
+        readonly marketing: boolean;
+        readonly role: "viewer" | "admin";
+      }>,
+      StateError,
+      StateService
+    >;
+    const select = {} as RefSubject.RefSubject<Select.State<"viewer" | "admin">, StateError, StateService>;
+    const props = {
+      id: Effect.flatMap(OptionService, () => maybeOptionError("field")),
+      onchange: EventHandler.make((event: Event) =>
+        Effect.flatMap(OptionService, () => maybeOptionError(event.type)),
+      ),
+      ref: () => Effect.flatMap(OptionService, () => maybeOptionError(undefined)),
+    } satisfies Dom.HostProps<HTMLInputElement>;
+    const host = (_props: Dom.HostProps<HTMLInputElement>, content: Reactive.AnyContent) =>
+      Effect.flatMap(OptionService, () => maybeOptionError(content));
+    const checkbox = Form.Checkbox(form, "marketing", { props, host, value: "yes" });
+    const hiddenSelect = Form.Select(form, "role", { state: select, props, host });
+
+    expectTypeOf<Fx.Error<typeof checkbox>>().toExtend<OptionError | StateError>();
+    expectTypeOf<Fx.Error<typeof hiddenSelect>>().toExtend<OptionError | StateError>();
+    expectTypeOf<Fx.Services<typeof checkbox>>().toExtend<
+      OptionService | StateService | RenderTemplate | Scope.Scope
+    >();
+    expectTypeOf<Fx.Services<typeof hiddenSelect>>().toExtend<
+      OptionService | StateService | RenderTemplate | Scope.Scope
+    >();
+  });
 });
 
 function maybeOptionError<A>(value: A): Effect.Effect<A, OptionError> {

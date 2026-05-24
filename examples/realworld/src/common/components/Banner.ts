@@ -1,7 +1,9 @@
+import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 
 export const Banner = Fx.gen(function* () {
+  yield* Effect.void;
   return html`<div class="banner">
     <div class="container">
       <h1 class="logo-font">conduit</h1>

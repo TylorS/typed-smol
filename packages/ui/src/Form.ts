@@ -290,6 +290,11 @@ export type FieldBinding<Values extends {}, Name extends keyof Values & string, 
   readonly name: Name;
 };
 
+export type SelectFieldBinding<Values extends {}, Name extends keyof Values & string, E, R> = {
+  readonly formState: RefSubject.RefSubject<State<Values>, E, R>;
+  readonly name: Name;
+};
+
 export interface FieldInputOptions<
   Values extends {} = {},
   Name extends keyof Values & string = keyof Values & string,
@@ -412,9 +417,11 @@ export function Checkbox<
     fieldDataAttrs(state, name, "typed/ui/Form.Checkbox"),
   );
 
-  return CheckboxPrimitive.InputView({ ...options, name, props }, checkboxState, onChange) as Component<
-    Opts & FieldBinding<Values, Name, E, R>
-  >;
+  return CheckboxPrimitive.InputView<Opts & FieldBinding<Values, Name, E, R>, E, R, E, R>(
+    { ...options, state, name, props },
+    checkboxState,
+    onChange,
+  );
 }
 
 export interface SelectOptions<
@@ -442,8 +449,16 @@ export function Select<
   formState: RefSubject.RefSubject<State<Values>, E, R>,
   name: Name,
   options: Opts & Pick<SelectOptions<Value, Values, E2, R2, E, R>, "state">,
-): Component<Opts & FieldBinding<Values, Name, E, R>> {
-  return SelectPrimitive.HiddenInput({
+): Component<Opts & SelectFieldBinding<Values, Name, E, R>> {
+  return SelectPrimitive.HiddenInput<
+    Value,
+    Values,
+    E2,
+    R2,
+    E,
+    R,
+    Opts & SelectFieldBinding<Values, Name, E, R>
+  >({
     ...options,
     formState,
     name,
@@ -451,7 +466,7 @@ export function Select<
       options.props,
       fieldDataAttrs(formState, name, "typed/ui/Form.Select"),
     ),
-  }) as Component<Opts & FieldBinding<Values, Name, E, R>>;
+  });
 }
 
 export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {

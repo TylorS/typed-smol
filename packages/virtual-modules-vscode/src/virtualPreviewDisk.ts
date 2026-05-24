@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import {
   rewriteSourceForPreviewLocation,
   VIRTUAL_NODE_MODULES_RELATIVE,

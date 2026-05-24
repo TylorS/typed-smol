@@ -147,9 +147,17 @@ export function createLanguageServiceSessionFactory(
           apiUsed = true;
           return getSession().api.resolveExport(baseDir, filePath, exportName);
         },
+        project: (node, projection) => {
+          apiUsed = true;
+          return getSession().api.project(node, projection);
+        },
         isAssignableTo: (node, targetId, projection) => {
           apiUsed = true;
           return getSession().api.isAssignableTo(node, targetId, projection);
+        },
+        schemaOrigin: (node) => {
+          apiUsed = true;
+          return getSession().api.schemaOrigin(node);
         },
       },
       consumeDependencies: () => (apiUsed ? getSession().consumeDependencies() : ([] as const)),

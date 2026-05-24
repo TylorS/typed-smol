@@ -103,12 +103,17 @@ describe("realworld SSR pages", () => {
   });
 
   it("renders settings route template directly as static html", async () => {
-    const settings = await Effect.runPromise(
-      renderToHtmlString(settingsTemplate).pipe(
-        Effect.provide(StaticHtmlRenderTemplate),
-        Effect.scoped,
+    const settings = await Promise.race([
+      Effect.runPromise(
+        renderToHtmlString(settingsTemplate).pipe(
+          Effect.provide(StaticHtmlRenderTemplate),
+          Effect.scoped,
+        ),
       ),
-    );
+      new Promise<string>((_, reject) =>
+        setTimeout(() => reject(new Error("settings static render did not finish")), 2000),
+      ),
+    ]);
 
     expect(settings).toContain('class="settings-page"');
     expect(settings).toContain("Or click here to logout.");

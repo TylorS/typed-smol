@@ -91,6 +91,8 @@ export const createAuthStore = (
       createArticle: Effect.fn(function* (input) {
         const token = yield* requireToken;
         return yield* client.articles.create({
+          params: {},
+          query: {},
           headers: authHeaders(token),
           payload: input,
         });
@@ -98,6 +100,8 @@ export const createAuthStore = (
       createComment: Effect.fn(function* (slug, input) {
         const token = yield* requireToken;
         return yield* client.comments.create({
+          params: { slug },
+          query: {},
           headers: authHeaders(token),
           payload: input,
         });
@@ -136,14 +140,14 @@ export const createAuthStore = (
       }),
       login: Effect.fn(function* (input) {
         yield* RefAsyncData.setLoading(ref);
-        const response = yield* client.users.login({ payload: input });
+        const response = yield* client.users.login({ params: {}, query: {}, payload: input });
         yield* setAuthenticated(response);
         return response;
       }),
       logout: setUnauthenticated(),
       register: Effect.fn(function* (input) {
         yield* RefAsyncData.setLoading(ref);
-        const response = yield* client.users.register({ payload: input });
+        const response = yield* client.users.register({ params: {}, query: {}, payload: input });
         yield* setAuthenticated(response);
         return response;
       }),
@@ -159,6 +163,8 @@ export const createAuthStore = (
       updateSettings: Effect.fn(function* (input) {
         const token = yield* requireToken;
         const response = yield* client.user.update({
+          params: {},
+          query: {},
           headers: authHeaders(token),
           payload: input,
         });
@@ -231,6 +237,8 @@ const loadCurrentUser: (
   token: string,
 ) => Effect.Effect<CurrentUserLoad, ApiClientError> = Effect.fn(function* (client, token) {
   const response = yield* client.user.current({
+    params: {},
+    query: {},
     headers: authHeaders(token),
     responseMode: "response-only",
   });

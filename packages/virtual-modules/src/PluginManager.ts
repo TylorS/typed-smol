@@ -22,7 +22,9 @@ const noopTypeInfoApi: TypeInfoApi = {
   file: () => ({ ok: false as const, error: "invalid-input" }),
   directory: () => [],
   resolveExport: () => undefined,
+  project: () => undefined,
   isAssignableTo: () => false,
+  schemaOrigin: () => undefined,
 };
 
 const noopSession: TypeInfoApiSession = {
@@ -148,6 +150,7 @@ export class PluginManager implements VirtualModuleResolver {
           options.id,
           options.importer,
           session.api,
+          options.context,
         );
 
         if (typeof result === "string") {

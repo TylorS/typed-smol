@@ -33,6 +33,7 @@ pnpm-debug.log*
 # Test / coverage
 coverage/
 .nyc_output/
+packages/storybook/.tmp/
 
 # Misc
 .cache/

@@ -1,5 +1,6 @@
 export * from "./types.js";
 export * from "./PluginManager.js";
+export * from "./importUsageAnalyzer.js";
 export { collectTypeTargetSpecsFromPlugins } from "./collectTypeTargetSpecs.js";
 export {
   createTypeInfoApiSession,

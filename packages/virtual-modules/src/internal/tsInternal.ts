@@ -84,6 +84,25 @@ export function getTypeReferenceTarget(
 }
 
 /**
+ * Get instantiated type arguments from a checker type reference or alias.
+ * Uses public checker.getTypeArguments first, then TypeScript's internal
+ * aliasTypeArguments field for namespace-qualified aliases such as Effect.Effect<A, E, R>.
+ */
+export function getTypeArguments(
+  type: ts.Type,
+  checker: ts.TypeChecker,
+): readonly ts.Type[] {
+  try {
+    const args = checker.getTypeArguments(type as ts.TypeReference);
+    if (args.length > 0) return args;
+  } catch {
+    /* getTypeArguments can throw for non-reference shapes */
+  }
+
+  return (type as ts.Type & { aliasTypeArguments?: readonly ts.Type[] }).aliasTypeArguments ?? [];
+}
+
+/**
  * Get the symbol attached to a type when available (e.g. interface, class, type alias).
  * Uses internal (type as Type).symbol; may change in future TS versions.
  */

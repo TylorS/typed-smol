@@ -27,6 +27,7 @@ export default defineConfig({
             "effect/unstable/httpapi/HttpApiEndpoint",
             "effect/unstable/httpapi/HttpApiGroup",
             "effect/unstable/httpapi/OpenApi",
+            "effect/unstable/rpc",
           ],
         },
         test: {

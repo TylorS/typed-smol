@@ -1,8 +1,10 @@
+import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 import { Link } from "@typed/ui";
 
 export const Navbar = Fx.gen(function* () {
+  yield* Effect.void;
   return html`<nav class="navbar navbar-light">
     <div class="container">
       ${Link({ class: "navbar-brand", href: "/", content: "conduit" })}

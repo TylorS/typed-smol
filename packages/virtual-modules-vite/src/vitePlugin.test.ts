@@ -8,6 +8,7 @@ import {
   createVirtualArtifactStore,
   PluginManager,
   type ArtifactStoreFingerprints,
+  type VirtualModuleBuildContext,
 } from "@typed/virtual-modules";
 import { encodeVirtualId } from "./encodeVirtualId.js";
 import { virtualModulesVitePlugin } from "./vitePlugin.js";
@@ -120,6 +121,60 @@ describe("virtualModulesVitePlugin", () => {
     );
 
     expect(out).toBe(encodeVirtualId("virtual:config?mode=client", "/app/main.ts"));
+  });
+
+  it("passes exact requested exports during build", async () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { Client } from "virtual:api";\nconsole.log(Client);', "utf8");
+    let context: VirtualModuleBuildContext | undefined;
+    const manager = new PluginManager([
+      {
+        name: "api",
+        shouldResolve: (id) => id === "virtual:api",
+        build: (_id, _importer, _api, buildContext) => {
+          context = buildContext;
+          return "export const Client = 1;";
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager, projectRoot });
+    plugin.configResolved?.({ root: projectRoot, command: "build" } as never);
+    const resolvedId = (plugin.resolveId! as ResolveId)("virtual:api", importer) as string;
+
+    await (plugin.load! as Load)(resolvedId);
+
+    expect(context?.requestedExports).toEqual({
+      kind: "names",
+      names: new Set(["Client"]),
+      typeOnlyNames: new Set(),
+    });
+  });
+
+  it("uses all requested exports during dev", async () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { Client } from "virtual:api";\nconsole.log(Client);', "utf8");
+    let context: VirtualModuleBuildContext | undefined;
+    const manager = new PluginManager([
+      {
+        name: "api",
+        shouldResolve: (id) => id === "virtual:api",
+        build: (_id, _importer, _api, buildContext) => {
+          context = buildContext;
+          return "export const Client = 1;";
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager, projectRoot });
+    plugin.configResolved?.({ root: projectRoot, command: "serve" } as never);
+    const resolvedId = (plugin.resolveId! as ResolveId)("virtual:api", importer) as string;
+
+    await (plugin.load! as Load)(resolvedId);
+
+    expect(context?.requestedExports).toEqual({ kind: "all", reason: "dev mode" });
   });
 
   it("load returns transpiled sourceText for encoded virtual id", async () => {

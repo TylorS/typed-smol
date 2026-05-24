@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import * as ts from "typescript";
 import {
-  collectTypeTargetSpecsFromPlugins,
   createTypeInfoApiSession,
   createVirtualFileName,
   createVirtualKey,

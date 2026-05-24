@@ -1,8 +1,8 @@
+import { createTypedVirtualModulePlugins } from "@typed/app";
+
 export default {
   plugins: [
     "./plugin.mjs",
-    "./plugins/router-plugin.mjs",
-    "./plugins/httpapi-plugin.mjs",
-    "./plugins/config-plugin.mjs",
+    ...createTypedVirtualModulePlugins(),
   ],
 };

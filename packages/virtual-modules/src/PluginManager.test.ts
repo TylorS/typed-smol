@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { PluginManager } from "./PluginManager.js";
+import type { VirtualModuleBuildContext } from "./types.js";
 
 describe("PluginManager", () => {
   it("uses first matching plugin only", () => {
@@ -67,7 +68,7 @@ describe("PluginManager", () => {
     expect(resolved.status).toBe("error");
     if (resolved.status !== "error") return;
     expect(resolved.diagnostic.code).toBe("plugin-should-resolve-threw");
-    expect(resolved.diagnostic.message).toContain("explode");
+    expect(resolved.diagnostic.message).toMatchInlineSnapshot(`"Plugin "broken" shouldResolve failed: explode"`);
   });
 
   it("returns invalid-options for empty id", () => {
@@ -81,7 +82,7 @@ describe("PluginManager", () => {
     expect(resolved.status).toBe("error");
     if (resolved.status !== "error") return;
     expect(resolved.diagnostic.code).toBe("invalid-options");
-    expect(resolved.diagnostic.message).toContain("id");
+    expect(resolved.diagnostic.message).toMatchInlineSnapshot(`"options.id must be non-empty"`);
   });
 
   it("returns invalid-options for empty importer", () => {
@@ -95,7 +96,7 @@ describe("PluginManager", () => {
     expect(resolved.status).toBe("error");
     if (resolved.status !== "error") return;
     expect(resolved.diagnostic.code).toBe("invalid-options");
-    expect(resolved.diagnostic.message).toContain("importer");
+    expect(resolved.diagnostic.message).toMatchInlineSnapshot(`"options.importer must be non-empty"`);
   });
 
   it("returns invalid-options when a plugin has empty name", () => {
@@ -109,7 +110,7 @@ describe("PluginManager", () => {
     expect(resolved.status).toBe("error");
     if (resolved.status !== "error") return;
     expect(resolved.diagnostic.code).toBe("invalid-options");
-    expect(resolved.diagnostic.message).toContain("Plugin name");
+    expect(resolved.diagnostic.message).toMatchInlineSnapshot(`"Plugin name must be non-empty"`);
   });
 
   it("returns plugin-build-threw when plugin build() throws", () => {
@@ -129,7 +130,7 @@ describe("PluginManager", () => {
     expect(resolved.status).toBe("error");
     if (resolved.status !== "error") return;
     expect(resolved.diagnostic.code).toBe("plugin-build-threw");
-    expect(resolved.diagnostic.message).toContain("build exploded");
+    expect(resolved.diagnostic.message).toMatchInlineSnapshot(`"Plugin "throws" build failed: build exploded"`);
   });
 
   it("returns invalid-build-output when plugin returns non-string", () => {
@@ -172,7 +173,40 @@ describe("PluginManager", () => {
     expect(resolved.status).toBe("error");
     if (resolved.status !== "error") return;
     expect(resolved.diagnostic.code).toBe("session-creation-failed");
-    expect(resolved.diagnostic.message).toContain("Session creation failed");
-    expect(resolved.diagnostic.message).toContain("session factory error");
+    expect(resolved.diagnostic.message).toMatchInlineSnapshot(`"Session creation failed: session factory error"`);
+  });
+
+  it("passes build context to the matching plugin", () => {
+    let received: VirtualModuleBuildContext | undefined;
+    const context: VirtualModuleBuildContext = {
+      id: "virtual:x",
+      rootImporter: "/project/src/main.ts",
+      containingFile: "/project/src/main.ts",
+      consumer: "client",
+      requestedExports: {
+        kind: "names",
+        names: new Set(["Client"]),
+        typeOnlyNames: new Set(),
+      },
+    };
+    const manager = new PluginManager([
+      {
+        name: "contextual",
+        shouldResolve: () => true,
+        build: (_id, _importer, _api, buildContext) => {
+          received = buildContext;
+          return "export const Client = 1;";
+        },
+      },
+    ]);
+
+    const resolved = manager.resolveModule({
+      id: "virtual:x",
+      importer: "/project/src/main.ts",
+      context,
+    });
+
+    expect(resolved.status).toBe("resolved");
+    expect(received).toBe(context);
   });
 });

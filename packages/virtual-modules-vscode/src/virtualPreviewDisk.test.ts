@@ -35,7 +35,10 @@ describe("virtualPreviewDisk", () => {
       'import { route } from "./route";\nexport { route };',
     );
 
-    expect(source).toContain('from "../../../../src/routes/route"');
+    expect(source).toMatchInlineSnapshot(`
+      "import { route } from "../../../../src/routes/route";
+      export { route };"
+    `);
   });
 
   it("materializes nested virtual imports next to the parent preview artifact", () => {
@@ -66,9 +69,17 @@ describe("virtualPreviewDisk", () => {
 
       const parentSource = readFileSync(parentPath, "utf8");
       const nestedPath = join(dirname(parentPath), "../router/routes.ts");
-      expect(parentSource).toContain('from "../router/routes.js"');
+      expect(parentSource).toMatchInlineSnapshot(`
+        "import Routes0 from "../router/routes.js";
+        export const Routes = Routes0;
+        "
+      `);
       expect(existsSync(nestedPath)).toBe(true);
-      expect(readFileSync(nestedPath, "utf8")).toContain('from "../../../../src/routes/index.js"');
+      expect(readFileSync(nestedPath, "utf8")).toMatchInlineSnapshot(`
+        "import { route } from "../../../../src/routes/index.js";
+        export default route;
+        "
+      `);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }

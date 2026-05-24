@@ -321,6 +321,12 @@ export interface TypeInfoApi {
     exportName: string,
   ): ExportedTypeInfo | undefined;
   /**
+   * Project a serialized TypeNode through the backing checker type and return
+   * the projected type serialized as a TypeNode. Returns undefined when the
+   * node was not created by this API or any projection step fails.
+   */
+  project(node: TypeNode, projection: readonly TypeProjectionStep[]): TypeNode | undefined;
+  /**
    * Dynamic structural assignability check. Looks up the ts.Type backing `node`
    * (registered during serialization), optionally applies projection steps to
    * navigate to a sub-type, then checks assignability against the resolved target.
@@ -346,10 +352,11 @@ export interface TypeInfoApi {
    * Return a user-authored schema export that originated this type when known.
    * Undefined means callers should use generated schemas or diagnostics.
    */
-  schemaOrigin(node: TypeNode): SchemaOrigin | undefined;
+  schemaOrigin(node: TypeNode): SchemaOriginInfo | undefined;
 }
 
-export interface SchemaOrigin {
+export interface SchemaOriginInfo {
+  readonly kind: "schema-value";
   readonly filePath: string;
   readonly exportName: string;
 }
@@ -365,6 +372,45 @@ export interface TypeInfoApiFactoryParams {
 }
 
 export type CreateTypeInfoApiSession = (params: TypeInfoApiFactoryParams) => TypeInfoApiSession;
+
+export type VirtualModuleConsumer = "client" | "server" | "unknown";
+
+export type VirtualModuleRequestedExports =
+  | { readonly kind: "all"; readonly reason: string }
+  | {
+      readonly kind: "names";
+      readonly names: ReadonlySet<string>;
+      readonly typeOnlyNames: ReadonlySet<string>;
+    };
+
+export interface VirtualModuleBuildContext {
+  readonly id: string;
+  readonly rootImporter: string;
+  readonly containingFile: string;
+  readonly consumer: VirtualModuleConsumer;
+  readonly requestedExports: VirtualModuleRequestedExports;
+}
+
+export function requestsExport(
+  context: VirtualModuleBuildContext | undefined,
+  exportName: string,
+): boolean {
+  if (!context || context.requestedExports.kind === "all") return true;
+  return context.requestedExports.names.has(exportName);
+}
+
+export function requestsAnyExport(
+  context: VirtualModuleBuildContext | undefined,
+  exportNames: readonly string[],
+): boolean {
+  if (!context || context.requestedExports.kind === "all") return true;
+  const requested = context.requestedExports;
+  return exportNames.some((exportName) => requested.names.has(exportName));
+}
+
+export function mustEmitAllExports(context: VirtualModuleBuildContext | undefined): boolean {
+  return !context || context.requestedExports.kind === "all";
+}
 
 /** Result of a successful build; plain string is treated as { sourceText }. */
 export interface VirtualModuleBuildSuccess {
@@ -468,6 +514,7 @@ export type VirtualModuleResolution =
 export interface ResolveVirtualModuleOptions {
   readonly id: string;
   readonly importer: string;
+  readonly context?: VirtualModuleBuildContext;
   readonly createTypeInfoApiSession?: CreateTypeInfoApiSession;
 }
 

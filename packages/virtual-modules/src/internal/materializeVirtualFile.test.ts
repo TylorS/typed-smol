@@ -28,22 +28,20 @@ describe("materializeVirtualFile", () => {
       "/workspace/app/node_modules/.typed/virtual/plugin/artifact.ts",
     );
 
-    expect(rewritten).toContain('import { x } from "../../../../src/features/x";');
-    expect(rewritten).toContain('import type { LocalType } from "../../../../src/types";');
-    expect(rewritten).toContain('import type { PackageType } from "pkg";');
-    expect(rewritten).toContain('export { y } from "../../../../src/features/y";');
-    expect(rewritten).toContain('export * from "../../../../src/shared";');
-    expect(rewritten).toContain('import "../../../../src/features/setup";');
-    expect(rewritten).toContain('const lazy = await import("../../../../src/features/lazy");');
-    expect(rewritten).toContain(
-      "const templateLazy = await import(`../../../../src/features/template-lazy`);",
-    );
-    expect(rewritten).toContain('const packageModule = await import("pkg");');
-    expect(rewritten).toContain("const dynamicPackage = await import(`pkg`);");
-    expect(rewritten).toContain(
-      'type LocalImportType = import("../../../../src/features/local-type").LocalType;',
-    );
-    expect(rewritten).toContain('type PackageImportType = import("pkg").PackageType;');
+    expect(rewritten).toMatchInlineSnapshot(`
+      "import { x } from "../../../../src/features/x";
+      import type { LocalType } from "../../../../src/types";
+      import type { PackageType } from "pkg";
+      export { y } from "../../../../src/features/y";
+      export * from "../../../../src/shared";
+      import "../../../../src/features/setup";
+      const lazy = await import("../../../../src/features/lazy");
+      const templateLazy = await import(\`../../../../src/features/template-lazy\`);
+      const packageModule = await import("pkg");
+      const dynamicPackage = await import(\`pkg\`);
+      type LocalImportType = import("../../../../src/features/local-type").LocalType;
+      type PackageImportType = import("pkg").PackageType;"
+    `);
   });
 
   it("preserves TSX while rewriting relative module specifiers", () => {
@@ -53,8 +51,10 @@ describe("materializeVirtualFile", () => {
       "/workspace/app/node_modules/.typed/virtual/plugin/artifact.tsx",
     );
 
-    expect(rewritten).toContain('import { View } from "../../../../src/features/view";');
-    expect(rewritten).toContain('export const element = <View label="ok" />;');
+    expect(rewritten).toMatchInlineSnapshot(`
+      "import { View } from "../../../../src/features/view";
+      export const element = <View label="ok" />;"
+    `);
   });
 
   it("exposes shared disk materialization for VS Code preview files", () => {
@@ -79,9 +79,11 @@ describe("materializeVirtualFile", () => {
       );
 
       const materialized = readFileSync(virtualFilePath, "utf8");
-      expect(materialized).toContain('from "../../../src/feature/local"');
-      expect(materialized).toContain('import "../../../src/feature/setup";');
-      expect(materialized).toContain('await import("../../../src/lazy")');
+      expect(materialized).toMatchInlineSnapshot(`
+        "import { value } from "../../../src/feature/local";
+        import "../../../src/feature/setup";
+        const lazy = await import("../../../src/lazy");"
+      `);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -2,23 +2,27 @@
  * @typed/vite-plugin — One-stop Vite preset: tsconfig paths, bundle analyzer,
  * Brotli compression, virtual-modules Vite plugin, and @typed/app VM plugins.
  */
-import { createBrowserVirtualModulePlugin } from "@typed/app/BrowserVirtualModulePlugin";
-import { createConfigVirtualModulePlugin } from "@typed/app/ConfigVirtualModulePlugin";
-import { createEnvVirtualModulePlugin } from "@typed/app/EnvVirtualModulePlugin";
-import { createHtmlVirtualModulePlugin } from "@typed/app/HtmlVirtualModulePlugin";
 import {
-  createHttpApiVirtualModulePlugin,
+  type BrowserVirtualModulePluginOptions,
+} from "@typed/app/BrowserVirtualModulePlugin";
+import {
+  type ComponentVirtualModulePluginOptions,
+} from "@typed/app/ComponentVirtualModulePlugin";
+import {
+  type HtmlVirtualModulePluginOptions,
+} from "@typed/app/HtmlVirtualModulePlugin";
+import {
   type HttpApiVirtualModulePluginOptions,
 } from "@typed/app/HttpApiVirtualModulePlugin";
-import { createRouteHandlersVirtualModulePlugin } from "@typed/app/RouteHandlersVirtualModulePlugin";
 import {
-  createRouterVirtualModulePlugin,
   type RouterVirtualModulePluginOptions,
 } from "@typed/app/RouterVirtualModulePlugin";
-import { createServerVirtualModulePlugin } from "@typed/app/ServerVirtualModulePlugin";
-import { createStorybookVirtualModulePlugin } from "@typed/app/StorybookVirtualModulePlugin";
+import {
+  type StorybookVirtualModulePluginOptions,
+} from "@typed/app/StorybookVirtualModulePlugin";
+import { createTypedVirtualModulePlugins } from "@typed/app/TypedVirtualModulePlugins";
 import type { TypedConfig } from "@typed/app/config/TypedConfig";
-import { loadTypedConfig } from "@typed/app/config/loadTypedConfig";
+import { findTypedConfigRoot, loadTypedConfig } from "@typed/app/config/loadTypedConfig";
 import {
   typedTemplateVitePlugin,
   type TypedTemplateVitePluginOptions,
@@ -50,6 +54,12 @@ export type TypedViteCompressionOptions =
 
 export interface TypedVitePluginOptions {
   /**
+   * Project root used for typed.config.ts and tsconfig-relative paths.
+   * Defaults to the nearest typed.config.ts directory, then process.cwd().
+   */
+  readonly projectRoot?: string;
+
+  /**
    * Options for the router VM plugin from @typed/app.
    */
   readonly routerVmOptions?: RouterVirtualModulePluginOptions;
@@ -59,6 +69,27 @@ export interface TypedVitePluginOptions {
    * registered (router first, then HttpApi). Use this to customize its behavior.
    */
   readonly apiVmOptions?: HttpApiVirtualModulePluginOptions;
+
+  /**
+   * Options for the HTML shell VM plugin from @typed/app.
+   */
+  readonly htmlVmOptions?: HtmlVirtualModulePluginOptions;
+
+  /**
+   * Options for the browser runtime VM plugin from @typed/app.
+   */
+  readonly browserVmOptions?: BrowserVirtualModulePluginOptions;
+
+  /**
+   * Options for the component VM plugin from @typed/app.
+   */
+  readonly componentVmOptions?: ComponentVirtualModulePluginOptions;
+
+  /**
+   * Options for the Storybook VM plugin from @typed/app. Storybook presets use this
+   * to provide short-import runtime defaults.
+   */
+  readonly storybookVmOptions?: StorybookVirtualModulePluginOptions;
 
   /**
    * Session factory for TypeInfo API. When not provided, a Language Service-backed
@@ -124,36 +155,107 @@ export function createTypedViteResolver(
   options: TypedVitePluginOptions = {},
   dependencies?: TypedViteResolverDependencies,
 ): VirtualModuleResolver {
-  const httpApiFactory =
-    dependencies?.createHttpApiVirtualModulePlugin ?? createHttpApiVirtualModulePlugin;
-  const plugins: import("@typed/virtual-modules").VirtualModulePlugin[] = [
-    createRouterVirtualModulePlugin(options.routerVmOptions ?? {}),
-    createRouteHandlersVirtualModulePlugin(),
-    httpApiFactory(options.apiVmOptions ?? {}),
-    createEnvVirtualModulePlugin(),
-    createConfigVirtualModulePlugin(),
-    createHtmlVirtualModulePlugin(),
-    createServerVirtualModulePlugin(),
-    createBrowserVirtualModulePlugin(),
-    createStorybookVirtualModulePlugin(),
-  ];
+  const plugins = createTypedVirtualModulePlugins({
+    router: options.routerVmOptions,
+    api: options.apiVmOptions,
+    html: options.htmlVmOptions,
+    browser: options.browserVmOptions,
+    component: options.componentVmOptions,
+    storybook: options.storybookVmOptions,
+    createHttpApiVirtualModulePlugin: dependencies?.createHttpApiVirtualModulePlugin,
+  });
   return new PluginManager(plugins);
 }
 
-function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
+function optionsFromTypedConfig(config: TypedConfig, projectRoot?: string): TypedVitePluginOptions {
+  const routeDirectories = config.router?.routes;
   return {
     routerVmOptions: config.router ? { prefix: config.router.prefix } : undefined,
-    apiVmOptions: config.api
-      ? { prefix: config.api.prefix, pathPrefix: config.api.pathPrefix }
+    apiVmOptions: config.api || config.openapi
+      ? { prefix: config.api?.prefix, pathPrefix: config.api?.pathPrefix, openapi: config.openapi }
       : undefined,
+    htmlVmOptions: config.html
+      ? { defaultPath: config.html.path, defaultOutlet: config.html.outlet }
+      : undefined,
+    browserVmOptions: browserOptionsFromConfig(config, routeDirectories),
+    storybookVmOptions: storybookOptionsFromConfig(config, routeDirectories, projectRoot),
     tsconfig: config.tsconfig,
     tsconfigPaths: config.tsconfigPaths,
     analyze: config.analyze,
     warnOnError: config.warnOnError,
     compression: config.compression,
     serverEntry: config.entry,
-    templates: true,
+    templates: templateOptionsFromConfig(config, routeDirectories),
   };
+}
+
+function browserOptionsFromConfig(
+  config: TypedConfig,
+  routeDirectories: readonly string[] | undefined,
+): BrowserVirtualModulePluginOptions | undefined {
+  if (!config.browser && !routeDirectories) return undefined;
+  return {
+    runtimeDefaults: {
+      routes: config.browser?.routes ?? routeDirectories,
+      root: config.browser?.root,
+      base: config.browser?.base,
+      mode: config.browser?.mode,
+      name: config.browser?.name,
+    },
+  };
+}
+
+function storybookOptionsFromConfig(
+  config: TypedConfig,
+  routeDirectories: readonly string[] | undefined,
+  projectRoot: string | undefined,
+): StorybookVirtualModulePluginOptions | undefined {
+  if (!config.storybook && !routeDirectories && !projectRoot) return undefined;
+  return {
+    runtimeDefaults: {
+      routes: config.storybook?.routes ?? routeDirectories,
+      api: config.storybook?.api,
+      proxyPath: config.storybook?.proxyPath,
+      serverOrigin: config.storybook?.serverOrigin,
+      baseDir: projectRoot,
+    },
+  };
+}
+
+function templateOptionsFromConfig(
+  config: TypedConfig,
+  routeDirectories: readonly string[] | undefined,
+): boolean | TypedTemplateVitePluginOptions {
+  if (config.templates === false) return false;
+  const diagnostics =
+    typeof config.templates === "object" ? config.templates.diagnostics : undefined;
+  if (diagnostics || routeDirectories) return { diagnostics, routeDirectories };
+  return true;
+}
+
+export function resolveTypedViteProjectRoot(startPath = process.cwd()): string {
+  return findTypedConfigRoot(startPath) ?? resolve(startPath);
+}
+
+function loadTypedViteOptions(
+  options: TypedVitePluginOptions | undefined,
+): { readonly options: TypedVitePluginOptions; readonly projectRoot: string } {
+  const fallbackRoot = options?.projectRoot ? resolve(options.projectRoot) : process.cwd();
+  const projectRoot = resolveTypedViteProjectRoot(fallbackRoot);
+  if (options) return { options, projectRoot };
+
+  const result = loadTypedConfig({ projectRoot, ts });
+  if (result.status === "loaded") {
+    return {
+      options: {
+        ...optionsFromTypedConfig(result.config, dirname(result.path)),
+        projectRoot: dirname(result.path),
+      },
+      projectRoot: dirname(result.path),
+    };
+  }
+
+  return { options: {}, projectRoot };
 }
 
 /**
@@ -164,12 +266,9 @@ function optionsFromTypedConfig(config: TypedConfig): TypedVitePluginOptions {
  * When called with explicit options, those take full precedence (config file is not loaded).
  */
 export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
-  const resolvedOptions: TypedVitePluginOptions = (() => {
-    if (options) return options;
-    const result = loadTypedConfig({ projectRoot: process.cwd(), ts });
-    if (result.status === "loaded") return optionsFromTypedConfig(result.config);
-    return {};
-  })();
+  const loaded = loadTypedViteOptions(options);
+  const resolvedOptions = loaded.options;
+  const projectRoot = loaded.projectRoot;
 
   const resolver = createTypedViteResolver(resolvedOptions);
   const analyze = resolvedOptions.analyze ?? (process.env.ANALYZE === "1" ? true : false);
@@ -181,14 +280,12 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
     try {
       const manager = resolver as PluginManager;
       const typeTargetSpecs = collectTypeTargetSpecsFromPlugins(manager.plugins);
-      const cwd = process.cwd();
       const tsconfigPath = resolvedOptions.tsconfig
-        ? resolve(cwd, resolvedOptions.tsconfig)
+        ? resolve(projectRoot, resolvedOptions.tsconfig)
         : undefined;
-      const projectRoot = tsconfigPath ? dirname(tsconfigPath) : cwd;
       createTypeInfoApiSession = createLanguageServiceSessionFactory({
         ts,
-        projectRoot,
+        projectRoot: tsconfigPath ? dirname(tsconfigPath) : projectRoot,
         typeTargetSpecs,
         tsconfigPath,
       });
@@ -214,6 +311,7 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
   plugins.push(
     virtualModulesVitePlugin({
       resolver,
+      projectRoot,
       createTypeInfoApiSession,
       warnOnError: resolvedOptions.warnOnError ?? true,
       mapId: ({ id, consumer }) =>

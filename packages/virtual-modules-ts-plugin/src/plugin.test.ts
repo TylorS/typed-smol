@@ -23,10 +23,7 @@ import {
   PluginManager,
   type VirtualArtifactManifest,
 } from "@typed/virtual-modules";
-import {
-  invalidTemplateDiagnosticCode,
-  invalidTemplateModuleSource,
-} from "@typed/compiler/template/templateFixtures";
+import { invalidTemplateModuleSource } from "@typed/compiler/template/templateFixtures";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -201,11 +198,10 @@ describe("virtual-modules-ts-plugin", () => {
     const service = createPluginLanguageService(dir, entryPath);
     const diagnostics = service.getSemanticDiagnostics(entryPath);
 
-    expect(
-      diagnostics.some((diagnostic) =>
-        String(diagnostic.messageText).includes(invalidTemplateDiagnosticCode),
-      ),
-    ).toBe(true);
+    expect(getDiagnosticMessages(diagnostics).join("\n")).toMatchInlineSnapshot(`
+      "Cannot find module '@typed/template' or its corresponding type declarations.
+      TYPED-TEMPLATE-ANALYZE-001: Expected AttrValueDq or AttrValueSq or AttrValueNq but got OpenTagEnd"
+    `);
   });
 
   it("materializes create() virtual modules through the shared artifact store", () => {
@@ -595,9 +591,11 @@ export default {
 
       writeFileSync(pluginPath, pluginSource("string"), "utf8");
       const firstDiagnostics = service.getSemanticDiagnostics(entryPath);
-      expect(getDiagnosticMessages(firstDiagnostics).join("\n")).toContain(
-        "TS plugin resolver inputs changed after startup",
-      );
+      expect(getDiagnosticMessages(firstDiagnostics).join("\n")).toMatchInlineSnapshot(`
+        "Cannot find module 'virtual:plugin-drift' or its corresponding type declarations.
+        Virtual module rebuild failed: Virtual artifact resolution failed: TS plugin resolver inputs changed after startup: vmc.config.ts or loaded VMC plugin modules changed after the TS plugin resolver was created. Restart TypeScript or recreate the language service before materializing virtual artifacts.
+        Virtual artifact resolution failed: TS plugin resolver inputs changed after startup: vmc.config.ts or loaded VMC plugin modules changed after the TS plugin resolver was created. Restart TypeScript or recreate the language service before materializing virtual artifacts."
+      `);
       const firstDriftMessages = getDiagnosticMessages(firstDiagnostics).filter((message) =>
         message.includes("TS plugin resolver inputs changed after startup"),
       );
