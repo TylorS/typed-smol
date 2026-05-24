@@ -1,4 +1,5 @@
 export * as Fx from "./Fx.js";
+export * as FxDevtools from "./Fx/devtools.js";
 export * as Push from "./Push.js";
 export * as RefArray from "./RefSubject/RefArray.js";
 export * as RefAsyncData from "./RefSubject/RefAsyncData.js";

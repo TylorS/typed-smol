@@ -545,6 +545,34 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for redaction, identity stability, bounded-history behavior, and runtime/protocol boundary compliance before commit.
 
+### T14 - Fx DevTools Hooks
+
+- requirement_links: FR-20, FR-21, FR-22, FR-23, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13.
+- write_set:
+  - `packages/fx/src/Fx/devtools.ts`
+  - `packages/fx/src/Fx.devtools.test.ts`
+  - `packages/fx/src/Fx/index.ts`
+  - `packages/fx/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused Fx DevTools hook tests before `Fx/devtools.ts` exists.
+  - Run `pnpm --filter @typed/fx exec vitest run src/Fx.devtools.test.ts src/Fx.lifecycle.test.ts src/Fx.test.ts` and capture the missing-module failure.
+- green_step:
+  - Add host-neutral Fx DevTools observer types for lifecycle phases: started, emitted, failed, completed, and interrupted.
+  - Add an opt-in `withFxDevtools` wrapper that preserves the wrapped Fx success, failure, interruption, and environment semantics.
+  - Carry optional component owner ids, RefSubject ids, and arbitrary unowned Fx ids without importing protocol, Chrome, or runtime packages.
+  - Swallow diagnostic observer failures so DevTools instrumentation cannot add user-visible emissions or failures.
+- verification:
+  - `pnpm --filter @typed/fx exec vitest run src/Fx.devtools.test.ts src/Fx.lifecycle.test.ts src/Fx.test.ts`
+  - `pnpm --filter @typed/fx build`
+  - `pnpm exec oxlint packages/fx/src/Fx/devtools.ts packages/fx/src/Fx.devtools.test.ts packages/fx/src/Fx/index.ts packages/fx/src/index.ts`
+  - `pnpm exec oxfmt --check packages/fx/src/Fx/devtools.ts packages/fx/src/Fx.devtools.test.ts packages/fx/src/Fx/index.ts packages/fx/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc|@typed/devtools-protocol" packages/fx/src/Fx/devtools.ts packages/fx/src/Fx.devtools.test.ts packages/fx/src/Fx/index.ts packages/fx/src/index.ts` must return no matches.
+  - `git diff --check -- packages/fx .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for Fx semantic preservation, observer failure isolation, lifecycle phase accuracy, ownership metadata, and dependency-boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

@@ -99,3 +99,9 @@
 - Runtime RefSubject capture must serialize values before calling `DevtoolsRuntimeService.emit`; raw values should not reach the bridge bus.
 - RefSubject capture should prefer service ids, then owner-qualified local ids, then explicit ids; missing identity should be skipped instead of mapped to a shared anonymous id.
 - Bounded RefSubject capture history should reuse `RuntimeEventBus` retention instead of keeping a separate per-capture history store.
+
+### T14
+
+- Fx DevTools hooks should stay opt-in around a specific `Fx`; global constructor instrumentation waits for app/runtime config wiring.
+- Fx lifecycle instrumentation must record only the first terminal event, so failed or interrupted streams do not also emit `Completed`.
+- Keep Fx DevTools ids as host-neutral runtime strings inside `@typed/fx`; protocol id branding belongs in runtime capture.

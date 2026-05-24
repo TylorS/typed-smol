@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan through T12, then report task completion.
+- current_scope: execute approved plan task T14, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -387,7 +387,7 @@
   - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no Critical, Important, or blocking Minor issues.
 - commit:
-  - pending
+  - `2ccf3f9 feat(devtools): capture refsubject runtime events`
 - context_updates:
   - Added `makeRefSubjectCapture` for converting RefSubject DevTools observer events into protocol runtime events.
   - Added value serialization/redaction before events enter the runtime bridge event bus.
@@ -396,6 +396,30 @@
   - Runtime RefSubject capture must serialize values before calling `DevtoolsRuntimeService.emit`; raw values should not reach the bridge bus.
   - RefSubject capture should prefer service ids, then owner-qualified local ids, then explicit ids; missing identity should be skipped instead of mapped to a shared anonymous id.
 
-## Deferred Work
+### T14 - Fx DevTools Hooks
 
-- T14 remains blocked on prior-task completion.
+- task_id: T14
+- requirement_ids: FR-20, FR-21, FR-22, FR-23, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13
+- ts_scenarios: TS-4, TS-11
+- routing_decision:
+  - direct execution for the red-green implementation because target files and ownership are locked in the approved plan.
+  - sidecar review-auditor required before commit for semantic-preservation and boundary risks.
+- validation_evidence:
+  - red: `pnpm --filter @typed/fx exec vitest run src/Fx.devtools.test.ts src/Fx.lifecycle.test.ts src/Fx.test.ts` failed before implementation with missing `./Fx/devtools.js`; the existing lifecycle and Fx tests passed in the same run.
+  - green: `pnpm --filter @typed/fx exec vitest run src/Fx.devtools.test.ts src/Fx.lifecycle.test.ts src/Fx.test.ts` passed with 3 test files and 17 tests.
+  - green: `pnpm --filter @typed/fx build` passed.
+  - green: `pnpm exec oxlint packages/fx/src/Fx/devtools.ts packages/fx/src/Fx.devtools.test.ts packages/fx/src/Fx/index.ts packages/fx/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/fx/src/Fx/devtools.ts packages/fx/src/Fx.devtools.test.ts packages/fx/src/Fx/index.ts packages/fx/src/index.ts` passed.
+  - green: boundary grep for `chrome.`, `effect/unstable/rpc`, and `@typed/devtools-protocol` returned no matches.
+  - green: `git diff --check -- packages/fx .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no Critical or Important issues; it noted a defensible T15 placement caveat for graph-boundary capture after downstream operators like `take`.
+- commit:
+  - pending
+- context_updates:
+  - Added `withFxDevtools` / `withDevtools` as opt-in Fx lifecycle instrumentation.
+  - Added host-neutral Fx DevTools event and observer types for start, emit, failure, completion, and interruption.
+  - Exported Fx DevTools hooks through the Fx barrel and root `FxDevtools` namespace.
+- memory_updates:
+  - Fx DevTools hooks should stay opt-in around a specific `Fx`; global constructor instrumentation waits for app/runtime config wiring.
+  - Fx lifecycle instrumentation must record only the first terminal event, so failed or interrupted streams do not also emit `Completed`.
+  - Keep Fx DevTools ids as host-neutral runtime strings inside `@typed/fx`; protocol id branding belongs in runtime capture.
