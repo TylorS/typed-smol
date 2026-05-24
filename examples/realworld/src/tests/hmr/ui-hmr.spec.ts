@@ -25,6 +25,9 @@ test("preserves @typed/ui state across a template-only HMR update", async ({ pag
 
   await page.getByRole("button", { name: "Toggle disclosure" }).click();
   await expect(page.getByText("Disclosure state survived")).toBeVisible();
+  await page.getByRole("button", { name: "Open select" }).click();
+  await page.getByRole("option", { name: "Personal" }).click();
+  await expect(page.getByTestId("hmr-select-value")).toHaveText("personal");
 
   writeFileSync(
     fixturePath,
@@ -36,4 +39,5 @@ test("preserves @typed/ui state across a template-only HMR update", async ({ pag
   await expect(page.getByTestId("compiled-title")).toHaveText(nextCompiledTitle);
   await expect(page.getByTestId("hmr-title")).toHaveText(nextTitle);
   await expect(page.getByText("Disclosure state survived")).toBeVisible();
+  await expect(page.getByTestId("hmr-select-value")).toHaveText("personal");
 });

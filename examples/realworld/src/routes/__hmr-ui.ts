@@ -53,8 +53,12 @@ export const template = Fx.gen(function* () {
       state: popover,
     })}
     ${Select.Trigger({
-      content: "Feed mode",
+      content: "Open select",
       props: { class: "btn btn-sm btn-outline-secondary", "data-testid": "hmr-select-trigger" },
+      state: select,
+    })}
+    ${Select.Value({
+      props: { "data-testid": "hmr-select-value" },
       state: select,
     })}
     ${Select.Content({
@@ -63,6 +67,12 @@ export const template = Fx.gen(function* () {
         id: "hmr-select-global",
         state: select,
         value: "global",
+      })}
+      ${Select.Option({
+        content: "Personal",
+        id: "hmr-select-personal",
+        state: select,
+        value: "personal",
       })}`,
       label: "Feed mode",
       state: select,

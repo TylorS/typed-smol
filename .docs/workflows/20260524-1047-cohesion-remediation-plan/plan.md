@@ -291,7 +291,7 @@ pnpm --filter @typed/app build
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit message:
 
@@ -688,7 +688,7 @@ feat(app): install typed devtools browser bridge
 - Modify RealWorld route/UI files named by failing diagnostics from this task.
 - Do not add broad Storybook features.
 
-- [ ] **Step 1: Add a failing RealWorld resumability test**
+- [x] **Step 1: Add a failing RealWorld resumability test**
 
 Create `examples/realworld/src/tests/presentation/resumability.test.ts` with two tests:
 
@@ -724,7 +724,7 @@ pnpm --filter typed-realworld exec vitest run src/tests/presentation/resumabilit
 
 Expected: fail before the browser runtime handoff and action boot fixes are complete.
 
-- [ ] **Step 2: Fix RealWorld non-resumable paths reported by the tests**
+- [x] **Step 2: Fix RealWorld non-resumable paths reported by the tests**
 
 For each failing route or component path printed by `resumability.test.ts`, `ui-hmr.spec.ts`, or compiler diagnostics:
 
@@ -733,7 +733,7 @@ For each failing route or component path printed by `resumability.test.ts`, `ui-
 - preserve existing user-facing behavior
 - add a diagnostic assertion in `packages/compiler/src/route/classifyRouteCaptures.test.ts` when the compiler must reject a non-resumable path
 
-- [ ] **Step 3: Verify compiler resumability coverage**
+- [x] **Step 3: Verify compiler resumability coverage**
 
 Run:
 
