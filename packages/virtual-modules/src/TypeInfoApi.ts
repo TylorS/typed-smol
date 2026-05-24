@@ -1414,12 +1414,39 @@ export const createTypeInfoApiSession = (
     return isAssignableTo(projected, targetType, checker, options.ts, assignabilityMode);
   };
 
+  const project = (
+    node: TypeNode,
+    projection: readonly TypeProjectionStep[],
+  ): TypeNode | undefined => {
+    const sourceType = typeNodeRegistry.get(node);
+    if (!sourceType) return undefined;
+    const projected = applyProjection(sourceType, projection, checker, options.ts, {
+      onInternalError: options.onInternalError,
+      targetsByIdMap,
+      assignabilityMode,
+      maxDepth,
+    });
+    if (!projected) return undefined;
+    return serializeTypeNode(
+      projected,
+      checker,
+      options.ts,
+      0,
+      maxDepth,
+      new Set(),
+      options.onInternalError,
+      typeNodeRegistry,
+    );
+  };
+
   return {
     api: {
       file,
       directory,
       resolveExport,
       isAssignableTo: apiIsAssignableTo,
+      project,
+      schemaOrigin: () => undefined,
     },
     consumeDependencies: () => [...descriptors.values()],
   };

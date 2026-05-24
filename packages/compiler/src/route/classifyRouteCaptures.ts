@@ -212,10 +212,7 @@ const allowedRouteGlobalNames = new Set([
   "undefined",
 ]);
 
-function unsupportedUnknown(
-  context: ClassificationContext,
-  name: string,
-): RouteCaptureFact {
+function unsupportedUnknown(context: ClassificationContext, name: string): RouteCaptureFact {
   context.diagnostics.push({
     code: "unsupported-closure-capture",
     message: `Cannot rewrite closure in ${context.moduleId}: ${name} is not an imported, top-level, service, serializable, template, or generated context value`,
@@ -272,7 +269,11 @@ function collectServiceAliases(
     const initializer = declaration.initializer;
     if (initializer) collectRefSubjectServiceAlias(aliases, declaration.name, initializer);
     if (ts.isClassDeclaration(declaration.node) && declaration.node.name) {
-      collectEffectServiceAlias(aliases, declaration.node.name.text, declaration.node.heritageClauses);
+      collectEffectServiceAlias(
+        aliases,
+        declaration.node.name.text,
+        declaration.node.heritageClauses,
+      );
     }
   }
   visit(sourceFile, (node) => {
@@ -355,12 +356,15 @@ function refSubjectServiceId(expression: ts.Expression): string | undefined {
   const idArg = expression.arguments[0];
   if (!idArg || !ts.isStringLiteral(idArg)) return undefined;
   const factory = expression.expression;
-  return ts.isCallExpression(factory) && isPropertyAccess(factory.expression, "RefSubject", "Service")
+  return ts.isCallExpression(factory) &&
+    isPropertyAccess(factory.expression, "RefSubject", "Service")
     ? idArg.text
     : undefined;
 }
 
-function effectServiceId(heritageClauses: ts.NodeArray<ts.HeritageClause> | undefined): string | undefined {
+function effectServiceId(
+  heritageClauses: ts.NodeArray<ts.HeritageClause> | undefined,
+): string | undefined {
   for (const item of heritageClauses?.flatMap((clause) => [...clause.types]) ?? []) {
     const id = effectServiceIdFromExpression(item.expression);
     if (id) return id;
@@ -386,7 +390,10 @@ function isInlineRefSubjectMigration(
 ): boolean {
   if (declaration.declarationKind !== "const" || !declaration.initializer) return false;
   if (!containsYield(declaration.initializer)) return false;
-  return isRefSubjectTypedExpression(context, declaration.initializer) || hasRefSubjectMake(declaration.initializer);
+  return (
+    isRefSubjectTypedExpression(context, declaration.initializer) ||
+    hasRefSubjectMake(declaration.initializer)
+  );
 }
 
 function inlineRefSubjectMigration(
@@ -427,7 +434,9 @@ function isTemplateValue(declaration: DeclarationFact): boolean {
 }
 
 function isEventHandlerAction(declaration: DeclarationFact): boolean {
-  return !!declaration.initializer && isPropertyCall(declaration.initializer, "EventHandler", "action");
+  return (
+    !!declaration.initializer && isPropertyCall(declaration.initializer, "EventHandler", "action")
+  );
 }
 
 function eventActionCapture(
@@ -480,7 +489,10 @@ function isEventAttributePrefix(text: string): boolean {
   return /(?:@[A-Za-z][\w:-]*|on[A-Za-z][\w:-]*)\s*=\s*["']?\s*$/u.test(text);
 }
 
-function isSerializableValue(context: ClassificationContext, declaration: DeclarationFact): boolean {
+function isSerializableValue(
+  context: ClassificationContext,
+  declaration: DeclarationFact,
+): boolean {
   if (declaration.declarationKind !== "const" || !declaration.initializer) return false;
   if (ts.isFunctionLike(declaration.initializer)) return false;
   const type = context.checker?.getTypeAtLocation(declaration.node);
@@ -495,7 +507,9 @@ function typeText(context: ClassificationContext, node: ts.Node): string {
   return context.checker.typeToString(context.checker.getTypeAtLocation(node));
 }
 
-function closureExpression(expression: ts.Expression | undefined): ts.FunctionLikeDeclaration | undefined {
+function closureExpression(
+  expression: ts.Expression | undefined,
+): ts.FunctionLikeDeclaration | undefined {
   if (!expression) return undefined;
   if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) return expression;
   if (!ts.isCallExpression(expression)) return undefined;
@@ -558,7 +572,9 @@ function isParsedYieldStarExpression(node: ts.Node): boolean {
 }
 
 function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
-  return ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node);
+  return (
+    ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node)
+  );
 }
 
 function isPropertyAccess(expression: ts.Expression, left: string, right: string): boolean {
@@ -578,7 +594,10 @@ function stringArg(expression: ts.CallExpression, index: number): string | undef
   return argument && ts.isStringLiteral(argument) ? argument.text : undefined;
 }
 
-function objectStringProperty(expression: ts.Expression | undefined, name: string): string | undefined {
+function objectStringProperty(
+  expression: ts.Expression | undefined,
+  name: string,
+): string | undefined {
   if (!expression || !ts.isObjectLiteralExpression(expression)) return undefined;
   for (const property of expression.properties) {
     if (!ts.isPropertyAssignment(property) || propertyNameText(property.name) !== name) continue;
@@ -588,7 +607,8 @@ function objectStringProperty(expression: ts.Expression | undefined, name: strin
 }
 
 function propertyNameText(name: ts.PropertyName): string | undefined {
-  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) return name.text;
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name))
+    return name.text;
   return undefined;
 }
 

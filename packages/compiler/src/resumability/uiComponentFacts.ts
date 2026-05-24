@@ -89,7 +89,11 @@ function stringConstFromStatement(statement: ts.Statement, name: string): string
   if (!isExportedVariable(statement)) return undefined;
   for (const declaration of statement.declarationList.declarations) {
     const initializer = declaration.initializer;
-    if (initializer && isIdentifierNamed(declaration.name, name) && ts.isStringLiteral(initializer)) {
+    if (
+      initializer &&
+      isIdentifierNamed(declaration.name, name) &&
+      ts.isStringLiteral(initializer)
+    ) {
       return initializer.text;
     }
   }

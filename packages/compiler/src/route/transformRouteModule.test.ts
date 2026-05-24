@@ -228,10 +228,16 @@ describe("transformRouteModule", () => {
       ts,
     });
 
-    expect(result.sourceText).toContain("class __typed_route_context_0_0 extends __typedRouteContext.Service");
-    expect(result.sourceText).toContain("const __typed_route_continuation_0 = Object.assign(__typedRouteEffect.gen");
+    expect(result.sourceText).toContain(
+      "class __typed_route_context_0_0 extends __typedRouteContext.Service",
+    );
+    expect(result.sourceText).toContain(
+      "const __typed_route_continuation_0 = Object.assign(__typedRouteEffect.gen",
+    );
     expect(result.sourceText).toContain("yield* __typed_route_context_0_0");
-    expect(result.sourceText).toContain("__typedRouteEffect.provideService(__typed_route_context_0_0, a)");
+    expect(result.sourceText).toContain(
+      "__typedRouteEffect.provideService(__typed_route_context_0_0, a)",
+    );
     expect(result.sourceText).not.toContain("__typed_route_context_values");
   });
 
@@ -759,18 +765,20 @@ function generatedDiagnostics(sourceText: string): readonly string[] {
   const host: ts.CompilerHost = {
     ...defaultHost,
     fileExists: (candidate) =>
-      candidate === fileName || candidate === appResumabilityFileName || defaultHost.fileExists(candidate),
+      candidate === fileName ||
+      candidate === appResumabilityFileName ||
+      defaultHost.fileExists(candidate),
     getSourceFile: (candidate, languageVersion, onError, shouldCreateNewSourceFile) =>
       candidate === fileName
         ? sourceFile
         : candidate === appResumabilityFileName
           ? appResumabilitySourceFile
-        : defaultHost.getSourceFile(
-            candidate,
-            languageVersion,
-            onError,
-            shouldCreateNewSourceFile,
-          ),
+          : defaultHost.getSourceFile(
+              candidate,
+              languageVersion,
+              onError,
+              shouldCreateNewSourceFile,
+            ),
     readFile: (candidate) =>
       candidate === fileName
         ? sourceText
@@ -788,9 +796,9 @@ function generatedDiagnostics(sourceText: string): readonly string[] {
       ),
   };
   const program = ts.createProgram([fileName], options, host);
-  return ts.getPreEmitDiagnostics(program).map((diagnostic) =>
-    ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-  );
+  return ts
+    .getPreEmitDiagnostics(program)
+    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
 }
 
 function routeRegistrationExcerpt(sourceText: string): string {

@@ -337,6 +337,21 @@ export interface TypeInfoApi {
     targetId: string,
     projection?: readonly TypeProjectionStep[],
   ): boolean;
+  /**
+   * Project a serialized type node through TypeScript-backed projection steps and
+   * return the projected serialized type when every step resolves.
+   */
+  project(node: TypeNode, projection: readonly TypeProjectionStep[]): TypeNode | undefined;
+  /**
+   * Return a user-authored schema export that originated this type when known.
+   * Undefined means callers should use generated schemas or diagnostics.
+   */
+  schemaOrigin(node: TypeNode): SchemaOrigin | undefined;
+}
+
+export interface SchemaOrigin {
+  readonly filePath: string;
+  readonly exportName: string;
 }
 
 export interface TypeInfoApiSession {
@@ -392,7 +407,12 @@ export function isVirtualModuleBuildSuccess(
 export interface VirtualModulePlugin {
   readonly name: string;
   shouldResolve(id: string, importer: string): boolean;
-  build(id: string, importer: string, api: TypeInfoApi): VirtualModuleBuildResult;
+  build(
+    id: string,
+    importer: string,
+    api: TypeInfoApi,
+    context?: VirtualModuleBuildContext,
+  ): VirtualModuleBuildResult;
   /**
    * Optional type target specs for structural assignability checks.
    * Plugins that need assignableTo (e.g. Route, Effect) should declare them here.
@@ -400,6 +420,15 @@ export interface VirtualModulePlugin {
    */
   readonly typeTargetSpecs?: readonly TypeTargetSpec[];
 }
+
+export interface VirtualModuleBuildContext {
+  readonly rootImporter?: string;
+  readonly requestedExports: RequestedVirtualModuleExports;
+}
+
+export type RequestedVirtualModuleExports =
+  | { readonly kind: "all" }
+  | { readonly kind: "named"; readonly names: readonly string[] };
 
 export interface VirtualModuleDiagnostic {
   readonly code:

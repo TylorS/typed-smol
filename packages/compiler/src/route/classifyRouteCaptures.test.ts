@@ -369,13 +369,9 @@ function semanticCompilerHost(moduleId: string, sourceFile: ts.SourceFile): ts.C
     getSourceFile: (fileName, languageVersion, onError, shouldCreateNewSourceFile) =>
       fileName === moduleId
         ? sourceFile
-        : defaultHost.getSourceFile(
-            fileName,
-            languageVersion,
-            onError,
-            shouldCreateNewSourceFile,
-          ),
-    readFile: (fileName) => (fileName === moduleId ? sourceFile.text : defaultHost.readFile(fileName)),
+        : defaultHost.getSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile),
+    readFile: (fileName) =>
+      fileName === moduleId ? sourceFile.text : defaultHost.readFile(fileName),
   };
 }
 

@@ -235,7 +235,9 @@ export function routeResumeServiceDataAttrKey(
   return `${RESUME_VALUE_KEY_PREFIX}-${index}-${toDataAttrToken(service.name || service.id)}`;
 }
 
-function decodePayloadObject(value: unknown): Effect.Effect<Serializable.DataAttrValue, Error, never> {
+function decodePayloadObject(
+  value: unknown,
+): Effect.Effect<Serializable.DataAttrValue, Error, never> {
   if (!isRecord(value)) return Effect.fail(routeResumeError("payload-not-object"));
 
   const id = value[RESUME_ID_KEY];

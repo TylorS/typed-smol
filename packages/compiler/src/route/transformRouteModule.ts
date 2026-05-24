@@ -56,11 +56,11 @@ interface ClosureTarget {
   readonly node: ts.FunctionLikeDeclaration;
 }
 
-export function transformRouteModule(
-  input: TransformRouteModuleInput,
-): TransformRouteModuleResult {
+export function transformRouteModule(input: TransformRouteModuleInput): TransformRouteModuleResult {
   const tsMod = input.ts ?? ts;
-  const sourceFile = hasParentPointers(input.sourceFile) ? input.sourceFile : sourceFileFor(tsMod, input);
+  const sourceFile = hasParentPointers(input.sourceFile)
+    ? input.sourceFile
+    : sourceFileFor(tsMod, input);
   const classification = classifyRouteCaptures({
     checker: input.checker,
     moduleId: input.moduleId,
@@ -79,7 +79,10 @@ export function transformRouteModule(
   if (continuations.length === 0 && edits.length === 0) return unchanged(input, [], diagnostics);
 
   const sourceText = applyEdits(input.sourceText, [
-    declarationEdit(sourceFile, declarationText(sourceFile, continuations, targets, edits.length > 0)),
+    declarationEdit(
+      sourceFile,
+      declarationText(sourceFile, continuations, targets, edits.length > 0),
+    ),
     ...edits,
     ...closureRewriteEdits(sourceFile, continuations, targets),
   ]);
@@ -137,7 +140,9 @@ function collectClosureTargets(sourceFile: ts.SourceFile): readonly ClosureTarge
   return targets;
 }
 
-function closureExpression(expression: ts.Expression | undefined): ts.FunctionLikeDeclaration | undefined {
+function closureExpression(
+  expression: ts.Expression | undefined,
+): ts.FunctionLikeDeclaration | undefined {
   if (!expression) return undefined;
   if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) return expression;
   if (!ts.isCallExpression(expression)) return undefined;
@@ -148,7 +153,9 @@ function closureExpression(expression: ts.Expression | undefined): ts.FunctionLi
 }
 
 function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
-  return ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node);
+  return (
+    ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node)
+  );
 }
 
 function continuation(
@@ -226,9 +233,16 @@ function declarationText(
     needsHmrHelper ? hmrHelperText() : "",
     routeHmrGlue(continuations),
     ...continuations.flatMap((continuation, index) =>
-      continuationDeclarations(sourceFile, continuation, targetFor(continuation, targets)?.node, index),
+      continuationDeclarations(
+        sourceFile,
+        continuation,
+        targetFor(continuation, targets)?.node,
+        index,
+      ),
     ),
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function routeHmrGlue(continuations: readonly RouteTransformContinuation[]): string {
@@ -236,7 +250,9 @@ function routeHmrGlue(continuations: readonly RouteTransformContinuation[]): str
   return emitViteRouteHmrGlue({
     moduleId: continuations[0]?.moduleId ?? "",
     compatibilityFingerprint: JSON.stringify({
-      continuations: continuations.map((continuation) => continuation.compatibilityFingerprint).sort(),
+      continuations: continuations
+        .map((continuation) => continuation.compatibilityFingerprint)
+        .sort(),
       version: continuations[0]?.version ?? "1",
     }),
   });
@@ -291,7 +307,9 @@ function continuationRegistration(
               `    { tag: ${generatedServiceName(continuationIndex, captureIndex)}, valueIndex: ${captureIndex} },`,
           ),
           "  ]",
-        ].join("\n").replace(",\n  ]", "\n  ]"),
+        ]
+          .join("\n")
+          .replace(",\n  ]", "\n  ]"),
     "});",
   ].join("\n");
 }
@@ -300,8 +318,9 @@ function generatedContextServiceDeclarations(
   continuation: RouteTransformContinuation,
   continuationIndex: number,
 ): readonly string[] {
-  return serviceCaptures(continuation).map((capture, captureIndex) =>
-    `class ${generatedServiceName(continuationIndex, captureIndex)} extends __typedRouteContext.Service<${generatedServiceName(continuationIndex, captureIndex)}, ${serviceShape(capture)}>()(${JSON.stringify(generatedServiceId(continuation, capture))}) {}`,
+  return serviceCaptures(continuation).map(
+    (capture, captureIndex) =>
+      `class ${generatedServiceName(continuationIndex, captureIndex)} extends __typedRouteContext.Service<${generatedServiceName(continuationIndex, captureIndex)}, ${serviceShape(capture)}>()(${JSON.stringify(generatedServiceId(continuation, capture))}) {}`,
   );
 }
 
@@ -334,7 +353,10 @@ function continuationBody(
   const body = target.body;
   if (!body) return block(params, []);
   if (!ts.isBlock(body)) return block(params, [expressionBodyStatement(sourceFile, body)]);
-  return block(params, body.statements.map((statement) => statement.getText(sourceFile)));
+  return block(
+    params,
+    body.statements.map((statement) => statement.getText(sourceFile)),
+  );
 }
 
 function expressionBodyStatement(sourceFile: ts.SourceFile, expression: ts.Expression): string {
@@ -383,15 +405,18 @@ function asyncContinuationBody(
     : ts.isBlock(body)
       ? body.getText(sourceFile)
       : `{ return ${body.getText(sourceFile)}; }`;
-  return block(params, [`return yield* __typedRouteEffect.promise(() => (async () => ${asyncBody})());`]);
+  return block(params, [
+    `return yield* __typedRouteEffect.promise(() => (async () => ${asyncBody})());`,
+  ]);
 }
 
 function generatedContextBindings(
   continuation: RouteTransformContinuation,
   continuationIndex: number,
 ): readonly string[] {
-  const generated = serviceCaptures(continuation).map((capture, captureIndex) =>
-    `const ${capture.name} = yield* ${generatedServiceName(continuationIndex, captureIndex)};`,
+  const generated = serviceCaptures(continuation).map(
+    (capture, captureIndex) =>
+      `const ${capture.name} = yield* ${generatedServiceName(continuationIndex, captureIndex)};`,
   );
   const services = continuation.captures.flatMap((capture) =>
     capture.kind === "effect-service" && capture.serviceName && capture.serviceName !== capture.name
@@ -416,9 +441,14 @@ function closureRewriteEdits(
     return [{ continuation, index, target }];
   });
   const topLevelTargets = rewriteTargets.filter(
-    (item) => !rewriteTargets.some((other) => other !== item && containsNode(other.target.node, item.target.node)),
+    (item) =>
+      !rewriteTargets.some(
+        (other) => other !== item && containsNode(other.target.node, item.target.node),
+      ),
   );
-  return topLevelTargets.map((item) => closureRewriteEdit(sourceFile, item.target.node, item.continuation, item.index));
+  return topLevelTargets.map((item) =>
+    closureRewriteEdit(sourceFile, item.target.node, item.continuation, item.index),
+  );
 }
 
 function targetFor(
@@ -458,16 +488,15 @@ function providedContinuationCall(
   continuation: RouteTransformContinuation,
   index: number,
 ): string {
-  const providers = serviceCaptures(continuation).map((capture, captureIndex) =>
-    `__typedRouteEffect.provideService(${generatedServiceName(index, captureIndex)}, ${capture.name})`,
+  const providers = serviceCaptures(continuation).map(
+    (capture, captureIndex) =>
+      `__typedRouteEffect.provideService(${generatedServiceName(index, captureIndex)}, ${capture.name})`,
   );
   if (providers.length === 0) return `__typed_route_continuation_${index}`;
   return `__typed_route_continuation_${index}.pipe(${providers.join(", ")})`;
 }
 
-function serviceCaptures(
-  continuation: RouteTransformContinuation,
-): readonly RouteCaptureFact[] {
+function serviceCaptures(continuation: RouteTransformContinuation): readonly RouteCaptureFact[] {
   return continuation.captures.filter(
     (capture) =>
       capture.kind === "generated-context" ||
@@ -516,12 +545,11 @@ function hasAsyncModifier(node: ts.FunctionLikeDeclaration): boolean {
 
 function contextDescriptor(continuation: RouteTransformContinuation): object {
   return {
-    captures: serviceCaptures(continuation)
-      .map((capture) => ({
-        name: capture.name,
-        serviceId: generatedServiceId(continuation, capture),
-        type: serviceShape(capture),
-      })),
+    captures: serviceCaptures(continuation).map((capture) => ({
+      name: capture.name,
+      serviceId: generatedServiceId(continuation, capture),
+      type: serviceShape(capture),
+    })),
     fingerprint: continuation.contextFingerprint,
   };
 }
@@ -601,10 +629,17 @@ function importInsertionIndex(sourceFile: ts.SourceFile): number {
 function applyEdits(sourceText: string, edits: readonly TextEdit[]): string {
   return [...edits]
     .sort((left, right) => right.start - left.start)
-    .reduce((text, edit) => text.slice(0, edit.start) + edit.text + text.slice(edit.end), sourceText);
+    .reduce(
+      (text, edit) => text.slice(0, edit.start) + edit.text + text.slice(edit.end),
+      sourceText,
+    );
 }
 
-function toCompilerDiagnostic(diagnostic: { readonly code: string; readonly message: string; readonly moduleId: string }): TypedCompilerDiagnostic {
+function toCompilerDiagnostic(diagnostic: {
+  readonly code: string;
+  readonly message: string;
+  readonly moduleId: string;
+}): TypedCompilerDiagnostic {
   return createCompilerDiagnostic({
     code: diagnostic.code,
     fileName: diagnostic.moduleId,
@@ -644,7 +679,8 @@ function captureFingerprint(capture: RouteCaptureFact): string {
   if (capture.kind === "serializable-value") {
     return `${capture.kind}:${capture.name}:${capture.descriptorName ?? ""}:${capture.typeText}`;
   }
-  if (capture.kind === "template-value") return `${capture.kind}:${capture.name}:${capture.templateHash ?? ""}`;
+  if (capture.kind === "template-value")
+    return `${capture.kind}:${capture.name}:${capture.templateHash ?? ""}`;
   return `${capture.kind}:${capture.name}:${capture.reason}:${capture.typeText ?? ""}`;
 }
 

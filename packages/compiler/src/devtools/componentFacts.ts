@@ -271,12 +271,20 @@ function namedComponentDeclaration(
   statement: ts.Statement,
   context: ComponentIdentityContext,
 ): ComponentDeclaration | undefined {
-  if (ts.isFunctionDeclaration(statement) && statement.name && hasComponentReturnType(statement, context)) {
+  if (
+    ts.isFunctionDeclaration(statement) &&
+    statement.name &&
+    hasComponentReturnType(statement, context)
+  ) {
     return { identityNode: statement.name, localName: statement.name.text };
   }
   if (!ts.isVariableStatement(statement)) return undefined;
   const declaration = statement.declarationList.declarations[0];
-  if (!declaration || !ts.isIdentifier(declaration.name) || !hasComponentVariableType(declaration)) {
+  if (
+    !declaration ||
+    !ts.isIdentifier(declaration.name) ||
+    !hasComponentVariableType(declaration)
+  ) {
     return undefined;
   }
   return { identityNode: declaration.name, localName: declaration.name.text };
