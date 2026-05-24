@@ -1,15 +1,19 @@
 import { assert, describe, it } from "vitest";
 import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 import type * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, EventHandler, html, render } from "@typed/template";
 import * as Button from "./Button.js";
+import * as Checkbox from "./Checkbox.js";
 import * as Combobox from "./Combobox.js";
 import * as Dialog from "./Dialog.js";
+import * as Disclosure from "./Disclosure.js";
 import * as Dom from "./Dom.js";
 import * as Form from "./Form.js";
 import * as Listbox from "./Listbox.js";
 import * as Menu from "./Menu.js";
+import * as Popover from "./Popover.js";
 import * as RadioGroup from "./RadioGroup.js";
 import * as Select from "./Select.js";
 import * as Tabs from "./Tabs.js";
@@ -17,6 +21,325 @@ import * as Toolbar from "./Toolbar.js";
 import type { Component } from "./Reactive.js";
 
 describe("typed/ui enterprise browser e2e", () => {
+  it("runs a settings dialog form lifecycle with validation, controls, submit, and reset", () =>
+    Effect.gen(function* () {
+      type SettingsValues = {
+        readonly email: string;
+        readonly role: string;
+        readonly tags: readonly string[];
+      };
+      const root = appendRoot();
+      const submitted: SettingsValues[] = [];
+      const dialog = yield* Dialog.makeState({ open: false });
+      const form = yield* Form.makeState<SettingsValues>({
+        values: { email: "", role: "viewer", tags: ["core"] },
+        schema: Schema.Struct({
+          email: Schema.String.check(Schema.isMinLength(1)),
+          role: Schema.String,
+          tags: Schema.Array(Schema.String),
+        }),
+      });
+      const marketing = yield* Checkbox.makeState({ checked: false });
+      const density = yield* RadioGroup.makeState<"compact" | "comfortable">({
+        value: "compact",
+      });
+      const role = yield* Select.makeState({ id: "settings-role", value: "viewer" });
+      const densityItems = [
+        { id: "density-compact", value: "compact", textValue: "Compact" },
+        { id: "density-comfortable", value: "comfortable", textValue: "Comfortable" },
+      ] as const;
+      const trigger = yield* renderOne<HTMLButtonElement>(
+        Dialog.Trigger({ state: dialog, controls: "settings-dialog", content: "Settings" }),
+        appendMount(root),
+      );
+      const formElement = yield* renderOne<HTMLFormElement>(
+        Form.Form({
+          state: form,
+          onValidSubmit: (values) =>
+            Effect.sync(() => {
+              submitted.push(values);
+            }),
+          content: html`
+            ${Form.Input({ state: form, name: "email", id: "settings-email" })}
+            ${Select.HiddenInput({ state: role, formState: form, name: "role" })}
+            ${Checkbox.Input({ state: marketing, name: "marketing", value: "yes" })}
+            ${RadioGroup.Root({
+              state: density,
+              items: densityItems,
+              content: html`
+                ${RadioGroup.Item({
+                  state: density,
+                  id: "density-compact",
+                  value: "compact",
+                  content: "Compact",
+                })}
+                ${RadioGroup.Item({
+                  state: density,
+                  id: "density-comfortable",
+                  value: "comfortable",
+                  content: "Comfortable",
+                })}
+              `,
+            })}
+            ${Form.Push({ state: form, name: "tags", value: "beta", content: "Add beta" })}
+            ${Form.Remove({ state: form, name: "tags", index: 0, content: "Remove first tag" })}
+            ${Form.Submit({ content: "Save" })}
+            ${Form.Reset({ content: "Reset" })}
+          `,
+        }),
+        appendMount(root),
+      );
+      const dialogElement = yield* renderOne<HTMLDialogElement>(
+        Dialog.Content({
+          state: dialog,
+          id: "settings-dialog",
+          label: "Settings",
+          finalFocus: trigger,
+          content: "Settings panel",
+        }),
+        appendMount(root),
+      );
+      const admin = yield* renderOne<HTMLElement>(
+        Select.Option({ state: role, id: "admin", value: "admin", content: "Admin" }),
+        appendMount(root),
+      );
+      yield* Effect.sleep(30);
+
+      trigger.click();
+      yield* Effect.sleep(50);
+      assert.strictEqual(dialogElement.open, true);
+
+      formElement.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(30);
+      assert.strictEqual(submitted.length, 0);
+      assert.ok((yield* form).errors.email);
+
+      const email = formElement.querySelector<HTMLInputElement>("#settings-email");
+      const marketingInput = formElement.querySelector<HTMLInputElement>("input[name=marketing]");
+      const comfortable = formElement.querySelector<HTMLElement>("#density-comfortable");
+      const add = buttonNamed(formElement, "Add beta");
+      const remove = buttonNamed(formElement, "Remove first tag");
+      assert(email);
+      assert(marketingInput);
+      assert(comfortable);
+
+      email.value = "editor@example.com";
+      email.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true }));
+      marketingInput.click();
+      comfortable.click();
+      add.click();
+      remove.click();
+      admin.click();
+      yield* Effect.sleep(50);
+
+      assert.strictEqual((yield* marketing).checked, true);
+      assert.strictEqual((yield* density).value, "comfortable");
+      assert.deepStrictEqual((yield* form).values, {
+        email: "editor@example.com",
+        role: "admin",
+        tags: ["beta"],
+      });
+      assert.strictEqual(new FormData(formElement).get("marketing"), "yes");
+
+      formElement.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(30);
+      assert.deepStrictEqual(submitted, [
+        { email: "editor@example.com", role: "admin", tags: ["beta"] },
+      ]);
+      assert.strictEqual((yield* form).submitting, false);
+
+      formElement.dispatchEvent(new Event("reset", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(30);
+      assert.deepStrictEqual((yield* form).values, { email: "", role: "viewer", tags: ["core"] });
+      assert.deepStrictEqual((yield* form).errors, {});
+
+      yield* Dialog.close(dialog);
+      yield* Effect.sleep(150);
+      assert.strictEqual(document.activeElement, trigger);
+      root.remove();
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("runs a command surface with native menu trigger, disabled-item navigation, and Fx combobox items", () =>
+    Effect.gen(function* () {
+      const root = appendRoot();
+      const menuItems = [
+        { id: "new", textValue: "New file" },
+        { id: "disabled-archive", textValue: "Archive", disabled: true },
+        { id: "delete", textValue: "Delete" },
+      ] as const;
+      const commandItems = Fx.succeed([
+        { id: "open", value: "open", textValue: "Open project" },
+        { id: "publish", value: "publish", textValue: "Publish project" },
+        { id: "delete", value: "delete", textValue: "Delete project" },
+      ] as const);
+      const menu = yield* Menu.makeState({ id: "command-menu", virtualFocus: true });
+      const combobox = yield* Combobox.makeState({ id: "command-combobox", value: "" });
+      const trigger = yield* renderOne<HTMLButtonElement>(
+        Menu.Trigger({ state: menu, content: "Commands" }),
+        appendMount(root),
+      );
+      const content = yield* renderOne<HTMLElement>(
+        Menu.Content({
+          state: menu,
+          items: menuItems,
+          content: html`
+            ${Menu.Item({ state: menu, id: "new", content: "New file" })}
+            ${Menu.Item({
+              state: menu,
+              id: "disabled-archive",
+              disabled: true,
+              content: "Archive",
+            })}
+            ${Menu.Item({ state: menu, id: "delete", content: "Delete" })}
+          `,
+        }),
+        appendMount(root),
+      );
+      const input = yield* renderOne<HTMLInputElement>(
+        Combobox.Input({
+          state: combobox,
+          items: commandItems,
+          autocomplete: "both",
+          autoSelect: true,
+          filter: (item, query) => item.textValue?.toLowerCase().startsWith(query.toLowerCase()) ?? false,
+        }),
+        appendMount(root),
+      );
+
+      trigger.click();
+      yield* Effect.sleep(50);
+      assert.strictEqual((yield* menu).open, true);
+      assert.strictEqual(content.getAttribute("data-open"), "true");
+
+      content.dispatchEvent(key("ArrowDown"));
+      content.dispatchEvent(key("ArrowDown"));
+      yield* Effect.sleep(30);
+      assert.strictEqual((yield* menu).activeId, "delete");
+      assert.strictEqual(content.getAttribute("aria-activedescendant"), "delete");
+
+      content.dispatchEvent(key("n"));
+      yield* Effect.sleep(30);
+      assert.strictEqual((yield* menu).activeId, "new");
+
+      input.value = "Pub";
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true }));
+      yield* Effect.sleep(30);
+      assert.strictEqual((yield* combobox).activeId, "publish");
+      assert.strictEqual((yield* combobox).value, "publish");
+      assert.strictEqual(input.getAttribute("aria-activedescendant"), "publish");
+
+      input.dispatchEvent(key("Escape"));
+      yield* Effect.sleep(30);
+      assert.strictEqual((yield* combobox).open, false);
+      assert.strictEqual(input.getAttribute("aria-expanded"), "false");
+      root.remove();
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("runs navigation and overlay controls through rendered tabs, disclosure, and popover DOM", () =>
+    Effect.gen(function* () {
+      const root = appendRoot();
+      const tabs = yield* Tabs.makeState({ selectedId: "overview" });
+      const disclosure = yield* Disclosure.makeState({ open: false });
+      const popover = yield* Popover.makeState({ id: "help-popover", open: false, mode: "auto" });
+      const tabItems = [
+        { id: "overview", textValue: "Overview" },
+        { id: "settings", textValue: "Settings" },
+      ] as const;
+      const tablist = yield* renderOne<HTMLElement>(
+        Tabs.List({
+          state: tabs,
+          items: tabItems,
+          content: html`
+            ${Tabs.Tab({
+              state: tabs,
+              id: "overview",
+              panelId: "overview-panel",
+              content: "Overview",
+            })}
+            ${Tabs.Tab({
+              state: tabs,
+              id: "settings",
+              panelId: "settings-panel",
+              content: "Settings",
+            })}
+          `,
+        }),
+        appendMount(root),
+      );
+      const overviewPanel = yield* renderOne<HTMLElement>(
+        Tabs.Panel({
+          state: tabs,
+          id: "overview-panel",
+          tabId: "overview",
+          content: "Overview panel",
+        }),
+        appendMount(root),
+      );
+      const settingsPanel = yield* renderOne<HTMLElement>(
+        Tabs.Panel({
+          state: tabs,
+          id: "settings-panel",
+          tabId: "settings",
+          content: "Settings panel",
+        }),
+        appendMount(root),
+      );
+      const disclosureButton = yield* renderOne<HTMLButtonElement>(
+        Disclosure.Button({
+          state: disclosure,
+          controls: "advanced-settings",
+          content: "Advanced",
+        }),
+        appendMount(root),
+      );
+      const disclosureContent = yield* renderOne<HTMLElement>(
+        Disclosure.Content({
+          state: disclosure,
+          id: "advanced-settings",
+          content: "Advanced settings",
+        }),
+        appendMount(root),
+      );
+      const popoverTrigger = yield* renderOne<HTMLButtonElement>(
+        Popover.Trigger({ state: popover, content: "Help" }),
+        appendMount(root),
+      );
+      const popoverContent = yield* renderOne<HTMLElement>(
+        Popover.Content({
+          state: popover,
+          positionAnchor: "--help",
+          positionArea: "bottom",
+          content: html`${Popover.Dismiss({ state: popover, content: "Close help" })}`,
+        }),
+        appendMount(root),
+      );
+      yield* Effect.sleep(30);
+
+      tablist.dispatchEvent(key("ArrowRight"));
+      yield* Effect.sleep(30);
+      assert.strictEqual((yield* tabs).selectedId, "settings");
+      assert.strictEqual(overviewPanel.hidden, true);
+      assert.strictEqual(settingsPanel.hidden, false);
+
+      disclosureButton.click();
+      yield* Effect.sleep(30);
+      assert.strictEqual((yield* disclosure).open, true);
+      assert.strictEqual(disclosureButton.getAttribute("aria-expanded"), "true");
+      assert.strictEqual(disclosureContent.hidden, false);
+
+      popoverTrigger.click();
+      yield* Effect.sleep(50);
+      assert.strictEqual((yield* popover).open, true);
+      assert.strictEqual(popoverContent.dataset.positionAnchor, "--help");
+      assert.strictEqual(popoverContent.dataset.positionArea, "bottom");
+
+      buttonNamed(popoverContent, "Close help").click();
+      yield* Effect.sleep(50);
+      assert.strictEqual((yield* popover).open, false);
+      assert.strictEqual(popoverTrigger.getAttribute("aria-expanded"), "false");
+      root.remove();
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("persists a dialog settings flow through Select hidden input and Form state", () =>
     Effect.gen(function* () {
       const root = appendRoot();
@@ -56,7 +379,7 @@ describe("typed/ui enterprise browser e2e", () => {
       yield* Effect.sleep(30);
 
       trigger.focus();
-      yield* Dialog.setOpen(dialog, true);
+      trigger.click();
       yield* Effect.sleep(50);
       assert.strictEqual(dialogElement.open, true);
 
@@ -67,7 +390,7 @@ describe("typed/ui enterprise browser e2e", () => {
       assert.strictEqual(new FormData(formElement).get("role"), "admin");
 
       yield* Dialog.close(dialog);
-      yield* Effect.sleep(30);
+      yield* Effect.sleep(150);
       assert.strictEqual(dialogElement.open, false);
       assert.strictEqual(document.activeElement, trigger);
       root.remove();
@@ -259,6 +582,14 @@ function appendMount(root: HTMLElement): HTMLElement {
 
 function key(value: string): KeyboardEvent {
   return new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: value });
+}
+
+function buttonNamed(root: ParentNode, name: string): HTMLButtonElement {
+  const button = Array.from(root.querySelectorAll("button")).find(
+    (element) => element.textContent === name,
+  );
+  assert(button instanceof HTMLButtonElement, `Expected button named ${name}`);
+  return button;
 }
 
 function renderOne<Element extends globalThis.HTMLElement, Opts extends {} = {}>(

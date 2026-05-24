@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import * as Schema from "effect/Schema";
 import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
@@ -183,7 +184,10 @@ export function Form<
     Effect.gen(function* () {
       event.preventDefault();
       yield* RefSubject.update(options.state, (state) => ({ ...state, submitting: true }));
-      const values = yield* validate(options.state);
+      const exit = yield* validate(options.state).pipe(Effect.exit);
+      if (Exit.isFailure(exit)) return;
+
+      const values = exit.value;
       const result = options.onValidSubmit?.(values, event);
       if (Effect.isEffect(result)) yield* result;
     }).pipe(

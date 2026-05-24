@@ -115,16 +115,12 @@ function closeElement(element: DialogElement | undefined): void {
 }
 
 function restoreFocus(element: HTMLElement): void {
-  element.focus();
-
-  const window = element.ownerDocument?.defaultView;
-  window?.requestAnimationFrame(() => element.focus());
-  window?.setTimeout(() => element.focus(), 0);
+  focusElement(element);
 }
 
 function focusInitial(element: DialogElement, options: Options): void {
   const target = focusTarget(element, options.initialFocus);
-  target?.focus();
+  if (target) focusElement(target);
 }
 
 function focusTarget(element: DialogElement | undefined, target: FocusTarget | undefined): HTMLElement | undefined {
@@ -151,4 +147,14 @@ function getActiveElement(value: EventTarget | null | undefined): HTMLElement | 
       : undefined;
   const activeElement = document?.activeElement ?? null;
   return isFocusableElement(activeElement) ? activeElement : undefined;
+}
+
+function focusElement(element: HTMLElement): void {
+  element.focus();
+
+  const window = element.ownerDocument?.defaultView;
+  window?.requestAnimationFrame(() => element.focus());
+  window?.setTimeout(() => element.focus(), 0);
+  window?.setTimeout(() => element.focus(), 50);
+  window?.setTimeout(() => element.focus(), 100);
 }
