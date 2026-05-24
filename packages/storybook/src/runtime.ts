@@ -3,6 +3,8 @@ import * as TypedRouter from "@typed/router";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
+type StorybookLayer = Layer.Layer<never, any, any>;
+
 export const TYPED_STORYBOOK_RUNTIME_PARAMETER = "typed" as const;
 
 export interface TypedStoryRuntimeOptions<
@@ -44,7 +46,7 @@ export function runWithTypedStoryRuntime<A, E>(
   }
 
   const layer = composeStorybookLayers(layers);
-  const provided = Effect.provide(effect, layer as Layer.Layer<never, unknown, unknown>);
+  const provided = Effect.provide(effect, layer as StorybookLayer);
 
   return Effect.runPromise(provided as Effect.Effect<A, E | unknown, never>);
 }
@@ -61,22 +63,22 @@ function runtimeLayers(runtime: TypedStoryRuntimeOptions): readonly LayerOrGroup
   ];
 }
 
-function composeStorybookLayers(layers: readonly LayerOrGroup[]): Layer.Layer<never, unknown, unknown> {
-  let out: Layer.Layer<never, unknown, unknown> = Layer.empty;
+function composeStorybookLayers(layers: readonly LayerOrGroup[]): StorybookLayer {
+  let out: StorybookLayer = Layer.empty;
   for (let index = layers.length - 1; index >= 0; index -= 1) {
     out = Layer.provideMerge(out, toLayer(layers[index]!));
   }
   return out;
 }
 
-function toLayer(layer: LayerOrGroup): Layer.Layer<never, unknown, unknown> {
+function toLayer(layer: LayerOrGroup): StorybookLayer {
   if (isLayerGroup(layer)) return Layer.mergeAll(layer[0], ...layer.slice(1));
-  return layer;
+  return layer as unknown as StorybookLayer;
 }
 
 function isLayerGroup(
   layer: LayerOrGroup,
-): layer is readonly [Layer.Layer<never, unknown, unknown>, ...ReadonlyArray<Layer.Layer<never, unknown, unknown>>] {
+): layer is readonly [StorybookLayer, ...ReadonlyArray<StorybookLayer>] {
   return Array.isArray(layer);
 }
 

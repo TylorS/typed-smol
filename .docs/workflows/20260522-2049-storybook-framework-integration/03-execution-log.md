@@ -241,3 +241,58 @@ Execution started after approval of `plan.md`.
   - Storybook runtime generated layers now include API dependency layers before story-level layers and `testLayers`.
 - memory_updates:
   - Recorded generated API client convenience wrapper and Storybook dependency-layer composition notes in `memories.md`.
+
+### Task
+
+- task_id: T-13
+- requirement_ids: FR-5, FR-6, FR-8, FR-9, FR-10, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6
+- ts_scenarios: TS-4, TS-5, TS-6, TS-7
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app test -- ComposableVirtualModulePlugin.test.ts` failed because composable VMs still emitted raw concern module maps, service dependencies were always lifted through `Router.normalizeDependencyInput`, and `typed:api-handler` ignored endpoint `body`.
+  - GREEN: `pnpm --filter @typed/app test -- ComposableVirtualModulePlugin.test.ts` passed with 28 files, 382 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app test -- RouterVirtualModulePlugin.test.ts` passed with 28 files, 381 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app test` passed with 28 files, 382 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app build` passed after removing duplicate runtime-template re-exports from the app runtime barrel.
+  - GREEN: `pnpm --filter @typed/virtual-modules test`, `pnpm --filter @typed/virtual-modules-vite test`, and `pnpm --filter @typed/vite-plugin test` passed.
+  - GREEN: `pnpm --filter @typed/storybook test`, `pnpm --filter @typed/storybook build`, `pnpm --filter @typed/storybook storybook:build`, `pnpm --filter @typed/storybook storybook:dev-smoke`, and `pnpm --filter @typed/storybook test:stories` passed.
+  - LINT: `pnpm exec oxlint packages/virtual-modules packages/virtual-modules-vite packages/app packages/storybook packages/vite-plugin` passed with 0 errors and 3 pre-existing warnings in `packages/virtual-modules`.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Guard concern VMs now validate exact guard/default export shape and callable form; full `Effect<Option<*>>` enforcement remains owned by the route descriptor validator until TypeInfo guard return classification is reliable for all fixture forms.
+  - `typed:router` and `typed:api` remain stable orchestrators while the concern VMs now expose normalized maps for the next safe orchestrator refactor tranche.
+  - `@typed/app/runtime` now exports the canonical `src/runtime` surface only; legacy `runtimeTemplates` remains available through its direct module path and no longer collides in the public runtime barrel.
+- context_updates:
+  - Added strict normalized exports for `typed:services`, `typed:guard`, `typed:layout`, `typed:catch`, API concern VMs, `typed:route-template`, and `typed:api-handler`.
+- memory_updates:
+  - Recorded type-directed composable VM normalization and the current orchestrator handoff boundary in `memories.md`.
+
+### Task
+
+- task_id: T-14
+- requirement_ids: FR-3, FR-5, FR-6, FR-8, FR-9, FR-10, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6
+- ts_scenarios: TS-2, TS-4, TS-5, TS-6, TS-7
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app test -- ComponentVirtualModulePlugin.test.ts` failed until `typed:component` stopped emitting `Schema.Unknown`, exported TypeInfo-derived `argTypes`, emitted component metadata types, supported property helpers, and classified non-callable renderable exports without invoking them.
+  - RED: `pnpm --filter @typed/storybook typecheck:stories` failed until generated component stories exported `argTypes`, `makeComponentProperty`, and `testLayers`-aware `makeComponentStory` parameters that Storybook can type-check.
+  - GREEN: `pnpm --filter @typed/virtual-modules test` passed with 14 files and 155 tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 32 files, 426 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app build` passed.
+  - GREEN: `pnpm --filter @typed/storybook typecheck:stories` passed.
+  - GREEN: `pnpm --filter @typed/storybook test` passed with 7 files and 24 tests.
+  - GREEN: `pnpm --filter @typed/storybook test:portable` passed with 1 file and 7 tests.
+  - GREEN: `pnpm --filter @typed/storybook test:stories` passed with 1 story file and 6 story tests.
+  - GREEN: `pnpm --filter @typed/storybook storybook:build` passed for the public-beta fixture.
+  - GREEN: `pnpm --filter @typed/storybook storybook:dev-smoke` passed.
+  - LINT: `pnpm exec oxlint packages/app packages/storybook packages/virtual-modules packages/vite-plugin` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Component dependency convention files are still deferred; v1 component stories remain explicit through `layers` and `testLayers`.
+  - Local stale `node_modules/.typed/virtual/typed-component-virtual-module` artifacts had to be cleared once because the artifact cache did not fingerprint helper-body changes in `ComponentVirtualModulePlugin`; clean CI workspaces should regenerate normally.
+- context_updates:
+  - `typed:component` is now strict and fail-closed for unsupported TypeInfo/schema nodes, with actionable diagnostics instead of weak schema fallbacks.
+  - Generated component stories export `InputSchema`, `InputArbitrary`, `InputEquivalence`, JSON/standard schema helpers, `argTypes`, `makeComponentStory`, `makeComponentProperty`, and component render metadata types.
+  - Public-beta Storybook coverage now includes a component-backed story, schema utility story, generated property helper, and dependency override story through `testLayers`.
+- memory_updates:
+  - Recorded strict component VM generation, generated Storybook controls/property helpers, explicit component layer ordering, and stale artifact-cache rerun notes in `memories.md`.

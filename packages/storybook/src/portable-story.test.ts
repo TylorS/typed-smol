@@ -1,11 +1,17 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import * as fc from "fast-check";
 import { Window } from "happy-dom";
 import projectAnnotations from "./preview.js";
 import { composeStory, setProjectAnnotations } from "./testing.js";
 import meta, {
   ApiBacked,
   ApiTestLayerOverride,
+  ComponentBacked,
+  ComponentSchemaUtilities,
+  ComponentTestLayerOverride,
   RouteBacked,
+  userCardArbitrary,
+  userCardProperty,
 } from "../fixtures/public-beta/src/PublicBeta.stories.js";
 
 describe("portable server-backed stories", () => {
@@ -25,6 +31,39 @@ describe("portable server-backed stories", () => {
 
     expect(canvasElement.innerHTML).toContain("Dashboard:");
     expect(canvasElement.innerHTML).toContain("Generated route dependency");
+  });
+
+  it("renders typed:component generated component stories", async () => {
+    const canvasElement = createRoot();
+    const Story = composeStory(ComponentBacked, meta, projectAnnotations);
+
+    await Story.run({ canvasElement });
+
+    expect(canvasElement.innerHTML).toContain("Ada Lovelace");
+    expect(canvasElement.innerHTML).toContain("Featured");
+  });
+
+  it("exposes schema-derived component testing utilities", async () => {
+    const canvasElement = createRoot();
+    const Story = composeStory(ComponentSchemaUtilities, meta, projectAnnotations);
+
+    await Story.run({ canvasElement });
+
+    expect(canvasElement.innerHTML).toContain("schema utilities ready");
+  });
+
+  it("checks generated component arbitrary inputs with the property helper", async () => {
+    await fc.assert(fc.asyncProperty(userCardArbitrary, userCardProperty), { numRuns: 3 });
+  });
+
+  it("satisfies component dependencies through generated testLayers", async () => {
+    const canvasElement = createRoot();
+    const Story = composeStory(ComponentTestLayerOverride, meta, projectAnnotations);
+
+    await Story.run({ canvasElement });
+
+    expect(canvasElement.innerHTML).toContain("Component dependency");
+    expect(canvasElement.innerHTML).toContain("Satisfied by component testLayers");
   });
 
   it("wires API stories through the generated typed API client", async () => {
