@@ -51,9 +51,10 @@ async function waitForServer(server) {
   }
 
   throw new Error(
-    [`Timed out waiting for RealWorld HMR app server at ${appBase}.`, ...server.logs.slice(-40)].join(
-      "\n",
-    ),
+    [
+      `Timed out waiting for RealWorld HMR app server at ${appBase}.`,
+      ...server.logs.slice(-40),
+    ].join("\n"),
   );
 }
 

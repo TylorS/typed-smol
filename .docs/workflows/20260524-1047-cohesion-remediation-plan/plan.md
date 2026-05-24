@@ -758,7 +758,7 @@ test(realworld): prove generated runtime resumability
 - Modify `examples/realworld` files named by a failing command in this task.
 - Update `.docs/workflows/20260524-1047-cohesion-remediation-plan/developer-tooling-handoff.md` if compliance depends on tooling-owned fixes.
 
-- [ ] **Step 1: Run the local RealWorld app gates**
+- [x] **Step 1: Run the local RealWorld app gates**
 
 Run:
 
@@ -771,7 +771,7 @@ pnpm --filter typed-realworld storybook:build
 
 Expected: pass without hiding warnings that affect runtime correctness.
 
-- [ ] **Step 2: Ensure local acceptance prerequisites are present**
+- [x] **Step 2: Ensure local acceptance prerequisites are present**
 
 Run:
 
@@ -781,6 +781,8 @@ pnpm --filter typed-realworld exec playwright install chromium
 ```
 
 Expected: Hurl is installed and Chromium is available for Playwright. If Hurl is absent, write the blocker to `developer-tooling-handoff.md` and stop this task with status `blocked`; do not continue to Step 3.
+
+Actual: blocked because `command -v hurl` exited 1. `typed-realworld check`, `typed-realworld build`, `typed-realworld test`, and `typed-realworld storybook:build` passed before the acceptance prerequisite check.
 
 - [ ] **Step 3: Run upstream local acceptance**
 
@@ -802,7 +804,7 @@ pnpm --filter typed-realworld test:hmr:local
 
 Expected: pass.
 
-- [ ] **Step 5: Resolve or hand off tooling-owned blockers**
+- [x] **Step 5: Resolve or hand off tooling-owned blockers**
 
 When these gates expose browser externalization, null-byte virtual-id, Vite host, TS plugin, or VS Code integration defects, append this exact record to `developer-tooling-handoff.md`:
 

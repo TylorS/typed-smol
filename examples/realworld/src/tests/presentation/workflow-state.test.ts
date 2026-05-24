@@ -3,11 +3,7 @@ import * as Effect from "effect/Effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { makeBrowserClient } from "../../common/BrowserApiClient.js";
 import { BrowserAuthState, createAuthStore, type AuthStore } from "../../common/State.js";
-import {
-  email as emailValue,
-  tagName,
-  username as usernameValue,
-} from "../helpers/domain.js";
+import { email as emailValue, tagName, username as usernameValue } from "../helpers/domain.js";
 
 const profile = {
   username: "reader",

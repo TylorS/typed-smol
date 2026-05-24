@@ -12,11 +12,5 @@
     "src/api/**/*.ts",
     ".storybook/**/*.ts"
   ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "src/tests",
-    "src/Api.ts",
-    "src/.browser.dependencies.ts"
-  ]
+  "exclude": ["dist", "node_modules", "src/tests", "src/Api.ts", "src/.browser.dependencies.ts"]
 }

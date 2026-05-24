@@ -22,6 +22,12 @@ export default defineConfig({
     port: 4173,
     strictPort: false,
   },
+  test: {
+    exclude: ["**/node_modules/**", "**/dist/**", "src/tests/hmr/**"],
+  },
+  lint: {
+    categories: {},
+  },
   compression: false,
   storybook: {
     routes: ["./src/routes"],

@@ -8,7 +8,11 @@ export const route = Route.Parse("__typed/hmr-ui");
 export const template = Fx.gen(function* () {
   const dialog = yield* Dialog.makeState({ open: false });
   const disclosure = yield* Disclosure.makeState({ open: false });
-  const popover = yield* Popover.makeState({ id: "realworld-hmr-popover", open: false, mode: "auto" });
+  const popover = yield* Popover.makeState({
+    id: "realworld-hmr-popover",
+    open: false,
+    mode: "auto",
+  });
   const select = yield* Select.makeState<string>({ id: "realworld-hmr-select", value: "global" });
 
   return html`<section class="container page" data-testid="hmr-ui-route">

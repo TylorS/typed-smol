@@ -1,12 +1,5 @@
 import * as Schema from "effect/Schema";
-import {
-  CommentId,
-  Email,
-  IsoDateTimeString,
-  Slug,
-  TagName,
-  Username,
-} from "../../domain/Ids.js";
+import { CommentId, Email, IsoDateTimeString, Slug, TagName, Username } from "../../domain/Ids.js";
 import { Password } from "../../domain/RealWorldApi.js";
 
 export const commentId = Schema.decodeUnknownSync(CommentId);

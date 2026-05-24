@@ -32,9 +32,11 @@ const HmrUi = Fx.gen(function* () {
   </section>`;
 });
 
-const hot = (import.meta as ImportMeta & {
-  readonly hot?: { readonly dispose: (callback: () => void) => void };
-}).hot;
+const hot = (
+  import.meta as ImportMeta & {
+    readonly hot?: { readonly dispose: (callback: () => void) => void };
+  }
+).hot;
 
 const stateScope = Effect.runSync(Scope.make());
 
