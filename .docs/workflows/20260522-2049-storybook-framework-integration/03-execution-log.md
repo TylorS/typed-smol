@@ -296,3 +296,29 @@ Execution started after approval of `plan.md`.
   - Public-beta Storybook coverage now includes a component-backed story, schema utility story, generated property helper, and dependency override story through `testLayers`.
 - memory_updates:
   - Recorded strict component VM generation, generated Storybook controls/property helpers, explicit component layer ordering, and stale artifact-cache rerun notes in `memories.md`.
+
+### Task
+
+- task_id: T-15
+- requirement_ids: FR-3, FR-5, FR-6, FR-8, FR-9, FR-10, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6
+- ts_scenarios: TS-2, TS-4, TS-5, TS-6, TS-7
+- validation_evidence:
+  - RED: `pnpm --filter @typed/storybook test -- src/preset.test.ts src/package-boundary.test.ts` failed because `viteFinal()` duplicated Typed Vite and Storybook HTTP server plugins when Storybook applied the framework preset twice.
+  - RED: the same focused test run failed because Storybook build-warning defaults were absent and `@typed/app/package.json` resolved through the wildcard export to nonexistent `dist/package.json.js`.
+  - GREEN: `pnpm --filter @typed/storybook test -- src/preset.test.ts src/package-boundary.test.ts` passed with 7 files and 28 tests.
+  - GREEN: `pnpm --filter @typed/storybook storybook:build` passed with no package lookup, chunk-size, or plugin-timing warnings in the captured output.
+  - GREEN: `pnpm --filter @typed/storybook typecheck:stories` passed.
+  - GREEN: `pnpm --filter @typed/storybook test` passed with 7 files and 28 tests.
+  - GREEN: `pnpm --filter @typed/storybook test:stories` passed with 1 story file and 6 story tests.
+  - GREEN: `pnpm --filter @typed/storybook storybook:dev-smoke` passed.
+  - LINT: `pnpm exec oxlint packages/app packages/storybook packages/vite-plugin` passed with 0 warnings and 0 errors.
+- commit:
+  - pending
+- deviations_or_replans:
+  - Kept the large Storybook iframe bundle intact and raised only Storybook's fixture warning threshold; manual chunking would add brittle fixture-specific complexity without reducing framework surface area.
+  - Disabled Rolldown plugin-timing warnings for Storybook fixture builds because TypeInfo virtual-module generation is expected work in this integration path, not a user-facing build warning.
+- context_updates:
+  - `viteFinal()` is now idempotent for Typed Vite and same-server Storybook HTTP plugin registration.
+  - `@typed/app` exports `./package.json` explicitly so Storybook auto-ref scanning can read package metadata instead of falling through the wildcard export.
+- memory_updates:
+  - Recorded duplicate preset application, clean Storybook build defaults, and `@typed/app/package.json` export notes in `memories.md`.

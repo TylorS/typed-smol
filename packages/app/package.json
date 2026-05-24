@@ -12,6 +12,7 @@
       "require": "./dist/index.js",
       "import": "./dist/index.js"
     },
+    "./package.json": "./package.json",
     "./*": {
       "types": "./dist/*.d.ts",
       "require": "./dist/*.js",

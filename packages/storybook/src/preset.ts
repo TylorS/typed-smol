@@ -1,3 +1,4 @@
+import { findTypedConfigRoot } from "@typed/app/config/loadTypedConfig";
 import { typedVitePlugin } from "@typed/vite-plugin";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -40,6 +41,9 @@ export interface TypedStorybookPresetOptions {
 const DEFAULT_STORYBOOK_HTTP_HOST = "127.0.0.1";
 const DEFAULT_STORYBOOK_HTTP_PORT = 6174;
 const DEFAULT_STORYBOOK_PROXY_PATH = "/__typed_storybook_api";
+const DEFAULT_STORYBOOK_CHUNK_WARNING_LIMIT_KB = 1_500;
+const TYPED_VITE_PATHS_PLUGIN = "typed-vite:native-tsconfig-paths";
+const TYPED_STORYBOOK_HTTP_SERVER_PLUGIN = "typed-storybook:http-server";
 
 type TypedStorybookHttpServerOptions = NonNullable<TypedStorybookFrameworkOptions["server"]> & {
   readonly mode: "http-server";
@@ -56,16 +60,99 @@ export async function viteFinal(
   const framework = await options.presets?.apply("framework");
   const frameworkOptions = getFrameworkOptions(framework);
   const serverOptions = frameworkOptions.server;
+  const fallbackRoot = config.root ?? process.cwd();
+  const projectRoot = findTypedConfigRoot(fallbackRoot) ?? fallbackRoot;
+  const typedViteOptions = {
+    ...frameworkOptions.typedVite,
+    projectRoot,
+    storybookVmOptions: {
+      ...frameworkOptions.typedVite?.storybookVmOptions,
+      runtimeDefaults: {
+        ...frameworkOptions.typedVite?.storybookVmOptions?.runtimeDefaults,
+        routes: serverOptions?.routes,
+        api: serverOptions?.api,
+        proxyPath: serverOptions?.proxyPath ?? DEFAULT_STORYBOOK_PROXY_PATH,
+        baseDir: projectRoot,
+      },
+    },
+  };
   const httpServerPlugin =
     isHttpServerOptions(serverOptions)
-      ? [createTypedStorybookHttpServerPlugin(serverOptions)]
+      ? maybeCreateHttpServerPlugin(config.plugins, serverOptions)
       : [];
+  config.build = withStorybookBuildDefaults(config.build);
   config.plugins = [
     ...(config.plugins ?? []),
-    ...typedVitePlugin(frameworkOptions.typedVite ?? {}),
+    ...maybeCreateTypedVitePlugins(config.plugins, typedViteOptions),
     ...httpServerPlugin,
   ] as PluginOption[];
   return config;
+}
+
+function withStorybookBuildDefaults(build: InlineConfig["build"]): InlineConfig["build"] {
+  return {
+    ...build,
+    chunkSizeWarningLimit:
+      build?.chunkSizeWarningLimit ?? DEFAULT_STORYBOOK_CHUNK_WARNING_LIMIT_KB,
+    rolldownOptions: {
+      ...build?.rolldownOptions,
+      checks: {
+        ...build?.rolldownOptions?.checks,
+        pluginTimings: build?.rolldownOptions?.checks?.pluginTimings ?? false,
+      },
+    },
+  };
+}
+
+function maybeCreateTypedVitePlugins(
+  plugins: InlineConfig["plugins"],
+  options: Parameters<typeof typedVitePlugin>[0],
+): PluginOption[] {
+  return hasPluginNamed(plugins, TYPED_VITE_PATHS_PLUGIN)
+    ? []
+    : typedVitePlugin(options);
+}
+
+function maybeCreateHttpServerPlugin(
+  plugins: InlineConfig["plugins"],
+  options: TypedStorybookHttpServerOptions,
+): readonly TypedStorybookHttpServerPlugin[] {
+  const typedServerId = typedServerIdFromOptions(options);
+  return hasTypedStorybookHttpServerPlugin(plugins, typedServerId)
+    ? []
+    : [createTypedStorybookHttpServerPlugin(options)];
+}
+
+function hasTypedStorybookHttpServerPlugin(
+  plugins: InlineConfig["plugins"],
+  typedServerId: string,
+): boolean {
+  return flattenPlugins(plugins).some(
+    (plugin) =>
+      plugin.name === TYPED_STORYBOOK_HTTP_SERVER_PLUGIN &&
+      "typedServerId" in plugin &&
+      plugin.typedServerId === typedServerId,
+  );
+}
+
+function hasPluginNamed(plugins: InlineConfig["plugins"], name: string): boolean {
+  return flattenPlugins(plugins).some((plugin) => plugin.name === name);
+}
+
+function flattenPlugins(plugins: InlineConfig["plugins"]): readonly Plugin[] {
+  const flat: Plugin[] = [];
+  const visit = (plugin: PluginOption) => {
+    if (!plugin) return;
+    if (Array.isArray(plugin)) {
+      for (const child of plugin) visit(child);
+      return;
+    }
+    if (typeof plugin === "object" && "name" in plugin) {
+      flat.push(plugin as Plugin);
+    }
+  };
+  for (const plugin of plugins ?? []) visit(plugin);
+  return flat;
 }
 
 function isHttpServerOptions(

@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const packageRoot = resolve(import.meta.dirname, "..");
+const requireFromStorybook = createRequire(resolve(packageRoot, "package.json"));
 const readPackageJson = () =>
   JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")) as {
     readonly exports: Record<string, unknown>;
@@ -45,5 +47,9 @@ describe("@typed/storybook package boundary", () => {
     const packageJson = readPackageJson();
 
     expect(packageJson.scripts.build ?? "").toContain("rm -rf dist");
+  });
+
+  it("lets Storybook auto-ref scanning resolve @typed/app package metadata", () => {
+    expect(() => requireFromStorybook.resolve("@typed/app/package.json")).not.toThrow();
   });
 });

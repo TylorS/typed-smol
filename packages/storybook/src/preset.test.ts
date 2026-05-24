@@ -89,6 +89,114 @@ describe("@typed/storybook preset", () => {
     ]);
   });
 
+  it("does not duplicate Typed Vite or HTTP server plugins when applied more than once", async () => {
+    const baseConfig = {} satisfies InlineConfig;
+    const options = {
+      presets: {
+        apply: async () => ({
+          name: TYPED_STORYBOOK_FRAMEWORK,
+          options: {
+            typedVite: {
+              compression: false,
+              serverEntry: false,
+            },
+            server: {
+              mode: "http-server",
+              routes: ["./routes"],
+              api: ["./api"],
+              port: 6174,
+              proxyPath: "/__typed_storybook_api",
+            },
+          },
+        }),
+      },
+    } satisfies Parameters<typeof viteFinal>[1];
+
+    await viteFinal(baseConfig, options);
+    const finalConfig = await viteFinal(baseConfig, options);
+
+    expect(pluginNames(finalConfig)).toEqual([
+      "typed-vite:native-tsconfig-paths",
+      "typed-template",
+      "virtual-modules",
+      "typed-storybook:http-server",
+    ]);
+  });
+
+  it("sets Storybook build defaults that keep expected fixture build warnings quiet", async () => {
+    const baseConfig = {
+      build: {
+        rolldownOptions: {
+          output: {
+            strictExecutionOrder: true,
+          },
+        },
+      },
+    } satisfies InlineConfig;
+
+    const finalConfig = await viteFinal(baseConfig, {
+      presets: {
+        apply: async () => ({
+          name: TYPED_STORYBOOK_FRAMEWORK,
+          options: {
+            typedVite: {
+              compression: false,
+              serverEntry: false,
+            },
+          },
+        }),
+      },
+    });
+
+    expect(finalConfig.build).toMatchObject({
+      chunkSizeWarningLimit: 1_500,
+      rolldownOptions: {
+        checks: {
+          pluginTimings: false,
+        },
+        output: {
+          strictExecutionOrder: true,
+        },
+      },
+    });
+  });
+
+  it("preserves user-provided Storybook build warning settings", async () => {
+    const baseConfig = {
+      build: {
+        chunkSizeWarningLimit: 2_000,
+        rolldownOptions: {
+          checks: {
+            pluginTimings: true,
+          },
+        },
+      },
+    } satisfies InlineConfig;
+
+    const finalConfig = await viteFinal(baseConfig, {
+      presets: {
+        apply: async () => ({
+          name: TYPED_STORYBOOK_FRAMEWORK,
+          options: {
+            typedVite: {
+              compression: false,
+              serverEntry: false,
+            },
+          },
+        }),
+      },
+    });
+
+    expect(finalConfig.build).toMatchObject({
+      chunkSizeWarningLimit: 2_000,
+      rolldownOptions: {
+        checks: {
+          pluginTimings: true,
+        },
+      },
+    });
+  });
+
   it("builds a typed:server id from HTTP server options", () => {
     const plugin = createTypedStorybookHttpServerPlugin({
       mode: "http-server",
