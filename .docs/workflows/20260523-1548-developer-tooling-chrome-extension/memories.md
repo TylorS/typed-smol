@@ -131,3 +131,10 @@
 
 - Runtime OTEL correlation should preserve `traceId` and `spanId` verbatim and only attach Typed ids as additive metadata.
 - Runtime OTEL correlation should emit protocol `OtelSpan` events through `DevtoolsRuntimeService.emit` so EventBus retention and bridge capability filtering stay shared.
+
+### T19
+
+- Source Analyzer should reuse compiler component identity derivation for exported component declarations and aliases instead of reimplementing component detection locally.
+- Deduped Source Analyzer component facts may need alternate match spans so selection on template expressions still returns the declaration-owned fact.
+- Runtime AnalyzeSource bridge support stays host-neutral: inject a compiler/dev-server handler into the bridge instead of importing compiler packages into `@typed/devtools-runtime`.
+- The bridge should advertise `source-analyzer` by default only when an Analyzer handler is installed; otherwise the RPC path returns an explicit unavailable state.

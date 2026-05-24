@@ -57,7 +57,7 @@ export function makeDevtoolsBridgeHandlers(options: DevtoolsBridgeOptions): Devt
 }
 
 export function makeDevtoolsBridge(options: DevtoolsBridgeOptions): DevtoolsBridge {
-  const capabilities = [...(options.capabilities ?? DEFAULT_CAPABILITIES)];
+  const capabilities = resolveCapabilities(options);
   const eventBus = resolveEventBus(options);
   const sessionId = resolveSessionId(options, eventBus);
   const bridge = {
@@ -88,6 +88,12 @@ export function makeDevtoolsBridge(options: DevtoolsBridgeOptions): DevtoolsBrid
       SubscribeRuntimeEvents: (request) => bridge.subscribeRuntimeEvents(request),
     }),
   };
+}
+
+function resolveCapabilities(options: DevtoolsBridgeOptions): readonly DevtoolsCapability[] {
+  if (options.capabilities !== undefined) return [...options.capabilities];
+  if (!options.analyzeSource) return [...DEFAULT_CAPABILITIES];
+  return [...DEFAULT_CAPABILITIES, "source-analyzer"];
 }
 
 function resolveEventBus(options: DevtoolsBridgeOptions): RuntimeEventBus {

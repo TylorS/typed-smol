@@ -11,6 +11,7 @@ import ts from "typescript";
 import type { RouteModulePlan } from "../route/RouteModulePlan.js";
 import { analyzeRouteModule } from "../route/analyzeRouteModule.js";
 import { analyzeTemplateModule } from "../template/analyzeTemplateModule.js";
+import { deriveComponentIdentities, type DerivedComponentIdentity } from "./componentFacts.js";
 
 export type CompilerSourceAnalyzerResponse = SourceAnalyzerResponse;
 export type SourceAnalyzerPositionBase = "one-based" | "zero-based";
@@ -45,6 +46,7 @@ export interface CompilerSourcePosition {
 
 interface PlannedSourceFact {
   readonly fact: SourceAnalyzerFact;
+  readonly matchSpans?: readonly SourceSpan[];
   readonly span: SourceSpan;
 }
 
@@ -122,11 +124,48 @@ function analyzeArtifact(artifact: CompilerSourceArtifact): ArtifactAnalysis {
 }
 
 function factsForArtifact(analysis: ArtifactAnalysis): readonly PlannedSourceFact[] {
+  const components = componentIdentityFacts(analysis);
+  const componentNames = new Set(components.flatMap(componentFactNames));
+  const templates = templateFacts(analysis.artifact);
+  const { componentFacts, templateFacts: unownedTemplateFacts } = mergeComponentTemplateFacts(
+    components,
+    templates,
+  );
   return [
-    ...templateFacts(analysis.artifact),
+    ...componentFacts,
+    ...unownedTemplateFacts,
     ...refSubjectFacts(analysis),
-    ...fxClosureFacts(analysis),
+    ...fxClosureFacts(analysis, componentNames),
   ].sort(comparePlannedFact);
+}
+
+interface PlannedComponentIdentityFact {
+  readonly fact: PlannedSourceFact;
+  readonly identity: DerivedComponentIdentity;
+}
+
+function componentIdentityFacts(
+  analysis: ArtifactAnalysis,
+): readonly PlannedComponentIdentityFact[] {
+  return deriveComponentIdentities({
+    moduleId: analysis.artifact.moduleId,
+    sourceFile: analysis.sourceFile,
+  }).map((identity) => ({
+    fact: {
+      fact: {
+        _tag: "ComponentDefinition",
+        componentId: identity.componentId,
+        displayName: identity.displayName,
+        sourceLocationId: identity.source.id,
+      },
+      span: { start: identity.source.startOffset, end: identity.source.endOffset },
+    },
+    identity,
+  }));
+}
+
+function componentFactNames(component: PlannedComponentIdentityFact): readonly string[] {
+  return [component.identity.exportName, component.identity.localName];
 }
 
 function templateFacts(artifact: CompilerSourceArtifact): readonly PlannedSourceFact[] {
@@ -136,16 +175,55 @@ function templateFacts(artifact: CompilerSourceArtifact): readonly PlannedSource
   });
   return analysis.templates.map((template) => {
     const displayName = template.localName ?? `template:${template.plan.templateHash}`;
+    const componentId = makeComponentId(`${artifact.moduleId}#${displayName}`);
     return {
       fact: {
         _tag: "ComponentDefinition",
-        componentId: makeComponentId(`${artifact.moduleId}#${displayName}`),
+        componentId,
         displayName,
         sourceLocationId: sourceLocationId(artifact.moduleId, template.templateSpan.start),
       },
       span: template.templateSpan,
     };
   });
+}
+
+function mergeComponentTemplateFacts(
+  components: readonly PlannedComponentIdentityFact[],
+  templates: readonly PlannedSourceFact[],
+): {
+  readonly componentFacts: readonly PlannedSourceFact[];
+  readonly templateFacts: readonly PlannedSourceFact[];
+} {
+  const componentIds = new Set(components.map((component) => component.identity.componentId));
+  const templateSpansByComponentId = new Map<string, SourceSpan[]>();
+  const templateFacts = templates.filter((template) => {
+    if (template.fact._tag !== "ComponentDefinition") return true;
+    if (!componentIds.has(template.fact.componentId)) return true;
+    const spans = templateSpansByComponentId.get(template.fact.componentId) ?? [];
+    spans.push(template.span);
+    templateSpansByComponentId.set(template.fact.componentId, spans);
+    return false;
+  });
+
+  return {
+    componentFacts: components.map((component) =>
+      mergeComponentMatchSpans(component, templateSpansByComponentId),
+    ),
+    templateFacts,
+  };
+}
+
+function mergeComponentMatchSpans(
+  component: PlannedComponentIdentityFact,
+  templateSpansByComponentId: ReadonlyMap<string, readonly SourceSpan[]>,
+): PlannedSourceFact {
+  const templateSpans = templateSpansByComponentId.get(component.identity.componentId);
+  if (!templateSpans?.length) return component.fact;
+  return {
+    ...component.fact,
+    matchSpans: [component.fact.span, ...templateSpans],
+  };
 }
 
 function refSubjectFacts(analysis: ArtifactAnalysis): readonly PlannedSourceFact[] {
@@ -163,8 +241,12 @@ function refSubjectFacts(analysis: ArtifactAnalysis): readonly PlannedSourceFact
   });
 }
 
-function fxClosureFacts(analysis: ArtifactAnalysis): readonly PlannedSourceFact[] {
+function fxClosureFacts(
+  analysis: ArtifactAnalysis,
+  componentNames: ReadonlySet<string>,
+): readonly PlannedSourceFact[] {
   return analysis.route.closures.flatMap((closure) => {
+    if (componentNames.has(closure.name)) return [];
     const span = analysis.declarationSpans.next(closure.name);
     if (!span) return [];
     return {
@@ -184,7 +266,11 @@ function filterFacts(
 ): readonly PlannedSourceFact[] {
   const range = selectionRange(input);
   if (!range) return facts;
-  return facts.filter((fact) => spansOverlap(range, fact.span));
+  return facts.filter((fact) => factMatchSpans(fact).some((span) => spansOverlap(range, span)));
+}
+
+function factMatchSpans(fact: PlannedSourceFact): readonly SourceSpan[] {
+  return fact.matchSpans ?? [fact.span];
 }
 
 function selectionRange(input: CompilerSourceAnalyzerInput): SourceSpan | undefined {

@@ -5,6 +5,7 @@ import {
   makeDevtoolsSessionId,
   makeDomBindingId,
   makeHmrBoundaryId,
+  makeSourceLocationId,
   type RuntimeEventEnvelope,
   type RuntimeEventStreamItem,
   type SourceAnalyzerResponse,
@@ -226,6 +227,55 @@ describe("DevTools runtime bridge", () => {
     await expect(
       Effect.runPromise(bridge.analyzeSource({ requestedAt: 5, resource: "file:///x.ts" })),
     ).resolves.toEqual(unavailable);
+  });
+
+  it("advertises and routes injected source analyzer facts", async () => {
+    const sourceFacts = {
+      _tag: "SourceFacts",
+      facts: [
+        {
+          _tag: "ComponentDefinition",
+          componentId: makeComponentId("src/App.tsx#App"),
+          displayName: "App",
+          sourceLocationId: makeSourceLocationId("src:src/App.tsx:0"),
+        },
+      ],
+      requestedAt: 6,
+      resource: "file:///workspace/src/App.tsx",
+    } as const satisfies SourceAnalyzerResponse;
+    const bridge = makeDevtoolsBridge({
+      analyzeSource: (request) =>
+        Effect.succeed({
+          ...sourceFacts,
+          requestedAt: request.requestedAt,
+          resource: request.resource,
+        }),
+      eventBus: makeRuntimeEventBus({ enabled: true, sessionId }),
+      sessionId,
+    });
+
+    const handshake = await Effect.runPromise(
+      bridge.handshake({
+        capabilities: ["source-analyzer"],
+        clientId: makeDevtoolsClientId("panel"),
+        peer: "extension-panel",
+        sessionId,
+        version: DEVTOOLS_PROTOCOL_VERSION,
+      }),
+    );
+    const response = await Effect.runPromise(
+      bridge.analyzeSource({
+        requestedAt: 7,
+        resource: "file:///workspace/src/Selected.tsx",
+      }),
+    );
+
+    expect(handshake.acceptedCapabilities).toEqual(["source-analyzer"]);
+    expect(response).toEqual({
+      ...sourceFacts,
+      requestedAt: 7,
+      resource: "file:///workspace/src/Selected.tsx",
+    });
   });
 
   it("preserves handler type inference from the protocol group", () => {

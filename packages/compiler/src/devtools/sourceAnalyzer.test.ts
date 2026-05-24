@@ -53,6 +53,127 @@ describe("compiler source analyzer planning", () => {
     expect(decodeDevtoolsPayload(SourceAnalyzerResponseSchema, response)).toEqual(response);
   });
 
+  it("maps exported Component declarations and aliases to compiler component facts", () => {
+    const sourceText = [
+      'import type { Component } from "./Reactive.js";',
+      "export function Button<const Opts>(options: Opts): Component<Opts> {",
+      "  return {} as Component<Opts>;",
+      "}",
+      "export { Button as Disclosure };",
+    ].join("\n");
+    const response = planSourceAnalyzerResponse({
+      artifacts: [
+        {
+          moduleId: "src/Disclosure.ts",
+          resource: "src/Disclosure.ts",
+          sourceText,
+        },
+      ],
+      request: {
+        requestedAt: 105,
+        resource: "src/Disclosure.ts",
+      },
+    });
+
+    expect(response).toMatchInlineSnapshot(`
+      {
+        "_tag": "SourceFacts",
+        "facts": [
+          {
+            "_tag": "ComponentDefinition",
+            "componentId": "cmp:src/Disclosure.ts#Button",
+            "displayName": "Button",
+            "sourceLocationId": "src:src/Disclosure.ts:64",
+          },
+          {
+            "_tag": "ComponentDefinition",
+            "componentId": "cmp:src/Disclosure.ts#Disclosure",
+            "displayName": "Disclosure",
+            "sourceLocationId": "src:src/Disclosure.ts:170",
+          },
+        ],
+        "requestedAt": 105,
+        "resource": "src/Disclosure.ts",
+      }
+    `);
+  });
+
+  it("does not duplicate exported html component definitions", () => {
+    const sourceText = [
+      'import type { Component } from "./Reactive.js";',
+      'import { html } from "@typed/template";',
+      "export const Counter: Component = html`<button>${count}</button>`;",
+    ].join("\n");
+    const counterStart = sourceText.indexOf("Counter");
+    const response = planSourceAnalyzerResponse({
+      artifacts: [
+        {
+          moduleId: "src/Counter.ts",
+          resource: "src/Counter.ts",
+          sourceText,
+        },
+      ],
+      request: {
+        requestedAt: 106,
+        resource: "src/Counter.ts",
+      },
+    });
+
+    expect(response).toEqual({
+      _tag: "SourceFacts",
+      facts: [
+        {
+          _tag: "ComponentDefinition",
+          componentId: makeComponentId("src/Counter.ts#Counter"),
+          displayName: "Counter",
+          sourceLocationId: makeSourceLocationId(`src/Counter.ts:${counterStart}`),
+        },
+      ],
+      requestedAt: 106,
+      resource: "src/Counter.ts",
+    });
+  });
+
+  it("matches exported html components from the template token without duplicating facts", () => {
+    const sourceText = [
+      'import type { Component } from "./Reactive.js";',
+      'import { html } from "@typed/template";',
+      "export const Counter: Component = html`<button>${count}</button>`;",
+    ].join("\n");
+    const counterStart = sourceText.indexOf("Counter");
+    const templateStart = sourceText.indexOf("html`");
+    const templatePosition = devtoolsPositionAt(sourceText, templateStart);
+    const response = planSourceAnalyzerResponse({
+      artifacts: [
+        {
+          moduleId: "src/Counter.ts",
+          resource: "src/Counter.ts",
+          sourceText,
+        },
+      ],
+      request: {
+        column: templatePosition.column,
+        line: templatePosition.line,
+        requestedAt: 107,
+        resource: "src/Counter.ts",
+      },
+    });
+
+    expect(response).toEqual({
+      _tag: "SourceFacts",
+      facts: [
+        {
+          _tag: "ComponentDefinition",
+          componentId: makeComponentId("src/Counter.ts#Counter"),
+          displayName: "Counter",
+          sourceLocationId: makeSourceLocationId(`src/Counter.ts:${counterStart}`),
+        },
+      ],
+      requestedAt: 107,
+      resource: "src/Counter.ts",
+    });
+  });
+
   it("returns explicit unavailable state when no compiler artifact matches", () => {
     const response = planSourceAnalyzerResponse({
       artifacts: [],

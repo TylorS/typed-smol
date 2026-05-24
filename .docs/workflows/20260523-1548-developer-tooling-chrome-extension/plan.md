@@ -678,6 +678,36 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for OTEL id preservation, Typed correlation metadata boundaries, EventBus reuse, and protocol-boundary compliance before commit.
 
+### T19 - Analyzer Bridge RPC Handler
+
+- requirement_links: FR-32, FR-33, FR-34, FR-35, FR-36, FR-37, FR-43, FR-44, FR-45, NFR-8, NFR-14, NFR-17, NFR-18, AC-10, AC-11, AC-14.
+- write_set:
+  - `packages/compiler/src/devtools/sourceAnalyzer.ts`
+  - `packages/compiler/src/devtools/sourceAnalyzer.test.ts`
+  - `packages/devtools-runtime/src/Bridge.ts`
+  - `packages/devtools-runtime/src/Bridge.test.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add a bridge test proving an injected source Analyzer handler is advertised as `source-analyzer` and returns `SourceFacts` through the bridge Analyzer path used by the protocol handlers.
+  - Run `pnpm --filter @typed/devtools-runtime exec vitest run src/Bridge.test.ts` and capture the current missing capability advertisement.
+- green_step:
+  - Keep the runtime bridge host-neutral: it accepts a dev-server/compiler-provided Analyzer handler but does not import compiler packages or run an AST fallback.
+  - Advertise `source-analyzer` by default only when an Analyzer handler is injected.
+  - Preserve explicit unavailable responses when no Analyzer handler is installed.
+- verification:
+  - `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts`
+  - `pnpm --filter @typed/compiler build`
+  - `pnpm --filter @typed/devtools-runtime exec vitest run src/Bridge.test.ts`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `pnpm --filter @typed/devtools-runtime test`
+  - `pnpm exec oxlint packages/devtools-runtime/src/Bridge.ts packages/devtools-runtime/src/Bridge.test.ts packages/compiler/src/devtools/sourceAnalyzer.ts packages/compiler/src/devtools/sourceAnalyzer.test.ts`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/Bridge.ts packages/devtools-runtime/src/Bridge.test.ts packages/compiler/src/devtools/sourceAnalyzer.ts packages/compiler/src/devtools/sourceAnalyzer.test.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc|from \"@typed/compiler\"|from '@typed/compiler'" packages/devtools-runtime/src/Bridge.ts packages/devtools-runtime/src/Bridge.test.ts` must return no matches.
+  - `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for AnalyzeSource RPC routing, capability advertisement, unavailable-state behavior, and absence of runtime AST/compiler fallback before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

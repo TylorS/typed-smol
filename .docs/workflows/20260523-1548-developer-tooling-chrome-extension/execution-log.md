@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T18, then report task completion.
+- current_scope: execute approved plan task T19, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -553,7 +553,7 @@
   - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 9 test files and 47 tests.
   - review: Sidecar review found no Critical or Important issues.
 - commit:
-  - pending
+  - `4586bf9 feat(devtools): correlate otel runtime spans`
 - context_updates:
   - Added `makeOtelCorrelation` for emitting protocol `OtelSpan` runtime events through the DevTools runtime service.
   - Preserved OTEL `traceId` and `spanId` verbatim while attaching optional Typed correlation ids as metadata.
@@ -561,3 +561,45 @@
 - memory_updates:
   - Runtime OTEL correlation should preserve `traceId` and `spanId` verbatim and only attach Typed ids as additive metadata.
   - Runtime OTEL correlation should emit protocol `OtelSpan` events through `DevtoolsRuntimeService.emit` so EventBus retention and bridge capability filtering stay shared.
+
+### T19 - Analyzer Bridge RPC Handler
+
+- task_id: T19
+- requirement_ids: FR-32, FR-33, FR-34, FR-35, FR-36, FR-37, FR-43, FR-44, FR-45, NFR-8, NFR-14, NFR-17, NFR-18, AC-10, AC-11, AC-14
+- ts_scenarios: TS-10, TS-12
+- routing_decision:
+  - direct execution for the red-green implementation because target files and ownership are locked and the task only touches runtime bridge wiring.
+  - sidecar review-auditor required before commit for AnalyzeSource RPC routing, capability advertisement, unavailable-state behavior, and absence of runtime AST/compiler fallback.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/Bridge.test.ts` failed because an injected Analyzer handler still left `source-analyzer` out of the accepted handshake capabilities.
+  - green: `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts` passed with 1 test file and 6 tests.
+  - review: Compiler sidecar found an Important duplicate `ComponentDefinition` issue when exported component declarations were also direct `html` templates.
+  - red: duplicate regression `does not duplicate exported html component definitions` failed with two facts for `cmp:src/Counter.ts#Counter`.
+  - red: after fixing duplicate component facts, `pnpm --filter @typed/compiler build` failed because the dedupe set read `componentId` through the union `SourceAnalyzerFact` type.
+  - green: after switching the dedupe key to `DerivedComponentIdentity.componentId`, `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts` passed with 1 test file and 7 tests.
+  - green: `pnpm --filter @typed/compiler build` passed.
+  - review: Compiler re-review found an Important selection regression where a request positioned on the `html` token could no longer match the deduped declaration fact.
+  - red: template-token selection regression failed with an empty `facts` array.
+  - green: after adding alternate match spans, `pnpm --filter @typed/compiler exec vitest run src/devtools/sourceAnalyzer.test.ts` passed with 1 test file and 8 tests.
+  - green: after alternate-span fix, `pnpm --filter @typed/compiler build` passed.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/Bridge.test.ts` passed with 1 test file and 10 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 9 test files and 48 tests.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/Bridge.ts packages/devtools-runtime/src/Bridge.test.ts packages/compiler/src/devtools/sourceAnalyzer.ts packages/compiler/src/devtools/sourceAnalyzer.test.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/Bridge.ts packages/devtools-runtime/src/Bridge.test.ts packages/compiler/src/devtools/sourceAnalyzer.ts packages/compiler/src/devtools/sourceAnalyzer.test.ts` passed.
+  - green: boundary grep for `chrome.`, `effect/unstable/rpc`, and `@typed/compiler` imports in runtime bridge files returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Runtime bridge sidecar found no Critical or Important issues. One Low test-depth note about not directly invoking `handlers.AnalyzeSource` was accepted because runtime tests intentionally avoid importing or fabricating unstable RPC handler metadata; the handler delegates through `bridge.analyzeSource`.
+  - review: Final compiler sidecar re-review found no Critical or Important issues after the alternate-span fix.
+- commit:
+  - pending
+- context_updates:
+  - Added Source Analyzer component declaration facts by reusing compiler-owned `deriveComponentIdentities`, and filtered same-named Fx closure facts to avoid duplicate component/root facts.
+  - Deduped exported `html` component facts by component id while preserving declaration source locations and template-token match spans for selection filtering.
+  - Added bridge coverage for injected Analyzer handlers returning protocol `SourceFacts` through the bridge Analyzer path used by `handlers.AnalyzeSource`.
+  - Added runtime bridge capability resolution so default capabilities include `source-analyzer` only when an Analyzer handler is injected.
+- memory_updates:
+  - Source Analyzer should reuse compiler component identity derivation for exported component declarations and aliases instead of reimplementing component detection locally.
+  - Deduped Source Analyzer component facts may need alternate match spans so selection on template expressions still returns the declaration-owned fact.
+  - Runtime AnalyzeSource bridge support stays host-neutral: inject a compiler/dev-server handler into the bridge instead of importing compiler packages into `@typed/devtools-runtime`.
+  - The bridge should advertise `source-analyzer` by default only when an Analyzer handler is installed; otherwise the RPC path returns an explicit unavailable state.
