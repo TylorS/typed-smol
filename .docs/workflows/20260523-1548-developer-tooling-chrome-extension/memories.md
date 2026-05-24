@@ -138,3 +138,9 @@
 - Deduped Source Analyzer component facts may need alternate match spans so selection on template expressions still returns the declaration-owned fact.
 - Runtime AnalyzeSource bridge support stays host-neutral: inject a compiler/dev-server handler into the bridge instead of importing compiler packages into `@typed/devtools-runtime`.
 - The bridge should advertise `source-analyzer` by default only when an Analyzer handler is installed; otherwise the RPC path returns an explicit unavailable state.
+
+### T20
+
+- DevTools Chrome package code should use `chrome.*` APIs directly; Chrome DevTools extension docs say the `browser` namespace is disabled for extensions declaring `devtools_page`.
+- Chrome transport envelope types should derive tags, payloads, and successes from `@typed/devtools-protocol` RPC types instead of redeclaring protocol message unions in the Chrome package.
+- Chrome runtime transport pending requests must retain the expected RPC tag and ignore incomplete responses before settling the request.

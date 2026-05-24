@@ -708,6 +708,41 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for AnalyzeSource RPC routing, capability advertisement, unavailable-state behavior, and absence of runtime AST/compiler fallback before commit.
 
+### T20 - Chrome DevTools Package Shell and Runtime Transport
+
+- requirement_links: FR-30, FR-31, FR-38, FR-39, FR-43, FR-44, FR-45, NFR-1, NFR-9, NFR-12, NFR-15, NFR-17, NFR-18, AC-9, AC-10, AC-14.
+- write_set:
+  - `packages/devtools-chrome/package.json`
+  - `packages/devtools-chrome/tsconfig.json`
+  - `packages/devtools-chrome/tsconfig.test.json`
+  - `packages/devtools-chrome/src/index.ts`
+  - `packages/devtools-chrome/src/manifest.ts`
+  - `packages/devtools-chrome/src/devtoolsPage.ts`
+  - `packages/devtools-chrome/src/transport/chromeRuntime.ts`
+  - `packages/devtools-chrome/src/transport/chromeRuntime.test.ts`
+  - `pnpm-lock.yaml`
+  - `scripts/publish-beta.sh`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Create the Chrome package shell and a transport test before implementation modules exist.
+  - Run `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/chromeRuntime.test.ts` and capture the missing-module failure after workspace lockfile wiring exists.
+- green_step:
+  - Add a Manifest V3 `devtools_page` manifest helper, callback-style `chrome.devtools.panels.create` registration, and a Chrome runtime Port transport whose tag/payload/result types derive from `@typed/devtools-protocol`.
+  - Keep Chrome APIs inside `@typed/devtools-chrome` and direct `effect/unstable/rpc` type imports inside the thin transport adapter.
+  - Add the package to beta publish ordering after `@typed/devtools-protocol`.
+- verification:
+  - `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/chromeRuntime.test.ts`
+  - `pnpm --filter @typed/devtools-chrome test`
+  - `pnpm --filter @typed/devtools-chrome build`
+  - `pnpm exec oxlint packages/devtools-chrome/src`
+  - `pnpm exec oxfmt --check packages/devtools-chrome/src packages/devtools-chrome/package.json packages/devtools-chrome/tsconfig.json packages/devtools-chrome/tsconfig.test.json`
+  - `rg -n "effect/unstable/rpc" packages/devtools-chrome/src --glob '!transport/chromeRuntime.ts'` must return no matches.
+  - `rg -n "from \"@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)|from '@typed/(?:devtools-runtime|compiler|fx|template|navigation|app)|\\bchrome\\." packages/devtools-chrome/src` is allowed to match only Chrome package files and must not show non-Chrome package imports.
+  - `git diff --check -- packages/devtools-chrome pnpm-lock.yaml scripts/publish-beta.sh .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for MV3 manifest shape, DevTools page API usage, protocol-derived transport typing, package boundary compliance, and publish/package wiring before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |

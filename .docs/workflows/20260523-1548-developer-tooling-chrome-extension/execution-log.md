@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T19, then report task completion.
+- current_scope: execute approved plan task T20, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -592,7 +592,7 @@
   - review: Runtime bridge sidecar found no Critical or Important issues. One Low test-depth note about not directly invoking `handlers.AnalyzeSource` was accepted because runtime tests intentionally avoid importing or fabricating unstable RPC handler metadata; the handler delegates through `bridge.analyzeSource`.
   - review: Final compiler sidecar re-review found no Critical or Important issues after the alternate-span fix.
 - commit:
-  - pending
+  - `bd79a00 feat(devtools): bridge compiler source analyzer`
 - context_updates:
   - Added Source Analyzer component declaration facts by reusing compiler-owned `deriveComponentIdentities`, and filtered same-named Fx closure facts to avoid duplicate component/root facts.
   - Deduped exported `html` component facts by component id while preserving declaration source locations and template-token match spans for selection filtering.
@@ -603,3 +603,53 @@
   - Deduped Source Analyzer component facts may need alternate match spans so selection on template expressions still returns the declaration-owned fact.
   - Runtime AnalyzeSource bridge support stays host-neutral: inject a compiler/dev-server handler into the bridge instead of importing compiler packages into `@typed/devtools-runtime`.
   - The bridge should advertise `source-analyzer` by default only when an Analyzer handler is installed; otherwise the RPC path returns an explicit unavailable state.
+
+### T20 - Chrome DevTools Package Shell and Runtime Transport
+
+- task_id: T20
+- requirement_ids: FR-30, FR-31, FR-38, FR-39, FR-43, FR-44, FR-45, NFR-1, NFR-9, NFR-12, NFR-15, NFR-17, NFR-18, AC-9, AC-10, AC-14
+- ts_scenarios: TS-9, TS-12
+- routing_decision:
+  - direct execution for the red-green implementation because target package/files are locked in the approved plan and the first slice is a narrow package shell plus transport adapter.
+  - sidecar review-auditor required before commit for MV3 manifest shape, DevTools page API usage, protocol-derived transport typing, package boundary compliance, and publish/package wiring.
+- source_context:
+  - Chrome DevTools extension docs: `devtools_page` must point to a local HTML page, `chrome.devtools.*` APIs are available only to pages loaded in the DevTools window, and DevTools extensions should continue using `chrome.*`.
+  - Chrome `devtools.panels` docs: `chrome.devtools.panels.create` creates a panel from title/icon/page path and requires the manifest `devtools_page` key.
+  - Chrome messaging docs: long-lived extension connections use `chrome.runtime.connect({ name })` and a Port that sends messages via `postMessage`.
+- validation_evidence:
+  - red: before workspace install, `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/chromeRuntime.test.ts` failed because the new package did not yet have a `@typed/devtools-protocol` symlink.
+  - red: after lockfile and workspace install, the focused test failed with missing `../devtoolsPage.js`, proving the implementation modules were absent.
+  - green: `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/chromeRuntime.test.ts` passed with 1 test file and 5 tests.
+  - green: `pnpm --filter @typed/devtools-chrome build` passed.
+  - red: `pnpm --filter @typed/devtools-chrome test` initially failed typecheck because the transport type test asserted exact fixture-literal equality against Effect schema-derived payload types.
+  - green: after changing the assertion to protocol request assignability, `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 1 test file and 5 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 1 test file and 5 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - red: first `pnpm exec oxfmt --check packages/devtools-chrome/src packages/devtools-chrome/package.json packages/devtools-chrome/tsconfig.json packages/devtools-chrome/tsconfig.test.json` failed on `chromeRuntime.ts` and `chromeRuntime.test.ts`.
+  - green: after formatting, `pnpm exec oxfmt --check packages/devtools-chrome/src packages/devtools-chrome/package.json packages/devtools-chrome/tsconfig.json packages/devtools-chrome/tsconfig.test.json` passed.
+  - green: boundary grep for `effect/unstable/rpc` outside `transport/chromeRuntime.ts` returned no matches.
+  - green: boundary grep for forbidden `@typed/*` package imports returned no matches.
+  - green: `chrome.` grep matched only `packages/devtools-chrome/src/devtoolsPage.ts` and its test text inside the Chrome package.
+  - green: `git diff --check -- packages/devtools-chrome pnpm-lock.yaml scripts/publish-beta.sh .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found an Important issue where a wrong-tag or incomplete Chrome runtime response could consume a pending request because only protocol/id were checked.
+  - red: wrong-tag/incomplete response regression failed because an `AnalyzeSource` response resolved a pending `Handshake` request.
+  - green: after storing the expected tag and requiring exactly one of `success` or `error`, `pnpm --filter @typed/devtools-chrome exec vitest run src/transport/chromeRuntime.test.ts` passed with 1 test file and 6 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome test` passed with typecheck plus 1 test file and 6 tests.
+  - green: final `pnpm --filter @typed/devtools-chrome build` passed.
+  - green: final `pnpm exec oxlint packages/devtools-chrome/src` passed with 0 warnings and 0 errors.
+  - green: final `pnpm exec oxfmt --check packages/devtools-chrome/src packages/devtools-chrome/package.json packages/devtools-chrome/tsconfig.json packages/devtools-chrome/tsconfig.test.json` passed.
+  - green: final boundary greps for restricted `effect/unstable/rpc`, forbidden `@typed/*` package imports, and Chrome API placement passed.
+  - green: final `git diff --check -- packages/devtools-chrome pnpm-lock.yaml scripts/publish-beta.sh .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Focused re-review found no Critical or Important issues after the response validation fix.
+- commit:
+  - pending
+- context_updates:
+  - Added `@typed/devtools-chrome` package shell with Manifest V3 DevTools manifest helper, callback-style DevTools panel registration, and Chrome runtime Port RPC client.
+  - Added protocol-derived Chrome runtime transport envelope types using `TypedDevtoolsRpc` tags/payloads/results instead of redeclaring protocol message unions.
+  - Hardened the Chrome runtime transport to ignore wrong-tag or incomplete responses before consuming pending requests.
+  - Added the Chrome package to beta publish ordering after `@typed/devtools-protocol`.
+- memory_updates:
+  - DevTools Chrome package code should use `chrome.*` APIs directly; Chrome DevTools extension docs say the `browser` namespace is disabled for extensions declaring `devtools_page`.
+  - Chrome transport envelope types should derive tags, payloads, and successes from `@typed/devtools-protocol` RPC types instead of redeclaring protocol message unions in the Chrome package.
+  - Chrome runtime transport pending requests must retain the expected RPC tag and ignore incomplete responses before settling the request.
