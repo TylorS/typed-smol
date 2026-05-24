@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { loadTypedConfig } from "./loadTypedConfig.js";
+import { findTypedConfigRoot, loadTypedConfig } from "./loadTypedConfig.js";
 import ts from "typescript";
 
 const FIXTURE_ROOT = resolve(import.meta.dirname ?? __dirname, "__test_fixtures__");
@@ -46,6 +46,14 @@ describe("loadTypedConfig", () => {
     expect(result.path).toBe(join(FIXTURE_ROOT, "typed.config.ts"));
   });
 
+  it("finds the nearest typed.config.ts root from nested directories", () => {
+    const nested = join(FIXTURE_ROOT, "apps", "web", "src");
+    mkdirSync(nested, { recursive: true });
+    writeFileSync(join(FIXTURE_ROOT, "typed.config.ts"), `export default {};`);
+
+    expect(findTypedConfigRoot(nested)).toBe(FIXTURE_ROOT);
+  });
+
   // TS-1: loads config with defineConfig pattern
   it("loads a config using defineConfig pattern", () => {
     writeFileSync(
@@ -86,7 +94,7 @@ describe("loadTypedConfig", () => {
     const result = loadTypedConfig({ projectRoot: FIXTURE_ROOT, ts });
     expect(result.status).toBe("error");
     if (result.status !== "error") throw new Error("unreachable");
-    expect(result.message).toContain("Invalid config export");
+    expect(result.message).toMatchInlineSnapshot(`"Invalid config export in /Users/tylorsteinbergher/code/typed-smol/packages/app/src/config/__test_fixtures__/typed.config.ts — expected an object"`);
   });
 
   it("returns error when projectRoot does not exist", () => {

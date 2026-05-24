@@ -11,7 +11,12 @@ import {
   notifyDomTemplateUnmounted,
   type DomTemplateDevtoolsObserver,
 } from "./devtools.js";
-import { type RenderableKind, runDomBinding, type DomTemplateRuntime } from "./renderable.js";
+import {
+  type RenderableKind,
+  runDomBinding,
+  type DomTemplateRuntime,
+  type RouteResumeTrigger,
+} from "./renderable.js";
 
 export interface DomTemplateInstance {
   readonly root: DocumentFragment;
@@ -26,7 +31,7 @@ export interface DomTemplateSpec<Values extends readonly unknown[]> {
     instance: DomTemplateInstance,
     values: Values,
     runtime: DomTemplateRuntime,
-  ) => Effect.Effect<void, unknown, never>;
+  ) => Effect.Effect<void, Error, never>;
 }
 
 export interface CompiledDomTemplate {
@@ -38,6 +43,13 @@ export interface CompiledDomTemplate {
 }
 
 export type DomSparsePart = string | { readonly valueIndex: number };
+
+export type RouteResumePayload = Readonly<Record<string, string>>;
+
+export interface RouteResumeServiceProvider {
+  readonly tag: unknown;
+  readonly valueIndex: number;
+}
 
 export type DomTemplateBinding =
   | {
@@ -67,6 +79,7 @@ export type DomTemplateBinding =
     }
   | {
       readonly kind: "event";
+      readonly action?: EventHandler.EventActionDescriptor;
       readonly path: readonly number[];
       readonly name: string;
       readonly valueIndex: number;
@@ -187,7 +200,7 @@ export function bindNode(
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   let current: readonly Node[] = [];
   return runDomBinding(
     kind,
@@ -207,7 +220,7 @@ export function bindText(
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return runDomBinding(
     kind,
     value,
@@ -224,7 +237,7 @@ export function bindAttr(
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return runDomBinding(
     kind,
     value,
@@ -242,7 +255,7 @@ export function bindBoolean(
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return runDomBinding(kind, value, (next) => element.toggleAttribute(name, !!next), runtime);
 }
 
@@ -251,7 +264,7 @@ export function bindClass(
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return runDomBinding(
     kind,
     value,
@@ -267,7 +280,7 @@ export function bindData(
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return runDomBinding(
     kind,
     value,
@@ -287,13 +300,184 @@ export function bindData(
 
 export const bindDataAttr = bindData;
 
+export function writeRouteResumePayload(element: Element, payload: RouteResumePayload): void {
+  for (const [key, value] of Object.entries(payload)) {
+    element.setAttribute(`data-${key}`, value);
+  }
+}
+
+export function readRouteResumePayload(element: Element): RouteResumePayload {
+  return Object.fromEntries(
+    Array.from(element.attributes).flatMap((attribute) => {
+      const key = routeResumeAttributeKey(attribute.name);
+      return key ? [[key, attribute.value] as const] : [];
+    }),
+  );
+}
+
+export function bootRouteResume(
+  root: ParentNode,
+  runtime: DomTemplateRuntime,
+): Effect.Effect<void, Error, never> {
+  return Effect.sync(() => {
+    if (!runtime.resumeRoute) return;
+    for (const element of routeResumeElements(root)) attachRouteResumeTriggers(element, runtime);
+  });
+}
+
+export function bootActionResume(
+  root: ParentNode,
+  runtime: DomTemplateRuntime,
+): Effect.Effect<void, Error, never> {
+  return Effect.sync(() => {
+    if (!runtime.resumeAction) return;
+    for (const element of actionResumeElements(root)) attachActionResumeListeners(element, runtime);
+  });
+}
+
+export function provideRouteResumeServices<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  values: readonly unknown[],
+  providers: readonly RouteResumeServiceProvider[],
+): Effect.Effect<A, E, never> {
+  return providers.reduce(
+    (current, provider) =>
+      current.pipe(Effect.provideService(provider.tag as never, values[provider.valueIndex] as never)),
+    effect as Effect.Effect<A, E, never>,
+  );
+}
+
+function routeResumeAttributeKey(attributeName: string): string | undefined {
+  const prefix = "data-typed-route-resume-";
+  return attributeName.startsWith(prefix) ? attributeName.slice("data-".length) : undefined;
+}
+
+function routeResumeElements(root: ParentNode): readonly Element[] {
+  const self = isElementNode(root) && root.hasAttribute("data-typed-resume") ? [root] : [];
+  return [...self, ...Array.from(root.querySelectorAll("[data-typed-resume]"))];
+}
+
+function isElementNode(value: ParentNode): value is Element {
+  return "nodeType" in value && value.nodeType === 1;
+}
+
+function attachRouteResumeTriggers(element: Element, runtime: DomTemplateRuntime): void {
+  for (const trigger of routeResumeTriggers(element)) attachRouteResumeTrigger(element, runtime, trigger);
+}
+
+function routeResumeTriggers(element: Element): readonly RouteResumeTrigger[] {
+  return (element.getAttribute("data-typed-resume") ?? "")
+    .split(/[\s,]+/u)
+    .flatMap((value) => isRouteResumeTrigger(value) ? [value] : []);
+}
+
+function isRouteResumeTrigger(value: string): value is RouteResumeTrigger {
+  return (
+    value === "load" ||
+    value === "idle" ||
+    value === "visible" ||
+    value === "hover" ||
+    value === "interaction" ||
+    value === "focus"
+  );
+}
+
+function attachRouteResumeTrigger(
+  element: Element,
+  runtime: DomTemplateRuntime,
+  trigger: RouteResumeTrigger,
+): void {
+  if (trigger === "load") return scheduleTask(() => runRouteResume(element, runtime, trigger));
+  if (trigger === "idle") return scheduleIdle(() => runRouteResume(element, runtime, trigger));
+  if (trigger === "visible") return attachVisibleResume(element, runtime);
+  const eventName = trigger === "hover" ? "pointerenter" : trigger === "focus" ? "focusin" : "pointerdown";
+  element.addEventListener(eventName, () => runRouteResume(element, runtime, trigger), { once: true });
+}
+
+function attachVisibleResume(element: Element, runtime: DomTemplateRuntime): void {
+  const Observer = element.ownerDocument.defaultView?.IntersectionObserver;
+  if (!Observer) return scheduleTask(() => runRouteResume(element, runtime, "visible"));
+  const observer = new Observer((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return;
+    observer.disconnect();
+    runRouteResume(element, runtime, "visible");
+  });
+  observer.observe(element);
+}
+
+function scheduleTask(task: () => void): void {
+  setTimeout(task, 0);
+}
+
+function scheduleIdle(task: () => void): void {
+  const requestIdleCallback = globalThis.window?.requestIdleCallback;
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(task);
+    return;
+  }
+  setTimeout(task, 0);
+}
+
+function runRouteResume(
+  element: Element,
+  runtime: DomTemplateRuntime,
+  trigger: RouteResumeTrigger,
+): void {
+  const resumeRoute = runtime.resumeRoute;
+  if (!resumeRoute) return;
+  void Effect.runPromise(resumeRoute(element, readRouteResumePayload(element), trigger));
+}
+
+function actionResumeElements(root: ParentNode): readonly Element[] {
+  const selector = actionResumeSelector();
+  const self = isElementNode(root) && elementActionDescriptors(root).length > 0 ? [root] : [];
+  return [...self, ...Array.from(root.querySelectorAll(selector))];
+}
+
+function actionResumeSelector(): string {
+  return "[data-typed-action-click-id],[data-typed-action-submit-id],[data-typed-action-change-id],[data-typed-action-input-id],[data-typed-action-toggle-id],[data-typed-action-keydown-id],[data-typed-action-focus-id],[data-typed-action-blur-id],[data-typed-action-mouseenter-id],[data-typed-action-mouseleave-id],[data-typed-action-pointerenter-id],[data-typed-action-pointerdown-id]";
+}
+
+function attachActionResumeListeners(element: Element, runtime: DomTemplateRuntime): void {
+  for (const descriptor of elementActionDescriptors(element)) {
+    element.addEventListener(descriptor.event, (event) => runActionResume(element, runtime, descriptor, event));
+  }
+}
+
+function elementActionDescriptors(element: Element): readonly EventHandler.EventActionDescriptor[] {
+  return Array.from(element.attributes).flatMap((attribute) => {
+    const event = actionEventFromAttribute(attribute.name);
+    if (!event) return [];
+    const id = attribute.value;
+    const declaredEvent = element.getAttribute(`data-typed-action-${event}-event`) ?? event;
+    const component = element.getAttribute(`data-typed-action-${event}-component`) ?? undefined;
+    return [{ id, event: declaredEvent, ...(component ? { component } : {}) }];
+  });
+}
+
+function actionEventFromAttribute(attributeName: string): string | undefined {
+  const match = /^data-typed-action-(.+)-id$/u.exec(attributeName);
+  return match?.[1];
+}
+
+function runActionResume(
+  element: Element,
+  runtime: DomTemplateRuntime,
+  descriptor: EventHandler.EventActionDescriptor,
+  event: Event,
+): void {
+  const resumeAction = runtime.resumeAction;
+  if (!resumeAction) return;
+  void Effect.runPromise(resumeAction(element, descriptor, event));
+}
+
 export function bindProperty(
   element: Element,
   name: string,
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return runDomBinding(
     kind,
     value,
@@ -304,11 +488,11 @@ export function bindProperty(
   );
 }
 
-export function bindRef(element: Element, value: unknown): Effect.Effect<void, unknown, never> {
+export function bindRef(element: Element, value: unknown): Effect.Effect<void, Error, never> {
   return Effect.gen(function* () {
     if (typeof value !== "function") return;
     const result = value(element);
-    if (Effect.isEffect(result)) yield* result as Effect.Effect<void, unknown, never>;
+    if (Effect.isEffect(result)) yield* result as Effect.Effect<void, Error, never>;
   });
 }
 
@@ -318,7 +502,7 @@ export function bindSparseAttr(
   parts: readonly DomSparsePart[],
   values: ArrayLike<unknown>,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return bindSparse(element, parts, values, runtime, (value) => {
     if (value === "") element.removeAttribute(name);
     else element.setAttribute(name, value);
@@ -330,7 +514,7 @@ export function bindSparseClass(
   parts: readonly DomSparsePart[],
   values: ArrayLike<unknown>,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return bindSparse(element, parts, values, runtime, (value) => {
     (element as HTMLElement).className = value.split(/\s+/).filter(Boolean).join(" ");
   });
@@ -341,13 +525,19 @@ export function bindProperties(
   value: unknown,
   kind: RenderableKind,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return runDomBinding(kind, value, (next) => applyProperties(element, next), runtime);
 }
 
-export function bindEvent(element: Element, name: string, value: unknown): Effect.Effect<void> {
+export function bindEvent(
+  element: Element,
+  name: string,
+  value: unknown,
+  action?: EventHandler.EventActionDescriptor,
+): Effect.Effect<void> {
   return Effect.sync(() => {
     const handler = EventHandler.fromEffectOrEventHandler(value as never);
+    writeEventActionDataAttributes(element, name, handler, action);
     element.addEventListener(
       name,
       (event) => void Effect.runPromise(handler.handler(event) as never),
@@ -356,12 +546,23 @@ export function bindEvent(element: Element, name: string, value: unknown): Effec
   });
 }
 
+function writeEventActionDataAttributes(
+  element: Element,
+  name: string,
+  value: unknown,
+  action?: EventHandler.EventActionDescriptor,
+): void {
+  for (const [key, child] of Object.entries(EventHandler.actionDataAttributes(name, value, action))) {
+    element.setAttribute(`data-${key}`, child);
+  }
+}
+
 export function mountDomTemplateBindings(
   instance: DomTemplateInstance,
   values: ArrayLike<unknown>,
   runtime: DomTemplateRuntime,
   bindings: readonly DomTemplateBinding[],
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return Effect.all(
     bindings.map((binding) => mountDomTemplateBinding(instance, values, runtime, binding)),
     {
@@ -375,7 +576,7 @@ function mountDomTemplateBinding(
   values: ArrayLike<unknown>,
   runtime: DomTemplateRuntime,
   binding: DomTemplateBinding,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   if (binding.kind === "node") {
     return withResolvedTemplateBinding(
       runtime,
@@ -457,7 +658,7 @@ function mountDomTemplateBinding(
       instance,
       binding,
       () => getElementAtPath(instance.root, binding.path),
-      (element) => bindEvent(element, binding.name, values[binding.valueIndex]),
+      (element) => bindEvent(element, binding.name, values[binding.valueIndex], binding.action),
     );
   }
   return withResolvedTemplateBinding(
@@ -474,8 +675,8 @@ function withResolvedTemplateBinding<T extends Node>(
   instance: DomTemplateInstance,
   binding: DomTemplateBinding,
   resolveNode: () => T,
-  bind: (node: T) => Effect.Effect<void, unknown, never>,
-): Effect.Effect<void, unknown, never> {
+  bind: (node: T) => Effect.Effect<void, Error, never>,
+): Effect.Effect<void, Error, never> {
   return Effect.flatMap(
     Effect.sync(() => {
       const node = resolveNode();
@@ -523,7 +724,7 @@ function bindSparse(
   values: ArrayLike<unknown>,
   runtime: DomTemplateRuntime,
   sink: (value: string) => void,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   const current = parts.map((part) => (typeof part === "string" ? part : values[part.valueIndex]));
   const flush = () => sink(current.map((value) => renderToString(value, "")).join(""));
   const effects = parts.flatMap((part, index) =>

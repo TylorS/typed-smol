@@ -63,6 +63,22 @@ function findConfigPath(projectRoot: string, configPath?: string): string | Load
   return { status: "not-found" };
 }
 
+export function findTypedConfigRoot(startPath: string): string | undefined {
+  let current = resolve(startPath);
+  if (existsSync(current) && statSync(current).isFile()) {
+    current = dirname(current);
+  }
+
+  while (true) {
+    const candidate = join(current, CONFIG_NAME);
+    if (existsSync(candidate) && statSync(candidate).isFile()) return current;
+
+    const parent = dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
 function tryRequireTs(): typeof import("typescript") | undefined {
   try {
     return require("typescript");

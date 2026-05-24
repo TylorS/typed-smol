@@ -89,6 +89,15 @@ function resolveModuleName(
   const resolved = ts.resolveModuleName(moduleName, containingFile, options, moduleResolutionHost);
   if (resolved.resolvedModule) return resolved.resolvedModule;
 
+  const virtualModuleFallback = writeVirtualModuleFallback(moduleName, input.rootDir);
+  if (virtualModuleFallback) {
+    return {
+      resolvedFileName: virtualModuleFallback,
+      extension: ts.Extension.Dts,
+      isExternalLibraryImport: false,
+    };
+  }
+
   const fallback = input.moduleFallbacks?.[moduleName];
   if (!fallback || !moduleResolutionHost.fileExists(fallback)) return undefined;
 
@@ -98,6 +107,91 @@ function resolveModuleName(
     isExternalLibraryImport: false,
   };
   return resolvedModule;
+}
+
+function writeVirtualModuleFallback(moduleName: string, rootDir: string): string | undefined {
+  const source = virtualModuleFallbackSource(moduleName);
+  if (!source) return undefined;
+
+  const fallbackDir = join(rootDir, ".typed-test-shims");
+  mkdirSync(fallbackDir, { recursive: true });
+  const fallbackPath = join(fallbackDir, `${safeModuleName(moduleName)}.d.ts`);
+  writeFileSync(fallbackPath, source, "utf8");
+  return fallbackPath;
+}
+
+function virtualModuleFallbackSource(moduleName: string): string | undefined {
+  if (moduleName.startsWith("typed:services?")) {
+    return `
+export const modules: Record<string, any>;
+export const dependencyInputs: Record<string, any>;
+export const dependencyLayers: Record<string, any>;
+export const DependenciesLayer: any;
+`;
+  }
+  if (moduleName.startsWith("typed:guard?")) {
+    return `
+export const modules: Record<string, any>;
+export const guards: Record<string, any>;
+`;
+  }
+  if (moduleName.startsWith("typed:layout?")) {
+    return `
+export const modules: Record<string, any>;
+export const layouts: Record<string, any>;
+`;
+  }
+  if (moduleName.startsWith("typed:catch?")) {
+    return `
+export const modules: Record<string, any>;
+export const catchers: Record<string, any>;
+`;
+  }
+  if (moduleName.startsWith("typed:route-template?")) {
+    return `
+export const route: any;
+export const handler: any;
+export const template: any;
+export const entrypoint: any;
+export const guard: any;
+export const layout: any;
+export const dependencies: any;
+export const catcher: any;
+`;
+  }
+  if (moduleName.startsWith("typed:headers?")) {
+    return `export const modules: Record<string, any>; export const headers: Record<string, any>;`;
+  }
+  if (moduleName.startsWith("typed:errors?")) {
+    return `export const modules: Record<string, any>; export const errors: Record<string, any>;`;
+  }
+  if (moduleName.startsWith("typed:middlewares?")) {
+    return `export const modules: Record<string, any>; export const middlewares: Record<string, any>;`;
+  }
+  if (moduleName.startsWith("typed:prefix?")) {
+    return `export const modules: Record<string, any>; export const prefixes: Record<string, any>;`;
+  }
+  if (moduleName.startsWith("typed:openapi?")) {
+    return `export const modules: Record<string, any>; export const openapi: Record<string, any>;`;
+  }
+  if (moduleName.startsWith("typed:api-handler?")) {
+    return `
+export const endpoint: any;
+export const route: any;
+export const method: any;
+export const headers: any;
+export const body: any;
+export const success: any;
+export const error: any;
+export const handler: any;
+export const metadata: any;
+`;
+  }
+  return undefined;
+}
+
+function safeModuleName(moduleName: string): string {
+  return moduleName.replace(/[^a-zA-Z0-9_.-]/g, "_");
 }
 
 function extensionForPath(path: string): ts.Extension {

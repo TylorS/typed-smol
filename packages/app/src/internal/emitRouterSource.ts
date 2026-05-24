@@ -20,19 +20,7 @@ import {
 } from "./emitRouterHelpers.js";
 import { ModuleSource } from "./moduleSource.js";
 import { makeUniqueVarNames, pathToIdentifier, routeModuleIdentifier } from "./routeIdentifiers.js";
-import { stripScriptExtension, toPosixPath } from "./path.js";
-
-/** Path relative to baseDir → import specifier relative to importerDir (script ext → .js for ESM). */
-function toImportSpecifier(
-  importerDir: string,
-  targetDir: string,
-  relativeFilePath: string,
-): string {
-  const absPath = join(targetDir, relativeFilePath);
-  const rel = toPosixPath(relative(importerDir, absPath));
-  const specifier = rel.startsWith(".") ? rel : `./${rel}`;
-  return stripScriptExtension(specifier) + ".js";
-}
+import { toPosixPath } from "./path.js";
 
 /** Canonical root directory: Node's dirname returns "." for root-level files; we use "" consistently. */
 function normalizeDir(dir: string): string {
@@ -126,12 +114,13 @@ export function emitRouterMatchSource(
       proposedName: routeModuleIdentifier(d.filePath),
     })),
     ...entrypointPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
-    ...depPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
-    ...layoutPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
-    ...guardPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
-    ...catchPaths.map((p) => ({ path: p, proposedName: pathToIdentifier(p) })),
   ];
   const varNameByPath = makeUniqueVarNames(nameEntries);
+  const targetSpecifier = toVirtualTargetSpecifier(importerDir, targetDirectory, "");
+  const servicesModule = source.importNamespace("RouteServices", `typed:services?dir=${targetSpecifier}`);
+  const guardsModule = source.importNamespace("RouteGuards", `typed:guard?dir=${targetSpecifier}`);
+  const layoutsModule = source.importNamespace("RouteLayouts", `typed:layout?dir=${targetSpecifier}`);
+  const catchesModule = source.importNamespace("RouteCatches", `typed:catch?dir=${targetSpecifier}`);
 
   const dirToCompanions = directoryCompanionPaths(descriptors);
   const descriptorTree = buildRouterDescriptorTree({
@@ -159,6 +148,35 @@ export function emitRouterMatchSource(
     catchExportByPath,
     catchFormByPath,
     depsFormByPath,
+    guardExprByPath: withInFileExpressions(
+      concernExpressionMap(guardPaths, guardsModule, "guards"),
+      descriptors,
+      varNameByPath,
+      "guard",
+      "guard",
+    ),
+    layoutExprByPath: withInFileExpressions(
+      concernExpressionMap(layoutPaths, layoutsModule, "layouts"),
+      descriptors,
+      varNameByPath,
+      "layout",
+      "layout",
+    ),
+    catchExprByPath: withInFileExpressions(
+      concernExpressionMap(catchPaths, catchesModule, "catchers"),
+      descriptors,
+      varNameByPath,
+      "catch",
+      "catcher",
+    ),
+    depsInputExprByPath: withInFileExpressions(
+      concernExpressionMap(depPaths, servicesModule, "dependencyInputs"),
+      descriptors,
+      varNameByPath,
+      "dependencies",
+      "dependencies",
+    ),
+    depsLayerExprByPath: concernExpressionMap(depPaths, servicesModule, "dependencyLayers"),
     handlerExprFor: handlerExprForMatch,
     catchExprFor: (catchForm, varName, exportName) =>
       catchExprFor(catchForm, varName, exportName, runtimeImports),
@@ -168,43 +186,53 @@ export function emitRouterMatchSource(
   for (const d of descriptors) {
     source.importNamespace(
       varNameByPath.get(d.filePath)!,
-      toImportSpecifier(importerDir, targetDirectory, d.filePath),
+      `typed:route-template?path=${toVirtualTargetSpecifier(importerDir, targetDirectory, d.filePath)}`,
     );
   }
   for (const p of entrypointPaths) {
     source.importNamespace(
       varNameByPath.get(p)!,
-      toImportSpecifier(importerDir, targetDirectory, p),
-    );
-  }
-  for (const p of depPaths) {
-    source.importNamespace(
-      varNameByPath.get(p)!,
-      toImportSpecifier(importerDir, targetDirectory, p),
-    );
-  }
-  for (const p of layoutPaths) {
-    source.importNamespace(
-      varNameByPath.get(p)!,
-      toImportSpecifier(importerDir, targetDirectory, p),
-    );
-  }
-  for (const p of guardPaths) {
-    source.importNamespace(
-      varNameByPath.get(p)!,
-      toImportSpecifier(importerDir, targetDirectory, p),
-    );
-  }
-  for (const p of catchPaths) {
-    source.importNamespace(
-      varNameByPath.get(p)!,
-      toImportSpecifier(importerDir, targetDirectory, p),
+      `typed:route-template?path=${toVirtualTargetSpecifier(importerDir, targetDirectory, p)}`,
     );
   }
 
   source.add(`const router = ${rootSource};
 export default router;`);
   return `${source.emit()}\n`;
+}
+
+function concernExpressionMap(
+  paths: readonly string[],
+  moduleName: string,
+  exportName: string,
+): ReadonlyMap<string, string> {
+  return new Map(paths.map((path) => [path, `${moduleName}.${exportName}[${JSON.stringify(path)}]`]));
+}
+
+function withInFileExpressions(
+  expressions: ReadonlyMap<string, string>,
+  descriptors: readonly RouteDescriptor[],
+  varNameByPath: ReadonlyMap<string, string>,
+  concern: ConcernKind,
+  exportName: string,
+): ReadonlyMap<string, string> {
+  const next = new Map(expressions);
+  for (const descriptor of descriptors) {
+    if (descriptor.inFileConcerns[concern]) {
+      next.set(descriptor.filePath, `${varNameByPath.get(descriptor.filePath)!}.${exportName}`);
+    }
+  }
+  return next;
+}
+
+function toVirtualTargetSpecifier(
+  importerDir: string,
+  targetDir: string,
+  relativeFilePath: string,
+): string {
+  const absPath = relativeFilePath.length === 0 ? targetDir : join(targetDir, relativeFilePath);
+  const rel = toPosixPath(relative(importerDir, absPath));
+  return rel.startsWith(".") ? rel : `./${rel}`;
 }
 
 function createRouterExpressionImports(source: ModuleSource): RouterExpressionImports {

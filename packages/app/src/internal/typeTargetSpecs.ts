@@ -15,7 +15,7 @@ export const ROUTER_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = [
   { id: "Cause", module: "effect/Cause", exportName: "Cause" },
   { id: "Option", module: "effect/Option", exportName: "Option" },
   { id: "Layer", module: "effect/Layer", exportName: "Layer" },
-  { id: "ServiceMap", module: "effect/Context", exportName: "ServiceMap" },
+  { id: "ServiceMap", module: "effect/Context", exportName: "Context" },
   { id: "Route", module: "@typed/router", exportName: "Route" },
 ];
 
@@ -48,4 +48,17 @@ export const HTTPAPI_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = [
     module: "effect/unstable/http/HttpServerResponse",
     exportName: "HttpServerResponse",
   },
+];
+
+export const COMPONENT_TYPE_TARGET_SPECS: readonly TypeTargetSpec[] = [
+  { id: "Fx", module: "@typed/fx/Fx", exportName: "Fx" },
+  { id: "Effect", module: "effect/Effect", exportName: "Effect" },
+  { id: "Stream", module: "effect/Stream", exportName: "Stream" },
+  {
+    id: "Renderable",
+    module: "@typed/template",
+    exportName: "Renderable",
+    typeMember: "Any",
+  },
+  { id: "Schema", module: "effect/Schema", exportName: "Top" },
 ];

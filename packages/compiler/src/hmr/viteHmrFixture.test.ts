@@ -3,7 +3,12 @@ import { planRouteCpsCompilation } from "../cps/planCpsCompilation.js";
 import { analyzeComponentHmr } from "./analyzeComponentHmr.js";
 import { analyzeDependencyHmr } from "./dependencies.js";
 import { analyzeRouteModule } from "../route/analyzeRouteModule.js";
-import { emitViteHmrRuntime, planViteHmrBoundary, type ViteHmrServicePlan } from "./viteHmr.js";
+import {
+  emitViteHmrRuntime,
+  emitViteRouteHmrGlue,
+  planViteHmrBoundary,
+  type ViteHmrServicePlan,
+} from "./viteHmr.js";
 
 describe("Vite HMR fixture", () => {
   it("keeps route and dependency service state across compatible reloads", () => {
@@ -79,19 +84,86 @@ describe("Vite HMR fixture", () => {
     expect(boundary.services[0]?.continuationFingerprints).toEqual(
       cps.continuations.map((continuation) => continuation.compatibilityFingerprint).sort(),
     );
-    expect(boundary.services[0]?.compatibilityFingerprint).toContain("continuationFingerprints");
+    expect(boundary.services[0]?.compatibilityFingerprint).toMatchInlineSnapshot(`"{"continuationFingerprints":["{\\"captureFingerprint\\":\\"captures:refsubject-service:Count:@app/Count\\",\\"contextFingerprint\\":\\"context:\\",\\"dependencyFingerprints\\":[],\\"symbolId\\":\\"/src/routes/counter.ts#closure:increment\\",\\"templateHashes\\":[],\\"version\\":\\"test\\"}","{\\"captureFingerprint\\":\\"captures:refsubject-service:Count:@app/Count\\",\\"contextFingerprint\\":\\"context:\\",\\"dependencyFingerprints\\":[],\\"symbolId\\":\\"/src/routes/counter.ts#closure:route\\",\\"templateHashes\\":[],\\"version\\":\\"test\\"}"],"dependencyFingerprints":[],"shapeFingerprint":"refsubject-service:Count:@app/Count","version":"test"}"`);
   });
 
   it("emits Vite hot accept and dispose hooks backed by the app HMR registry", () => {
     const boundary = planCounterBoundary({});
     const source = emitViteHmrRuntime(boundary);
 
-    expect(source).toContain('from "@typed/app/runtime/hmrRegistry"');
-    expect(source).toContain("import.meta");
-    expect(source).toContain("import.meta.hot.accept()");
-    expect(source).toContain("import.meta.hot.dispose");
-    expect(source).toContain("getOrCreateHmrState");
-    expect(source).toContain("pruneHmrState");
+    expect(source).toMatchInlineSnapshot(`
+      "import { getOrCreateHmrState, getOrCreateHmrStateEffect, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime/hmrRegistry";
+      type __TypedHot = {
+        readonly data: Record<string, unknown>;
+        readonly accept: () => void;
+        readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
+      };
+      const __typedHmrDescriptors = [{"continuationFingerprints":[],"dependencyFingerprints":["/src/routes/counter/state.ts:@app/routes/counter/Count"],"moduleId":"/src/routes/counter.ts","serviceId":"/src/routes/counter.ts#count","shapeFingerprint":"inline-refsubject:count:0","version":"1","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[\\"/src/routes/counter/state.ts:@app/routes/counter/Count\\"],\\"shapeFingerprint\\":\\"inline-refsubject:count:0\\",\\"version\\":\\"1\\"}"},{"continuationFingerprints":[],"dependencyFingerprints":[],"moduleId":"/src/routes/counter/state.ts","serviceId":"@app/routes/counter/Count","shapeFingerprint":"/src/routes/counter/state.ts:@app/routes/counter/Count","version":"1","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[],\\"shapeFingerprint\\":\\"/src/routes/counter/state.ts:@app/routes/counter/Count\\",\\"version\\":\\"1\\"}"}];
+      const __typedHmrModules = new Set(__typedHmrDescriptors.map((item) => item.moduleId));
+      const __typedHot = (import.meta as ImportMeta & { readonly hot?: __TypedHot }).hot;
+      function __typedHasDescriptor(entry: HmrRegistryEntry): boolean {
+        return __typedHmrDescriptors.some((item) => item.moduleId === entry.moduleId && item.serviceId === entry.serviceId);
+      }
+      export function __typedGetHmrState<A>(serviceId: string, create: () => A): A {
+        const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);
+        return descriptor ? getOrCreateHmrState(descriptor, create, { hotData: __typedHot?.data }) : create();
+      }
+      export function __typedGetHmrStateEffect<A, E, R>(serviceId: string, create: () => import("effect/Effect").Effect<A, E, R>): import("effect/Effect").Effect<A, E, R> {
+        const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);
+        return descriptor ? getOrCreateHmrStateEffect(descriptor, create, { hotData: __typedHot?.data }) : create();
+      }
+      if (__typedHot) {
+        __typedHot.accept();
+        __typedHot.dispose((data) => {
+          data[typedHmrRegistryKey] = (globalThis as Record<string, unknown>)[typedHmrRegistryKey];
+          pruneHmrState((entry) => __typedHmrModules.has(entry.moduleId) && !__typedHasDescriptor(entry));
+        });
+      }"
+    `);
+  });
+
+  it("emits guarded route HMR glue that self-accepts compatible fingerprints", () => {
+    const source = emitViteRouteHmrGlue({
+      moduleId: "/src/routes/counter.ts",
+      compatibilityFingerprint: "route:capture-v1",
+    });
+
+    expect(source).toMatchInlineSnapshot(`
+      "type __TypedRouteHot = {
+        readonly data: Record<string, unknown>;
+        readonly accept: (callback?: (nextModule: Record<string, unknown> | undefined) => void) => void;
+        readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
+        readonly invalidate: (message?: string) => void;
+      };
+      export const __typedRouteCompatibilityFingerprint = "route:capture-v1";
+      const __typedRouteHmrKey = "__typed_route_hmr:/src/routes/counter.ts";
+      const __typedRouteHot = (import.meta as ImportMeta & { readonly hot?: __TypedRouteHot }).hot;
+      const __typedPreviousFingerprint = __typedRouteHot?.data[__typedRouteHmrKey];
+      if (__typedRouteHot) {
+        __typedRouteHot.accept((nextModule) => {
+          const nextFingerprint = nextModule?.__typedRouteCompatibilityFingerprint;
+          if (nextFingerprint !== __typedRouteCompatibilityFingerprint) {
+            __typedRouteHot.invalidate("Typed route HMR compatibility changed for /src/routes/counter.ts");
+          }
+        });
+        __typedRouteHot.dispose((data) => {
+          data[__typedRouteHmrKey] = __typedRouteCompatibilityFingerprint;
+        });
+        if (__typedPreviousFingerprint !== undefined && __typedPreviousFingerprint !== __typedRouteCompatibilityFingerprint) {
+          __typedRouteHot.invalidate("Typed route HMR compatibility changed for /src/routes/counter.ts");
+        }
+      }"
+    `);
+  });
+
+  it("keeps generated route HMR glue behind the guarded hot binding", () => {
+    const source = emitViteRouteHmrGlue({
+      moduleId: "/src/routes/counter.ts",
+      compatibilityFingerprint: "route:capture-v1",
+    });
+
+    expect(source.match(/import\.meta\.hot/g)).toBeNull();
+    expect(source.match(/__typedHot\./g)).toMatchInlineSnapshot(`null`);
   });
 });
 

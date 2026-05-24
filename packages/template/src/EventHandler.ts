@@ -42,13 +42,27 @@ export type EventHandlerTypeId = typeof EventHandlerTypeId;
  */
 export interface EventHandler<Ev extends Event = Event, E = never, R = never> extends Pipeable {
   readonly [EventHandlerTypeId]: EventHandlerTypeId;
+  readonly action?: EventActionDescriptor;
   readonly handler: (event: Ev) => Effect.Effect<unknown, E, R>;
   readonly options: (AddEventListenerOptions & EventOptions) | undefined;
+}
+
+export interface ActionEventHandler<Ev extends Event = Event, E = never, R = never>
+  extends EventHandler<Ev, E, R> {
+  readonly action: EventActionDescriptor;
 }
 
 export type Services<T> = T extends EventHandler<infer _Ev, infer _E, infer R> ? R : never;
 export type Error<T> = T extends EventHandler<infer _Ev, infer E, infer _R> ? E : never;
 export type EventOf<T> = T extends EventHandler<infer Ev, infer _E, infer _R> ? Ev : never;
+
+export interface EventActionDescriptor {
+  readonly id: string;
+  readonly event: string;
+  readonly component?: string;
+}
+
+export type EventActionDataAttributes = Readonly<Record<`typed-action-${string}`, string>>;
 
 /**
  * Options for configuring event handling behavior.
@@ -57,6 +71,10 @@ export type EventOptions = {
   readonly preventDefault?: boolean;
   readonly stopPropagation?: boolean;
   readonly stopImmediatePropagation?: boolean;
+};
+
+export type EventActionOptions = AddEventListenerOptions & EventOptions & {
+  readonly component?: string;
 };
 
 /**
@@ -100,8 +118,32 @@ export function make<Ev extends Event, E = never, R = never>(
   handler: (event: Ev) => void | Effect.Effect<unknown, E, R>,
   options?: AddEventListenerOptions & EventOptions,
 ): EventHandler<Ev, E, R> {
+  return makeEventHandler(handler, options);
+}
+
+export function action<Ev extends Event, E = never, R = never>(
+  id: string,
+  event: string,
+  handler: (event: Ev) => void | Effect.Effect<unknown, E, R>,
+  options?: EventActionOptions,
+): ActionEventHandler<Ev, E, R> {
+  const { component, eventOptions } = splitActionOptions(options);
+  const descriptor = actionDescriptor(id, event, component);
+  return makeEventHandler(handler, eventOptions, descriptor) as ActionEventHandler<
+    Ev,
+    E,
+    R
+  >;
+}
+
+function makeEventHandler<Ev extends Event, E = never, R = never>(
+  handler: (event: Ev) => void | Effect.Effect<unknown, E, R>,
+  options?: AddEventListenerOptions & EventOptions,
+  action?: EventActionDescriptor,
+): EventHandler<Ev, E, R> {
   return {
     [EventHandlerTypeId]: EventHandlerTypeId,
+    ...(action ? { action } : {}),
     handler: (ev: Ev) => {
       if (options) handleEventOptions(options, ev);
       const result = handler(ev);
@@ -113,6 +155,30 @@ export function make<Ev extends Event, E = never, R = never>(
       return pipeArguments(this, arguments);
     },
   };
+}
+
+function splitActionOptions(options: EventActionOptions | undefined): {
+  readonly component: string | undefined;
+  readonly eventOptions: (AddEventListenerOptions & EventOptions) | undefined;
+} {
+  if (!options) return { component: undefined, eventOptions: undefined };
+  const { component, ...eventOptions } = options;
+  return { component, eventOptions };
+}
+
+function actionDescriptor(
+  id: string,
+  event: string,
+  component: string | undefined,
+): EventActionDescriptor {
+  return component ? { id, event, component } : { id, event };
+}
+
+function preserveAction<Ev extends Event, E = never, R = never>(
+  next: EventHandler<Ev, E, R>,
+  previous: EventHandler<Ev, unknown, unknown>,
+): EventHandler<Ev, E, R> {
+  return previous.action ? { ...next, action: previous.action } : next;
 }
 
 /**
@@ -158,7 +224,10 @@ export const provide: {
     handler: EventHandler<Ev, E, R>,
     services: Context.Context<R2>,
   ): EventHandler<Ev, E, Exclude<R, R2>> => {
-    return make((ev) => handler.handler(ev).pipe(Effect.provideContext(services)), handler.options);
+    return preserveAction(
+      make((ev) => handler.handler(ev).pipe(Effect.provideContext(services)), handler.options),
+      handler,
+    );
   },
 );
 
@@ -198,7 +267,10 @@ export const catchCause: {
     handler: EventHandler<Ev, E, R>,
     f: (cause: Cause.Cause<E>) => Effect.Effect<unknown, E2, R2>,
   ): EventHandler<Ev, E2, R | R2> => {
-    return make((ev) => handler.handler(ev).pipe(Effect.catchCause(f)), handler.options);
+    return preserveAction(
+      make((ev) => handler.handler(ev).pipe(Effect.catchCause(f)), handler.options),
+      handler,
+    );
   },
 );
 
@@ -240,6 +312,37 @@ export function isEventHandler<Ev extends Event, E = never, R = never>(
   return hasProperty(handler, EventHandlerTypeId);
 }
 
+export function isAction<Ev extends Event, E = never, R = never>(
+  handler: unknown,
+): handler is ActionEventHandler<Ev, E, R> {
+  return isEventHandler(handler) && handler.action !== undefined;
+}
+
+export function actionDataAttributes(
+  eventName: string,
+  value: unknown,
+  descriptor?: EventActionDescriptor,
+): EventActionDataAttributes {
+  if (!descriptor && !isAction(value)) return {};
+  const token = eventName.toLowerCase();
+  const action = descriptor ?? (value as ActionEventHandler).action;
+  return {
+    [`typed-action-${token}-id`]: action.id,
+    [`typed-action-${token}-event`]: action.event,
+    ...(action.component ? { [`typed-action-${token}-component`]: action.component } : {}),
+  };
+}
+
+export function actionDataAttributeHtml(
+  eventName: string,
+  value: unknown,
+  descriptor?: EventActionDescriptor,
+): string {
+  return Object.entries(actionDataAttributes(eventName, value, descriptor))
+    .map(([key, child]) => ` data-${key}="${escapeAttribute(child)}"`)
+    .join("");
+}
+
 /**
  * Applies event options to a native DOM event.
  */
@@ -249,6 +352,10 @@ export function handleEventOptions<Ev extends Event>(eventOptions: EventOptions,
   if (eventOptions.stopImmediatePropagation) ev.stopImmediatePropagation();
 
   return true;
+}
+
+function escapeAttribute(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
 }
 
 /**
@@ -274,7 +381,10 @@ export function handleEventOptions<Ev extends Event>(eventOptions: EventOptions,
 export function preventDefault<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
 ): EventHandler<Ev, E, R> {
-  return make(handler.handler, { ...handler.options, preventDefault: true });
+  return preserveAction(
+    make(handler.handler, { ...handler.options, preventDefault: true }),
+    handler,
+  );
 }
 
 /**
@@ -297,7 +407,10 @@ export function preventDefault<Ev extends Event, E = never, R = never>(
 export function stopPropagation<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
 ): EventHandler<Ev, E, R> {
-  return make(handler.handler, { ...handler.options, stopPropagation: true });
+  return preserveAction(
+    make(handler.handler, { ...handler.options, stopPropagation: true }),
+    handler,
+  );
 }
 
 /**
@@ -320,7 +433,10 @@ export function stopPropagation<Ev extends Event, E = never, R = never>(
 export function stopImmediatePropagation<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
 ): EventHandler<Ev, E, R> {
-  return make(handler.handler, { ...handler.options, stopImmediatePropagation: true });
+  return preserveAction(
+    make(handler.handler, { ...handler.options, stopImmediatePropagation: true }),
+    handler,
+  );
 }
 
 /**
@@ -343,7 +459,10 @@ export function stopImmediatePropagation<Ev extends Event, E = never, R = never>
 export function once<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
 ): EventHandler<Ev, E, R> {
-  return make(handler.handler, { ...handler.options, once: true, passive: false });
+  return preserveAction(
+    make(handler.handler, { ...handler.options, once: true, passive: false }),
+    handler,
+  );
 }
 
 /**
@@ -367,5 +486,8 @@ export function once<Ev extends Event, E = never, R = never>(
 export function passive<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
 ): EventHandler<Ev, E, R> {
-  return make(handler.handler, { ...handler.options, passive: true, once: false });
+  return preserveAction(
+    make(handler.handler, { ...handler.options, passive: true, once: false }),
+    handler,
+  );
 }

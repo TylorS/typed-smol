@@ -40,8 +40,6 @@ export const data = DataAttr.schema({
   toolbar: Schema.Boolean,
 });
 
-export const component = "typed/ui/RadioGroup";
-
 export function makeState<Value extends string>(
   initial: InitialState<Value>,
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
@@ -133,7 +131,6 @@ export function Root<
     role: "radiogroup",
     "aria-label": options.label,
     "aria-orientation": orientation,
-    "data-ui": component,
     onkeydown: onKeyDown,
   };
   return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);

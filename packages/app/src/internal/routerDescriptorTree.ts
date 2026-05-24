@@ -274,6 +274,11 @@ export type RenderContext = {
   readonly catchExportByPath: Readonly<Record<string, "catch" | "catchFn">>;
   readonly catchFormByPath: Readonly<Record<string, CatchForm>>;
   readonly depsFormByPath: Readonly<Record<string, DepsExportKind>>;
+  readonly guardExprByPath?: ReadonlyMap<string, string>;
+  readonly layoutExprByPath?: ReadonlyMap<string, string>;
+  readonly catchExprByPath?: ReadonlyMap<string, string>;
+  readonly depsInputExprByPath?: ReadonlyMap<string, string>;
+  readonly depsLayerExprByPath?: ReadonlyMap<string, string>;
   readonly handlerExprFor: (match: RouteMatchDescriptor, varName: string) => string;
   readonly catchExprFor: (form: CatchForm, varName: string, exportName: string) => string;
   readonly depsExprFor: (kind: DepsExportKind, varName: string) => string;
@@ -293,46 +298,32 @@ export function renderRouterDescriptorTree(tree: RouterDescriptorTree, ctx: Rend
     if (children.length === 1) {
       inner = emit(children[0]!);
     } else {
-      inner = `Router.merge(\n  ${children.map((c) => emit(c)).join(",\n  ")}\n)`;
+      inner = `Router.merge(\n${children.map((child) => indent(emit(child))).join(",\n")}\n)`;
     }
     if (companions?.layout) {
-      const v = ctx.varNameByPath.get(companions.layout)!;
-      inner = `${inner}.layout(${v}.layout)`;
+      inner = `${inner}.layout(${layoutExpression(companions.layout, ctx)})`;
     }
     if (companions?.catch) {
-      const v = ctx.varNameByPath.get(companions.catch)!;
-      const exp = ctx.catchExportByPath[companions.catch];
-      if (!exp) throw new Error(`RVM: catch export missing for ${companions.catch}`);
-      const form = ctx.catchFormByPath[companions.catch];
-      if (!form) throw new Error(`RVM: catch form missing for ${companions.catch}`);
-      const catchExpr = ctx.catchExprFor(form, v, exp);
-      inner = `${inner}.catchCause(${catchExpr})`;
+      inner = `${inner}.catchCause(${catchExpression(companions.catch, ctx)})`;
     }
     if (companions?.dependencies) {
-      const v = ctx.varNameByPath.get(companions.dependencies)!;
-      const depsKind = ctx.depsFormByPath[companions.dependencies];
-      if (depsKind === undefined)
-        throw new Error(
-          `RVM: dependency form unknown for ${companions.dependencies}; validation should have failed (RVM-DEPS-001)`,
-        );
-      const depsExpr = ctx.depsExprFor(depsKind, v);
-      inner = `${inner}.provide(${depsExpr})`;
+      inner = `${inner}.provide(${depsLayerExpression(companions.dependencies, ctx)})`;
     }
     return inner;
   };
 
   let result = emit(tree.root);
   if (tree.rootCompanions?.dependencies) {
-    const v = ctx.varNameByPath.get(tree.rootCompanions.dependencies)!;
-    const depsKind = ctx.depsFormByPath[tree.rootCompanions.dependencies];
-    if (depsKind === undefined)
-      throw new Error(
-        `RVM: dependency form unknown for ${tree.rootCompanions.dependencies}; validation should have failed (RVM-DEPS-001)`,
-      );
-    const depsExpr = ctx.depsExprFor(depsKind, v);
-    result = `${result}.provide(${depsExpr})`;
+    result = `${result}.provide(${depsLayerExpression(tree.rootCompanions.dependencies, ctx)})`;
   }
   return result;
+}
+
+function indent(source: string): string {
+  return source
+    .split("\n")
+    .map((line) => `  ${line}`)
+    .join("\n");
 }
 
 /** Emit Router.match(...) for a route. Favors positional when no extra opts. */
@@ -346,16 +337,13 @@ function emitRoute(match: RouteMatchDescriptor, ctx: RenderContext): string {
 
   const opts: string[] = [`handler: ${handlerExpr}`];
   if (match.depsPath) {
-    opts.push(`dependencies: ${ctx.varNameByPath.get(match.depsPath)!}.dependencies`);
+    opts.push(`dependencies: ${depsInputExpression(match.depsPath, ctx)}`);
   }
   if (match.layoutPath) {
-    opts.push(`layout: ${ctx.varNameByPath.get(match.layoutPath)!}.layout`);
+    opts.push(`layout: ${layoutExpression(match.layoutPath, ctx)}`);
   }
   if (match.catchPath && match.catchExport) {
-    const catchVar = ctx.varNameByPath.get(match.catchPath)!;
-    const form = match.catchForm;
-    if (!form) throw new Error(`RVM: catch form missing for ${match.catchPath}`);
-    opts.push(`catch: ${ctx.catchExprFor(form, catchVar, match.catchExport)}`);
+    opts.push(`catch: ${catchExpression(match.catchPath, ctx)}`);
   }
 
   if (guardExpr && !hasExtraOpts) {
@@ -374,6 +362,8 @@ function emitRoute(match: RouteMatchDescriptor, ctx: RenderContext): string {
 function guardExpression(guardPaths: readonly string[], ctx: RenderContext): string | undefined {
   const guardExprs = guardPaths
     .map((guardPath) => {
+      const explicit = ctx.guardExprByPath?.get(guardPath);
+      if (explicit) return explicit;
       const guardExport = ctx.guardExportByPath[guardPath];
       return guardExport ? `${ctx.varNameByPath.get(guardPath)!}.${guardExport}` : undefined;
     })
@@ -381,4 +371,35 @@ function guardExpression(guardPaths: readonly string[], ctx: RenderContext): str
   if (guardExprs.length === 0) return undefined;
   if (guardExprs.length === 1) return guardExprs[0];
   return `Router.composeGuards(${guardExprs.join(", ")})`;
+}
+
+function layoutExpression(path: string, ctx: RenderContext): string {
+  return ctx.layoutExprByPath?.get(path) ?? `${ctx.varNameByPath.get(path)!}.layout`;
+}
+
+function catchExpression(path: string, ctx: RenderContext): string {
+  const explicit = ctx.catchExprByPath?.get(path);
+  if (explicit) return explicit;
+  const catchVar = ctx.varNameByPath.get(path)!;
+  const exp = ctx.catchExportByPath[path];
+  if (!exp) throw new Error(`RVM: catch export missing for ${path}`);
+  const form = ctx.catchFormByPath[path];
+  if (!form) throw new Error(`RVM: catch form missing for ${path}`);
+  return ctx.catchExprFor(form, catchVar, exp);
+}
+
+function depsInputExpression(path: string, ctx: RenderContext): string {
+  return ctx.depsInputExprByPath?.get(path) ?? `${ctx.varNameByPath.get(path)!}.dependencies`;
+}
+
+function depsLayerExpression(path: string, ctx: RenderContext): string {
+  const explicit = ctx.depsLayerExprByPath?.get(path);
+  if (explicit) return explicit;
+  const v = ctx.varNameByPath.get(path)!;
+  const depsKind = ctx.depsFormByPath[path];
+  if (depsKind === undefined)
+    throw new Error(
+      `RVM: dependency form unknown for ${path}; validation should have failed (RVM-DEPS-001)`,
+    );
+  return ctx.depsExprFor(depsKind, v);
 }

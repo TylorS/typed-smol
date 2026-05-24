@@ -50,8 +50,6 @@ export const optionData = DataAttr.schema({
   selected: Schema.Boolean,
 });
 
-export const component = "typed/ui/Listbox";
-
 export function makeState<Value extends string = string>(
   initial: InitialState<NoInfer<Value>> = {},
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
@@ -134,7 +132,6 @@ export function Root<
     "aria-label": options.label,
     "aria-orientation": orientation,
     "aria-activedescendant": activeDescendant,
-    "data-ui": component,
     onkeydown: onKeyDown,
   };
 

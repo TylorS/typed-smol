@@ -9,7 +9,7 @@ import {
   PluginManager,
   resolveTypeTargetsFromSpecs,
 } from "@typed/virtual-modules";
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import type { VirtualModuleBuildContext, VirtualModuleBuildError } from "@typed/virtual-modules";
 import {
   createHttpApiVirtualModulePlugin,
   parseHttpApiVirtualModuleId,
@@ -101,6 +101,7 @@ function buildApiFromExistingFixture(
   fixture: ReturnType<typeof createApiFixture>,
   pluginOptions?: { pathPrefix?: `/${string}` },
   id = "typed:api?dir=./apis",
+  context?: VirtualModuleBuildContext,
 ) {
   const plugin = createHttpApiVirtualModulePlugin(pluginOptions ?? {});
   const files =
@@ -113,7 +114,7 @@ function buildApiFromExistingFixture(
     program,
     typeTargetSpecs: HTTPAPI_TYPE_TARGET_SPECS,
   });
-  return plugin.build(id, fixture.importer, session.api);
+  return plugin.build(id, fixture.importer, session.api, context);
 }
 
 /** Extract source text from build result (string or { sourceText, warnings }). */
@@ -366,7 +367,6 @@ describe("createHttpApiVirtualModulePlugin", () => {
       "import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
-      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
@@ -379,14 +379,20 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
+      import * as ApiServices from "typed:services?dir=./apis";
+      import * as ApiHeaders from "typed:headers?dir=./apis";
+      import * as ApiErrors from "typed:errors?dir=./apis";
+      import * as ApiMiddlewares from "typed:middlewares?dir=./apis";
+      import * as ApiPrefixes from "typed:prefix?dir=./apis";
+      import * as ApiOpenApi from "typed:openapi?dir=./apis";
       import * as TypedConfigModule from "typed:config";
-      import * as Status from "./apis/status.js";
+      import * as Status from "typed:api-handler?path=./apis/status.ts";
 
       const StatusRoute = Status.route;
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: StatusRoute.pathSchema, query: StatusRoute.querySchema, success: Status.success, error: Status.error })));
       export const DependenciesLayer = Layer.empty;
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", Status.handler))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -438,7 +444,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
             const dev = isDevImportMeta(import.meta);
             const appConfig = { disableListenLog };
             const staticAssetsLayer = TypedHttpServer.staticAssets({
-              projectRoot: process.cwd(),
+              projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
               clientOutDir,
               dev,
             });
@@ -447,7 +453,7 @@ describe("createHttpApiVirtualModulePlugin", () => {
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
-              projectRoot: process.cwd(),
+              projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
               dev,
             });
             return appLayer.pipe(Layer.provide(serverLayer));
@@ -480,10 +486,10 @@ export const handler = () => Effect.succeed({ status: "ok" });
       }),
     );
 
-    expect(sourceText).toContain('import * as Errors from "./apis/_errors.js";');
-    expect(sourceText).toContain('import * as UsersHeaders from "./apis/users/_headers.js";');
+    expect(sourceText).toContain('import * as ApiErrors from "typed:errors?dir=./apis";');
+    expect(sourceText).toContain('import * as ApiHeaders from "typed:headers?dir=./apis";');
     expect(sourceText).toContain(
-      "headers: UsersHeaders.headers, success: UsersCurrent.success, error: Errors.error",
+      'headers: ApiHeaders.headers["users/_headers.ts"], success: UsersCurrent.success, error: ApiErrors.errors["_errors.ts"]',
     );
   });
 
@@ -546,6 +552,55 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).not.toContain("export const ApiLayer");
   });
 
+  it("emits client-only API module when build context requests only Client", () => {
+    const fixture = createApiFixture({
+      "src/domain.ts": `
+import * as Schema from "effect/Schema";
+export const Success = Schema.Struct({ ok: Schema.Boolean });
+`,
+      "src/apis/status.ts": `
+import { ApiHandlerRaw } from "@typed/app/httpapi/ApiHandler";
+import * as Effect from "effect/Effect";
+import * as Route from "@typed/router";
+import { ServerOnly } from "../server-only.js";
+import { Success } from "../domain.js";
+export const route = Route.Parse("/status");
+export const method = "GET";
+export const success = Success;
+export const handler = ApiHandlerRaw({ route, method })(() =>
+  ServerOnly.use(() => Effect.succeed({ ok: true })),
+);
+`,
+      "src/server-only.ts": `
+import { readFileSync } from "node:fs";
+export const ServerOnly = { use: readFileSync };
+`,
+    });
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis", {
+        id: "typed:api?dir=./apis",
+        rootImporter: fixture.importer,
+        containingFile: fixture.importer,
+        consumer: "client",
+        requestedExports: {
+          kind: "names",
+          names: new Set(["Client"]),
+          typeOnlyNames: new Set(),
+        },
+      }),
+    );
+
+    expect(sourceText).toBeDefined();
+    expect(sourceText).toContain("export const Client = HttpApiClient.make(Api);");
+    expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
+    expect(sourceText).not.toContain("HttpApiBuilder");
+    expect(sourceText).not.toContain("./apis/status.js");
+    expect(sourceText).not.toContain("server-only");
+    expect(sourceText).not.toContain("node:fs");
+    expect(sourceText).not.toContain("export const serve");
+    expect(sourceText).not.toContain("export const ApiLayer");
+  });
+
   it("re-exports discovered API dependencies from client-only modules", () => {
     const fixture = createApiFixture({
       "src/apis/_dependencies.ts": `
@@ -559,10 +614,9 @@ export default Layer.empty;
       buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
     );
 
-    expect(sourceText).toContain('import * as Router from "@typed/router";');
-    expect(sourceText).toContain('import * as Dependencies from "./apis/_dependencies.js";');
+    expect(sourceText).toContain('import * as ApiServices from "typed:services?dir=./apis";');
     expect(sourceText).toContain(
-      "export const DependenciesLayer = Layer.mergeAll(Layer.empty, Router.normalizeDependencyInput(Dependencies.default));",
+      'export const DependenciesLayer = Layer.mergeAll(Layer.empty, ApiServices.dependencyLayers["_dependencies.ts"]);',
     );
     expect(sourceText).not.toContain("export const ApiLayer");
     expect(sourceText).not.toContain("HttpApiBuilder");
@@ -605,7 +659,10 @@ export const handler = () => Effect.succeed({ ok: true });
     );
 
     expect(sourceText).toContain(
-      'HttpApiEndpoint.get("status", StatusRouteRoute.Parse("/status").path, { success: StatusSuccessSchema.Struct({ status: StatusSuccessSchema.Literal("ok") }), error: StatusErrorSchema.Struct({ message: StatusErrorSchema.String }) })',
+      'const StatusRoute = StatusRouteRoute.Parse("/status");',
+    );
+    expect(sourceText).toContain(
+      'HttpApiEndpoint.get("status", StatusRoute.path, { success: StatusSuccessSchema.Struct({ status: StatusSuccessSchema.Literal("ok") }), error: StatusErrorSchema.Struct({ message: StatusErrorSchema.String }) })',
     );
     expect(sourceText).not.toContain("params: StatusRoute.pathSchema");
     expect(sourceText).not.toContain("query: StatusRoute.querySchema");
@@ -834,6 +891,18 @@ export const handler = () => Effect.succeed({ ok: true });
 });
 
 describe("HttpApiVirtualModulePlugin integration", () => {
+  it("uses the nearest typed.config.ts root for generated serve projectRoot", () => {
+    const fixture = createApiFixture({
+      "typed.config.ts": "export default {};",
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+    });
+    const result = buildApiFromExistingFixture(fixture);
+    const source = getSourceText(result);
+
+    expect(source).toContain(`projectRoot: ${JSON.stringify(fixture.root)}`);
+    expect(source).not.toContain("projectRoot: process.cwd()");
+  });
+
   it("emits generated handler aliases from the effective endpoint contract", () => {
     const fixture = createApiFixture({
       "src/apis/_dependencies.ts": `
@@ -1014,10 +1083,7 @@ export default Layer.succeed(UsersService, { users: "users" });
     const sourceText = getSourceText(result);
 
     expect(sourceText).toContain(
-      'import * as UsersDependencies from "./apis/users/_dependencies.js";',
-    );
-    expect(sourceText).toContain(
-      'HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", ApiHandlers.handler(UsersList))).pipe(Layer.provideMerge(Router.normalizeDependencyInput(UsersDependencies.default)))',
+      'HttpApiBuilder.group(Api, "users", (handlers) => handlers.handle("list", UsersList.handler)).pipe(Layer.provideMerge(ApiServices.dependencyLayers["users/_dependencies.ts"]))',
     );
   });
 
@@ -1043,8 +1109,8 @@ export default Layer.succeed(UsersService, { users: "users" });
     const sourceText = getSourceText(result);
 
     expect(sourceText).toContain("export const DependenciesLayer = Layer.mergeAll(");
-    expect(sourceText).toContain("Router.normalizeDependencyInput(Dependencies.default)");
-    expect(sourceText).toContain("Router.normalizeDependencyInput(UsersDependencies.default)");
+    expect(sourceText).toContain('ApiServices.dependencyLayers["_dependencies.ts"]');
+    expect(sourceText).toContain('ApiServices.dependencyLayers["users/_dependencies.ts"]');
   });
 
   it("accepts Context default exports in generated Dependencies types", () => {
@@ -1176,7 +1242,6 @@ export const handler = (({ headers, query, body }) => {
       "import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";
       import { resolveConfig } from "@typed/app/internal/resolveConfig";
       import { TypedHttpServer } from "@typed/app/TypedHttpServer";
-      import { ApiHandlers } from "@typed/app/httpapi/Handlers";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
       import * as HttpApi from "effect/unstable/httpapi/HttpApi";
@@ -1189,14 +1254,20 @@ export const handler = (({ headers, query, body }) => {
       import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
+      import * as ApiServices from "typed:services?dir=./apis";
+      import * as ApiHeaders from "typed:headers?dir=./apis";
+      import * as ApiErrors from "typed:errors?dir=./apis";
+      import * as ApiMiddlewares from "typed:middlewares?dir=./apis";
+      import * as ApiPrefixes from "typed:prefix?dir=./apis";
+      import * as ApiOpenApi from "typed:openapi?dir=./apis";
       import * as TypedConfigModule from "typed:config";
-      import * as Status from "./apis/status.js";
+      import * as Status from "typed:api-handler?path=./apis/status.ts";
 
       const StatusRoute = Status.route;
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: StatusRoute.pathSchema, query: StatusRoute.querySchema, success: Status.success, error: Status.error })));
       export const DependenciesLayer = Layer.empty;
-      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", ApiHandlers.handler(Status)))));
+      export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", Status.handler))));
       export const OpenApi = OpenApiModule.fromApi(Api);
       export const Swagger = HttpApiSwagger.layer(Api);
       export const Scalar = HttpApiScalar.layer(Api);
@@ -1248,7 +1319,7 @@ export const handler = (({ headers, query, body }) => {
             const dev = isDevImportMeta(import.meta);
             const appConfig = { disableListenLog };
             const staticAssetsLayer = TypedHttpServer.staticAssets({
-              projectRoot: process.cwd(),
+              projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
               clientOutDir,
               dev,
             });
@@ -1257,7 +1328,7 @@ export const handler = (({ headers, query, body }) => {
             const serverLayer = TypedHttpServer.layer({
               host,
               port,
-              projectRoot: process.cwd(),
+              projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
               dev,
             });
             return appLayer.pipe(Layer.provide(serverLayer));
@@ -1433,7 +1504,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("status", ApiHandlers.handler(Status))');
+      expect(sourceText).toContain('handlers.handle("status", Status.handler)');
     });
 
     it("Wrong typeTargetSpecs: wrong module paths; assignableTo missing; build fails", () => {
@@ -1554,7 +1625,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw))');
+      expect(sourceText).toContain('handlers.handle("raw", Raw.handler)');
       expect(sourceText).not.toContain("handleRaw");
     });
 
@@ -1576,8 +1647,8 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw))');
-      expect(sourceText).toContain('handle("status", ApiHandlers.handler(Status))');
+      expect(sourceText).toContain('handlers.handle("raw", Raw.handler)');
+      expect(sourceText).toContain('handle("status", Status.handler)');
     });
   });
 
@@ -1669,9 +1740,9 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("get", ApiHandlers.handler(UsersGet))');
-      expect(sourceText).toContain('handle("list", ApiHandlers.handler(UsersList))');
-      expect(sourceText).toContain('handle("update", ApiHandlers.handler(UsersUpdate))');
+      expect(sourceText).toContain('handlers.handle("get", UsersGet.handler)');
+      expect(sourceText).toContain('handle("list", UsersList.handler)');
+      expect(sourceText).toContain('handle("update", UsersUpdate.handler)');
     });
   });
 
@@ -1680,14 +1751,14 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("status", ApiHandlers.handler(Status))');
+      expect(sourceText).toContain('handlers.handle("status", Status.handler)');
     });
 
     it("value return: handlers.handle with decoded params", () => {
       const result = buildApiFromFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("status", ApiHandlers.handler(Status))');
+      expect(sourceText).toContain('handlers.handle("status", Status.handler)');
     });
 
     it("HttpServerResponse return: handler receives typed endpoint params", () => {
@@ -1705,7 +1776,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const result = buildApiFromFixture({ "src/apis/raw.ts": rawHandlerSource });
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('handlers.handle("raw", ApiHandlers.handler(Raw))');
+      expect(sourceText).toContain('handlers.handle("raw", Raw.handler)');
       expect(sourceText).not.toContain("Effect.map(Raw.handler");
       expect(sourceText).not.toContain("Effect.mapError(Raw.handler");
     });
@@ -1730,7 +1801,7 @@ describe("HttpApi assignableTo and validation (comprehensive)", () => {
       const sourceText = getSourceText(result);
       expect(sourceText).toBeDefined();
       expect(sourceText).toContain(
-        'handlers.handle("raw", ApiHandlers.handler(Raw, { body: "payload" }))',
+        'handlers.handle("raw", Raw.handler)',
       );
       expect(sourceText).not.toContain("HttpIncomingMessage.schemaBodyJson(Raw.body)");
       expect(sourceText).not.toContain("handleRaw");
@@ -1841,16 +1912,13 @@ export const handler = () => Effect.succeed({ ok: true });
       const sourceText = getSourceText(result);
 
       expect(sourceText).toBeDefined();
-      expect(sourceText).toContain('import * as ArticlesPrefix from "./apis/articles/_prefix.js";');
+      expect(sourceText).toContain('import * as ApiPrefixes from "typed:prefix?dir=./apis";');
+      expect(sourceText).toContain('const ApiRoute = ApiPrefixes.prefixes["_api.ts"];');
       expect(sourceText).toContain(
-        'import * as ArticlesCommentsPrefix from "./apis/articles/comments/_prefix.js";',
-      );
-      expect(sourceText).toContain("const ApiRoute = ApiRoot.prefix;");
-      expect(sourceText).toContain(
-        "const ArticlesRoute = Route.Join(ApiRoute, ArticlesPrefix.default);",
+        'const ArticlesRoute = Route.Join(ApiRoute, ApiPrefixes.prefixes["articles/_prefix.ts"]);',
       );
       expect(sourceText).toContain(
-        "const ArticlesCommentsRoute = Route.Join(ArticlesRoute, ArticlesCommentsPrefix.default);",
+        'const ArticlesCommentsRoute = Route.Join(ArticlesRoute, ApiPrefixes.prefixes["articles/comments/_prefix.ts"]);',
       );
       expect(sourceText).toContain(
         "const ArticlesCommentsDeleteRoute = Route.Join(ArticlesCommentsRoute, ArticlesCommentsDelete.route);",
@@ -1858,7 +1926,7 @@ export const handler = () => Effect.succeed({ ok: true });
       expect(sourceText).toContain("params: ArticlesCommentsDeleteRoute.pathSchema");
       expect(sourceText).toContain("query: ArticlesCommentsDeleteRoute.querySchema");
       expect(sourceText).not.toContain(
-        "params: Route.Join(ApiRoot.prefix, ArticlesPrefix.default, ArticlesCommentsPrefix.default, ArticlesCommentsDelete.route).pathSchema",
+        'params: Route.Join(ApiPrefixes.prefixes["_api.ts"], ApiPrefixes.prefixes["articles/_prefix.ts"], ApiPrefixes.prefixes["articles/comments/_prefix.ts"], ArticlesCommentsDelete.route).pathSchema',
       );
     });
 
@@ -1902,6 +1970,44 @@ export const handler = () => Effect.succeed({ ok: true });
       );
       expect(sourceText).toContain("params: ArticlesCommentsDeleteRoute.pathSchema");
       expect(sourceText).toContain("query: ArticlesCommentsDeleteRoute.querySchema");
+    });
+
+    it("uses effective prefixed routes for client endpoint paths", () => {
+      const fixture = createApiFixture({
+        "src/domain.ts": `
+import * as Schema from "effect/Schema";
+export const Success = Schema.Struct({ ok: Schema.Boolean });
+`,
+        "src/apis/articles/_prefix.ts": `
+import * as Route from "@typed/router";
+export default Route.Parse("/articles");
+`,
+        "src/apis/articles/comments/_prefix.ts": `
+import * as Route from "@typed/router";
+export default Route.Parse("/:slug/comments");
+`,
+        "src/apis/articles/comments/create.ts": `
+import * as Route from "@typed/router";
+import * as Effect from "effect/Effect";
+import { Success } from "../../../domain.js";
+export const route = Route.Slash;
+export const method = "POST";
+export const success = Success;
+export const handler = () => Effect.succeed({ ok: true });
+`,
+      });
+      const sourceText = getSourceText(
+        buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
+      );
+
+      expect(sourceText).toBeDefined();
+      expect(sourceText).toContain(
+        'HttpApiEndpoint.post("create", ArticlesCommentsRoute.path,',
+      );
+      expect(sourceText).toContain("params: ArticlesCommentsRoute.pathSchema");
+      expect(sourceText).not.toContain(
+        "const ArticlesCommentsCreateRoute = Route.Join(ArticlesCommentsRoute",
+      );
     });
 
     it("_api.ts openapi.exposure: emits installed JSON, Swagger, and Scalar CDN layers", () => {

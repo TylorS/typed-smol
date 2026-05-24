@@ -237,6 +237,7 @@ describe("resolveTypeTargetsFromSpecs with ROUTER_TYPE_TARGET_SPECS", () => {
           "Option",
           "RefSubject",
           "Route",
+          "ServiceMap",
           "Stream",
         ]
       `);
@@ -406,9 +407,13 @@ describe("RouterVirtualModulePlugin", () => {
     const source = result as string;
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Users from "./routes/users.js";
+      import * as Users from "typed:route-template?path=./routes/users.ts";
 
       const router = Router.match(Users.route, constant(Fx.succeed(Users.handler)));
       export default router;
@@ -449,7 +454,7 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     expect(typeof source).toBe("string");
-    expect(source).toContain("Router.normalizeDependencyInput(Dependencies.default)");
+    expect(source).toContain('RouteServices.dependencyLayers["_dependencies.ts"]');
     expect(source).toContain(".provide(");
   });
 
@@ -460,7 +465,7 @@ describe("RouterVirtualModulePlugin", () => {
       "src/routes/home.ts": route("/", "export const handler = 1;"),
     });
     expect(typeof source).toBe("string");
-    expect(source).toContain(".provide(Dependencies.default)");
+    expect(source).toContain('.provide(RouteServices.dependencyLayers["_dependencies.ts"])');
     expect(source).not.toContain("Router.normalizeDependencyInput");
   });
 
@@ -473,13 +478,15 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof source).toBe("string");
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as UsersProfile from "./routes/users/profile.js";
-      import * as Dependencies from "./routes/_dependencies.js";
-      import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
+      import * as UsersProfile from "typed:route-template?path=./routes/users/profile.ts";
 
-      const router = Router.match(UsersProfile.route, { handler: constant(Fx.succeed(UsersProfile.handler)), dependencies: UsersProfiledependencies.dependencies }).provide(Router.normalizeDependencyInput(Dependencies.default));
+      const router = Router.match(UsersProfile.route, { handler: constant(Fx.succeed(UsersProfile.handler)), dependencies: RouteServices.dependencyInputs["users/profile.dependencies.ts"] }).provide(RouteServices.dependencyLayers["_dependencies.ts"]);
       export default router;
       "
     `);
@@ -497,18 +504,15 @@ describe("RouterVirtualModulePlugin", () => {
     expect(source).not.toContain("Cause.Cause<unknown>");
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";
-      import * as Cause from "effect/Cause";
-      import * as Result from "effect/Result";
-      import * as Effect from "effect/Effect";
-      import * as ApiItem from "./routes/api/item.js";
-      import * as Dependencies from "./routes/_dependencies.js";
-      import * as ApiLayout from "./routes/api/_layout.js";
-      import * as ApiItemcatch from "./routes/api/item.catch.js";
+      import * as ApiItem from "typed:route-template?path=./routes/api/item.ts";
 
-      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), catch: (causeRef: RefSubject<Cause.Cause<any>>) => Fx.flatMap(causeRef, (cause) => Result.match(Cause.findFail(cause), { onFailure: (c) => Fx.fromEffect(Effect.failCause(c)), onSuccess: ({ error: e }) => Fx.succeed(ApiItemcatch.catchFn(e)) })) }).layout(ApiLayout.layout).provide(Dependencies.default);
+      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), catch: RouteCatches.catchers["api/item.catch.ts"] }).layout(RouteLayouts.layouts["api/_layout.ts"]).provide(RouteServices.dependencyLayers["_dependencies.ts"]);
       export default router;
       "
     `);
@@ -522,13 +526,15 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Page from "./routes/page.js";
-      import * as Pagedependencies from "./routes/page.dependencies.js";
-      import * as Pagelayout from "./routes/page.layout.js";
+      import * as Page from "typed:route-template?path=./routes/page.ts";
 
-      const router = Router.match(Page.route, { handler: constant(Fx.succeed(Page.handler)), dependencies: Pagedependencies.dependencies, layout: Pagelayout.layout });
+      const router = Router.match(Page.route, { handler: constant(Fx.succeed(Page.handler)), dependencies: RouteServices.dependencyInputs["page.dependencies.ts"], layout: RouteLayouts.layouts["page.layout.ts"] });
       export default router;
       "
     `);
@@ -543,13 +549,15 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as UsersProfile from "./routes/users/profile.js";
-      import * as Dependencies from "./routes/_dependencies.js";
-      import * as UsersProfiledependencies from "./routes/users/profile.dependencies.js";
+      import * as UsersProfile from "typed:route-template?path=./routes/users/profile.ts";
 
-      const router = Router.match(UsersProfile.route, { handler: constant(Fx.succeed(UsersProfile.handler)), dependencies: UsersProfiledependencies.dependencies }).provide(Dependencies.default);
+      const router = Router.match(UsersProfile.route, { handler: constant(Fx.succeed(UsersProfile.handler)), dependencies: RouteServices.dependencyInputs["users/profile.dependencies.ts"] }).provide(RouteServices.dependencyLayers["_dependencies.ts"]);
       export default router;
       "
     `);
@@ -565,13 +573,15 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as ApiItem from "./routes/api/item.js";
-      import * as ApiDependencies from "./routes/api/_dependencies.js";
-      import * as Dependencies from "./routes/_dependencies.js";
+      import * as ApiItem from "typed:route-template?path=./routes/api/item.ts";
 
-      const router = Router.match(ApiItem.route, constant(Fx.succeed(ApiItem.handler))).provide(ApiDependencies.default).provide(Dependencies.default);
+      const router = Router.match(ApiItem.route, constant(Fx.succeed(ApiItem.handler))).provide(RouteServices.dependencyLayers["api/_dependencies.ts"]).provide(RouteServices.dependencyLayers["_dependencies.ts"]);
       export default router;
       "
     `);
@@ -585,13 +595,15 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as ApiItem from "./routes/api/item.js";
-      import * as ApiLayout from "./routes/api/_layout.js";
-      import * as ApiItemlayout from "./routes/api/item.layout.js";
+      import * as ApiItem from "typed:route-template?path=./routes/api/item.ts";
 
-      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), layout: ApiItemlayout.layout }).layout(ApiLayout.layout);
+      const router = Router.match(ApiItem.route, { handler: constant(Fx.succeed(ApiItem.handler)), layout: RouteLayouts.layouts["api/item.layout.ts"] }).layout(RouteLayouts.layouts["api/_layout.ts"]);
       export default router;
       "
     `);
@@ -691,7 +703,7 @@ describe("RouterVirtualModulePlugin", () => {
       expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-GUARD-001");
       return;
     }
-    expect(result).toContain("Router.match(Users.route, Usersguard.guard");
+    expect(result).toContain('Router.match(Users.route, RouteGuards.guards["users.guard.ts"]');
     expect(result).not.toContain("??");
   });
 
@@ -707,7 +719,7 @@ describe("RouterVirtualModulePlugin", () => {
       expect((result as VirtualModuleBuildError).errors[0].code).toBe("RVM-GUARD-001");
       return;
     }
-    expect(result).toContain("Router.match(Users.route, Usersguard.default");
+    expect(result).toContain('Router.match(Users.route, RouteGuards.guards["users.guard.ts"]');
     expect(result).not.toContain("??");
   });
 
@@ -721,9 +733,9 @@ describe("RouterVirtualModulePlugin", () => {
 
     expect(result).toContain("Router.composeGuards(");
     const source = String(result);
-    const rootIndex = source.indexOf("Guard.guard");
-    const apiIndex = source.indexOf("ApiGuard.guard");
-    const leafIndex = source.indexOf("ApiItemguard.guard");
+    const rootIndex = source.indexOf('RouteGuards.guards["_guard.ts"]');
+    const apiIndex = source.indexOf('RouteGuards.guards["api/_guard.ts"]');
+    const leafIndex = source.indexOf('RouteGuards.guards["api/item.guard.ts"]');
     expect(rootIndex).toBeGreaterThan(-1);
     expect(apiIndex).toBeGreaterThan(rootIndex);
     expect(leafIndex).toBeGreaterThan(apiIndex);
@@ -735,9 +747,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Home from "./routes/home.js";
+      import * as Home from "typed:route-template?path=./routes/home.ts";
 
       const router = Router.match(Home.route, constant(Fx.succeed(Home.handler)));
       export default router;
@@ -751,9 +767,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as MEffect from "./routes/effect.js";
+      import * as MEffect from "typed:route-template?path=./routes/effect.ts";
 
       const router = Router.match(MEffect.route, constant(Fx.fromEffect(MEffect.handler)));
       export default router;
@@ -767,7 +787,11 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as MFx from "./routes/fx.js";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
+      import * as MFx from "typed:route-template?path=./routes/fx.ts";
 
       const router = Router.match(MFx.route, MFx.handler);
       export default router;
@@ -803,9 +827,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as MStream from "./routes/stream.js";
+      import * as MStream from "typed:route-template?path=./routes/stream.ts";
 
       const router = Router.match(MStream.route, constant(Fx.fromStream(MStream.handler)));
       export default router;
@@ -819,8 +847,12 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
-      import * as Page from "./routes/page.js";
+      import * as Page from "typed:route-template?path=./routes/page.ts";
 
       const router = Router.match(Page.route, (params) => Fx.map(params, Page.handler));
       export default router;
@@ -836,8 +868,12 @@ describe("RouterVirtualModulePlugin", () => {
     const source = result as string;
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
-      import * as Async from "./routes/async.js";
+      import * as Async from "typed:route-template?path=./routes/async.ts";
 
       const router = Router.match(Async.route, (params) => Fx.switchMap(params, Async.handler));
       export default router;
@@ -851,9 +887,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as V from "./routes/v.js";
+      import * as V from "typed:route-template?path=./routes/v.ts";
 
       const router = Router.match(V.route, constant(Fx.succeed(V.handler)));
       export default router;
@@ -867,8 +907,12 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
-      import * as F from "./routes/f.js";
+      import * as F from "typed:route-template?path=./routes/f.ts";
 
       const router = Router.match(F.route, (params) => Fx.map(params, F.handler));
       export default router;
@@ -883,9 +927,13 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as E from "./routes/e.js";
+      import * as E from "typed:route-template?path=./routes/e.ts";
 
       const router = Router.match(E.route, constant(Fx.fromEffect(E.handler)));
       export default router;
@@ -900,8 +948,12 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
-      import * as Ef from "./routes/ef.js";
+      import * as Ef from "typed:route-template?path=./routes/ef.ts";
 
       const router = Router.match(Ef.route, (params) => Fx.mapEffect(params, Ef.handler));
       export default router;
@@ -916,9 +968,13 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as S from "./routes/s.js";
+      import * as S from "typed:route-template?path=./routes/s.ts";
 
       const router = Router.match(S.route, constant(Fx.fromStream(S.handler)));
       export default router;
@@ -933,8 +989,12 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
-      import * as Sf from "./routes/sf.js";
+      import * as Sf from "typed:route-template?path=./routes/sf.ts";
 
       const router = Router.match(Sf.route, (params) => Fx.switchMap(params, (p) => Fx.fromStream(Sf.handler(p))));
       export default router;
@@ -979,7 +1039,11 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as X from "./routes/x.js";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
+      import * as X from "typed:route-template?path=./routes/x.ts";
 
       const router = Router.match(X.route, X.handler);
       export default router;
@@ -994,8 +1058,12 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
-      import * as Xf from "./routes/xf.js";
+      import * as Xf from "typed:route-template?path=./routes/xf.ts";
 
       const router = Router.match(Xf.route, (params) => Fx.switchMap(params, Xf.handler));
       export default router;
@@ -1066,9 +1134,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Home from "./routes/home.js";
+      import * as Home from "typed:route-template?path=./routes/home.ts";
 
       const router = Router.match(Home.route, constant(Fx.succeed(Home.handler)));
       export default router;
@@ -1082,9 +1154,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Home from "./routes/home.js";
+      import * as Home from "typed:route-template?path=./routes/home.ts";
 
       const router = Router.match(Home.route, constant(Fx.succeed(Home.handler)));
       export default router;
@@ -1098,8 +1174,12 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
-      import * as Page from "./routes/page.js";
+      import * as Page from "typed:route-template?path=./routes/page.ts";
 
       const router = Router.match(Page.route, (params) => Fx.map(params, Page.handler));
       export default router;
@@ -1114,7 +1194,11 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
-      import * as MFx from "./routes/fx.js";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
+      import * as MFx from "typed:route-template?path=./routes/fx.ts";
 
       const router = Router.match(MFx.route, MFx.handler);
       export default router;
@@ -1129,9 +1213,13 @@ describe("RouterVirtualModulePlugin", () => {
     expect(typeof result).toBe("string");
     expect(result as string).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as MEffect from "./routes/effect.js";
+      import * as MEffect from "typed:route-template?path=./routes/effect.ts";
 
       const router = Router.match(MEffect.route, constant(Fx.fromEffect(MEffect.handler)));
       export default router;
@@ -1145,9 +1233,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as MStream from "./routes/stream.js";
+      import * as MStream from "typed:route-template?path=./routes/stream.ts";
 
       const router = Router.match(MStream.route, constant(Fx.fromStream(MStream.handler)));
       export default router;
@@ -1161,9 +1253,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Template from "./routes/template.js";
+      import * as Template from "typed:route-template?path=./routes/template.ts";
 
       const router = Router.match(Template.route, constant(Fx.succeed(Template.template)));
       export default router;
@@ -1190,11 +1286,15 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as About from "./routes/about.js";
-      import * as Contact from "./routes/contact.js";
-      import * as Home from "./routes/home.js";
+      import * as About from "typed:route-template?path=./routes/about.ts";
+      import * as Contact from "typed:route-template?path=./routes/contact.ts";
+      import * as Home from "typed:route-template?path=./routes/home.ts";
 
       const router = Router.merge(
         Router.match(About.route, constant(Fx.succeed(About.handler))),
@@ -1214,11 +1314,15 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as UsersId from "./routes/users/[id].js";
-      import * as UsersIndex from "./routes/users/index.js";
-      import * as UsersProfile from "./routes/users/profile.js";
+      import * as UsersId from "typed:route-template?path=./routes/users/[id].ts";
+      import * as UsersIndex from "typed:route-template?path=./routes/users/index.ts";
+      import * as UsersProfile from "typed:route-template?path=./routes/users/profile.ts";
 
       const router = Router.merge(
         Router.match(UsersId.route, constant(Fx.succeed(UsersId.handler))),
@@ -1260,9 +1364,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Index from "./routes/index.js";
+      import * as Index from "typed:route-template?path=./routes/index.ts";
 
       const router = Router.match(Index.route, constant(Fx.succeed(Index.handler)));
       export default router;
@@ -1276,9 +1384,13 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as Default from "./routes/default.js";
+      import * as Default from "typed:route-template?path=./routes/default.ts";
 
       const router = Router.match(Default.route, constant(Fx.succeed(Default.default)));
       export default router;
@@ -1298,15 +1410,15 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as ApiItemsX from "./routes/api/items/x.js";
-      import * as ApiDependencies from "./routes/api/_dependencies.js";
-      import * as Dependencies from "./routes/_dependencies.js";
-      import * as ApiItemsLayout from "./routes/api/items/_layout.js";
-      import * as ApiLayout from "./routes/api/_layout.js";
+      import * as ApiItemsX from "typed:route-template?path=./routes/api/items/x.ts";
 
-      const router = Router.match(ApiItemsX.route, constant(Fx.succeed(ApiItemsX.handler))).layout(ApiItemsLayout.layout).layout(ApiLayout.layout).provide(ApiDependencies.default).provide(Dependencies.default);
+      const router = Router.match(ApiItemsX.route, constant(Fx.succeed(ApiItemsX.handler))).layout(RouteLayouts.layouts["api/items/_layout.ts"]).layout(RouteLayouts.layouts["api/_layout.ts"]).provide(RouteServices.dependencyLayers["api/_dependencies.ts"]).provide(RouteServices.dependencyLayers["_dependencies.ts"]);
       export default router;
       "
     `);
@@ -1320,10 +1432,14 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as A from "./routes/a.js";
-      import * as B from "./routes/b.js";
+      import * as A from "typed:route-template?path=./routes/a.ts";
+      import * as B from "typed:route-template?path=./routes/b.ts";
 
       const router = Router.merge(
         Router.match(A.route, constant(Fx.succeed(A.handler))),
@@ -1342,10 +1458,14 @@ describe("RouterVirtualModulePlugin", () => {
     });
     expect(source).toMatchInlineSnapshot(`
       "import * as Router from "@typed/router";
+      import * as RouteServices from "typed:services?dir=./routes";
+      import * as RouteGuards from "typed:guard?dir=./routes";
+      import * as RouteLayouts from "typed:layout?dir=./routes";
+      import * as RouteCatches from "typed:catch?dir=./routes";
       import * as Fx from "@typed/fx/Fx";
       import { constant } from "effect/Function";
-      import * as A from "./routes/a.js";
-      import * as B from "./routes/b.js";
+      import * as A from "typed:route-template?path=./routes/a.ts";
+      import * as B from "typed:route-template?path=./routes/b.ts";
 
       const router = Router.merge(
         Router.match(A.route, constant(Fx.succeed(A.handler))),

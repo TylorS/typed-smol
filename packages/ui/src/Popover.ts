@@ -52,7 +52,6 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
     popovertarget: id,
     popovertargetaction: "toggle",
     "aria-expanded": open,
-    "data-ui": "typed/ui/Popover",
     ".data": { open },
   } as const;
 
@@ -103,7 +102,6 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     id,
     popover: mode,
     style,
-    "data-ui": "typed/ui/Popover",
     ".data": { open, mode },
     "data-position-anchor": firstOptionalString(options.positionAnchor),
     "data-position-area": firstOptionalString(options.positionArea),

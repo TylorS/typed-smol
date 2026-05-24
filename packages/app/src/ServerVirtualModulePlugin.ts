@@ -1,4 +1,6 @@
 import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
+import process from "node:process";
+import { findTypedConfigRoot } from "./config/loadTypedConfig.js";
 import { emitServerSource } from "./internal/emitServerSource.js";
 import { parseTypedVirtualModuleId } from "./internal/frameworkVirtualModuleId.js";
 import { resolveServerCompanion } from "./internal/serverCompanions.js";
@@ -25,7 +27,8 @@ export function createServerVirtualModulePlugin(
       if (!parsed.ok) return buildError(parsed.code, parsed.reason, name);
       if (parsed.kind !== "server") return buildError("TVM-ID-001", "expected typed:server", name);
       const companion = resolveServerCompanion(importer);
-      return emitServerSource({ parsed, id, companions: companion.imports });
+      const projectRoot = findTypedConfigRoot(importer) ?? process.cwd();
+      return emitServerSource({ parsed, id, companions: companion.imports, projectRoot });
     },
   };
 }

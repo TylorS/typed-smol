@@ -87,6 +87,39 @@ export type PlanSchemaFromTypeNodeInput = {
   readonly span?: SourceSpan;
 };
 
+export type UserSchemaReference = {
+  readonly expression: string;
+};
+
+export type SerializableDescriptorPlan =
+  | UserSchemaDescriptorPlan
+  | GeneratedSerializableDescriptorPlan;
+
+export type UserSchemaDescriptorPlan = {
+  readonly kind: "schema";
+  readonly typeId: string;
+  readonly schemaExpression: string;
+};
+
+export type GeneratedSerializableDescriptorPlan = {
+  readonly kind: "generated";
+  readonly plan: SchemaGenerationPlan;
+};
+
+export type PlanSerializableDescriptorInput = PlanSchemaFromTypeNodeInput & {
+  readonly userSchema?: UserSchemaReference;
+};
+
+export type SerializableDescriptorPlanResult =
+  | {
+      readonly ok: true;
+      readonly descriptor: SerializableDescriptorPlan;
+    }
+  | {
+      readonly ok: false;
+      readonly diagnostics: readonly TypedCompilerDiagnostic[];
+    };
+
 type SupportedPrimitive = "string" | "number" | "boolean" | "bigint" | "null" | "undefined";
 
 type NodePlanResult =
@@ -139,11 +172,40 @@ export function schemaPlanFingerprint(
   });
 }
 
+export function planSerializableDescriptor(
+  input: PlanSerializableDescriptorInput,
+): SerializableDescriptorPlanResult {
+  if (input.userSchema) {
+    return {
+      ok: true,
+      descriptor: {
+        kind: "schema",
+        schemaExpression: input.userSchema.expression,
+        typeId: input.typeId,
+      },
+    };
+  }
+
+  const generated = planSchemaFromTypeNode(input);
+  return generated.ok
+    ? { ok: true, descriptor: { kind: "generated", plan: generated.plan } }
+    : generated;
+}
+
 export function emitSerializableDescriptorSource(
-  plan: SchemaGenerationPlan,
+  plan: SchemaGenerationPlan | SerializableDescriptorPlan,
   exportName = "serializable",
 ): string {
   assertIdentifier(exportName);
+  if ("kind" in plan) {
+    return plan.kind === "schema"
+      ? emitSchemaDescriptorSource(plan, exportName)
+      : emitGeneratedDescriptorSource(plan.plan, exportName);
+  }
+  return emitGeneratedDescriptorSource(plan, exportName);
+}
+
+function emitGeneratedDescriptorSource(plan: SchemaGenerationPlan, exportName: string): string {
   return [
     'import { Serializable } from "@typed/app";',
     "",
@@ -156,6 +218,14 @@ export function emitSerializableDescriptorSource(
     `    fingerprint: ${JSON.stringify(plan.fingerprint)},`,
     "  },",
     ");",
+  ].join("\n");
+}
+
+function emitSchemaDescriptorSource(plan: UserSchemaDescriptorPlan, exportName: string): string {
+  return [
+    'import { Serializable } from "@typed/app";',
+    "",
+    `export const ${exportName} = Serializable.schema(${plan.schemaExpression}, { id: ${JSON.stringify(plan.typeId)} });`,
   ].join("\n");
 }
 

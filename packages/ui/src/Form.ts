@@ -32,8 +32,6 @@ export const data = DataAttr.schema({
   submitting: Schema.Boolean,
 });
 
-export const component = "typed/ui/Form";
-
 export interface Result<Values extends {}> {
   readonly values?: Partial<Values>;
   readonly errors?: Partial<Record<keyof Values & string, string>>;
@@ -265,7 +263,6 @@ export function Form<
     : internalSubmit;
   const onReset = EventHandler.make(() => reset(options.state), { preventDefault: true });
   const props = {
-    "data-ui": component,
     onsubmit: onSubmit,
     onreset: onReset,
   };

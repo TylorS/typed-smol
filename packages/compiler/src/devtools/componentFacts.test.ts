@@ -15,6 +15,8 @@ import { analyzeTemplateModule } from "../template/analyzeTemplateModule.js";
 import {
   createComponentDevtoolsFact,
   createComponentDevtoolsFacts,
+  deriveComponentDevtoolsFactInputs,
+  deriveComponentIdentities,
   type ComponentDevtoolsFact,
 } from "./componentFacts.js";
 
@@ -236,7 +238,145 @@ describe("component devtools facts", () => {
     expectTypeOf(fact.componentId).toEqualTypeOf<ReturnType<typeof makeComponentId>>();
     expectTypeOf(fact.summary.componentId).toEqualTypeOf<ReturnType<typeof makeComponentId>>();
   });
+
+  it("derives component identity from exported component source facts", () => {
+    const moduleId = "/repo/packages/ui/src/Disclosure.ts";
+    const sourceText = [
+      'import type { Component } from "./Reactive.js";',
+      "interface ButtonOptions { readonly content: unknown }",
+      "function actionId(name: string) { return name }",
+      "export function Button<const Opts extends ButtonOptions>(options: Opts): Component<Opts> {",
+      "  return options.content as Component<Opts>;",
+      "}",
+      "export const Disclosure = Button;",
+      "export default function DefaultDisclosure(options: ButtonOptions): Component<ButtonOptions> {",
+      "  return Button(options);",
+      "}",
+      "export function toggle(): void {}",
+    ].join("\n");
+
+    const identities = deriveComponentIdentities({ moduleId, sourceText });
+
+    expect(identities.map(identitySnapshot)).toMatchInlineSnapshot(`
+      [
+        {
+          "componentId": "cmp:/repo/packages/ui/src/Disclosure.ts#Button",
+          "declarationKind": "function",
+          "displayName": "Button",
+          "exportName": "Button",
+          "localName": "Button",
+          "moduleId": "/repo/packages/ui/src/Disclosure.ts",
+          "source": {
+            "endOffset": 172,
+            "endPosition": {
+              "column": 23,
+              "line": 4,
+            },
+            "id": "src:/repo/packages/ui/src/Disclosure.ts:166",
+            "moduleId": "/repo/packages/ui/src/Disclosure.ts",
+            "startOffset": 166,
+            "startPosition": {
+              "column": 17,
+              "line": 4,
+            },
+          },
+        },
+        {
+          "componentId": "cmp:/repo/packages/ui/src/Disclosure.ts#Disclosure",
+          "declarationKind": "alias",
+          "displayName": "Disclosure",
+          "exportName": "Disclosure",
+          "localName": "Button",
+          "moduleId": "/repo/packages/ui/src/Disclosure.ts",
+          "source": {
+            "endOffset": 311,
+            "endPosition": {
+              "column": 24,
+              "line": 7,
+            },
+            "id": "src:/repo/packages/ui/src/Disclosure.ts:301",
+            "moduleId": "/repo/packages/ui/src/Disclosure.ts",
+            "startOffset": 301,
+            "startPosition": {
+              "column": 14,
+              "line": 7,
+            },
+          },
+        },
+        {
+          "componentId": "cmp:/repo/packages/ui/src/Disclosure.ts#default",
+          "declarationKind": "default-function",
+          "displayName": "DefaultDisclosure",
+          "exportName": "default",
+          "localName": "DefaultDisclosure",
+          "moduleId": "/repo/packages/ui/src/Disclosure.ts",
+          "source": {
+            "endOffset": 363,
+            "endPosition": {
+              "column": 42,
+              "line": 8,
+            },
+            "id": "src:/repo/packages/ui/src/Disclosure.ts:346",
+            "moduleId": "/repo/packages/ui/src/Disclosure.ts",
+            "startOffset": 346,
+            "startPosition": {
+              "column": 25,
+              "line": 8,
+            },
+          },
+        },
+      ]
+    `);
+  });
+
+  it("feeds derived identities into devtools fact creation", () => {
+    const moduleId = "/repo/packages/ui/src/Checkbox.ts";
+    const sourceText = [
+      'import type { Component } from "./Reactive.js";',
+      "export function Input<const Opts>(options: Opts): Component<Opts> {",
+      "  return {} as Component<Opts>;",
+      "}",
+      "export { Input as Checkbox };",
+    ].join("\n");
+
+    const facts = createComponentDevtoolsFacts(
+      deriveComponentDevtoolsFactInputs({ moduleId, sourceText }),
+    );
+
+    expect(facts.map((fact) => fact.summary)).toMatchInlineSnapshot(`
+      [
+        {
+          "componentId": "cmp:/repo/packages/ui/src/Checkbox.ts#Input",
+          "displayName": "Input",
+          "fxNodeIds": [],
+          "refSubjectIds": [],
+          "sourceLocationId": "src:/repo/packages/ui/src/Checkbox.ts:64",
+        },
+        {
+          "componentId": "cmp:/repo/packages/ui/src/Checkbox.ts#Checkbox",
+          "displayName": "Checkbox",
+          "fxNodeIds": [],
+          "refSubjectIds": [],
+          "sourceLocationId": "src:/repo/packages/ui/src/Checkbox.ts:168",
+        },
+      ]
+    `);
+  });
 });
+
+function identitySnapshot(
+  identity: ReturnType<typeof deriveComponentIdentities>[number],
+): Record<string, unknown> {
+  return {
+    componentId: identity.componentId,
+    declarationKind: identity.declarationKind,
+    displayName: identity.displayName,
+    exportName: identity.exportName,
+    localName: identity.localName,
+    moduleId: identity.moduleId,
+    source: identity.source,
+  };
+}
 
 function sourceSpan(moduleId: string, sourceText: string, start: number, end: number) {
   return {

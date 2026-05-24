@@ -55,8 +55,6 @@ export const itemData = DataAttr.schema({
   disabled: Schema.Boolean,
 });
 
-export const component = "typed/ui/Menu";
-
 export function makeState(
   initial: InitialState,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -114,7 +112,6 @@ export function Trigger<const E, const R, const Opts extends TriggerOptions<NoIn
     popovertargetaction: "toggle",
     "aria-haspopup": "menu",
     "aria-expanded": open,
-    "data-ui": component,
     ".data": { open },
   } as const;
 
@@ -172,7 +169,6 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     "aria-label": options.label,
     "aria-orientation": orientation,
     "aria-activedescendant": activeDescendant,
-    "data-ui": component,
     ".data": { open },
     ontoggle: onToggle,
     onkeydown: onKeyDown,

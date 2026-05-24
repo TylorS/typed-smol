@@ -5,7 +5,12 @@ import {
   analyzeComponentHmr,
   type ComponentHmrServiceDescriptor,
 } from "../hmr/analyzeComponentHmr.js";
+import {
+  deriveComponentResumabilityFacts,
+  type ComponentResumabilityFact,
+} from "../resumability/componentFacts.js";
 import { emitViteHmrRuntime } from "../hmr/viteHmr.js";
+import { createRouteModuleMatcher, type RouteModuleMatcher } from "../route/routeModuleMatcher.js";
 import {
   analyzeTemplateModule,
   type AnalyzeTemplateModuleInput,
@@ -22,6 +27,9 @@ import type {
 
 export interface TransformTemplateModuleInput extends AnalyzeTemplateModuleInput {
   readonly target?: "dom" | "server";
+  readonly projectRoot?: string;
+  readonly routeDirectories?: readonly string[];
+  readonly routeModuleMatcher?: RouteModuleMatcher;
 }
 
 export interface TransformTemplateModuleResult {
@@ -48,9 +56,16 @@ export function transformTemplateModule(
 
   const tsMod = input.ts ?? ts;
   const sourceFile = sourceFileFor(tsMod, input);
+  const routeModuleMatcher = routeModuleMatcherFor(input);
+  const componentFacts = deriveComponentResumabilityFacts({
+    moduleId: input.moduleId,
+    sourceFile,
+  });
   const templates = directEligibleTemplates(
     input.moduleId,
+    routeModuleMatcher,
     sourceFile,
+    componentFacts,
     topLevelTemplates(analysis.templates),
   );
   if (templates.length === 0) return unchanged(input, analysis);
@@ -65,6 +80,7 @@ export function transformTemplateModule(
     bindings,
     target,
     hmr.runtime,
+    actionDescriptorMap(componentFacts),
   );
   const sourceText = applyEdits(input.sourceText, [
     declarationEdit(sourceFile, declarationText),
@@ -106,17 +122,33 @@ function topLevelTemplates(
 
 function directEligibleTemplates(
   moduleId: string,
+  routeModuleMatcher: RouteModuleMatcher,
   sourceFile: ts.SourceFile,
+  components: readonly ComponentResumabilityFact[],
   templates: readonly TemplateModuleTemplate[],
 ): readonly TemplateModuleTemplate[] {
   return templates.filter((template) => {
-    const node = findTaggedTemplate(sourceFile, template.templateSpan.start, template.templateSpan.end);
+    const node = findTaggedTemplate(
+      sourceFile,
+      template.templateSpan.start,
+      template.templateSpan.end,
+    );
     return (
       node !== null &&
-      !hasFunctionAncestor(node) &&
-      !isRouteTemplateExport(moduleId, node)
+      (!hasFunctionAncestor(node) || hasComponentFunctionAncestor(node, components)) &&
+      !isRouteTemplateExport(moduleId, routeModuleMatcher, node)
     );
   });
+}
+
+function routeModuleMatcherFor(input: TransformTemplateModuleInput): RouteModuleMatcher {
+  return (
+    input.routeModuleMatcher ??
+    createRouteModuleMatcher({
+      projectRoot: input.projectRoot,
+      routeDirectories: input.routeDirectories,
+    })
+  );
 }
 
 function findTaggedTemplate(
@@ -150,8 +182,33 @@ function hasFunctionAncestor(node: ts.Node): boolean {
   return false;
 }
 
-function isRouteTemplateExport(moduleId: string, node: ts.TaggedTemplateExpression): boolean {
-  if (!moduleId.includes("/routes/")) return false;
+function hasComponentFunctionAncestor(
+  node: ts.Node,
+  components: readonly ComponentResumabilityFact[],
+): boolean {
+  let current = node.parent;
+  const names = new Set(components.map((component) => component.localName));
+  while (current !== undefined) {
+    const name = functionLikeName(current);
+    if (name && names.has(name)) return true;
+    current = current.parent;
+  }
+  return false;
+}
+
+function functionLikeName(node: ts.Node): string | undefined {
+  if (ts.isFunctionDeclaration(node) && node.name) return node.name.text;
+  if (!ts.isArrowFunction(node) && !ts.isFunctionExpression(node)) return undefined;
+  const parent = node.parent;
+  return ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name) ? parent.name.text : undefined;
+}
+
+function isRouteTemplateExport(
+  moduleId: string,
+  routeModuleMatcher: RouteModuleMatcher,
+  node: ts.TaggedTemplateExpression,
+): boolean {
+  if (!routeModuleMatcher(moduleId)) return false;
   const declaration = node.parent;
   if (!ts.isVariableDeclaration(declaration)) return false;
   if (!ts.isIdentifier(declaration.name)) return false;
@@ -204,6 +261,7 @@ const serverDirectParts = new Set<TemplatePlan["parts"][number]["kind"]>([
   "boolean",
   "className",
   "comment",
+  "event",
   "node",
   "property",
   "sparseComment",
@@ -300,11 +358,12 @@ function directTemplateDeclarations(
   bindings: readonly string[],
   target: "dom" | "server",
   hmrRuntime: string,
+  actionDescriptors: ReadonlyMap<string, object>,
 ): string {
   const effectNamespace = findNamespaceImport(sourceFile, "effect/Effect");
   const importText =
     target === "dom"
-      ? `${effectNamespace ? "" : 'import * as __typedTemplateEffect from "effect/Effect";\n'}import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath, mountDomTemplateBindings } from "@typed/template/compiler-runtime/dom";`
+      ? `${effectNamespace ? "" : 'import * as __typedTemplateEffect from "effect/Effect";\n'}import { ${domRuntimeImports(templates)} } from "@typed/template/compiler-runtime/dom";`
       : 'import { defineServerTemplate, renderServerChunks } from "@typed/template/compiler-runtime/server";';
   const effectRuntime = effectNamespace ?? "__typedTemplateEffect";
   return [
@@ -312,10 +371,39 @@ function directTemplateDeclarations(
     hmrRuntime,
     ...templates.map((template, index) =>
       target === "dom"
-        ? domTemplateDeclaration(template, bindings[index] ?? "__typed_template", effectRuntime)
-        : serverTemplateDeclaration(template, bindings[index] ?? "__typed_template"),
+        ? domTemplateDeclaration(
+            template,
+            bindings[index] ?? "__typed_template",
+            effectRuntime,
+            actionDescriptors,
+          )
+        : serverTemplateDeclaration(
+            template,
+            bindings[index] ?? "__typed_template",
+            actionDescriptors,
+          ),
     ),
   ].join("\n");
+}
+
+function domRuntimeImports(templates: readonly TemplateModuleTemplate[]): string {
+  return [
+    "bindAttr",
+    "bindBoolean",
+    "bindClass",
+    "bindData",
+    "bindEvent",
+    "bindNode",
+    "bindProperty",
+    "bindRef",
+    "bindText",
+    ...(templates.some((template) => hasRouteResumeMarker(template.plan)) ? ["bootRouteResume"] : []),
+    "defineDomTemplate",
+    "getCommentAtPath",
+    "getElementAtPath",
+    "getNodeAtPath",
+    "mountDomTemplateBindings",
+  ].join(", ");
 }
 
 function findNamespaceImport(sourceFile: ts.SourceFile, moduleSpecifier: string): string | null {
@@ -334,13 +422,75 @@ function directTemplateCall(template: TemplateModuleTemplate, binding: string): 
   return `${binding}(${expressions.join(", ")})`;
 }
 
+function actionDescriptorMap(
+  components: readonly ComponentResumabilityFact[],
+): ReadonlyMap<string, object> {
+  const descriptors = new Map<string, object>();
+  for (const component of components) {
+    for (const action of component.actions) {
+      if (!action.bindingName) continue;
+      descriptors.set(action.bindingName, {
+        component: action.componentId,
+        event: action.event,
+        id: action.canonicalId,
+      });
+    }
+  }
+  return descriptors;
+}
+
+function actionDescriptorArgument(
+  template: TemplateModuleTemplate,
+  valueIndex: number,
+  descriptors: ReadonlyMap<string, object>,
+): string {
+  const descriptor = actionDescriptorForValue(template, valueIndex, descriptors);
+  return descriptor ? `, ${jsonSource(descriptor)}` : "";
+}
+
+function actionDescriptorProperty(
+  template: TemplateModuleTemplate,
+  valueIndex: number,
+  descriptors: ReadonlyMap<string, object>,
+): object {
+  const descriptor = actionDescriptorForValue(template, valueIndex, descriptors);
+  return descriptor ? { action: descriptor } : {};
+}
+
+function actionDescriptorForValue(
+  template: TemplateModuleTemplate,
+  valueIndex: number,
+  descriptors: ReadonlyMap<string, object>,
+): object | undefined {
+  const expression = template.expressions.find((candidate) => candidate.index === valueIndex);
+  if (!expression) return undefined;
+  return descriptors.get(expression.sourceText.trim());
+}
+
+function componentIdForTemplate(
+  template: TemplateModuleTemplate,
+  descriptors: ReadonlyMap<string, object>,
+): string | undefined {
+  for (const part of template.plan.parts) {
+    if (part.kind !== "event") continue;
+    const descriptor = actionDescriptorForValue(template, part.valueIndex, descriptors);
+    const component = descriptor && "component" in descriptor ? descriptor.component : undefined;
+    if (typeof component === "string") return component;
+  }
+  return undefined;
+}
+
 function domTemplateDeclaration(
   template: TemplateModuleTemplate,
   binding: string,
   effectRuntime: string,
+  actionDescriptors: ReadonlyMap<string, object>,
 ): string {
-  if (template.plan.parts.length > 32) return tableDomTemplateDeclaration(template, binding);
-  const effects = template.plan.parts.map((part) => {
+  if (template.plan.parts.length > 32) {
+    return tableDomTemplateDeclaration(template, binding, effectRuntime, actionDescriptors);
+  }
+  const effects = [
+    ...template.plan.parts.map((part) => {
     if (part.kind === "node") {
       const anchorPath = nodePartAnchorPath(template.plan, part.valueIndex) ?? part.path;
       return `bindNode(getCommentAtPath(instance.root, ${jsonSource(anchorPath)}), values[${part.valueIndex}], "unknown", runtime)`;
@@ -364,18 +514,20 @@ function domTemplateDeclaration(
       return `bindData(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}], "unknown", runtime)`;
     }
     if (part.kind === "event") {
-      return `bindEvent(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}])`;
+      return `bindEvent(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}]${actionDescriptorArgument(template, part.valueIndex, actionDescriptors)})`;
     }
     if (part.kind === "ref") {
       return `bindRef(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}])`;
     }
     if (part.kind === "properties") return `${effectRuntime}.void`;
     return `${effectRuntime}.void`;
-  });
+    }),
+    ...(hasRouteResumeMarker(template.plan) ? ["bootRouteResume(instance.root, runtime)"] : []),
+  ];
   return [
     `const ${binding} = defineDomTemplate({`,
     `  templateHash: ${JSON.stringify(template.plan.templateHash)},`,
-    `  html: ${JSON.stringify(domStaticHtml(template.plan))},`,
+    `  html: ${JSON.stringify(domStaticHtml(template.plan, componentIdForTemplate(template, actionDescriptors)))},`,
     "  mount(instance, values, runtime) {",
     `    return ${effectRuntime}.all([${effects.join(", ")}], { concurrency: "unbounded" });`,
     "  }",
@@ -383,24 +535,56 @@ function domTemplateDeclaration(
   ].join("\n");
 }
 
-function tableDomTemplateDeclaration(template: TemplateModuleTemplate, binding: string): string {
+function tableDomTemplateDeclaration(
+  template: TemplateModuleTemplate,
+  binding: string,
+  effectRuntime: string,
+  actionDescriptors: ReadonlyMap<string, object>,
+): string {
+  const bindingEffect = `mountDomTemplateBindings(instance, values, runtime, ${jsonSource(domBindingTable(template, actionDescriptors))})`;
+  const mountEffect = hasRouteResumeMarker(template.plan)
+    ? `${effectRuntime}.all([${bindingEffect}, bootRouteResume(instance.root, runtime)], { concurrency: "unbounded" })`
+    : bindingEffect;
   return [
     `const ${binding} = defineDomTemplate({`,
     `  templateHash: ${JSON.stringify(template.plan.templateHash)},`,
-    `  html: ${JSON.stringify(domStaticHtml(template.plan))},`,
+    `  html: ${JSON.stringify(domStaticHtml(template.plan, componentIdForTemplate(template, actionDescriptors)))},`,
     "  mount(instance, values, runtime) {",
-    `    return mountDomTemplateBindings(instance, values, runtime, ${jsonSource(domBindingTable(template.plan))});`,
+    `    return ${mountEffect};`,
     "  }",
     "});",
   ].join("\n");
 }
 
-function domBindingTable(plan: TemplatePlan): readonly object[] {
-  return plan.parts.map((part) => {
+function hasRouteResumeMarker(plan: TemplatePlan): boolean {
+  return plan.nodes.some(nodeHasRouteResumeMarker);
+}
+
+function nodeHasRouteResumeMarker(node: TemplatePlanNode): boolean {
+  if (node.kind === "element") {
+    return hasRouteResumeAttribute(node.attributes) || node.children.some(nodeHasRouteResumeMarker);
+  }
+  if (node.kind === "selfClosingElement" || node.kind === "textOnlyElement") {
+    return hasRouteResumeAttribute(node.attributes);
+  }
+  return false;
+}
+
+function hasRouteResumeAttribute(attributes: readonly TemplatePlanAttribute[]): boolean {
+  return attributes.some(
+    (attribute) => attribute.kind === "attribute" && attribute.name === "data-typed-resume",
+  );
+}
+
+function domBindingTable(
+  template: TemplateModuleTemplate,
+  actionDescriptors: ReadonlyMap<string, object>,
+): readonly object[] {
+  return template.plan.parts.map((part) => {
     if (part.kind === "node") {
       return {
         kind: "node",
-        path: nodePartAnchorPath(plan, part.valueIndex) ?? part.path,
+        path: nodePartAnchorPath(template.plan, part.valueIndex) ?? part.path,
         valueIndex: part.valueIndex,
         valueKind: "unknown",
       };
@@ -432,6 +616,7 @@ function domBindingTable(plan: TemplatePlan): readonly object[] {
     }
     if (part.kind === "event") {
       return {
+        ...actionDescriptorProperty(template, part.valueIndex, actionDescriptors),
         kind: part.kind,
         name: part.name,
         path: part.path,
@@ -445,8 +630,12 @@ function domBindingTable(plan: TemplatePlan): readonly object[] {
   });
 }
 
-function serverTemplateDeclaration(template: TemplateModuleTemplate, binding: string): string {
-  const chunks = serverChunks(template.plan);
+function serverTemplateDeclaration(
+  template: TemplateModuleTemplate,
+  binding: string,
+  actionDescriptors: ReadonlyMap<string, object>,
+): string {
+  const chunks = serverChunks(template, actionDescriptors, componentIdForTemplate(template, actionDescriptors));
   return [
     `const ${binding} = defineServerTemplate({`,
     `  templateHash: ${JSON.stringify(template.plan.templateHash)},`,
@@ -458,20 +647,24 @@ function serverTemplateDeclaration(template: TemplateModuleTemplate, binding: st
   ].join("\n");
 }
 
-function domStaticHtml(plan: TemplatePlan): string {
-  return plan.nodes.map(domNodeHtml).join("");
+function domStaticHtml(plan: TemplatePlan, componentId: string | undefined): string {
+  const injection = { componentId, used: false };
+  return plan.nodes.map((node) => domNodeHtml(node, injection)).join("");
 }
 
-function domNodeHtml(node: TemplatePlanNode): string {
+function domNodeHtml(
+  node: TemplatePlanNode,
+  injection: ComponentDataUiInjection,
+): string {
   switch (node.kind) {
     case "element":
-      return `<${node.tagName}${domAttributesHtml(node.attributes)}>${node.children
-        .map(domNodeHtml)
+      return `<${node.tagName}${domAttributesHtml(node.attributes, injection)}>${node.children
+        .map((child) => domNodeHtml(child, injection))
         .join("")}</${node.tagName}>`;
     case "selfClosingElement":
-      return `<${node.tagName}${domAttributesHtml(node.attributes)}>`;
+      return `<${node.tagName}${domAttributesHtml(node.attributes, injection)}>`;
     case "textOnlyElement":
-      return `<${node.tagName}${domAttributesHtml(node.attributes)}>${node.textContent ? domTextContentHtml(node.textContent) : ""}</${node.tagName}>`;
+      return `<${node.tagName}${domAttributesHtml(node.attributes, injection)}>${node.textContent ? domTextContentHtml(node.textContent) : ""}</${node.tagName}>`;
     case "text":
       return escapeHtml(node.value);
     case "sparseText":
@@ -500,8 +693,21 @@ function domTextContentHtml(node: TemplatePlanTextContent): string {
   return "";
 }
 
-function domAttributesHtml(attributes: readonly TemplatePlanAttribute[]): string {
-  return attributes
+interface ComponentDataUiInjection {
+  componentId: string | undefined;
+  used: boolean;
+}
+
+function domAttributesHtml(
+  attributes: readonly TemplatePlanAttribute[],
+  injection: ComponentDataUiInjection,
+): string {
+  const explicit = hasDataUiAttribute(attributes);
+  const injected = !explicit && !injection.used && injection.componentId
+    ? ` data-ui="${escapeAttribute(injection.componentId)}"`
+    : "";
+  if (injected) injection.used = true;
+  return injected + attributes
     .filter((attribute) => attribute.kind === "attribute")
     .map((attribute) => {
       const value = attribute.value === "" ? "" : `="${escapeAttribute(attribute.value)}"`;
@@ -510,34 +716,61 @@ function domAttributesHtml(attributes: readonly TemplatePlanAttribute[]): string
     .join("");
 }
 
-function serverChunks(plan: TemplatePlan): readonly object[] {
-  return flattenServerNodes(plan.nodes);
+function hasDataUiAttribute(attributes: readonly TemplatePlanAttribute[]): boolean {
+  return attributes.some((attribute) => "name" in attribute && attribute.name === "data-ui");
 }
 
-function flattenServerNodes(nodes: readonly TemplatePlanNode[]): readonly object[] {
-  return nodes.flatMap(serverNodeChunks);
+function serverDataUiAttr(
+  attributes: readonly TemplatePlanAttribute[],
+  injection: ComponentDataUiInjection,
+): string {
+  if (hasDataUiAttribute(attributes) || injection.used || !injection.componentId) return "";
+  injection.used = true;
+  return ` data-ui="${escapeAttribute(injection.componentId)}"`;
 }
 
-function serverNodeChunks(node: TemplatePlanNode): readonly object[] {
+function serverChunks(
+  template: TemplateModuleTemplate,
+  actionDescriptors: ReadonlyMap<string, object>,
+  componentId: string | undefined,
+): readonly object[] {
+  return flattenServerNodes(template.plan.nodes, template, actionDescriptors, { componentId, used: false });
+}
+
+function flattenServerNodes(
+  nodes: readonly TemplatePlanNode[],
+  template: TemplateModuleTemplate,
+  actionDescriptors: ReadonlyMap<string, object>,
+  injection: ComponentDataUiInjection,
+): readonly object[] {
+  return nodes.flatMap((node) => serverNodeChunks(node, template, actionDescriptors, injection));
+}
+
+function serverNodeChunks(
+  node: TemplatePlanNode,
+  template: TemplateModuleTemplate,
+  actionDescriptors: ReadonlyMap<string, object>,
+  injection: ComponentDataUiInjection,
+): readonly object[] {
   switch (node.kind) {
     case "element":
       return [
-        textChunk(`<${node.tagName}`),
-        ...serverAttributeChunks(node.attributes),
+        textChunk(`<${node.tagName}${serverDataUiAttr(node.attributes, injection)}`),
+        ...serverAttributeChunks(node.attributes, template, actionDescriptors),
         textChunk(">"),
-        ...flattenServerNodes(node.children),
+        ...flattenServerNodes(node.children, template, actionDescriptors, injection),
         textChunk(`</${node.tagName}>`),
       ];
     case "selfClosingElement":
       return [
-        textChunk(`<${node.tagName}`),
-        ...serverAttributeChunks(node.attributes),
+        textChunk(`<${node.tagName}${serverDataUiAttr(node.attributes, injection)}`),
+        ...serverAttributeChunks(node.attributes, template, actionDescriptors),
         textChunk("/>"),
       ];
     case "textOnlyElement":
       return [
-        textChunk(`<${node.tagName}`),
-        ...serverAttributeChunks(node.attributes),
+        textChunk(`<${node.tagName}${serverDataUiAttr(node.attributes, injection)}`),
+        ...serverAttributeChunks(node.attributes, template, actionDescriptors),
         textChunk(">"),
         ...(node.textContent ? serverTextContentChunks(node.textContent) : []),
         textChunk(`</${node.tagName}>`),
@@ -576,7 +809,11 @@ function sparseChunks(parts: readonly TemplatePlanSparsePart[]): readonly object
   );
 }
 
-function serverAttributeChunks(attributes: readonly TemplatePlanAttribute[]): readonly object[] {
+function serverAttributeChunks(
+  attributes: readonly TemplatePlanAttribute[],
+  template: TemplateModuleTemplate,
+  actionDescriptors: ReadonlyMap<string, object>,
+): readonly object[] {
   return attributes.flatMap((attribute) => {
     if (attribute.kind === "attribute")
       return [textChunk(` ${attribute.name}="${attribute.value}"`)];
@@ -587,6 +824,15 @@ function serverAttributeChunks(attributes: readonly TemplatePlanAttribute[]): re
       return [slotChunk(attribute.valueIndex, "boolean", attribute.name)];
     if (attribute.kind === "property")
       return [slotChunk(attribute.valueIndex, "attr", attribute.name)];
+    if (attribute.kind === "event")
+      return [
+        slotChunk(
+          attribute.valueIndex,
+          "event",
+          attribute.name,
+          actionDescriptorForValue(template, attribute.valueIndex, actionDescriptors),
+        ),
+      ];
     return [];
   });
 }
@@ -595,10 +841,20 @@ function textChunk(text: string): object {
   return { kind: "text", text };
 }
 
-function slotChunk(valueIndex: number, mode: string = "node", name?: string): object {
-  return name
-    ? { kind: "slot", valueIndex, valueKind: "unknown", mode, name }
-    : { kind: "slot", valueIndex, valueKind: "unknown", mode };
+function slotChunk(
+  valueIndex: number,
+  mode: string = "node",
+  name?: string,
+  action?: object,
+): object {
+  return {
+    ...(action ? { action } : {}),
+    kind: "slot",
+    valueIndex,
+    valueKind: "unknown",
+    mode,
+    ...(name ? { name } : {}),
+  };
 }
 
 function nodePartAnchorPath(plan: TemplatePlan, valueIndex: number): readonly number[] | null {

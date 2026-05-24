@@ -57,11 +57,46 @@ export type RouteCaptureFact =
       readonly kind: "effect-service";
       readonly name: string;
       readonly serviceId: string;
+      readonly serviceName?: string;
     }
   | {
       readonly kind: "refsubject-service";
       readonly name: string;
       readonly serviceId: string;
+      readonly serviceName?: string;
+    }
+  | {
+      readonly kind: "generated-context";
+      readonly name: string;
+      readonly serviceId: string;
+      readonly typeText: string;
+    }
+  | {
+      readonly kind: "template-value";
+      readonly name: string;
+      readonly templateHash?: string;
+    }
+  | {
+      readonly kind: "serializable-value";
+      readonly name: string;
+      readonly descriptorName?: string;
+      readonly typeText: string;
+    }
+  | {
+      readonly kind: "inline-refsubject-migration";
+      readonly name: string;
+      readonly serviceId: string;
+      readonly initializerSource: string;
+    }
+  | {
+      readonly kind: "unsupported";
+      readonly name: string;
+      readonly reason:
+        | "mutable-local"
+        | "unknown-capture"
+        | "dynamic-service-id"
+        | "non-resumable-event-handler";
+      readonly typeText?: string;
     };
 
 export interface RouteDiagnostic {

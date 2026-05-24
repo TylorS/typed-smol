@@ -7,6 +7,7 @@ import { Fx, Sink } from "@typed/fx";
 import { renderToString } from "../internal/encoding.js";
 import { takeOneIfNotRenderEvent } from "../internal/takeOneIfNotRenderEvent.js";
 import { HtmlRenderEvent, isHtmlRenderEvent } from "../RenderEvent.js";
+import type { EventActionDescriptor } from "../EventHandler.js";
 import type { DomTemplateDevtoolsObserver } from "./devtools.js";
 
 export type RenderableKind =
@@ -23,18 +24,38 @@ export interface DomTemplateRuntime {
   readonly devtools?: DomTemplateDevtoolsObserver;
   readonly scope?: Scope;
   readonly onError?: (error: unknown) => Effect.Effect<void>;
+  readonly resumeRoute?: (
+    element: Element,
+    payload: RouteResumePayload,
+    trigger: RouteResumeTrigger,
+  ) => Effect.Effect<void, Error, never>;
+  readonly resumeAction?: (
+    element: Element,
+    descriptor: EventActionDescriptor,
+    event: Event,
+  ) => Effect.Effect<void, Error, never>;
 }
 
 export interface ServerTemplateRuntime {}
+
+export type RouteResumePayload = Readonly<Record<string, string>>;
+
+export type RouteResumeTrigger =
+  | "load"
+  | "idle"
+  | "visible"
+  | "hover"
+  | "interaction"
+  | "focus";
 
 export function runDomBinding<A>(
   kind: RenderableKind,
   value: A,
   sink: (value: unknown) => void,
   runtime: DomTemplateRuntime,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   if (runtime.scope) return forkBindingUntilFirstValue(kind, value, sink, runtime, runtime.scope);
-  return bindingEffect(kind, value, sink, runtime) as Effect.Effect<void, unknown, never>;
+  return bindingEffect(kind, value, sink, runtime);
 }
 
 function bindingEffect<A>(
@@ -62,9 +83,9 @@ function forkBindingUntilFirstValue<A>(
   sink: (value: unknown) => void,
   runtime: DomTemplateRuntime,
   scope: Scope,
-): Effect.Effect<void, unknown, never> {
+): Effect.Effect<void, Error, never> {
   return Effect.gen(function* () {
-    const first = yield* Deferred.make<void, unknown>();
+    const first = yield* Deferred.make<void, Error>();
     let pending = true;
     const markReady = Effect.suspend(() => {
       if (!pending) return Effect.void;
@@ -91,61 +112,61 @@ export function runServerSlot<A>(
   kind: RenderableKind,
   value: A,
   _runtime: ServerTemplateRuntime,
-): Fx.Fx<HtmlRenderEvent, unknown, never> {
+): Fx.Fx<HtmlRenderEvent, Error, never> {
   return Fx.map(toServerFx(kind, value), (next) =>
     isHtmlRenderEvent(next) ? next : HtmlRenderEvent(renderToString(next, ""), true),
-  ) as Fx.Fx<HtmlRenderEvent, unknown, never>;
+  );
 }
 
 export function resolveServerValue<A>(
   kind: RenderableKind,
   value: A,
   _runtime: ServerTemplateRuntime,
-): Effect.Effect<unknown, unknown, never> {
+): Effect.Effect<unknown, Error, never> {
   return Effect.map(Fx.collectAll(toServerFx(kind, value)), renderServerValues);
 }
 
-function toDomFx(kind: RenderableKind, value: unknown): Fx.Fx<unknown, unknown, never> {
+function toDomFx(kind: RenderableKind, value: unknown): Fx.Fx<unknown, Error, never> {
   if (kind === "plain") return Fx.succeed(value);
-  if (kind === "effect") return Fx.fromEffect(value as Effect.Effect<unknown, unknown, never>);
+  if (kind === "effect") return Fx.fromEffect(value as Effect.Effect<unknown, Error, never>);
   if (kind === "stream") return Fx.fromStream(value as never);
-  if (kind === "fx" || kind === "nested-template") return value as Fx.Fx<unknown, unknown, never>;
+  if (kind === "fx" || kind === "nested-template") return value as Fx.Fx<unknown, Error, never>;
   return detectDomFx(value);
 }
 
-function detectDomFx(value: unknown): Fx.Fx<unknown, unknown, never> {
+function detectDomFx(value: unknown): Fx.Fx<unknown, Error, never> {
   if (value === null || value === undefined) return Fx.succeed(value);
-  if (Fx.isFx(value)) return value as Fx.Fx<unknown, unknown, never>;
+  if (Fx.isFx(value)) return value as Fx.Fx<unknown, Error, never>;
   if (isStream(value)) return Fx.fromStream(value as never);
-  if (Effect.isEffect(value)) return Fx.fromEffect(value as Effect.Effect<unknown, unknown, never>);
+  if (Effect.isEffect(value)) return Fx.fromEffect(value as Effect.Effect<unknown, Error, never>);
   if (Array.isArray(value)) return Fx.mergeOrdered(...value.map(detectDomFx));
   return Fx.succeed(value);
 }
 
-function toServerFx(kind: RenderableKind, value: unknown): Fx.Fx<unknown, unknown, never> {
+function toServerFx(kind: RenderableKind, value: unknown): Fx.Fx<unknown, Error, never> {
   if (kind === "plain") return Fx.succeed(value);
   if (kind === "html-render-event" || kind === "dom-render-event") return Fx.succeed(value);
-  if (kind === "effect") return effectToServerFx(value as Effect.Effect<unknown, unknown, never>);
+  if (kind === "effect") return effectToServerFx(value as Effect.Effect<unknown, Error, never>);
   if (kind === "stream") return takeOneIfNotRenderEvent(Fx.fromStream(value as never));
   if (kind === "fx" || kind === "nested-template") {
-    return takeOneIfNotRenderEvent(value as Fx.Fx<unknown, unknown, never>);
+    return takeOneIfNotRenderEvent(value as Fx.Fx<unknown, Error, never>);
   }
   return detectServerFx(value);
 }
 
-function detectServerFx(value: unknown): Fx.Fx<unknown, unknown, never> {
+function detectServerFx(value: unknown): Fx.Fx<unknown, Error, never> {
   if (value === null || value === undefined) return Fx.succeed(value);
-  if (Fx.isFx(value)) return takeOneIfNotRenderEvent(value as Fx.Fx<unknown, unknown, never>);
+  if (Fx.isFx(value)) return takeOneIfNotRenderEvent(value as Fx.Fx<unknown, Error, never>);
   if (isStream(value)) return takeOneIfNotRenderEvent(Fx.fromStream(value as never));
   if (Effect.isEffect(value))
-    return effectToServerFx(value as Effect.Effect<unknown, unknown, never>);
+    return effectToServerFx(value as Effect.Effect<unknown, Error, never>);
   if (Array.isArray(value)) return Fx.mergeOrdered(...value.map(detectServerFx));
   return Fx.succeed(value);
 }
 
 function effectToServerFx(
-  effect: Effect.Effect<unknown, unknown, never>,
-): Fx.Fx<unknown, unknown, never> {
+  effect: Effect.Effect<unknown, Error, never>,
+): Fx.Fx<unknown, Error, never> {
   return Fx.unwrap(Effect.map(effect, detectServerFx));
 }
 

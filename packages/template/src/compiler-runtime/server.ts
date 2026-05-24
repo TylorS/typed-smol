@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
+import * as EventHandler from "../EventHandler.js";
 import { renderToString } from "../internal/encoding.js";
 import { HtmlRenderEvent } from "../RenderEvent.js";
 import {
@@ -11,16 +12,19 @@ import {
 
 export type ServerChunk = ServerTextChunk | ServerSlotChunk;
 
+export type RouteResumePayload = Readonly<Record<string, string>>;
+
 export interface ServerTextChunk {
   readonly kind: "text";
   readonly text: string;
 }
 
 export interface ServerSlotChunk {
+  readonly action?: EventHandler.EventActionDescriptor;
   readonly kind: "slot";
   readonly valueIndex: number;
   readonly valueKind: RenderableKind;
-  readonly mode?: "node" | "attr" | "boolean" | "comment";
+  readonly mode?: "node" | "attr" | "boolean" | "comment" | "event";
   readonly name?: string;
 }
 
@@ -30,7 +34,7 @@ export interface ServerTemplateSpec<Values extends readonly unknown[]> {
   readonly render: (
     values: Values,
     runtime: ServerTemplateRuntime,
-  ) => Fx.Fx<HtmlRenderEvent, unknown, never>;
+  ) => Fx.Fx<HtmlRenderEvent, Error, never>;
 }
 
 export interface CompiledServerTemplate {
@@ -50,31 +54,64 @@ export function defineServerTemplate<Values extends readonly unknown[]>(
   });
 }
 
+export function defineStaticServerTemplate(
+  spec: { readonly templateHash: string; readonly html: string },
+): () => CompiledServerTemplate {
+  return defineServerTemplate({
+    chunks: [{ kind: "text", text: spec.html }],
+    render: () => Fx.succeed(HtmlRenderEvent(spec.html, true)),
+    templateHash: spec.templateHash,
+  });
+}
+
+export function routeResumeAttrs(payload: RouteResumePayload): string {
+  return Object.entries(payload)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => ` data-${key}="${escapeAttribute(value)}"`)
+    .join("");
+}
+
+export function routeResumeChunk(payload: RouteResumePayload): ServerTextChunk {
+  return { kind: "text", text: routeResumeAttrs(payload) };
+}
+
 export function renderServerChunks<Values extends readonly unknown[]>(
   values: Values,
   runtime: ServerTemplateRuntime,
   chunks: readonly ServerChunk[],
-): Fx.Fx<HtmlRenderEvent, unknown, never> {
+): Fx.Fx<HtmlRenderEvent, Error, never> {
   return Fx.mergeOrdered(...chunks.map((chunk) => renderChunk(values, runtime, chunk)));
 }
+
+export const renderOrderedServerChunks = renderServerChunks;
 
 function renderChunk<Values extends readonly unknown[]>(
   values: Values,
   runtime: ServerTemplateRuntime,
   chunk: ServerChunk,
-): Fx.Fx<HtmlRenderEvent, unknown, never> {
+): Fx.Fx<HtmlRenderEvent, Error, never> {
   if (chunk.kind === "text") return Fx.succeed(HtmlRenderEvent(chunk.text, true));
   if (chunk.mode === "attr") return renderAttributeSlot(values[chunk.valueIndex], runtime, chunk);
   if (chunk.mode === "boolean") return renderBooleanSlot(values[chunk.valueIndex], runtime, chunk);
   if (chunk.mode === "comment") return renderCommentSlot(values[chunk.valueIndex], runtime);
+  if (chunk.mode === "event") return renderEventSlot(values[chunk.valueIndex], chunk);
   return runServerSlot(chunk.valueKind, values[chunk.valueIndex], runtime);
+}
+
+function renderEventSlot(
+  value: unknown,
+  chunk: ServerSlotChunk,
+): Fx.Fx<HtmlRenderEvent, Error, never> {
+  return Fx.succeed(
+    HtmlRenderEvent(EventHandler.actionDataAttributeHtml(chunk.name ?? "event", value, chunk.action), true),
+  );
 }
 
 function renderAttributeSlot(
   value: unknown,
   runtime: ServerTemplateRuntime,
   chunk: ServerSlotChunk,
-): Fx.Fx<HtmlRenderEvent, unknown, never> {
+): Fx.Fx<HtmlRenderEvent, Error, never> {
   return Fx.fromEffect(
     Effect.map(resolveServerValue(chunk.valueKind, value, runtime), (resolved) => {
       if (resolved === false || resolved === null || resolved === undefined) return HtmlRenderEvent("", true);
@@ -87,7 +124,7 @@ function renderBooleanSlot(
   value: unknown,
   runtime: ServerTemplateRuntime,
   chunk: ServerSlotChunk,
-): Fx.Fx<HtmlRenderEvent, unknown, never> {
+): Fx.Fx<HtmlRenderEvent, Error, never> {
   return Fx.fromEffect(
     Effect.map(resolveServerValue(chunk.valueKind, value, runtime), (resolved) =>
       HtmlRenderEvent(resolved ? ` ${chunk.name}` : "", true),
@@ -98,7 +135,7 @@ function renderBooleanSlot(
 function renderCommentSlot(
   value: unknown,
   runtime: ServerTemplateRuntime,
-): Fx.Fx<HtmlRenderEvent, unknown, never> {
+): Fx.Fx<HtmlRenderEvent, Error, never> {
   return Fx.fromEffect(
     Effect.map(resolveServerValue("unknown", value, runtime), (resolved) =>
       HtmlRenderEvent(escapeText(renderToString(resolved, "")), true),

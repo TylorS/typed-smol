@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 import { getTemplateDiagnostics } from "./templateDiagnostics.js";
-import {
-  invalidTemplateDiagnosticCode,
-  invalidTemplateModuleSource,
-} from "./templateFixtures.js";
+import { invalidTemplateModuleSource } from "./templateFixtures.js";
 
 describe("getTemplateDiagnostics", () => {
   it("returns TypeScript diagnostics for invalid typed templates", () => {
@@ -24,6 +21,6 @@ describe("getTemplateDiagnostics", () => {
       code: 900001,
       file: sourceFile,
     });
-    expect(String(diagnostics[0]?.messageText)).toContain(invalidTemplateDiagnosticCode);
+    expect(String(diagnostics[0]?.messageText)).toMatchInlineSnapshot(`"TYPED-TEMPLATE-ANALYZE-001: Expected AttrValueDq or AttrValueSq or AttrValueNq but got OpenTagEnd"`);
   });
 });

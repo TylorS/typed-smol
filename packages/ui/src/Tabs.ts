@@ -42,8 +42,6 @@ export const data = DataAttr.schema({
   rtl: Schema.Boolean,
 });
 
-export const component = "typed/ui/Tabs";
-
 export function makeState(
   initial: InitialState,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -122,7 +120,6 @@ export function List<const E, const R, const Opts extends ListOptions<NoInfer<E>
     role: "tablist",
     "aria-label": options.label,
     "aria-orientation": orientation,
-    "data-ui": component,
     onkeydown: onKeyDown,
   };
   return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);

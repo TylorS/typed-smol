@@ -33,6 +33,14 @@ afterEach(() => {
 });
 
 describe("ServerVirtualModulePlugin", () => {
+  it("uses the nearest typed.config.ts root for generated server projectRoot", () => {
+    const fixture = createFixture({ "typed.config.ts": "export default {};" });
+    const result = buildServer("typed:server?routes=./routes", fixture.importer);
+
+    expect(result).toContain(`projectRoot: ${JSON.stringify(fixture.root)}`);
+    expect(result).not.toContain("projectRoot: process.cwd()");
+  });
+
   it("resolves valid typed:server ids", () => {
     const plugin = createServerVirtualModulePlugin();
 
@@ -46,72 +54,153 @@ describe("ServerVirtualModulePlugin", () => {
       "typed:server?api=./api&routes=./routes1&routes=./routes2",
     ) as string;
 
-    expect(source).not.toContain("// @ts-nocheck");
-    expect(source).toContain('import * as Cause from "effect/Cause";');
-    expect(source).toContain('import * as Context from "effect/Context";');
-    expect(source).toContain('import * as Effect from "effect/Effect";');
-    expect(source).toContain('import * as Layer from "effect/Layer";');
-    expect(source).toContain('import * as HttpRouter from "effect/unstable/http/HttpRouter";');
-    expect(source).toContain('import { pathToFileURL } from "node:url";');
-    expect(source).toContain('import { TypedHttpServer } from "@typed/app/TypedHttpServer";');
-    expect(source).toContain(
-      'import { composeWithLayers, Ids, renderServer, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
-    );
-    expect(source).not.toContain('from "@typed/app";');
-    expect(source).toContain('import * as TypedRouter from "@typed/router";');
-    expect(source).toContain('import { ssrForHttp } from "@typed/ui";');
-    expect(source).toContain('import * as Api0 from "typed:api?dir=./api";');
-    expect(source).toContain('import Routes0 from "typed:router?dir=./routes1";');
-    expect(source).toContain('import Routes1 from "typed:router?dir=./routes2";');
-    expect(source).not.toContain("route-handlers:");
-    expect(source).not.toContain("RouteHandlers.apply");
-    expect(source).toContain("const routeModules = [Routes0, Routes1];");
-    expect(source).toContain("export const AppLayer =");
-    expect(source).toContain("export const ServerLayer =");
-    expect(source).toContain("export const ServerRuntime =");
-    expect(source).toContain("renderServer,");
-    expect(source).toContain("export const handler =");
-    expect(source).toContain("export default handler");
-    expect(source).toContain("export function run");
-    expect(source).toContain("Layer.launch(layer)");
-    expect(source).toContain("Ids.Default");
-    expect(source).toContain("Effect.tapCause");
-    expect(source).toContain("type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;");
-    expect(source).toContain("type ServerLayerInputs = readonly LayerOrGroup[];");
-    expect(source).toContain(
-      "type ServerErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;",
-    );
-    expect(source).toContain("function withErrorHandling<A, E, R>");
-    expect(source).not.toContain("Effect.Effect<void, any");
-    expect(source).not.toContain("Cause.Cause<any>");
-    expect(source).toContain("options.layers");
-    expect(source).toContain("options.onError");
-    expect(source).toContain("readonly host?: string;");
-    expect(source).toContain("readonly port?: number;");
-    expect(source).not.toContain("options.run");
-    expect(source).not.toContain("readonly run?");
-    expect(source).not.toContain("Effect.Effect<never, unknown");
-    expect(source).not.toContain("Effect.Effect<unknown, unknown");
-    expect(source).toContain("const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);");
-    expect(source).toContain("host: runtimeConfig.host");
-    expect(source).toContain("port: runtimeConfig.port");
-    expect(source).toContain("function makeServerLayer(options: ServerListenConfig = {})");
-    expect(source).toContain(
-      "const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);",
-    );
-    expect(source).toContain(
-      "const baseLayer = hasListenOverrides(options) ? makeServerLayer(options) : ServerLayer;",
-    );
-    expect(source).toContain(
-      "function mergeListenConfig(base: ServerListenConfig, overrides: ServerListenConfig): ServerListenConfig",
-    );
-    expect(source).toContain(
-      "function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig",
-    );
-    expect(source).toContain("TypedHttpServer.toNodeHandler(AppLayer)");
-    expect(source).toContain("function isMainModule(meta: ImportMeta): boolean");
-    expect(source).toContain("Effect.runFork(Effect.provide(run(), Context.empty()))");
-    expect(source).not.toContain("export async function run");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Context from "effect/Context";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import * as HttpRouter from "effect/unstable/http/HttpRouter";
+      import { pathToFileURL } from "node:url";
+      import { TypedHttpServer } from "@typed/app/TypedHttpServer";
+      import { composeWithLayers, Ids, renderServer, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+      import { ssrForHttp } from "@typed/ui";
+      import * as TypedConfigModule from "typed:config";
+      import * as Api0 from "typed:api?dir=./api";
+      import Routes0 from "typed:router?dir=./routes1";
+      import Routes1 from "typed:router?dir=./routes2";
+      type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type ServerLayerInputs = readonly LayerOrGroup[];
+      type ServerBaseLayer = typeof ServerLayer;
+      type ServerLayerWith<Layers extends ServerLayerInputs> = ComputeLayers<Layers, typeof ServerLayer>;
+      type ServerRunLayer<Layers extends ServerLayerInputs> = ServerBaseLayer | ServerLayerWith<Layers>;
+      type ServerRunEffect<Layers extends ServerLayerInputs> = Effect.Effect<never, Layer.Error<ServerRunLayer<Layers>>, Layer.Services<ServerRunLayer<Layers>>>;
+      type ServerErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface ServerRunOptions<Layers extends ServerLayerInputs = readonly []> {
+        readonly layers?: Layers;
+        readonly onError?: ServerErrorHandler<Layer.Error<ServerLayerWith<Layers>>>;
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerListenConfig {
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerBuildConfig {
+        readonly outDir?: string;
+        readonly clientOutDir?: string;
+      }
+      interface ServerPageEntry {
+        readonly name: string;
+        readonly html: {
+          readonly loadHtml: (options?: { readonly dev?: boolean; readonly url?: string }) => Promise<string>;
+          readonly renderHtml: (template: string, markup: string) => string;
+        };
+        readonly client: string;
+      }
+      type TypedConfigWithServerOptions = typeof TypedConfigModule & {
+        readonly build?: ServerBuildConfig;
+        readonly server?: ServerListenConfig;
+        readonly preview?: ServerListenConfig;
+      };
+      type ServerRunOptionsWithLayers<Layers extends ServerLayerInputs> = ServerRunOptions<Layers> & { readonly layers: Layers };
+      const apiModules = [Api0];
+      const routeModules = [Routes0, Routes1];
+      const primaryRoutes = routeModules[0];
+      const pageEntries: readonly ServerPageEntry[] = [];
+      const apiLayers = [Api0.ApiLayer];
+      const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0))), HttpRouter.use(ssrForHttp(routeModules[1], documentOptions(1)))];
+      const companionPages = [];
+      const companionLayers: readonly [] = [];
+      const companionOnError = undefined;
+      const typedConfig = TypedConfigModule as TypedConfigWithServerOptions;
+      const typedBuildConfig = typedConfig.build ?? {};
+      const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+      const dev = (import.meta as { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
+      const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);
+      const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app", clientOutDir, dev });
+      const frameworkLayers = [StaticHtmlRenderTemplate, Ids.Default] as const;
+      const appLayers = [...frameworkLayers, ...companionLayers] as const;
+      const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);
+      export const ServerRuntime = { apiModules, routeModules, pageEntries, renderServer };
+      export const AppLayer = composeWithLayers(appLayerBase, appLayers);
+      export const ServerLayer = makeServerLayer();
+      export const handler = TypedHttpServer.toNodeHandler(AppLayer);
+      export default handler;
+      function makeServerLayer(options: ServerListenConfig = {}) {
+        const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
+        return composeWithLayers(
+          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+          projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
+          dev,
+          host: runtimeConfig.host,
+          port: runtimeConfig.port,
+          }))),
+          appLayers,
+        );
+      }
+      export function renderUrl(input: string | URL) {
+        if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
+        return renderToHtmlString(primaryRoutes).pipe(
+          Effect.provide(TypedRouter.ServerRouter({ url: input })),
+          Effect.provide(StaticHtmlRenderTemplate),
+          Effect.scoped,
+          Effect.flatMap((markup) => renderPageHtml(0, input, markup)),
+        );
+      }
+      function documentOptions(pageIndex: number) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        return page === undefined ? {} : {
+          renderDocument: ({ markup, url }: { readonly markup: string; readonly url: string }) => renderPageHtml(pageIndex, url, markup),
+        };
+      }
+      function renderPageHtml(pageIndex: number, url: string | URL, markup: string) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        if (page === undefined) return Effect.succeed(markup);
+        return Effect.promise(async () => {
+          const template = await page.html.loadHtml({ dev, url: String(url) });
+          return page.html.renderHtml(template, markup);
+        });
+      }
+      export function run(options?: ServerRunOptions<readonly []>): ServerRunEffect<readonly []>;
+      export function run<const Layers extends ServerLayerInputs>(options: ServerRunOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<ServerLayerWith<Layers>>, Layer.Services<ServerLayerWith<Layers>>>;
+      export function run(options: ServerRunOptions<readonly []> | ServerRunOptionsWithLayers<ServerLayerInputs> = {}): ServerRunEffect<ServerLayerInputs> {
+        const baseLayer = hasListenOverrides(options) ? makeServerLayer(options) : ServerLayer;
+        const layer = options.layers === undefined ? baseLayer : composeWithLayers(baseLayer, options.layers);
+        return withErrorHandling(Layer.launch(layer), options.onError);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: ServerErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: ServerErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }
+      function isMainModule(meta: ImportMeta): boolean {
+        const entry = process.argv[1];
+        return typeof entry === "string" && meta.url === pathToFileURL(entry).href;
+      }
+      function joinBuildPath(...parts: readonly string[]) {
+        return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+      }
+      function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig {
+        return isDev ? config.server ?? {} : config.preview ?? config.server ?? {};
+      }
+      function mergeListenConfig(base: ServerListenConfig, overrides: ServerListenConfig): ServerListenConfig {
+        return {
+          host: overrides.host ?? base.host,
+          port: overrides.port ?? base.port,
+        };
+      }
+      function hasListenOverrides(options: ServerListenConfig): boolean {
+        return options.host !== undefined || options.port !== undefined;
+      }
+      if (isMainModule(import.meta)) {
+        Effect.runFork(Effect.provide(run(), Context.empty()));
+      }"
+    `);
   });
 
   it("preserves source order for repeated api and routes parameters", () => {
@@ -120,10 +209,156 @@ describe("ServerVirtualModulePlugin", () => {
     expect(source.indexOf('import Routes0 from "typed:router?dir=./routes";')).toBeLessThan(
       source.indexOf('import * as Api0 from "typed:api?dir=./api1";'),
     );
-    expect(source).not.toContain("route-handlers:");
     expect(source.indexOf('import * as Api0 from "typed:api?dir=./api1";')).toBeLessThan(
       source.indexOf('import * as Api1 from "typed:api?dir=./api2";'),
     );
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Context from "effect/Context";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import * as HttpRouter from "effect/unstable/http/HttpRouter";
+      import { pathToFileURL } from "node:url";
+      import { TypedHttpServer } from "@typed/app/TypedHttpServer";
+      import { composeWithLayers, Ids, renderServer, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+      import { ssrForHttp } from "@typed/ui";
+      import * as TypedConfigModule from "typed:config";
+      import Routes0 from "typed:router?dir=./routes";
+      import * as Api0 from "typed:api?dir=./api1";
+      import * as Api1 from "typed:api?dir=./api2";
+      type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type ServerLayerInputs = readonly LayerOrGroup[];
+      type ServerBaseLayer = typeof ServerLayer;
+      type ServerLayerWith<Layers extends ServerLayerInputs> = ComputeLayers<Layers, typeof ServerLayer>;
+      type ServerRunLayer<Layers extends ServerLayerInputs> = ServerBaseLayer | ServerLayerWith<Layers>;
+      type ServerRunEffect<Layers extends ServerLayerInputs> = Effect.Effect<never, Layer.Error<ServerRunLayer<Layers>>, Layer.Services<ServerRunLayer<Layers>>>;
+      type ServerErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface ServerRunOptions<Layers extends ServerLayerInputs = readonly []> {
+        readonly layers?: Layers;
+        readonly onError?: ServerErrorHandler<Layer.Error<ServerLayerWith<Layers>>>;
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerListenConfig {
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerBuildConfig {
+        readonly outDir?: string;
+        readonly clientOutDir?: string;
+      }
+      interface ServerPageEntry {
+        readonly name: string;
+        readonly html: {
+          readonly loadHtml: (options?: { readonly dev?: boolean; readonly url?: string }) => Promise<string>;
+          readonly renderHtml: (template: string, markup: string) => string;
+        };
+        readonly client: string;
+      }
+      type TypedConfigWithServerOptions = typeof TypedConfigModule & {
+        readonly build?: ServerBuildConfig;
+        readonly server?: ServerListenConfig;
+        readonly preview?: ServerListenConfig;
+      };
+      type ServerRunOptionsWithLayers<Layers extends ServerLayerInputs> = ServerRunOptions<Layers> & { readonly layers: Layers };
+      const apiModules = [Api0, Api1];
+      const routeModules = [Routes0];
+      const primaryRoutes = routeModules[0];
+      const pageEntries: readonly ServerPageEntry[] = [];
+      const apiLayers = [Api0.ApiLayer, Api1.ApiLayer];
+      const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0)))];
+      const companionPages = [];
+      const companionLayers: readonly [] = [];
+      const companionOnError = undefined;
+      const typedConfig = TypedConfigModule as TypedConfigWithServerOptions;
+      const typedBuildConfig = typedConfig.build ?? {};
+      const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+      const dev = (import.meta as { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
+      const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);
+      const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app", clientOutDir, dev });
+      const frameworkLayers = [StaticHtmlRenderTemplate, Ids.Default] as const;
+      const appLayers = [...frameworkLayers, ...companionLayers] as const;
+      const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);
+      export const ServerRuntime = { apiModules, routeModules, pageEntries, renderServer };
+      export const AppLayer = composeWithLayers(appLayerBase, appLayers);
+      export const ServerLayer = makeServerLayer();
+      export const handler = TypedHttpServer.toNodeHandler(AppLayer);
+      export default handler;
+      function makeServerLayer(options: ServerListenConfig = {}) {
+        const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
+        return composeWithLayers(
+          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+          projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
+          dev,
+          host: runtimeConfig.host,
+          port: runtimeConfig.port,
+          }))),
+          appLayers,
+        );
+      }
+      export function renderUrl(input: string | URL) {
+        if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
+        return renderToHtmlString(primaryRoutes).pipe(
+          Effect.provide(TypedRouter.ServerRouter({ url: input })),
+          Effect.provide(StaticHtmlRenderTemplate),
+          Effect.scoped,
+          Effect.flatMap((markup) => renderPageHtml(0, input, markup)),
+        );
+      }
+      function documentOptions(pageIndex: number) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        return page === undefined ? {} : {
+          renderDocument: ({ markup, url }: { readonly markup: string; readonly url: string }) => renderPageHtml(pageIndex, url, markup),
+        };
+      }
+      function renderPageHtml(pageIndex: number, url: string | URL, markup: string) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        if (page === undefined) return Effect.succeed(markup);
+        return Effect.promise(async () => {
+          const template = await page.html.loadHtml({ dev, url: String(url) });
+          return page.html.renderHtml(template, markup);
+        });
+      }
+      export function run(options?: ServerRunOptions<readonly []>): ServerRunEffect<readonly []>;
+      export function run<const Layers extends ServerLayerInputs>(options: ServerRunOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<ServerLayerWith<Layers>>, Layer.Services<ServerLayerWith<Layers>>>;
+      export function run(options: ServerRunOptions<readonly []> | ServerRunOptionsWithLayers<ServerLayerInputs> = {}): ServerRunEffect<ServerLayerInputs> {
+        const baseLayer = hasListenOverrides(options) ? makeServerLayer(options) : ServerLayer;
+        const layer = options.layers === undefined ? baseLayer : composeWithLayers(baseLayer, options.layers);
+        return withErrorHandling(Layer.launch(layer), options.onError);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: ServerErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: ServerErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }
+      function isMainModule(meta: ImportMeta): boolean {
+        const entry = process.argv[1];
+        return typeof entry === "string" && meta.url === pathToFileURL(entry).href;
+      }
+      function joinBuildPath(...parts: readonly string[]) {
+        return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+      }
+      function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig {
+        return isDev ? config.server ?? {} : config.preview ?? config.server ?? {};
+      }
+      function mergeListenConfig(base: ServerListenConfig, overrides: ServerListenConfig): ServerListenConfig {
+        return {
+          host: overrides.host ?? base.host,
+          port: overrides.port ?? base.port,
+        };
+      }
+      function hasListenOverrides(options: ServerListenConfig): boolean {
+        return options.host !== undefined || options.port !== undefined;
+      }
+      if (isMainModule(import.meta)) {
+        Effect.runFork(Effect.provide(run(), Context.empty()));
+      }"
+    `);
   });
 
   it("emits a default html and client pairing", () => {
@@ -131,13 +366,152 @@ describe("ServerVirtualModulePlugin", () => {
       "typed:server?routes=./routes&html=./index.html&client=./client.ts",
     ) as string;
 
-    expect(source).toContain('import * as Html0 from "typed:html?path=./index.html";');
-    expect(source).toContain('client: "./client.ts"');
-    expect(source).toContain('name: "default"');
-    expect(source).toContain("ssrForHttp(routeModules[0], documentOptions(0))");
-    expect(source).toContain(
-      "function renderPageHtml(pageIndex: number, url: string | URL, markup: string)",
-    );
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Context from "effect/Context";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import * as HttpRouter from "effect/unstable/http/HttpRouter";
+      import { pathToFileURL } from "node:url";
+      import { TypedHttpServer } from "@typed/app/TypedHttpServer";
+      import { composeWithLayers, Ids, renderServer, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+      import { ssrForHttp } from "@typed/ui";
+      import * as TypedConfigModule from "typed:config";
+      import Routes0 from "typed:router?dir=./routes";
+      import * as Html0 from "typed:html?path=./index.html";
+      type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type ServerLayerInputs = readonly LayerOrGroup[];
+      type ServerBaseLayer = typeof ServerLayer;
+      type ServerLayerWith<Layers extends ServerLayerInputs> = ComputeLayers<Layers, typeof ServerLayer>;
+      type ServerRunLayer<Layers extends ServerLayerInputs> = ServerBaseLayer | ServerLayerWith<Layers>;
+      type ServerRunEffect<Layers extends ServerLayerInputs> = Effect.Effect<never, Layer.Error<ServerRunLayer<Layers>>, Layer.Services<ServerRunLayer<Layers>>>;
+      type ServerErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface ServerRunOptions<Layers extends ServerLayerInputs = readonly []> {
+        readonly layers?: Layers;
+        readonly onError?: ServerErrorHandler<Layer.Error<ServerLayerWith<Layers>>>;
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerListenConfig {
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerBuildConfig {
+        readonly outDir?: string;
+        readonly clientOutDir?: string;
+      }
+      interface ServerPageEntry {
+        readonly name: string;
+        readonly html: {
+          readonly loadHtml: (options?: { readonly dev?: boolean; readonly url?: string }) => Promise<string>;
+          readonly renderHtml: (template: string, markup: string) => string;
+        };
+        readonly client: string;
+      }
+      type TypedConfigWithServerOptions = typeof TypedConfigModule & {
+        readonly build?: ServerBuildConfig;
+        readonly server?: ServerListenConfig;
+        readonly preview?: ServerListenConfig;
+      };
+      type ServerRunOptionsWithLayers<Layers extends ServerLayerInputs> = ServerRunOptions<Layers> & { readonly layers: Layers };
+      const apiModules = [];
+      const routeModules = [Routes0];
+      const primaryRoutes = routeModules[0];
+      const pageEntries: readonly ServerPageEntry[] = [{ name: "default", html: Html0, client: "./client.ts",}];
+      const apiLayers = [];
+      const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0)))];
+      const companionPages = [];
+      const companionLayers: readonly [] = [];
+      const companionOnError = undefined;
+      const typedConfig = TypedConfigModule as TypedConfigWithServerOptions;
+      const typedBuildConfig = typedConfig.build ?? {};
+      const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+      const dev = (import.meta as { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
+      const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);
+      const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app", clientOutDir, dev });
+      const frameworkLayers = [StaticHtmlRenderTemplate, Ids.Default] as const;
+      const appLayers = [...frameworkLayers, ...companionLayers] as const;
+      const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);
+      export const ServerRuntime = { apiModules, routeModules, pageEntries, renderServer };
+      export const AppLayer = composeWithLayers(appLayerBase, appLayers);
+      export const ServerLayer = makeServerLayer();
+      export const handler = TypedHttpServer.toNodeHandler(AppLayer);
+      export default handler;
+      function makeServerLayer(options: ServerListenConfig = {}) {
+        const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
+        return composeWithLayers(
+          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+          projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
+          dev,
+          host: runtimeConfig.host,
+          port: runtimeConfig.port,
+          }))),
+          appLayers,
+        );
+      }
+      export function renderUrl(input: string | URL) {
+        if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
+        return renderToHtmlString(primaryRoutes).pipe(
+          Effect.provide(TypedRouter.ServerRouter({ url: input })),
+          Effect.provide(StaticHtmlRenderTemplate),
+          Effect.scoped,
+          Effect.flatMap((markup) => renderPageHtml(0, input, markup)),
+        );
+      }
+      function documentOptions(pageIndex: number) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        return page === undefined ? {} : {
+          renderDocument: ({ markup, url }: { readonly markup: string; readonly url: string }) => renderPageHtml(pageIndex, url, markup),
+        };
+      }
+      function renderPageHtml(pageIndex: number, url: string | URL, markup: string) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        if (page === undefined) return Effect.succeed(markup);
+        return Effect.promise(async () => {
+          const template = await page.html.loadHtml({ dev, url: String(url) });
+          return page.html.renderHtml(template, markup);
+        });
+      }
+      export function run(options?: ServerRunOptions<readonly []>): ServerRunEffect<readonly []>;
+      export function run<const Layers extends ServerLayerInputs>(options: ServerRunOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<ServerLayerWith<Layers>>, Layer.Services<ServerLayerWith<Layers>>>;
+      export function run(options: ServerRunOptions<readonly []> | ServerRunOptionsWithLayers<ServerLayerInputs> = {}): ServerRunEffect<ServerLayerInputs> {
+        const baseLayer = hasListenOverrides(options) ? makeServerLayer(options) : ServerLayer;
+        const layer = options.layers === undefined ? baseLayer : composeWithLayers(baseLayer, options.layers);
+        return withErrorHandling(Layer.launch(layer), options.onError);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: ServerErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: ServerErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }
+      function isMainModule(meta: ImportMeta): boolean {
+        const entry = process.argv[1];
+        return typeof entry === "string" && meta.url === pathToFileURL(entry).href;
+      }
+      function joinBuildPath(...parts: readonly string[]) {
+        return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+      }
+      function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig {
+        return isDev ? config.server ?? {} : config.preview ?? config.server ?? {};
+      }
+      function mergeListenConfig(base: ServerListenConfig, overrides: ServerListenConfig): ServerListenConfig {
+        return {
+          host: overrides.host ?? base.host,
+          port: overrides.port ?? base.port,
+        };
+      }
+      function hasListenOverrides(options: ServerListenConfig): boolean {
+        return options.host !== undefined || options.port !== undefined;
+      }
+      if (isMainModule(import.meta)) {
+        Effect.runFork(Effect.provide(run(), Context.empty()));
+      }"
+    `);
   });
 
   it("emits repeated MPA page pairings", () => {
@@ -145,10 +519,153 @@ describe("ServerVirtualModulePlugin", () => {
       "typed:server?routes=./routes&page=home:./home.html:./home.ts&page=admin:./admin.html:./admin.ts",
     ) as string;
 
-    expect(source).toContain('import * as Html0 from "typed:html?path=./home.html";');
-    expect(source).toContain('import * as Html1 from "typed:html?path=./admin.html";');
-    expect(source).toContain('name: "home"');
-    expect(source).toContain('client: "./admin.ts"');
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Context from "effect/Context";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import * as HttpRouter from "effect/unstable/http/HttpRouter";
+      import { pathToFileURL } from "node:url";
+      import { TypedHttpServer } from "@typed/app/TypedHttpServer";
+      import { composeWithLayers, Ids, renderServer, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+      import { ssrForHttp } from "@typed/ui";
+      import * as TypedConfigModule from "typed:config";
+      import Routes0 from "typed:router?dir=./routes";
+      import * as Html0 from "typed:html?path=./home.html";
+      import * as Html1 from "typed:html?path=./admin.html";
+      type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type ServerLayerInputs = readonly LayerOrGroup[];
+      type ServerBaseLayer = typeof ServerLayer;
+      type ServerLayerWith<Layers extends ServerLayerInputs> = ComputeLayers<Layers, typeof ServerLayer>;
+      type ServerRunLayer<Layers extends ServerLayerInputs> = ServerBaseLayer | ServerLayerWith<Layers>;
+      type ServerRunEffect<Layers extends ServerLayerInputs> = Effect.Effect<never, Layer.Error<ServerRunLayer<Layers>>, Layer.Services<ServerRunLayer<Layers>>>;
+      type ServerErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface ServerRunOptions<Layers extends ServerLayerInputs = readonly []> {
+        readonly layers?: Layers;
+        readonly onError?: ServerErrorHandler<Layer.Error<ServerLayerWith<Layers>>>;
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerListenConfig {
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerBuildConfig {
+        readonly outDir?: string;
+        readonly clientOutDir?: string;
+      }
+      interface ServerPageEntry {
+        readonly name: string;
+        readonly html: {
+          readonly loadHtml: (options?: { readonly dev?: boolean; readonly url?: string }) => Promise<string>;
+          readonly renderHtml: (template: string, markup: string) => string;
+        };
+        readonly client: string;
+      }
+      type TypedConfigWithServerOptions = typeof TypedConfigModule & {
+        readonly build?: ServerBuildConfig;
+        readonly server?: ServerListenConfig;
+        readonly preview?: ServerListenConfig;
+      };
+      type ServerRunOptionsWithLayers<Layers extends ServerLayerInputs> = ServerRunOptions<Layers> & { readonly layers: Layers };
+      const apiModules = [];
+      const routeModules = [Routes0];
+      const primaryRoutes = routeModules[0];
+      const pageEntries: readonly ServerPageEntry[] = [{ name: "home", html: Html0, client: "./home.ts",}, { name: "admin", html: Html1, client: "./admin.ts",}];
+      const apiLayers = [];
+      const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0)))];
+      const companionPages = [];
+      const companionLayers: readonly [] = [];
+      const companionOnError = undefined;
+      const typedConfig = TypedConfigModule as TypedConfigWithServerOptions;
+      const typedBuildConfig = typedConfig.build ?? {};
+      const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+      const dev = (import.meta as { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
+      const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);
+      const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app", clientOutDir, dev });
+      const frameworkLayers = [StaticHtmlRenderTemplate, Ids.Default] as const;
+      const appLayers = [...frameworkLayers, ...companionLayers] as const;
+      const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);
+      export const ServerRuntime = { apiModules, routeModules, pageEntries, renderServer };
+      export const AppLayer = composeWithLayers(appLayerBase, appLayers);
+      export const ServerLayer = makeServerLayer();
+      export const handler = TypedHttpServer.toNodeHandler(AppLayer);
+      export default handler;
+      function makeServerLayer(options: ServerListenConfig = {}) {
+        const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
+        return composeWithLayers(
+          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+          projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
+          dev,
+          host: runtimeConfig.host,
+          port: runtimeConfig.port,
+          }))),
+          appLayers,
+        );
+      }
+      export function renderUrl(input: string | URL) {
+        if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
+        return renderToHtmlString(primaryRoutes).pipe(
+          Effect.provide(TypedRouter.ServerRouter({ url: input })),
+          Effect.provide(StaticHtmlRenderTemplate),
+          Effect.scoped,
+          Effect.flatMap((markup) => renderPageHtml(0, input, markup)),
+        );
+      }
+      function documentOptions(pageIndex: number) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        return page === undefined ? {} : {
+          renderDocument: ({ markup, url }: { readonly markup: string; readonly url: string }) => renderPageHtml(pageIndex, url, markup),
+        };
+      }
+      function renderPageHtml(pageIndex: number, url: string | URL, markup: string) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        if (page === undefined) return Effect.succeed(markup);
+        return Effect.promise(async () => {
+          const template = await page.html.loadHtml({ dev, url: String(url) });
+          return page.html.renderHtml(template, markup);
+        });
+      }
+      export function run(options?: ServerRunOptions<readonly []>): ServerRunEffect<readonly []>;
+      export function run<const Layers extends ServerLayerInputs>(options: ServerRunOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<ServerLayerWith<Layers>>, Layer.Services<ServerLayerWith<Layers>>>;
+      export function run(options: ServerRunOptions<readonly []> | ServerRunOptionsWithLayers<ServerLayerInputs> = {}): ServerRunEffect<ServerLayerInputs> {
+        const baseLayer = hasListenOverrides(options) ? makeServerLayer(options) : ServerLayer;
+        const layer = options.layers === undefined ? baseLayer : composeWithLayers(baseLayer, options.layers);
+        return withErrorHandling(Layer.launch(layer), options.onError);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: ServerErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: ServerErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }
+      function isMainModule(meta: ImportMeta): boolean {
+        const entry = process.argv[1];
+        return typeof entry === "string" && meta.url === pathToFileURL(entry).href;
+      }
+      function joinBuildPath(...parts: readonly string[]) {
+        return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+      }
+      function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig {
+        return isDev ? config.server ?? {} : config.preview ?? config.server ?? {};
+      }
+      function mergeListenConfig(base: ServerListenConfig, overrides: ServerListenConfig): ServerListenConfig {
+        return {
+          host: overrides.host ?? base.host,
+          port: overrides.port ?? base.port,
+        };
+      }
+      function hasListenOverrides(options: ServerListenConfig): boolean {
+        return options.host !== undefined || options.port !== undefined;
+      }
+      if (isMainModule(import.meta)) {
+        Effect.runFork(Effect.provide(run(), Context.empty()));
+      }"
+    `);
   });
 
   it("imports entry-adjacent named server companions when present", () => {
@@ -159,18 +676,154 @@ describe("ServerVirtualModulePlugin", () => {
     });
     const source = buildServer("typed:server?routes=./routes", fixture.importer) as string;
 
-    expect(source).toContain(
-      'import * as ServerDependenciesCompanion from "./.server.dependencies.js";',
-    );
-    expect(source).toContain('import * as ServerHtmlCompanion from "./.html.js";');
-    expect(source).toContain('import * as ServerErrorsCompanion from "./.errors.js";');
-    expect(source).toContain("const companionLayers = ServerDependenciesCompanion.layers;");
-    expect(source).toContain("ServerHtmlCompanion.pages");
-    expect(source).toContain("ServerErrorsCompanion.onError");
-    expect(source).not.toContain(
-      "const companionLayers: ServerLayerInputs = ServerDependenciesCompanion.layers ?? [];",
-    );
-    expect(source).not.toContain("_server");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Context from "effect/Context";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import * as HttpRouter from "effect/unstable/http/HttpRouter";
+      import { pathToFileURL } from "node:url";
+      import { TypedHttpServer } from "@typed/app/TypedHttpServer";
+      import { composeWithLayers, Ids, renderServer, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+      import { ssrForHttp } from "@typed/ui";
+      import * as TypedConfigModule from "typed:config";
+      import Routes0 from "typed:router?dir=./routes";
+      import * as ServerDependenciesCompanion from "./.server.dependencies.js";
+      import * as ServerHtmlCompanion from "./.html.js";
+      import * as ServerErrorsCompanion from "./.errors.js";
+      type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type ServerLayerInputs = readonly LayerOrGroup[];
+      type ServerBaseLayer = typeof ServerLayer;
+      type ServerLayerWith<Layers extends ServerLayerInputs> = ComputeLayers<Layers, typeof ServerLayer>;
+      type ServerRunLayer<Layers extends ServerLayerInputs> = ServerBaseLayer | ServerLayerWith<Layers>;
+      type ServerRunEffect<Layers extends ServerLayerInputs> = Effect.Effect<never, Layer.Error<ServerRunLayer<Layers>>, Layer.Services<ServerRunLayer<Layers>>>;
+      type ServerErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface ServerRunOptions<Layers extends ServerLayerInputs = readonly []> {
+        readonly layers?: Layers;
+        readonly onError?: ServerErrorHandler<Layer.Error<ServerLayerWith<Layers>>>;
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerListenConfig {
+        readonly host?: string;
+        readonly port?: number;
+      }
+      interface ServerBuildConfig {
+        readonly outDir?: string;
+        readonly clientOutDir?: string;
+      }
+      interface ServerPageEntry {
+        readonly name: string;
+        readonly html: {
+          readonly loadHtml: (options?: { readonly dev?: boolean; readonly url?: string }) => Promise<string>;
+          readonly renderHtml: (template: string, markup: string) => string;
+        };
+        readonly client: string;
+      }
+      type TypedConfigWithServerOptions = typeof TypedConfigModule & {
+        readonly build?: ServerBuildConfig;
+        readonly server?: ServerListenConfig;
+        readonly preview?: ServerListenConfig;
+      };
+      type ServerRunOptionsWithLayers<Layers extends ServerLayerInputs> = ServerRunOptions<Layers> & { readonly layers: Layers };
+      const apiModules = [];
+      const routeModules = [Routes0];
+      const primaryRoutes = routeModules[0];
+      const pageEntries: readonly ServerPageEntry[] = [];
+      const apiLayers = [];
+      const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0)))];
+      const companionPages = ServerHtmlCompanion.pages ?? [];
+      const companionLayers = ServerDependenciesCompanion.layers;
+      const companionOnError = ServerErrorsCompanion.onError ?? undefined;
+      const typedConfig = TypedConfigModule as TypedConfigWithServerOptions;
+      const typedBuildConfig = typedConfig.build ?? {};
+      const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
+      const dev = (import.meta as { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
+      const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);
+      const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app", clientOutDir, dev });
+      const frameworkLayers = [StaticHtmlRenderTemplate, Ids.Default] as const;
+      const appLayers = [...frameworkLayers, ...companionLayers] as const;
+      const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);
+      export const ServerRuntime = { apiModules, routeModules, pageEntries, renderServer };
+      export const AppLayer = composeWithLayers(appLayerBase, appLayers);
+      export const ServerLayer = makeServerLayer();
+      export const handler = TypedHttpServer.toNodeHandler(AppLayer);
+      export default handler;
+      function makeServerLayer(options: ServerListenConfig = {}) {
+        const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
+        return composeWithLayers(
+          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+          projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
+          dev,
+          host: runtimeConfig.host,
+          port: runtimeConfig.port,
+          }))),
+          appLayers,
+        );
+      }
+      export function renderUrl(input: string | URL) {
+        if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
+        return renderToHtmlString(primaryRoutes).pipe(
+          Effect.provide(TypedRouter.ServerRouter({ url: input })),
+          Effect.provide(StaticHtmlRenderTemplate),
+          Effect.scoped,
+          Effect.flatMap((markup) => renderPageHtml(0, input, markup)),
+        );
+      }
+      function documentOptions(pageIndex: number) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        return page === undefined ? {} : {
+          renderDocument: ({ markup, url }: { readonly markup: string; readonly url: string }) => renderPageHtml(pageIndex, url, markup),
+        };
+      }
+      function renderPageHtml(pageIndex: number, url: string | URL, markup: string) {
+        const page = pageEntries[pageIndex] ?? pageEntries[0];
+        if (page === undefined) return Effect.succeed(markup);
+        return Effect.promise(async () => {
+          const template = await page.html.loadHtml({ dev, url: String(url) });
+          return page.html.renderHtml(template, markup);
+        });
+      }
+      export function run(options?: ServerRunOptions<readonly []>): ServerRunEffect<readonly []>;
+      export function run<const Layers extends ServerLayerInputs>(options: ServerRunOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<ServerLayerWith<Layers>>, Layer.Services<ServerLayerWith<Layers>>>;
+      export function run(options: ServerRunOptions<readonly []> | ServerRunOptionsWithLayers<ServerLayerInputs> = {}): ServerRunEffect<ServerLayerInputs> {
+        const baseLayer = hasListenOverrides(options) ? makeServerLayer(options) : ServerLayer;
+        const layer = options.layers === undefined ? baseLayer : composeWithLayers(baseLayer, options.layers);
+        return withErrorHandling(Layer.launch(layer), options.onError);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: ServerErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: ServerErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }
+      function isMainModule(meta: ImportMeta): boolean {
+        const entry = process.argv[1];
+        return typeof entry === "string" && meta.url === pathToFileURL(entry).href;
+      }
+      function joinBuildPath(...parts: readonly string[]) {
+        return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
+      }
+      function resolveRuntimeConfig(config: TypedConfigWithServerOptions, isDev: boolean): ServerListenConfig {
+        return isDev ? config.server ?? {} : config.preview ?? config.server ?? {};
+      }
+      function mergeListenConfig(base: ServerListenConfig, overrides: ServerListenConfig): ServerListenConfig {
+        return {
+          host: overrides.host ?? base.host,
+          port: overrides.port ?? base.port,
+        };
+      }
+      function hasListenOverrides(options: ServerListenConfig): boolean {
+        return options.host !== undefined || options.port !== undefined;
+      }
+      if (isMainModule(import.meta)) {
+        Effect.runFork(Effect.provide(run(), Context.empty()));
+      }"
+    `);
   });
 
   it("type-checks generated server entry source", () => {

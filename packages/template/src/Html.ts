@@ -68,6 +68,9 @@ export function renderToHtml<E, R>(
   return Fx.filterMap(fx, toHtmlString);
 }
 
+const isFinalHtmlRenderEvent = (event: unknown): boolean =>
+  (isObject(event) && event.last === true);
+
 /**
  * Renders a stream of `RenderEvent`s into a single HTML string.
  *
@@ -107,7 +110,7 @@ export function renderToHtmlString<E, R>(
   fx: Fx.Fx<RenderEvent | null | undefined, E, R>,
 ): Effect.Effect<string, E, R> {
   return fx.pipe(
-    Fx.dropAfter((event) => isHtmlRenderEvent(event) && event.last),
+    Fx.dropAfter((event) => isFinalHtmlRenderEvent(event)),
     renderToHtml,
     Fx.collectAll,
     Effect.map((events) => events.join("")),
@@ -264,6 +267,9 @@ function setupProperties<E, R>(
   // Order here doesn't matter ??
   return Fx.mergeAll(
     ...entries.map(([key, renderable], i) => {
+      // Skip ref and events
+      if (key === 'ref' || (key[0] === 'o' && key[1] === 'n') || key[0] == '@') return Fx.empty;
+
       return Fx.filterMap(liftRenderableToFx<E, R>(renderable, isStatic), (value) => {
         const s = render({ [key]: value });
         return s ? some(HtmlRenderEvent(s, last && i === lastIndex)) : none();

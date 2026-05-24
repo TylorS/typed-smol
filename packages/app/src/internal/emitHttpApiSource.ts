@@ -476,13 +476,11 @@ function inheritedDirectoryOption(
 function renderGroupLayerExpression(
   groupLayerExpression: string,
   groupSpec: GroupRenderSpec,
-  dependencyNameByPath: ReadonlyMap<string, string>,
+  dependencyLayerExpressionByPath: ReadonlyMap<string, string>,
 ): string {
   return groupSpec.directoryCompanions["_dependencies.ts"].reduce((expression, path) => {
-    const dependencyModule = dependencyNameByPath.get(path);
-    return dependencyModule
-      ? `${expression}.pipe(Layer.provideMerge(Router.normalizeDependencyInput(${dependencyModule}.default)))`
-      : expression;
+    const dependencyLayer = dependencyLayerExpressionByPath.get(path);
+    return dependencyLayer ? `${expression}.pipe(Layer.provideMerge(${dependencyLayer}))` : expression;
   }, groupLayerExpression);
 }
 
@@ -511,7 +509,7 @@ type RouteBindingDeclaration = {
 function createRouteBindingPlan(input: {
   readonly endpointSpecs: readonly EndpointRenderSpec[];
   readonly routePartsForEndpoint: (endpoint: EndpointRenderSpec) => readonly RouteExpressionPart[];
-  readonly routeExpressionForEndpoint: (endpoint: EndpointRenderSpec) => string;
+  readonly routeExpressionForEndpoint: (endpoint: EndpointRenderSpec) => string | undefined;
 }): RouteBindingPlan {
   const drafts = new Map<string, RouteBindingDraft>();
   const order: string[] = [];
@@ -533,12 +531,18 @@ function createRouteBindingPlan(input: {
       parentKey = key;
     }
 
+    const endpointRouteExpression = input.routeExpressionForEndpoint(endpoint);
+    if (!endpointRouteExpression && parentKey) {
+      endpointKeys.set(endpoint.modulePath, parentKey);
+      continue;
+    }
+
     const endpointKey = `endpoint:${endpoint.modulePath}`;
     drafts.set(endpointKey, {
       key: endpointKey,
       parentKey,
       proposedName: `${pathToIdentifier(endpoint.modulePath)}Route`,
-      routeExpression: input.routeExpressionForEndpoint(endpoint),
+      routeExpression: endpointRouteExpression ?? "Route.Slash",
     });
     order.push(endpointKey);
     endpointKeys.set(endpoint.modulePath, endpointKey);
@@ -586,14 +590,13 @@ function endpointPrefixRouteParts(
   endpoint: EndpointRenderSpec,
   apiSpec: ApiRenderSpec,
   groupSpecByKey: ReadonlyMap<string, GroupRenderSpec>,
-  directoryOptionNameByPath: ReadonlyMap<string, string>,
+  prefixExpressionByPath: ReadonlyMap<string, string>,
   expressionsByPath: ReadonlyMap<string, ReadonlyMap<string, HttpApiExportExpression>>,
 ): readonly RouteExpressionPart[] {
   return endpointPrefixRoutePaths(apiSpec, endpoint, groupSpecByKey, expressionsByPath).flatMap(
     (path) => {
-      const moduleName = directoryOptionNameByPath.get(path);
-      const exportName = prefixRouteExportName(expressionsByPath, path);
-      return moduleName && exportName ? [{ path, expression: `${moduleName}.${exportName}` }] : [];
+      const expression = prefixExpressionByPath.get(path);
+      return expression ? [{ path, expression }] : [];
     },
   );
 }
@@ -624,31 +627,14 @@ function prefixRouteExportName(
   return undefined;
 }
 
-function reserveGeneratedIdentifier(
-  identifiersByPath: Map<string, string>,
-  path: string | undefined,
-  preferredName: string,
-): void {
-  if (!path || identifiersByPath.get(path) !== "Api") return;
-  const used = new Set(identifiersByPath.values());
-  let candidate = preferredName;
-  let index = 0;
-  while (used.has(candidate)) {
-    index += 1;
-    candidate = `${preferredName}${index}`;
-  }
-  identifiersByPath.set(path, candidate);
-}
-
-function toImportSpecifier(
+function toVirtualTargetSpecifier(
   importerDir: string,
   targetDir: string,
   relativeFilePath: string,
 ): string {
-  const absPath = join(targetDir, relativeFilePath);
+  const absPath = relativeFilePath.length === 0 ? targetDir : join(targetDir, relativeFilePath);
   const rel = toPosixPath(relative(importerDir, absPath));
-  const specifier = rel.startsWith(".") ? rel : `./${rel}`;
-  return stripScriptExtension(specifier) + ".js";
+  return rel.startsWith(".") ? rel : `./${rel}`;
 }
 
 const METHOD_FACTORIES: Record<string, string> = {
@@ -702,6 +688,7 @@ export function emitHttpApiSource(input: {
     string,
     ReadonlyMap<string, HttpApiExportExpression>
   >;
+  readonly projectRoot: string;
 }): string {
   const directoryConventions = indexDirectoryConventions(input.tree);
   const endpointSpecs = buildEndpointRenderSpecs(input.tree, directoryConventions);
@@ -721,6 +708,7 @@ export function emitHttpApiSource(input: {
   ].sort(compareHttpApiPathOrder);
   const groupDependencyPaths = collectGroupDependencyPaths(groupSpecs);
   const importerDir = dirname(toPosixPath(input.importer));
+  const targetSpecifier = toVirtualTargetSpecifier(importerDir, input.targetDirectory, "");
 
   if (input.mode === "client") {
     return emitHttpApiClientSource({
@@ -745,25 +733,19 @@ export function emitHttpApiSource(input: {
     proposedName: pathToIdentifier(path),
   }));
   const varNameByPath = makeUniqueVarNames(proposedNames);
-  const directoryOptionNameByPath = makeUniqueVarNames(
-    directoryOptionPaths.map((path) => ({
-      path,
-      proposedName: pathToIdentifier(`__${path}`),
-    })),
+  const serviceLayerExpressionByPath = concernExpressionMap(
+    groupDependencyPaths,
+    "ApiServices",
+    "dependencyLayers",
   );
-  reserveGeneratedIdentifier(directoryOptionNameByPath, apiSpec.apiRootPath, "ApiRoot");
-  const groupDependencyNameByPath = makeUniqueVarNames(
-    groupDependencyPaths.map((path) => ({
-      path,
-      proposedName: pathToIdentifier(`__${path}`),
-    })),
-  );
+  const headerExpressionByPath = concernExpressionMap(directoryOptionPaths, "ApiHeaders", "headers");
+  const errorExpressionByPath = concernExpressionMap(directoryOptionPaths, "ApiErrors", "errors");
+  const prefixExpressionByPath = concernExpressionMap(directoryOptionPaths, "ApiPrefixes", "prefixes");
 
   const importLines: string[] = [
     `import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";`,
     `import { resolveConfig } from "@typed/app/internal/resolveConfig";`,
     `import { TypedHttpServer } from "@typed/app/TypedHttpServer";`,
-    `import { ApiHandlers } from "@typed/app/httpapi/Handlers";`,
     `import * as Effect from "effect/Effect";`,
     `import * as Layer from "effect/Layer";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
@@ -776,6 +758,12 @@ export function emitHttpApiSource(input: {
     `import * as HttpServer from "effect/unstable/http/HttpServer";`,
     `import * as HttpRouter from "effect/unstable/http/HttpRouter";`,
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
+    `import * as ApiServices from "typed:services?dir=${targetSpecifier}";`,
+    `import * as ApiHeaders from "typed:headers?dir=${targetSpecifier}";`,
+    `import * as ApiErrors from "typed:errors?dir=${targetSpecifier}";`,
+    `import * as ApiMiddlewares from "typed:middlewares?dir=${targetSpecifier}";`,
+    `import * as ApiPrefixes from "typed:prefix?dir=${targetSpecifier}";`,
+    `import * as ApiOpenApi from "typed:openapi?dir=${targetSpecifier}";`,
     `import * as TypedConfigModule from "typed:config";`,
   ];
   if (prefixRoutePaths.length > 0) {
@@ -783,24 +771,9 @@ export function emitHttpApiSource(input: {
   }
 
   for (const path of endpointPaths) {
-    const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
+    const importSpecifier = `typed:api-handler?path=${toVirtualTargetSpecifier(importerDir, input.targetDirectory, path)}`;
     importLines.push(
       `import * as ${varNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
-    );
-  }
-  for (const path of directoryOptionPaths) {
-    const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
-    importLines.push(
-      `import * as ${directoryOptionNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
-    );
-  }
-  if (groupDependencyPaths.length > 0) {
-    importLines.push(`import * as Router from "@typed/router";`);
-  }
-  for (const path of groupDependencyPaths) {
-    const importSpecifier = toImportSpecifier(importerDir, input.targetDirectory, path);
-    importLines.push(
-      `import * as ${groupDependencyNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
     );
   }
 
@@ -816,7 +789,7 @@ export function emitHttpApiSource(input: {
         endpoint,
         apiSpec,
         groupSpecByKey,
-        directoryOptionNameByPath,
+        prefixExpressionByPath,
         exportExpressionsByPath,
       ),
   });
@@ -848,8 +821,11 @@ export function emitHttpApiSource(input: {
         const inherited = inheritedDirectoryOption(ep, exp);
         if (inherited) {
           const optName = EXPORT_TO_OPTION[exp];
-          const inheritedModule = directoryOptionNameByPath.get(inherited.path);
-          optsParts.push(`${optName}: ${inheritedModule}.${inherited.exportName}`);
+          const expression =
+            exp === "headers"
+              ? headerExpressionByPath.get(inherited.path)
+              : errorExpressionByPath.get(inherited.path);
+          if (expression) optsParts.push(`${optName}: ${expression}`);
         }
       }
       const opts = optsParts.join(", ");
@@ -895,15 +871,14 @@ export function emitHttpApiSource(input: {
       const varName = varNameByPath.get(e.modulePath)!;
       const literals = input.extractedLiteralsByPath.get(e.path);
       const name = literals?.name ?? e.stem;
-      const optPresent = input.optionalExportsByPath.get(e.path) ?? new Set<OptionalExport>();
-      const handler = emitEndpointHandler(varName, e, optPresent, directoryOptionNameByPath);
+      const handler = emitEndpointHandler(varName);
       return `${handlersExpression}.handle(${JSON.stringify(name)}, ${handler})`;
     }, "handlers");
     groupLayerBlocks.push(
       renderGroupLayerExpression(
         `HttpApiBuilder.group(Api, ${JSON.stringify(groupName)}, (handlers) => ${groupHandlers})`,
         groupSpec,
-        groupDependencyNameByPath,
+        serviceLayerExpressionByPath,
       ),
     );
   }
@@ -930,22 +905,14 @@ export function emitHttpApiSource(input: {
         );
   const dependenciesLayer = renderDependenciesLayer(
     groupDependencyPaths,
-    groupDependencyNameByPath,
+    serviceLayerExpressionByPath,
   );
 
   const middlewaresPath = apiSpec.directoryCompanions["_middlewares.ts"][0];
   const hasMiddlewares = Boolean(middlewaresPath);
-  if (hasMiddlewares) {
-    const middlewareSpecifier = toImportSpecifier(
-      importerDir,
-      input.targetDirectory,
-      middlewaresPath,
-    );
-    importLines.push(`import * as ApiMiddlewares from ${JSON.stringify(middlewareSpecifier)};`);
-  }
 
   const serveOptions = hasMiddlewares
-    ? `{ disableListenLog, middleware: ApiMiddlewares.middleware ?? ApiMiddlewares.default }`
+    ? `{ disableListenLog, middleware: ApiMiddlewares.middlewares[${JSON.stringify(middlewaresPath)}] }`
     : `{ disableListenLog }`;
 
   const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
@@ -1009,7 +976,7 @@ export const serve = <const Layers extends readonly LayerOrGroup[]>(
       const dev = isDevImportMeta(import.meta);
       const appConfig = { disableListenLog };
       const staticAssetsLayer = TypedHttpServer.staticAssets({
-        projectRoot: process.cwd(),
+        projectRoot: ${JSON.stringify(input.projectRoot)},
         clientOutDir,
         dev,
       });
@@ -1018,7 +985,7 @@ export const serve = <const Layers extends readonly LayerOrGroup[]>(
       const serverLayer = TypedHttpServer.layer({
         host,
         port,
-        projectRoot: process.cwd(),
+        projectRoot: ${JSON.stringify(input.projectRoot)},
         dev,
       });
       return appLayer.pipe(Layer.provide(serverLayer));
@@ -1029,20 +996,25 @@ export const serve = <const Layers extends readonly LayerOrGroup[]>(
 
 function renderDependenciesLayer(
   dependencyPaths: readonly string[],
-  dependencyNameByPath: ReadonlyMap<string, string>,
+  dependencyLayerExpressionByPath: ReadonlyMap<string, string>,
 ): string {
   if (dependencyPaths.length === 0) return "Layer.empty";
 
   const layers = dependencyPaths
-    .map((path) => {
-      const dependencyModule = dependencyNameByPath.get(path);
-      return dependencyModule
-        ? `Router.normalizeDependencyInput(${dependencyModule}.default)`
-        : undefined;
-    })
+    .map((path) => dependencyLayerExpressionByPath.get(path))
     .filter((value): value is string => value !== undefined);
 
   return layers.length === 0 ? "Layer.empty" : `Layer.mergeAll(Layer.empty, ${layers.join(", ")})`;
+}
+
+function concernExpressionMap(
+  paths: readonly string[],
+  moduleName: string,
+  exportName: string,
+): ReadonlyMap<string, string> {
+  return new Map(
+    paths.map((path) => [path, `${moduleName}.${exportName}[${JSON.stringify(path)}]`]),
+  );
 }
 
 function emitHttpApiClientSource(input: {
@@ -1069,11 +1041,11 @@ function emitHttpApiClientSource(input: {
   void input.directoryOptionNameByPath;
   const imports = new ClientImportBuilder(input.importerDir, input.targetDirectory);
   const groupDependencyPaths = collectGroupDependencyPaths(input.groupSpecs);
-  const groupDependencyNameByPath = makeUniqueVarNames(
-    groupDependencyPaths.map((path) => ({
-      path,
-      proposedName: pathToIdentifier(`__${path}`),
-    })),
+  const targetSpecifier = toVirtualTargetSpecifier(input.importerDir, input.targetDirectory, "");
+  const serviceLayerExpressionByPath = concernExpressionMap(
+    groupDependencyPaths,
+    "ApiServices",
+    "dependencyLayers",
   );
   const importLines: string[] = [
     `import * as Route from "@typed/router";`,
@@ -1087,13 +1059,7 @@ function emitHttpApiClientSource(input: {
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
   ];
   if (groupDependencyPaths.length > 0) {
-    importLines.push(`import * as Router from "@typed/router";`);
-  }
-  for (const path of groupDependencyPaths) {
-    const importSpecifier = toImportSpecifier(input.importerDir, input.targetDirectory, path);
-    importLines.push(
-      `import * as ${groupDependencyNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
-    );
+    importLines.push(`import * as ApiServices from "typed:services?dir=${targetSpecifier}";`);
   }
 
   const groupExprs: string[] = [];
@@ -1104,6 +1070,7 @@ function emitHttpApiClientSource(input: {
     routeExpressionForEndpoint: (endpoint) => {
       const literals = input.extractedLiteralsByPath.get(endpoint.path);
       const routePath = literals?.path ?? `/${endpoint.stem}`;
+      if (routePath === "/") return undefined;
       return (
         imports.expressionFor(endpoint.path, "route", input.exportExpressionsByPath) ??
         `Route.Parse(${JSON.stringify(routePath)})`
@@ -1126,15 +1093,19 @@ function emitHttpApiClientSource(input: {
 
     const endpointExprs = endpointsInGroup.map((endpoint) => {
       const literals = input.extractedLiteralsByPath.get(endpoint.path);
-      const routePath = literals?.path ?? `/${endpoint.stem}`;
       const method = (literals?.method ?? "GET").toUpperCase();
       const name = literals?.name ?? endpoint.stem;
       const factory = METHOD_FACTORIES[method] ?? "get";
-      const routeExpr =
-        imports.expressionFor(endpoint.path, "route", input.exportExpressionsByPath) ??
-        `Route.Parse(${JSON.stringify(routePath)})`;
       const effectiveRouteExpr = routeBindings.endpointRouteNameByPath.get(endpoint.modulePath)!;
-      const optsParts = shouldEmitClientRouteSchemas(literals?.path)
+      const hasRoutePrefix =
+        clientEndpointPrefixRouteParts(
+          endpoint,
+          input.apiSpec,
+          groupSpecByKey,
+          imports,
+          input.exportExpressionsByPath,
+        ).length > 0;
+      const optsParts = (hasRoutePrefix || shouldEmitClientRouteSchemas(literals?.path))
         ? [`params: ${effectiveRouteExpr}.pathSchema`, `query: ${effectiveRouteExpr}.querySchema`]
         : [];
       const optionalPresent =
@@ -1170,17 +1141,12 @@ function emitHttpApiClientSource(input: {
       );
 
       return renderAnnotatedEndpointExpression(
-        `HttpApiEndpoint.${factory}(${JSON.stringify(name)}, ${routeExpr}.path, { ${optsParts.join(", ")} })`,
+        `HttpApiEndpoint.${factory}(${JSON.stringify(name)}, ${effectiveRouteExpr}.path, { ${optsParts.join(", ")} })`,
         input.openapiPlan?.endpointAnnotationsByPath.get(endpoint.path),
       );
     });
 
-    const effectivePrefix = resolveEffectivePrefixForGroup(
-      groupSpec.dirPath,
-      input.prefixByScope,
-      input.pathPrefix,
-    );
-    const suffix = effectivePrefix ? `.prefix(${JSON.stringify(effectivePrefix)})` : "";
+    const suffix = "";
     const groupChain = endpointExprs.map((expr) => `.add(${expr})`).join("");
     typedClientGroups.push(renderTypedClientGroup(groupName, typedClientEndpoints));
     groupExprs.push(
@@ -1199,7 +1165,7 @@ function emitHttpApiClientSource(input: {
   );
   const dependenciesLayer = renderDependenciesLayer(
     groupDependencyPaths,
-    groupDependencyNameByPath,
+    serviceLayerExpressionByPath,
   );
   const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
   const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
@@ -1377,17 +1343,8 @@ function capitalize(value: string): string {
   return value.length === 0 ? value : `${value[0]!.toUpperCase()}${value.slice(1)}`;
 }
 
-function emitEndpointHandler(
-  moduleName: string,
-  endpoint: EndpointRenderSpec,
-  optionalExports: ReadonlySet<OptionalExport>,
-  directoryOptionNameByPath: ReadonlyMap<string, string>,
-): string {
-  void endpoint;
-  void directoryOptionNameByPath;
-  return optionalExports.has("body")
-    ? `ApiHandlers.handler(${moduleName}, { body: "payload" })`
-    : `ApiHandlers.handler(${moduleName})`;
+function emitEndpointHandler(moduleName: string): string {
+  return `${moduleName}.handler`;
 }
 
 function renderAnnotatedApiExpression(

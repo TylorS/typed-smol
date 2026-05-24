@@ -20,8 +20,6 @@ export const data = DataAttr.schema({
   virtualFocus: Schema.Boolean,
 });
 
-export const component = "typed/ui/Menubar";
-
 export function makeState(
   initial: Composite.InitialState = { orientation: "horizontal" },
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -78,7 +76,6 @@ export function Root<const E, const R, const Opts extends RootOptions<NoInfer<E>
     role: "menubar",
     "aria-label": options.label,
     "aria-orientation": orientation,
-    "data-ui": component,
     onkeydown: onKeyDown,
   };
 

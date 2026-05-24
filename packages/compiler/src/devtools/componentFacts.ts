@@ -15,6 +15,7 @@ import {
   type TemplateHash,
   type TemplatePartId,
 } from "@typed/devtools-protocol";
+import ts from "typescript";
 import type { SourceSpan } from "../diagnostics/diagnostics.js";
 import type { TemplateModuleTemplate } from "../template/analyzeTemplateModule.js";
 import type { TemplatePlan, TemplatePlanNode, TemplatePlanPart } from "../template/TemplatePlan.js";
@@ -35,6 +36,33 @@ export interface ComponentDevtoolsFactInput {
   readonly template?:
     | TemplateModuleTemplate
     | Pick<TemplatePlan, "nodes" | "parts" | "templateHash">;
+}
+
+export interface DeriveComponentIdentityInput {
+  readonly checker?: ts.TypeChecker;
+  readonly componentType?: ts.Type;
+  readonly moduleId: string;
+  readonly sourceFile?: ts.SourceFile;
+  readonly sourceText?: string;
+  readonly ts?: typeof ts;
+}
+
+export type DerivedComponentDeclarationKind =
+  | "alias"
+  | "const"
+  | "default-alias"
+  | "default-function"
+  | "export-alias"
+  | "function";
+
+export interface DerivedComponentIdentity {
+  readonly componentId: ComponentId;
+  readonly declarationKind: DerivedComponentDeclarationKind;
+  readonly displayName: string;
+  readonly exportName: string;
+  readonly localName: string;
+  readonly moduleId: string;
+  readonly source: ComponentSourceSpan;
 }
 
 export interface ComponentFxRootInput {
@@ -106,6 +134,28 @@ export function createComponentDevtoolsFacts(
   return inputs.map(createComponentDevtoolsFact);
 }
 
+export function deriveComponentDevtoolsFactInputs(
+  input: DeriveComponentIdentityInput,
+): readonly ComponentDevtoolsFactInput[] {
+  return deriveComponentIdentities(input).map((identity) => ({
+    displayName: identity.displayName,
+    exportName: identity.exportName,
+    moduleId: identity.moduleId,
+    source: identity.source,
+  }));
+}
+
+export function deriveComponentIdentities(
+  input: DeriveComponentIdentityInput,
+): readonly DerivedComponentIdentity[] {
+  const sourceFile = componentIdentitySourceFile(input);
+  const context = componentIdentityContext(input);
+  const declarations = componentDeclarationIndex(sourceFile, context);
+  const direct = directComponentIdentities(input.moduleId, sourceFile, context);
+  const aliases = aliasComponentIdentities(input.moduleId, sourceFile, declarations);
+  return [...direct, ...aliases].sort(compareComponentIdentities);
+}
+
 export function createComponentDevtoolsFact(
   input: ComponentDevtoolsFactInput,
 ): ComponentDevtoolsFact {
@@ -144,6 +194,262 @@ export function createComponentDevtoolsFact(
     ...(source && { source, sourceLocationId }),
     ...(template && { template, templateHash }),
   };
+}
+
+interface ComponentDeclaration {
+  readonly identityNode: ts.Node;
+  readonly localName: string;
+}
+
+interface ComponentIdentityContext {
+  readonly checker?: ts.TypeChecker;
+  readonly componentType?: ts.Type;
+}
+
+function componentIdentitySourceFile(input: DeriveComponentIdentityInput): ts.SourceFile {
+  if (input.sourceFile) return input.sourceFile;
+  return (input.ts ?? ts).createSourceFile(
+    input.moduleId,
+    input.sourceText ?? "",
+    (input.ts ?? ts).ScriptTarget.Latest,
+    true,
+  );
+}
+
+function componentIdentityContext(input: DeriveComponentIdentityInput): ComponentIdentityContext {
+  if (!input.checker || !input.componentType) return {};
+  return { checker: input.checker, componentType: input.componentType };
+}
+
+function componentDeclarationIndex(
+  sourceFile: ts.SourceFile,
+  context: ComponentIdentityContext,
+): ReadonlyMap<string, ComponentDeclaration> {
+  const declarations = new Map<string, ComponentDeclaration>();
+  for (const statement of sourceFile.statements) {
+    const declaration = namedComponentDeclaration(statement, context);
+    if (declaration) declarations.set(declaration.localName, declaration);
+  }
+  return declarations;
+}
+
+function directComponentIdentities(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  context: ComponentIdentityContext,
+): readonly DerivedComponentIdentity[] {
+  return sourceFile.statements.flatMap((statement) => {
+    const declaration = namedComponentDeclaration(statement, context);
+    if (!declaration || !isExported(statement)) return [];
+    const exportName = isDefaultExport(statement) ? "default" : declaration.localName;
+    const kind = directDeclarationKind(statement, exportName);
+    return [
+      componentIdentity(
+        moduleId,
+        sourceFile,
+        declaration.identityNode,
+        exportName,
+        declaration.localName,
+        kind,
+      ),
+    ];
+  });
+}
+
+function aliasComponentIdentities(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  declarations: ReadonlyMap<string, ComponentDeclaration>,
+): readonly DerivedComponentIdentity[] {
+  return sourceFile.statements.flatMap((statement) => [
+    ...variableAliasIdentities(moduleId, sourceFile, declarations, statement),
+    ...exportAliasIdentities(moduleId, sourceFile, declarations, statement),
+  ]);
+}
+
+function namedComponentDeclaration(
+  statement: ts.Statement,
+  context: ComponentIdentityContext,
+): ComponentDeclaration | undefined {
+  if (ts.isFunctionDeclaration(statement) && statement.name && hasComponentReturnType(statement, context)) {
+    return { identityNode: statement.name, localName: statement.name.text };
+  }
+  if (!ts.isVariableStatement(statement)) return undefined;
+  const declaration = statement.declarationList.declarations[0];
+  if (!declaration || !ts.isIdentifier(declaration.name) || !hasComponentVariableType(declaration)) {
+    return undefined;
+  }
+  return { identityNode: declaration.name, localName: declaration.name.text };
+}
+
+function variableAliasIdentities(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  declarations: ReadonlyMap<string, ComponentDeclaration>,
+  statement: ts.Statement,
+): readonly DerivedComponentIdentity[] {
+  if (!ts.isVariableStatement(statement) || !isExported(statement)) return [];
+  return statement.declarationList.declarations.flatMap((declaration) =>
+    variableAliasIdentity(moduleId, sourceFile, declarations, declaration),
+  );
+}
+
+function variableAliasIdentity(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  declarations: ReadonlyMap<string, ComponentDeclaration>,
+  declaration: ts.VariableDeclaration,
+): readonly DerivedComponentIdentity[] {
+  const initializer = declaration.initializer;
+  if (!ts.isIdentifier(declaration.name) || !initializer || !ts.isIdentifier(initializer)) {
+    return [];
+  }
+  if (!declarations.has(initializer.text)) return [];
+  return [
+    componentIdentity(
+      moduleId,
+      sourceFile,
+      declaration.name,
+      declaration.name.text,
+      initializer.text,
+      "alias",
+    ),
+  ];
+}
+
+function exportAliasIdentities(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  declarations: ReadonlyMap<string, ComponentDeclaration>,
+  statement: ts.Statement,
+): readonly DerivedComponentIdentity[] {
+  const exportClause = ts.isExportDeclaration(statement) ? statement.exportClause : undefined;
+  if (!exportClause || !ts.isNamedExports(exportClause)) return [];
+  return exportClause.elements.flatMap((specifier) =>
+    exportSpecifierIdentity(moduleId, sourceFile, declarations, specifier),
+  );
+}
+
+function exportSpecifierIdentity(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  declarations: ReadonlyMap<string, ComponentDeclaration>,
+  specifier: ts.ExportSpecifier,
+): readonly DerivedComponentIdentity[] {
+  const localName = specifier.propertyName?.text ?? specifier.name.text;
+  if (!declarations.has(localName)) return [];
+  return [
+    componentIdentity(
+      moduleId,
+      sourceFile,
+      specifier.name,
+      specifier.name.text,
+      localName,
+      "export-alias",
+    ),
+  ];
+}
+
+function componentIdentity(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  exportName: string,
+  localName: string,
+  declarationKind: DerivedComponentDeclarationKind,
+): DerivedComponentIdentity {
+  const source = sourceSpanFromNode(moduleId, sourceFile, node);
+  return {
+    componentId: makeComponentId(`${moduleId}#${exportName}`),
+    declarationKind,
+    displayName: exportName === "default" ? localName : exportName,
+    exportName,
+    localName,
+    moduleId,
+    source,
+  };
+}
+
+function directDeclarationKind(
+  statement: ts.Statement,
+  exportName: string,
+): DerivedComponentDeclarationKind {
+  if (ts.isVariableStatement(statement)) {
+    return exportName === "default" ? "default-alias" : "const";
+  }
+  return exportName === "default" ? "default-function" : "function";
+}
+
+function hasComponentVariableType(declaration: ts.VariableDeclaration): boolean {
+  if (isComponentTypeText(declaration.type?.getText())) return true;
+  const initializer = declaration.initializer;
+  return isFunctionExpressionLike(initializer) && hasComponentReturnType(initializer, {});
+}
+
+function hasComponentReturnType(
+  node: ts.SignatureDeclaration,
+  context: ComponentIdentityContext,
+): boolean {
+  if (isCheckerComponentReturn(node, context)) return true;
+  return isComponentTypeText(node.type?.getText());
+}
+
+function isCheckerComponentReturn(
+  node: ts.SignatureDeclaration,
+  context: ComponentIdentityContext,
+): boolean {
+  if (!context.checker || !context.componentType) return false;
+  const signature = context.checker.getSignatureFromDeclaration(node);
+  if (!signature) return false;
+  const returnType = context.checker.getReturnTypeOfSignature(signature);
+  return context.checker.isTypeAssignableTo(returnType, context.componentType);
+}
+
+function isComponentTypeText(typeText: string | undefined): boolean {
+  return typeText === "Component" || typeText?.startsWith("Component<") === true;
+}
+
+function isFunctionExpressionLike(
+  node: ts.Node | undefined,
+): node is ts.ArrowFunction | ts.FunctionExpression {
+  return node !== undefined && (ts.isArrowFunction(node) || ts.isFunctionExpression(node));
+}
+
+function sourceSpanFromNode(
+  moduleId: string,
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+): ComponentSourceSpan {
+  const start = node.getStart(sourceFile);
+  return sourceSpan(moduleId, {
+    endOffset: node.getEnd(),
+    endPosition: positionAt(sourceFile.text, node.getEnd()),
+    startOffset: start,
+    startPosition: positionAt(sourceFile.text, start),
+  });
+}
+
+function isExported(node: ts.Node): boolean {
+  return hasModifier(node, ts.SyntaxKind.ExportKeyword);
+}
+
+function isDefaultExport(node: ts.Node): boolean {
+  return hasModifier(node, ts.SyntaxKind.DefaultKeyword);
+}
+
+function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
+  return (
+    ts.canHaveModifiers(node) &&
+    ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) === true
+  );
+}
+
+function compareComponentIdentities(
+  left: DerivedComponentIdentity,
+  right: DerivedComponentIdentity,
+): number {
+  const sourceOrder = left.source.startOffset - right.source.startOffset;
+  return sourceOrder === 0 ? left.exportName.localeCompare(right.exportName) : sourceOrder;
 }
 
 function componentSummary(input: ComponentSummary): ComponentSummary {

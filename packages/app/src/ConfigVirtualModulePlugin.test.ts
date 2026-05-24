@@ -18,20 +18,21 @@ describe("ConfigVirtualModulePlugin", () => {
   });
 
   it("emits named exports from computed config entries", () => {
-    expect(buildConfig("typed:config", { entry: "server.ts", server: { port: 3000 } })).toBe(
-      'export const entry = "server.ts";\nexport const server = {"port":3000};',
-    );
+    expect(buildConfig("typed:config", { entry: "server.ts", server: { port: 3000 } }))
+      .toMatchInlineSnapshot(`
+        "export const entry = "server.ts";
+        export const server = {"port":3000};"
+      `);
   });
 
   it("does not emit a default export", () => {
     const source = buildConfig("typed:config", { entry: "server.ts" });
 
-    expect(source).toBe('export const entry = "server.ts";');
-    expect(source).not.toContain("export default");
+    expect(source).toMatchInlineSnapshot(`"export const entry = "server.ts";"`);
   });
 
   it("emits a module marker for empty computed config", () => {
-    expect(buildConfig("typed:config", {})).toBe("export {};");
+    expect(buildConfig("typed:config", {})).toMatchInlineSnapshot(`"export {};"`);
   });
 
   it("loads the typed config nearest to the importer when no config is provided", () => {
@@ -55,9 +56,10 @@ describe("ConfigVirtualModulePlugin", () => {
         {} as never,
       );
 
-      expect(source).toContain('export const entry = "src/server.ts";');
-      expect(source).toContain('export const build = {"outDir":"dist"};');
-      expect(source).not.toContain("wrong.ts");
+      expect(source).toMatchInlineSnapshot(`
+        "export const entry = "src/server.ts";
+        export const build = {"outDir":"dist"};"
+      `);
     } finally {
       process.chdir(cwd);
       rmSync(fixtureRoot, { recursive: true, force: true });

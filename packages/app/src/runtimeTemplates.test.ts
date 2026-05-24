@@ -22,8 +22,8 @@ describe("runtime template functions", () => {
     await Effect.runPromise(mount(compiled, { root, values: ["Ada"] }));
     await Effect.runPromise(hydrate(compiled, { root: hydrateRoot, values: ["Grace"] }));
 
-    expect(root.innerHTML).toBe("<main><h1>Ada<!--/n_0--></h1></main>");
-    expect(hydrateRoot.innerHTML).toBe("<main><h1>Grace<!--/n_0--></h1></main>");
+    expect(root.innerHTML).toMatchInlineSnapshot(`"<main><h1>Ada<!--/n_0--></h1></main>"`);
+    expect(hydrateRoot.innerHTML).toMatchInlineSnapshot(`"<main><h1>Grace<!--/n_0--></h1></main>"`);
   });
 
   it("renders compiled and fallback templates on the server", async () => {
@@ -38,8 +38,8 @@ describe("runtime template functions", () => {
     const compiledResult = await Effect.runPromise(renderServer(compiled, { values: ["Ada"] }));
     const fallbackResult = await Effect.runPromise(renderServer(fallback, { values: ["Ada"] }));
 
-    expect(compiledResult.html).toContain("<p><!--n_0-->Ada<!--/n_0--></p>");
-    expect(fallbackResult.html).toContain("<p><!--n_0-->Ada<!--/n_0--></p>");
+    expect(compiledResult.html).toMatchInlineSnapshot(`"<!--t_KwZ/fKKViAs=--><p><!--n_0-->Ada<!--/n_0--></p><!--/t_KwZ/fKKViAs=-->"`);
+    expect(fallbackResult.html).toMatchInlineSnapshot(`"<!--t_KwZ/fKKViAs=--><p><!--n_0-->Ada<!--/n_0--></p><!--/t_KwZ/fKKViAs=-->"`);
   });
 });
 

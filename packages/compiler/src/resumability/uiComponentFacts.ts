@@ -48,7 +48,12 @@ function exportedStringConst(sourceFile: ts.SourceFile, name: string): string {
     const value = stringConstFromStatement(statement, name);
     if (value !== undefined) return value;
   }
+  if (name === "component") return componentIdFromModuleId(sourceFile.fileName);
   throw new Error(`Missing exported string const ${name} in ${sourceFile.fileName}`);
+}
+
+function componentIdFromModuleId(moduleId: string): string {
+  return moduleId.replace(/^@/, "");
 }
 
 function exportedDataFields(sourceFile: ts.SourceFile): readonly string[] {
@@ -107,11 +112,6 @@ function dataFieldsFromInitializer(initializer: ts.Expression | undefined): read
   return fields.properties.flatMap((property) =>
     ts.isPropertyAssignment(property) ? propertyName(property.name) : [],
   );
-}
-
-function exportedFunctionName(statement: ts.Statement): string | undefined {
-  if (!ts.isFunctionDeclaration(statement) || !hasExportModifier(statement)) return undefined;
-  return statement.name?.text;
 }
 
 function isActionFunction(statement: ts.FunctionDeclaration): boolean {

@@ -22,13 +22,15 @@ describe("RouteHandlersVirtualModulePlugin", () => {
       apiWithFiles([routePath, handlerPath]),
     );
 
-    expect(source).toContain('import * as RouteHandlers from "@typed/app/RouteHandlers";');
-    expect(source).toContain('import * as Article from "./routes/article.js";');
-    expect(source).toContain('import * as Articlehandler from "./routes/article.handler.js";');
-    expect(source).toContain(
-      "const handlers = RouteHandlers.empty.match(Article.route, Articlehandler.handler);",
-    );
-    expect(source).toContain("export default handlers;");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as RouteHandlers from "@typed/app/RouteHandlers";
+      import * as Article from "./routes/article.js";
+      import * as Articlehandler from "./routes/article.handler.js";
+
+      const handlers = RouteHandlers.empty.match(Article.route, Articlehandler.handler);
+      export default handlers;
+      "
+    `);
   });
 
   it("emits an empty collection when a route directory has no handlers", () => {
@@ -45,8 +47,13 @@ describe("RouteHandlersVirtualModulePlugin", () => {
       apiWithFiles([routePath]),
     );
 
-    expect(source).toContain("const handlers = RouteHandlers.empty;");
-    expect(source).toContain("export default handlers;");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as RouteHandlers from "@typed/app/RouteHandlers";
+
+      const handlers = RouteHandlers.empty;
+      export default handlers;
+      "
+    `);
   });
 
   it("emits handler dependency layers without importing them through router modules", () => {
@@ -67,12 +74,16 @@ describe("RouteHandlersVirtualModulePlugin", () => {
       apiWithFiles([routePath, handlerPath, dependenciesPath]),
     );
 
-    expect(source).toContain(
-      'import * as Handlersdependencies from "./routes/_handlers.dependencies.js";',
-    );
-    expect(source).toContain(
-      ".provide(RouteHandlers.normalizeDependencyInput(Handlersdependencies.default));",
-    );
+    expect(source).toMatchInlineSnapshot(`
+      "import * as RouteHandlers from "@typed/app/RouteHandlers";
+      import * as Article from "./routes/article.js";
+      import * as Articlehandler from "./routes/article.handler.js";
+      import * as Handlersdependencies from "./routes/_handlers.dependencies.js";
+
+      const handlers = RouteHandlers.empty.match(Article.route, Articlehandler.handler).provide(RouteHandlers.normalizeDependencyInput(Handlersdependencies.default));
+      export default handlers;
+      "
+    `);
   });
 });
 
@@ -84,8 +95,9 @@ function apiWithFiles(files: readonly string[]): TypeInfoApi {
           filePath,
           exports: [],
         }),
-      ),
+    ),
     file: () => ({ ok: false, reason: "not needed" }),
+    project: () => undefined,
     isAssignableTo: () => false,
     resolveExport: () => undefined,
   };

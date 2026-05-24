@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TypeNode } from "@typed/virtual-modules";
 import {
   emitSerializableDescriptorSource,
+  planSerializableDescriptor,
   planSchemaFromTypeNode,
   schemaPlanFingerprint,
 } from "./schemaPlan.js";
@@ -128,34 +129,33 @@ describe("schemaPlan", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(emitSerializableDescriptorSource(result.plan, "UserSerializable")).toBe(
-      [
-        'import { Serializable } from "@typed/app";',
-        "",
-        "export const UserSerializable = Serializable.generated(",
-        '  "User",',
-        "  {",
-        "    version: 1,",
-        '    typeId: "User",',
-        "    root: {",
-        '      kind: "object",',
-        "      properties: [",
-        "        {",
-        '          name: "id",',
-        "          node: {",
-        '            kind: "primitive",',
-        '            name: "string",',
-        "          },",
-        "          optional: false,",
-        "          readonly: true,",
-        "        },",
-        "      ],",
-        "    },",
-        `    fingerprint: ${JSON.stringify(result.plan.fingerprint)},`,
-        "  },",
-        ");",
-      ].join("\n"),
-    );
+    expect(emitSerializableDescriptorSource(result.plan, "UserSerializable"))
+      .toMatchInlineSnapshot(`
+      "import { Serializable } from "@typed/app";
+
+      export const UserSerializable = Serializable.generated(
+        "User",
+        {
+          version: 1,
+          typeId: "User",
+          root: {
+            kind: "object",
+            properties: [
+              {
+                name: "id",
+                node: {
+                  kind: "primitive",
+                  name: "string",
+                },
+                optional: false,
+                readonly: true,
+              },
+            ],
+          },
+          fingerprint: "{\\"root\\":{\\"kind\\":\\"object\\",\\"properties\\":[{\\"name\\":\\"id\\",\\"node\\":{\\"kind\\":\\"primitive\\",\\"name\\":\\"string\\"},\\"optional\\":false,\\"readonly\\":true}]},\\"typeId\\":\\"User\\",\\"version\\":1}",
+        },
+      );"
+    `);
   });
 
   it("plans bigint literals without degrading them to strings", () => {
@@ -173,6 +173,54 @@ describe("schemaPlan", () => {
           value: 1n,
         },
       },
+    });
+  });
+
+  it("emits a user-provided schema descriptor before using generated schema plans", () => {
+    const descriptor = planSerializableDescriptor({
+      typeId: "User",
+      node: object([property("id", primitive("string"))]),
+      userSchema: { expression: "UserSchema" },
+    });
+
+    expect(descriptor).toMatchObject({
+      ok: true,
+      descriptor: {
+        kind: "schema",
+        schemaExpression: "UserSchema",
+        typeId: "User",
+      },
+    });
+    if (!descriptor.ok) return;
+
+    expect(emitSerializableDescriptorSource(descriptor.descriptor, "UserSerializable"))
+      .toMatchInlineSnapshot(`
+        "import { Serializable } from "@typed/app";
+
+        export const UserSerializable = Serializable.schema(UserSchema, { id: "User" });"
+      `);
+  });
+
+  it("diagnoses ambiguous unsupported values when no user schema is provided", () => {
+    const descriptor = planSerializableDescriptor({
+      typeId: "RouteCapture",
+      fileName: "/src/routes/profile.ts",
+      node: unknown("User"),
+      span: { start: 24, end: 28 },
+    });
+
+    expect(descriptor).toEqual({
+      ok: false,
+      diagnostics: [
+        {
+          code: "TYPED-SERIALIZATION-001",
+          fileName: "/src/routes/profile.ts",
+          message: "Cannot generate Schema for RouteCapture: `unknown` needs an explicit Schema",
+          severity: "error",
+          source: "compiler",
+          span: { start: 24, end: 28 },
+        },
+      ],
     });
   });
 });
@@ -221,6 +269,10 @@ function fn(): TypeNode {
     parameters: [],
     returnType: primitive("void"),
   };
+}
+
+function unknown(text: string): TypeNode {
+  return { kind: "unknown", text };
 }
 
 type TypeNodeProperty = Extract<TypeNode, { kind: "object" }>["properties"][number];

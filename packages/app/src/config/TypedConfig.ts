@@ -61,6 +61,28 @@ export interface TypedDevtoolsConfig {
   readonly sessionId?: string;
 }
 
+export type TypedTemplateDiagnosticMode = "error" | "warn" | "silent";
+export type TypedBrowserMode = "mount" | "mpa";
+
+export interface TypedOpenApiConfig {
+  readonly annotations?: Readonly<Record<string, unknown>>;
+  readonly generation?: {
+    readonly additionalProperties?: boolean;
+  };
+  readonly exposure?: {
+    readonly jsonPath?: `/${string}` | false;
+    readonly swaggerPath?: `/${string}` | false;
+    readonly scalar?:
+      | false
+      | {
+          readonly path?: `/${string}`;
+          readonly source?: "inline" | "cdn";
+          readonly version?: string;
+          readonly config?: Readonly<Record<string, unknown>>;
+        };
+  };
+}
+
 export interface TypedConfig {
   /** Server entry file path. Default: "server.ts" */
   readonly entry?: string;
@@ -68,6 +90,7 @@ export interface TypedConfig {
   /** Router virtual module plugin options. */
   readonly router?: {
     readonly prefix?: string;
+    readonly routes?: readonly string[];
   };
 
   /** HttpApi virtual module plugin options. */
@@ -75,6 +98,35 @@ export interface TypedConfig {
     readonly prefix?: string;
     readonly pathPrefix?: `/${string}`;
   };
+
+  /** Direct template compiler defaults. Target is selected by the host compiler context. */
+  readonly templates?: boolean | { readonly diagnostics?: TypedTemplateDiagnosticMode };
+
+  /** HTML shell virtual module defaults for short typed:html imports. */
+  readonly html?: {
+    readonly path?: string;
+    readonly outlet?: string;
+  };
+
+  /** Browser runtime virtual module defaults for short typed:browser imports. */
+  readonly browser?: {
+    readonly routes?: readonly string[];
+    readonly root?: string;
+    readonly base?: string;
+    readonly mode?: TypedBrowserMode;
+    readonly name?: string;
+  };
+
+  /** Storybook runtime virtual module defaults. */
+  readonly storybook?: {
+    readonly routes?: readonly string[];
+    readonly api?: readonly string[];
+    readonly proxyPath?: string;
+    readonly serverOrigin?: string;
+  };
+
+  /** Global OpenAPI defaults. Source-file OpenAPI conventions override these values. */
+  readonly openapi?: TypedOpenApiConfig;
 
   /** Path to tsconfig.json (relative to project root or absolute). Default: auto-discovered. */
   readonly tsconfig?: string;

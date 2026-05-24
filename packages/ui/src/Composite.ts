@@ -52,8 +52,6 @@ export const data = DataAttr.schema({
   virtualFocus: Schema.Boolean,
 });
 
-export const component = "typed/ui/Composite";
-
 export function makeState(
   initial: InitialState = {},
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {

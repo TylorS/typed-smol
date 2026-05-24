@@ -49,6 +49,8 @@ export interface RouteClosureContinuation {
   readonly symbolId: string;
   readonly closureName: string;
   readonly captures: readonly RouteCaptureFact[];
+  readonly captureFingerprint: string;
+  readonly contextFingerprint: string;
   readonly serviceIds: readonly string[];
   readonly templateHashes: readonly string[];
   readonly dependencyFingerprints: readonly string[];
@@ -148,9 +150,11 @@ function routeClosureContinuation(
   const symbolId = `${moduleId}#closure:${closure.name}`;
   const captures = stableCaptures(closure.captures);
   return {
+    captureFingerprint: routeCaptureFingerprint(captures),
     captures,
     closureName: closure.name,
     compatibilityFingerprint: routeClosureCompatibility(symbolId, captures, options),
+    contextFingerprint: routeContextFingerprint(captures),
     dependencyFingerprints: options.dependencyFingerprints,
     id: symbolId,
     kind: "route-closure",
@@ -168,9 +172,11 @@ function routeClosureCompatibility(
   options: Required<RouteCpsCompilationOptions>,
 ): string {
   return JSON.stringify({
-    captures: captures.map(captureFingerprint),
+    captureFingerprint: routeCaptureFingerprint(captures),
+    contextFingerprint: routeContextFingerprint(captures),
     dependencyFingerprints: options.dependencyFingerprints,
     symbolId,
+    templateHashes: options.templateHashes,
     version: options.version,
   });
 }
@@ -180,9 +186,28 @@ function stableCaptures(captures: readonly RouteCaptureFact[]): readonly RouteCa
 }
 
 function serviceIds(captures: readonly RouteCaptureFact[]): readonly string[] {
-  return [...new Set(captures.map((capture) => capture.serviceId))].sort();
+  return [...new Set(captures.flatMap((capture) => ("serviceId" in capture ? [capture.serviceId] : [])))].sort();
 }
 
 function captureFingerprint(capture: RouteCaptureFact): string {
-  return `${capture.kind}:${capture.name}:${capture.serviceId}`;
+  if ("serviceId" in capture) return `${capture.kind}:${capture.name}:${capture.serviceId}`;
+  if (capture.kind === "serializable-value") {
+    return `${capture.kind}:${capture.name}:${capture.descriptorName ?? ""}:${capture.typeText}`;
+  }
+  if (capture.kind === "template-value") {
+    return `${capture.kind}:${capture.name}:${capture.templateHash ?? ""}`;
+  }
+  return `${capture.kind}:${capture.name}:${capture.reason}:${capture.typeText ?? ""}`;
+}
+
+function routeCaptureFingerprint(captures: readonly RouteCaptureFact[]): string {
+  return `captures:${captures.map(captureFingerprint).sort().join("|")}`;
+}
+
+function routeContextFingerprint(captures: readonly RouteCaptureFact[]): string {
+  return `context:${captures
+    .filter((capture) => capture.kind === "generated-context")
+    .map((capture) => `${capture.name}:${capture.typeText}`)
+    .sort()
+    .join("|")}`;
 }

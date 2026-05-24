@@ -75,9 +75,9 @@ describe("typed/ui/Resumability", () => {
     ).toEqual([]);
   });
 
-  it("does not allow first resumable primitives to hand-author component identity", () => {
+  it("does not allow stateful primitives to hand-author component identity", () => {
     expect(
-      ["Checkbox.ts", "Disclosure.ts", "Dialog.ts", "Popover.ts", "Select.ts"].flatMap((fileName) => {
+      statefulModules.flatMap((fileName) => {
         const source = readUiSource(fileName);
         return [
           source.includes("export const component") ? `${fileName}:component` : undefined,

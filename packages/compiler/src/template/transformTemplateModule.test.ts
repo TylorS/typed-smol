@@ -152,6 +152,147 @@ describe("transformTemplateModule", () => {
     expect(result.sourceText).toBe(sourceText);
   });
 
+  it("emits compiler-derived action descriptors for component-local DOM templates", () => {
+    const sourceText = [
+      'import { EventHandler, html } from "@typed/template";',
+      'import type { Component } from "./Reactive.js";',
+      "export function Button(): Component<{}> {",
+      '  const onClick = EventHandler.action("toggle", "click", () => undefined);',
+      "  return html`<button onclick=${onClick}>Toggle</button>`;",
+      "}",
+    ].join("\n");
+
+    const result = transformTemplateModule({ moduleId: "/src/Disclosure.ts", sourceText });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.transformed).toBe(true);
+    expect(result.sourceText).toContain('html: "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\">Toggle</button>"');
+    expect(result.sourceText).toMatchInlineSnapshot(`
+      "import { EventHandler, html } from "@typed/template";
+      import type { Component } from "./Reactive.js";
+      import * as __typedTemplateEffect from "effect/Effect";
+      import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath, mountDomTemplateBindings } from "@typed/template/compiler-runtime/dom";
+
+      const __typed_template_0 = defineDomTemplate({
+        templateHash: "PcOC4mpyUh8=",
+        html: "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\">Toggle</button>",
+        mount(instance, values, runtime) {
+          return __typedTemplateEffect.all([bindEvent(getElementAtPath(instance.root, [
+        0
+      ]), "click", values[0], {
+        "component": "cmp:/src/Disclosure.ts#Button",
+        "event": "click",
+        "id": "cmp:/src/Disclosure.ts#Button:action:toggle"
+      })], { concurrency: "unbounded" });
+        }
+      });
+
+
+      export function Button(): Component<{}> {
+        const onClick = EventHandler.action("toggle", "click", () => undefined);
+        return __typed_template_0(onClick);
+      }"
+    `);
+  });
+
+  it("emits compiler-derived action descriptors for component-local server templates", () => {
+    const sourceText = [
+      'import { EventHandler, html } from "@typed/template";',
+      'import type { Component } from "./Reactive.js";',
+      "export function Button(): Component<{}> {",
+      '  const onClick = EventHandler.action("toggle", "click", () => undefined);',
+      "  return html`<button onclick=${onClick}>Toggle</button>`;",
+      "}",
+    ].join("\n");
+
+    const result = transformTemplateModule({
+      moduleId: "/src/Disclosure.ts",
+      sourceText,
+      target: "server",
+    });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.transformed).toBe(true);
+    expect(result.sourceText).toContain('"text": "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\""');
+    expect(result.sourceText).toMatchInlineSnapshot(`
+      "import { EventHandler, html } from "@typed/template";
+      import type { Component } from "./Reactive.js";
+      import { defineServerTemplate, renderServerChunks } from "@typed/template/compiler-runtime/server";
+
+      const __typed_template_0 = defineServerTemplate({
+        templateHash: "PcOC4mpyUh8=",
+        chunks: [
+        {
+          "kind": "text",
+          "text": "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\""
+        },
+        {
+          "action": {
+            "component": "cmp:/src/Disclosure.ts#Button",
+            "event": "click",
+            "id": "cmp:/src/Disclosure.ts#Button:action:toggle"
+          },
+          "kind": "slot",
+          "valueIndex": 0,
+          "valueKind": "unknown",
+          "mode": "event",
+          "name": "click"
+        },
+        {
+          "kind": "text",
+          "text": ">"
+        },
+        {
+          "kind": "text",
+          "text": "Toggle"
+        },
+        {
+          "kind": "text",
+          "text": "</button>"
+        }
+      ],
+        render(values, runtime) {
+          return renderServerChunks(values, runtime, [
+        {
+          "kind": "text",
+          "text": "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\""
+        },
+        {
+          "action": {
+            "component": "cmp:/src/Disclosure.ts#Button",
+            "event": "click",
+            "id": "cmp:/src/Disclosure.ts#Button:action:toggle"
+          },
+          "kind": "slot",
+          "valueIndex": 0,
+          "valueKind": "unknown",
+          "mode": "event",
+          "name": "click"
+        },
+        {
+          "kind": "text",
+          "text": ">"
+        },
+        {
+          "kind": "text",
+          "text": "Toggle"
+        },
+        {
+          "kind": "text",
+          "text": "</button>"
+        }
+      ]);
+        }
+      });
+
+
+      export function Button(): Component<{}> {
+        const onClick = EventHandler.action("toggle", "click", () => undefined);
+        return __typed_template_0(onClick);
+      }"
+    `);
+  });
+
   it("does not direct-transform route module template exports", () => {
     const sourceText = [
       'import { html } from "@typed/template";',
@@ -160,6 +301,24 @@ describe("transformTemplateModule", () => {
 
     const result = transformTemplateModule({
       moduleId: "/src/routes/login.ts",
+      sourceText,
+      target: "server",
+    });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.transformed).toBe(false);
+    expect(result.sourceText).toBe(sourceText);
+  });
+
+  it("uses configured route directories for route template export eligibility", () => {
+    const sourceText = [
+      'import { html } from "@typed/template";',
+      "export const template = html`<section>Login</section>`;",
+    ].join("\n");
+
+    const result = transformTemplateModule({
+      moduleId: "/src/pages/login.ts",
+      routeDirectories: ["pages"],
       sourceText,
       target: "server",
     });
@@ -199,14 +358,84 @@ describe("transformTemplateModule", () => {
 
     expect(result.diagnostics).toEqual([]);
     expect(result.transformed).toBe(true);
-    expect(result.sourceText).toContain(
-      'from "@typed/template/compiler-runtime/server"',
-    );
-    expect(result.sourceText).toContain("defineServerTemplate");
-    expect(result.sourceText).toContain("renderServerChunks");
-    expect(result.sourceText).toContain("export const view = __typed_template_0(name);");
-    expect(result.sourceText).not.toContain("html(__typed_template_0");
-    expect(result.sourceText).not.toContain("html`<main>");
+    expect(result.sourceText).toMatchInlineSnapshot(`
+      "import { html } from "@typed/template";
+      import { defineServerTemplate, renderServerChunks } from "@typed/template/compiler-runtime/server";
+
+      const __typed_template_0 = defineServerTemplate({
+        templateHash: "Y8vheQhuAQo=",
+        chunks: [
+        {
+          "kind": "text",
+          "text": "<main"
+        },
+        {
+          "kind": "text",
+          "text": ">"
+        },
+        {
+          "kind": "text",
+          "text": "Hello "
+        },
+        {
+          "kind": "text",
+          "text": "<!--n_0-->"
+        },
+        {
+          "kind": "slot",
+          "valueIndex": 0,
+          "valueKind": "unknown",
+          "mode": "node"
+        },
+        {
+          "kind": "text",
+          "text": "<!--/n_0-->"
+        },
+        {
+          "kind": "text",
+          "text": "</main>"
+        }
+      ],
+        render(values, runtime) {
+          return renderServerChunks(values, runtime, [
+        {
+          "kind": "text",
+          "text": "<main"
+        },
+        {
+          "kind": "text",
+          "text": ">"
+        },
+        {
+          "kind": "text",
+          "text": "Hello "
+        },
+        {
+          "kind": "text",
+          "text": "<!--n_0-->"
+        },
+        {
+          "kind": "slot",
+          "valueIndex": 0,
+          "valueKind": "unknown",
+          "mode": "node"
+        },
+        {
+          "kind": "text",
+          "text": "<!--/n_0-->"
+        },
+        {
+          "kind": "text",
+          "text": "</main>"
+        }
+      ]);
+        }
+      });
+
+
+      const name = 'Ada';
+      export const view = __typed_template_0(name);"
+    `);
   });
 
   it("can emit direct DOM template factories with path-bound parts", () => {
@@ -243,6 +472,41 @@ describe("transformTemplateModule", () => {
 
       const name = 'Ada';
       export const view = __typed_template_0(name);"
+    `);
+  });
+
+  it("extracts resume trigger markers from static template attributes", () => {
+    const sourceText = [
+      'import { html } from "@typed/template";',
+      "const label = 'Open';",
+      'export const view = html`<button data-typed-resume="load hover">${label}</button>`;',
+    ].join("\n");
+
+    const result = transformTemplateModule({
+      moduleId: "/src/view.ts",
+      sourceText,
+      target: "dom",
+    });
+
+    expect(result.sourceText).toMatchInlineSnapshot(`
+      "import { html } from "@typed/template";
+      import * as __typedTemplateEffect from "effect/Effect";
+      import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, bootRouteResume, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath, mountDomTemplateBindings } from "@typed/template/compiler-runtime/dom";
+
+      const __typed_template_0 = defineDomTemplate({
+        templateHash: "qUEsVcw/6K8=",
+        html: "<button data-typed-resume=\\"load hover\\"><!--n_0--></button>",
+        mount(instance, values, runtime) {
+          return __typedTemplateEffect.all([bindNode(getCommentAtPath(instance.root, [
+        0,
+        0
+      ]), values[0], "unknown", runtime), bootRouteResume(instance.root, runtime)], { concurrency: "unbounded" });
+        }
+      });
+
+
+      const label = 'Open';
+      export const view = __typed_template_0(label);"
     `);
   });
 

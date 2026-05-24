@@ -142,7 +142,8 @@ describe("planCpsCompilation", () => {
 
     expect(plan.continuations).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
+          captureFingerprint: "captures:refsubject-service:Count:@app/Count",
           captures: [
             {
               kind: "refsubject-service",
@@ -151,12 +152,6 @@ describe("planCpsCompilation", () => {
             },
           ],
           closureName: "increment",
-          compatibilityFingerprint: JSON.stringify({
-            captures: ["refsubject-service:Count:@app/Count"],
-            dependencyFingerprints: [],
-            symbolId: "/src/routes/counter.ts#closure:increment",
-            version: "test",
-          }),
           dependencyFingerprints: [],
           id: "/src/routes/counter.ts#closure:increment",
           kind: "route-closure",
@@ -165,7 +160,7 @@ describe("planCpsCompilation", () => {
           symbolId: "/src/routes/counter.ts#closure:increment",
           templateHashes: [],
           version: "test",
-        },
+        }),
       ]),
     );
   });

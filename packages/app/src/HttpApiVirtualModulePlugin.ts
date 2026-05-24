@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
+import process from "node:process";
 import {
   pathIsUnderBase,
   resolvePathUnderBase,
@@ -19,7 +20,10 @@ import {
 } from "./internal/emitHttpApiSource.js";
 import { extractEndpointLiterals } from "./internal/extractHttpApiLiterals.js";
 import { validatePrefixConventions } from "./internal/validatePrefixConventions.js";
-import { buildHttpApiOpenApiPlan } from "./internal/httpapiOpenApiPlan.js";
+import {
+  buildHttpApiOpenApiPlan,
+  type HttpApiOpenApiDefaults,
+} from "./internal/httpapiOpenApiPlan.js";
 import { dependencyLayerType, TypeModuleSource, typeTuple } from "./internal/typeModuleSource.js";
 import {
   getCallableReturnType,
@@ -31,10 +35,12 @@ import type {
   ImportInfo,
   TypeInfoApi,
   TypeInfoFileSnapshot,
+  VirtualModuleBuildContext,
   VirtualModuleBuildError,
   VirtualModulePlugin,
 } from "@typed/virtual-modules";
 import { HTTPAPI_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
+import { findTypedConfigRoot } from "./config/loadTypedConfig.js";
 
 const DEFAULT_PREFIX = "typed:api";
 const DEFAULT_PLUGIN_NAME = "httpapi-virtual-module";
@@ -53,12 +59,24 @@ const API_FILE_GLOBS: readonly string[] = [
 ];
 
 const REQUIRED_ENDPOINT_EXPORTS = ["route", "method", "handler"] as const;
+const CLIENT_SAFE_EXPORTS = new Set([
+  "Api",
+  "DependenciesLayer",
+  "OpenApi",
+  "Client",
+  "makeClient",
+  "makeClientWith",
+  "makeUrlBuilder",
+  "makeTypedClient",
+  "makeTypedClientWith",
+]);
 
 export interface HttpApiVirtualModulePluginOptions {
   readonly prefix?: string;
   readonly name?: string;
   /** HTTP path prefix for all endpoints when conventions do not define one (e.g. "/api"). */
   readonly pathPrefix?: `/${string}`;
+  readonly openapi?: HttpApiOpenApiDefaults;
 }
 
 export type HttpApiVirtualModuleMode = "full" | "client";
@@ -179,6 +197,18 @@ export function resolveHttpApiTargetDirectory(
   }
 
   return { ok: true, targetDirectory: toPosixPath(resolved.path), mode: parsed.mode };
+}
+
+function httpApiEmitModeFor(
+  mode: HttpApiVirtualModuleMode,
+  context: VirtualModuleBuildContext | undefined,
+): "full" | "client" {
+  if (mode === "client") return "client";
+  if (!context || context.requestedExports.kind === "all") return "full";
+  for (const name of context.requestedExports.names) {
+    if (!CLIENT_SAFE_EXPORTS.has(name)) return "full";
+  }
+  return "client";
 }
 
 function isExistingDirectory(absolutePath: string): boolean {
@@ -813,7 +843,7 @@ export const createHttpApiVirtualModulePlugin = (
       if (id === API_TYPES_MODULE_ID && importer) return true;
       return Boolean(importer) && isHttpApiVirtualModuleId(id, prefix);
     },
-    build(id, importer, api) {
+    build(id, importer, api, context) {
       if (id === API_TYPES_MODULE_ID) {
         return emitApiTypesModule(importer, api, name);
       }
@@ -883,7 +913,11 @@ export const createHttpApiVirtualModulePlugin = (
         snapshotsByRelativePath,
         api,
       );
-      const openapiPlan = buildHttpApiOpenApiPlan({ tree, snapshotsByRelativePath });
+      const openapiPlan = buildHttpApiOpenApiPlan({
+        tree,
+        snapshotsByRelativePath,
+        defaults: options.openapi,
+      });
       const allViolations = [
         ...contractViolations,
         ...prefixViolations,
@@ -938,13 +972,14 @@ export const createHttpApiVirtualModulePlugin = (
         tree,
         targetDirectory: resolved.targetDirectory,
         importer,
+        projectRoot: findTypedConfigRoot(importer) ?? process.cwd(),
         extractedLiteralsByPath,
         optionalExportsByPath,
         handlerIsRawByPath,
         prefixByScope,
         pathPrefix: options.pathPrefix,
         openapiPlan,
-        mode: resolved.mode === "client" ? "client" : "full",
+        mode: httpApiEmitModeFor(resolved.mode, context),
         groupNamesByPath,
         exportExpressionsByPath,
       });

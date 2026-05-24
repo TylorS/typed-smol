@@ -10,9 +10,8 @@ describe("runtime template compiler example", () => {
 
     const result = await runRuntimeTemplateCompilerExample({ globalObject, root });
 
-    expect(result.serverHtml).toContain("<!--t_");
-    expect(result.serverHtml).toContain("<main><p>Count: <!--n_0-->1<!--/n_0--></p></main>");
-    expect(result.domHtml).toBe("<main><p>Count: 1<!--/n_0--></p></main>");
+    expect(result.serverHtml).toMatchInlineSnapshot(`"<!--t_fRRFUsDffAM=--><main><p>Count: <!--n_0-->1<!--/n_0--></p></main><!--/t_fRRFUsDffAM=-->"`);
+    expect(result.domHtml).toMatchInlineSnapshot(`"<main><p>Count: 1<!--/n_0--></p></main>"`);
     expect(result.hmrStateReused).toBe(true);
     expect(result.hmrServiceIds).toEqual([
       "@example/runtime-template-compiler/Count",

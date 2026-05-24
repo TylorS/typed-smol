@@ -18,8 +18,6 @@ export const data = DataAttr.schema({
   size: Schema.NumberFromString,
 });
 
-export const component = "typed/ui/Collection";
-
 export function makeState<Value = unknown>(
   initial: State<Value> = [],
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {

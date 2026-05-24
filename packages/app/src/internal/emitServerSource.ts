@@ -5,6 +5,7 @@ export interface EmitServerSourceInput {
   readonly parsed: Extract<TypedVirtualModuleId, { readonly kind: "server" }>;
   readonly id: string;
   readonly companions?: readonly ServerCompanionImport[];
+  readonly projectRoot: string;
 }
 
 type OrderedImport =
@@ -32,7 +33,7 @@ export function emitServerSource(input: EmitServerSourceInput): string {
     ...emitCompanionImports(input.companions ?? []),
     emitTypes(),
     emitConstants(imports, pages),
-    emitExports(input.companions ?? []),
+    emitExports(input.companions ?? [], input.projectRoot),
   ].join("\n");
 }
 
@@ -158,7 +159,7 @@ function pageEntrySource(page: TypedServerPage, index: number): string {
   ].join("");
 }
 
-function emitExports(companions: readonly ServerCompanionImport[]): string {
+function emitExports(companions: readonly ServerCompanionImport[], projectRoot: string): string {
   const pagesCompanion = companions.find((companion) => companion.name === "html");
   const dependenciesCompanion = companions.find((companion) => companion.name === "dependencies");
   const errorsCompanion = companions.find((companion) => companion.name === "errors");
@@ -179,7 +180,7 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     'const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");',
     "const dev = (import.meta as { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;",
     "const typedRuntimeConfig = resolveRuntimeConfig(typedConfig, dev);",
-    "const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: process.cwd(), clientOutDir, dev });",
+    `const staticAssetsLayer = TypedHttpServer.staticAssets({ projectRoot: ${JSON.stringify(projectRoot)}, clientOutDir, dev });`,
     "const frameworkLayers = [StaticHtmlRenderTemplate, Ids.Default] as const;",
     "const appLayers = [...frameworkLayers, ...companionLayers] as const;",
     "const appLayerBase = Layer.mergeAll(Layer.empty, ...apiLayers, ...routeLayers, staticAssetsLayer);",
@@ -192,7 +193,7 @@ function emitExports(companions: readonly ServerCompanionImport[]): string {
     "  const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);",
     "  return composeWithLayers(",
     "    HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({",
-    "    projectRoot: process.cwd(),",
+    `    projectRoot: ${JSON.stringify(projectRoot)},`,
     "    dev,",
     "    host: runtimeConfig.host,",
     "    port: runtimeConfig.port,",

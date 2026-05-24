@@ -23,8 +23,6 @@ export const data = DataAttr.schema({
   open: Schema.Boolean,
 });
 
-export const component = "typed/ui/Hovercard";
-
 export function makeState(
   initial: InitialState,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -56,7 +54,6 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
   const props = {
     "aria-controls": id,
     "aria-expanded": open,
-    "data-ui": component,
     onfocus: onFocus,
     onblur: onBlur,
     onmouseenter: onMouseEnter,
@@ -114,7 +111,6 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     id,
     role: "dialog",
     popover: "auto",
-    "data-ui": component,
     "data-open": open,
     ontoggle: onToggle,
     ref: NativePopover.register(options.state),

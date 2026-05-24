@@ -42,8 +42,6 @@ export const data = DataAttr.schema({
 type OptionalString = AnyValue<string | undefined>;
 type RequiredString = AnyValue<string>;
 
-export const component = "typed/ui/Combobox";
-
 export function makeState<Value extends string = string>(
   initial: InitialState<NoInfer<Value>> = {},
 ): Effect.Effect<RefSubject.RefSubject<State<Value>>, never, Scope.Scope> {
@@ -137,7 +135,6 @@ function inputProps<Value extends string, E, R, E2, R2>(
   return {
     id: options.id,
     role: "combobox",
-    "data-ui": component,
     "aria-autocomplete": ariaAutocomplete(options.autocomplete),
     "aria-controls": RefSubject.map(options.state, (state) => state.id),
     "aria-expanded": RefSubject.map(options.state, (state) => state.open),
@@ -248,7 +245,6 @@ export function List<
   const props = {
     id,
     role: options.role ?? "listbox",
-    "data-ui": component,
     ".data": { open },
   };
   return Dom.renderHost<HTMLDivElement, Opts>(options, props, options.content, Dom.renderDivHost);
@@ -269,7 +265,6 @@ export function Popover<
     id,
     role: options.role ?? "listbox",
     popover: "auto",
-    "data-ui": component,
     ".data": { open },
     ontoggle: onToggle,
     ref: NativePopover.register(options.state),

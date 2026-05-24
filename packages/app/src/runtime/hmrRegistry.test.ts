@@ -4,6 +4,7 @@ import {
   disposeHmrState,
   getOrCreateHmrState,
   getOrCreateHmrStateEffect,
+  getOrCreateRefSubjectHmrService,
   pruneHmrState,
   typedHmrRegistryKey,
   type HmrStateDescriptor,
@@ -154,5 +155,34 @@ describe("hmrRegistry", () => {
 
     expect(second).toBe(first);
     expect(created).toEqual([1]);
+  });
+
+  it("reuses compatible RefSubject service state through the dedicated helper", () => {
+    const globalObject: Record<PropertyKey, unknown> = {};
+    const first = { current: 1 };
+    const created = getOrCreateRefSubjectHmrService(descriptor(), () => first, { globalObject });
+    const reused = getOrCreateRefSubjectHmrService(descriptor(), () => ({ current: 2 }), {
+      globalObject,
+    });
+
+    expect(created).toBe(first);
+    expect(reused).toBe(first);
+  });
+
+  it("disposes incompatible RefSubject service state through the dedicated helper", () => {
+    const disposed: string[] = [];
+    const globalObject: Record<PropertyKey, unknown> = {};
+    const first = getOrCreateRefSubjectHmrService(descriptor(), () => ({ current: 1 }), {
+      globalObject,
+      onDispose: () => disposed.push("count"),
+    });
+    const next = getOrCreateRefSubjectHmrService(
+      descriptor({ contextFingerprint: "context:changed" }),
+      () => ({ current: 2 }),
+      { globalObject },
+    );
+
+    expect(next).not.toBe(first);
+    expect(disposed).toEqual(["count"]);
   });
 });

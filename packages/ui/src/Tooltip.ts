@@ -24,8 +24,6 @@ export const data = DataAttr.schema({
   open: Schema.Boolean,
 });
 
-export const component = "typed/ui/Tooltip";
-
 export function makeState(
   initial: InitialState,
 ): Effect.Effect<RefSubject.RefSubject<State>, never, Scope.Scope> {
@@ -73,7 +71,6 @@ export function Anchor<const E, const R, const Opts extends AnchorOptions<NoInfe
 
     const props = {
       "aria-describedby": id,
-      "data-ui": component,
       onfocus: onFocus,
       onblur: onBlur,
       onmouseenter: onMouseEnter,
@@ -106,7 +103,6 @@ export function Content<const E, const R, const Opts extends ContentOptions<NoIn
     id,
     role: "tooltip",
     popover: "hint",
-    "data-ui": component,
     "data-placement": options.placement,
     "data-open": open,
     "?hidden": hidden,

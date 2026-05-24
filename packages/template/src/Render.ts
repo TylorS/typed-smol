@@ -645,15 +645,12 @@ function setupRenderProperties<E = never, R = never>(
   for (const [key, value] of Object.entries(properties)) {
     const index = ctx.dynamicIndex++;
     const part = makePropertiesPart(keyToPartType(key), index);
-    const effect = setupRenderPart(part, element, { ...ctx, values: makeArrayLike(index, value) });
+    const effect = setupRenderPart(part, element, withValues(ctx, makeArrayLike(index, value)));
     if (effect !== undefined) {
       effects.push(effect);
     }
   }
-  if (effects.length > 0) {
-    ctx.expected += effects.length;
-    return Effect.all(effects, { concurrency: "unbounded" });
-  }
+  if (effects.length > 0) return Effect.all(effects, { concurrency: "unbounded" });
 }
 
 type PartType = ReturnType<typeof keyToPartType>;
@@ -806,6 +803,28 @@ function makeArrayLike<A>(index: number, value: A): ArrayLike<A> {
   };
 }
 
+function withValues<R>(
+  ctx: TemplateContext<R>,
+  values: ArrayLike<Renderable<unknown, any, any>>,
+): TemplateContext<R> {
+  return {
+    ...ctx,
+    values,
+    get expected() {
+      return ctx.expected;
+    },
+    set expected(value) {
+      ctx.expected = value;
+    },
+    get dynamicIndex() {
+      return ctx.dynamicIndex;
+    },
+    set dynamicIndex(value) {
+      ctx.dynamicIndex = value;
+    },
+  };
+}
+
 export function attemptHydration(
   ctx: TemplateContext,
   hash: string,
@@ -848,16 +867,11 @@ function setupDataset<E, R>(
     for (const [k, v] of Object.entries(value)) {
       const index = ctx.dynamicIndex++;
       const part = makePropertiesPart(["attr", `data-${k}`], index);
-      const effect = setupRenderPart<E, R>(part, element, {
-        ...ctx,
-        values: makeArrayLike(index, v),
-      });
+      const effect = setupRenderPart<E, R>(part, element, withValues(ctx, makeArrayLike(index, v)));
       if (effect !== undefined) {
         effects.push(effect);
       }
     }
-
-    ctx.expected += effects.length;
 
     return Effect.all(effects, { concurrency: "unbounded" });
   }

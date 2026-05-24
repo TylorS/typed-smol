@@ -75,6 +75,52 @@ describe("Html", () => {
     ).resolves.toBe("<p>Done</p>");
   });
 
+  it("renders to string once a structurally final html event is emitted", async () => {
+    const event = { last: true, toString: () => "<p>Done</p>" } as RenderEvent;
+    const stream = Fx.mergeAll(Fx.succeed(event), Fx.never as Fx.Fx<RenderEvent>);
+
+    await expect(
+      Promise.race([
+        Effect.runPromise(renderToHtmlString(stream)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("renderToHtmlString did not stop at last event")), 100),
+        ),
+      ]),
+    ).resolves.toBe("<p>Done</p>");
+  });
+
+  it("renders to string when an ordered final chunk is followed by a live producer", async () => {
+    const stream = Fx.mergeOrdered(
+      Fx.succeed(HtmlRenderEvent("<p>", false)),
+      Fx.mergeAll(Fx.succeed(HtmlRenderEvent("Done</p>", true)), Fx.never as Fx.Fx<RenderEvent>),
+    );
+
+    await expect(
+      Promise.race([
+        Effect.runPromise(renderToHtmlString(stream)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("renderToHtmlString did not stop at last event")), 100),
+        ),
+      ]),
+    ).resolves.toBe("<p>Done</p>");
+  });
+
+  it("renders to string under a scope when the final event is followed by a live producer", async () => {
+    const stream = Fx.mergeAll(
+      Fx.succeed(HtmlRenderEvent("<p>Done</p>", true)),
+      Fx.never as Fx.Fx<RenderEvent>,
+    );
+
+    await expect(
+      Promise.race([
+        Effect.runPromise(renderToHtmlString(stream).pipe(Effect.scoped)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("renderToHtmlString scoped observer stayed alive")), 100),
+        ),
+      ]),
+    ).resolves.toBe("<p>Done</p>");
+  });
+
   it("renders template with static attribute", () =>
     Effect.gen(function* () {
       expect(
@@ -89,9 +135,47 @@ describe("Html", () => {
           >Save</button>`,
       );
 
-      expect(rendered).toContain('type="button"');
-      expect(rendered).not.toContain("onclick");
+      expect(rendered).toMatchInlineSnapshot(`"<button  type="button">Save</button>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("skips spread event handlers with listener options in static html", async () => {
+    await expect(
+      Promise.race([
+        Effect.runPromise(
+          getStaticHtml(
+            html`<button
+              ...${{
+                type: "button",
+                onclick: EventHandler.make(() => Effect.void, { preventDefault: true }),
+              }}
+            >
+              Save
+            </button>`,
+          ),
+        ),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("event handler options were rendered as props")), 100),
+        ),
+      ]),
+    ).resolves.toMatchInlineSnapshot(`
+      "<button  type="button">
+                    Save
+                  </button>"
+    `);
+  });
+
+  it("finishes static html when nested spread properties end with skipped values", async () => {
+    const child = html`<button ...${{ type: "button", onclick: undefined }}>Save</button>`;
+
+    await expect(
+      Promise.race([
+        Effect.runPromise(getStaticHtml(html`<section>${child}</section>`)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("static nested spread render did not finish")), 100),
+        ),
+      ]),
+    ).resolves.toMatchInlineSnapshot(`"<section><button  type="button">Save</button></section>"`);
+  });
 
   it("skips event handler attributes in static html", () =>
     Effect.gen(function* () {
@@ -99,7 +183,7 @@ describe("Html", () => {
         html`<form onsubmit=${EventHandler.make(() => Effect.void)}></form>`,
       );
 
-      expect(rendered).not.toContain("onsubmit");
+      expect(rendered).toMatchInlineSnapshot(`"<form></form>"`);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders template with primitive attribute interpolation", () =>

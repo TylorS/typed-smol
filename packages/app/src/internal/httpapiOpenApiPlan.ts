@@ -29,18 +29,26 @@ export interface HttpApiOpenApiPlan {
   readonly diagnostics: readonly OpenApiConfigDiagnostic[];
 }
 
+export interface HttpApiOpenApiDefaults {
+  readonly annotations?: Record<string, unknown>;
+  readonly generation?: OpenApiGenerationConfig;
+  readonly exposure?: OpenApiExposureConfig;
+}
+
 export function buildHttpApiOpenApiPlan(input: {
   readonly tree: HttpApiDescriptorTree;
   readonly snapshotsByRelativePath: ReadonlyMap<string, TypeInfoFileSnapshot>;
+  readonly defaults?: HttpApiOpenApiDefaults;
 }): HttpApiOpenApiPlan {
   const diagnostics: OpenApiConfigDiagnostic[] = [];
   const apiRoot = input.tree.conventions.find((convention) => convention.kind === "api_root");
   const apiRootSnapshot = apiRoot ? input.snapshotsByRelativePath.get(apiRoot.path) : undefined;
   const extracted = apiRootSnapshot ? extractOpenApiConfig(apiRootSnapshot) : null;
+  const rawConfig = mergeOpenApiConfig(input.defaults, extracted ?? undefined);
   const normalized = normalizeOpenApiConfig("api", {
-    annotations: extracted?.annotations,
-    generation: extracted?.generation,
-    exposure: extracted?.exposure,
+    annotations: rawConfig.annotations,
+    generation: rawConfig.generation,
+    exposure: rawConfig.exposure,
   });
   diagnostics.push(...normalized.diagnostics);
   const groupAnnotationsByPath = new Map<string, OpenApiAnnotationsConfig>();
@@ -59,6 +67,38 @@ export function buildHttpApiOpenApiPlan(input: {
     endpointAnnotationsByPath,
     diagnostics,
   };
+}
+
+function mergeOpenApiConfig(
+  defaults: HttpApiOpenApiDefaults | undefined,
+  override: ExtractedOpenApiConfig | undefined,
+): HttpApiOpenApiDefaults {
+  return {
+    annotations: { ...defaults?.annotations, ...override?.annotations },
+    generation: { ...defaults?.generation, ...override?.generation },
+    exposure: mergeExposure(defaults?.exposure, override?.exposure),
+  };
+}
+
+function mergeExposure(
+  defaults: OpenApiExposureConfig | undefined,
+  override: OpenApiExposureConfig | undefined,
+): OpenApiExposureConfig {
+  return {
+    ...defaults,
+    ...override,
+    scalar: mergeScalar(defaults?.scalar, override?.scalar),
+  };
+}
+
+function mergeScalar(
+  defaults: OpenApiExposureConfig["scalar"] | undefined,
+  override: OpenApiExposureConfig["scalar"] | undefined,
+): OpenApiExposureConfig["scalar"] | undefined {
+  if (override === false || defaults === false) return override ?? defaults;
+  if (override === undefined) return defaults;
+  if (defaults === undefined) return override;
+  return { ...defaults, ...override };
 }
 
 function collectGroupAnnotations(

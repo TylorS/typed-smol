@@ -1,10 +1,8 @@
 import process from "node:process";
 import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
-import { existsSync, statSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
 import ts from "typescript";
 import type { LoadTypedConfigResult } from "./config/index.js";
-import { loadTypedConfig } from "./config/index.js";
+import { findTypedConfigRoot, loadTypedConfig } from "./config/index.js";
 import { emitConfigSource } from "./internal/emitConfigSource.js";
 import { parseTypedVirtualModuleId } from "./internal/frameworkVirtualModuleId.js";
 
@@ -51,20 +49,7 @@ function defaultLoadConfig(importer: string): LoadTypedConfigResult {
 }
 
 function projectRootForImporter(importer: string): string {
-  return findNearestConfigRoot(importer) ?? process.cwd();
-}
-
-function findNearestConfigRoot(importer: string): string | undefined {
-  let current = dirname(isAbsolute(importer) ? importer : resolve(process.cwd(), importer));
-
-  while (true) {
-    const candidate = resolve(current, "typed.config.ts");
-    if (existsSync(candidate) && statSync(candidate).isFile()) return current;
-
-    const parent = dirname(current);
-    if (parent === current) return undefined;
-    current = parent;
-  }
+  return findTypedConfigRoot(importer) ?? process.cwd();
 }
 
 function buildError(code: string, message: string, pluginName: string): VirtualModuleBuildError {

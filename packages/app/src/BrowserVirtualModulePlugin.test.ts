@@ -43,53 +43,168 @@ describe("BrowserVirtualModulePlugin", () => {
     );
   });
 
+  it("uses configured runtime defaults for bare typed:browser ids", () => {
+    const plugin = createBrowserVirtualModulePlugin({
+      runtimeDefaults: {
+        base: "/app",
+        mode: "mpa",
+        name: "web",
+        root: "#shell",
+        routes: ["./pages"],
+      },
+    });
+
+    expect(plugin.shouldResolve("typed:browser", "/project/src/entry.ts")).toBe(true);
+    expect(plugin.build("typed:browser", "/project/src/entry.ts", {} as never)).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import Routes0 from "typed:router?dir=./pages";
+      type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type BrowserLayerInputs = readonly LayerOrGroup[];
+      type BrowserBaseLayer = ReturnType<typeof makeRenderLayer>;
+      type BrowserCompanionLayers = typeof companionLayers;
+      type BrowserAllLayers<Layers extends BrowserLayerInputs> = readonly [...BrowserCompanionLayers, ...Layers];
+      type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<BrowserAllLayers<Layers>, BrowserBaseLayer>;
+      type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserLayerWith<Layers>;
+      type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
+      type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly window?: Window;
+        readonly root?: string | HTMLElement;
+        readonly layers?: Layers;
+        readonly onError?: BrowserErrorHandler<Layer.Error<BrowserLayerWith<Layers>>>;
+      }
+      type BrowserOptionsWithLayers<Layers extends BrowserLayerInputs> = BrowserOptions<Layers> & { readonly layers: Layers };
+      const routeModules = [Routes0];
+      const companionLayers = [] as const;
+      const companionOnError = undefined;
+      export const Routes = Routes0;
+      export const BrowserRuntime = {
+        routeModules,
+        root: "#shell",
+        base: "/app",
+        mode: "mpa",
+        name: "web",
+        companionLayers,
+      };
+      function makeRenderLayer(win: Window, root: HTMLElement) {
+        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+          Layer.provideMerge(TypedRouter.BrowserRouter(win)),
+        );
+      }
+      export function hydrate(options?: BrowserOptions<readonly []>): BrowserLayerWith<readonly []>;
+      export function hydrate<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): BrowserLayerWith<Layers>;
+      export function hydrate(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserHydratedLayer<BrowserLayerInputs> {
+        return hydrateFromOptions(options);
+      }
+      function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
+        const win = options.window ?? window;
+        const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
+        const renderLayer = makeRenderLayer(win, root);
+        return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
+      }
+      export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
+      export function run<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<BrowserLayerWith<Layers>>, Layer.Services<BrowserLayerWith<Layers>>>;
+      export function run(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserRunEffect<BrowserLayerInputs> {
+        const BrowserLayer = hydrateFromOptions(options);
+        const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);
+        return program;
+      }
+      function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {
+        if (typeof root !== "string") return root;
+        const element = document.querySelector(root);
+        if (element instanceof HTMLElement) return element;
+        throw new Error(\`typed:browser root not found: \${root}\`);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: BrowserErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: BrowserErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }"
+    `);
+  });
+
   it("emits composable run, hydrate, and BrowserRuntime exports for wildcard routes", () => {
     const source = buildBrowser("typed:browser?routes=*") as string;
 
-    expect(source).not.toContain("// @ts-nocheck");
-    expect(source).toContain('import * as Cause from "effect/Cause";');
-    expect(source).toContain('import * as Effect from "effect/Effect";');
-    expect(source).toContain('import * as Layer from "effect/Layer";');
-    expect(source).toContain(
-      'import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
-    );
-    expect(source).not.toContain("TypedAppRuntime");
-    expect(source).not.toContain('from "@typed/app";');
-    expect(source).toContain('import * as TypedRouter from "@typed/router";');
-    expect(source).not.toContain('import { Fx } from "@typed/fx";');
-    expect(source).not.toContain('import { DomRenderTemplate, render } from "@typed/template";');
-    expect(source).toContain('import Routes0 from "typed:router?dir=*";');
-    expect(source).not.toContain("route-handlers:");
-    expect(source).toContain("export const Routes = Routes0;");
-    expect(source).not.toContain("export const Routes = TypedRouter.merge(Routes0);");
-    expect(source).toContain("export const BrowserRuntime =");
-    expect(source).not.toContain("type BrowserProgram");
-    expect(source).toContain("type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;");
-    expect(source).toContain("type BrowserLayerInputs = readonly LayerOrGroup[];");
-    expect(source).toContain(
-      "type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;",
-    );
-    expect(source).toContain("function makeRenderLayer");
-    expect(source).toContain("export function hydrate");
-    expect(source).toContain("export function run");
-    expect(source).toContain("Layer.effectDiscard(mountRuntime(Routes, { root }))");
-    expect(source).toContain("Layer.launch(BrowserLayer");
-    expect(source).toContain("Effect.tapCause");
-    expect(source).toContain("function withErrorHandling<A, E, R>");
-    expect(source).not.toContain("Effect.Effect<void, any, never>");
-    expect(source).not.toContain("Context.empty() as");
-    expect(source).not.toContain("Cause.Cause<any>");
-    expect(source).toContain("options.layers");
-    expect(source).toContain("options.onError");
-    expect(source).not.toContain("options.run");
-    expect(source).not.toContain("readonly run?");
-    expect(source).not.toContain("Effect.Effect<never, unknown");
-    expect(source).not.toContain("Effect.Effect<unknown, unknown");
-    expect(source).not.toContain("Effect.succeed(BrowserRuntime)");
-    expect(source).not.toContain("export async function run");
-    expect(source).toContain('root: "#typed-root"');
-    expect(source).toContain('base: "/"');
-    expect(source).not.toContain('mode: "hydrate"');
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import Routes0 from "typed:router?dir=*";
+      type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type BrowserLayerInputs = readonly LayerOrGroup[];
+      type BrowserBaseLayer = ReturnType<typeof makeRenderLayer>;
+      type BrowserCompanionLayers = typeof companionLayers;
+      type BrowserAllLayers<Layers extends BrowserLayerInputs> = readonly [...BrowserCompanionLayers, ...Layers];
+      type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<BrowserAllLayers<Layers>, BrowserBaseLayer>;
+      type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserLayerWith<Layers>;
+      type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
+      type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly window?: Window;
+        readonly root?: string | HTMLElement;
+        readonly layers?: Layers;
+        readonly onError?: BrowserErrorHandler<Layer.Error<BrowserLayerWith<Layers>>>;
+      }
+      type BrowserOptionsWithLayers<Layers extends BrowserLayerInputs> = BrowserOptions<Layers> & { readonly layers: Layers };
+      const routeModules = [Routes0];
+      const companionLayers = [] as const;
+      const companionOnError = undefined;
+      export const Routes = Routes0;
+      export const BrowserRuntime = {
+        routeModules,
+        root: "#typed-root",
+        base: "/",
+        name: undefined,
+        companionLayers,
+      };
+      function makeRenderLayer(win: Window, root: HTMLElement) {
+        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+          Layer.provideMerge(TypedRouter.BrowserRouter(win)),
+        );
+      }
+      export function hydrate(options?: BrowserOptions<readonly []>): BrowserLayerWith<readonly []>;
+      export function hydrate<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): BrowserLayerWith<Layers>;
+      export function hydrate(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserHydratedLayer<BrowserLayerInputs> {
+        return hydrateFromOptions(options);
+      }
+      function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
+        const win = options.window ?? window;
+        const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
+        const renderLayer = makeRenderLayer(win, root);
+        return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
+      }
+      export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
+      export function run<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<BrowserLayerWith<Layers>>, Layer.Services<BrowserLayerWith<Layers>>>;
+      export function run(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserRunEffect<BrowserLayerInputs> {
+        const BrowserLayer = hydrateFromOptions(options);
+        const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);
+        return program;
+      }
+      function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {
+        if (typeof root !== "string") return root;
+        const element = document.querySelector(root);
+        if (element instanceof HTMLElement) return element;
+        throw new Error(\`typed:browser root not found: \${root}\`);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: BrowserErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: BrowserErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }"
+    `);
   });
 
   it("type-checks generated browser entry source without ts-nocheck", () => {
@@ -132,7 +247,79 @@ describe("BrowserVirtualModulePlugin", () => {
     expect(source.indexOf('import Routes0 from "typed:router?dir=./main";')).toBeLessThan(
       source.indexOf('import Routes1 from "typed:router?dir=./admin";'),
     );
-    expect(source).toContain("export const Routes = TypedRouter.merge(Routes0, Routes1);");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import Routes0 from "typed:router?dir=./main";
+      import Routes1 from "typed:router?dir=./admin";
+      type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type BrowserLayerInputs = readonly LayerOrGroup[];
+      type BrowserBaseLayer = ReturnType<typeof makeRenderLayer>;
+      type BrowserCompanionLayers = typeof companionLayers;
+      type BrowserAllLayers<Layers extends BrowserLayerInputs> = readonly [...BrowserCompanionLayers, ...Layers];
+      type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<BrowserAllLayers<Layers>, BrowserBaseLayer>;
+      type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserLayerWith<Layers>;
+      type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
+      type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly window?: Window;
+        readonly root?: string | HTMLElement;
+        readonly layers?: Layers;
+        readonly onError?: BrowserErrorHandler<Layer.Error<BrowserLayerWith<Layers>>>;
+      }
+      type BrowserOptionsWithLayers<Layers extends BrowserLayerInputs> = BrowserOptions<Layers> & { readonly layers: Layers };
+      const routeModules = [Routes0, Routes1];
+      const companionLayers = [] as const;
+      const companionOnError = undefined;
+      export const Routes = TypedRouter.merge(Routes0, Routes1);
+      export const BrowserRuntime = {
+        routeModules,
+        root: "#typed-root",
+        base: "/",
+        name: undefined,
+        companionLayers,
+      };
+      function makeRenderLayer(win: Window, root: HTMLElement) {
+        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+          Layer.provideMerge(TypedRouter.BrowserRouter(win)),
+        );
+      }
+      export function hydrate(options?: BrowserOptions<readonly []>): BrowserLayerWith<readonly []>;
+      export function hydrate<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): BrowserLayerWith<Layers>;
+      export function hydrate(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserHydratedLayer<BrowserLayerInputs> {
+        return hydrateFromOptions(options);
+      }
+      function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
+        const win = options.window ?? window;
+        const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
+        const renderLayer = makeRenderLayer(win, root);
+        return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
+      }
+      export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
+      export function run<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<BrowserLayerWith<Layers>>, Layer.Services<BrowserLayerWith<Layers>>>;
+      export function run(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserRunEffect<BrowserLayerInputs> {
+        const BrowserLayer = hydrateFromOptions(options);
+        const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);
+        return program;
+      }
+      function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {
+        if (typeof root !== "string") return root;
+        const element = document.querySelector(root);
+        if (element instanceof HTMLElement) return element;
+        throw new Error(\`typed:browser root not found: \${root}\`);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: BrowserErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: BrowserErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }"
+    `);
   });
 
   it("emits root, base, mode, and name options", () => {
@@ -140,10 +327,79 @@ describe("BrowserVirtualModulePlugin", () => {
       "typed:browser?routes=./routes&root=%23shell&base=/admin&mode=mpa&name=admin",
     ) as string;
 
-    expect(source).toContain('root: "#shell"');
-    expect(source).toContain('base: "/admin"');
-    expect(source).toContain('mode: "mpa"');
-    expect(source).toContain('name: "admin"');
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import Routes0 from "typed:router?dir=./routes";
+      type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type BrowserLayerInputs = readonly LayerOrGroup[];
+      type BrowserBaseLayer = ReturnType<typeof makeRenderLayer>;
+      type BrowserCompanionLayers = typeof companionLayers;
+      type BrowserAllLayers<Layers extends BrowserLayerInputs> = readonly [...BrowserCompanionLayers, ...Layers];
+      type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<BrowserAllLayers<Layers>, BrowserBaseLayer>;
+      type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserLayerWith<Layers>;
+      type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
+      type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly window?: Window;
+        readonly root?: string | HTMLElement;
+        readonly layers?: Layers;
+        readonly onError?: BrowserErrorHandler<Layer.Error<BrowserLayerWith<Layers>>>;
+      }
+      type BrowserOptionsWithLayers<Layers extends BrowserLayerInputs> = BrowserOptions<Layers> & { readonly layers: Layers };
+      const routeModules = [Routes0];
+      const companionLayers = [] as const;
+      const companionOnError = undefined;
+      export const Routes = Routes0;
+      export const BrowserRuntime = {
+        routeModules,
+        root: "#shell",
+        base: "/admin",
+        mode: "mpa",
+        name: "admin",
+        companionLayers,
+      };
+      function makeRenderLayer(win: Window, root: HTMLElement) {
+        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+          Layer.provideMerge(TypedRouter.BrowserRouter(win)),
+        );
+      }
+      export function hydrate(options?: BrowserOptions<readonly []>): BrowserLayerWith<readonly []>;
+      export function hydrate<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): BrowserLayerWith<Layers>;
+      export function hydrate(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserHydratedLayer<BrowserLayerInputs> {
+        return hydrateFromOptions(options);
+      }
+      function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
+        const win = options.window ?? window;
+        const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
+        const renderLayer = makeRenderLayer(win, root);
+        return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
+      }
+      export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
+      export function run<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<BrowserLayerWith<Layers>>, Layer.Services<BrowserLayerWith<Layers>>>;
+      export function run(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserRunEffect<BrowserLayerInputs> {
+        const BrowserLayer = hydrateFromOptions(options);
+        const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);
+        return program;
+      }
+      function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {
+        if (typeof root !== "string") return root;
+        const element = document.querySelector(root);
+        if (element instanceof HTMLElement) return element;
+        throw new Error(\`typed:browser root not found: \${root}\`);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: BrowserErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: BrowserErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }"
+    `);
   });
 
   it("imports entry-adjacent named browser companions when present", () => {
@@ -154,14 +410,81 @@ describe("BrowserVirtualModulePlugin", () => {
     });
     const source = buildBrowser("typed:browser?routes=./routes", fixture.importer) as string;
 
-    expect(source).toContain(
-      'import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";',
-    );
-    expect(source).toContain('import * as BrowserNavigationCompanion from "./.navigation.js";');
-    expect(source).toContain('import * as BrowserErrorsCompanion from "./.errors.js";');
-    expect(source).toContain("BrowserDependenciesCompanion.layers");
-    expect(source).toContain("BrowserErrorsCompanion.onError");
-    expect(source).not.toContain("_browser");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Cause from "effect/Cause";
+      import * as Effect from "effect/Effect";
+      import * as Layer from "effect/Layer";
+      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import * as TypedRouter from "@typed/router";
+      import Routes0 from "typed:router?dir=./routes";
+      import * as BrowserDependenciesCompanion from "./.browser.dependencies.js";
+      import * as BrowserNavigationCompanion from "./.navigation.js";
+      import * as BrowserErrorsCompanion from "./.errors.js";
+      type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
+      type BrowserLayerInputs = readonly LayerOrGroup[];
+      type BrowserBaseLayer = ReturnType<typeof makeRenderLayer>;
+      type BrowserCompanionLayers = typeof companionLayers;
+      type BrowserAllLayers<Layers extends BrowserLayerInputs> = readonly [...BrowserCompanionLayers, ...Layers];
+      type BrowserLayerWith<Layers extends BrowserLayerInputs> = ComputeLayers<BrowserAllLayers<Layers>, BrowserBaseLayer>;
+      type BrowserHydratedLayer<Layers extends BrowserLayerInputs> = BrowserLayerWith<Layers>;
+      type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;
+      type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;
+      interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {
+        readonly window?: Window;
+        readonly root?: string | HTMLElement;
+        readonly layers?: Layers;
+        readonly onError?: BrowserErrorHandler<Layer.Error<BrowserLayerWith<Layers>>>;
+      }
+      type BrowserOptionsWithLayers<Layers extends BrowserLayerInputs> = BrowserOptions<Layers> & { readonly layers: Layers };
+      const routeModules = [Routes0];
+      const companionLayers = BrowserDependenciesCompanion.layers;
+      const companionOnError = BrowserErrorsCompanion.onError ?? undefined;
+      export const Routes = Routes0;
+      export const BrowserRuntime = {
+        routeModules,
+        root: "#typed-root",
+        base: "/",
+        name: undefined,
+        companionLayers,
+      };
+      function makeRenderLayer(win: Window, root: HTMLElement) {
+        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+          Layer.provideMerge(TypedRouter.BrowserRouter(win)),
+        );
+      }
+      export function hydrate(options?: BrowserOptions<readonly []>): BrowserLayerWith<readonly []>;
+      export function hydrate<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): BrowserLayerWith<Layers>;
+      export function hydrate(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserHydratedLayer<BrowserLayerInputs> {
+        return hydrateFromOptions(options);
+      }
+      function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
+        const win = options.window ?? window;
+        const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
+        const renderLayer = makeRenderLayer(win, root);
+        return composeWithLayers(renderLayer, [...companionLayers, ...(options.layers ?? [])] as BrowserAllLayers<BrowserLayerInputs>);
+      }
+      export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
+      export function run<const Layers extends BrowserLayerInputs>(options: BrowserOptionsWithLayers<Layers>): Effect.Effect<never, Layer.Error<BrowserLayerWith<Layers>>, Layer.Services<BrowserLayerWith<Layers>>>;
+      export function run(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs> = {}): BrowserRunEffect<BrowserLayerInputs> {
+        const BrowserLayer = hydrateFromOptions(options);
+        const program = withErrorHandling(Layer.launch(BrowserLayer), options.onError);
+        return program;
+      }
+      function resolveRoot(root: string | HTMLElement, document: Document): HTMLElement {
+        if (typeof root !== "string") return root;
+        const element = document.querySelector(root);
+        if (element instanceof HTMLElement) return element;
+        throw new Error(\`typed:browser root not found: \${root}\`);
+      }
+      function withErrorHandling<A, E, R>(program: Effect.Effect<A, E, R>, onError: BrowserErrorHandler<E> | undefined): Effect.Effect<A, E, R> {
+        const handler = onError ?? companionOnError;
+        return handler ? program.pipe(Effect.tapCause((cause) => callErrorHandler(handler, cause))) : program;
+      }
+      function callErrorHandler<E>(handler: BrowserErrorHandler<E>, cause: Cause.Cause<E>): Effect.Effect<void, never, never> {
+        const result = handler(cause);
+        return Effect.isEffect(result) ? result : Effect.void;
+      }"
+    `);
   });
 
   it("returns parser diagnostics with the browser plugin name", () => {

@@ -82,6 +82,14 @@ export function getOrCreateHmrStateEffect<A, E, R>(
   });
 }
 
+export function getOrCreateRefSubjectHmrService<A>(
+  descriptor: HmrStateDescriptor,
+  create: () => A,
+  options: HmrRegistryOptions = {},
+): A {
+  return getOrCreateHmrState(descriptor, create, options);
+}
+
 export function disposeHmrState(
   descriptor: Pick<HmrStateDescriptor, "moduleId" | "serviceId">,
   options: HmrRegistryOptions = {},

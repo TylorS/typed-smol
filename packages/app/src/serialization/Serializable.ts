@@ -34,8 +34,27 @@ export namespace Serializable {
     readonly exportName?: string;
   };
 
+  export type ContinuationDescriptor = {
+    readonly _tag: "Continuation";
+    readonly id: string;
+    readonly captures: readonly CaptureDescriptor[];
+    readonly fingerprint: string;
+  };
+
+  export type DataAttrValue = Readonly<Record<string, string>>;
+
+  export type CaptureDescriptor = {
+    readonly id: string;
+    readonly kind: string;
+    readonly descriptor: Descriptor;
+  };
+
   export type SchemaDescriptorOptions = {
     readonly id?: string;
+  };
+
+  export type ContinuationDescriptorOptions = {
+    readonly fingerprint: string;
   };
 
   export const schema = <S extends AnySchema>(
@@ -50,6 +69,33 @@ export namespace Serializable {
     id: string,
     plan: GeneratedSchemaPlan,
   ): GeneratedDescriptor<A, I> => ({ _tag: "Generated", id, plan });
+
+  export const capture = (id: string, kind: string, descriptor: Descriptor): CaptureDescriptor => ({
+    id,
+    kind,
+    descriptor,
+  });
+
+  export function continuation(descriptor: ContinuationDescriptor): ContinuationDescriptor;
+  export function continuation(
+    id: string,
+    captures: readonly CaptureDescriptor[],
+    options: ContinuationDescriptorOptions,
+  ): ContinuationDescriptor;
+  export function continuation(
+    descriptorOrId: ContinuationDescriptor | string,
+    captures: readonly CaptureDescriptor[] = [],
+    options?: ContinuationDescriptorOptions,
+  ): ContinuationDescriptor {
+    return typeof descriptorOrId === "string"
+      ? {
+          _tag: "Continuation",
+          id: descriptorOrId,
+          captures,
+          fingerprint: options?.fingerprint ?? descriptorOrId,
+        }
+      : descriptorOrId;
+  }
 
   export function fromSchemaOrGenerated<S extends AnySchema>(
     schema: S,

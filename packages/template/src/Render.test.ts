@@ -189,6 +189,19 @@ describe("Render", () => {
       assert(spreadExample.getAttribute("baz") === "qux");
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("supports spread data attributes with multiple dynamic values", () =>
+    Effect.gen(function* () {
+      const dataExample = yield* renderHtmlElement`<div ...${{
+        ".data": {
+          mode: Effect.succeed("auto"),
+          open: Effect.succeed("true"),
+        },
+      }}></div>`;
+
+      assert.equal(dataExample.dataset.mode, "auto");
+      assert.equal(dataExample.dataset.open, "true");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("supports effects as event handlers using @event syntax", () =>
     Effect.gen(function* () {
       let clicked = false;
