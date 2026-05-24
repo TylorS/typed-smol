@@ -47,7 +47,11 @@ function mountCompiled<Values extends ReadonlyArray<Renderable.Any>>(
   options: MountOptions<Values>,
 ): Effect.Effect<MountedApp> {
   return Effect.promise(async () => {
-    const nodes = await template.renderInto(options.root, options.values ?? emptyValues());
+    const nodes = await template.renderInto(
+      options.root,
+      options.values ?? emptyValues(),
+      options.runtime,
+    );
     return mountedApp(options.root, nodes);
   });
 }

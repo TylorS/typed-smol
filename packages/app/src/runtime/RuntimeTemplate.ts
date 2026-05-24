@@ -5,6 +5,7 @@ import type {
 } from "@typed/compiler";
 import type { Fx } from "@typed/fx";
 import type { Renderable, RenderEvent } from "@typed/template";
+import type { DomTemplateRuntime } from "@typed/template/compiler-runtime/renderable";
 import * as Effect from "effect/Effect";
 
 export type RuntimeTemplate<
@@ -24,6 +25,7 @@ export interface MountOptions<
 > {
   readonly root: HTMLElement;
   readonly values?: Values;
+  readonly runtime?: Omit<DomTemplateRuntime, "scope">;
 }
 
 export type HydrateOptions<

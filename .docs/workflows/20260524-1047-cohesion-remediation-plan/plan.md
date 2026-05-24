@@ -256,7 +256,7 @@ pnpm --filter @typed/app build
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit message:
 
@@ -271,7 +271,7 @@ feat(app): compose dom template runtime
 - Modify: `packages/app/src/runtime/mount.ts`
 - Add or modify: `packages/app/src/runtime/mount.test.ts`
 
-- [ ] **Step 1: Write failing mount test**
+- [x] **Step 1: Write failing mount test**
 
 Add a compiled-template test where `renderInto` receives the runtime object:
 
@@ -307,7 +307,7 @@ pnpm --filter @typed/app exec vitest run src/runtime/mount.test.ts
 
 Expected: fail because `MountOptions` has no `runtime` and `mountCompiled` does not pass it.
 
-- [ ] **Step 2: Add runtime option**
+- [x] **Step 2: Add runtime option**
 
 In `RuntimeTemplate.ts`, add:
 
@@ -321,7 +321,7 @@ export interface MountOptions<Values extends ReadonlyArray<Renderable.Any> = rea
 }
 ```
 
-- [ ] **Step 3: Pass runtime to compiled render**
+- [x] **Step 3: Pass runtime to compiled render**
 
 In `mountCompiled`:
 
@@ -333,7 +333,7 @@ const nodes = await template.renderInto(
 );
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
