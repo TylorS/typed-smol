@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T14, then report task completion.
+- current_scope: execute approved plan task T15, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -414,7 +414,7 @@
   - green: `git diff --check -- packages/fx .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
   - review: Sidecar review found no Critical or Important issues; it noted a defensible T15 placement caveat for graph-boundary capture after downstream operators like `take`.
 - commit:
-  - pending
+  - `69fc84a feat(devtools): add fx devtools hooks`
 - context_updates:
   - Added `withFxDevtools` / `withDevtools` as opt-in Fx lifecycle instrumentation.
   - Added host-neutral Fx DevTools event and observer types for start, emit, failure, completion, and interruption.
@@ -423,3 +423,33 @@
   - Fx DevTools hooks should stay opt-in around a specific `Fx`; global constructor instrumentation waits for app/runtime config wiring.
   - Fx lifecycle instrumentation must record only the first terminal event, so failed or interrupted streams do not also emit `Completed`.
   - Keep Fx DevTools ids as host-neutral runtime strings inside `@typed/fx`; protocol id branding belongs in runtime capture.
+
+### T15 - Runtime Fx Capture
+
+- task_id: T15
+- requirement_ids: FR-20, FR-21, FR-22, FR-23, FR-24, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13
+- ts_scenarios: TS-4, TS-11
+- routing_decision:
+  - direct execution for the red-green implementation because target files and ownership are locked in the approved plan.
+  - sidecar review-auditor required before commit for lifecycle mapping, serialization, identity, and boundary risks.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/FxCapture.test.ts` failed before implementation with missing `./FxCapture.js`.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/FxCapture.test.ts` passed with 1 test file and 4 tests.
+  - red: `pnpm --filter @typed/devtools-runtime build` initially failed with TS2339 because `FxCapture.ts` indexed `phase` on the full `RuntimeEventEnvelope` union instead of the `FxNodeEvent` member.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/FxCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts` passed with 3 test files and 19 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/FxCapture.ts packages/devtools-runtime/src/FxCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/FxCapture.ts packages/devtools-runtime/src/FxCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - review: Sidecar review found no Critical or Important issues; it noted only a non-blocking suggestion for more focused serialized `Cause` payload assertions.
+- commit:
+  - pending
+- context_updates:
+  - Added `makeFxCapture` for converting Fx DevTools observer events into protocol `FxNodeEvent` runtime events.
+  - Added value and cause serialization/redaction before Fx events enter the runtime bridge event bus.
+  - Added identity handling for component-owned, RefSubject-derived, explicit unowned, and unidentifiable Fx events.
+- memory_updates:
+  - Runtime Fx capture should serialize emitted values and failure/interruption causes before calling `DevtoolsRuntimeService.emit`.
+  - Fx node ids should prefer owner-qualified ids, then RefSubject-qualified ids, then explicit unowned ids; missing identity should be skipped.
+  - Type helpers for protocol runtime events should narrow to the `FxNodeEvent` union member before reading phase/value fields.

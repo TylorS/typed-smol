@@ -573,6 +573,33 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for Fx semantic preservation, observer failure isolation, lifecycle phase accuracy, ownership metadata, and dependency-boundary compliance before commit.
 
+### T15 - Runtime Fx Capture
+
+- requirement_links: FR-20, FR-21, FR-22, FR-23, FR-24, FR-41, FR-42, NFR-3, NFR-4, NFR-6, NFR-15, NFR-17, AC-4, AC-5, AC-13.
+- write_set:
+  - `packages/devtools-runtime/src/FxCapture.ts`
+  - `packages/devtools-runtime/src/FxCapture.test.ts`
+  - `packages/devtools-runtime/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused runtime capture tests before `FxCapture.ts` exists.
+  - Run `pnpm --filter @typed/devtools-runtime exec vitest run src/FxCapture.test.ts` and capture the missing-module failure.
+- green_step:
+  - Convert `@typed/fx` Fx DevTools lifecycle events into protocol `FxNodeEvent` envelopes.
+  - Serialize and redact emitted values and failure/interruption causes before events enter the runtime bus.
+  - Derive stable Fx node ids from component owner ids, RefSubject ids, or explicit unowned ids; skip events with no stable id.
+  - Reuse the runtime EventBus for bounded history and bridge visibility.
+- verification:
+  - `pnpm --filter @typed/devtools-runtime exec vitest run src/FxCapture.test.ts src/EventBus.test.ts src/Bridge.test.ts`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `pnpm exec oxlint packages/devtools-runtime/src/FxCapture.ts packages/devtools-runtime/src/FxCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/FxCapture.ts packages/devtools-runtime/src/FxCapture.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc" packages/devtools-runtime/src/FxCapture.ts packages/devtools-runtime/src/FxCapture.test.ts packages/devtools-runtime/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for Fx identity stability, value/cause serialization, bounded-history behavior, lifecycle phase mapping, and runtime/protocol boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |
