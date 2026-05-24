@@ -17,9 +17,7 @@ import * as Matcher from "./Matcher.js";
 import * as Route from "./Route.js";
 import { ServerRouter } from "./Router.js";
 
-/** Runs a fully-scoped Effect in tests; the caller provides services before execution. */
-const runEff = <A, E, R>(eff: Effect.Effect<A, E, R>) =>
-  Effect.runPromise(eff as Effect.Effect<A, E, never>);
+const runEff = <A, E>(eff: Effect.Effect<A, E, never>) => Effect.runPromise(eff);
 
 class TestError extends Data.TaggedError("TestError")<{ readonly message: string }> {}
 
