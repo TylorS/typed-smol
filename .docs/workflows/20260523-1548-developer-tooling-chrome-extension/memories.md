@@ -164,4 +164,12 @@
 
 - Chrome package smoke tests should avoid Node built-in imports because `@typed/devtools-chrome` test typecheck does not include Node built-in module types.
 - Browser load-unpacked smoke remains blocked until `@typed/devtools-chrome` emits a complete extension root with `manifest.json`, DevTools HTML pages, sidebar HTML pages, and icon assets.
+
+### T25
+
 - Storybook DevTools fixtures are host-neutral: protocol-owned runtime facts live in `@typed/devtools-protocol`, and `@typed/storybook` fixture helpers must not import Chrome APIs, devtools runtime, compiler, template, Fx, navigation, or app packages.
+
+### T26
+
+- Realworld server SSR must provide a server-safe `BrowserAuth` layer when route templates include browser auth event handlers; browser-only auth belongs in `.browser.dependencies.ts`, but server rendering still needs a non-browser service value.
+- Action resume dispatch can preserve an unknown handler environment at the low-level dispatcher; only runtime bootstraps that actually satisfy the environment should narrow to `never`.

@@ -828,10 +828,45 @@
   - FORMAT: `pnpm exec oxfmt --check packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts packages/devtools-protocol/src/Fixtures.ts` passed.
   - BOUNDARY: `rg -n "\\bchrome\\.|from \"@typed/(?:devtools-runtime|compiler|template|fx|navigation|app)|from '@typed/(?:devtools-runtime|compiler|template|fx|navigation|app)'" packages/storybook/src/devtoolsFixtures.ts packages/storybook/src/devtoolsFixtures.test.ts` returned no matches.
 - commit:
-  - pending
+  - `94581b2 feat(storybook): add host-neutral devtools fixtures`
 - context_updates:
   - Added protocol-owned Storybook runtime stream fixtures under `DevtoolsProtocolFixtures.storybook`.
   - Added host-neutral Storybook view-model helpers for components, Fx, RefSubject, HMR, and replay state.
   - Exported the fixture helper from `@typed/storybook` and added `@typed/devtools-protocol` as a direct runtime dependency.
 - memory_updates:
   - Storybook DevTools fixtures must consume protocol-owned runtime facts and avoid Chrome/devtools-runtime/compiler/template/app imports.
+
+### T26 - Final Validation
+
+- task_id: T26
+- requirement_ids: FR-1 through FR-45, NFR-1 through NFR-18, AC-1 through AC-14
+- ts_scenarios: TS-1 through TS-12
+- routing_decision:
+  - direct validation because all plan implementation tasks were already committed and remaining work was command execution plus evidence capture.
+  - subagent review was not launched because the available Codex subagent tool only permits spawning on explicit user request for agents; record direct evidence instead.
+- validation_evidence:
+  - GREEN: `pnpm --filter @typed/devtools-protocol test` passed with 4 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/devtools-runtime test` passed with 9 files and 48 tests.
+  - GREEN: `pnpm --filter @typed/devtools-chrome test` passed with 5 files and 27 tests.
+  - GREEN: `pnpm --filter @typed/compiler test` passed with 33 files and 169 tests.
+  - GREEN: `pnpm --filter @typed/template test` passed with 10 files and 178 tests.
+  - GREEN: `pnpm --filter @typed/fx test` passed with 39 files, 288 passed tests, and 1 skipped test.
+  - GREEN: initial `pnpm --filter @typed/app test` passed with 32 files, 426 tests, and no type errors.
+  - RED: initial `pnpm build` failed in `examples/realworld` because generated `typed:server` still required `BrowserAuth`; `src/.server.dependencies.ts` did not provide a server-safe auth layer for SSR route rendering.
+  - GREEN: after adding a server-safe `BrowserAuth` layer in `examples/realworld/src/.server.dependencies.ts`, `pnpm --filter typed-realworld build` passed.
+  - RED: rerun `pnpm build` then failed in dirty `packages/app/src/resumability.ts` because `dispatchAction` returned an action handler with environment `unknown` while its signature declared environment `never`.
+  - GREEN: after widening `dispatchAction` to `Effect.Effect<unknown, unknown, unknown>`, `pnpm --filter @typed/app build` passed.
+  - GREEN: `pnpm exec oxfmt --check packages/app/src/resumability.ts examples/realworld/src/.server.dependencies.ts` passed.
+  - GREEN: `pnpm exec oxlint packages/app/src/resumability.ts examples/realworld/src/.server.dependencies.ts` passed with 0 warnings and 0 errors.
+  - GREEN: final `pnpm build` passed, including package builds, examples, root `tsc -b tsconfig.build.json`, and `@typed/virtual-modules-ts-plugin` plugin builds.
+  - GREEN: final `git diff --check` passed.
+  - GREEN: final `pnpm --filter @typed/app test` passed with 32 files, 428 tests, and no type errors after the resumability type fix.
+- commit:
+  - `test(devtools): record final validation evidence`
+  - note: `packages/app/src/resumability.ts` remains untracked outside this workflow, but its local type fix was required for the current-worktree `pnpm build` validation.
+- context_updates:
+  - T25 was already committed; the stale execution-log commit marker was corrected to `94581b2`.
+  - Root build required two cross-slice repairs: a server-safe realworld auth layer and a resumability environment type correction.
+- memory_updates:
+  - Realworld server SSR must provide a server-safe `BrowserAuth` layer when route templates include browser auth event handlers; browser-only auth belongs in `.browser.dependencies.ts`, but server rendering still needs a non-browser service value.
+  - Action resume dispatch can preserve an unknown handler environment at the low-level dispatcher; only runtime bootstraps that actually satisfy the environment should narrow to `never`.
