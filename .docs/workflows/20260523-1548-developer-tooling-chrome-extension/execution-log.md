@@ -3,7 +3,7 @@
 - workflow_slug: 20260523-1548-developer-tooling-chrome-extension
 - mode: strict
 - finalization_strategy: merge
-- current_scope: execute approved plan task T17, then report task completion.
+- current_scope: execute approved plan task T18, then report task completion.
 
 ## Dependency Readiness Matrix
 
@@ -523,7 +523,7 @@
   - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 8 test files and 43 tests.
   - review: Sidecar review found an Important behavior-preservation issue where capture defects could affect `NavigationHandler`; after adding diagnostic failure isolation and regression coverage, re-review found the issue resolved with no blocking findings.
 - commit:
-  - pending
+  - `ba10685 feat(devtools): capture navigation runtime events`
 - context_updates:
   - Added `makeNavigationCapture` for converting canonical `@typed/navigation` `NavigationEvent` values into protocol runtime events.
   - Added a `NavigationHandler`-compatible hook for wiring capture through `Navigation.onNavigation`.
@@ -532,3 +532,32 @@
   - Runtime Navigation capture should consume `@typed/navigation` `NavigationEvent` values and expose a `NavigationHandler`-compatible hook for `Navigation.onNavigation`.
   - Navigation runtime event ids can default to `<navigation type>:<destination id>`; custom correlation ids belong behind a `resolveId` option.
   - Runtime Navigation capture failures from id resolution, time sources, or runtime emission must be swallowed because capture is diagnostic-only.
+
+### T18 - Runtime OTEL Correlation
+
+- task_id: T18
+- requirement_ids: FR-28, FR-29, FR-41, FR-42, NFR-6, NFR-14, NFR-15, NFR-17, AC-8, AC-13
+- ts_scenarios: TS-8, TS-11
+- routing_decision:
+  - direct execution for the red-green implementation because target files and ownership are locked in the approved plan.
+  - sidecar review-auditor required before commit for OTEL id preservation, Typed correlation boundaries, EventBus reuse, and protocol compliance.
+- validation_evidence:
+  - red: `pnpm --filter @typed/devtools-runtime exec vitest run src/OtelCorrelation.test.ts` failed before implementation with missing `./OtelCorrelation.js`.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/OtelCorrelation.test.ts` passed with 1 test file and 4 tests.
+  - green: `pnpm --filter @typed/devtools-runtime exec vitest run src/OtelCorrelation.test.ts src/EventBus.test.ts src/Bridge.test.ts` passed with 3 test files and 19 tests.
+  - green: `pnpm --filter @typed/devtools-runtime build` passed.
+  - green: `pnpm exec oxlint packages/devtools-runtime/src/OtelCorrelation.ts packages/devtools-runtime/src/OtelCorrelation.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed with 0 warnings and 0 errors.
+  - green: `pnpm exec oxfmt --check packages/devtools-runtime/src/OtelCorrelation.ts packages/devtools-runtime/src/OtelCorrelation.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts` passed.
+  - green: boundary grep for `chrome.` and `effect/unstable/rpc` returned no matches.
+  - green: `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension` passed.
+  - green: `pnpm --filter @typed/devtools-runtime test` passed with typecheck plus 9 test files and 47 tests.
+  - review: Sidecar review found no Critical or Important issues.
+- commit:
+  - pending
+- context_updates:
+  - Added `makeOtelCorrelation` for emitting protocol `OtelSpan` runtime events through the DevTools runtime service.
+  - Preserved OTEL `traceId` and `spanId` verbatim while attaching optional Typed correlation ids as metadata.
+  - Reused DevTools runtime EventBus retention and bridge `otel` capability filtering.
+- memory_updates:
+  - Runtime OTEL correlation should preserve `traceId` and `spanId` verbatim and only attach Typed ids as additive metadata.
+  - Runtime OTEL correlation should emit protocol `OtelSpan` events through `DevtoolsRuntimeService.emit` so EventBus retention and bridge capability filtering stay shared.

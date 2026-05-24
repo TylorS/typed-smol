@@ -652,6 +652,32 @@ Existing packages receive narrow hook points only:
 - review:
   - Run sidecar review for canonical `@typed/navigation` event usage, id stability, EventBus reuse, and runtime/protocol boundary compliance before commit.
 
+### T18 - Runtime OTEL Correlation
+
+- requirement_links: FR-28, FR-29, FR-41, FR-42, NFR-6, NFR-14, NFR-15, NFR-17, AC-8, AC-13.
+- write_set:
+  - `packages/devtools-runtime/src/OtelCorrelation.ts`
+  - `packages/devtools-runtime/src/OtelCorrelation.test.ts`
+  - `packages/devtools-runtime/src/index.ts`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/execution-log.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/memories.md`
+- red_step:
+  - Add focused OTEL correlation tests before `OtelCorrelation.ts` exists.
+  - Run `pnpm --filter @typed/devtools-runtime exec vitest run src/OtelCorrelation.test.ts` and capture the missing-module failure.
+- green_step:
+  - Emit protocol `OtelSpan` runtime events that preserve OpenTelemetry span name, `traceId`, and `spanId`.
+  - Attach Typed ids as additive correlation metadata without inventing a parallel trace model.
+  - Reuse `DevtoolsRuntimeService.emit`, EventBus retention, and bridge capability filtering.
+- verification:
+  - `pnpm --filter @typed/devtools-runtime exec vitest run src/OtelCorrelation.test.ts src/EventBus.test.ts src/Bridge.test.ts`
+  - `pnpm --filter @typed/devtools-runtime build`
+  - `pnpm exec oxlint packages/devtools-runtime/src/OtelCorrelation.ts packages/devtools-runtime/src/OtelCorrelation.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `pnpm exec oxfmt --check packages/devtools-runtime/src/OtelCorrelation.ts packages/devtools-runtime/src/OtelCorrelation.test.ts packages/devtools-runtime/src/EventBus.test.ts packages/devtools-runtime/src/Bridge.test.ts packages/devtools-runtime/src/index.ts`
+  - `rg -n "chrome\\.|effect/unstable/rpc" packages/devtools-runtime/src/OtelCorrelation.ts packages/devtools-runtime/src/OtelCorrelation.test.ts packages/devtools-runtime/src/index.ts` must return no matches.
+  - `git diff --check -- packages/devtools-runtime .docs/workflows/20260523-1548-developer-tooling-chrome-extension`
+- review:
+  - Run sidecar review for OTEL id preservation, Typed correlation metadata boundaries, EventBus reuse, and protocol-boundary compliance before commit.
+
 ## Verification Matrix
 
 | scenario                       | required commands                                                                                                                                                                                                                                           |
