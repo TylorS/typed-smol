@@ -922,3 +922,25 @@
 - memory_updates:
   - Default production builds must grep clean for devtools bridge symbols before claiming instrumentation is compiled out.
   - `createAppDomTemplateRuntime()` must not import or install the Chrome/page bridge; bridge installation belongs only in explicit devtools-enabled generated browser modules.
+
+### T29 - Inspected Page RPC Bridge
+
+- task_id: T29
+- trigger:
+  - User asked to continue fixing the DevTools panel after reporting that the extension UI and instrumentation did not feel connected to the real inspected page.
+- root_cause:
+  - The panel could still source Handshake, AnalyzeSource, and ResolveDomBinding from the extension runtime fixture path.
+  - The page-side `__TYPED_DEVTOOLS__` bridge only exposed selected-node and binding inspection helpers, so a real DevTools panel had no typed RPC path into the inspected page.
+- validation_evidence:
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/runtime/devtoolsBridge.test.ts` passed with 1 file and 4 tests.
+  - GREEN: `pnpm --filter @typed/devtools-chrome test` passed with 7 files and 36 tests after typechecking `tsconfig.test.json`.
+  - GREEN: `pnpm --filter @typed/devtools-chrome build:extension` passed.
+  - GREEN: `pnpm --filter @typed/devtools-chrome test:browser` passed after rebuilding the unpacked extension and running the Chromium smoke.
+  - GREEN: `pnpm --filter @typed/app build` passed.
+- context_updates:
+  - Added inspected-window RPC evaluation for Handshake, AnalyzeSource, ResolveDomBinding, and SubscribeRuntimeEvents with schema decoding and protocol-shaped fallback results.
+  - Expanded the page-side bridge to expose `handshake`, `resolveDomBinding`, and an explicit unavailable `analyzeSource` response.
+  - Updated the real panel loader to prefer `chrome.devtools.inspectedWindow` RPC inside DevTools, while preserving the Chrome runtime fixture path for extension-page browser smoke.
+- memory_updates:
+  - Real DevTools panel RPC must prefer `chrome.devtools.inspectedWindow.eval` over the extension background fixture path when `chrome.devtools.inspectedWindow` is available.
+  - Page-side bridge methods should decode/fallback through protocol schemas so missing instrumentation appears as explicit unavailable/unbound states instead of fake connected data.

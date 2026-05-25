@@ -3,9 +3,12 @@ import {
   makeDevtoolsClientId,
   makeNavigationEventId,
   type ComponentId,
+  type DevtoolsHandshakeRequest,
   type DomBindingId,
+  type DomBindingRequest,
   type DomBindingResolution,
   type RuntimeEventEnvelope,
+  type SourceAnalyzerRequest,
   type SourceAnalyzerResponse,
 } from "@typed/devtools-protocol";
 import {
@@ -14,6 +17,7 @@ import {
 } from "../transport/chromeRuntime.js";
 import {
   inspectDomBinding as inspectInspectedWindowDomBinding,
+  makeInspectedWindowRpcClient,
   type ChromeInspectedWindow,
 } from "../transport/inspectedWindow.js";
 import { applyRuntimeStreamItem, createTypedDevtoolsPanelState } from "./state.js";
@@ -23,6 +27,7 @@ import { refSubjectRows } from "./views/refsubjects.js";
 
 export interface TypedDevtoolsPanelOptions {
   readonly actions?: TypedDevtoolsPanelActions;
+  readonly inspectedWindow?: ChromeInspectedWindow;
   readonly runtime?: ChromeRuntimeConnectable;
 }
 
@@ -62,7 +67,10 @@ export async function renderTypedDevtoolsPanel(
   root: Element,
   options: TypedDevtoolsPanelOptions = {},
 ): Promise<void> {
-  const runtimeModel = await loadRuntimeModel(options.runtime ?? globalChromeRuntime());
+  const runtimeModel = await loadRuntimeModel(
+    options.runtime ?? globalChromeRuntime(),
+    options.inspectedWindow ?? globalChromeInspectedWindow(),
+  );
   const events = fixturePanelEvents();
   const state = DevtoolsProtocolFixtures.storybook.runtimeStreamItems.reduce(
     applyRuntimeStreamItem,
@@ -101,40 +109,75 @@ interface RuntimeModel {
 
 async function loadRuntimeModel(
   runtime: ChromeRuntimeConnectable | undefined,
+  inspectedWindow: ChromeInspectedWindow | undefined,
 ): Promise<RuntimeModel> {
+  if (inspectedWindow) {
+    return loadRuntimeModelFromInspectedWindow(inspectedWindow);
+  }
   if (!runtime) return fixtureRuntimeModel();
   const client = makeChromeRuntimeRpcClient(runtime);
   try {
-    const handshake = await client.request("Handshake", {
-      capabilities: [
-        "components",
-        "dom",
-        "fx",
-        "hmr",
-        "navigation",
-        "otel",
-        "refsubjects",
-        "source-analyzer",
-      ],
-      clientId: makeDevtoolsClientId("panel"),
-      peer: "extension-panel",
-      sessionId: DevtoolsProtocolFixtures.ids.session,
-      version: "0.1.0",
+    return await loadRuntimeModelFromRuntimeRequests({
+      analyzeSource: (payload) => client.request("AnalyzeSource", payload),
+      handshake: (payload) => client.request("Handshake", payload),
+      resolveDomBinding: (payload) => client.request("ResolveDomBinding", payload),
     });
-    const source = await client.request(
-      "AnalyzeSource",
-      DevtoolsProtocolFixtures.sourceAnalyzerRequest,
-    );
-    const domBinding = await client.request(
-      "ResolveDomBinding",
-      DevtoolsProtocolFixtures.domBindingRequest,
-    );
-    return { domBinding, sessionId: handshake.sessionId, source, status: "runtime connected" };
   } catch {
     return fixtureRuntimeModel("runtime unavailable");
   } finally {
     client.disconnect();
   }
+}
+
+async function loadRuntimeModelFromInspectedWindow(
+  inspectedWindow: ChromeInspectedWindow,
+): Promise<RuntimeModel> {
+  const client = makeInspectedWindowRpcClient(inspectedWindow);
+  try {
+    return await loadRuntimeModelFromRuntimeRequests({
+      analyzeSource: (payload) => client.request("AnalyzeSource", payload),
+      handshake: (payload) => client.request("Handshake", payload),
+      resolveDomBinding: (payload) => client.request("ResolveDomBinding", payload),
+    });
+  } catch {
+    return fixtureRuntimeModel("page bridge unavailable");
+  }
+}
+
+async function loadRuntimeModelFromRuntimeRequests(
+  requests: RuntimeRequests,
+): Promise<RuntimeModel> {
+  const handshake = await requests.handshake(handshakeRequest());
+  const source = await requests.analyzeSource(DevtoolsProtocolFixtures.sourceAnalyzerRequest);
+  const domBinding = await requests.resolveDomBinding(DevtoolsProtocolFixtures.domBindingRequest);
+  return { domBinding, sessionId: handshake.sessionId, source, status: "runtime connected" };
+}
+
+interface RuntimeRequests {
+  readonly analyzeSource: (payload: SourceAnalyzerRequest) => Promise<SourceAnalyzerResponse>;
+  readonly handshake: (
+    payload: DevtoolsHandshakeRequest,
+  ) => Promise<{ readonly sessionId: string }>;
+  readonly resolveDomBinding: (payload: DomBindingRequest) => Promise<DomBindingResolution>;
+}
+
+function handshakeRequest(): DevtoolsHandshakeRequest {
+  return {
+    capabilities: [
+      "components",
+      "dom",
+      "fx",
+      "hmr",
+      "navigation",
+      "otel",
+      "refsubjects",
+      "source-analyzer",
+    ],
+    clientId: makeDevtoolsClientId("panel"),
+    peer: "extension-panel",
+    sessionId: DevtoolsProtocolFixtures.ids.session,
+    version: "0.1.0",
+  };
 }
 
 function fixtureRuntimeModel(status = "fixture connected"): RuntimeModel {
@@ -406,6 +449,13 @@ function globalChromeRuntime(): ChromeRuntimeConnectable | undefined {
     readonly chrome?: { readonly runtime?: ChromeRuntimeConnectable };
   };
   return candidate.chrome?.runtime;
+}
+
+function globalChromeInspectedWindow(): ChromeInspectedWindow | undefined {
+  const candidate = globalThis as {
+    readonly chrome?: { readonly devtools?: { readonly inspectedWindow?: ChromeInspectedWindow } };
+  };
+  return candidate.chrome?.devtools?.inspectedWindow;
 }
 
 function empty(): HTMLElement {

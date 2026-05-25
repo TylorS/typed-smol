@@ -185,3 +185,9 @@
 - Default production builds must grep clean for devtools bridge symbols before claiming instrumentation is compiled out.
 - `createAppDomTemplateRuntime()` must not import or install the Chrome/page bridge; bridge installation belongs only in explicit devtools-enabled generated browser modules.
 - Devtools RealWorld smoke mode is selected by Vite runtime defaults (`VITE_TYPED_DEVTOOLS_SMOKE=1`) and `typed:browser?...&devtools=1`, not by runtime `run({ devtools })` options in the production entrypoint.
+
+### T29
+
+- Real DevTools panel RPC must prefer `chrome.devtools.inspectedWindow.eval` over the extension background fixture path when `chrome.devtools.inspectedWindow` is available.
+- Page-side bridge methods should decode/fallback through protocol schemas so missing instrumentation appears as explicit unavailable/unbound states instead of fake connected data.
+- Extension-page browser smoke still needs the fixture/runtime fallback because `chrome.devtools.*` APIs are only available inside actual DevTools extension pages.

@@ -1,5 +1,15 @@
-import { makeDomBindingId } from "@typed/devtools-protocol";
+import {
+  DEVTOOLS_PROTOCOL_VERSION,
+  makeDomBindingId,
+  type DevtoolsCapability,
+  type DevtoolsHandshakeRequest,
+  type DevtoolsHandshakeResponse,
+  type DomBindingRequest,
+  type SourceAnalyzerRequest,
+  type SourceAnalyzerResponse,
+} from "@typed/devtools-protocol";
 import type { DomRegistry } from "@typed/devtools-runtime";
+import * as Effect from "effect/Effect";
 
 export interface TypedDevtoolsBridgeOptions {
   readonly domRegistry?: DomRegistry;
@@ -13,11 +23,44 @@ export function installTypedDevtoolsBridge(options: TypedDevtoolsBridgeOptions):
     delete globalObject.__TYPED_DEVTOOLS__;
     return;
   }
+  const domRegistry = options.domRegistry;
 
   globalObject.__TYPED_DEVTOOLS__ = {
+    analyzeSource: (request: SourceAnalyzerRequest) => analyzeSource(request),
+    handshake: (request: DevtoolsHandshakeRequest) => handshake(request),
     inspectDomBinding: (bindingId: string) =>
-      inspectDomBinding(globalObject, options.domRegistry, bindingId),
-    resolveSelectedElement: (node: Node) => options.domRegistry?.resolveNode(node),
+      inspectDomBinding(globalObject, domRegistry, bindingId),
+    resolveDomBinding: (request: DomBindingRequest) =>
+      Effect.runSync(domRegistry.resolveDomBinding(request)),
+    resolveSelectedElement: (node: Node) => domRegistry.resolveNode(node),
+  };
+}
+
+const supportedCapabilities = [
+  "components",
+  "dom",
+] as const satisfies readonly DevtoolsCapability[];
+
+function handshake(request: DevtoolsHandshakeRequest): DevtoolsHandshakeResponse {
+  return {
+    acceptedCapabilities: request.capabilities.filter((capability) =>
+      supportedCapabilities.includes(capability as (typeof supportedCapabilities)[number]),
+    ),
+    peer: "inspected-runtime",
+    sessionId: request.sessionId,
+    unsupportedCapabilities: request.capabilities.filter(
+      (capability) =>
+        !supportedCapabilities.includes(capability as (typeof supportedCapabilities)[number]),
+    ),
+    version: DEVTOOLS_PROTOCOL_VERSION,
+  };
+}
+
+function analyzeSource(request: SourceAnalyzerRequest): SourceAnalyzerResponse {
+  return {
+    _tag: "Unavailable",
+    reason: "Source analyzer bridge is not available",
+    requestedAt: request.requestedAt,
   };
 }
 

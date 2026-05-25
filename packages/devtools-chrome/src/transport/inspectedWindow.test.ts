@@ -7,9 +7,11 @@ import {
 } from "../elementsSidebar.js";
 import {
   TYPED_DEVTOOLS_INSPECT_DOM_BINDING_EXPRESSION,
+  TYPED_DEVTOOLS_RPC_EXPRESSION,
   TYPED_DEVTOOLS_SELECTED_NODE_EXPRESSION,
   inspectDomBinding,
   makeInspectedWindowDomResolver,
+  makeInspectedWindowRpcClient,
   type ChromeInspectedWindow,
 } from "./inspectedWindow.js";
 
@@ -67,6 +69,67 @@ describe("Chrome inspected window transport", () => {
       _tag: "Unbound",
       bindingId: makeDomBindingId("selected-node"),
       reason: "Inspected window evaluation failed: inspected target is gone",
+    });
+  });
+
+  it("evaluates protocol RPCs through the page-side Typed bridge", async () => {
+    const inspectedWindow = makeFakeInspectedWindowByExpression({
+      [TYPED_DEVTOOLS_RPC_EXPRESSION("Handshake", DevtoolsProtocolFixtures.handshakeRequest)]:
+        DevtoolsProtocolFixtures.handshakeResponse,
+      [TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "AnalyzeSource",
+        DevtoolsProtocolFixtures.sourceAnalyzerRequest,
+      )]: DevtoolsProtocolFixtures.sourceAnalyzerResponse,
+      [TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "ResolveDomBinding",
+        DevtoolsProtocolFixtures.domBindingRequest,
+      )]: DevtoolsProtocolFixtures.domBindingResolution,
+    });
+    const client = makeInspectedWindowRpcClient(inspectedWindow);
+
+    await expect(
+      client.request("Handshake", DevtoolsProtocolFixtures.handshakeRequest),
+    ).resolves.toEqual(DevtoolsProtocolFixtures.handshakeResponse);
+    await expect(
+      client.request("AnalyzeSource", DevtoolsProtocolFixtures.sourceAnalyzerRequest),
+    ).resolves.toEqual(DevtoolsProtocolFixtures.sourceAnalyzerResponse);
+    await expect(
+      client.request("ResolveDomBinding", DevtoolsProtocolFixtures.domBindingRequest),
+    ).resolves.toEqual(DevtoolsProtocolFixtures.domBindingResolution);
+    expect(inspectedWindow.expressions).toEqual([
+      TYPED_DEVTOOLS_RPC_EXPRESSION("Handshake", DevtoolsProtocolFixtures.handshakeRequest),
+      TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "AnalyzeSource",
+        DevtoolsProtocolFixtures.sourceAnalyzerRequest,
+      ),
+      TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "ResolveDomBinding",
+        DevtoolsProtocolFixtures.domBindingRequest,
+      ),
+    ]);
+  });
+
+  it("returns protocol-shaped unavailable RPC results for missing or invalid inspected bridges", async () => {
+    const missing = makeInspectedWindowRpcClient(
+      makeFakeInspectedWindow(undefined, { description: "bridge missing" }),
+    );
+    const invalid = makeInspectedWindowRpcClient(makeFakeInspectedWindow({ nope: true }));
+
+    await expect(
+      missing.request("Handshake", DevtoolsProtocolFixtures.handshakeRequest),
+    ).resolves.toEqual({
+      acceptedCapabilities: [],
+      peer: "inspected-runtime",
+      sessionId: DevtoolsProtocolFixtures.ids.session,
+      unsupportedCapabilities: DevtoolsProtocolFixtures.handshakeRequest.capabilities,
+      version: DevtoolsProtocolFixtures.handshakeRequest.version,
+    });
+    await expect(
+      invalid.request("ResolveDomBinding", DevtoolsProtocolFixtures.domBindingRequest),
+    ).resolves.toEqual({
+      _tag: "Unbound",
+      bindingId: DevtoolsProtocolFixtures.domBindingRequest.bindingId,
+      reason: "Inspected window returned an invalid Typed DevTools RPC response",
     });
   });
 });
@@ -180,6 +243,19 @@ function makeFakeInspectedWindow(
     eval(expression, callback) {
       expressions.push(expression);
       callback(result, exceptionInfo);
+    },
+  };
+}
+
+function makeFakeInspectedWindowByExpression(
+  results: Record<string, unknown>,
+): ChromeInspectedWindow & { readonly expressions: string[] } {
+  const expressions: string[] = [];
+  return {
+    expressions,
+    eval(expression, callback) {
+      expressions.push(expression);
+      callback(results[expression]);
     },
   };
 }

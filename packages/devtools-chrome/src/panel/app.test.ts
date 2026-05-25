@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
-import { DevtoolsProtocolFixtures } from "@typed/devtools-protocol";
+import { DevtoolsProtocolFixtures, makeDevtoolsClientId } from "@typed/devtools-protocol";
 import { renderTypedDevtoolsPanel } from "./app.js";
+import {
+  TYPED_DEVTOOLS_RPC_EXPRESSION,
+  type ChromeInspectedWindow,
+} from "../transport/inspectedWindow.js";
 
 describe("Typed DevTools panel app", () => {
   it("renders every protocol tab with fixture-backed data", async () => {
@@ -96,6 +100,41 @@ describe("Typed DevTools panel app", () => {
     click(root, '[data-testid="tab-Sources"]');
     expect(root.textContent).toContain("file:///workspace/src/App.tsx");
   });
+
+  it("prefers inspected-window RPC inside the real DevTools panel", async () => {
+    const root = document.createElement("div");
+    const runtime = makeFakeRuntime();
+    const inspectedWindow = makeFakeInspectedWindowByExpression({
+      [TYPED_DEVTOOLS_RPC_EXPRESSION("Handshake", panelHandshakeRequest())]:
+        DevtoolsProtocolFixtures.handshakeResponse,
+      [TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "AnalyzeSource",
+        DevtoolsProtocolFixtures.sourceAnalyzerRequest,
+      )]: DevtoolsProtocolFixtures.sourceAnalyzerResponse,
+      [TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "ResolveDomBinding",
+        DevtoolsProtocolFixtures.domBindingRequest,
+      )]: DevtoolsProtocolFixtures.domBindingResolution,
+    });
+
+    await renderTypedDevtoolsPanel(root, { inspectedWindow, runtime });
+
+    expect(root.querySelector('[data-testid="connection-status"]')?.textContent).toContain(
+      "runtime connected",
+    );
+    expect(runtime.messages).toEqual([]);
+    expect(inspectedWindow.expressions).toEqual([
+      TYPED_DEVTOOLS_RPC_EXPRESSION("Handshake", panelHandshakeRequest()),
+      TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "AnalyzeSource",
+        DevtoolsProtocolFixtures.sourceAnalyzerRequest,
+      ),
+      TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "ResolveDomBinding",
+        DevtoolsProtocolFixtures.domBindingRequest,
+      ),
+    ]);
+  });
 });
 
 function click(root: Element, selector: string): void {
@@ -154,6 +193,38 @@ function makeFakeRuntime() {
           });
         },
       };
+    },
+  };
+}
+
+function panelHandshakeRequest() {
+  return {
+    capabilities: [
+      "components",
+      "dom",
+      "fx",
+      "hmr",
+      "navigation",
+      "otel",
+      "refsubjects",
+      "source-analyzer",
+    ],
+    clientId: makeDevtoolsClientId("panel"),
+    peer: "extension-panel",
+    sessionId: DevtoolsProtocolFixtures.ids.session,
+    version: "0.1.0",
+  } as const;
+}
+
+function makeFakeInspectedWindowByExpression(
+  results: Record<string, unknown>,
+): ChromeInspectedWindow & { readonly expressions: string[] } {
+  const expressions: string[] = [];
+  return {
+    expressions,
+    eval(expression, callback) {
+      expressions.push(expression);
+      callback(results[expression]);
     },
   };
 }
