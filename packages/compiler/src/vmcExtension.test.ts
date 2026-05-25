@@ -87,18 +87,26 @@ describe("createTypedCompilerExtension", () => {
       "import * as __typedRouteContext from "effect/Context";
       import * as __typedRouteEffect from "effect/Effect";
       import { registerRouteContinuation as __typedRegisterRouteContinuation, getDefaultRouteResumeRegistry as __typedGetRouteResumeRegistry } from "@typed/app/resumability";
-      type __TypedRouteHot = {
+      interface __TypedHot {
         readonly data: Record<string, unknown>;
-        readonly accept: (callback?: (nextModule: Record<string, unknown> | undefined) => void) => void;
+        readonly accept: {
+          (): void;
+          (callback: (nextModule: Record<string, unknown> | undefined) => void): void;
+        };
         readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
         readonly invalidate: (message?: string) => void;
-      };
+      }
+      declare global {
+        interface ImportMeta {
+          readonly hot?: __TypedHot;
+        }
+      }
       export const __typedRouteCompatibilityFingerprint = "{\\"continuations\\":[\\"{\\\\\\"captureFingerprint\\\\\\":\\\\\\"captures:generated-context:name:/project/src/routes/profile.ts#param:name\\\\\\",\\\\\\"contextFingerprint\\\\\\":\\\\\\"context:generated-context:name:string\\\\\\",\\\\\\"dependencyFingerprints\\\\\\":[],\\\\\\"symbolId\\\\\\":\\\\\\"/project/src/routes/profile.ts#closure:route\\\\\\",\\\\\\"templateHashes\\\\\\":[],\\\\\\"version\\\\\\":\\\\\\"1\\\\\\"}\\"],\\"version\\":\\"1\\"}";
       const __typedRouteHmrKey = "__typed_route_hmr:/project/src/routes/profile.ts";
-      const __typedRouteHot = (import.meta as ImportMeta & { readonly hot?: __TypedRouteHot }).hot;
+      const __typedRouteHot = import.meta.hot;
       const __typedPreviousFingerprint = __typedRouteHot?.data[__typedRouteHmrKey];
-      if (__typedRouteHot) {
-        __typedRouteHot.accept((nextModule) => {
+      if (__typedRouteHot && import.meta.hot) {
+        import.meta.hot.accept((nextModule) => {
           const nextFingerprint = nextModule?.__typedRouteCompatibilityFingerprint;
           if (nextFingerprint !== __typedRouteCompatibilityFingerprint) {
             __typedRouteHot.invalidate("Typed route HMR compatibility changed for /project/src/routes/profile.ts");
@@ -191,18 +199,26 @@ describe("createTypedCompilerExtension", () => {
       "import * as __typedRouteContext from "effect/Context";
       import * as __typedRouteEffect from "effect/Effect";
       import { registerRouteContinuation as __typedRegisterRouteContinuation, getDefaultRouteResumeRegistry as __typedGetRouteResumeRegistry } from "@typed/app/resumability";
-      type __TypedRouteHot = {
+      interface __TypedHot {
         readonly data: Record<string, unknown>;
-        readonly accept: (callback?: (nextModule: Record<string, unknown> | undefined) => void) => void;
+        readonly accept: {
+          (): void;
+          (callback: (nextModule: Record<string, unknown> | undefined) => void): void;
+        };
         readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
         readonly invalidate: (message?: string) => void;
-      };
+      }
+      declare global {
+        interface ImportMeta {
+          readonly hot?: __TypedHot;
+        }
+      }
       export const __typedRouteCompatibilityFingerprint = "{\\"continuations\\":[\\"{\\\\\\"captureFingerprint\\\\\\":\\\\\\"captures:generated-context:name:/project/src/pages/profile.ts#param:name\\\\\\",\\\\\\"contextFingerprint\\\\\\":\\\\\\"context:generated-context:name:string\\\\\\",\\\\\\"dependencyFingerprints\\\\\\":[],\\\\\\"symbolId\\\\\\":\\\\\\"/project/src/pages/profile.ts#closure:route\\\\\\",\\\\\\"templateHashes\\\\\\":[],\\\\\\"version\\\\\\":\\\\\\"1\\\\\\"}\\"],\\"version\\":\\"1\\"}";
       const __typedRouteHmrKey = "__typed_route_hmr:/project/src/pages/profile.ts";
-      const __typedRouteHot = (import.meta as ImportMeta & { readonly hot?: __TypedRouteHot }).hot;
+      const __typedRouteHot = import.meta.hot;
       const __typedPreviousFingerprint = __typedRouteHot?.data[__typedRouteHmrKey];
-      if (__typedRouteHot) {
-        __typedRouteHot.accept((nextModule) => {
+      if (__typedRouteHot && import.meta.hot) {
+        import.meta.hot.accept((nextModule) => {
           const nextFingerprint = nextModule?.__typedRouteCompatibilityFingerprint;
           if (nextFingerprint !== __typedRouteCompatibilityFingerprint) {
             __typedRouteHot.invalidate("Typed route HMR compatibility changed for /project/src/pages/profile.ts");

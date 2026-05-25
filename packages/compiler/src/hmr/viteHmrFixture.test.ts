@@ -93,14 +93,23 @@ describe("Vite HMR fixture", () => {
 
     expect(source).toMatchInlineSnapshot(`
       "import { getOrCreateHmrState, getOrCreateHmrStateEffect, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime/hmrRegistry";
-      type __TypedHot = {
+      interface __TypedHot {
         readonly data: Record<string, unknown>;
-        readonly accept: () => void;
+        readonly accept: {
+          (): void;
+          (callback: (nextModule: Record<string, unknown> | undefined) => void): void;
+        };
         readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
-      };
+        readonly invalidate: (message?: string) => void;
+      }
+      declare global {
+        interface ImportMeta {
+          readonly hot?: __TypedHot;
+        }
+      }
       const __typedHmrDescriptors = [{"continuationFingerprints":[],"dependencyFingerprints":["/src/routes/counter/state.ts:@app/routes/counter/Count"],"moduleId":"/src/routes/counter.ts","serviceId":"/src/routes/counter.ts#count","shapeFingerprint":"inline-refsubject:count:0","version":"1","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[\\"/src/routes/counter/state.ts:@app/routes/counter/Count\\"],\\"shapeFingerprint\\":\\"inline-refsubject:count:0\\",\\"version\\":\\"1\\"}"},{"continuationFingerprints":[],"dependencyFingerprints":[],"moduleId":"/src/routes/counter/state.ts","serviceId":"@app/routes/counter/Count","shapeFingerprint":"/src/routes/counter/state.ts:@app/routes/counter/Count","version":"1","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[],\\"shapeFingerprint\\":\\"/src/routes/counter/state.ts:@app/routes/counter/Count\\",\\"version\\":\\"1\\"}"}];
       const __typedHmrModules = new Set(__typedHmrDescriptors.map((item) => item.moduleId));
-      const __typedHot = (import.meta as ImportMeta & { readonly hot?: __TypedHot }).hot;
+      const __typedHot = import.meta.hot;
       function __typedHasDescriptor(entry: HmrRegistryEntry): boolean {
         return __typedHmrDescriptors.some((item) => item.moduleId === entry.moduleId && item.serviceId === entry.serviceId);
       }
@@ -112,8 +121,8 @@ describe("Vite HMR fixture", () => {
         const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);
         return descriptor ? getOrCreateHmrStateEffect(descriptor, create, { hotData: __typedHot?.data }) : create();
       }
-      if (__typedHot) {
-        __typedHot.accept();
+      if (__typedHot && import.meta.hot) {
+        import.meta.hot.accept();
         __typedHot.dispose((data) => {
           data[typedHmrRegistryKey] = (globalThis as Record<string, unknown>)[typedHmrRegistryKey];
           pruneHmrState((entry) => __typedHmrModules.has(entry.moduleId) && !__typedHasDescriptor(entry));
@@ -129,18 +138,26 @@ describe("Vite HMR fixture", () => {
     });
 
     expect(source).toMatchInlineSnapshot(`
-      "type __TypedRouteHot = {
+      "interface __TypedHot {
         readonly data: Record<string, unknown>;
-        readonly accept: (callback?: (nextModule: Record<string, unknown> | undefined) => void) => void;
+        readonly accept: {
+          (): void;
+          (callback: (nextModule: Record<string, unknown> | undefined) => void): void;
+        };
         readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
         readonly invalidate: (message?: string) => void;
-      };
+      }
+      declare global {
+        interface ImportMeta {
+          readonly hot?: __TypedHot;
+        }
+      }
       export const __typedRouteCompatibilityFingerprint = "route:capture-v1";
       const __typedRouteHmrKey = "__typed_route_hmr:/src/routes/counter.ts";
-      const __typedRouteHot = (import.meta as ImportMeta & { readonly hot?: __TypedRouteHot }).hot;
+      const __typedRouteHot = import.meta.hot;
       const __typedPreviousFingerprint = __typedRouteHot?.data[__typedRouteHmrKey];
-      if (__typedRouteHot) {
-        __typedRouteHot.accept((nextModule) => {
+      if (__typedRouteHot && import.meta.hot) {
+        import.meta.hot.accept((nextModule) => {
           const nextFingerprint = nextModule?.__typedRouteCompatibilityFingerprint;
           if (nextFingerprint !== __typedRouteCompatibilityFingerprint) {
             __typedRouteHot.invalidate("Typed route HMR compatibility changed for /src/routes/counter.ts");
@@ -156,13 +173,14 @@ describe("Vite HMR fixture", () => {
     `);
   });
 
-  it("keeps generated route HMR glue behind the guarded hot binding", () => {
+  it("emits Vite-detectable route HMR accept calls", () => {
     const source = emitViteRouteHmrGlue({
       moduleId: "/src/routes/counter.ts",
       compatibilityFingerprint: "route:capture-v1",
     });
 
-    expect(source.match(/import\.meta\.hot/g)).toBeNull();
+    expect(source).toContain("import.meta.hot.accept(");
+    expect(source).toContain("__typedRouteHot.dispose(");
     expect(source.match(/__typedHot\./g)).toMatchInlineSnapshot(`null`);
   });
 });

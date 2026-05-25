@@ -16,8 +16,9 @@
 - handoff status: blocked before `pnpm --filter typed-realworld test:acceptance:local`; do not treat acceptance as verified
 - failing command: `command -v hurl && pnpm --filter typed-realworld exec playwright install chromium`
 - exact error: `command -v hurl` produced no path and exited 1
-- required next action: install Hurl, then rerun `pnpm --filter typed-realworld test:acceptance:local` and `pnpm --filter typed-realworld test:hmr:local`
+- required next action: install Hurl, then rerun `pnpm --filter typed-realworld test:acceptance:local`
 
 - null-byte virtual id warning: not observed in the final non-acceptance gates after cache regeneration
 - browser externalization warnings: still observed during RealWorld build and Storybook build for server-oriented Node imports; no build failure observed, but this remains a developer-tooling/runtime bundling follow-up
+- compiler HMR warning: fixed in cohesion remediation by emitting Vite-detectable `import.meta.hot.accept(` calls; verified with `pnpm --filter typed-realworld test:hmr:local`
 - Vite/TS plugin/VS Code diagnostics: untouched by this remediation pass

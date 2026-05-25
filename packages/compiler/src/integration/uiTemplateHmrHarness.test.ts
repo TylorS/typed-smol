@@ -36,14 +36,23 @@ describe("typed ui template and HMR integration harness", () => {
       import * as __typedTemplateEffect from "effect/Effect";
       import { bindAttr, bindBoolean, bindClass, bindData, bindEvent, bindNode, bindProperty, bindRef, bindText, defineDomTemplate, getCommentAtPath, getElementAtPath, getNodeAtPath, mountDomTemplateBindings } from "@typed/template/compiler-runtime/dom";
       import { getOrCreateHmrState, getOrCreateHmrStateEffect, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime/hmrRegistry";
-      type __TypedHot = {
+      interface __TypedHot {
         readonly data: Record<string, unknown>;
-        readonly accept: () => void;
+        readonly accept: {
+          (): void;
+          (callback: (nextModule: Record<string, unknown> | undefined) => void): void;
+        };
         readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
-      };
+        readonly invalidate: (message?: string) => void;
+      }
+      declare global {
+        interface ImportMeta {
+          readonly hot?: __TypedHot;
+        }
+      }
       const __typedHmrDescriptors = [{"continuationFingerprints":[],"dependencyFingerprints":[],"moduleId":"/src/routes/ui.ts","serviceId":"/src/routes/ui.ts#select","shapeFingerprint":"inline-refsubject:select:Select.makeState({ id: \\"fruit-select\\" })","version":"1","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[],\\"shapeFingerprint\\":\\"inline-refsubject:select:Select.makeState({ id: \\\\\\"fruit-select\\\\\\" })\\",\\"version\\":\\"1\\"}"},{"continuationFingerprints":[],"dependencyFingerprints":[],"moduleId":"/src/routes/ui.ts","serviceId":"@app/ui/DialogState","shapeFingerprint":"refsubject-service:DialogState:@app/ui/DialogState","version":"1","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[],\\"shapeFingerprint\\":\\"refsubject-service:DialogState:@app/ui/DialogState\\",\\"version\\":\\"1\\"}"}];
       const __typedHmrModules = new Set(__typedHmrDescriptors.map((item) => item.moduleId));
-      const __typedHot = (import.meta as ImportMeta & { readonly hot?: __TypedHot }).hot;
+      const __typedHot = import.meta.hot;
       function __typedHasDescriptor(entry: HmrRegistryEntry): boolean {
         return __typedHmrDescriptors.some((item) => item.moduleId === entry.moduleId && item.serviceId === entry.serviceId);
       }
@@ -55,8 +64,8 @@ describe("typed ui template and HMR integration harness", () => {
         const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);
         return descriptor ? getOrCreateHmrStateEffect(descriptor, create, { hotData: __typedHot?.data }) : create();
       }
-      if (__typedHot) {
-        __typedHot.accept();
+      if (__typedHot && import.meta.hot) {
+        import.meta.hot.accept();
         __typedHot.dispose((data) => {
           data[typedHmrRegistryKey] = (globalThis as Record<string, unknown>)[typedHmrRegistryKey];
           pruneHmrState((entry) => __typedHmrModules.has(entry.moduleId) && !__typedHasDescriptor(entry));
@@ -108,14 +117,23 @@ describe("typed ui template and HMR integration harness", () => {
     ].sort());
     expect(runtime).toMatchInlineSnapshot(`
       "import { getOrCreateHmrState, getOrCreateHmrStateEffect, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime/hmrRegistry";
-      type __TypedHot = {
+      interface __TypedHot {
         readonly data: Record<string, unknown>;
-        readonly accept: () => void;
+        readonly accept: {
+          (): void;
+          (callback: (nextModule: Record<string, unknown> | undefined) => void): void;
+        };
         readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;
-      };
+        readonly invalidate: (message?: string) => void;
+      }
+      declare global {
+        interface ImportMeta {
+          readonly hot?: __TypedHot;
+        }
+      }
       const __typedHmrDescriptors = [{"continuationFingerprints":[],"dependencyFingerprints":[],"moduleId":"/src/routes/ui.ts","serviceId":"/src/routes/ui.ts#select","shapeFingerprint":"inline-refsubject:select:Select.makeState({ id: \\"fruit-select\\" })","version":"test","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[],\\"shapeFingerprint\\":\\"inline-refsubject:select:Select.makeState({ id: \\\\\\"fruit-select\\\\\\" })\\",\\"version\\":\\"test\\"}"},{"continuationFingerprints":[],"dependencyFingerprints":[],"moduleId":"/src/routes/ui.ts","serviceId":"@app/ui/DialogState","shapeFingerprint":"refsubject-service:DialogState:@app/ui/DialogState","version":"test","compatibilityFingerprint":"{\\"continuationFingerprints\\":[],\\"dependencyFingerprints\\":[],\\"shapeFingerprint\\":\\"refsubject-service:DialogState:@app/ui/DialogState\\",\\"version\\":\\"test\\"}"}];
       const __typedHmrModules = new Set(__typedHmrDescriptors.map((item) => item.moduleId));
-      const __typedHot = (import.meta as ImportMeta & { readonly hot?: __TypedHot }).hot;
+      const __typedHot = import.meta.hot;
       function __typedHasDescriptor(entry: HmrRegistryEntry): boolean {
         return __typedHmrDescriptors.some((item) => item.moduleId === entry.moduleId && item.serviceId === entry.serviceId);
       }
@@ -127,8 +145,8 @@ describe("typed ui template and HMR integration harness", () => {
         const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);
         return descriptor ? getOrCreateHmrStateEffect(descriptor, create, { hotData: __typedHot?.data }) : create();
       }
-      if (__typedHot) {
-        __typedHot.accept();
+      if (__typedHot && import.meta.hot) {
+        import.meta.hot.accept();
         __typedHot.dispose((data) => {
           data[typedHmrRegistryKey] = (globalThis as Record<string, unknown>)[typedHmrRegistryKey];
           pruneHmrState((entry) => __typedHmrModules.has(entry.moduleId) && !__typedHasDescriptor(entry));

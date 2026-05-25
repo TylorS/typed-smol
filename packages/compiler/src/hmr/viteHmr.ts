@@ -60,14 +60,10 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
 
   return [
     'import { getOrCreateHmrState, getOrCreateHmrStateEffect, pruneHmrState, typedHmrRegistryKey, type HmrRegistryEntry } from "@typed/app/runtime/hmrRegistry";',
-    "type __TypedHot = {",
-    "  readonly data: Record<string, unknown>;",
-    "  readonly accept: () => void;",
-    "  readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;",
-    "};",
+    ...typedHotInterface(),
     `const __typedHmrDescriptors = ${JSON.stringify(plan.services)};`,
     "const __typedHmrModules = new Set(__typedHmrDescriptors.map((item) => item.moduleId));",
-    "const __typedHot = (import.meta as ImportMeta & { readonly hot?: __TypedHot }).hot;",
+    "const __typedHot = import.meta.hot;",
     "function __typedHasDescriptor(entry: HmrRegistryEntry): boolean {",
     "  return __typedHmrDescriptors.some((item) => item.moduleId === entry.moduleId && item.serviceId === entry.serviceId);",
     "}",
@@ -79,8 +75,8 @@ export function emitViteHmrRuntime(plan: ViteHmrBoundaryPlan): string {
     "  const descriptor = __typedHmrDescriptors.find((item) => item.serviceId === serviceId);",
     "  return descriptor ? getOrCreateHmrStateEffect(descriptor, create, { hotData: __typedHot?.data }) : create();",
     "}",
-    "if (__typedHot) {",
-    "  __typedHot.accept();",
+    "if (__typedHot && import.meta.hot) {",
+    "  import.meta.hot.accept();",
     "  __typedHot.dispose((data) => {",
     "    data[typedHmrRegistryKey] = (globalThis as Record<string, unknown>)[typedHmrRegistryKey];",
     "    pruneHmrState((entry) => __typedHmrModules.has(entry.moduleId) && !__typedHasDescriptor(entry));",
@@ -93,18 +89,13 @@ export function emitViteRouteHmrGlue(input: ViteRouteHmrGlueInput): string {
   const message = `Typed route HMR compatibility changed for ${input.moduleId}`;
 
   return [
-    "type __TypedRouteHot = {",
-    "  readonly data: Record<string, unknown>;",
-    "  readonly accept: (callback?: (nextModule: Record<string, unknown> | undefined) => void) => void;",
-    "  readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;",
-    "  readonly invalidate: (message?: string) => void;",
-    "};",
+    ...typedHotInterface(),
     `export const __typedRouteCompatibilityFingerprint = ${JSON.stringify(input.compatibilityFingerprint)};`,
     `const __typedRouteHmrKey = ${JSON.stringify(`__typed_route_hmr:${input.moduleId}`)};`,
-    "const __typedRouteHot = (import.meta as ImportMeta & { readonly hot?: __TypedRouteHot }).hot;",
+    "const __typedRouteHot = import.meta.hot;",
     "const __typedPreviousFingerprint = __typedRouteHot?.data[__typedRouteHmrKey];",
-    "if (__typedRouteHot) {",
-    "  __typedRouteHot.accept((nextModule) => {",
+    "if (__typedRouteHot && import.meta.hot) {",
+    "  import.meta.hot.accept((nextModule) => {",
     "    const nextFingerprint = nextModule?.__typedRouteCompatibilityFingerprint;",
     "    if (nextFingerprint !== __typedRouteCompatibilityFingerprint) {",
     `      __typedRouteHot.invalidate(${JSON.stringify(message)});`,
@@ -118,6 +109,25 @@ export function emitViteRouteHmrGlue(input: ViteRouteHmrGlueInput): string {
     "  }",
     "}",
   ].join("\n");
+}
+
+function typedHotInterface(): readonly string[] {
+  return [
+    "interface __TypedHot {",
+    "  readonly data: Record<string, unknown>;",
+    "  readonly accept: {",
+    "    (): void;",
+    "    (callback: (nextModule: Record<string, unknown> | undefined) => void): void;",
+    "  };",
+    "  readonly dispose: (callback: (data: Record<string, unknown>) => void) => void;",
+    "  readonly invalidate: (message?: string) => void;",
+    "}",
+    "declare global {",
+    "  interface ImportMeta {",
+    "    readonly hot?: __TypedHot;",
+    "  }",
+    "}",
+  ];
 }
 
 function dependencyFingerprintSet(

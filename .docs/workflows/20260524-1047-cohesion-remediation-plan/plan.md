@@ -847,7 +847,7 @@ pnpm --filter typed-realworld test:acceptance:local
 
 Expected: pass. This resets/seeds the local database, starts the full app server, runs upstream Hurl API acceptance, runs upstream Playwright browser E2E acceptance, and tears the server down.
 
-- [ ] **Step 4: Run local HMR/resumability gate**
+- [x] **Step 4: Run local HMR/resumability gate**
 
 Run:
 
@@ -856,6 +856,8 @@ pnpm --filter typed-realworld test:hmr:local
 ```
 
 Expected: pass.
+
+Actual: passed after fixing the compiler HMR emitter to produce Vite-detectable `import.meta.hot.accept(` calls and extending the HMR fixture to render the `Select` state asserted by `ui-hmr.spec.ts`.
 
 - [x] **Step 5: Resolve or hand off tooling-owned blockers**
 
@@ -954,7 +956,7 @@ pnpm --filter typed-realworld test:hmr:local
 
 Expected: pass.
 
-Actual: all listed focused gates passed except `typed-realworld test:acceptance:local` and `typed-realworld test:hmr:local`, which were not run because Task 8 stopped at the missing Hurl prerequisite.
+Actual: all listed focused gates passed except `typed-realworld test:acceptance:local`, which was not run because Task 8 stopped at the missing Hurl prerequisite. `typed-realworld test:hmr:local` passed after the compiler HMR emitter fix.
 
 - [x] **Step 2: Run final gates**
 
