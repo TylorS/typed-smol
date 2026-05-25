@@ -34,9 +34,11 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 packages/storybook/.tmp/
+packages/devtools-chrome/.tmp/
 
 # Misc
 .cache/
+.data/
 .temp/
 tmp-*/
 

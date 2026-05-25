@@ -21,7 +21,10 @@
   },
   "scripts": {
     "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
+    "build:extension": "pnpm run build && node scripts/build-extension.mjs",
+    "smoke:manual": "pnpm run build:extension && printf 'Load packages/devtools-chrome/.tmp/devtools-chrome-extension in chrome://extensions and follow MANUAL_SMOKE.md\\n'",
     "test": "pnpm run test:typecheck && vitest run --passWithNoTests",
+    "test:browser": "pnpm run build:extension && node scripts/browser-smoke.mjs",
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
@@ -29,6 +32,11 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.7.0",
+    "esbuild": "^0.28.0",
+    "happy-dom": "catalog:",
+    "playwright": "^1.60.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

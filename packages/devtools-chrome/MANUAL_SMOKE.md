@@ -7,6 +7,8 @@ Run the automated smoke before any browser pass:
 ```sh
 pnpm --filter @typed/devtools-chrome exec vitest run src/devtoolsSmoke.test.ts
 pnpm --filter @typed/devtools-chrome build
+pnpm --filter @typed/devtools-chrome build:extension
+pnpm --filter @typed/devtools-chrome test:browser
 ```
 
 The automated smoke covers:
@@ -16,12 +18,18 @@ The automated smoke covers:
 - Elements sidebar selection rendering from a protocol `DomBindingResolution`.
 - Sources Analyzer sidebar rendering through a `chrome.runtime` `AnalyzeSource` request.
 - Runtime connect, disconnect, and reconnect after an extension reload.
+- Unpacked extension artifact generation under `.tmp/devtools-chrome-extension`.
+- Headed Chromium extension-page smoke for panel rendering, reload, runtime-connected status, and runtime messaging.
 
-## Current Browser Blocker
+## Current Browser Artifact
 
-Browser load-unpacked smoke is blocked in this tranche because `@typed/devtools-chrome`
-currently builds TypeScript modules into `dist`, but does not yet emit a complete unpacked
-extension root containing:
+`@typed/devtools-chrome` emits a complete unpacked extension root at:
+
+```sh
+packages/devtools-chrome/.tmp/devtools-chrome-extension
+```
+
+The generated root contains:
 
 - `manifest.json`
 - `devtools.html`
@@ -30,8 +38,7 @@ extension root containing:
 - `sourcesSidebar.html`
 - icon assets referenced by the manifest or panel registration
 
-Chrome's Load unpacked flow requires selecting an extension directory that contains
-`manifest.json`.
+Chrome's Load unpacked flow should select that directory.
 
 ## Manual Browser Smoke Steps
 
@@ -39,7 +46,7 @@ Use these steps once the unpacked extension root exists.
 
 ### Load unpacked
 
-1. Run `pnpm --filter @typed/devtools-chrome build`.
+1. Run `pnpm --filter @typed/devtools-chrome build:extension`.
 2. Confirm the chosen unpacked extension directory contains `manifest.json`.
 3. Open `chrome://extensions`.
 4. Enable Developer Mode.
@@ -84,5 +91,4 @@ Use these steps once the unpacked extension root exists.
 ## Evidence To Record
 
 Record the Chrome version, extension directory path, fixture URL, and any blocked assertion.
-If the unpacked extension root is still missing, record that as the blocker rather than
-claiming browser smoke coverage.
+Record whether `pnpm --filter @typed/devtools-chrome test:browser` passed locally before the manual pass.
