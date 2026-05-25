@@ -6,7 +6,9 @@ import {
   type ElementsSidebarModel,
 } from "../elementsSidebar.js";
 import {
+  TYPED_DEVTOOLS_INSPECT_DOM_BINDING_EXPRESSION,
   TYPED_DEVTOOLS_SELECTED_NODE_EXPRESSION,
+  inspectDomBinding,
   makeInspectedWindowDomResolver,
   type ChromeInspectedWindow,
 } from "./inspectedWindow.js";
@@ -20,6 +22,20 @@ describe("Chrome inspected window transport", () => {
       DevtoolsProtocolFixtures.domBindingResolution,
     );
     expect(inspectedWindow.expressions).toEqual([TYPED_DEVTOOLS_SELECTED_NODE_EXPRESSION]);
+  });
+
+  it("evaluates DOM binding inspection through the page-side Typed DOM bridge", async () => {
+    const inspectedWindow = makeFakeInspectedWindow({
+      _tag: "Inspected",
+      bindingId: DevtoolsProtocolFixtures.ids.domBinding,
+    });
+
+    await expect(
+      inspectDomBinding(inspectedWindow, DevtoolsProtocolFixtures.ids.domBinding),
+    ).resolves.toEqual({ ok: true });
+    expect(inspectedWindow.expressions).toEqual([
+      TYPED_DEVTOOLS_INSPECT_DOM_BINDING_EXPRESSION(DevtoolsProtocolFixtures.ids.domBinding),
+    ]);
   });
 
   it("returns explicit unbound results for eval exceptions and invalid payloads", async () => {

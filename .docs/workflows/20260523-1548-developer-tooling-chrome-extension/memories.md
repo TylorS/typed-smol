@@ -173,3 +173,9 @@
 
 - Realworld server SSR must provide a server-safe `BrowserAuth` layer when route templates include browser auth event handlers; browser-only auth belongs in `.browser.dependencies.ts`, but server rendering still needs a non-browser service value.
 - Action resume dispatch can preserve an unknown handler environment at the low-level dispatcher; only runtime bootstraps that actually satisfy the environment should narrow to `never`.
+
+### T27
+
+- Chrome panel protocol tabs must be real active panels with one visible body at a time; static all-section label dumps are not an acceptable DevTools UI.
+- Component rows must expose explicit DOM and Source actions, backed by protocol DOM binding resolution and Source Analyzer facts.
+- Page-side DOM bridge inspection needs a binding-id-to-node lookup in `DomRegistry`; selected-node resolution alone cannot support panel-driven component inspection.

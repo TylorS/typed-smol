@@ -28,6 +28,36 @@ describe("installTypedDevtoolsBridge", () => {
     expect(api.resolveSelectedElement(element)).toMatchObject({ _tag: "Resolved" });
   });
 
+  it("installs DOM binding inspection when enabled", () => {
+    const document = new Window().document;
+    const element = document.createElement("button");
+    const root = document.createElement("main");
+    const registry = makeDomRegistry();
+    const inspected: Node[] = [];
+    const globalObject: Record<PropertyKey, unknown> = {
+      inspect: (node: Node) => inspected.push(node),
+    };
+
+    root.append(element);
+    registry.registerComponent(DevtoolsProtocolFixtures.componentSummary);
+    registry.observer.onTemplateMounted?.({
+      nodes: [element],
+      root,
+      templateHash: DevtoolsProtocolFixtures.ids.templateHash,
+    });
+
+    installTypedDevtoolsBridge({ enabled: true, domRegistry: registry, globalObject });
+
+    const api = globalObject.__TYPED_DEVTOOLS__ as {
+      readonly inspectDomBinding: (bindingId: string) => unknown;
+    };
+    expect(api.inspectDomBinding(`${DevtoolsProtocolFixtures.ids.templateHash}#root:0`)).toEqual({
+      _tag: "Inspected",
+      bindingId: `${DevtoolsProtocolFixtures.ids.templateHash}#root:0`,
+    });
+    expect(inspected).toEqual([element]);
+  });
+
   it("does not install the bridge when disabled", () => {
     const globalObject: Record<PropertyKey, unknown> = {};
 

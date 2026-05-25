@@ -46,6 +46,7 @@ describe("DOM DevTools registry", () => {
       component,
       templatePartId,
     });
+    expect(registry.resolveBindingNode(bindingId)).toBe(anchor);
   });
 
   it("resolves fragment roots and nearest nested ownership for selected nodes", () => {
@@ -153,6 +154,8 @@ describe("DOM DevTools registry", () => {
       templateHash: "shared-template",
     });
 
+    expect(registry.resolveBindingNode(bindingA)).toBeUndefined();
+    expect(registry.resolveBindingNode(bindingB)).toBe(anchorB);
     await expect(
       Effect.runPromise(registry.resolveDomBinding({ bindingId: bindingA })),
     ).resolves.toMatchObject({ _tag: "Unbound" });

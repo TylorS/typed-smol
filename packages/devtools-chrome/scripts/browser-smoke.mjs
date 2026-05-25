@@ -28,9 +28,19 @@ try {
   await expectText(page, "HMR");
   await expectText(page, "OTEL");
   await expectText(page, "Sources");
+  await page.waitForSelector('[data-testid="panel-components"]');
+  await page.waitForSelector('[data-testid="component-action-dom-cmp-app-root"]');
+  await page.waitForSelector('[data-testid="component-action-source-cmp-app-root"]');
+  await page.click('[data-testid="tab-Sources"]');
+  await page.waitForSelector('[data-testid="panel-sources"]');
+  await expectText(page, "file:///workspace/src/App.tsx");
+  await page.click('[data-testid="tab-OTEL"]');
+  await page.waitForSelector('[data-testid="panel-otel"]');
+  await expectText(page, "trace-root/span-root");
   await page.reload();
   await page.waitForSelector('[data-testid="connection-status"]');
   await expectText(page, "runtime connected");
+  await page.waitForSelector('[data-testid="panel-components"]');
 
   const response = await page.evaluate(() => {
     return new Promise((resolve, reject) => {

@@ -20,6 +20,7 @@ import * as Effect from "effect/Effect";
 export interface DomRegistry {
   readonly observer: DomTemplateDevtoolsObserver;
   readonly registerComponent: (component: ComponentSummary) => void;
+  readonly resolveBindingNode: (bindingId: DomBindingId) => Node | undefined;
   readonly resolveDomBinding: (request: DomBindingRequest) => Effect.Effect<DomBindingResolution>;
   readonly resolveNode: (node: Node) => DomBindingResolution;
 }
@@ -34,6 +35,7 @@ interface DomRegistryState {
   readonly bindingRecords: Map<DomBindingId, DomNodeRecord>;
   readonly componentsByTemplate: Map<TemplateHash, ComponentSummary>;
   readonly nodeRecords: WeakMap<Node, DomNodeRecord>;
+  readonly nodesByBinding: Map<DomBindingId, Node>;
   readonly pendingBindingsByTemplate: Map<TemplateHash, Set<PendingBindingRecord>>;
   readonly rootBindings: WeakMap<HTMLElement, Set<DomBindingId>>;
 }
@@ -51,6 +53,9 @@ export function makeDomRegistry(): DomRegistry {
     registerComponent(component) {
       if (component.templateHash) state.componentsByTemplate.set(component.templateHash, component);
     },
+    resolveBindingNode(bindingId) {
+      return state.nodesByBinding.get(bindingId);
+    },
     resolveDomBinding(request) {
       return Effect.succeed(resolveBindingRecord(state, request.bindingId));
     },
@@ -65,6 +70,7 @@ function makeDomRegistryState(): DomRegistryState {
     bindingRecords: new Map(),
     componentsByTemplate: new Map(),
     nodeRecords: new WeakMap(),
+    nodesByBinding: new Map(),
     pendingBindingsByTemplate: new Map(),
     rootBindings: new WeakMap(),
   };
@@ -97,6 +103,7 @@ function recordTemplateBinding(
 
   state.bindingRecords.set(bindingId, record);
   state.nodeRecords.set(event.node, record);
+  state.nodesByBinding.set(bindingId, event.node);
   addPendingBinding(state, record.templateHash, {
     bindingId,
     node: event.node,
@@ -114,6 +121,7 @@ function recordTemplateMounted(
     const record = rootRecord(event.templateHash, templateHash, index);
     state.bindingRecords.set(record.bindingId, record);
     state.nodeRecords.set(node, record);
+    state.nodesByBinding.set(record.bindingId, node);
     rootBindingIds.add(record.bindingId);
   });
 
@@ -128,7 +136,10 @@ function forgetTemplateRoot(
   const bindingIds = state.rootBindings.get(event.root);
   if (!bindingIds) return;
 
-  for (const bindingId of bindingIds) state.bindingRecords.delete(bindingId);
+  for (const bindingId of bindingIds) {
+    state.bindingRecords.delete(bindingId);
+    state.nodesByBinding.delete(bindingId);
+  }
   state.rootBindings.delete(event.root);
 }
 

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { DevtoolsProtocolFixtures } from "@typed/devtools-protocol";
 import { renderTypedDevtoolsPanel } from "./app.js";
 
 describe("Typed DevTools panel app", () => {
@@ -24,12 +25,58 @@ describe("Typed DevTools panel app", () => {
       expect(root.textContent).toContain(title);
     }
     expect(root.textContent).toContain("Root");
+    click(root, '[data-testid="tab-Templates"]');
     expect(root.textContent).toContain("sha256:root-template");
+    click(root, '[data-testid="tab-Fx"]');
     expect(root.textContent).toContain("component/root/load-user");
+    click(root, '[data-testid="tab-RefSubjects"]');
     expect(root.textContent).toContain("component/root/user");
+    click(root, '[data-testid="tab-HMR"]');
     expect(root.textContent).toContain("module:/src/App.tsx");
+    click(root, '[data-testid="tab-OTEL"]');
     expect(root.textContent).toContain("trace-root/span-root");
+    click(root, '[data-testid="tab-Sources"]');
     expect(root.textContent).toContain("file:///workspace/src/App.tsx");
+  });
+
+  it("switches tabs instead of rendering placeholder sections at once", async () => {
+    const root = document.createElement("div");
+
+    await renderTypedDevtoolsPanel(root);
+
+    expect(root.querySelector('[data-testid="panel-components"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="panel-sources"]')).toBeNull();
+
+    click(root, '[data-testid="tab-Sources"]');
+
+    expect(root.querySelector('[data-testid="panel-components"]')).toBeNull();
+    expect(root.querySelector('[data-testid="panel-sources"]')).not.toBeNull();
+    expect(root.textContent).toContain("file:///workspace/src/App.tsx");
+  });
+
+  it("connects component rows to DOM inspection and source reveal actions", async () => {
+    const root = document.createElement("div");
+    const inspectDomBinding = vi.fn();
+    const openSource = vi.fn();
+
+    await renderTypedDevtoolsPanel(root, {
+      actions: {
+        inspectDomBinding,
+        openSource,
+      },
+    });
+
+    click(root, '[data-testid="component-action-dom-cmp-app-root"]');
+    click(root, '[data-testid="component-action-source-cmp-app-root"]');
+
+    expect(inspectDomBinding).toHaveBeenCalledWith(
+      DevtoolsProtocolFixtures.domBindingResolution.bindingId,
+    );
+    expect(openSource).toHaveBeenCalledWith({
+      column: 3,
+      line: 12,
+      resource: "file:///workspace/src/App.tsx",
+    });
   });
 
   it("uses Chrome runtime RPC when the extension runtime is available", async () => {
@@ -41,10 +88,21 @@ describe("Typed DevTools panel app", () => {
     expect(root.querySelector('[data-testid="connection-status"]')?.textContent).toContain(
       "runtime connected",
     );
-    expect(runtime.messages.map((message) => message.tag)).toEqual(["Handshake", "AnalyzeSource"]);
+    expect(runtime.messages.map((message) => message.tag)).toEqual([
+      "Handshake",
+      "AnalyzeSource",
+      "ResolveDomBinding",
+    ]);
+    click(root, '[data-testid="tab-Sources"]');
     expect(root.textContent).toContain("file:///workspace/src/App.tsx");
   });
 });
+
+function click(root: Element, selector: string): void {
+  const target = root.querySelector(selector);
+  if (!(target instanceof HTMLElement)) throw new Error(`Missing ${selector}`);
+  target.click();
+}
 
 function makeFakeRuntime() {
   const listeners = new Set<(message: unknown) => void>();
@@ -82,12 +140,14 @@ function makeFakeRuntime() {
                         unsupportedCapabilities: [],
                         version: "0.1.0",
                       }
-                    : {
-                        _tag: "SourceFacts",
-                        facts: [],
-                        requestedAt: 1,
-                        resource: "file:///workspace/src/App.tsx",
-                      },
+                    : request.tag === "AnalyzeSource"
+                      ? {
+                          _tag: "SourceFacts",
+                          facts: [],
+                          requestedAt: 1,
+                          resource: "file:///workspace/src/App.tsx",
+                        }
+                      : DevtoolsProtocolFixtures.domBindingResolution,
                 tag: request.tag,
               });
             }

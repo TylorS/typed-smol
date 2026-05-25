@@ -870,3 +870,30 @@
 - memory_updates:
   - Realworld server SSR must provide a server-safe `BrowserAuth` layer when route templates include browser auth event handlers; browser-only auth belongs in `.browser.dependencies.ts`, but server rendering still needs a non-browser service value.
   - Action resume dispatch can preserve an unknown handler environment at the low-level dispatcher; only runtime bootstraps that actually satisfy the environment should narrow to `never`.
+
+### T27 - Real Panel Tabs and Component Actions
+
+- task_id: T27
+- trigger:
+  - User browser feedback reported the extension panel was placeholder UI: no real tabs and component rows were not connected to Sources or DOM inspection.
+- root_cause:
+  - `packages/devtools-chrome/src/panel/app.ts` rendered every protocol section at once and tab buttons had no click behavior.
+  - Component rows rendered text only; there was no action model for `chrome.devtools.panels.openResource` or inspected-window DOM inspection.
+  - The page bridge exposed selected-node resolution only, so panel-driven component inspection had no way to map a protocol binding id back to a mounted DOM node.
+- validation_evidence:
+  - RED: `pnpm --filter @typed/devtools-chrome exec vitest run src/panel/app.test.ts src/transport/inspectedWindow.test.ts` failed for missing active panel, missing component action controls, and missing inspected-window DOM action transport.
+  - GREEN: `pnpm --filter @typed/devtools-runtime test` passed with 9 files and 48 tests.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/runtime/devtoolsBridge.test.ts` passed with 1 file and 3 tests.
+  - GREEN: `pnpm --filter @typed/devtools-chrome test` passed with 7 files and 33 tests.
+  - GREEN: `pnpm --filter @typed/devtools-chrome test:browser` passed after checking active tab switching, component action buttons, Sources data, OTEL data, reload, runtime connect, and RPC messaging in Chromium with the unpacked extension.
+  - GREEN: `pnpm exec oxfmt --check ...` passed for the 9 touched implementation/test files.
+  - GREEN: `git diff --check` passed.
+- context_updates:
+  - Replaced the placeholder panel shell with active DevTools-style tabs and dense row layouts.
+  - Added component DOM and Source buttons; Source routes to `chrome.devtools.panels.openResource` and DOM routes to inspected-window bridge evaluation.
+  - Added `DomRegistry.resolveBindingNode` and page-side `inspectDomBinding` bridge support so binding ids can reveal mounted DOM nodes.
+  - Strengthened Chromium smoke to fail if tabs or component action buttons regress back to placeholders.
+- memory_updates:
+  - Chrome panel protocol tabs must be real active panels with one visible body at a time; static all-section label dumps are not an acceptable DevTools UI.
+  - Component rows must expose explicit DOM and Source actions, backed by protocol DOM binding resolution and Source Analyzer facts.
+  - Page-side DOM bridge inspection needs a binding-id-to-node lookup in `DomRegistry`; selected-node resolution alone cannot support panel-driven component inspection.
