@@ -17,6 +17,8 @@
 
 ## Known Residual Risks
 
+- Generated browser mounts still do not pass a `DomTemplateRuntime` into compiled DOM templates, so route resume, action resume, and devtools observation are not yet aligned as an end-to-end app runtime handoff.
+- `packages/ui/AGENTS.md` still frames `@typed/ui` as Link plus SSR only, which is stale against the current headless component-library scope.
 - Storybook and RealWorld builds still warn about server-oriented Node imports being externalized for browser compatibility.
 - The non-fatal virtual-modules warning `options.id must not contain null bytes` still appears during RealWorld and Storybook Vite builds.
 - No browser-interaction smoke was added for clicking through the built stories.
@@ -41,6 +43,7 @@
 
 - The final slice keeps Storybook as a consumer of app virtual modules and does not move router/api ownership into Storybook.
 - RealWorld uses the same virtual-module defaults path as app/plugin configuration instead of duplicating router/api targets inside stories.
+- UI, Storybook, compiler, and virtual-module ownership are mostly aligned after the fixes; the remaining cross-stream gap is runtime handoff from `@typed/app` into compiled templates and devtools.
 
 ## Self-Improvement Loop
 

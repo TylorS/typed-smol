@@ -7,6 +7,14 @@
 
 ## Findings
 
+### P1 - Resumability and DevTools runtime handoff is not wired through generated browser mounts
+
+- what: the compiler/template/runtime/devtools packages now expose the expected pieces, but the app browser runtime still mounts compiled DOM templates without passing a `DomTemplateRuntime`.
+- why_it_matters: route resume, action resume, and DOM binding observation can pass library-level tests while generated apps never activate those hooks during browser hydration. Chrome DevTools also expects `globalThis.__TYPED_DEVTOOLS__`, but no runtime installer currently owns that bridge.
+- where: `packages/app/src/runtime/mount.ts`, `packages/app/src/internal/emitBrowserSource.ts`, `packages/compiler/src/template/transformTemplateModule.ts`, `packages/template/src/compiler-runtime/dom.ts`, `packages/devtools-chrome/src/transport/inspectedWindow.ts`
+- evidence: `mountCompiled` calls `template.renderInto(options.root, options.values ?? emptyValues())` with no runtime; generated `makeRenderLayer` only provides router runtime; the compiler imports/emits `bootRouteResume` but not `bootActionResume`; `rg "__TYPED_DEVTOOLS__"` only finds the Chrome transport.
+- fix_path: introduce one browser runtime integration point that constructs route/action resume runtimes plus optional devtools DOM observation, passes that runtime into compiled `renderInto`, emits/boots action resume for server-rendered action descriptors, and installs the Chrome bridge when devtools is enabled.
+
 ### Resolved - RealWorld Storybook runtime imports resolved route/api targets from the wrong directory
 
 - what: RealWorld Storybook files imported `typed:storybook/runtime?path=/&routes=./src/routes&api=./src/api` from inside `src/`, causing nested virtual imports to resolve `src/src/routes` and `src/src/api`.
@@ -23,6 +31,13 @@
 - fix_path: preserve the helper return environment as `unknown` and leave the environment boundary at `runWithTypedStoryRuntime`.
 - evidence: `pnpm --filter @typed/storybook build` failed before the fix and passed after the signature correction.
 
+### P2 - `@typed/ui` package instructions lag the new headless component-library scope
+
+- what: `packages/ui/AGENTS.md` still describes `@typed/ui` only as Link plus SSR web integration, while `packages/ui/README.md` now documents the headless RefSubject/DataAttr/StartupRef/component primitive surface.
+- why_it_matters: future agents routed through package-local instructions can miss the current component-library ownership model and accidentally treat the headless primitives as incidental or out of scope.
+- where: `packages/ui/AGENTS.md`, `packages/ui/README.md`
+- fix_path: update the local package instructions to match the README and current branch direction: headless/template-native primitives, RefSubject-backed state, Schema-backed data attrs, StartupRef hydration, and native Dialog/Popover-first layering.
+
 ## Test Gaps
 
 - Browser-interactive Storybook behavior was validated by static Storybook build only; no Playwright interaction test was added in this pass.
@@ -31,6 +46,11 @@
 
 ## Verification
 
+- fresh continuation checks:
+  - `pnpm build`
+  - `pnpm --filter typed-realworld storybook:build`
+  - `git diff --check`
+  - `git status -sb`
 - `pnpm --filter @typed/compiler exec vitest run src/route/transformRouteModule.test.ts`
 - `pnpm --filter @typed/storybook exec vitest run src/runtime.test.ts src/preview.test.ts`
 - `pnpm --filter @typed/ui exec vitest run src/Dom.test.ts src/AriakitParity.test.ts`

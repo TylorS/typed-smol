@@ -10,6 +10,7 @@
 - Add Storybook/RealWorld smoke coverage for the generated runtime path.
 - Make `examples/realworld` pass its local functional gates: check, build, unit, integration, SSR, local API acceptance, local browser E2E acceptance, local HMR, and Storybook build.
 - Treat browser externalization warnings or null-byte virtual-id warnings as blockers if they prevent RealWorld from being 100% functional/compliant/resumable.
+- Add and enforce a durable architecture ownership ADR before further remediation work continues.
 - Update `packages/ui/AGENTS.md` to match the current headless component-library scope.
 - Track developer-tooling workflow overlap explicitly.
 
@@ -34,4 +35,5 @@
 - `pnpm build` passes.
 - Browser-runtime source snapshots show the app runtime helper rather than ad hoc route-only mounting.
 - Devtools browser bridge tests prove selected DOM node resolution is bound when enabled and unbound when disabled.
+- Every implementation task documents which ADR-owned boundary it touches and does not introduce duplicate ownership.
 - Workflow notes record whether developer-tooling handoff happened before any tooling-owned changes.

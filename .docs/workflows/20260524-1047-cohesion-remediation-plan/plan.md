@@ -21,6 +21,36 @@ Another agent is still working through `.docs/workflows/20260522-2104-serializab
 
 Allowed compiler work in this plan is limited to compiled-template action-resume bootstrapping in `packages/compiler/src/template/transformTemplateModule.ts` and RealWorld resumability proof. If RealWorld compliance requires null-byte virtual-id fixes, browser externalization fixes, Vite host changes, TS plugin changes, or VS Code changes, stop and get developer-tooling handoff before editing those surfaces.
 
+## Architecture Sustainability Gate
+
+The durable ownership model is `.docs/adrs/20260524-runtime-cohesion-ownership-boundaries.md`. Task 0 must validate this plan against that ADR before any remaining implementation continues.
+
+Architecture invariants:
+
+- One browser runtime handoff path: generated `typed:browser` source from `@typed/app`.
+- One route/action resume runtime path: app-owned registries composed into `DomTemplateRuntime`.
+- One DOM DevTools bridge path: `@typed/app/runtime` installs the browser global; `@typed/devtools-runtime` remains registry/event substrate.
+- Storybook consumes app virtual modules; it does not own a parallel app runtime.
+- UI primitives use public resumability conventions; they do not define private hydration paths.
+- Developer tooling host integration stays in the developer-tooling workflow unless explicitly handed off.
+
+Every task must pass the architecture check:
+
+```text
+owner:
+reason_for_change:
+new_abstraction: yes/no
+duplicate_runtime_path: yes/no
+tooling_surface_touched: yes/no
+realworld_gate_requiring_change:
+```
+
+Acceptable answers:
+
+- `duplicate_runtime_path: no`
+- `tooling_surface_touched: no`, unless `developer-tooling-handoff.md` records handoff
+- `new_abstraction: yes` only when a failing test or RealWorld gate requires it
+
 ## Exact Definitions
 
 `100% functional RealWorld` means these commands complete with exit code 0 in this checkout:
@@ -57,7 +87,8 @@ pnpm --filter typed-realworld test:hmr:local
 
 ```mermaid
 flowchart TD
-  T0["T0 Coordination checkpoint"] --> T1["T1 UI package instructions"]
+  A0["A0 Architecture sustainability gate"] --> T0["T0 Coordination checkpoint"]
+  T0 --> T1["T1 UI package instructions"]
   T0 --> T2["T2 App DOM runtime helper"]
   T2 --> T3["T3 Mount passes runtime to compiled templates"]
   T2 --> T4["T4 Browser VM hydrates with runtime helper"]
@@ -71,6 +102,7 @@ flowchart TD
 
 ## File Structure
 
+- Create: `.docs/adrs/20260524-runtime-cohesion-ownership-boundaries.md` - durable package ownership model for runtime, compiler, Storybook, UI, DevTools, and developer tooling.
 - Create: `packages/app/src/runtime/domTemplateRuntime.ts` - compose route/action resume and optional devtools DOM observer.
 - Create: `packages/app/src/runtime/domTemplateRuntime.test.ts` - runtime helper unit tests.
 - Modify: `packages/app/src/runtime/RuntimeTemplate.ts` - add `runtime` to `MountOptions`.
@@ -93,13 +125,34 @@ flowchart TD
 
 ## Tasks
 
-### Task 0: Coordination Checkpoint
+### Task 0: Architecture And Coordination Checkpoint
 
 **Files:**
 - Modify: `.docs/workflows/20260524-1047-cohesion-remediation-plan/plan.md`
+- Create or modify: `.docs/adrs/20260524-runtime-cohesion-ownership-boundaries.md`
 - Create: `.docs/workflows/20260524-1047-cohesion-remediation-plan/developer-tooling-handoff.md`
 
-- [ ] **Step 1: Capture current worktree and tooling workflow status**
+- [x] **Step 1: Review the architecture ADR**
+
+Run:
+
+```bash
+sed -n '1,240p' .docs/adrs/20260524-runtime-cohesion-ownership-boundaries.md
+```
+
+Expected: the ADR explicitly assigns ownership for `@typed/template`, `@typed/compiler`, `@typed/app`, `@typed/storybook`, `@typed/ui`, DevTools runtime/Chrome integration, and developer tooling.
+
+- [x] **Step 2: Check this plan against the ADR**
+
+Run:
+
+```bash
+sed -n '180,$p' .docs/workflows/20260524-1047-cohesion-remediation-plan/plan.md | rg -n "parallel runtime|Storybook.*runtime owner|filesystem routing|declare module \"typed:|@typed/template.*DevTools|@typed/compiler.*globalThis|@typed/storybook.*resume registry"
+```
+
+Expected: no matches. If there is a match, rewrite that task so the owning package matches the ADR before implementation continues.
+
+- [x] **Step 3: Capture current worktree and tooling workflow status**
 
 Run:
 
@@ -110,7 +163,7 @@ sed -n '1,260p' .docs/workflows/20260522-2104-serializable-template-tooling/plan
 
 Expected: worktree changes are either this workflow's docs or explicitly identified external-agent changes.
 
-- [ ] **Step 2: Write the handoff note**
+- [x] **Step 4: Write the handoff note**
 
 Create `developer-tooling-handoff.md`:
 
@@ -128,12 +181,12 @@ Create `developer-tooling-handoff.md`:
 - required_before_tooling_edits: explicit handoff from the developer-tooling agent or human approval
 ```
 
-- [x] **Step 3: Commit**
+- [ ] **Step 5: Commit**
 
 Commit message:
 
 ```text
-docs: record cohesion remediation coordination
+docs: record runtime cohesion architecture gate
 ```
 
 ### Task 1: Align `@typed/ui` Package Instructions
