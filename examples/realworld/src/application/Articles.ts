@@ -11,12 +11,21 @@ import type { RealWorldError } from "../domain/Errors.js";
 import type { ArticleRepositoryError, UserRepositoryError } from "../domain/RepositoryErrors.js";
 import { ArticleRepository } from "../infrastructure/repositories/ArticleRepository.js";
 import type {
+  CreateArticleInput,
   ArticleListFilter,
   ArticleRepositoryService,
+  UpdateArticleInput,
 } from "../infrastructure/repositories/ArticleRepository.js";
 import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
 import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
-import { forbidden, notFound, optionalUserId, requireNonBlank, requireUser } from "./Common.js";
+import {
+  forbidden,
+  notFound,
+  optionalUserId,
+  requireNonBlank,
+  requireUser,
+  validationError,
+} from "./Common.js";
 
 type ArticlesError = RealWorldError | ArticleRepositoryError | UserRepositoryError;
 
@@ -140,20 +149,41 @@ const requireAuthor = (
 
 const validateCreate = (
   input: CreateArticleRequest,
-): Effect.Effect<CreateArticleRequest["article"], RealWorldError> =>
+): Effect.Effect<CreateArticleInput, RealWorldError> =>
   Effect.gen(function* () {
     yield* requireNonBlank("title", input.article.title);
     yield* requireNonBlank("description", input.article.description);
     yield* requireNonBlank("body", input.article.body);
-    return input.article;
+    if (input.article.tagList === null) return yield* Effect.fail(validationError("tagList"));
+    return {
+      title: input.article.title,
+      description: input.article.description,
+      body: input.article.body,
+      ...(input.article.tagList === undefined ? {} : { tagList: input.article.tagList }),
+    };
   });
 
 const validateUpdate = (
   input: UpdateArticleRequest,
-): Effect.Effect<UpdateArticleRequest["article"], RealWorldError> =>
+): Effect.Effect<UpdateArticleInput, RealWorldError> =>
   Effect.gen(function* () {
     if (input.article.title !== undefined) {
       yield* requireNonBlank("title", input.article.title);
     }
-    return input.article;
+    if (input.article.description !== undefined) {
+      yield* requireNonBlank("description", input.article.description);
+    }
+    if (input.article.body !== undefined) {
+      yield* requireNonBlank("body", input.article.body);
+    }
+    if (input.article.tagList === null) return yield* Effect.fail(validationError("tagList"));
+
+    return {
+      ...(input.article.title === undefined ? {} : { title: input.article.title }),
+      ...(input.article.description === undefined
+        ? {}
+        : { description: input.article.description }),
+      ...(input.article.body === undefined ? {} : { body: input.article.body }),
+      ...(input.article.tagList === undefined ? {} : { tagList: input.article.tagList }),
+    };
   });

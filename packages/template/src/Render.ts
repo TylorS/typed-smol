@@ -324,18 +324,6 @@ export type ToRendered<T extends RenderEvent | null> = Rendered | (T extends nul
  *     Layer.launch
  *   )
  * })
- *
- * // Can also use pipe syntax
- * const program2 = Effect.gen(function* () {
- *   const template = html`<div>Hello</div>`
- *
- *   yield* template.pipe(
- *     render(document.body),
- *     Fx.drainLayer,
- *     Layer.provide(DomRenderTemplate),
- *     Layer.launch
- *   )
- * })
  * ```
  *
  * @param fx - The `Fx` stream of content to render.
@@ -389,12 +377,50 @@ function removeChildren(where: HTMLElement, previous: Rendered) {
 }
 
 function replaceChildren(where: HTMLElement, wire: Rendered) {
+  const formState = captureFormControlState(where);
   where.replaceChildren(...getNodesFromRendered(wire));
+  restoreFormControlState(where, formState);
 }
 
 function getNodesFromRendered(rendered: Rendered): Array<globalThis.Node> {
   const value = rendered.valueOf() as globalThis.Node | Array<globalThis.Node>;
   return Array.isArray(value) ? value : [value];
+}
+
+interface FormControlState {
+  readonly key: string;
+  readonly value: string;
+  readonly checked?: boolean;
+}
+
+function captureFormControlState(root: ParentNode): readonly FormControlState[] {
+  return formControls(root).map((element, index) => ({
+    key: formControlKey(element, index),
+    value: element.value,
+    ...("checked" in element ? { checked: element.checked } : {}),
+  }));
+}
+
+function restoreFormControlState(root: ParentNode, state: readonly FormControlState[]): void {
+  if (state.length === 0) return;
+  const byKey = new Map(state.map((entry) => [entry.key, entry]));
+  for (const [index, element] of formControls(root).entries()) {
+    const entry = byKey.get(formControlKey(element, index));
+    if (!entry) continue;
+    element.value = entry.value;
+    if (entry.checked !== undefined && "checked" in element) element.checked = entry.checked;
+  }
+}
+
+function formControls(root: ParentNode): Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> {
+  return Array.from(root.querySelectorAll("input, textarea, select"));
+}
+
+function formControlKey(
+  element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+  index: number,
+): string {
+  return `${element.tagName}:${element.getAttribute("name") ?? ""}:${element.getAttribute("type") ?? ""}:${index}`;
 }
 
 function setupRenderParts(
@@ -617,14 +643,14 @@ function matchRenderable<X, A, B, C>(
   matches: {
     Primitive: (value: X) => A;
     Effect: (effect: Effect.Effect<X>) => B;
-    Fx: (fx: Fx.Fx<X>) => C;
+    Fx: (fx: Fx.Fx<X, any, any>) => C;
   },
 ): A | B | C | void {
   if (isNullish(renderable)) return;
   else if (isRenderEvent(renderable)) {
     return matches.Primitive(renderable as X);
   } else if (Fx.isFx(renderable)) {
-    return matches.Fx(renderable as any);
+    return matches.Fx(Fx.switchMap(renderable, liftRenderableToFx));
   } else if (isStream(renderable)) {
     return matches.Fx(Fx.fromStream(renderable));
   } else if (Effect.isEffect(renderable)) {

@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect";
-import { Fx } from "@typed/fx";
+import { Fx, RefSubject } from "@typed/fx";
 import * as EventHandler from "../EventHandler.js";
 import { renderToString } from "../internal/encoding.js";
 import { HtmlRenderEvent } from "../RenderEvent.js";
@@ -47,7 +47,9 @@ export function defineServerTemplate<Values extends readonly unknown[]>(
   return (...captured) => ({
     renderToString: async (values = captured) => {
       const events = await Effect.runPromise(
-        Fx.collectAll(spec.render(values as unknown as Values, {})),
+        Fx.collectAll(spec.render(values as unknown as Values, {})).pipe(
+          Effect.provideService(RefSubject.CurrentComputedBehavior, "one"),
+        ),
       );
       return events.map((event) => event.html).join("");
     },

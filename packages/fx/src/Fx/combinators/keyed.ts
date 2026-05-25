@@ -16,7 +16,7 @@ import * as Sink from "../../Sink/Sink.js";
 import type { Fx } from "../Fx.js";
 import type { Add, Moved, Remove, Update } from "../internal/diff.js";
 import { diff, getKeyMap } from "../internal/diff.js";
-import { withScopedFork } from "../internal/scope.js";
+import { awaitScopeClose, withScopedFork } from "../internal/scope.js";
 import { FxTypeId } from "../TypeId.js";
 
 /**
@@ -137,61 +137,66 @@ function runKeyed<A, E, R, B extends PropertyKey, C, E2, R2, R3>(
   sink: Sink.Sink<ReadonlyArray<C>, E | E2, R3>,
   id: number,
 ): Effect.Effect<unknown, never, Scope.Scope | R | R2 | R3> {
-  return withDebounceFork((debounceFork, parentScope) => {
-    const state = emptyKeyedState<A, B, C>();
-    const emit = Effect.suspend(() => sink.onSuccess(getReadyIndices(state)));
-    const scheduleNextEmit = debounceFork(emit);
+  return withDebounceFork(
+    (debounceFork, parentScope) =>
+      Effect.gen(function* () {
+        const state = emptyKeyedState<A, B, C>();
+        const emit = Effect.suspend(() => sink.onSuccess(getReadyIndices(state)));
+        const scheduleNextEmit = debounceFork(emit);
 
-    let first = true;
-    let previousKeyMap: Map<PropertyKey, number> = new Map();
+        let first = true;
+        let previousKeyMap: Map<PropertyKey, number> = new Map();
 
-    return fx.run(
-      Sink.make(
-        sink.onFailure,
-        Effect.fn(function* (values: ReadonlyArray<A>) {
-          const previous = state.previousValues;
-          const keyMap = getKeyMap(values, options.getKey);
+        yield* fx.run(
+          Sink.make(
+            sink.onFailure,
+            Effect.fn(function* (values: ReadonlyArray<A>) {
+              const previous = state.previousValues;
+              const keyMap = getKeyMap(values, options.getKey);
 
-          let changed = first;
-          first = false;
+              let changed = first;
+              first = false;
 
-          for (const patch of diff<A, B>(previous, values, {
-            getKey: options.getKey,
-            previousKeyMap,
-            keyMap,
-          })) {
-            if (patch._tag === "Remove") {
-              changed = true;
-              yield* removeValue(state, patch, state.entries.get(patch.key)!);
-            } else if (patch._tag === "Add") {
-              changed = true;
-              yield* addValue({
-                state,
-                values,
-                patch,
-                id,
-                parentScope,
-                keyedOptions: options,
-                sink,
-                scheduleNextEmit,
-              });
-            } else {
-              yield* updateValue(state, values, patch);
-            }
-          }
+              for (const patch of diff<A, B>(previous, values, {
+                getKey: options.getKey,
+                previousKeyMap,
+                keyMap,
+              })) {
+                if (patch._tag === "Remove") {
+                  changed = true;
+                  yield* removeValue(state, patch, state.entries.get(patch.key)!);
+                } else if (patch._tag === "Add") {
+                  changed = true;
+                  yield* addValue({
+                    state,
+                    values,
+                    patch,
+                    id,
+                    parentScope,
+                    keyedOptions: options,
+                    sink,
+                    scheduleNextEmit,
+                  });
+                } else {
+                  yield* updateValue(state, values, patch);
+                }
+              }
 
-          state.previousValues = values;
-          previousKeyMap = keyMap;
+              state.previousValues = values;
+              previousKeyMap = keyMap;
 
-          if (changed) {
-            yield* scheduleNextEmit;
-          } else {
-            yield* adjustTime();
-          }
-        }),
-      ),
-    );
-  }, options.debounce || 1);
+              if (changed) {
+                yield* scheduleNextEmit;
+              } else {
+                yield* adjustTime();
+              }
+            }),
+          ),
+        );
+        yield* awaitScopeClose(parentScope);
+      }),
+    options.debounce || 1,
+  );
 }
 
 class KeyedEntry<A, C> {

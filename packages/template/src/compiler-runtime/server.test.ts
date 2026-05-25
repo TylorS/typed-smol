@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import { Fx } from "@typed/fx";
+import { RefSubject } from "@typed/fx";
 import * as EventHandler from "../EventHandler.js";
 import { HtmlRenderEvent } from "../RenderEvent.js";
 import {
@@ -82,6 +83,21 @@ describe("compiler-runtime server templates", () => {
         ]),
       })(nested).renderToString(),
     ).resolves.toBe("<span>nested</span>");
+  });
+
+  it("renders compiled server templates with single-pass computed behavior", async () => {
+    const view = defineServerTemplate<[]>({
+      chunks: [],
+      templateHash: "computed-behavior",
+      render: () =>
+        Fx.fromEffect(
+          Effect.map(RefSubject.CurrentComputedBehavior, (behavior) =>
+            HtmlRenderEvent(behavior, true),
+          ),
+        ),
+    });
+
+    await expect(view().renderToString()).resolves.toBe("one");
   });
 
   it("exposes ordered rendering under the explicit ordered helper name", async () => {

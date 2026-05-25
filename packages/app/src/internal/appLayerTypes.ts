@@ -16,10 +16,9 @@ function isLayerArray(l: LayerOrGroup): l is readonly [LayerAny, ...ReadonlyArra
 
 function toLayer(l: LayerOrGroup): ConcreteLayerAny {
   if (isLayerArray(l)) {
-    const [first, ...rest] = l;
     return Layer.mergeAll(
-      first as ConcreteLayerAny,
-      ...(rest as unknown as readonly ConcreteLayerAny[]),
+      Layer.empty,
+      ...l.map(toLayer),
     );
   }
   return l as ConcreteLayerAny;

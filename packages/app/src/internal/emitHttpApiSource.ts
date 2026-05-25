@@ -1050,13 +1050,7 @@ function emitHttpApiClientSource(input: {
 }): string {
   void input.directoryOptionNameByPath;
   const imports = new ClientImportBuilder(input.importerDir, input.targetDirectory);
-  const groupDependencyPaths = collectGroupDependencyPaths(input.groupSpecs);
   const targetSpecifier = toVirtualTargetSpecifier(input.importerDir, input.targetDirectory, "");
-  const serviceLayerExpressionByPath = concernExpressionMap(
-    groupDependencyPaths,
-    "ApiServices",
-    "dependencyLayers",
-  );
   const importLines: string[] = [
     `import * as Route from "@typed/router";`,
     `import type * as HttpClient from "effect/unstable/http/HttpClient";`,
@@ -1068,9 +1062,6 @@ function emitHttpApiClientSource(input: {
     `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
     `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
   ];
-  if (groupDependencyPaths.length > 0) {
-    importLines.push(`import * as ApiServices from "typed:services?dir=${targetSpecifier}";`);
-  }
 
   const groupExprs: string[] = [];
   const typedClientGroups: string[] = [];
@@ -1170,10 +1161,6 @@ function emitHttpApiClientSource(input: {
     input.openapiPlan?.api.annotations,
     input.openapiPlan?.api.generation,
   );
-  const dependenciesLayer = renderDependenciesLayer(
-    groupDependencyPaths,
-    serviceLayerExpressionByPath,
-  );
   const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
   const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
 
@@ -1182,19 +1169,10 @@ function emitHttpApiClientSource(input: {
 ${renderRouteBindingDeclarations(routeBindings)}
 
 export const Api = ${apiExpr};
-export const DependenciesLayer = ${dependenciesLayer};
+export const DependenciesLayer = Layer.empty;
 export const OpenApi = OpenApiModule.fromApi(Api);
 export const Client = HttpApiClient.make(Api);
 type TypedRawClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>;
-type TypedClientInput = {
-  readonly [Group in keyof TypedRawClient<any, any>]: {
-    readonly [Endpoint in keyof TypedRawClient<any, any>[Group]]: TypedRawClient<any, any>[Group][Endpoint] extends (
-      ...args: infer Args
-    ) => unknown
-      ? (...args: Args) => unknown
-      : never;
-  };
-};
 type OptionalEndpoint<Method extends (...args: ReadonlyArray<any>) => unknown> =
   (() => ReturnType<Method>) & Method;
 
@@ -1215,7 +1193,7 @@ function optionalEndpoint<Method extends (...args: ReadonlyArray<any>) => unknow
   return method(input) as ReturnType<Method>;
 }
 
-function makeTypedClientFromRaw<const RawClient extends TypedClientInput>(client: RawClient) {
+function makeTypedClientFromRaw<E, R, const RawClient extends TypedRawClient<E, R>>(client: RawClient) {
   return {
 ${typedClientGroups.map((group) => `    ${group}`).join(",\n")}
   } as const;

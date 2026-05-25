@@ -60,7 +60,7 @@ pnpm --filter typed-realworld test:acceptance:local
 For API acceptance, install `hurl`, start a local RealWorld app server, then run:
 
 ```sh
-HOST=http://127.0.0.1:3000/api UID_VAL=typed-local \
+HOST=http://127.0.0.1:3000 UID_VAL=typed-local \
   pnpm --filter typed-realworld test:api:hurl:local
 ```
 

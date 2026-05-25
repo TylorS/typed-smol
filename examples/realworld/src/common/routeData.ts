@@ -82,6 +82,11 @@ type ArticleListQuery = {
   readonly tag?: string;
 };
 
+type WireArticleListQuery = Omit<ArticleListQuery, "limit" | "offset"> & {
+  readonly limit?: string;
+  readonly offset?: string;
+};
+
 type MethodError<Method> = Method extends (
   ...args: ReadonlyArray<any>
 ) => Effect.Effect<any, infer Error, any>
@@ -99,7 +104,7 @@ type RouteApiDecoderArticlesGet<E = RouteApiDecoderError, R = never> = (
 ) => Effect.Effect<SingleArticleResponse, E, R>;
 
 type RouteApiDecoderArticlesList<E = RouteApiDecoderError, R = never> = (
-  request: ApiRequest<{}, ArticleListQuery> & {
+  request: ApiRequest<{}, WireArticleListQuery> & {
     readonly responseMode?: "decoded-only";
   },
 ) => Effect.Effect<MultipleArticlesResponse, E, R>;
@@ -158,7 +163,12 @@ export const decodedRouteApiClient = <E, R>(
 ): RouteApiClient<E, R> => ({
   articles: {
     get: (request) => client.articles.get({ ...request, responseMode: "decoded-only" }),
-    list: (request) => client.articles.list({ ...request, responseMode: "decoded-only" }),
+    list: (request) =>
+      client.articles.list({
+        ...request,
+        query: encodeArticleListQuery(request.query),
+        responseMode: "decoded-only",
+      }),
   },
   comments: {
     list: (request) => client.comments.list({ ...request, responseMode: "decoded-only" }),
@@ -169,6 +179,14 @@ export const decodedRouteApiClient = <E, R>(
   tags: {
     list: (request) => client.tags.list({ ...request, responseMode: "decoded-only" }),
   },
+});
+
+const encodeArticleListQuery = (query: ArticleListQuery): WireArticleListQuery => ({
+  author: query.author,
+  favorited: query.favorited,
+  tag: query.tag,
+  limit: query.limit === undefined ? undefined : String(query.limit),
+  offset: query.offset === undefined ? undefined : String(query.offset),
 });
 
 export const home = Effect.fn(function* (

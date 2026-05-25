@@ -1087,16 +1087,22 @@ export { catch_ as catch };
 export const catchTag: {
   <
     I extends Fx.Fx.Any | Matcher.Any,
-    const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>,
-    E,
+    const K extends Tags<InputError<I>> | Arr.NonEmptyReadonlyArray<Tags<InputError<I>>>,
     B,
     E2,
     R2,
   >(
     k: K,
-    f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
-  ): (input: I) => Fx.Fx<InputSucces<I> | B, E2, InputServices<I> | R2 | Router | Scope.Scope>;
-
+    f: (
+      e: ExtractTag<InputError<I>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    ) => Fx.Fx<B, E2, R2>,
+  ): (
+    input: I,
+  ) => Fx.Fx<
+    InputSucces<I> | B,
+    E2 | ExcludeTag<InputError<I>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    InputServices<I> | R2 | Router | Scope.Scope
+  >;
   <
     I extends Fx.Fx.Any | Matcher.Any,
     const K extends Tags<InputError<I>> | Arr.NonEmptyReadonlyArray<Tags<InputError<I>>>,

@@ -5,7 +5,7 @@
     "esModuleInterop": true,
     "outDir": "./dist/types",
     "rootDir": ".",
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "plugins": [
       {
         "name": "@typed/virtual-modules-ts-plugin",

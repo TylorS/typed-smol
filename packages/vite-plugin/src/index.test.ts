@@ -15,7 +15,7 @@ import {
   typedVitePlugin,
   type HttpApiVirtualModulePluginOptions,
 } from "./index.js";
-import { createSsrRunnableEnvironment } from "./vaviteIntegration.js";
+import { createSsrRunnableEnvironment, createTypedVaviteEntry } from "./vaviteIntegration.js";
 
 const COMPOSABLE_PLUGIN_NAMES = [
   "typed-services-virtual-module",
@@ -122,8 +122,12 @@ describe("createTypedViteResolver", () => {
     });
     const manager = resolver as PluginManager;
     const html = manager.plugins.find((plugin) => plugin.name === "typed-html-virtual-module")!;
-    const browser = manager.plugins.find((plugin) => plugin.name === "typed-browser-virtual-module")!;
-    const storybook = manager.plugins.find((plugin) => plugin.name === "typed-storybook-virtual-module")!;
+    const browser = manager.plugins.find(
+      (plugin) => plugin.name === "typed-browser-virtual-module",
+    )!;
+    const storybook = manager.plugins.find(
+      (plugin) => plugin.name === "typed-storybook-virtual-module",
+    )!;
 
     expect(html.build("typed:html", "/project/src/entry.ts", {} as never)).toMatchInlineSnapshot(`
       "import { readFile } from "node:fs/promises";
@@ -140,10 +144,11 @@ describe("createTypedViteResolver", () => {
           readonly clientOutDir?: string;
         };
       };
-      const sourceHtmlPath = "./shell.html";
+      const sourceHtmlPath = "/project/src/shell.html";
+      const clientHtmlPath = "./shell.html";
       const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
-      const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);
+      const builtHtmlPath = joinClientBuildPath(clientHtmlPath);
       const outlet = "<!--app-->";
       export const html = sourceHtmlPath;
       function joinClientBuildPath(sourcePath: string): string {
@@ -161,9 +166,9 @@ describe("createTypedViteResolver", () => {
       }
       export async function loadHtml(options: LoadHtmlOptions = {}) {
         const read = options.readFile ?? readFile;
-        if (options.dev && options.devServer) {
+        if (options.dev) {
           const source = await read(sourceHtmlPath, "utf8");
-          return options.devServer.transformIndexHtml(options.url ?? "/", source);
+          return options.devServer ? options.devServer.transformIndexHtml(options.url ?? "/", source) : source;
         }
         return read(builtHtmlPath, "utf8");
       }
@@ -175,11 +180,14 @@ describe("createTypedViteResolver", () => {
         return \`\${template.slice(0, insertAt)}\${markup}\${template.slice(insertAt)}\`;
       }"
     `);
-    expect(browser.build("typed:browser", "/project/src/entry.ts", {} as never)).toMatchInlineSnapshot(`
+    expect(browser.build("typed:browser", "/project/src/entry.ts", {} as never))
+      .toMatchInlineSnapshot(`
       "import * as Cause from "effect/Cause";
       import * as Effect from "effect/Effect";
       import * as Layer from "effect/Layer";
-      import { composeWithLayers, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";
+      import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/internal/appLayerTypes";
+      import { createAppDomTemplateRuntime } from "@typed/app/runtime/domTemplateRuntime";
+      import { mount as mountRuntime } from "@typed/app/runtime/mount";
       import * as TypedRouter from "@typed/router";
       import Routes0 from "typed:router?dir=./pages";
       type BrowserLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -209,8 +217,9 @@ describe("createTypedViteResolver", () => {
         name: undefined,
         companionLayers,
       };
-      function makeRenderLayer(win: Window, root: HTMLElement) {
-        return Layer.effectDiscard(mountRuntime(Routes, { root })).pipe(
+      function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
+        const domRuntime = createAppDomTemplateRuntime();
+        return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(
           Layer.provideMerge(TypedRouter.BrowserRouter(win)),
         );
       }
@@ -222,7 +231,7 @@ describe("createTypedViteResolver", () => {
       function hydrateFromOptions(options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {
         const win = options.window ?? window;
         const root = resolveRoot(options.root ?? BrowserRuntime.root, win.document);
-        const renderLayer = makeRenderLayer(win, root);
+        const renderLayer = makeRenderLayer(win, root, options);
         return options.layers === undefined ? renderLayer : composeWithLayers(renderLayer, options.layers);
       }
       export function run(options?: BrowserOptions<readonly []>): BrowserRunEffect<readonly []>;
@@ -247,9 +256,8 @@ describe("createTypedViteResolver", () => {
         return Effect.isEffect(result) ? result : Effect.void;
       }"
     `);
-    expect(
-      storybook.build("typed:storybook/runtime", "/project/src/story.ts", {} as never),
-    ).toMatchInlineSnapshot(`
+    expect(storybook.build("typed:storybook/runtime", "/project/src/story.ts", {} as never))
+      .toMatchInlineSnapshot(`
       "import * as Layer from "effect/Layer";
       import type { LayerOrGroup } from "@typed/app/runtime";
       import { defineTypedStoryRuntime } from "@typed/storybook";
@@ -259,6 +267,8 @@ describe("createTypedViteResolver", () => {
       export const routeModules = [Routes0] as const;
       export const apiModules = [Api0] as const;
       export const apiLayers = [Api0.DependenciesLayer] as const;
+      export const makeTypedClient = Api0.makeTypedClient;
+      export const makeTypedClientWith = Api0.makeTypedClientWith;
       export const serverOrigin = undefined;
       export const proxyPath = "/__api";
       export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;
@@ -310,31 +320,16 @@ describe("typedVitePlugin", () => {
        * @typed/vite-plugin — One-stop Vite preset: tsconfig paths, bundle analyzer,
        * Brotli compression, virtual-modules Vite plugin, and @typed/app VM plugins.
        */
-      import {
-        type BrowserVirtualModulePluginOptions,
-      } from "@typed/app/BrowserVirtualModulePlugin";
-      import {
-        type ComponentVirtualModulePluginOptions,
-      } from "@typed/app/ComponentVirtualModulePlugin";
-      import {
-        type HtmlVirtualModulePluginOptions,
-      } from "@typed/app/HtmlVirtualModulePlugin";
-      import {
-        type HttpApiVirtualModulePluginOptions,
-      } from "@typed/app/HttpApiVirtualModulePlugin";
-      import {
-        type RouterVirtualModulePluginOptions,
-      } from "@typed/app/RouterVirtualModulePlugin";
-      import {
-        type StorybookVirtualModulePluginOptions,
-      } from "@typed/app/StorybookVirtualModulePlugin";
+      import { type BrowserVirtualModulePluginOptions } from "@typed/app/BrowserVirtualModulePlugin";
+      import { type ComponentVirtualModulePluginOptions } from "@typed/app/ComponentVirtualModulePlugin";
+      import { type HtmlVirtualModulePluginOptions } from "@typed/app/HtmlVirtualModulePlugin";
+      import { type HttpApiVirtualModulePluginOptions } from "@typed/app/HttpApiVirtualModulePlugin";
+      import { type RouterVirtualModulePluginOptions } from "@typed/app/RouterVirtualModulePlugin";
+      import { type StorybookVirtualModulePluginOptions } from "@typed/app/StorybookVirtualModulePlugin";
       import { createTypedVirtualModulePlugins } from "@typed/app/TypedVirtualModulePlugins";
       import type { TypedConfig } from "@typed/app/config/TypedConfig";
       import { findTypedConfigRoot, loadTypedConfig } from "@typed/app/config/loadTypedConfig";
-      import {
-        typedTemplateVitePlugin,
-        type TypedTemplateVitePluginOptions,
-      } from "@typed/compiler";
+      import { typedTemplateVitePlugin, type TypedTemplateVitePluginOptions } from "@typed/compiler";
       import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
       import {
         collectTypeTargetSpecsFromPlugins,
@@ -479,9 +474,14 @@ describe("typedVitePlugin", () => {
         const routeDirectories = config.router?.routes;
         return {
           routerVmOptions: config.router ? { prefix: config.router.prefix } : undefined,
-          apiVmOptions: config.api || config.openapi
-            ? { prefix: config.api?.prefix, pathPrefix: config.api?.pathPrefix, openapi: config.openapi }
-            : undefined,
+          apiVmOptions:
+            config.api || config.openapi
+              ? {
+                  prefix: config.api?.prefix,
+                  pathPrefix: config.api?.pathPrefix,
+                  openapi: config.openapi,
+                }
+              : undefined,
           htmlVmOptions: config.html
             ? { defaultPath: config.html.path, defaultOutlet: config.html.outlet }
             : undefined,
@@ -509,6 +509,7 @@ describe("typedVitePlugin", () => {
             base: config.browser?.base,
             mode: config.browser?.mode,
             name: config.browser?.name,
+            devtools: process.env.VITE_TYPED_DEVTOOLS_SMOKE === "1",
           },
         };
       }
@@ -545,9 +546,10 @@ describe("typedVitePlugin", () => {
         return findTypedConfigRoot(startPath) ?? resolve(startPath);
       }
 
-      function loadTypedViteOptions(
-        options: TypedVitePluginOptions | undefined,
-      ): { readonly options: TypedVitePluginOptions; readonly projectRoot: string } {
+      function loadTypedViteOptions(options: TypedVitePluginOptions | undefined): {
+        readonly options: TypedVitePluginOptions;
+        readonly projectRoot: string;
+      } {
         const fallbackRoot = options?.projectRoot ? resolve(options.projectRoot) : process.cwd();
         const projectRoot = resolveTypedViteProjectRoot(fallbackRoot);
         if (options) return { options, projectRoot };
@@ -575,7 +577,7 @@ describe("typedVitePlugin", () => {
        */
       export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
         const loaded = loadTypedViteOptions(options);
-        const resolvedOptions = loaded.options;
+        const resolvedOptions = withDevtoolsSmokeMode(loaded.options);
         const projectRoot = loaded.projectRoot;
 
         const resolver = createTypedViteResolver(resolvedOptions);
@@ -665,6 +667,21 @@ describe("typedVitePlugin", () => {
         }
 
         return plugins;
+      }
+
+      function withDevtoolsSmokeMode(options: TypedVitePluginOptions): TypedVitePluginOptions {
+        if (process.env.VITE_TYPED_DEVTOOLS_SMOKE !== "1") return options;
+        const browserVmOptions = options.browserVmOptions;
+        return {
+          ...options,
+          browserVmOptions: {
+            ...browserVmOptions,
+            runtimeDefaults: {
+              ...browserVmOptions?.runtimeDefaults,
+              devtools: true,
+            },
+          },
+        };
       }
 
       export const nativeTsconfigPathsPlugin: Plugin = {
@@ -797,6 +814,7 @@ describe("typedVitePlugin", () => {
     (runnablePlugin as { config: (config: Record<string, any>) => void }).config(config);
 
     expect(config).toEqual({
+      appType: "custom",
       environments: {
         ssr: {
           dev: {
@@ -804,6 +822,14 @@ describe("typedVitePlugin", () => {
           },
         },
       },
+    });
+  });
+
+  it("configures vavite after Vite asset middlewares", () => {
+    expect(createTypedVaviteEntry({ serverEntry: "/src/entry.server.ts" })).toEqual({
+      entry: "/src/entry.server.ts",
+      type: "runnable-handler",
+      order: "post",
     });
   });
 

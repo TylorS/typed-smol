@@ -118,6 +118,14 @@ describe("typed-realworld package skeleton", () => {
     expect(existsSync(resolve(projectRoot, "public/default-avatar.svg"))).toBe(true);
   });
 
+  it("lets typed.config.ts provide the Vite server entry for API dev routing", () => {
+    const viteConfig = readText("vite.config.ts");
+
+    expect(viteConfig).toContain("typedVitePlugin()");
+    expect(viteConfig).not.toContain("typedVitePlugin({");
+    expect(readText("typed.config.ts")).toContain('entry: "src/server.ts"');
+  });
+
   it("uses the SSR outlet and explicitly configures the browser root", () => {
     const html = readText("index.html");
     const browserEntry = readText("src/browser.ts");
@@ -127,6 +135,13 @@ describe("typed-realworld package skeleton", () => {
     expect(browserEntry).not.toContain("root:");
     expect(existsSync(resolve(projectRoot, "src/.browser.dependencies.ts"))).toBe(true);
     expect(readText("src/.browser.dependencies.ts")).toContain("BrowserAuth.WithState");
+  });
+
+  it("does not assume unauthenticated auth state from the server companion", () => {
+    const serverDependencies = readText("src/.server.dependencies.ts");
+
+    expect(serverDependencies).not.toContain('getAuthState: Effect.succeed("unauthenticated")');
+    expect(serverDependencies).toContain('getAuthState: Effect.succeed("unavailable")');
   });
 
   it("keeps route modules environment-agnostic with entrypoint-scoped dependencies", () => {

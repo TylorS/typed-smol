@@ -105,6 +105,12 @@ export declare namespace Computed {
     | Computed<never, any, any>
     | Computed<any, never, any>
     | Computed<never, never, any>;
+
+  export type Error<T> = T extends Computed<infer _A, infer E, infer _R> ? E : never;
+
+  export type Services<T> = T extends Computed<infer _A, infer _E, infer R> ? R : never;
+
+  export type Success<T> = T extends Computed<infer A, infer _E, infer _R> ? A : never;
 }
 
 /**
@@ -182,6 +188,12 @@ export declare namespace Filtered {
     | Filtered<never, any, any>
     | Filtered<any, never, any>
     | Filtered<never, never, any>;
+
+  export type Error<T> = T extends Filtered<infer _A, infer E, infer _R> ? E : never;
+
+  export type Services<T> = T extends Filtered<infer _A, infer _E, infer R> ? R : never;
+
+  export type Success<T> = T extends Filtered<infer A, infer _E, infer _R> ? A : never;
 }
 
 /**
@@ -2702,4 +2714,12 @@ export function isComputed<T>(value: T): value is Extract<T, Computed.Any> {
 
 export function isFiltered<T>(value: T): value is Extract<T, Filtered.Any> {
   return hasProperty(value, FilteredTypeId);
+}
+
+export function not<R extends Computed.Any | Filtered.Any>(
+  ref: R,
+): R extends Filtered.Any
+  ? Filtered<boolean, Filtered.Error<R>, Filtered.Services<R>>
+  : Computed<boolean, Computed.Error<R>, Computed.Services<R>> {
+  return map(ref, (value) => !value) as any;
 }

@@ -40,11 +40,9 @@ export interface VirtualModulesTreeProvider extends vscode.TreeDataProvider<Virt
 async function discoverVirtualImports(
   folder: vscode.WorkspaceFolder,
   getResolver: (projectRoot: string) => ReturnType<typeof createResolver>,
+  getProjectRoot: (filePath: string) => string | undefined,
   onResolved?: (projectRoot: string, moduleId: string, importer: string) => void,
 ): Promise<Array<{ moduleId: string; importer: string }>> {
-  const projectRoot = folder.uri.fsPath;
-  const resolver = getResolver(projectRoot);
-
   const files = await vscode.workspace.findFiles(
     new vscode.RelativePattern(folder, "**/*.{ts,tsx,js,jsx,mts,cts}"),
     "{**/node_modules/**,**/.git/**}",
@@ -72,6 +70,8 @@ async function discoverVirtualImports(
       if (seen.has(key)) continue;
       seen.add(key);
 
+      const projectRoot = getProjectRoot(importer) ?? folder.uri.fsPath;
+      const resolver = getResolver(projectRoot);
       const result = resolver.resolve(moduleId, importer);
       if (result) {
         onResolved?.(projectRoot, moduleId, importer);
@@ -97,7 +97,7 @@ export function createVirtualModulesTreeProvider(
     if (!folders?.length) return;
 
     for (const folder of folders) {
-      const items = await discoverVirtualImports(folder, getResolver, onResolved);
+      const items = await discoverVirtualImports(folder, getResolver, getProjectRoot, onResolved);
       cache.set(folder.uri.fsPath, items);
     }
   }

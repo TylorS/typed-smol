@@ -545,6 +545,8 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).toContain(
       "type TypedRawClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>",
     );
+    expect(sourceText).not.toContain("type TypedClientInput");
+    expect(sourceText).not.toContain("? (...args: Args) => unknown");
     expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
     expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
     expect(sourceText).not.toContain("HttpApiBuilder");
@@ -604,7 +606,7 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).not.toContain("export const ApiLayer");
   });
 
-  it("re-exports discovered API dependencies from client-only modules", () => {
+  it("omits discovered API dependencies from client-only modules", () => {
     const fixture = createApiFixture({
       "src/apis/_dependencies.ts": `
 import * as Layer from "effect/Layer";
@@ -617,10 +619,9 @@ export default Layer.empty;
       buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
     );
 
-    expect(sourceText).toContain('import * as ApiServices from "typed:services?dir=./apis";');
-    expect(sourceText).toContain(
-      'export const DependenciesLayer = Layer.mergeAll(Layer.empty, ApiServices.dependencyLayers["_dependencies.ts"]);',
-    );
+    expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
+    expect(sourceText).not.toContain('import * as ApiServices from "typed:services?dir=./apis";');
+    expect(sourceText).not.toContain('ApiServices.dependencyLayers["_dependencies.ts"]');
     expect(sourceText).not.toContain("export const ApiLayer");
     expect(sourceText).not.toContain("HttpApiBuilder");
   });
@@ -703,6 +704,46 @@ type _PropagatesTransportService = Assert<TransportService extends ResultService
     );
 
     expect(sourceText).toBeDefined();
+    expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
+  });
+
+  it("does not erase typed client endpoint returns to unknown", () => {
+    const fixture = createApiFixture({
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      "src/consumer.ts": `
+import type * as Effect from "effect/Effect";
+import { makeTypedClient } from "./api.generated.js";
+
+type Assert<T extends true> = T;
+type IsAny<T> = 0 extends (1 & T) ? true : false;
+type IsUnknown<T> = IsAny<T> extends true ? false : unknown extends T ? ([keyof T] extends [never] ? true : false) : false;
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends
+  (<T>() => T extends B ? 1 : 2) ? true : false;
+
+const clientEffect = makeTypedClient();
+type Client = Effect.Success<typeof clientEffect>;
+declare const client: Client;
+const result = client.root.status({ responseMode: "decoded-only" });
+
+type ResultSuccess = Effect.Success<typeof result>;
+type ResultError = Effect.Error<typeof result>;
+type ResultServices = Effect.Services<typeof result>;
+type _successIsNotAny = Assert<Equals<IsAny<ResultSuccess>, false>>;
+type _successIsNotUnknown = Assert<Equals<IsUnknown<ResultSuccess>, false>>;
+type _successShape = Assert<Equals<ResultSuccess, { readonly status: "ok" }>>;
+type _errorIsNotAny = Assert<Equals<IsAny<ResultError>, false>>;
+type _servicesIsNotAny = Assert<Equals<IsAny<ResultServices>, false>>;
+`,
+    });
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis&mode=client"),
+    );
+
+    expect(sourceText).toBeDefined();
+    expect(sourceText).not.toContain("type TypedClientInput");
+    expect(sourceText).not.toContain("TypedRawClient<any, any>");
+    expect(sourceText).not.toContain("? (...args: Args) => unknown");
     expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
   });
 

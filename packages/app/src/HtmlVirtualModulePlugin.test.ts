@@ -39,10 +39,11 @@ describe("HtmlVirtualModulePlugin", () => {
           readonly clientOutDir?: string;
         };
       };
-      const sourceHtmlPath = "./shell.html";
+      const sourceHtmlPath = "/project/src/shell.html";
+      const clientHtmlPath = "./shell.html";
       const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
-      const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);
+      const builtHtmlPath = joinClientBuildPath(clientHtmlPath);
       const outlet = "<!--app-->";
       export const html = sourceHtmlPath;
       function joinClientBuildPath(sourcePath: string): string {
@@ -60,9 +61,9 @@ describe("HtmlVirtualModulePlugin", () => {
       }
       export async function loadHtml(options: LoadHtmlOptions = {}) {
         const read = options.readFile ?? readFile;
-        if (options.dev && options.devServer) {
+        if (options.dev) {
           const source = await read(sourceHtmlPath, "utf8");
-          return options.devServer.transformIndexHtml(options.url ?? "/", source);
+          return options.devServer ? options.devServer.transformIndexHtml(options.url ?? "/", source) : source;
         }
         return read(builtHtmlPath, "utf8");
       }
@@ -94,10 +95,11 @@ describe("HtmlVirtualModulePlugin", () => {
           readonly clientOutDir?: string;
         };
       };
-      const sourceHtmlPath = "./index.html";
+      const sourceHtmlPath = "/project/src/index.html";
+      const clientHtmlPath = "./index.html";
       const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
-      const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);
+      const builtHtmlPath = joinClientBuildPath(clientHtmlPath);
       const outlet = "<!--typed-ssr-outlet-->";
       export const html = sourceHtmlPath;
       function joinClientBuildPath(sourcePath: string): string {
@@ -115,9 +117,9 @@ describe("HtmlVirtualModulePlugin", () => {
       }
       export async function loadHtml(options: LoadHtmlOptions = {}) {
         const read = options.readFile ?? readFile;
-        if (options.dev && options.devServer) {
+        if (options.dev) {
           const source = await read(sourceHtmlPath, "utf8");
-          return options.devServer.transformIndexHtml(options.url ?? "/", source);
+          return options.devServer ? options.devServer.transformIndexHtml(options.url ?? "/", source) : source;
         }
         return read(builtHtmlPath, "utf8");
       }
@@ -149,10 +151,11 @@ describe("HtmlVirtualModulePlugin", () => {
           readonly clientOutDir?: string;
         };
       };
-      const sourceHtmlPath = "./index.html";
+      const sourceHtmlPath = "/project/src/index.html";
+      const clientHtmlPath = "./index.html";
       const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
-      const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);
+      const builtHtmlPath = joinClientBuildPath(clientHtmlPath);
       const outlet = "<!--app-->";
       export const html = sourceHtmlPath;
       function joinClientBuildPath(sourcePath: string): string {
@@ -170,9 +173,9 @@ describe("HtmlVirtualModulePlugin", () => {
       }
       export async function loadHtml(options: LoadHtmlOptions = {}) {
         const read = options.readFile ?? readFile;
-        if (options.dev && options.devServer) {
+        if (options.dev) {
           const source = await read(sourceHtmlPath, "utf8");
-          return options.devServer.transformIndexHtml(options.url ?? "/", source);
+          return options.devServer ? options.devServer.transformIndexHtml(options.url ?? "/", source) : source;
         }
         return read(builtHtmlPath, "utf8");
       }
@@ -204,10 +207,11 @@ describe("HtmlVirtualModulePlugin", () => {
           readonly clientOutDir?: string;
         };
       };
-      const sourceHtmlPath = "./index.html";
+      const sourceHtmlPath = "/project/src/index.html";
+      const clientHtmlPath = "./index.html";
       const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
-      const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);
+      const builtHtmlPath = joinClientBuildPath(clientHtmlPath);
       const outlet = "<!--typed-ssr-outlet-->";
       export const html = sourceHtmlPath;
       function joinClientBuildPath(sourcePath: string): string {
@@ -225,9 +229,9 @@ describe("HtmlVirtualModulePlugin", () => {
       }
       export async function loadHtml(options: LoadHtmlOptions = {}) {
         const read = options.readFile ?? readFile;
-        if (options.dev && options.devServer) {
+        if (options.dev) {
           const source = await read(sourceHtmlPath, "utf8");
-          return options.devServer.transformIndexHtml(options.url ?? "/", source);
+          return options.devServer ? options.devServer.transformIndexHtml(options.url ?? "/", source) : source;
         }
         return read(builtHtmlPath, "utf8");
       }
@@ -259,10 +263,11 @@ describe("HtmlVirtualModulePlugin", () => {
           readonly clientOutDir?: string;
         };
       };
-      const sourceHtmlPath = "./pages/admin.html";
+      const sourceHtmlPath = "/project/src/pages/admin.html";
+      const clientHtmlPath = "./pages/admin.html";
       const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
       const typedBuildConfig = typedConfig.build ?? {};
-      const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);
+      const builtHtmlPath = joinClientBuildPath(clientHtmlPath);
       const outlet = "<!--typed-ssr-outlet-->";
       export const html = sourceHtmlPath;
       function joinClientBuildPath(sourcePath: string): string {
@@ -280,9 +285,9 @@ describe("HtmlVirtualModulePlugin", () => {
       }
       export async function loadHtml(options: LoadHtmlOptions = {}) {
         const read = options.readFile ?? readFile;
-        if (options.dev && options.devServer) {
+        if (options.dev) {
           const source = await read(sourceHtmlPath, "utf8");
-          return options.devServer.transformIndexHtml(options.url ?? "/", source);
+          return options.devServer ? options.devServer.transformIndexHtml(options.url ?? "/", source) : source;
         }
         return read(builtHtmlPath, "utf8");
       }

@@ -78,7 +78,7 @@ async function waitForServer(server: ServerProcess): Promise<void> {
 
 function runHurl(): void {
   runCommand("Hurl acceptance", nodeExecutable, ["dist/types/scripts/run-hurl-local.js"], {
-    HOST: apiBase,
+    HOST: appBase,
     UID_VAL: process.env.UID_VAL ?? `${Date.now()}${process.pid}`,
   });
 }
@@ -141,4 +141,6 @@ async function serverResponds(): Promise<boolean> {
   }
 }
 
-const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

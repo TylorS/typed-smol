@@ -20,11 +20,7 @@ import {
   type RuntimeKind,
   typeNodeIsEffectOptionReturn,
 } from "./routeTypeNode.js";
-import {
-  catchExprFor,
-  handlerExprFor,
-  type RouterExpressionImports,
-} from "./emitRouterHelpers.js";
+import { catchExprFor, handlerExprFor, type RouterExpressionImports } from "./emitRouterHelpers.js";
 import {
   pathIsUnderBase,
   resolvePathUnderBase,
@@ -168,7 +164,20 @@ export function createApiHandlerVirtualModulePlugin(): VirtualModulePlugin {
   return createPathPlugin("api-handler");
 }
 
-function createDirPlugin(kind: Extract<ComposableKind, "services" | "guard" | "layout" | "catch" | "headers" | "errors" | "middlewares" | "prefix" | "openapi">): VirtualModulePlugin {
+function createDirPlugin(
+  kind: Extract<
+    ComposableKind,
+    | "services"
+    | "guard"
+    | "layout"
+    | "catch"
+    | "headers"
+    | "errors"
+    | "middlewares"
+    | "prefix"
+    | "openapi"
+  >,
+): VirtualModulePlugin {
   return {
     name: `typed-${kind}-virtual-module`,
     shouldResolve: (id, importer) => Boolean(importer) && matchesKind(id, kind),
@@ -184,7 +193,9 @@ function createDirPlugin(kind: Extract<ComposableKind, "services" | "guard" | "l
   };
 }
 
-function createPathPlugin(kind: Extract<ComposableKind, "route-template" | "api-handler">): VirtualModulePlugin {
+function createPathPlugin(
+  kind: Extract<ComposableKind, "route-template" | "api-handler">,
+): VirtualModulePlugin {
   return {
     name: `typed-${kind}-virtual-module`,
     shouldResolve: (id, importer) => Boolean(importer) && matchesKind(id, kind),
@@ -214,7 +225,9 @@ function emitConcernDir(
     const name = moduleNameFor(kind, path);
     return `import * as ${name} from ${JSON.stringify(toImportSpecifier(importerDir, targetDir, path))};`;
   });
-  const entries = paths.map((path) => `  ${JSON.stringify(path)}: ${moduleNameFor(kind, path)}`).join(",\n");
+  const entries = paths
+    .map((path) => `  ${JSON.stringify(path)}: ${moduleNameFor(kind, path)}`)
+    .join(",\n");
   const normalized = normalizedConcernFor(kind, paths, targetDir, api);
   if (typeof normalized !== "string") return buildError(kind, normalized);
   const runtimeImports = concernRuntimeImportsFor(kind, normalized);
@@ -231,9 +244,14 @@ function emitApiHandlerLeaf(
   importer: string,
   api: TypeInfoApi,
 ): VirtualModuleBuildResult {
-  const specifier = toImportSpecifier(dirname(toPosixPath(importer)), dirname(path), basename(path));
+  const specifier = toImportSpecifier(
+    dirname(toPosixPath(importer)),
+    dirname(path),
+    basename(path),
+  );
   const snapshot = api.file(basename(path), { baseDir: dirname(path), watch: true });
-  if (!snapshot.ok) return buildError("api-handler", `unable to read API endpoint type info: ${path}`);
+  if (!snapshot.ok)
+    return buildError("api-handler", `unable to read API endpoint type info: ${path}`);
   const mode = classifyApiHandlerMode(snapshot.snapshot, api);
   if (!mode.ok) return buildError("api-handler", mode);
   const optionalExports = ["headers", "body", "success", "error"].filter((name) =>
@@ -297,7 +315,11 @@ function emitRouteTemplateLeaf(
   importer: string,
   api: TypeInfoApi,
 ): VirtualModuleBuildResult {
-  const specifier = toImportSpecifier(dirname(toPosixPath(importer)), dirname(path), basename(path));
+  const specifier = toImportSpecifier(
+    dirname(toPosixPath(importer)),
+    dirname(path),
+    basename(path),
+  );
   const snapshot = api.file(basename(path), { baseDir: dirname(path), watch: true });
   if (!snapshot.ok) {
     return buildError("route-template", `unable to read route module type info: ${path}`);
@@ -317,7 +339,12 @@ function emitRouteTemplateLeaf(
     entrypoint.exportName === "template" || entrypoint.exportName === "default"
       ? `export const template = RouteModule.${entrypoint.exportName};\n`
       : "";
-  const localConcernExports = routeTemplateLocalConcernExports(snapshot.snapshot, "RouteModule", imports.helpers, api);
+  const localConcernExports = routeTemplateLocalConcernExports(
+    snapshot.snapshot,
+    "RouteModule",
+    imports.helpers,
+    api,
+  );
   return `${imports.lines()}import * as RouteModule from ${JSON.stringify(specifier)};
 
 export const route = RouteModule.route;
@@ -442,7 +469,12 @@ function dependencyRefsFor(
 }
 
 type ExportRef =
-  | { readonly ok: true; readonly path: string; readonly exportName: string; readonly exportInfo: ExportedTypeInfo }
+  | {
+      readonly ok: true;
+      readonly path: string;
+      readonly exportName: string;
+      readonly exportInfo: ExportedTypeInfo;
+    }
   | { readonly ok: false; readonly code: string; readonly reason: string };
 
 function normalizedConcernFor(
@@ -455,7 +487,15 @@ function normalizedConcernFor(
     case "services":
       return normalizedServicesFor(paths, targetDir, api);
     case "guard":
-      return normalizedExportMapFor(kind, "guards", paths, targetDir, api, ["guard", "default"], validateGuardRef);
+      return normalizedExportMapFor(
+        kind,
+        "guards",
+        paths,
+        targetDir,
+        api,
+        ["guard", "default"],
+        validateGuardRef,
+      );
     case "layout":
       return normalizedExportMapFor(kind, "layouts", paths, targetDir, api, ["layout"]);
     case "catch":
@@ -465,7 +505,10 @@ function normalizedConcernFor(
     case "errors":
       return normalizedExportMapFor(kind, "errors", paths, targetDir, api, ["error"]);
     case "middlewares":
-      return normalizedExportMapFor(kind, "middlewares", paths, targetDir, api, ["middleware", "default"]);
+      return normalizedExportMapFor(kind, "middlewares", paths, targetDir, api, [
+        "middleware",
+        "default",
+      ]);
     case "prefix":
       return normalizedExportMapFor(kind, "prefixes", paths, targetDir, api, ["prefix", "default"]);
     case "openapi":
@@ -492,10 +535,16 @@ export const dependencyLayers = {} as const;
 export const DependenciesLayer = Layer.empty;`;
   }
   const inputEntries = refs
-    .map((ref) => `  ${JSON.stringify(ref.path)}: ${moduleNameFor("services", ref.path)}.${ref.exportName}`)
+    .map(
+      (ref) =>
+        `  ${JSON.stringify(ref.path)}: ${moduleNameFor("services", ref.path)}.${ref.exportName}`,
+    )
     .join(",\n");
   const layerEntries = refs
     .map((ref) => `  ${JSON.stringify(ref.path)}: ${dependencyLayerExprFor(ref)}`)
+    .join(",\n");
+  const layerListEntries = refs
+    .map((ref) => `  dependencyLayers[${JSON.stringify(ref.path)}]`)
     .join(",\n");
   return `
 export const dependencyInputs = {
@@ -504,7 +553,10 @@ ${inputEntries}
 export const dependencyLayers = {
 ${layerEntries}
 } as const;
-export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...Object.values(dependencyLayers));`;
+export const dependencyLayerList = [
+${layerListEntries}
+] as const;
+export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...dependencyLayerList);`;
 }
 
 function concernRuntimeImportsFor(kind: ComposableKind, source: string): readonly string[] {
@@ -552,7 +604,9 @@ function normalizedExportMapFor(
   if (failed && !failed.ok) return failed;
   const entries = refs
     .filter((ref): ref is Extract<ExportRef, { ok: true }> => ref.ok)
-    .map((ref) => `  ${JSON.stringify(ref.path)}: ${moduleNameFor(kind, ref.path)}.${ref.exportName}`)
+    .map(
+      (ref) => `  ${JSON.stringify(ref.path)}: ${moduleNameFor(kind, ref.path)}.${ref.exportName}`,
+    )
     .join(",\n");
   return `
 export const ${exportName} = {
@@ -573,7 +627,12 @@ function normalizedCatchMapFor(
     .filter((ref): ref is Extract<ExportRef, { ok: true }> => ref.ok)
     .map((ref) => {
       const form = classifyCatchForm(ref.exportInfo.type, api);
-      const expr = catchExprFor(form, moduleNameFor("catch", ref.path), ref.exportName, imports.helpers);
+      const expr = catchExprFor(
+        form,
+        moduleNameFor("catch", ref.path),
+        ref.exportName,
+        imports.helpers,
+      );
       return `  ${JSON.stringify(ref.path)}: ${expr}`;
     })
     .join(",\n");
@@ -652,8 +711,8 @@ type RouteEntrypoint =
   | { readonly ok: false; readonly code: string; readonly reason: string };
 
 function routeEntrypointFor(snapshot: TypeInfoFileSnapshot, api: TypeInfoApi): RouteEntrypoint {
-  const entrypoints = snapshot.exports.filter((exp) =>
-    exp.name === "handler" || exp.name === "template" || exp.name === "default"
+  const entrypoints = snapshot.exports.filter(
+    (exp) => exp.name === "handler" || exp.name === "template" || exp.name === "default",
   );
   if (entrypoints.length !== 1) {
     return {
@@ -683,14 +742,23 @@ function routeEntrypointFor(snapshot: TypeInfoFileSnapshot, api: TypeInfoApi): R
   };
 }
 
-function createImportCollector(): { readonly helpers: RouterExpressionImports; readonly lines: () => string } {
+function createImportCollector(): {
+  readonly helpers: RouterExpressionImports;
+  readonly lines: () => string;
+} {
   const imports = new Map<string, string>();
   const namespace = (name: string, specifier: string): string => {
-    imports.set(`namespace:${name}:${specifier}`, `import * as ${name} from ${JSON.stringify(specifier)};`);
+    imports.set(
+      `namespace:${name}:${specifier}`,
+      `import * as ${name} from ${JSON.stringify(specifier)};`,
+    );
     return name;
   };
   const named = (name: string, specifier: string): string => {
-    imports.set(`named:${name}:${specifier}`, `import { ${name} } from ${JSON.stringify(specifier)};`);
+    imports.set(
+      `named:${name}:${specifier}`,
+      `import { ${name} } from ${JSON.stringify(specifier)};`,
+    );
     return name;
   };
   return {
@@ -731,7 +799,11 @@ function matchesKind(id: string, kind: ComposableKind): boolean {
   return parsed.ok && parsed.kind === kind;
 }
 
-function resolveTarget(id: string, importer: string, context?: VirtualModuleBuildContext):
+function resolveTarget(
+  id: string,
+  importer: string,
+  context?: VirtualModuleBuildContext,
+):
   | { readonly ok: true; readonly target: "dir" | "path"; readonly path: string }
   | { readonly ok: false; readonly code: string; readonly reason: string } {
   const parsed = parseComposableTypedVirtualModuleId(id);
@@ -740,12 +812,19 @@ function resolveTarget(id: string, importer: string, context?: VirtualModuleBuil
   const importerDir = dirname(toPosixPath(rootImporter));
   const resolved = resolvePathUnderBase(importerDir, parsed.value);
   if (!resolved.ok || !pathIsUnderBase(importerDir, resolved.path)) {
-    return { ok: false, code: "CVM-ID-TARGET-003", reason: "resolved target escapes importer base directory" };
+    return {
+      ok: false,
+      code: "CVM-ID-TARGET-003",
+      reason: "resolved target escapes importer base directory",
+    };
   }
   return { ok: true, target: parsed.target, path: toPosixPath(resolved.path) };
 }
 
-function normalizeRelativeTarget(value: string, name: string):
+function normalizeRelativeTarget(
+  value: string,
+  name: string,
+):
   | { readonly ok: true; readonly value: string }
   | { readonly ok: false; readonly code: string; readonly reason: string } {
   if (value.includes("://") || value.startsWith("/")) {
@@ -757,13 +836,18 @@ function normalizeRelativeTarget(value: string, name: string):
   return { ok: true, value };
 }
 
-function buildError(kind: ComposableKind, error: string | { readonly code: string; readonly reason: string }): VirtualModuleBuildError {
+function buildError(
+  kind: ComposableKind,
+  error: string | { readonly code: string; readonly reason: string },
+): VirtualModuleBuildError {
   return {
-    errors: [{
-      code: typeof error === "string" ? "CVM-BUILD-001" : error.code,
-      message: typeof error === "string" ? error : error.reason,
-      pluginName: `typed-${kind}-virtual-module`,
-    }],
+    errors: [
+      {
+        code: typeof error === "string" ? "CVM-BUILD-001" : error.code,
+        message: typeof error === "string" ? error : error.reason,
+        pluginName: `typed-${kind}-virtual-module`,
+      },
+    ],
   };
 }
 
@@ -775,7 +859,11 @@ function isExistingDirectory(path: string): boolean {
   }
 }
 
-function toImportSpecifier(importerDir: string, targetDir: string, relativeFilePath: string): string {
+function toImportSpecifier(
+  importerDir: string,
+  targetDir: string,
+  relativeFilePath: string,
+): string {
   const absPath = join(targetDir, relativeFilePath);
   const rel = toPosixPath(relative(importerDir, absPath));
   const specifier = rel.startsWith(".") ? rel : `./${rel}`;

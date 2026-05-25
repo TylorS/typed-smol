@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 const apiSpecPath = ".temp/references/realworld/specs/api/hurl";
 const workspaceRoot = resolve(process.cwd(), "../..");
 const specDirectory = resolve(workspaceRoot, apiSpecPath);
-const host = process.env.HOST ?? "http://127.0.0.1:3000/api";
+const host = process.env.HOST ?? "http://127.0.0.1:3000";
 const uid = process.env.UID_VAL ?? `${Date.now()}${process.pid}`;
 
 if (!existsSync(specDirectory)) {

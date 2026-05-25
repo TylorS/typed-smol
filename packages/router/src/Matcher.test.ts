@@ -416,14 +416,14 @@ describe("typed/router/Matcher", () => {
       runEff(
         Effect.gen(function* () {
           const about = Route.Parse("about");
-          const inner = Matcher.empty.match(about, () =>
+          const matcher = Matcher.empty.match(about, () =>
             Fx.unwrap(
               Effect.sync(() => {
                 throw new Error("sync-boom");
               }),
             ),
           );
-          const handler = (causeRef: RefSubject.RefSubject<Cause.Cause<unknown>>) =>
+          const handler = <E>(causeRef: RefSubject.RefSubject<Cause.Cause<E>>) =>
             Fx.unwrap(
               Effect.gen(function* () {
                 const cause = yield* causeRef;
@@ -433,9 +433,8 @@ describe("typed/router/Matcher", () => {
                 return Fx.succeed("recovered-sync");
               }),
             );
-          const wide = inner as any;
-          const a = yield* Fx.collectAll(Fx.take(Matcher.catchCause(handler)(wide), 1));
-          const b = yield* Fx.collectAll(Fx.take(Matcher.catchCause(wide, handler), 1));
+          const a = yield* Fx.collectAll(Fx.take(matcher.pipe(Matcher.catchCause(handler)), 1));
+          const b = yield* Fx.collectAll(Fx.take(Matcher.catchCause(matcher, handler), 1));
           assert.deepStrictEqual(a, ["recovered-sync"]);
           assert.deepStrictEqual(b, ["recovered-sync"]);
         }).pipe(Effect.provide(ServerRouter({ url: "http://localhost/about" })), Effect.scoped),
@@ -463,9 +462,7 @@ describe("typed/router/Matcher", () => {
         Effect.gen(function* () {
           const about = Route.Parse("about");
           const inner = Matcher.empty.match(about, Fx.fail(new TestError({ message: "inner" })));
-          const fx = (Matcher.catchTag as any)("TestError", () => Fx.succeed("recovered-fx"))(
-            inner,
-          );
+          const fx = inner.pipe(Matcher.catchTag("TestError", () => Fx.succeed("recovered-fx")));
           const values = yield* Fx.collectAll(Fx.take(fx, 1));
           assert.deepStrictEqual(values, ["recovered-fx"]);
         }).pipe(Effect.provide(ServerRouter({ url: "http://localhost/about" })), Effect.scoped),
@@ -476,7 +473,7 @@ describe("typed/router/Matcher", () => {
         Effect.gen(function* () {
           const about = Route.Parse("about");
           const inner = Matcher.empty.match(about, Fx.fail(new TestError({ message: "x" })));
-          const fx = Matcher.catch(() => Fx.succeed("recovered-catch-fn"))(inner as any);
+          const fx = inner.pipe(Matcher.catch(() => Fx.succeed("recovered-catch-fn")));
           const values = yield* Fx.collectAll(Fx.take(fx, 1));
           assert.deepStrictEqual(values, ["recovered-catch-fn"]);
         }).pipe(Effect.provide(ServerRouter({ url: "http://localhost/about" })), Effect.scoped),
@@ -487,20 +484,22 @@ describe("typed/router/Matcher", () => {
         Effect.gen(function* () {
           const about = Route.Parse("about");
           const inner = Matcher.empty.match(about, Fx.fail(new OtherError({ message: "o" })));
-          const fx = Matcher.catchCause((causeRef) =>
-            Fx.unwrap(
-              Effect.gen(function* () {
-                const cause = yield* causeRef;
-                const fr = Cause.findFail(cause);
-                if (Result.isFailure(fr)) {
-                  return Fx.fromEffect(Effect.failCause(fr.failure));
-                }
-                const err = fr.success.error as OtherError;
-                assert.strictEqual(err._tag, "OtherError");
-                return Fx.succeed("from-outer-cause");
-              }),
+          const fx = inner.pipe(
+            Matcher.catchCause((causeRef) =>
+              Fx.unwrap(
+                Effect.gen(function* () {
+                  const cause = yield* causeRef;
+                  const fr = Cause.findFail(cause);
+                  if (Result.isFailure(fr)) {
+                    return Fx.fromEffect(Effect.failCause(fr.failure));
+                  }
+                  const err = fr.success.error as OtherError;
+                  assert.strictEqual(err._tag, "OtherError");
+                  return Fx.succeed("from-outer-cause");
+                }),
+              ),
             ),
-          )(inner as any);
+          );
           const values = yield* Fx.collectAll(Fx.take(fx, 1));
           assert.deepStrictEqual(values, ["from-outer-cause"]);
         }).pipe(Effect.provide(ServerRouter({ url: "http://localhost/about" })), Effect.scoped),
@@ -511,11 +510,9 @@ describe("typed/router/Matcher", () => {
         Effect.gen(function* () {
           const about = Route.Parse("about");
           const inner = Matcher.empty.match(about, Fx.fail(new TestError({ message: "t" })));
-          const wrapped = (Matcher.catchTag as any)("TestError", () => Fx.succeed("inner-ok"))(
-            inner,
-          );
-          const fx = (Matcher.catchTag as any)("RouteNotFound", () => Fx.succeed("should-not-run"))(
-            wrapped,
+          const wrapped = inner.pipe(Matcher.catchTag("TestError", () => Fx.succeed("inner-ok")));
+          const fx = wrapped.pipe(
+            Matcher.catchTag("RouteNotFound", () => Fx.succeed("should-not-run")),
           );
           const values = yield* Fx.collectAll(Fx.take(fx, 1));
           assert.deepStrictEqual(values, ["inner-ok"]);
@@ -680,10 +677,10 @@ describe("typed/router/Matcher", () => {
       runEff(
         Effect.gen(function* () {
           const users = Route.Join(Route.Parse("users"), Route.Param("id"));
-          const inner = (Matcher.empty.match(users, () => Effect.fail("g"), "x") as any).catchTag(
-            "RouteGuardError",
-            () => Fx.succeed("never"),
-          );
+          const inner = Matcher.empty
+            .match(users, () => Effect.fail("g"), "x")
+            // @ts-expect-error - RouteGuardError from guards is not caught by matcher catchTag
+            .catchTag("RouteGuardError", () => Fx.succeed("never"));
           const exited = yield* Fx.collectAll(Fx.take(inner, 1)).pipe(Effect.exit);
           assert.isTrue(Exit.isFailure(exited));
         }).pipe(Effect.provide(ServerRouter({ url: "http://localhost/users/1" })), Effect.scoped),

@@ -4,7 +4,7 @@ import { Effect } from "effect";
 import * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
 import type { Renderable, RenderTemplate } from "./index.js";
-import { DomRenderTemplate, EventHandler, html, render, unsafeHtml } from "./index.js";
+import { DomRenderTemplate, EventHandler, html, many, render, unsafeHtml } from "./index.js";
 import type { Rendered } from "./Wire.js";
 import { Window } from "happy-dom";
 
@@ -267,7 +267,7 @@ describe("Render", () => {
 
       assert(button instanceof window.HTMLElement);
       button.click();
-      yield* Effect.sleep("10 millis");
+      yield* Effect.sleep("100 millis");
       assert.strictEqual(observedScope, renderScope);
     }).pipe(Effect.scoped, Effect.runPromise));
 
@@ -327,6 +327,27 @@ describe("Render", () => {
         html` <p>B</p> `,
       ]}</div>`;
       assert.equal(renderEventExample.innerHTML, `<p>A</p><p>B</p>${TYPED_NODE_END(0)}`);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("flattens nested reactive child renderables", () =>
+    Effect.gen(function* () {
+      const renderEventExample = yield* renderHtmlElement`<div>${Fx.succeed(
+        html`<p>Loaded</p>`,
+      )}</div>`;
+
+      assert.equal(renderEventExample.innerHTML, `<p>Loaded</p>${TYPED_NODE_END(0)}`);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("renders keyed lists from static reactive arrays in dom mode", () =>
+    Effect.gen(function* () {
+      const renderEventExample = yield* renderHtmlElement`<ul>${many(
+        Fx.succeed(["one"]),
+        (value) => value,
+        (value) => html`<li>${value}</li>`,
+      )}</ul>`;
+
+      yield* Effect.sleep("100 millis");
+      assert.equal(renderEventExample.textContent, "one");
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

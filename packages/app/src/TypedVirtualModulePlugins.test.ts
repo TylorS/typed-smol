@@ -150,9 +150,14 @@ describe("createTypedVirtualModulePlugins", () => {
       "src/routes/dashboard.dependencies.ts": "export const dependencies = [];",
       "src/entry.ts": 'import "typed:services?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-services-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-services-virtual-module",
+    )!;
     const source = plugin.build("typed:services?dir=./routes", f.importer, apiFor(f));
 
+    expect(source).not.toContain("Object.values");
+    expect(source).toContain('dependencyLayers["_dependencies.ts"]');
+    expect(source).toContain('dependencyLayers["dashboard.dependencies.ts"]');
     expect(source).toMatchInlineSnapshot(`
       "import * as Layer from "effect/Layer";
       import * as Router from "@typed/router";
@@ -171,7 +176,11 @@ describe("createTypedVirtualModulePlugins", () => {
         "_dependencies.ts": Router.normalizeDependencyInput(RootDependencies.default),
         "dashboard.dependencies.ts": Router.normalizeDependencyInput(DashboardDependencies.dependencies)
       } as const;
-      export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...Object.values(dependencyLayers));
+      export const dependencyLayerList = [
+        dependencyLayers["_dependencies.ts"],
+        dependencyLayers["dashboard.dependencies.ts"]
+      ] as const;
+      export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...dependencyLayerList);
       "
     `);
   });
@@ -181,9 +190,12 @@ describe("createTypedVirtualModulePlugins", () => {
       "src/routes/home.ts": "export const route = {}; export const template = '';",
       "src/entry.ts": 'import "typed:services?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-services-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-services-virtual-module",
+    )!;
     const source = plugin.build("typed:services?dir=./routes", f.importer, apiFor(f));
 
+    expect(source).not.toContain("Object.values");
     expect(source).toMatchInlineSnapshot(`
       "import * as Layer from "effect/Layer";
 
@@ -211,7 +223,9 @@ export const dependencies = Layer.succeed(DashboardService, { value: "dashboard"
 `,
       "src/entry.ts": 'import "typed:services?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-services-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-services-virtual-module",
+    )!;
     const source = plugin.build("typed:services?dir=./routes", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -231,7 +245,11 @@ export const dependencies = Layer.succeed(DashboardService, { value: "dashboard"
         "_dependencies.ts": Layer.succeedContext(RootDependencies.default),
         "dashboard.dependencies.ts": DashboardDependencies.dependencies
       } as const;
-      export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...Object.values(dependencyLayers));
+      export const dependencyLayerList = [
+        dependencyLayers["_dependencies.ts"],
+        dependencyLayers["dashboard.dependencies.ts"]
+      ] as const;
+      export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...dependencyLayerList);
       "
     `);
   });
@@ -241,7 +259,9 @@ export const dependencies = Layer.succeed(DashboardService, { value: "dashboard"
       "src/routes/_dependencies.ts": "export default { nope: true };",
       "src/entry.ts": 'import "typed:services?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-services-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-services-virtual-module",
+    )!;
     const result = plugin.build("typed:services?dir=./routes", f.importer, apiFor(f));
 
     expect(result).toMatchObject({ errors: [{ code: "CVM-SERVICES-002" }] });
@@ -256,7 +276,9 @@ export function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.s
 `,
       "src/entry.ts": 'import "typed:guard?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-guard-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-guard-virtual-module",
+    )!;
     const source = plugin.build("typed:guard?dir=./routes", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -280,7 +302,9 @@ export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
 `,
       "src/entry.ts": 'import "typed:guard?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-guard-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-guard-virtual-module",
+    )!;
     const result = plugin.build("typed:guard?dir=./routes", f.importer, apiFor(f));
 
     expect(result).toMatchObject({ errors: [{ code: "CVM-GUARD-001" }] });
@@ -291,7 +315,9 @@ export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
       "src/routes/_layout.ts": "export const layout = (x: unknown) => x;",
       "src/entry.ts": 'import "typed:layout?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-layout-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-layout-virtual-module",
+    )!;
     const source = plugin.build("typed:layout?dir=./routes", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -312,7 +338,9 @@ export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
       "src/routes/_catch.ts": "export const catchFn = (error: unknown) => String(error);",
       "src/entry.ts": 'import "typed:catch?dir=./routes";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-catch-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-catch-virtual-module",
+    )!;
     const source = plugin.build("typed:catch?dir=./routes", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -335,9 +363,12 @@ export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
 
   it("generates api handler leaf modules", () => {
     const f = fixture({
-      "src/api/status.ts": "export const route = { path: '/status' }; export const handler = () => null;",
+      "src/api/status.ts":
+        "export const route = { path: '/status' }; export const handler = () => null;",
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-api-handler-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
     const source = plugin.build("typed:api-handler?path=./api/status.ts", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -368,7 +399,9 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
 ;
 `,
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-api-handler-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
     const source = plugin.build("typed:api-handler?path=./api/status.ts", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -397,7 +430,9 @@ export const body = Schema.Struct({ name: Schema.String });
 export const handler = () => Effect.succeed({ ok: true });
 `,
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-api-handler-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
     const source = plugin.build("typed:api-handler?path=./api/status.ts", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -429,7 +464,9 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
 ;
 `,
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-api-handler-virtual-module")!;
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
     const source = plugin.build("typed:api-handler?path=./api/raw.ts", f.importer, apiFor(f));
 
     expect(source).toMatchInlineSnapshot(`
@@ -458,7 +495,11 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
     });
     const plugins = createTypedVirtualModulePlugins();
 
-    expect(plugins.find((p) => p.name === "typed-headers-virtual-module")!.build("typed:headers?dir=./api", f.importer, apiFor(f))).toMatchInlineSnapshot(`
+    expect(
+      plugins
+        .find((p) => p.name === "typed-headers-virtual-module")!
+        .build("typed:headers?dir=./api", f.importer, apiFor(f)),
+    ).toMatchInlineSnapshot(`
       "import * as Headers from "./api/_headers.js";
 
       export const modules = {
@@ -469,7 +510,11 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
       } as const;
       "
     `);
-    expect(plugins.find((p) => p.name === "typed-errors-virtual-module")!.build("typed:errors?dir=./api", f.importer, apiFor(f))).toMatchInlineSnapshot(`
+    expect(
+      plugins
+        .find((p) => p.name === "typed-errors-virtual-module")!
+        .build("typed:errors?dir=./api", f.importer, apiFor(f)),
+    ).toMatchInlineSnapshot(`
       "import * as Errors from "./api/_errors.js";
 
       export const modules = {
@@ -480,7 +525,11 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
       } as const;
       "
     `);
-    expect(plugins.find((p) => p.name === "typed-middlewares-virtual-module")!.build("typed:middlewares?dir=./api", f.importer, apiFor(f))).toMatchInlineSnapshot(`
+    expect(
+      plugins
+        .find((p) => p.name === "typed-middlewares-virtual-module")!
+        .build("typed:middlewares?dir=./api", f.importer, apiFor(f)),
+    ).toMatchInlineSnapshot(`
       "import * as Middlewares from "./api/_middlewares.js";
 
       export const modules = {
@@ -491,7 +540,11 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
       } as const;
       "
     `);
-    expect(plugins.find((p) => p.name === "typed-prefix-virtual-module")!.build("typed:prefix?dir=./api", f.importer, apiFor(f))).toMatchInlineSnapshot(`
+    expect(
+      plugins
+        .find((p) => p.name === "typed-prefix-virtual-module")!
+        .build("typed:prefix?dir=./api", f.importer, apiFor(f)),
+    ).toMatchInlineSnapshot(`
       "import * as Api from "./api/_api.js";
       import * as Prefix from "./api/_prefix.js";
 
@@ -505,7 +558,11 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
       } as const;
       "
     `);
-    expect(plugins.find((p) => p.name === "typed-prefix-virtual-module")!.build("typed:prefix?dir=./api", f.importer, apiFor(f))).toMatchInlineSnapshot(`
+    expect(
+      plugins
+        .find((p) => p.name === "typed-prefix-virtual-module")!
+        .build("typed:prefix?dir=./api", f.importer, apiFor(f)),
+    ).toMatchInlineSnapshot(`
       "import * as Api from "./api/_api.js";
       import * as Prefix from "./api/_prefix.js";
 
@@ -519,7 +576,11 @@ export const handler: (ctx: { readonly body: { readonly name: string } }) => Eff
       } as const;
       "
     `);
-    expect(plugins.find((p) => p.name === "typed-openapi-virtual-module")!.build("typed:openapi?dir=./api", f.importer, apiFor(f))).toMatchInlineSnapshot(`
+    expect(
+      plugins
+        .find((p) => p.name === "typed-openapi-virtual-module")!
+        .build("typed:openapi?dir=./api", f.importer, apiFor(f)),
+    ).toMatchInlineSnapshot(`
       "import * as Openapi from "./api/_openapi.js";
 
       export const modules = {
@@ -541,8 +602,14 @@ export const template = "<main/>";
 `,
       "src/entry.ts": 'import "typed:route-template?path=./routes/home.ts";',
     });
-    const plugin = createTypedVirtualModulePlugins().find((p) => p.name === "typed-route-template-virtual-module")!;
-    const source = plugin.build("typed:route-template?path=./routes/home.ts", f.importer, apiFor(f));
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-route-template-virtual-module",
+    )!;
+    const source = plugin.build(
+      "typed:route-template?path=./routes/home.ts",
+      f.importer,
+      apiFor(f),
+    );
 
     expect(source).toMatchInlineSnapshot(`
       "import * as Fx from "@typed/fx/Fx";

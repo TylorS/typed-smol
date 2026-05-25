@@ -1,9 +1,11 @@
 import {
-  isTemplateFallback,
   type CompiledDomTemplate,
-  type CompiledServerTemplate,
+} from "@typed/compiler/template/emitDomTemplate";
+import type { CompiledServerTemplate } from "@typed/compiler/template/emitServerTemplate";
+import {
+  isTemplateFallback,
   type RuntimeTemplateFallback,
-} from "@typed/compiler";
+} from "@typed/compiler/template/fallback";
 import type { Renderable } from "@typed/template";
 
 export { isTemplateFallback };

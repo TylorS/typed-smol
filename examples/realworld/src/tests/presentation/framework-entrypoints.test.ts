@@ -50,7 +50,7 @@ describe("realworld framework entrypoints", () => {
     expect(moduleId).toBe("typed:browser?routes=./routes");
     expect(generated).toContain('import Routes0 from "typed:router?dir=./routes";');
     expect(generated).not.toContain("route-handlers:");
-    expect(generated).toContain('from "@typed/app/runtime";');
+    expect(generated).toContain('from "@typed/app/runtime/mount";');
     expect(generated).toContain("composeWithLayers");
     expect(generated).toContain("type BrowserLayer<ROut, E, RIn>");
     expect(generated).toContain("function withErrorHandling<A, E, R>");

@@ -1,5 +1,6 @@
 import { Context, Effect, Layer, Option } from "effect";
-import type { OpaqueToken } from "../domain/Ids.js";
+import * as Schema from "effect/Schema";
+import { Email, type OpaqueToken, Username } from "../domain/Ids.js";
 import type {
   LoginUserRequest,
   RegisterUserRequest,
@@ -19,7 +20,10 @@ import {
   validationError,
 } from "./Common.js";
 import type { User } from "../domain/User.js";
-import type { UserRepositoryService } from "../infrastructure/repositories/UserRepository.js";
+import type {
+  UpdateUserInput,
+  UserRepositoryService,
+} from "../infrastructure/repositories/UserRepository.js";
 
 type UsersError = RealWorldError | UserRepositoryError;
 
@@ -90,6 +94,8 @@ const validateRegister = (
     yield* requireNonBlank("username", input.user.username);
     yield* requireNonBlank("email", input.user.email);
     yield* requireNonBlank("password", input.user.password);
+    yield* validateUsername(input.user.username);
+    yield* validateEmail(input.user.email);
     return input.user;
   });
 
@@ -99,18 +105,55 @@ const validateLogin = (
   Effect.gen(function* () {
     yield* requireNonBlank("email", input.user.email);
     yield* requireNonBlank("password", input.user.password);
+    yield* validateEmail(input.user.email);
     return input.user;
   });
 
-const validateUpdate = (
-  input: UpdateUserRequest,
-): Effect.Effect<UpdateUserRequest["user"], RealWorldError> =>
+const validateUpdate = (input: UpdateUserRequest): Effect.Effect<UpdateUserInput, RealWorldError> =>
   Effect.gen(function* () {
-    if (input.user.password !== undefined && input.user.password.length < 8) {
-      return yield* Effect.fail(validationError("password"));
+    let update: UpdateUserInput = {};
+
+    if (hasOwn(input.user, "email")) {
+      const email = yield* requireNonBlank("email", input.user.email);
+      yield* validateEmail(email);
+      update = { ...update, email };
     }
-    return input.user;
+    if (hasOwn(input.user, "username")) {
+      const username = yield* requireNonBlank("username", input.user.username);
+      yield* validateUsername(username);
+      update = { ...update, username };
+    }
+    if (hasOwn(input.user, "password")) {
+      const password = yield* requireNonBlank("password", input.user.password);
+      if (password.length < 8) return yield* Effect.fail(validationError("password"));
+      update = { ...update, password };
+    }
+    if (hasOwn(input.user, "bio")) {
+      update = { ...update, bio: input.user.bio };
+    }
+    if (hasOwn(input.user, "image")) {
+      update = { ...update, image: input.user.image };
+    }
+
+    return update;
   });
+
+const validateEmail = (email: string): Effect.Effect<void, RealWorldError> =>
+  Schema.decodeUnknownEffect(Email)(email).pipe(
+    Effect.asVoid,
+    Effect.catch(() => Effect.fail(validationError("email"))),
+  );
+
+const validateUsername = (username: string): Effect.Effect<void, RealWorldError> =>
+  Schema.decodeUnknownEffect(Username)(username).pipe(
+    Effect.asVoid,
+    Effect.catch(() => Effect.fail(validationError("username"))),
+  );
+
+const hasOwn = <A extends object, K extends PropertyKey>(
+  value: A,
+  key: K,
+): value is A & Record<K, unknown> => Object.prototype.hasOwnProperty.call(value, key);
 
 const mapUserError = (error: UserRepositoryError): RealWorldError => {
   if (isTagged(error, "DuplicateUserField")) return duplicate(error.field);

@@ -8,6 +8,8 @@ import {
   type RenderTemplate,
 } from "@typed/template";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
+import * as Scope from "effect/Scope";
 import {
   emptyValues,
   type DomRuntimeTemplate,
@@ -64,36 +66,47 @@ function mountFallback<Values extends ReadonlyArray<Renderable.Any>>(
   Renderable.Error<Values[number]>,
   Exclude<Renderable.Services<Values[number]>, RenderTemplate>
 > {
-  return Effect.map(
-    render(template.render(...(options.values ?? emptyValues())), options.root).pipe(
-      FxRuntime.provide(DomRenderTemplate.using(options.root.ownerDocument)),
-      FxRuntime.take(1),
-      FxRuntime.collectAll,
-      Effect.scoped,
-    ),
-    () => mountedApp(options.root, Array.from(options.root.childNodes)),
-  );
+  return mountRenderedFx(
+    template.render(...(options.values ?? emptyValues())),
+    options,
+  ) as Effect.Effect<
+    MountedApp,
+    Renderable.Error<Values[number]>,
+    Exclude<Renderable.Services<Values[number]>, RenderTemplate>
+  >;
 }
 
 function mountFx<E, R>(
   fx: Fx.Fx<RenderEvent, E, R>,
   options: MountOptions,
 ): Effect.Effect<MountedApp, E, Exclude<R, RenderTemplate>> {
-  return Effect.map(
-    render(fx, options.root).pipe(
+  return mountRenderedFx(fx, options) as Effect.Effect<MountedApp, E, Exclude<R, RenderTemplate>>;
+}
+
+function mountRenderedFx<E, R>(
+  fx: Fx.Fx<RenderEvent, E, R>,
+  options: MountOptions,
+): Effect.Effect<MountedApp, E, Exclude<R, RenderTemplate | Scope.Scope>> {
+  return Effect.gen(function* () {
+    const scope = yield* Scope.make();
+    yield* render(fx, options.root).pipe(
       FxRuntime.provide(DomRenderTemplate.using(options.root.ownerDocument)),
       FxRuntime.take(1),
       FxRuntime.collectAll,
-      Effect.scoped,
-    ),
-    () => mountedApp(options.root, Array.from(options.root.childNodes)),
-  );
+      Effect.provideService(Scope.Scope, scope),
+      Effect.onError((cause) => Scope.close(scope, Exit.failCause(cause))),
+    );
+    return mountedApp(options.root, Array.from(options.root.childNodes), scope);
+  }) as Effect.Effect<MountedApp, E, Exclude<R, RenderTemplate | Scope.Scope>>;
 }
 
-function mountedApp(root: HTMLElement, nodes: readonly Node[]): MountedApp {
+function mountedApp(root: HTMLElement, nodes: readonly Node[], scope?: Scope.Scope): MountedApp {
   return {
     root,
     nodes,
-    dispose: Effect.sync(() => root.replaceChildren()),
+    dispose: Effect.gen(function* () {
+      if (scope) yield* Scope.close(scope, Exit.void);
+      root.replaceChildren();
+    }),
   };
 }

@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema";
 import { Article, ArticleFilter, ArticlePreview, Comment } from "./Article.js";
 import { ErrorResponse } from "./Errors.js";
-import { Email, NonEmptyString, OpaqueToken, Slug, TagName, Username } from "./Ids.js";
+import { NonEmptyString, OpaqueToken, Slug, TagName } from "./Ids.js";
 import { ListQuery } from "./Pagination.js";
 import { Profile, UserResponseUser } from "./User.js";
 
@@ -46,28 +46,30 @@ export const TagsResponse = Schema.Struct({
 });
 export type TagsResponse = Schema.Schema.Type<typeof TagsResponse>;
 
+const WireTagList = Schema.Array(Schema.String);
+
 export const RegisterUserRequest = Schema.Struct({
   user: Schema.Struct({
-    username: Username,
-    email: Email,
-    password: Password,
+    username: Schema.String,
+    email: Schema.String,
+    password: Schema.String,
   }),
 });
 export type RegisterUserRequest = Schema.Schema.Type<typeof RegisterUserRequest>;
 
 export const LoginUserRequest = Schema.Struct({
   user: Schema.Struct({
-    email: Email,
-    password: Password,
+    email: Schema.String,
+    password: Schema.String,
   }),
 });
 export type LoginUserRequest = Schema.Schema.Type<typeof LoginUserRequest>;
 
 export const UpdateUserRequest = Schema.Struct({
   user: Schema.Struct({
-    email: Schema.optionalKey(Email),
-    username: Schema.optionalKey(Username),
-    password: Schema.optionalKey(Password),
+    email: Schema.optionalKey(Schema.NullOr(Schema.String)),
+    username: Schema.optionalKey(Schema.NullOr(Schema.String)),
+    password: Schema.optionalKey(Schema.NullOr(Schema.String)),
     bio: Schema.optionalKey(Schema.NullOr(Schema.String)),
     image: Schema.optionalKey(Schema.NullOr(Schema.String)),
   }),
@@ -76,27 +78,27 @@ export type UpdateUserRequest = Schema.Schema.Type<typeof UpdateUserRequest>;
 
 export const CreateArticleRequest = Schema.Struct({
   article: Schema.Struct({
-    title: NonEmptyString,
+    title: Schema.String,
     description: Schema.String,
-    body: NonEmptyString,
-    tagList: Schema.optionalKey(Schema.Array(TagName)),
+    body: Schema.String,
+    tagList: Schema.optionalKey(Schema.NullOr(WireTagList)),
   }),
 });
 export type CreateArticleRequest = Schema.Schema.Type<typeof CreateArticleRequest>;
 
 export const UpdateArticleRequest = Schema.Struct({
   article: Schema.Struct({
-    title: Schema.optionalKey(NonEmptyString),
+    title: Schema.optionalKey(Schema.String),
     description: Schema.optionalKey(Schema.String),
-    body: Schema.optionalKey(NonEmptyString),
-    tagList: Schema.optionalKey(Schema.Array(TagName)),
+    body: Schema.optionalKey(Schema.String),
+    tagList: Schema.optionalKey(Schema.NullOr(WireTagList)),
   }),
 });
 export type UpdateArticleRequest = Schema.Schema.Type<typeof UpdateArticleRequest>;
 
 export const CreateCommentRequest = Schema.Struct({
   comment: Schema.Struct({
-    body: NonEmptyString,
+    body: Schema.String,
   }),
 });
 export type CreateCommentRequest = Schema.Schema.Type<typeof CreateCommentRequest>;

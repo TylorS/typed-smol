@@ -2,6 +2,7 @@ const DEFAULT_OUTLET = "<!--typed-ssr-outlet-->";
 
 export interface EmitHtmlSourceInput {
   readonly sourcePath: string;
+  readonly clientPath?: string;
   readonly outlet?: string;
 }
 
@@ -23,9 +24,10 @@ export function emitHtmlSource(input: EmitHtmlSourceInput): string {
     "  };",
     "};",
     `const sourceHtmlPath = ${JSON.stringify(input.sourcePath)};`,
+    `const clientHtmlPath = ${JSON.stringify(input.clientPath ?? input.sourcePath)};`,
     "const typedConfig = TypedConfigModule as TypedConfigBuildOptions;",
     "const typedBuildConfig = typedConfig.build ?? {};",
-    "const builtHtmlPath = joinClientBuildPath(sourceHtmlPath);",
+    "const builtHtmlPath = joinClientBuildPath(clientHtmlPath);",
     `const outlet = ${JSON.stringify(outlet)};`,
     "export const html = sourceHtmlPath;",
     clientBuildPathSource(),
@@ -54,9 +56,9 @@ function loadHtmlSource(): string {
   return [
     "export async function loadHtml(options: LoadHtmlOptions = {}) {",
     "  const read = options.readFile ?? readFile;",
-    "  if (options.dev && options.devServer) {",
+    "  if (options.dev) {",
     '    const source = await read(sourceHtmlPath, "utf8");',
-    '    return options.devServer.transformIndexHtml(options.url ?? "/", source);',
+    '    return options.devServer ? options.devServer.transformIndexHtml(options.url ?? "/", source) : source;',
     "  }",
     '  return read(builtHtmlPath, "utf8");',
     "}",

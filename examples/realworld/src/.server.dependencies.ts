@@ -7,7 +7,7 @@ import { RealWorldConfig } from "./infrastructure/Config.js";
 import { SqliteLive } from "./infrastructure/Sql.js";
 import { ServerApiClient } from "./common/serverApiClient.js";
 
-const authRequired = Effect.fail({ _tag: "AuthRequired" as const });
+const authRequired = Effect.fail<{ readonly _tag: "AuthRequired" }>({ _tag: "AuthRequired" });
 
 const browserOnly = Effect.die(
   new Error("Browser auth mutations are unavailable during server SSR"),
@@ -26,7 +26,7 @@ const ServerBrowserAuth = Layer.succeed(BrowserAuth, {
   updateArticle: () => authRequired,
   updateSettings: () => authRequired,
   getToken: Effect.succeed(null),
-  getAuthState: Effect.succeed("unauthenticated"),
+  getAuthState: Effect.succeed("unavailable"),
   getCurrentUser: Effect.succeed(null),
 } satisfies AuthStore);
 

@@ -28,7 +28,7 @@ export default defineConfig({
   lint: {
     categories: {},
   },
-  compression: false,
+  compression: true,
   storybook: {
     routes: ["./src/routes"],
     api: ["./src/api"],

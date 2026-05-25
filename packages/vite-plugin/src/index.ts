@@ -259,7 +259,7 @@ function loadTypedViteOptions(options: TypedVitePluginOptions | undefined): {
  */
 export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
   const loaded = loadTypedViteOptions(options);
-  const resolvedOptions = loaded.options;
+  const resolvedOptions = withDevtoolsSmokeMode(loaded.options);
   const projectRoot = loaded.projectRoot;
 
   const resolver = createTypedViteResolver(resolvedOptions);
@@ -349,6 +349,21 @@ export function typedVitePlugin(options?: TypedVitePluginOptions): Plugin[] {
   }
 
   return plugins;
+}
+
+function withDevtoolsSmokeMode(options: TypedVitePluginOptions): TypedVitePluginOptions {
+  if (process.env.VITE_TYPED_DEVTOOLS_SMOKE !== "1") return options;
+  const browserVmOptions = options.browserVmOptions;
+  return {
+    ...options,
+    browserVmOptions: {
+      ...browserVmOptions,
+      runtimeDefaults: {
+        ...browserVmOptions?.runtimeDefaults,
+        devtools: true,
+      },
+    },
+  };
 }
 
 export const nativeTsconfigPathsPlugin: Plugin = {

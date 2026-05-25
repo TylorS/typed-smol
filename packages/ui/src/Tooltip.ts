@@ -92,9 +92,8 @@ export interface ContentOptions<E = never, R = never> extends Dom.HostOptions<HT
 export function Content<const E, const R, const Opts extends ContentOptions<NoInfer<E>, NoInfer<R>>>(
   options: Opts & Pick<ContentOptions<E, R>, "state">,
 ): Component<Opts> {
-  const id = RefSubject.map(options.state, (state) => state.id);
-  const open = RefSubject.map(options.state, (state) => String(state.open));
-  const hidden = RefSubject.map(options.state, (state) => !state.open);
+  const { id, open } = RefSubject.proxy(options.state);
+  const hidden = RefSubject.not(open);
   const onToggle = EventHandler.make((event: ToggleEventLike) =>
     NativePopover.syncToggle(options.state, event),
   );
