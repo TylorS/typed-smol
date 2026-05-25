@@ -183,6 +183,20 @@ describe("parseTypedVirtualModuleId", () => {
       base: "/",
       mode: undefined,
       name: undefined,
+      devtools: false,
+    });
+  });
+
+  it("parses typed:browser devtools as an explicit build-time opt-in", () => {
+    expect(parseTypedVirtualModuleId("typed:browser?routes=*&devtools=1")).toEqual({
+      ok: true,
+      kind: "browser",
+      routes: ["*"],
+      root: "#typed-root",
+      base: "/",
+      mode: undefined,
+      name: undefined,
+      devtools: true,
     });
   });
 
@@ -199,6 +213,7 @@ describe("parseTypedVirtualModuleId", () => {
       base: "/admin",
       mode: "mpa",
       name: "admin",
+      devtools: false,
     });
   });
 
@@ -233,22 +248,24 @@ describe("parseTypedVirtualModuleId", () => {
   });
 
   it("rejects URL-shaped typed:storybook runtime inputs", () => {
-    expect(parseTypedVirtualModuleId("typed:storybook/runtime?url=http://localhost/users")).toEqual({
-      ok: false,
-      code: "TVM-STORYBOOK-003",
-      reason: 'typed:storybook/runtime does not support query option "url"',
-    });
-    expect(parseTypedVirtualModuleId("typed:storybook/runtime?routes=https://example.test/app")).toEqual(
+    expect(parseTypedVirtualModuleId("typed:storybook/runtime?url=http://localhost/users")).toEqual(
       {
         ok: false,
-        code: "TVM-STORYBOOK-002",
-        reason: 'typed:storybook/runtime routes must be a path, not a URL',
+        code: "TVM-STORYBOOK-003",
+        reason: 'typed:storybook/runtime does not support query option "url"',
       },
     );
+    expect(
+      parseTypedVirtualModuleId("typed:storybook/runtime?routes=https://example.test/app"),
+    ).toEqual({
+      ok: false,
+      code: "TVM-STORYBOOK-002",
+      reason: "typed:storybook/runtime routes must be a path, not a URL",
+    });
     expect(parseTypedVirtualModuleId("typed:storybook/runtime?api=//example.test/api")).toEqual({
       ok: false,
       code: "TVM-STORYBOOK-002",
-      reason: 'typed:storybook/runtime api must be a path, not a URL',
+      reason: "typed:storybook/runtime api must be a path, not a URL",
     });
   });
 
@@ -273,6 +290,14 @@ describe("parseTypedVirtualModuleId", () => {
       ok: false,
       code: "TVM-BROWSER-002",
       reason: 'typed:browser mode must be one of "mount" or "mpa"',
+    });
+  });
+
+  it("rejects typed:browser invalid devtools values", () => {
+    expect(parseTypedVirtualModuleId("typed:browser?routes=*&devtools=true")).toEqual({
+      ok: false,
+      code: "TVM-BROWSER-004",
+      reason: 'typed:browser devtools must be "1" when present',
     });
   });
 

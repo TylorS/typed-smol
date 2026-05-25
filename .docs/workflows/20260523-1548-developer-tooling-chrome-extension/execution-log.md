@@ -897,3 +897,28 @@
   - Chrome panel protocol tabs must be real active panels with one visible body at a time; static all-section label dumps are not an acceptable DevTools UI.
   - Component rows must expose explicit DOM and Source actions, backed by protocol DOM binding resolution and Source Analyzer facts.
   - Page-side DOM bridge inspection needs a binding-id-to-node lookup in `DomRegistry`; selected-node resolution alone cannot support panel-driven component inspection.
+
+### T28 - Production DevTools Compile-Out
+
+- task_id: T28
+- trigger:
+  - User challenged whether devtools instrumentation was actually compiled out of normal RealWorld builds.
+- root_cause:
+  - The default generated `typed:browser` module imported `createAppDomTemplateRuntime` from a runtime path that still pulled in `installTypedDevtoolsBridge`.
+  - `createAppDomTemplateRuntime` also imported the bridge directly, so default client bundles retained `__TYPED_DEVTOOLS__`, `installTypedDevtoolsBridge`, and `resolveSelectedElement` even with smoke mode disabled.
+- validation_evidence:
+  - RED: default `pnpm --filter typed-realworld build` artifact grep found devtools bridge symbols in `examples/realworld/dist/client`.
+  - GREEN: `rm -rf packages/app/dist packages/app/tsconfig.tsbuildinfo examples/realworld/node_modules/.typed && pnpm --filter @typed/app exec tsc --pretty false && pnpm --filter typed-realworld build` passed.
+  - GREEN: production artifact grep returned `0` matches for `__TYPED_DEVTOOLS__`, `installTypedDevtoolsBridge`, `makeDomRegistry`, `typed-devtools`, `VITE_TYPED_DEVTOOLS_SMOKE`, and `resolveSelectedElement` under `examples/realworld/dist/client` and `examples/realworld/dist/server`.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/internal/frameworkVirtualModuleId.test.ts src/BrowserVirtualModulePlugin.test.ts src/runtime/devtoolsBridge.test.ts src/runtime/domTemplateRuntime.test.ts` passed with 4 files, 46 tests, and no type errors.
+  - GREEN: `pnpm --filter typed-realworld exec vitest run src/tests/presentation/devtools-smoke-mode.test.ts src/tests/presentation/resumability.test.ts` passed with 2 files and 3 tests.
+  - GREEN: `pnpm --filter @typed/devtools-chrome test` passed with 7 files and 33 tests.
+  - GREEN: `pnpm --filter @typed/devtools-chrome build:extension` passed.
+  - GREEN: `pnpm --filter @typed/devtools-chrome test:browser` passed.
+- context_updates:
+  - Devtools instrumentation is now a build-time `typed:browser` virtual-module option (`devtools=1`), not a runtime option on default `run()`.
+  - RealWorld smoke mode selects the devtools browser virtual module through Vite runtime defaults when `VITE_TYPED_DEVTOOLS_SMOKE=1`.
+  - The default RealWorld browser entrypoint stays on `typed:browser?routes=./routes` and calls `run()` without devtools options.
+- memory_updates:
+  - Default production builds must grep clean for devtools bridge symbols before claiming instrumentation is compiled out.
+  - `createAppDomTemplateRuntime()` must not import or install the Chrome/page bridge; bridge installation belongs only in explicit devtools-enabled generated browser modules.

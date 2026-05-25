@@ -2,31 +2,16 @@
  * @typed/vite-plugin — One-stop Vite preset: tsconfig paths, bundle analyzer,
  * Brotli compression, virtual-modules Vite plugin, and @typed/app VM plugins.
  */
-import {
-  type BrowserVirtualModulePluginOptions,
-} from "@typed/app/BrowserVirtualModulePlugin";
-import {
-  type ComponentVirtualModulePluginOptions,
-} from "@typed/app/ComponentVirtualModulePlugin";
-import {
-  type HtmlVirtualModulePluginOptions,
-} from "@typed/app/HtmlVirtualModulePlugin";
-import {
-  type HttpApiVirtualModulePluginOptions,
-} from "@typed/app/HttpApiVirtualModulePlugin";
-import {
-  type RouterVirtualModulePluginOptions,
-} from "@typed/app/RouterVirtualModulePlugin";
-import {
-  type StorybookVirtualModulePluginOptions,
-} from "@typed/app/StorybookVirtualModulePlugin";
+import { type BrowserVirtualModulePluginOptions } from "@typed/app/BrowserVirtualModulePlugin";
+import { type ComponentVirtualModulePluginOptions } from "@typed/app/ComponentVirtualModulePlugin";
+import { type HtmlVirtualModulePluginOptions } from "@typed/app/HtmlVirtualModulePlugin";
+import { type HttpApiVirtualModulePluginOptions } from "@typed/app/HttpApiVirtualModulePlugin";
+import { type RouterVirtualModulePluginOptions } from "@typed/app/RouterVirtualModulePlugin";
+import { type StorybookVirtualModulePluginOptions } from "@typed/app/StorybookVirtualModulePlugin";
 import { createTypedVirtualModulePlugins } from "@typed/app/TypedVirtualModulePlugins";
 import type { TypedConfig } from "@typed/app/config/TypedConfig";
 import { findTypedConfigRoot, loadTypedConfig } from "@typed/app/config/loadTypedConfig";
-import {
-  typedTemplateVitePlugin,
-  type TypedTemplateVitePluginOptions,
-} from "@typed/compiler";
+import { typedTemplateVitePlugin, type TypedTemplateVitePluginOptions } from "@typed/compiler";
 import type { CreateTypeInfoApiSession, VirtualModuleResolver } from "@typed/virtual-modules";
 import {
   collectTypeTargetSpecsFromPlugins,
@@ -171,9 +156,14 @@ function optionsFromTypedConfig(config: TypedConfig, projectRoot?: string): Type
   const routeDirectories = config.router?.routes;
   return {
     routerVmOptions: config.router ? { prefix: config.router.prefix } : undefined,
-    apiVmOptions: config.api || config.openapi
-      ? { prefix: config.api?.prefix, pathPrefix: config.api?.pathPrefix, openapi: config.openapi }
-      : undefined,
+    apiVmOptions:
+      config.api || config.openapi
+        ? {
+            prefix: config.api?.prefix,
+            pathPrefix: config.api?.pathPrefix,
+            openapi: config.openapi,
+          }
+        : undefined,
     htmlVmOptions: config.html
       ? { defaultPath: config.html.path, defaultOutlet: config.html.outlet }
       : undefined,
@@ -201,6 +191,7 @@ function browserOptionsFromConfig(
       base: config.browser?.base,
       mode: config.browser?.mode,
       name: config.browser?.name,
+      devtools: process.env.VITE_TYPED_DEVTOOLS_SMOKE === "1",
     },
   };
 }
@@ -237,9 +228,10 @@ export function resolveTypedViteProjectRoot(startPath = process.cwd()): string {
   return findTypedConfigRoot(startPath) ?? resolve(startPath);
 }
 
-function loadTypedViteOptions(
-  options: TypedVitePluginOptions | undefined,
-): { readonly options: TypedVitePluginOptions; readonly projectRoot: string } {
+function loadTypedViteOptions(options: TypedVitePluginOptions | undefined): {
+  readonly options: TypedVitePluginOptions;
+  readonly projectRoot: string;
+} {
   const fallbackRoot = options?.projectRoot ? resolve(options.projectRoot) : process.cwd();
   const projectRoot = resolveTypedViteProjectRoot(fallbackRoot);
   if (options) return { options, projectRoot };

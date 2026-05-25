@@ -8,7 +8,6 @@ import {
   type ActionResumeRegistry,
   type RouteResumeRegistry,
 } from "../resumability.js";
-import { installTypedDevtoolsBridge } from "./devtoolsBridge.js";
 
 export interface AppDomTemplateRuntimeOptions {
   readonly actionRegistry?: ActionResumeRegistry;
@@ -31,15 +30,9 @@ export function createAppDomTemplateRuntime(
     options.actionRegistry ?? getDefaultActionResumeRegistry(),
   );
   const devtools =
-    options.devtools && options.devtools.enabled ? options.devtools.domRegistry.observer : undefined;
-  if (options.devtools) {
-    installTypedDevtoolsBridge({
-      domRegistry: options.devtools.enabled ? options.devtools.domRegistry : undefined,
-      enabled: options.devtools.enabled,
-      globalObject: options.devtools.enabled ? options.devtools.globalObject : undefined,
-    });
-  }
-
+    options.devtools && options.devtools.enabled
+      ? options.devtools.domRegistry.observer
+      : undefined;
   return {
     resumeRoute: route.resumeRoute,
     resumeAction: action.resumeAction,

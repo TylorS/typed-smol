@@ -11,13 +11,24 @@ export function emitBrowserSource(input: EmitBrowserSourceInput): string {
     'import * as Cause from "effect/Cause";',
     'import * as Effect from "effect/Effect";',
     'import * as Layer from "effect/Layer";',
-    'import { composeWithLayers, createAppDomTemplateRuntime, installTypedDevtoolsBridge, makeDomRegistry, mount as mountRuntime, type ComputeLayers, type LayerOrGroup } from "@typed/app/runtime";',
+    ...emitRuntimeImports(input.parsed.devtools),
     'import * as TypedRouter from "@typed/router";',
     ...emitRouteImports(input.parsed.routes),
     ...emitCompanionImports(input.companions ?? []),
     emitTypes(),
     emitRuntime(input.parsed, input.companions ?? []),
   ].join("\n");
+}
+
+function emitRuntimeImports(devtools: boolean): readonly string[] {
+  return [
+    'import { composeWithLayers, type ComputeLayers, type LayerOrGroup } from "@typed/app/internal/appLayerTypes";',
+    'import { createAppDomTemplateRuntime } from "@typed/app/runtime/domTemplateRuntime";',
+    'import { mount as mountRuntime } from "@typed/app/runtime/mount";',
+    ...(devtools
+      ? ['import { installTypedDevtoolsBridge, makeDomRegistry } from "@typed/app/runtime";']
+      : []),
+  ];
 }
 
 function emitTypes(): string {
@@ -32,7 +43,6 @@ function emitTypes(): string {
     "type BrowserRunEffect<Layers extends BrowserLayerInputs> = Effect.Effect<never, Layer.Error<BrowserHydratedLayer<Layers>>, Layer.Services<BrowserHydratedLayer<Layers>>>;",
     "type BrowserErrorHandler<E> = (cause: Cause.Cause<E>) => void | Effect.Effect<void, never, never>;",
     "interface BrowserOptions<Layers extends BrowserLayerInputs = readonly []> {",
-    "  readonly devtools?: boolean;",
     "  readonly window?: Window;",
     "  readonly root?: string | HTMLElement;",
     "  readonly layers?: Layers;",
@@ -85,17 +95,7 @@ function emitRuntime(
     "  companionLayers,",
     "};",
     "function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {",
-    "  const domRegistry = options.devtools === true ? makeDomRegistry() : undefined;",
-    "  installTypedDevtoolsBridge({",
-    "    enabled: options.devtools === true,",
-    "    ...(domRegistry ? { domRegistry } : {}),",
-    "    globalObject: win as unknown as Record<PropertyKey, unknown>,",
-    "  });",
-    "  const domRuntime = createAppDomTemplateRuntime(",
-    "    domRegistry",
-    "      ? { devtools: { enabled: true, domRegistry } }",
-    "      : { devtools: { enabled: false } },",
-    "  );",
+    ...emitDomRuntime(parsed.devtools),
     "  return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(",
     "    Layer.provideMerge(TypedRouter.BrowserRouter(win)),",
     "  );",
@@ -135,6 +135,22 @@ function emitRuntime(
     "  return Effect.isEffect(result) ? result : Effect.void;",
     "}",
   ].join("\n");
+}
+
+function emitDomRuntime(devtools: boolean): readonly string[] {
+  if (!devtools) return ["  const domRuntime = createAppDomTemplateRuntime();"];
+
+  return [
+    "  const domRegistry = makeDomRegistry();",
+    "  installTypedDevtoolsBridge({",
+    "    enabled: true,",
+    "    domRegistry,",
+    "    globalObject: win as unknown as Record<PropertyKey, unknown>,",
+    "  });",
+    "  const domRuntime = createAppDomTemplateRuntime({",
+    "    devtools: { enabled: true, domRegistry },",
+    "  });",
+  ];
 }
 
 function routeExpression(routes: readonly string[]): string {

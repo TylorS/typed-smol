@@ -114,7 +114,7 @@ describe("realworld generated runtime resumability", () => {
     );
 
     expect(generatedBrowserSource).toContain("createAppDomTemplateRuntime");
-    expect(generatedBrowserSource).toContain("installTypedDevtoolsBridge");
+    expect(generatedBrowserSource).not.toContain("installTypedDevtoolsBridge");
     expect(generatedBrowserSource).toContain("runtime: domRuntime");
   });
 });

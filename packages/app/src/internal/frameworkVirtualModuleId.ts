@@ -27,6 +27,7 @@ export type TypedVirtualModuleId =
       readonly base: string;
       readonly mode: BrowserMode | undefined;
       readonly name: string | undefined;
+      readonly devtools: boolean;
     }
   | {
       readonly ok: true;
@@ -176,11 +177,18 @@ function parseBrowser(params: URLSearchParams): ParseTypedVirtualModuleIdResult 
   if (mode !== null && !BROWSER_MODES.has(mode as BrowserMode)) {
     return fail("TVM-BROWSER-002", 'typed:browser mode must be one of "mount" or "mpa"');
   }
-  return browserOk(params, routes.values, mode === null ? undefined : (mode as BrowserMode));
+  const devtools = parseBrowserDevtools(params);
+  if (!devtools.ok) return devtools;
+  return browserOk(
+    params,
+    routes.values,
+    mode === null ? undefined : (mode as BrowserMode),
+    devtools.value,
+  );
 }
 
 const serverOptions = ["api", "routes", "html", "client", "page", "base", "name"] as const;
-const browserOptions = ["routes", "root", "base", "mode", "name"] as const;
+const browserOptions = ["routes", "root", "base", "mode", "name", "devtools"] as const;
 const storybookRuntimeOptions = ["api", "routes", "path", "serverOrigin", "proxyPath"] as const;
 
 function parseStorybookEntry(
@@ -360,6 +368,7 @@ function browserOk(
   params: URLSearchParams,
   routes: readonly string[],
   mode: BrowserMode | undefined,
+  devtools: boolean,
 ): TypedVirtualModuleId {
   return {
     ok: true,
@@ -369,7 +378,17 @@ function browserOk(
     base: params.get("base") ?? "/",
     mode,
     name: params.get("name") ?? undefined,
+    devtools,
   };
+}
+
+function parseBrowserDevtools(
+  params: URLSearchParams,
+): { readonly ok: true; readonly value: boolean } | ParseFail {
+  const value = params.get("devtools");
+  if (value === null) return { ok: true, value: false };
+  if (value === "1") return { ok: true, value: true };
+  return fail("TVM-BROWSER-004", 'typed:browser devtools must be "1" when present');
 }
 
 function fail(code: string, reason: string): ParseFail {

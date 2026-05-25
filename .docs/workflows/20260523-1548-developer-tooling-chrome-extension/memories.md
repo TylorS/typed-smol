@@ -179,3 +179,9 @@
 - Chrome panel protocol tabs must be real active panels with one visible body at a time; static all-section label dumps are not an acceptable DevTools UI.
 - Component rows must expose explicit DOM and Source actions, backed by protocol DOM binding resolution and Source Analyzer facts.
 - Page-side DOM bridge inspection needs a binding-id-to-node lookup in `DomRegistry`; selected-node resolution alone cannot support panel-driven component inspection.
+
+### T28
+
+- Default production builds must grep clean for devtools bridge symbols before claiming instrumentation is compiled out.
+- `createAppDomTemplateRuntime()` must not import or install the Chrome/page bridge; bridge installation belongs only in explicit devtools-enabled generated browser modules.
+- Devtools RealWorld smoke mode is selected by Vite runtime defaults (`VITE_TYPED_DEVTOOLS_SMOKE=1`) and `typed:browser?...&devtools=1`, not by runtime `run({ devtools })` options in the production entrypoint.

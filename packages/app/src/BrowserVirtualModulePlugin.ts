@@ -1,6 +1,9 @@
 import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
 import { emitBrowserSource } from "./internal/emitBrowserSource.js";
-import { parseTypedVirtualModuleId, type BrowserMode } from "./internal/frameworkVirtualModuleId.js";
+import {
+  parseTypedVirtualModuleId,
+  type BrowserMode,
+} from "./internal/frameworkVirtualModuleId.js";
 import { resolveBrowserCompanion } from "./internal/browserCompanions.js";
 
 const DEFAULT_PLUGIN_NAME = "typed-browser-virtual-module";
@@ -16,6 +19,7 @@ export interface BrowserRuntimeDefaults {
   readonly base?: string;
   readonly mode?: BrowserMode;
   readonly name?: string;
+  readonly devtools?: boolean;
 }
 
 export function createBrowserVirtualModulePlugin(
@@ -49,6 +53,7 @@ function applyBrowserDefaults(id: string, defaults: BrowserRuntimeDefaults | und
   setMissing(params, "base", defaults.base);
   setMissing(params, "mode", defaults.mode);
   setMissing(params, "name", defaults.name);
+  if (!params.has("devtools") && defaults.devtools === true) params.set("devtools", "1");
   const query = params.toString();
   return query ? `typed:browser?${query}` : id;
 }
