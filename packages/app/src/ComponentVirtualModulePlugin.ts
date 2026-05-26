@@ -9,6 +9,7 @@ import type {
   OverloadSetTypeNode,
   TypeInfoApi,
   TypeNode,
+  VirtualModuleBuildContext,
   VirtualModuleBuildError,
   VirtualModulePlugin,
 } from "@typed/virtual-modules";
@@ -20,6 +21,27 @@ import { COMPONENT_TYPE_TARGET_SPECS } from "./internal/typeTargetSpecs.js";
 
 const DEFAULT_PREFIX = "typed:component";
 const DEFAULT_PLUGIN_NAME = "typed-component-virtual-module";
+const COMPONENT_EXPORTS = [
+  "entrypoint",
+  "Input",
+  "InputSchema",
+  "InputArbitrary",
+  "InputArbitraryLazy",
+  "InputEquivalence",
+  "InputFormatter",
+  "InputRepresentation",
+  "InputJsonSchema",
+  "InputStandardSchema",
+  "InputStandardJsonSchema",
+  "argTypes",
+  "Component",
+  "render",
+  "ComponentResult",
+  "ComponentError",
+  "ComponentServices",
+  "makeComponentStory",
+  "makeComponentProperty",
+] as const;
 
 export type ParseComponentVirtualModuleIdResult =
   | { readonly ok: true; readonly path: string; readonly exportName: string }
@@ -104,9 +126,15 @@ export function createComponentVirtualModulePlugin(
           name,
         );
       }
-      return emitComponentSource(resolved, importer, api, name);
+      if (!shouldEmitAnyComponentExport(context)) return "export {};";
+      return emitComponentSource(resolved, importer, api, name, context);
     },
   };
+}
+
+function shouldEmitAnyComponentExport(context: VirtualModuleBuildContext | undefined): boolean {
+  if (!context || context.requestedExports.kind === "all") return true;
+  return COMPONENT_EXPORTS.some((name) => requestsComponentExport(context, name));
 }
 
 function resolveComponentTarget(
@@ -134,6 +162,7 @@ function emitComponentSource(
   importer: string,
   api: TypeInfoApi,
   pluginName: string,
+  context: VirtualModuleBuildContext | undefined,
 ): string | VirtualModuleBuildError {
   const source = api.file(`./${basename(target.targetPath)}`, {
     baseDir: dirname(target.targetPath),
@@ -164,7 +193,7 @@ function emitComponentSource(
 
   const inputType = preferExportedInputType(signature.inputType, source.snapshot.exports);
 
-  return emitComponentModule(target, importer, signature, inputType, api, pluginName);
+  return emitComponentModule(target, importer, signature, inputType, api, pluginName, context);
 }
 
 function componentSignature(type: TypeNode, api: TypeInfoApi): ComponentSignature | undefined {
@@ -233,6 +262,21 @@ function emptyInputNode(): TypeNode {
 }
 
 function emitComponentModule(
+  target: Extract<ResolvedComponentTarget, { readonly ok: true }>,
+  importer: string,
+  signature: ComponentSignature,
+  inputType: TypeNode,
+  api: TypeInfoApi,
+  pluginName: string,
+  context?: VirtualModuleBuildContext,
+): string | VirtualModuleBuildError {
+  if (context && context.requestedExports.kind === "names") {
+    return emitPrunedComponentModule(target, importer, signature, inputType, api, pluginName, context);
+  }
+  return emitFullComponentModule(target, importer, signature, inputType, api, pluginName);
+}
+
+function emitFullComponentModule(
   target: Extract<ResolvedComponentTarget, { readonly ok: true }>,
   importer: string,
   signature: ComponentSignature,
@@ -312,6 +356,245 @@ function makeComponentParameters<const Options extends Pick<ComponentStoryOption
   };
 }`);
   return source.emit();
+}
+
+interface ComponentEmitPlan {
+  readonly entrypoint: boolean;
+  readonly input: boolean;
+  readonly inputSchema: boolean;
+  readonly inputArbitrary: boolean;
+  readonly inputArbitraryLazy: boolean;
+  readonly inputEquivalence: boolean;
+  readonly inputFormatter: boolean;
+  readonly inputRepresentation: boolean;
+  readonly inputJsonSchema: boolean;
+  readonly inputStandardSchema: boolean;
+  readonly inputStandardJsonSchema: boolean;
+  readonly argTypes: boolean;
+  readonly component: boolean;
+  readonly render: boolean;
+  readonly componentResult: boolean;
+  readonly componentError: boolean;
+  readonly componentServices: boolean;
+  readonly makeComponentStory: boolean;
+  readonly makeComponentProperty: boolean;
+}
+
+function emitPrunedComponentModule(
+  target: Extract<ResolvedComponentTarget, { readonly ok: true }>,
+  importer: string,
+  signature: ComponentSignature,
+  inputType: TypeNode,
+  api: TypeInfoApi,
+  pluginName: string,
+  context: VirtualModuleBuildContext,
+): string | VirtualModuleBuildError {
+  const plan = componentEmitPlan(context);
+  const deps = componentPlanDependencies(plan);
+  const source = new ModuleSource();
+  const componentDir = dirname(toPosixPath(importer));
+  const targetSpecifier = toImportSpecifier(componentDir, target.targetPath);
+  addPrunedComponentImports(source, deps, targetSpecifier);
+  const schemaPlan = deps.inputSchema ? inputSchemaPlan(inputType, api, source, componentDir) : undefined;
+  if (schemaPlan && !schemaPlan.ok) {
+    return buildError("CVM-COMPONENT-SCHEMA-001", schemaPlan.message, pluginName);
+  }
+  addPrunedComponentBindings(source, target.exportName, signature, inputType, plan, deps, schemaPlan);
+  return source.emit() || "export {};";
+}
+
+function componentEmitPlan(context: VirtualModuleBuildContext): ComponentEmitPlan {
+  return {
+    entrypoint: requestsComponentExport(context, "entrypoint"),
+    input: requestsComponentExport(context, "Input"),
+    inputSchema: requestsComponentExport(context, "InputSchema"),
+    inputArbitrary: requestsComponentExport(context, "InputArbitrary"),
+    inputArbitraryLazy: requestsComponentExport(context, "InputArbitraryLazy"),
+    inputEquivalence: requestsComponentExport(context, "InputEquivalence"),
+    inputFormatter: requestsComponentExport(context, "InputFormatter"),
+    inputRepresentation: requestsComponentExport(context, "InputRepresentation"),
+    inputJsonSchema: requestsComponentExport(context, "InputJsonSchema"),
+    inputStandardSchema: requestsComponentExport(context, "InputStandardSchema"),
+    inputStandardJsonSchema: requestsComponentExport(context, "InputStandardJsonSchema"),
+    argTypes: requestsComponentExport(context, "argTypes"),
+    component: requestsComponentExport(context, "Component"),
+    render: requestsComponentExport(context, "render"),
+    componentResult: requestsComponentExport(context, "ComponentResult"),
+    componentError: requestsComponentExport(context, "ComponentError"),
+    componentServices: requestsComponentExport(context, "ComponentServices"),
+    makeComponentStory: requestsComponentExport(context, "makeComponentStory"),
+    makeComponentProperty: requestsComponentExport(context, "makeComponentProperty"),
+  };
+}
+
+function requestsComponentExport(
+  context: VirtualModuleBuildContext,
+  name: (typeof COMPONENT_EXPORTS)[number],
+): boolean {
+  if (context.requestedExports.kind === "all") return true;
+  return context.requestedExports.names.has(name) || context.requestedExports.typeOnlyNames.has(name);
+}
+
+interface ComponentPlanDependencies {
+  readonly entrypoint: boolean;
+  readonly input: boolean;
+  readonly inputSchema: boolean;
+  readonly argTypes: boolean;
+  readonly component: boolean;
+  readonly componentResult: boolean;
+  readonly componentStoryRuntime: boolean;
+  readonly decodeInput: boolean;
+  readonly renderableTypes: boolean;
+}
+
+function componentPlanDependencies(plan: ComponentEmitPlan): ComponentPlanDependencies {
+  const component =
+    plan.component ||
+    plan.render ||
+    plan.componentResult ||
+    plan.componentError ||
+    plan.componentServices ||
+    plan.makeComponentStory ||
+    plan.makeComponentProperty;
+  const input =
+    plan.input ||
+    component ||
+    plan.makeComponentStory ||
+    plan.makeComponentProperty;
+  const inputSchema =
+    plan.inputSchema ||
+    plan.inputArbitrary ||
+    plan.inputArbitraryLazy ||
+    plan.inputEquivalence ||
+    plan.inputFormatter ||
+    plan.inputRepresentation ||
+    plan.inputJsonSchema ||
+    plan.inputStandardSchema ||
+    plan.inputStandardJsonSchema ||
+    plan.makeComponentStory ||
+    plan.makeComponentProperty;
+  return {
+    entrypoint: plan.entrypoint || input || component,
+    input,
+    inputSchema,
+    argTypes: plan.argTypes || plan.makeComponentStory,
+    component,
+    componentResult:
+      plan.componentResult || plan.componentError || plan.componentServices || plan.makeComponentProperty,
+    componentStoryRuntime: plan.makeComponentStory,
+    decodeInput: plan.makeComponentStory || plan.makeComponentProperty,
+    renderableTypes: plan.componentError || plan.componentServices,
+  };
+}
+
+function addPrunedComponentImports(
+  source: ModuleSource,
+  deps: ComponentPlanDependencies,
+  targetSpecifier: string,
+): void {
+  if (deps.inputSchema || deps.decodeInput) source.importLine('import * as Schema from "effect/Schema";');
+  if (deps.componentStoryRuntime) {
+    source.importLine('import type { LayerOrGroup } from "@typed/app/runtime";');
+    source.importLine('import { defineTypedStoryRuntime } from "@typed/storybook";');
+  }
+  if (deps.renderableTypes) source.importLine('import type { Renderable } from "@typed/template";');
+  if (deps.entrypoint || deps.component) source.importNamespace("ComponentModule", targetSpecifier);
+}
+
+function addPrunedComponentBindings(
+  source: ModuleSource,
+  exportName: string,
+  signature: ComponentSignature,
+  inputType: TypeNode,
+  plan: ComponentEmitPlan,
+  deps: ComponentPlanDependencies,
+  schemaPlan: Extract<SchemaPlan, { readonly ok: true }> | undefined,
+): void {
+  if (deps.entrypoint) addBinding(source, plan.entrypoint, `const entrypoint = ${entrypointExpression(exportName)};`);
+  if (deps.input) addBinding(source, plan.input, `type Input = ${inputTypeExpression(exportName, signature)};`);
+  if (schemaPlan) addInputSchemaBindings(source, plan, schemaPlan.expression);
+  if (deps.argTypes) addBinding(source, plan.argTypes, `const argTypes = ${argTypesExpression(inputType)} as const;`);
+  if (deps.component) addBinding(source, plan.component, `const Component = ${componentExpression(exportName, signature)};`);
+  if (plan.render) source.add("export const render = Component;");
+  if (deps.renderableTypes) addRenderableTypeHelpers(source);
+  if (deps.componentResult) addBinding(source, plan.componentResult, "type ComponentResult = ReturnType<typeof Component>;");
+  if (plan.componentError) source.add("export type ComponentError = ComponentErrorOf<ComponentResult>;");
+  if (plan.componentServices) source.add("export type ComponentServices = ComponentServicesOf<ComponentResult>;");
+  if (deps.decodeInput) source.add("const decodeInput = Schema.decodeUnknownSync(InputSchema);");
+  if (plan.makeComponentStory) source.add(componentStorySource());
+  if (plan.makeComponentProperty) source.add(componentPropertySource());
+}
+
+function addBinding(source: ModuleSource, exported: boolean, declaration: string): void {
+  source.add(exported ? `export ${declaration}` : declaration);
+}
+
+function addInputSchemaBindings(source: ModuleSource, plan: ComponentEmitPlan, expression: string): void {
+  addBinding(source, plan.inputSchema, `const InputSchema = ${expression};`);
+  if (plan.inputArbitrary) source.add("export const InputArbitrary = Schema.toArbitrary(InputSchema);");
+  if (plan.inputArbitraryLazy) source.add("export const InputArbitraryLazy = Schema.toArbitraryLazy(InputSchema);");
+  if (plan.inputEquivalence) source.add("export const InputEquivalence = Schema.toEquivalence(InputSchema);");
+  if (plan.inputFormatter) source.add("export const InputFormatter = Schema.toFormatter(InputSchema);");
+  if (plan.inputRepresentation) source.add("export const InputRepresentation = Schema.toRepresentation(InputSchema);");
+  if (plan.inputJsonSchema) source.add("export const InputJsonSchema = Schema.toJsonSchemaDocument(InputSchema);");
+  if (plan.inputStandardSchema) {
+    source.add("export type InputStandardSchema = ReturnType<typeof Schema.toStandardSchemaV1<typeof InputSchema>>;");
+    source.add("export const InputStandardSchema: InputStandardSchema = Schema.toStandardSchemaV1(InputSchema);");
+  }
+  if (plan.inputStandardJsonSchema) {
+    source.add("export type InputStandardJsonSchema = ReturnType<typeof Schema.toStandardJSONSchemaV1<typeof InputSchema>>;");
+    source.add("export const InputStandardJsonSchema: InputStandardJsonSchema = Schema.toStandardJSONSchemaV1(InputSchema);");
+  }
+}
+
+function addRenderableTypeHelpers(source: ModuleSource): void {
+  source.add("type ComponentErrorOf<Result> = Renderable.Error<Result>;");
+  source.add("type ComponentServicesOf<Result> = Renderable.Services<Result>;");
+}
+
+function componentStorySource(): string {
+  return `type Layers = readonly LayerOrGroup[];
+type TestLayers = readonly LayerOrGroup[];
+
+interface ComponentStoryOptions {
+  readonly input: Input;
+  readonly layers?: Layers;
+  readonly testLayers?: TestLayers;
+}
+
+export function makeComponentStory<const Options extends ComponentStoryOptions>(options: Options) {
+  return {
+    args: options.input,
+    argTypes,
+    parameters: makeComponentParameters(options),
+    render: (args: unknown) => Component(decodeInput(args)),
+  };
+}
+
+function makeComponentParameters<const Options extends Pick<ComponentStoryOptions, "layers" | "testLayers">>(
+  options: Options,
+) {
+  return {
+    typed: defineTypedStoryRuntime({
+      layers: options.layers,
+      testLayers: options.testLayers,
+    }),
+  };
+}`;
+}
+
+function componentPropertySource(): string {
+  return `interface ComponentPropertyOptions {
+  readonly assert?: (input: Input, result: ComponentResult) => void | Promise<void>;
+}
+
+export function makeComponentProperty(options: ComponentPropertyOptions = {}) {
+  return async (input: Input) => {
+    const decoded = decodeInput(input);
+    const result = Component(decoded);
+    await options.assert?.(decoded, result);
+  };
+}`;
 }
 
 function inputTypeExpression(_exportName: string, signature: ComponentSignature): string {

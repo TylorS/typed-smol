@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import ts from "typescript";
-import { createTypeInfoApiSession } from "@typed/virtual-modules";
+import { createTypeInfoApiSession, type VirtualModuleBuildContext } from "@typed/virtual-modules";
 import {
   createComponentVirtualModulePlugin,
   parseComponentVirtualModuleId,
@@ -63,6 +63,31 @@ function apiFor(f: ReturnType<typeof fixture>) {
     ],
     failWhenNoTargetsResolved: false,
   }).api;
+}
+
+function productionContext(
+  id: string,
+  importer: string,
+  names: readonly string[],
+): VirtualModuleBuildContext {
+  return {
+    id,
+    rootImporter: importer,
+    containingFile: importer,
+    consumer: "client",
+    requestedExports: {
+      kind: "names",
+      names: new Set(names),
+      typeOnlyNames: new Set(),
+    },
+    closure: {
+      kind: "partial",
+      requested: new Set(names),
+      pluginDeclared: new Set(),
+      typeInfoReachable: new Set(),
+      routeOrAppReachable: new Set(),
+    },
+  };
 }
 
 afterEach(() => {
@@ -147,6 +172,192 @@ export default (input: MyInput) => html\`<article>\${input.my.name}: \${input.ot
     expect(source).not.toContain(" as Input");
     expect(source).not.toContain("Schema.Unknown");
     expect(source).not.toContain("??");
+  });
+
+  it("emits only requested InputSchema output in production partial builds", () => {
+    const f = fixture({
+      "src/UserCard.ts": `
+import { html } from "@typed/template";
+
+export type MyInput = {
+  readonly label: string;
+};
+
+export default (input: MyInput) => html\`<article>\${input.label}</article>\`;
+`,
+      "src/entry.ts": 'import "typed:component?path=./UserCard.ts";',
+    });
+    const id = "typed:component?path=./UserCard.ts";
+    const source = createComponentVirtualModulePlugin().build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["InputSchema"]),
+    );
+    expect(typeof source, JSON.stringify(source)).toBe("string");
+    if (typeof source !== "string") return;
+
+    expect(source).toContain('import * as Schema from "effect/Schema";');
+    expect(source).toContain("export const InputSchema = Schema.Struct({");
+    expect(source).not.toContain("@typed/storybook");
+    expect(source).not.toContain("LayerOrGroup");
+    expect(source).not.toContain("InputArbitrary");
+    expect(source).not.toContain("export const Component");
+    expect(source).not.toContain("makeComponentStory");
+  });
+
+  it("emits only requested makeComponentStory output and concrete dependencies in production partial builds", () => {
+    const f = fixture({
+      "src/UserCard.ts": `
+import { html } from "@typed/template";
+
+export type MyInput = {
+  readonly label: string;
+};
+
+export default (input: MyInput) => html\`<article>\${input.label}</article>\`;
+`,
+      "src/entry.ts": 'import "typed:component?path=./UserCard.ts";',
+    });
+    const id = "typed:component?path=./UserCard.ts";
+    const source = createComponentVirtualModulePlugin().build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["makeComponentStory"]),
+    );
+    expect(typeof source, JSON.stringify(source)).toBe("string");
+    if (typeof source !== "string") return;
+
+    expect(source).toContain('import * as ComponentModule from "./UserCard.js";');
+    expect(source).toContain('import { defineTypedStoryRuntime } from "@typed/storybook";');
+    expect(source).toContain("export function makeComponentStory");
+    expect(source).toContain("const InputSchema = Schema.Struct({");
+    expect(source).toContain("const Component = (input: Input) => ComponentModule.default(input);");
+    expect(source).not.toContain("export const InputSchema");
+    expect(source).not.toContain("export const InputArbitrary");
+    expect(source).not.toContain("export const Component");
+    expect(source).not.toContain("export function makeComponentProperty");
+    expect(source).not.toContain("Renderable.");
+  });
+
+  it("emits only requested makeComponentProperty output and concrete dependencies in production partial builds", () => {
+    const f = fixture({
+      "src/UserCard.ts": `
+import { html } from "@typed/template";
+
+export type MyInput = {
+  readonly label: string;
+};
+
+export default (input: MyInput) => html\`<article>\${input.label}</article>\`;
+`,
+      "src/entry.ts": 'import "typed:component?path=./UserCard.ts";',
+    });
+    const id = "typed:component?path=./UserCard.ts";
+    const source = createComponentVirtualModulePlugin().build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["makeComponentProperty"]),
+    );
+    expect(typeof source, JSON.stringify(source)).toBe("string");
+    if (typeof source !== "string") return;
+
+    expect(source).toContain('import * as ComponentModule from "./UserCard.js";');
+    expect(source).toContain("export function makeComponentProperty");
+    expect(source).toContain("const InputSchema = Schema.Struct({");
+    expect(source).toContain("const Component = (input: Input) => ComponentModule.default(input);");
+    expect(source).toContain("type ComponentResult = ReturnType<typeof Component>;");
+    expect(source).toContain("const decodeInput = Schema.decodeUnknownSync(InputSchema);");
+    expect(source).not.toContain("@typed/storybook");
+    expect(source).not.toContain("export type ComponentResult");
+    expect(source).not.toContain("export const Component");
+    expect(source).not.toContain("export function makeComponentStory");
+    expect(source).not.toContain("LayerOrGroup");
+  });
+
+  it("emits render with a local Component dependency in production partial builds", () => {
+    const f = fixture({
+      "src/UserCard.ts": `
+import { html } from "@typed/template";
+
+export type MyInput = {
+  readonly label: string;
+};
+
+export default (input: MyInput) => html\`<article>\${input.label}</article>\`;
+`,
+      "src/entry.ts": 'import "typed:component?path=./UserCard.ts";',
+    });
+    const id = "typed:component?path=./UserCard.ts";
+    const source = createComponentVirtualModulePlugin().build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["render"]),
+    );
+    expect(typeof source, JSON.stringify(source)).toBe("string");
+    if (typeof source !== "string") return;
+
+    expect(source).toContain('import * as ComponentModule from "./UserCard.js";');
+    expect(source).toContain("const Component = (input: Input) => ComponentModule.default(input);");
+    expect(source).toContain("export const render = Component;");
+    expect(source).not.toContain("export const Component");
+    expect(source).not.toContain("InputSchema");
+    expect(source).not.toContain("@typed/storybook");
+  });
+
+  it("keeps full component output for all-export production contexts", () => {
+    const f = fixture({
+      "src/UserCard.ts": `
+import { html } from "@typed/template";
+
+export type MyInput = {
+  readonly label: string;
+};
+
+export default (input: MyInput) => html\`<article>\${input.label}</article>\`;
+`,
+      "src/entry.ts": 'import "typed:component?path=./UserCard.ts";',
+    });
+    const id = "typed:component?path=./UserCard.ts";
+    const source = createComponentVirtualModulePlugin().build(id, f.importer, apiFor(f), {
+      id,
+      rootImporter: f.importer,
+      containingFile: f.importer,
+      consumer: "client",
+      requestedExports: { kind: "all", reason: "test fallback" },
+      closure: { kind: "all", reason: "test fallback" },
+    });
+    expect(typeof source, JSON.stringify(source)).toBe("string");
+    if (typeof source !== "string") return;
+
+    expect(source).toContain("export const InputSchema = Schema.Struct({");
+    expect(source).toContain("export const InputArbitrary = Schema.toArbitrary(InputSchema);");
+    expect(source).toContain("export const Component = (input: Input) => ComponentModule.default(input);");
+    expect(source).toContain("export function makeComponentStory");
+    expect(source).toContain("export function makeComponentProperty");
+  });
+
+  it("returns an empty component module when no requested production export matches", () => {
+    const f = fixture({
+      "src/UserCard.ts": `
+import { html } from "@typed/template";
+export default () => html\`<article>Static</article>\`;
+`,
+      "src/entry.ts": 'import "typed:component?path=./UserCard.ts";',
+    });
+    const id = "typed:component?path=./UserCard.ts";
+
+    expect(
+      createComponentVirtualModulePlugin().build(
+        id,
+        f.importer,
+        apiFor(f),
+        productionContext(id, f.importer, ["missing"]),
+      ),
+    ).toBe("export {};");
   });
 
   it("generates select controls for literal unions", () => {
