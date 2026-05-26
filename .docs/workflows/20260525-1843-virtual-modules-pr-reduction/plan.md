@@ -92,11 +92,11 @@ This is a multi-day release-hardening plan. Do not collapse it into one uninterr
 
 ### T2 Production Closure Core Contract
 
-- [ ] Extend `packages/virtual-modules/src/types.ts` with shared closure semantics.
-- [ ] Extend `packages/virtual-modules/src/importUsageAnalyzer.test.ts` and core manager tests for partial/all closure behavior.
-- [ ] Update `packages/virtual-modules-vite/src/vitePlugin.ts` to fingerprint closure context in build mode and preserve dev all-output mode.
-- [ ] Add tests for conservative all-output fallback reasons.
-- [ ] Run virtual-module core/Vite/app tests, then commit.
+- [x] Extend `packages/virtual-modules/src/types.ts` with shared closure semantics.
+- [x] Extend `packages/virtual-modules/src/importUsageAnalyzer.test.ts` and core manager tests for partial/all closure behavior.
+- [x] Update `packages/virtual-modules-vite/src/vitePlugin.ts` to fingerprint closure context in build mode and preserve dev all-output mode.
+- [x] Add tests for conservative all-output fallback reasons.
+- [x] Run virtual-module core/Vite/app tests, then commit.
 
 ### T3 First-Party Plugin Pruning Inventory
 

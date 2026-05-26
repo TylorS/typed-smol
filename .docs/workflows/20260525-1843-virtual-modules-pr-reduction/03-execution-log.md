@@ -55,6 +55,28 @@
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
 
+### T2 Production closure core contract
+
+- task_id: T2
+- requirement_ids: FR-2, FR-3, NFR-2, AC-2, AC-3
+- ts_scenarios: TS-3, TS-4 partial, TS-5 partial
+- validation_evidence:
+  - RED: implementation subagent reported core tests first failed because shared closure helpers were missing, and Vite tests first failed because build context lacked `closure`.
+  - GREEN: `pnpm --filter @typed/virtual-modules test` passed with 14 files and 156 tests.
+  - GREEN: `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/app test -- HttpApiVirtualModulePlugin` passed with 35 files, 448 tests, and no type errors.
+  - `git diff --check` over T2 owner files passed.
+  - Spec compliance review requested required `VirtualModuleBuildContext.closure` and direct Vite fallback tests for missing importer source and virtual importer source; both were fixed and re-reviewed as approved.
+  - Code-quality review approved with one residual non-blocking test precision gap: stale-artifact invalidation proves build-context fingerprinting, but does not isolate `closure` alone.
+- commit: `bf4801f` - `feat(virtual-modules): add production dependency closure context`
+- deviations_or_replans:
+  - Added `packages/virtual-modules-vite/vitest.config.ts` so Vite package tests resolve `@typed/virtual-modules` to workspace source instead of stale `dist`.
+  - Kept closure graph fields empty in T2; T3 and T6 fill plugin-declared, TypeInfo, route, and app reachability.
+- context_updates: none
+- memory_updates:
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
+
 ## Deferred Work
 
-- T2 through T9 remain pending.
+- T3 through T9 remain pending.
