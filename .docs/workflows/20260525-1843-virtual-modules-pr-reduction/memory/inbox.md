@@ -62,3 +62,11 @@
 - Missing production requests return `export {};` before directory discovery imports are emitted.
 - `pnpm --filter @typed/app exec tsc --noEmit --pretty false` caught non-predicate narrowing errors that Vitest missed. Keep `tsc --noEmit` in later T3/T4 gates when changing virtual-module build context code.
 - Strictness fixes landed for earlier pruning code in composable path/dir emitters, html, and Storybook runtime by replacing boolean-helper assumptions with explicit context discriminant checks.
+
+## 2026-05-26 - T3b2b2b1 component production pruning
+
+- Component virtual modules now honor production requested exports through a local emit plan and dependency plan.
+- `InputSchema`-only output avoids Storybook and component runtime imports; story, property, and render helpers emit local concrete dependencies without making them public exports unless directly requested.
+- Missing production requests return `export {};`; all-export and no-context builds still use the full component output.
+- Component tests cover `InputSchema`, `makeComponentStory`, `makeComponentProperty`, `render`, no-match, and all-export production contexts.
+- Browser/server plugin files remain dirty from other work and were not touched. Treat browser/server pruning as T3b2b2b2.

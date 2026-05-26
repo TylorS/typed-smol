@@ -206,6 +206,33 @@
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
 
+### T3b2b2b1 First-party plugin pruning: component exports
+
+- task_id: T3b2b2b1
+- parent_task_id: T3
+- requirement_ids: FR-1, FR-2, FR-3, NFR-2, AC-1, AC-2, AC-3
+- ts_scenarios: TS-3, TS-4 partial, TS-5 partial, TS-7 partial
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app exec vitest run src/ComponentVirtualModulePlugin.test.ts` failed before implementation because production partial output still emitted broad component exports.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/ComponentVirtualModulePlugin.test.ts` passed with 1 file, 14 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/ComponentVirtualModulePlugin.test.ts src/RouteHandlersVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts` passed with 3 files, 53 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec tsc --noEmit --pretty false` passed.
+  - GREEN: `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 35 files, 496 tests, and no type errors.
+  - `git diff --check` over T3b2b2b1 owner files passed.
+  - Banned wrapper-name scan over T3b2b2b1 owner files found no `TypedClient`, `TypedClientInput`, `TypedRawClient`, `makeTypedClient`, `makeTypedClientWith`, `makeTypedClientFromRaw`, or `OptionalEndpoint` matches.
+  - Spec compliance review approved with no blocking findings.
+  - Code-quality review approved with no blocking findings; optional local-dependency tests for `makeComponentProperty`, `render`, and all-export fallback were added and passed.
+- commit: `4341e48` - `feat(app): prune component virtual module output`
+- deviations_or_replans:
+  - Component pruning emits requested public exports plus local concrete dependencies for story, property, and render helpers; local dependencies are not public exports unless directly requested.
+  - No-match production requests return `export {};` before component source emission.
+  - Browser/server plugin families remain T3b2b2b2. Their files are still dirty from other work and were not touched.
+- context_updates: none
+- memory_updates:
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
+
 ## Deferred Work
 
-- T3b2b2b through T9 remain pending.
+- T3b2b2b2 through T9 remain pending.

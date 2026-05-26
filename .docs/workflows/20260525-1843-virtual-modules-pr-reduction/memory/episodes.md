@@ -99,3 +99,16 @@
   - `pnpm --filter @typed/app test` passed with 35 files, 490 tests, and no type errors.
   - Spec compliance review approved with no findings; code-quality re-review approved after the strict compiler fix.
 - outcome: committed `4834919` (`feat(app): prune route handlers production output`); component and browser/server plugin families remain.
+
+## T3b2b2b1 - Component production pruning
+
+- objective: make `typed:component` emit only requested production exports and concrete dependencies while preserving full dev/no-context output.
+- evidence:
+  - `pnpm --filter @typed/app exec vitest run src/ComponentVirtualModulePlugin.test.ts` failed first because production partial component output still emitted broad exports.
+  - `pnpm --filter @typed/app exec vitest run src/ComponentVirtualModulePlugin.test.ts` passed with 1 file, 14 tests, and no type errors.
+  - `pnpm --filter @typed/app exec vitest run src/ComponentVirtualModulePlugin.test.ts src/RouteHandlersVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts` passed with 3 files, 53 tests, and no type errors.
+  - `pnpm --filter @typed/app exec tsc --noEmit --pretty false` passed.
+  - `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - `pnpm --filter @typed/app test` passed with 35 files, 496 tests, and no type errors.
+  - Spec compliance review found no blocking issue; code-quality review found no blocker and suggested local-dependency guard tests, which were added.
+- outcome: committed `4341e48` (`feat(app): prune component virtual module output`); browser/server plugin families remain and were not touched because their files are dirty from other work.

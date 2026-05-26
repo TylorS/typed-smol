@@ -114,7 +114,8 @@ This is a multi-day release-hardening plan. Do not collapse it into one uninterr
 - [x] T3b2a: HttpApi production client-safe export pruning.
 - [x] T3b2b1: path-based composable plugin families (`typed:api-handler`, `typed:route-template`).
 - [x] T3b2b2a: route-handler production default export pruning.
-- [ ] T3b2b2b: component and browser/server plugin families.
+- [x] T3b2b2b1: component production export pruning.
+- [ ] T3b2b2b2: browser/server plugin families.
 
 ### T4 TS Plugin and VS Code Shared Cache Stability
 
