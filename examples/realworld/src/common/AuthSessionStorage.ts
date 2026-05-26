@@ -22,9 +22,9 @@ export class AuthSessionStorage extends Context.Service<AuthSessionStorage>()(
     function* () {
       const store = yield* AuthSessionStorage;
       const token = yield* store.get(authTokenKey);
-      return Option.getOrElse(token, () => null);
+      return Option.getOrNull(token);
     },
-  ).pipe(Effect.catchCause(() => Effect.succeed(null)));
+  ).pipe(Effect.orElseSucceed(() => null));
 
   static readonly authSnapshot: Effect.Effect<AuthSnapshot, never, AuthSessionStorage> = Effect.gen(
     function* () {
@@ -44,9 +44,8 @@ export class AuthSessionStorage extends Context.Service<AuthSessionStorage>()(
       if (snapshot === undefined) return;
 
       const store = yield* AuthSessionStorage;
-      if (snapshot.token == null) {
-        yield* store.remove(authTokenKey);
-        return;
+      if (snapshot.token === null) {
+        return yield* store.remove(authTokenKey);
       }
 
       yield* store.set(authTokenKey, snapshot.token);

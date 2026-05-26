@@ -137,7 +137,10 @@ function emitConstants(
     `const pageEntries: readonly ServerPageEntry[] = [${pages.map(pageEntrySource).join(", ")}];`,
     `const apiLayers = [${imports
       .filter((i) => i.kind === "api")
-      .map((i) => `Api${i.index}.ApiLayer`)
+      .map(
+        (i) =>
+          `Api${i.index}.ApiLayer.pipe(Layer.provideMerge(Api${i.index}.DependenciesLayer), HttpRouter.provideRequest(Api${i.index}.DependenciesLayer))`,
+      )
       .join(", ")}];`,
     `const routeLayers = [${imports
       .filter((i) => i.kind === "routes")
@@ -191,15 +194,13 @@ function emitExports(companions: readonly ServerCompanionImport[], projectRoot: 
     "export default handler;",
     "function makeServerLayer(options: ServerListenConfig = {}) {",
     "  const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);",
-    "  return composeWithLayers(",
-    "    HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({",
+    "  const appLayer = composeWithLayers(appLayerBase, appLayers);",
+    "  return HttpRouter.serve(appLayer).pipe(Layer.provide(TypedHttpServer.layer({",
     `    projectRoot: ${JSON.stringify(projectRoot)},`,
     "    dev,",
     "    host: runtimeConfig.host,",
     "    port: runtimeConfig.port,",
-    "    }))),",
-    "    appLayers,",
-    "  );",
+    "    })));",
     "}",
     "export function renderUrl(input: string | URL) {",
     '  if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");',

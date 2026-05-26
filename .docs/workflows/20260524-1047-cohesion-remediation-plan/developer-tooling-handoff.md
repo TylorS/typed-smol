@@ -22,3 +22,27 @@
 - browser externalization warnings: still observed during RealWorld build and Storybook build for server-oriented Node imports; no build failure observed, but this remains a developer-tooling/runtime bundling follow-up
 - compiler HMR warning: fixed in cohesion remediation by emitting Vite-detectable `import.meta.hot.accept(` calls; verified with `pnpm --filter typed-realworld test:hmr:local`
 - Vite/TS plugin/VS Code diagnostics: untouched by this remediation pass
+
+## 2026-05-25 Human Handoff Update
+
+- status: human explicitly expanded this workflow to include developer-tooling and DevTools truthfulness work
+- newly_allowed_surfaces:
+  - `packages/virtual-modules-vscode`
+  - `packages/virtual-modules-ts-plugin`
+  - `packages/virtual-modules` language-service hot paths needed by the TS plugin
+  - generated HttpApi client type-safety in `packages/app`
+  - compiler/template server runtime behavior for `CurrentComputedBehavior`
+  - DevTools protocol/runtime/Chrome panel instrumentation
+  - focused type-cast remediation in touched surfaces
+- still_requires_coordination:
+  - broad Vite null-byte virtual-id cleanup unrelated to the above symptoms
+  - unrelated compiler CLI architecture beyond proving whether `typed check` should load compiler extensions
+  - large visual redesign of the DevTools panel before live data truthfulness is fixed
+
+## Current Root-Cause Findings
+
+- VS Code tree: `VirtualModulesTreeProvider` resolves imports against the workspace folder root, so monorepo app imports such as RealWorld are filtered out when the repo root lacks `vmc.config.ts`; discovery must use `getProjectRoot(importer)` per file.
+- TS plugin responsiveness: no direct hover wrapper was found; likely blocking comes from synchronous fallback `Program` creation, type-target bootstrap `createProgram`, TypeInfo session creation, artifact fingerprinting, dependency hashing, and stale record rebuilds on language-service request paths.
+- Generated client: `TypedClientInput` maps `HttpApiClient.ForApi<typeof Api, any, any>` methods to `(...args) => unknown`, which erases endpoint return and channel types.
+- Compiler runtime: Vite builds use `@typed/compiler`, but `typed check`/plain `vmc` do not load compiler extensions; compiled server template runtime also bypasses the `CurrentComputedBehavior = "one"` layer used by interpreted SSR.
+- DevTools panel: current panel initializes from fixture stream items even when no live runtime stream is connected, so tabs can imply functionality that the inspected app did not provide.

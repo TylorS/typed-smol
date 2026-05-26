@@ -16,6 +16,12 @@ import type {
   DomTemplateDevtoolsUnmountedEvent,
 } from "@typed/template/compiler-runtime/devtools";
 import * as Effect from "effect/Effect";
+import type { DevtoolsRuntimeService } from "./Layer.js";
+
+export interface DomRegistryOptions {
+  readonly now?: () => number;
+  readonly runtime?: DevtoolsRuntimeService;
+}
 
 export interface DomRegistry {
   readonly observer: DomTemplateDevtoolsObserver;
@@ -34,10 +40,13 @@ interface DomNodeRecord {
 interface DomRegistryState {
   readonly bindingRecords: Map<DomBindingId, DomNodeRecord>;
   readonly componentsByTemplate: Map<TemplateHash, ComponentSummary>;
+  readonly now: () => number;
   readonly nodeRecords: WeakMap<Node, DomNodeRecord>;
   readonly nodesByBinding: Map<DomBindingId, Node>;
   readonly pendingBindingsByTemplate: Map<TemplateHash, Set<PendingBindingRecord>>;
   readonly rootBindings: WeakMap<HTMLElement, Set<DomBindingId>>;
+  readonly rootComponents: WeakMap<HTMLElement, ComponentSummary>;
+  readonly runtime?: DevtoolsRuntimeService;
 }
 
 interface PendingBindingRecord {
@@ -45,8 +54,8 @@ interface PendingBindingRecord {
   readonly node: Node;
 }
 
-export function makeDomRegistry(): DomRegistry {
-  const state = makeDomRegistryState();
+export function makeDomRegistry(options: DomRegistryOptions = {}): DomRegistry {
+  const state = makeDomRegistryState(options);
 
   return {
     observer: makeDomRegistryObserver(state),
@@ -65,14 +74,17 @@ export function makeDomRegistry(): DomRegistry {
   };
 }
 
-function makeDomRegistryState(): DomRegistryState {
+function makeDomRegistryState(options: DomRegistryOptions): DomRegistryState {
   return {
     bindingRecords: new Map(),
     componentsByTemplate: new Map(),
+    now: options.now ?? Date.now,
     nodeRecords: new WeakMap(),
     nodesByBinding: new Map(),
     pendingBindingsByTemplate: new Map(),
     rootBindings: new WeakMap(),
+    rootComponents: new WeakMap(),
+    ...(options.runtime?.enabled ? { runtime: options.runtime } : {}),
   };
 }
 
@@ -127,6 +139,7 @@ function recordTemplateMounted(
 
   addMountedPendingBindings(state, templateHash, event.nodes, rootBindingIds);
   state.rootBindings.set(event.root, rootBindingIds);
+  recordComponentMounted(state, event.root, templateHash);
 }
 
 function forgetTemplateRoot(
@@ -135,12 +148,32 @@ function forgetTemplateRoot(
 ): void {
   const bindingIds = state.rootBindings.get(event.root);
   if (!bindingIds) return;
+  const component = state.rootComponents.get(event.root);
 
   for (const bindingId of bindingIds) {
     state.bindingRecords.delete(bindingId);
     state.nodesByBinding.delete(bindingId);
   }
   state.rootBindings.delete(event.root);
+  state.rootComponents.delete(event.root);
+  if (component) {
+    state.runtime?.emit({
+      _tag: "ComponentUnmounted",
+      componentId: component.componentId,
+      timestamp: state.now(),
+    });
+  }
+}
+
+function recordComponentMounted(
+  state: DomRegistryState,
+  root: HTMLElement,
+  templateHash: TemplateHash,
+): void {
+  const component = state.componentsByTemplate.get(templateHash);
+  if (!component) return;
+  state.rootComponents.set(root, component);
+  state.runtime?.emit({ _tag: "ComponentMounted", component, timestamp: state.now() });
 }
 
 function rootRecord(

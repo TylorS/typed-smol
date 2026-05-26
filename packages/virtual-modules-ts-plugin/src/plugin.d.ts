@@ -2,6 +2,9 @@ import type * as ts from "typescript";
 
 interface VirtualModulesTsPluginConfig {
   readonly debounceMs?: number;
+  readonly debugTimings?: boolean;
+  readonly templateDiagnostics?: boolean;
+  readonly configPath?: string;
   readonly vmcConfigPath?: string;
 }
 

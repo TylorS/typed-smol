@@ -10,7 +10,7 @@ import { BrowserAuthState } from "./common/State.js";
 const client = makeBrowserClient({ baseUrl: window.location.origin });
 
 const browserStateLayer = Layer.mergeAll(
-  BrowserAuth.WithState(window, client),
+  BrowserAuth.WithState(client),
   ApiClient.layer(Effect.map(client, decodedRouteApiClient)),
 ).pipe(
   Layer.provideMerge(FetchHttpClient.layer),

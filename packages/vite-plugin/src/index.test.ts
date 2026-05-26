@@ -267,8 +267,8 @@ describe("createTypedViteResolver", () => {
       export const routeModules = [Routes0] as const;
       export const apiModules = [Api0] as const;
       export const apiLayers = [Api0.DependenciesLayer] as const;
-      export const makeTypedClient = Api0.makeTypedClient;
-      export const makeTypedClientWith = Api0.makeTypedClientWith;
+      export const makeClient = Api0.makeClient;
+      export const makeClientWith = Api0.makeClientWith;
       export const serverOrigin = undefined;
       export const proxyPath = "/__api";
       export const apiBaseUrl = serverOrigin === undefined ? proxyPath : new URL(proxyPath, serverOrigin).href;

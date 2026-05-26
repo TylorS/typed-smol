@@ -1,4 +1,16 @@
-import type { TypedDevtoolsRpc, TypedDevtoolsRpcTag } from "@typed/devtools-protocol";
+import {
+  DevtoolsHandshakeResponseSchema,
+  DomBindingResolutionSchema,
+  RuntimeEventStreamItemSchema,
+  SourceAnalyzerResponseSchema,
+  decodeDevtoolsPayload,
+  type DevtoolsHandshakeResponse,
+  type DomBindingResolution,
+  type RuntimeEventStreamItem,
+  type SourceAnalyzerResponse,
+  type TypedDevtoolsRpc,
+  type TypedDevtoolsRpcTag,
+} from "@typed/devtools-protocol";
 import type * as Rpc from "effect/unstable/rpc/Rpc";
 
 export const TYPED_DEVTOOLS_CHROME_PORT = "typed-devtools:rpc";
@@ -17,6 +29,11 @@ export type ChromeRuntimeRpcSuccess<Tag extends TypedDevtoolsRpcTag> = Rpc.Succe
   TypedRpcFor<Tag>
 >;
 
+export type ChromeRuntimeRpcTransportSuccess<Tag extends TypedDevtoolsRpcTag> =
+  Tag extends "SubscribeRuntimeEvents"
+    ? RuntimeEventStreamItem | readonly RuntimeEventStreamItem[]
+    : ChromeRuntimeRpcSuccess<Tag>;
+
 export interface ChromeRuntimeRpcRequest<Tag extends TypedDevtoolsRpcTag = TypedDevtoolsRpcTag> {
   readonly id: number;
   readonly payload: ChromeRuntimeRpcPayload<Tag>;
@@ -29,7 +46,7 @@ export interface ChromeRuntimeRpcSuccessResponse<
 > {
   readonly id: number;
   readonly protocol: typeof TYPED_DEVTOOLS_CHROME_PROTOCOL;
-  readonly success: ChromeRuntimeRpcSuccess<Tag>;
+  readonly success: ChromeRuntimeRpcTransportSuccess<Tag>;
   readonly tag: Tag;
 }
 
@@ -65,7 +82,7 @@ export interface ChromeRuntimeRpcClient {
   readonly request: <Tag extends TypedDevtoolsRpcTag>(
     tag: Tag,
     payload: ChromeRuntimeRpcPayload<Tag>,
-  ) => Promise<ChromeRuntimeRpcSuccess<Tag>>;
+  ) => Promise<ChromeRuntimeRpcTransportSuccess<Tag>>;
 }
 
 export function makeChromeRuntimeRpcClient(
@@ -103,10 +120,17 @@ export function makeChromeRuntimeRpcClient(
         protocol: TYPED_DEVTOOLS_CHROME_PROTOCOL,
         tag,
       } satisfies ChromeRuntimeRpcRequest<typeof tag>;
-      const response = new Promise<ChromeRuntimeRpcSuccess<typeof tag>>((resolve, reject) => {
-        pending.set(id, { reject, resolve: resolve as (value: unknown) => void, tag });
-      });
-      port.postMessage(request);
+      const response = new Promise<ChromeRuntimeRpcTransportSuccess<typeof tag>>(
+        (resolve, reject) => {
+          pending.set(id, { reject, resolve: resolve as (value: unknown) => void, tag });
+        },
+      );
+      try {
+        port.postMessage(request);
+      } catch (error) {
+        pending.delete(id);
+        return Promise.reject(error);
+      }
       return response;
     },
   };
@@ -133,7 +157,11 @@ function handleResponse(
     deferred.reject(message.error);
     return;
   }
-  deferred.resolve(message.success);
+  try {
+    deferred.resolve(decodeRpcSuccess(message.tag, message.success));
+  } catch {
+    deferred.reject(new Error("Chrome runtime returned an invalid Typed DevTools RPC response"));
+  }
 }
 
 function rejectPending(
@@ -158,4 +186,34 @@ function isChromeRuntimeRpcResponse(message: unknown): message is ChromeRuntimeR
 
 function isCompleteChromeRuntimeRpcResponse(response: ChromeRuntimeRpcResponse): boolean {
   return "success" in response !== "error" in response;
+}
+
+function decodeRpcSuccess(
+  tag: TypedDevtoolsRpcTag,
+  result: unknown,
+):
+  | DevtoolsHandshakeResponse
+  | DomBindingResolution
+  | RuntimeEventStreamItem
+  | readonly RuntimeEventStreamItem[]
+  | SourceAnalyzerResponse {
+  switch (tag) {
+    case "AnalyzeSource":
+      return decodeDevtoolsPayload(SourceAnalyzerResponseSchema, result);
+    case "Handshake":
+      return decodeDevtoolsPayload(DevtoolsHandshakeResponseSchema, result);
+    case "ResolveDomBinding":
+      return decodeDevtoolsPayload(DomBindingResolutionSchema, result);
+    case "SubscribeRuntimeEvents":
+      return decodeRuntimeEventStreamItems(result);
+  }
+}
+
+function decodeRuntimeEventStreamItems(
+  result: unknown,
+): RuntimeEventStreamItem | readonly RuntimeEventStreamItem[] {
+  if (Array.isArray(result)) {
+    return result.map((item) => decodeDevtoolsPayload(RuntimeEventStreamItemSchema, item));
+  }
+  return decodeDevtoolsPayload(RuntimeEventStreamItemSchema, result);
 }

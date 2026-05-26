@@ -87,7 +87,7 @@ export interface InspectedWindowRpcClient {
     (
       tag: "SubscribeRuntimeEvents",
       payload: RuntimeEventSubscriptionRequest,
-    ): Promise<RuntimeEventStreamItem>;
+    ): Promise<RuntimeEventStreamItem | readonly RuntimeEventStreamItem[]>;
   };
 }
 
@@ -192,8 +192,17 @@ function decodeRpcSuccess(tag: TypedDevtoolsRpcTag, result: unknown): unknown {
     case "ResolveDomBinding":
       return decodeDevtoolsPayload(DomBindingResolutionSchema, result);
     case "SubscribeRuntimeEvents":
-      return decodeDevtoolsPayload(RuntimeEventStreamItemSchema, result);
+      return decodeRuntimeEventStreamItems(result);
   }
+}
+
+function decodeRuntimeEventStreamItems(
+  result: unknown,
+): RuntimeEventStreamItem | readonly RuntimeEventStreamItem[] {
+  if (Array.isArray(result)) {
+    return result.map((item) => decodeDevtoolsPayload(RuntimeEventStreamItemSchema, item));
+  }
+  return decodeDevtoolsPayload(RuntimeEventStreamItemSchema, result);
 }
 
 function methodForTag(tag: TypedDevtoolsRpcTag): string {

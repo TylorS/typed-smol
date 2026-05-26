@@ -14,7 +14,6 @@ export class BrowserAuth extends Context.Service<BrowserAuth, AuthStore>()(
   "RealWorld/BrowserAuth",
 ) {
   static readonly WithState = <R>(
-    win: BrowserAuthWindow,
     clientEffect: Effect.Effect<RealWorldClient, never, R>,
   ): Layer.Layer<BrowserAuth, never, R | BrowserAuthState | AuthSessionStorage> => {
     const authLayer = Layer.effect(
@@ -32,7 +31,7 @@ export class BrowserAuth extends Context.Service<BrowserAuth, AuthStore>()(
     win: BrowserAuthWindow & object,
     clientEffect: Effect.Effect<RealWorldClient, never, R>,
   ) =>
-    BrowserAuth.WithState(win, clientEffect).pipe(
+    BrowserAuth.WithState(clientEffect).pipe(
       Layer.provideMerge(BrowserAuthState.make(AuthSessionStorage.authSnapshot)),
       Layer.provideMerge(AuthSessionStorage.local(() => win.localStorage)),
     );

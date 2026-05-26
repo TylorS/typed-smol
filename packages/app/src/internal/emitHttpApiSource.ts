@@ -31,10 +31,7 @@ import type {
   OpenApiGenerationConfig,
 } from "./httpapiOpenApiConfig.js";
 import type { PrefixByScope } from "./validatePrefixConventions.js";
-import {
-  mustEmitAllExports,
-  type VirtualModuleBuildContext,
-} from "@typed/virtual-modules";
+import { mustEmitAllExports, type VirtualModuleBuildContext } from "@typed/virtual-modules";
 
 const ROOT_GROUP_KEY = "__root__";
 
@@ -716,6 +713,11 @@ export function emitHttpApiSource(input: {
   const groupDependencyPaths = collectGroupDependencyPaths(groupSpecs);
   const importerDir = dirname(toPosixPath(input.importer));
   const targetSpecifier = toVirtualTargetSpecifier(importerDir, input.targetDirectory, "");
+  const serviceLayerExpressionByPath = concernExpressionMap(
+    groupDependencyPaths,
+    "ApiServices",
+    "dependencyLayers",
+  );
 
   if (input.mode === "client") {
     return emitHttpApiClientSource({
@@ -736,16 +738,24 @@ export function emitHttpApiSource(input: {
     });
   }
 
+  if (shouldEmitDependenciesLayerOnly(input.context)) {
+    const imports = [`import * as Layer from "effect/Layer";`];
+    if (groupDependencyPaths.length > 0) {
+      imports.push(`import * as ApiServices from "typed:services?dir=${targetSpecifier}";`);
+    }
+    return `${imports.join("\n")}
+
+export const DependenciesLayer = ${renderDependenciesLayer(
+      groupDependencyPaths,
+      serviceLayerExpressionByPath,
+    )};`;
+  }
+
   const proposedNames = endpointPaths.map((path) => ({
     path,
     proposedName: pathToIdentifier(path),
   }));
   const varNameByPath = makeUniqueVarNames(proposedNames);
-  const serviceLayerExpressionByPath = concernExpressionMap(
-    groupDependencyPaths,
-    "ApiServices",
-    "dependencyLayers",
-  );
   const headerExpressionByPath = concernExpressionMap(
     directoryOptionPaths,
     "ApiHeaders",
@@ -1021,6 +1031,15 @@ function renderDependenciesLayer(
     .filter((value): value is string => value !== undefined);
 
   return layers.length === 0 ? "Layer.empty" : `Layer.mergeAll(Layer.empty, ${layers.join(", ")})`;
+}
+
+function shouldEmitDependenciesLayerOnly(context: VirtualModuleBuildContext | undefined): boolean {
+  if (!context || context.requestedExports.kind === "all") return false;
+  const names = new Set([
+    ...context.requestedExports.names,
+    ...context.requestedExports.typeOnlyNames,
+  ]);
+  return names.size === 1 && names.has("DependenciesLayer");
 }
 
 function concernExpressionMap(

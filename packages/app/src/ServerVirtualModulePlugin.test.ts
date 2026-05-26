@@ -41,6 +41,22 @@ describe("ServerVirtualModulePlugin", () => {
     expect(result).not.toContain("projectRoot: process.cwd()");
   });
 
+  it("serves the composed app layer for production preview", () => {
+    const fixture = createFixture({
+      "src/.server.dependencies.ts": "export const layers = [];",
+    });
+    const source = buildServer(
+      "typed:server?api=./api&routes=./routes",
+      fixture.importer,
+    ) as string;
+
+    expect(source).toContain("const appLayer = composeWithLayers(appLayerBase, appLayers);");
+    expect(source).toContain(
+      "HttpRouter.serve(appLayer).pipe(Layer.provide(TypedHttpServer.layer({",
+    );
+    expect(source).not.toContain("HttpRouter.serve(appLayerBase)");
+  });
+
   it("resolves valid typed:server ids", () => {
     const plugin = createServerVirtualModulePlugin();
 
@@ -109,7 +125,7 @@ describe("ServerVirtualModulePlugin", () => {
       const routeModules = [Routes0, Routes1];
       const primaryRoutes = routeModules[0];
       const pageEntries: readonly ServerPageEntry[] = [];
-      const apiLayers = [Api0.ApiLayer];
+      const apiLayers = [Api0.ApiLayer.pipe(Layer.provideMerge(Api0.DependenciesLayer), HttpRouter.provideRequest(Api0.DependenciesLayer))];
       const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0))), HttpRouter.use(ssrForHttp(routeModules[1], documentOptions(1)))];
       const companionPages = [];
       const companionLayers: readonly [] = [];
@@ -130,15 +146,13 @@ describe("ServerVirtualModulePlugin", () => {
       export default handler;
       function makeServerLayer(options: ServerListenConfig = {}) {
         const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
-        return composeWithLayers(
-          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+        const appLayer = composeWithLayers(appLayerBase, appLayers);
+        return HttpRouter.serve(appLayer).pipe(Layer.provide(TypedHttpServer.layer({
           projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
           dev,
           host: runtimeConfig.host,
           port: runtimeConfig.port,
-          }))),
-          appLayers,
-        );
+          })));
       }
       export function renderUrl(input: string | URL) {
         if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
@@ -267,7 +281,7 @@ describe("ServerVirtualModulePlugin", () => {
       const routeModules = [Routes0];
       const primaryRoutes = routeModules[0];
       const pageEntries: readonly ServerPageEntry[] = [];
-      const apiLayers = [Api0.ApiLayer, Api1.ApiLayer];
+      const apiLayers = [Api0.ApiLayer.pipe(Layer.provideMerge(Api0.DependenciesLayer), HttpRouter.provideRequest(Api0.DependenciesLayer)), Api1.ApiLayer.pipe(Layer.provideMerge(Api1.DependenciesLayer), HttpRouter.provideRequest(Api1.DependenciesLayer))];
       const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0)))];
       const companionPages = [];
       const companionLayers: readonly [] = [];
@@ -288,15 +302,13 @@ describe("ServerVirtualModulePlugin", () => {
       export default handler;
       function makeServerLayer(options: ServerListenConfig = {}) {
         const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
-        return composeWithLayers(
-          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+        const appLayer = composeWithLayers(appLayerBase, appLayers);
+        return HttpRouter.serve(appLayer).pipe(Layer.provide(TypedHttpServer.layer({
           projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
           dev,
           host: runtimeConfig.host,
           port: runtimeConfig.port,
-          }))),
-          appLayers,
-        );
+          })));
       }
       export function renderUrl(input: string | URL) {
         if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
@@ -441,15 +453,13 @@ describe("ServerVirtualModulePlugin", () => {
       export default handler;
       function makeServerLayer(options: ServerListenConfig = {}) {
         const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
-        return composeWithLayers(
-          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+        const appLayer = composeWithLayers(appLayerBase, appLayers);
+        return HttpRouter.serve(appLayer).pipe(Layer.provide(TypedHttpServer.layer({
           projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
           dev,
           host: runtimeConfig.host,
           port: runtimeConfig.port,
-          }))),
-          appLayers,
-        );
+          })));
       }
       export function renderUrl(input: string | URL) {
         if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
@@ -595,15 +605,13 @@ describe("ServerVirtualModulePlugin", () => {
       export default handler;
       function makeServerLayer(options: ServerListenConfig = {}) {
         const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
-        return composeWithLayers(
-          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+        const appLayer = composeWithLayers(appLayerBase, appLayers);
+        return HttpRouter.serve(appLayer).pipe(Layer.provide(TypedHttpServer.layer({
           projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
           dev,
           host: runtimeConfig.host,
           port: runtimeConfig.port,
-          }))),
-          appLayers,
-        );
+          })));
       }
       export function renderUrl(input: string | URL) {
         if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
@@ -753,15 +761,13 @@ describe("ServerVirtualModulePlugin", () => {
       export default handler;
       function makeServerLayer(options: ServerListenConfig = {}) {
         const runtimeConfig = mergeListenConfig(typedRuntimeConfig, options);
-        return composeWithLayers(
-          HttpRouter.serve(appLayerBase).pipe(Layer.provide(TypedHttpServer.layer({
+        const appLayer = composeWithLayers(appLayerBase, appLayers);
+        return HttpRouter.serve(appLayer).pipe(Layer.provide(TypedHttpServer.layer({
           projectRoot: "/Users/tylorsteinbergher/code/typed-smol/packages/app",
           dev,
           host: runtimeConfig.host,
           port: runtimeConfig.port,
-          }))),
-          appLayers,
-        );
+          })));
       }
       export function renderUrl(input: string | URL) {
         if (primaryRoutes === undefined) throw new Error("typed:server renderUrl requires at least one routes option");
@@ -828,17 +834,26 @@ describe("ServerVirtualModulePlugin", () => {
 
   it("type-checks generated server entry source", () => {
     const fixture = createFixture({
-      "src/api.ts":
-        'import * as Layer from "effect/Layer";\nexport const ApiLayer = Layer.empty;\n',
+      "src/api.ts": [
+        'import * as Context from "effect/Context";',
+        'import * as Effect from "effect/Effect";',
+        'import * as Layer from "effect/Layer";',
+        'import type { Request } from "effect/unstable/http/HttpRouter";',
+        'export class ApiDependency extends Context.Service<ApiDependency, { readonly ready: Effect.Effect<void> }>()("test/ApiDependency") {}',
+        "export const DependenciesLayer = Layer.succeed(ApiDependency)({ ready: Effect.void });",
+        'export const ApiLayer = Layer.effectDiscard(Effect.flatMap(ApiDependency, (dependency) => dependency.ready)) as Layer.Layer<never, never, ApiDependency | Request.From<"Requires", ApiDependency>>;',
+      ].join("\n"),
       "src/routes.ts": "const routes: any = {};\nexport default routes;\n",
       "src/typed-config.ts":
         'export const build = { outDir: "dist", clientOutDir: "public/client" };\n',
       "src/typed-app.d.ts": [
         'declare module "@typed/app/runtime" {',
         '  import type * as Layer from "effect/Layer";',
-        "  export type LayerAny = Layer.Any;",
+        "  export type LayerAny = Layer.Layer<never, any, any>;",
         "  export type LayerOrGroup = LayerAny | readonly [LayerAny, ...ReadonlyArray<LayerAny>];",
-        "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = Base;",
+        "  export type ComputeLayers<Layers extends ReadonlyArray<LayerOrGroup>, Base extends LayerAny> = readonly [] extends Layers ? Base : Layers extends readonly [infer Head extends LayerOrGroup, ...infer Tail extends ReadonlyArray<LayerOrGroup>] ? ComputeLayers<Tail, ProvideMerge<Base, ComputeLayer<Head>>> : Base;",
+        "  export type ProvideMerge<A extends Layer.Any, B extends Layer.Any> = Layer.Layer<Layer.Success<A | B>, Layer.Error<A | B>, Exclude<Layer.Services<A>, Layer.Success<B>> | Layer.Services<B>>;",
+        "  type ComputeLayer<L extends LayerOrGroup> = L extends ReadonlyArray<LayerAny> ? Layer.Layer<Layer.Success<L[number]>, Layer.Error<L[number]>, Layer.Services<L[number]>> : L extends LayerAny ? Layer.Layer<Layer.Success<L>, Layer.Error<L>, Layer.Services<L>> : never;",
         "  export function composeWithLayers<Base extends LayerAny, const Layers extends ReadonlyArray<LayerOrGroup>>(base: Base, layers?: Layers): ComputeLayers<Layers, Base>;",
         "  export const Ids: { readonly Default: Layer.Layer<never, never, never> };",
         "  export const renderServer: unknown;",

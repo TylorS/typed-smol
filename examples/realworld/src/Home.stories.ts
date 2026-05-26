@@ -3,12 +3,7 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import type { Meta, StoryObj } from "@typed/storybook";
 import { ApiClient, decodedRouteApiClient } from "./common/routeData.js";
-import {
-  Routes,
-  apiBaseUrl,
-  makeClient,
-  makeStoryRuntime,
-} from "typed:storybook/runtime?path=/";
+import { Routes, apiBaseUrl, makeClient, makeStoryRuntime } from "typed:storybook/runtime?path=/";
 
 const StorybookApiLayer = ApiClient.layer(
   Effect.map(makeClient({ baseUrl: apiBaseUrl }), decodedRouteApiClient),

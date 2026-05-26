@@ -682,7 +682,9 @@ export const ServerOnly = { use: readFileSync };
       ),
     );
 
-    expect(sourceText).toContain('import type * as HttpClient from "effect/unstable/http/HttpClient";');
+    expect(sourceText).toContain(
+      'import type * as HttpClient from "effect/unstable/http/HttpClient";',
+    );
     expect(sourceText).toContain("export const Api = ");
     expect(sourceText).toContain("export const makeClientWith = ");
     expect(sourceText).toContain("HttpApiClient.makeWith(Api, { ...options, httpClient })");
@@ -718,6 +720,37 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).not.toContain("export const makeClientWith = ");
     expect(sourceText).not.toContain("export const makeUrlBuilder = ");
     expect(sourceText).not.toContain("export const OpenApi");
+  });
+
+  it("emits real DependenciesLayer for production DependenciesLayer output", () => {
+    const fixture = createApiFixture({
+      "src/apis/_dependencies.ts": `
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
+
+export class RootApiService extends Context.Service<RootApiService, { readonly root: string }>()("RootApiService") {}
+export default Layer.succeed(RootApiService, { root: "root" });
+`,
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+    });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["DependenciesLayer"]),
+      ),
+    );
+
+    expect(sourceText).toContain('import * as ApiServices from "typed:services?dir=./apis";');
+    expect(sourceText).toContain(
+      'export const DependenciesLayer = Layer.mergeAll(Layer.empty, ApiServices.dependencyLayers["_dependencies.ts"]);',
+    );
+    expect(sourceText).not.toContain("export const Api = ");
+    expect(sourceText).not.toContain("export const ApiLayer = ");
+    expect(sourceText).not.toContain("HttpApiClient");
+    expect(sourceText).not.toContain("HttpApiEndpoint");
   });
 
   it("emits Api-only production output without client helper imports", () => {
@@ -785,7 +818,9 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).toContain("export const Api = ");
     expect(sourceText).toContain("export const makeUrlBuilder = ");
     expect(sourceText).toContain("HttpApiClient.urlBuilder(Api, options)");
-    expect(sourceText).not.toContain('import type * as HttpClient from "effect/unstable/http/HttpClient";');
+    expect(sourceText).not.toContain(
+      'import type * as HttpClient from "effect/unstable/http/HttpClient";',
+    );
     expect(sourceText).not.toContain('import * as Layer from "effect/Layer";');
     expect(sourceText).not.toContain("OpenApiModule");
     expect(sourceText).not.toContain("export const DependenciesLayer");

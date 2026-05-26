@@ -8,7 +8,9 @@ export { Api, Client };
 export type RealWorldClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>;
 export type ApiClientError = Effect.Error<ReturnType<RealWorldClient["users"]["login"]>>;
 
-export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>
+export const makeClient = (options?: {
+  readonly baseUrl?: URL | string;
+}): Effect.Effect<RealWorldClient, never, HttpClient.HttpClient> =>
   HttpApiClient.make(Api, options);
 
 export const makeClientWith = <E, R>(
@@ -16,4 +18,5 @@ export const makeClientWith = <E, R>(
   options?: {
     readonly baseUrl?: URL | string;
   },
-) => HttpApiClient.makeWith(Api, { ...options, httpClient });
+): Effect.Effect<RealWorldClient<E, R>, never, R> =>
+  HttpApiClient.makeWith(Api, { ...options, httpClient });

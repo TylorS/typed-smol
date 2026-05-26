@@ -26,7 +26,9 @@ function emitRuntimeImports(devtools: boolean): readonly string[] {
     'import { createAppDomTemplateRuntime } from "@typed/app/runtime/domTemplateRuntime";',
     'import { mount as mountRuntime } from "@typed/app/runtime/mount";',
     ...(devtools
-      ? ['import { installTypedDevtoolsBridge, makeDomRegistry } from "@typed/app/runtime";']
+      ? [
+          'import { installTypedDevtoolsBridge, makeDevtoolsRuntime, makeDomRegistry } from "@typed/app/runtime";',
+        ]
       : []),
   ];
 }
@@ -141,11 +143,13 @@ function emitDomRuntime(devtools: boolean): readonly string[] {
   if (!devtools) return ["  const domRuntime = createAppDomTemplateRuntime();"];
 
   return [
-    "  const domRegistry = makeDomRegistry();",
+    "  const devtoolsRuntime = makeDevtoolsRuntime({ enabled: true });",
+    "  const domRegistry = makeDomRegistry({ runtime: devtoolsRuntime });",
     "  installTypedDevtoolsBridge({",
     "    enabled: true,",
     "    domRegistry,",
     "    globalObject: win as unknown as Record<PropertyKey, unknown>,",
+    "    runtime: devtoolsRuntime,",
     "  });",
     "  const domRuntime = createAppDomTemplateRuntime({",
     "    devtools: { enabled: true, domRegistry },",

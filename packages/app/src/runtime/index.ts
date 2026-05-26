@@ -1,6 +1,8 @@
 export * from "./RuntimeTemplate.js";
 export {
+  makeDevtoolsRuntime,
   makeDomRegistry,
+  type DevtoolsRuntimeService,
   type DomRegistry,
 } from "@typed/devtools-runtime";
 export {

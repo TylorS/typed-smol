@@ -70,6 +70,7 @@ import type { PluginCreateInfo } from "./types.js";
 
 interface VirtualModulesTsPluginConfig {
   readonly debounceMs?: number;
+  readonly debugTimings?: boolean;
   readonly templateDiagnostics?: boolean;
   /** Path to typed.config.ts (relative to project root or absolute). */
   readonly configPath?: string;
@@ -87,6 +88,13 @@ type VmcLoadResult = ReturnType<typeof loadResolverFromVmcConfig>;
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | readonly JsonValue[] | { readonly [key: string]: JsonValue };
+
+interface TimingReporter {
+  readonly enabled: boolean;
+  readonly measure: <T>(label: string, run: () => T, metadata?: JsonValue) => T;
+  readonly report: (label: string, startedAt: number, metadata?: JsonValue) => void;
+  readonly start: () => number;
+}
 
 function findTsconfig(fromDir: string): string | undefined {
   let dir = resolve(fromDir);
@@ -170,6 +178,7 @@ function createTsPluginArtifactStoreFactory(options: {
   readonly vmcLoad: VmcLoadResult;
   readonly resolver: VirtualModuleResolver;
   readonly mergedPlugins: readonly VirtualModulePlugin[];
+  readonly timing: TimingReporter;
 }): {
   readonly artifactStoreFactory: VirtualArtifactStoreFactory;
   readonly shouldReuseRecord: (record: VirtualModuleRecord) => boolean;
@@ -183,11 +192,13 @@ function createTsPluginArtifactStoreFactory(options: {
   );
   const loadedVmcConfigToken = createVmcConfigComparisonToken(options.projectRoot, options.vmcLoad);
   const createFingerprints = (): ArtifactStoreFingerprints =>
-    createTsPluginArtifactFingerprints({
-      ...options,
-      loadedTypedConfigToken,
-      loadedVmcConfigToken,
-    });
+    options.timing.measure("artifact.fingerprints", () =>
+      createTsPluginArtifactFingerprints({
+        ...options,
+        loadedTypedConfigToken,
+        loadedVmcConfigToken,
+      }),
+    );
   const createArtifactStoreContext = () => {
     const fingerprints = createFingerprints();
     return {
@@ -212,12 +223,15 @@ function createTsPluginArtifactStoreFactory(options: {
     },
     shouldReuseRecord: (record) => {
       const context = createArtifactStoreContext();
-      const dependencyToken = createDependencySnapshotToken(
-        options.languageServiceHost,
-        record.dependencies,
+      const dependencyToken = options.timing.measure(
+        "artifact.dependencies.hash",
+        () =>
+          createDependencySnapshotToken(options.languageServiceHost, record.dependencies),
+        { virtualKey: record.key },
       );
       const previousDependencyToken = dependencyTokenByVirtualKey.get(record.key);
       if (previousDependencyToken === undefined) {
+        if (createDiskDependencySnapshotToken(record.dependencies) !== dependencyToken) return false;
         dependencyTokenByVirtualKey.set(record.key, dependencyToken);
       }
       return (
@@ -229,7 +243,11 @@ function createTsPluginArtifactStoreFactory(options: {
     onRecordResolved: (record) => {
       dependencyTokenByVirtualKey.set(
         record.key,
-        createDependencySnapshotToken(options.languageServiceHost, record.dependencies),
+        options.timing.measure(
+          "artifact.dependencies.hash",
+          () => createDependencySnapshotToken(options.languageServiceHost, record.dependencies),
+          { virtualKey: record.key },
+        ),
       );
     },
   };
@@ -382,6 +400,25 @@ function createDependencySnapshotToken(
           hash: hashVirtualArtifactContent(snapshot.getText(0, snapshot.getLength())),
         };
       }
+      try {
+        return {
+          ...dependency,
+          hash: hashVirtualArtifactContent(readFileSync(dependency.path)),
+        };
+      } catch {
+        return {
+          ...dependency,
+          unavailableReason: "dependency source unavailable",
+        };
+      }
+    }),
+  );
+}
+
+function createDiskDependencySnapshotToken(dependencies: VirtualModuleRecord["dependencies"]): string {
+  return hashVirtualArtifactJson(
+    dependencies.map((dependency) => {
+      if (dependency.type !== "file") return dependency;
       try {
         return {
           ...dependency,
@@ -701,6 +738,35 @@ function toJsonValue(value: unknown): JsonValue {
   return Object.fromEntries(entries.map(([key, item]) => [key, toJsonValue(item)]));
 }
 
+function createTimingReporter(enabled: boolean, log: (msg: string) => void): TimingReporter {
+  return {
+    enabled,
+    measure: (label, run, metadata) => {
+      const startedAt = Date.now();
+      try {
+        return run();
+      } finally {
+        if (enabled) reportTiming(log, label, startedAt, metadata);
+      }
+    },
+    report: (label, startedAt, metadata) => {
+      if (enabled) reportTiming(log, label, startedAt, metadata);
+    },
+    start: () => Date.now(),
+  };
+}
+
+function reportTiming(
+  log: (msg: string) => void,
+  label: string,
+  startedAt: number,
+  metadata?: JsonValue,
+): void {
+  const durationMs = Math.max(0, Date.now() - startedAt);
+  const suffix = metadata === undefined ? "" : ` ${JSON.stringify(metadata)}`;
+  log(`timing ${label} ${durationMs}ms${suffix}`);
+}
+
 function init(modules: { typescript: typeof import("typescript") }): {
   create: (info: PluginCreateInfo) => import("typescript").LanguageService;
 } {
@@ -712,6 +778,8 @@ function init(modules: { typescript: typeof import("typescript") }): {
       info.project as { projectService?: { logger?: { info?: (s: string) => void } } }
     )?.projectService?.logger;
     const log = (msg: string) => logger?.info?.(`[@typed/virtual-modules-ts-plugin] ${msg}`);
+    const timing = createTimingReporter(config.debugTimings === true, log);
+    const createStartedAt = timing.start();
 
     const project = info.project as {
       getCurrentDirectory?: () => string;
@@ -813,13 +881,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
         ? projectConfigPath
         : undefined;
 
-    let cachedFallbackProgram: ts.Program | undefined = createFallbackProgram(
-      ts,
-      projectRoot,
-      log,
-      tsconfigPath,
-      typeTargetSpecs,
-    );
+    let cachedFallbackProgram: ts.Program | undefined;
     const artifactStore = createTsPluginArtifactStoreFactory({
       ts,
       projectRoot,
@@ -833,26 +895,31 @@ function init(modules: { typescript: typeof import("typescript") }): {
       vmcLoad,
       resolver,
       mergedPlugins,
+      timing,
     });
 
-    // Pre-validate that TypeInfoApiSession can be created from the fallback program.
-    // This catches issues early (missing type targets, checker errors) and caches the result.
     let preCreatedSession: ReturnType<typeof createTypeInfoApiSession> | undefined;
     if (cachedFallbackProgram) {
+      const fallbackProgram = cachedFallbackProgram;
       try {
-        const programWithBootstrap = getProgramWithTypeTargetBootstrap(
-          ts,
-          cachedFallbackProgram,
-          projectRoot,
-          typeTargetSpecs,
+        const programWithBootstrap = timing.measure(
+          "typeTarget.bootstrapProgram",
+          () =>
+            getProgramWithTypeTargetBootstrap(ts, fallbackProgram, projectRoot, typeTargetSpecs),
+          { specs: typeTargetSpecs.length },
         );
-        preCreatedSession = createTypeInfoApiSession({
-          ts,
-          program: programWithBootstrap,
-          ...(typeTargetSpecs.length > 0
-            ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
-            : {}),
-        });
+        preCreatedSession = timing.measure(
+          "typeInfo.session.create",
+          () =>
+            createTypeInfoApiSession({
+              ts,
+              program: programWithBootstrap,
+              ...(typeTargetSpecs.length > 0
+                ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
+                : {}),
+            }),
+          { source: "fallback", specs: typeTargetSpecs.length },
+        );
         log("pre-created TypeInfoApiSession OK");
       } catch (err) {
         log(
@@ -868,7 +935,11 @@ function init(modules: { typescript: typeof import("typescript") }): {
       const fromProject = projectLike.getProgram?.();
       if (fromProject !== undefined) return fromProject;
       if (cachedFallbackProgram !== undefined) return cachedFallbackProgram;
-      const fallback = createFallbackProgram(ts, projectRoot, log, tsconfigPath, typeTargetSpecs);
+      const fallback = timing.measure(
+        "fallbackProgram.create",
+        () => createFallbackProgram(ts, projectRoot, log, tsconfigPath, typeTargetSpecs),
+        { projectRoot },
+      );
       if (fallback !== undefined) cachedFallbackProgram = fallback;
       return fallback;
     };
@@ -901,19 +972,23 @@ function init(modules: { typescript: typeof import("typescript") }): {
         }
 
         try {
-          const programWithBootstrap = getProgramWithTypeTargetBootstrap(
-            ts,
-            program,
-            projectRoot,
-            typeTargetSpecs,
+          const programWithBootstrap = timing.measure(
+            "typeTarget.bootstrapProgram",
+            () => getProgramWithTypeTargetBootstrap(ts, program, projectRoot, typeTargetSpecs),
+            { specs: typeTargetSpecs.length },
           );
-          session = createTypeInfoApiSession({
-            ts,
-            program: programWithBootstrap,
-            ...(typeTargetSpecs.length > 0
-              ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
-              : {}),
-          });
+          session = timing.measure(
+            "typeInfo.session.create",
+            () =>
+              createTypeInfoApiSession({
+                ts,
+                program: programWithBootstrap,
+                ...(typeTargetSpecs.length > 0
+                  ? { typeTargetSpecs, failWhenNoTargetsResolved: false }
+                  : {}),
+              }),
+            { source: "language-service", specs: typeTargetSpecs.length },
+          );
         } catch (err) {
           // If session creation from the real program fails, fall back to the
           // pre-created session (from the fallback program).
@@ -1020,6 +1095,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
         languageServiceHost: info.project as import("typescript").LanguageServiceHost,
       });
     }
+    attachTimingDiagnostics(info.languageService, timing);
 
     // Force program rebuild so resolution uses our patched host.
     const projectWithDirty = info.project as {
@@ -1045,6 +1121,7 @@ function init(modules: { typescript: typeof import("typescript") }): {
       }
     }, 200);
 
+    timing.report("create.total", createStartedAt, { projectRoot });
     return info.languageService;
   }
 
@@ -1052,6 +1129,21 @@ function init(modules: { typescript: typeof import("typescript") }): {
 }
 
 module.exports = init;
+
+function attachTimingDiagnostics(
+  languageService: import("typescript").LanguageService,
+  timing: TimingReporter,
+): void {
+  if (!timing.enabled) return;
+  const originalGetSemanticDiagnostics =
+    languageService.getSemanticDiagnostics.bind(languageService);
+  languageService.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] =>
+    timing.measure(
+      "semanticDiagnostics",
+      () => originalGetSemanticDiagnostics(fileName),
+      { fileName },
+    );
+}
 
 function attachTemplateDiagnostics(options: {
   readonly ts: typeof import("typescript");

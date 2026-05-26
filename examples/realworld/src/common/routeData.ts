@@ -43,9 +43,9 @@ export type RouteApiClient<E = RouteApiError, R = never> = {
 };
 
 export class ApiClient extends Context.Service<ApiClient, RouteApiClient>()("RealWorld/ApiClient") {
-  static readonly layer = <R>(
-    client: Effect.Effect<RouteApiClient, never, R>,
-  ): Layer.Layer<ApiClient, never, R> => Layer.effect(ApiClient, client);
+  static readonly layer = <R2>(
+    client: Effect.Effect<RouteApiClient<RouteApiError>, never, R2>,
+  ): Layer.Layer<ApiClient, never, R2> => Layer.effect(ApiClient, client);
 }
 
 export interface FeedViewData {
@@ -98,27 +98,19 @@ type DecodedResponseRequest = {
 };
 
 type RouteApiDecoderArticlesGet<E = RouteApiDecoderError, R = never> = (
-  request: ApiRequest<{ readonly slug: string }> & {
-    readonly responseMode?: "decoded-only";
-  },
+  request: ApiRequest<{ readonly slug: string }> & DecodedResponseRequest,
 ) => Effect.Effect<SingleArticleResponse, E, R>;
 
 type RouteApiDecoderArticlesList<E = RouteApiDecoderError, R = never> = (
-  request: ApiRequest<{}, WireArticleListQuery> & {
-    readonly responseMode?: "decoded-only";
-  },
+  request: ApiRequest<{}, WireArticleListQuery> & DecodedResponseRequest,
 ) => Effect.Effect<MultipleArticlesResponse, E, R>;
 
 type RouteApiDecoderCommentsList<E = RouteApiDecoderError, R = never> = (
-  request: ApiRequest<{ readonly slug: string }> & {
-    readonly responseMode?: "decoded-only";
-  },
+  request: ApiRequest<{ readonly slug: string }> & DecodedResponseRequest,
 ) => Effect.Effect<MultipleCommentsResponse, E, R>;
 
 type RouteApiDecoderProfilesGet<E = RouteApiDecoderError, R = never> = (
-  request: ApiRequest<{ readonly username: string }> & {
-    readonly responseMode?: "decoded-only";
-  },
+  request: ApiRequest<{ readonly username: string }> & DecodedResponseRequest,
 ) => Effect.Effect<ProfileResponse, E, R>;
 
 type RouteApiDecoderTagsList<E = RouteApiDecoderError, R = never> = (

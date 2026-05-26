@@ -58,7 +58,7 @@ describe("createVirtualModulesTreeProvider", () => {
           clearProgramCache: () => undefined,
           getPluginSpecifiers: () => [],
           resolve: (id: string, importerPath: string) =>
-            projectRoot === "/repo/examples/realworld"
+            projectRoot === "/repo/examples/realworld" && importerPath === importer
               ? {
                   pluginName: "typed-browser-virtual-module",
                   sourceText: `export const id = ${JSON.stringify(id)};`,

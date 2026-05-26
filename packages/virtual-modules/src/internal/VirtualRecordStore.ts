@@ -281,7 +281,9 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
           version: previous ? previous.version + 1 : 1,
           stale: false,
         };
-        return storeRecord(record, previous);
+        if (!shouldReuseRecord || shouldReuseRecord(record)) {
+          return storeRecord(record, previous);
+        }
       }
 
       const resolution = options.resolver.resolveModule(resolveOptions);

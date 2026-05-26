@@ -8,13 +8,13 @@ import {
 } from "../transport/inspectedWindow.js";
 
 describe("Typed DevTools panel app", () => {
-  it("renders every protocol tab with fixture-backed data", async () => {
+  it("renders protocol tabs without fixture-backed runtime data when disconnected", async () => {
     const root = document.createElement("div");
 
     await renderTypedDevtoolsPanel(root);
 
     expect(root.querySelector('[data-testid="connection-status"]')?.textContent).toContain(
-      "connected",
+      "disconnected",
     );
     for (const title of [
       "Components",
@@ -28,6 +28,41 @@ describe("Typed DevTools panel app", () => {
     ]) {
       expect(root.textContent).toContain(title);
     }
+    expect(root.textContent).not.toContain("Root");
+    expect(root.textContent).toContain("No events");
+    click(root, '[data-testid="tab-Templates"]');
+    expect(root.textContent).not.toContain("sha256:root-template");
+    expect(root.textContent).toContain("No events");
+    click(root, '[data-testid="tab-Fx"]');
+    expect(root.textContent).not.toContain("component/root/load-user");
+    expect(root.textContent).toContain("No events");
+    click(root, '[data-testid="tab-RefSubjects"]');
+    expect(root.textContent).not.toContain("component/root/user");
+    expect(root.textContent).toContain("No events");
+    click(root, '[data-testid="tab-HMR"]');
+    expect(root.textContent).not.toContain("module:/src/App.tsx");
+    expect(root.textContent).toContain("No events");
+    click(root, '[data-testid="tab-OTEL"]');
+    expect(root.textContent).not.toContain("trace-root/span-root");
+    expect(root.textContent).toContain("No events");
+    click(root, '[data-testid="tab-Sources"]');
+    expect(root.textContent).toContain("Typed DevTools runtime is not connected");
+  });
+
+  it("populates panel rows from SubscribeRuntimeEvents instead of static fixtures", async () => {
+    const root = document.createElement("div");
+    const runtime = makeFakeRuntime({
+      runtimeItems: DevtoolsProtocolFixtures.storybook.runtimeStreamItems,
+    });
+
+    await renderTypedDevtoolsPanel(root, { runtime });
+
+    expect(runtime.messages.map((message) => message.tag)).toEqual([
+      "Handshake",
+      "SubscribeRuntimeEvents",
+      "AnalyzeSource",
+      "ResolveDomBinding",
+    ]);
     expect(root.textContent).toContain("Root");
     click(root, '[data-testid="tab-Templates"]');
     expect(root.textContent).toContain("sha256:root-template");
@@ -37,16 +72,15 @@ describe("Typed DevTools panel app", () => {
     expect(root.textContent).toContain("component/root/user");
     click(root, '[data-testid="tab-HMR"]');
     expect(root.textContent).toContain("module:/src/App.tsx");
-    click(root, '[data-testid="tab-OTEL"]');
-    expect(root.textContent).toContain("trace-root/span-root");
-    click(root, '[data-testid="tab-Sources"]');
-    expect(root.textContent).toContain("file:///workspace/src/App.tsx");
   });
 
   it("switches tabs instead of rendering placeholder sections at once", async () => {
     const root = document.createElement("div");
+    const runtime = makeFakeRuntime({
+      runtimeItems: DevtoolsProtocolFixtures.storybook.runtimeStreamItems,
+    });
 
-    await renderTypedDevtoolsPanel(root);
+    await renderTypedDevtoolsPanel(root, { runtime });
 
     expect(root.querySelector('[data-testid="panel-components"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="panel-sources"]')).toBeNull();
@@ -62,12 +96,16 @@ describe("Typed DevTools panel app", () => {
     const root = document.createElement("div");
     const inspectDomBinding = vi.fn();
     const openSource = vi.fn();
+    const runtime = makeFakeRuntime({
+      runtimeItems: DevtoolsProtocolFixtures.storybook.runtimeStreamItems,
+    });
 
     await renderTypedDevtoolsPanel(root, {
       actions: {
         inspectDomBinding,
         openSource,
       },
+      runtime,
     });
 
     click(root, '[data-testid="component-action-dom-cmp-app-root"]');
@@ -85,7 +123,9 @@ describe("Typed DevTools panel app", () => {
 
   it("uses Chrome runtime RPC when the extension runtime is available", async () => {
     const root = document.createElement("div");
-    const runtime = makeFakeRuntime();
+    const runtime = makeFakeRuntime({
+      runtimeItems: DevtoolsProtocolFixtures.runtimeStreamItems,
+    });
 
     await renderTypedDevtoolsPanel(root, { runtime });
 
@@ -94,6 +134,7 @@ describe("Typed DevTools panel app", () => {
     );
     expect(runtime.messages.map((message) => message.tag)).toEqual([
       "Handshake",
+      "SubscribeRuntimeEvents",
       "AnalyzeSource",
       "ResolveDomBinding",
     ]);
@@ -107,6 +148,13 @@ describe("Typed DevTools panel app", () => {
     const inspectedWindow = makeFakeInspectedWindowByExpression({
       [TYPED_DEVTOOLS_RPC_EXPRESSION("Handshake", panelHandshakeRequest())]:
         DevtoolsProtocolFixtures.handshakeResponse,
+      [TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "SubscribeRuntimeEvents",
+        runtimeSubscriptionRequest(
+          DevtoolsProtocolFixtures.ids.session,
+          DevtoolsProtocolFixtures.handshakeResponse.acceptedCapabilities,
+        ),
+      )]: DevtoolsProtocolFixtures.storybook.runtimeStreamItems,
       [TYPED_DEVTOOLS_RPC_EXPRESSION(
         "AnalyzeSource",
         DevtoolsProtocolFixtures.sourceAnalyzerRequest,
@@ -126,6 +174,13 @@ describe("Typed DevTools panel app", () => {
     expect(inspectedWindow.expressions).toEqual([
       TYPED_DEVTOOLS_RPC_EXPRESSION("Handshake", panelHandshakeRequest()),
       TYPED_DEVTOOLS_RPC_EXPRESSION(
+        "SubscribeRuntimeEvents",
+        runtimeSubscriptionRequest(
+          DevtoolsProtocolFixtures.ids.session,
+          DevtoolsProtocolFixtures.handshakeResponse.acceptedCapabilities,
+        ),
+      ),
+      TYPED_DEVTOOLS_RPC_EXPRESSION(
         "AnalyzeSource",
         DevtoolsProtocolFixtures.sourceAnalyzerRequest,
       ),
@@ -143,7 +198,9 @@ function click(root: Element, selector: string): void {
   target.click();
 }
 
-function makeFakeRuntime() {
+function makeFakeRuntime(
+  options: { readonly runtimeItems?: readonly unknown[] } = {},
+) {
   const listeners = new Set<(message: unknown) => void>();
   return {
     messages: [] as { readonly id: number; readonly tag: string }[],
@@ -161,6 +218,11 @@ function makeFakeRuntime() {
         postMessage: (message: unknown) => {
           const request = message as {
             readonly id: number;
+            readonly payload?: {
+              readonly capabilities?: readonly string[];
+              readonly sessionId?: string;
+              readonly version?: string;
+            };
             readonly protocol: string;
             readonly tag: string;
           };
@@ -173,20 +235,17 @@ function makeFakeRuntime() {
                 success:
                   request.tag === "Handshake"
                     ? {
-                        acceptedCapabilities: ["components", "source-analyzer"],
+                        acceptedCapabilities: request.payload?.capabilities ?? [],
                         peer: "inspected-runtime",
-                        sessionId: "session:session-1",
+                        sessionId: request.payload?.sessionId ?? "session:session-1",
                         unsupportedCapabilities: [],
-                        version: "0.1.0",
+                        version: request.payload?.version ?? "0.1.0",
                       }
                     : request.tag === "AnalyzeSource"
-                      ? {
-                          _tag: "SourceFacts",
-                          facts: [],
-                          requestedAt: 1,
-                          resource: "file:///workspace/src/App.tsx",
-                        }
-                      : DevtoolsProtocolFixtures.domBindingResolution,
+                      ? DevtoolsProtocolFixtures.sourceAnalyzerResponse
+                      : request.tag === "SubscribeRuntimeEvents"
+                        ? (options.runtimeItems ?? DevtoolsProtocolFixtures.runtimeStreamItems)
+                        : DevtoolsProtocolFixtures.domBindingResolution,
                 tag: request.tag,
               });
             }
@@ -213,6 +272,17 @@ function panelHandshakeRequest() {
     peer: "extension-panel",
     sessionId: DevtoolsProtocolFixtures.ids.session,
     version: "0.1.0",
+  } as const;
+}
+
+function runtimeSubscriptionRequest(sessionId: string, acceptedCapabilities: readonly string[]) {
+  return {
+    capabilities: acceptedCapabilities.filter((capability) =>
+      ["components", "fx", "hmr", "navigation", "otel", "refsubjects"].includes(capability),
+    ),
+    replay: true,
+    sessionId,
+    sinceSequence: 0,
   } as const;
 }
 

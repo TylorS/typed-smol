@@ -25,10 +25,10 @@ import {
 import {
   Routes,
   apiBaseUrl,
+  makeClient,
   makeStoryRuntime,
   parameters,
 } from "typed:storybook/runtime?path=/dashboard";
-import { makeTypedClient } from "typed:api?dir=./api&mode=client";
 import { ApiMessage } from "./api/_dependencies.js";
 import { ComponentGreeting } from "./components/ServiceCard.js";
 
@@ -115,7 +115,7 @@ export const ComponentTestLayerOverride = makeServiceComponentStory({
 export const ApiBacked = {
   render: () =>
     html`<output data-testid="api-message">${Effect.gen(function* () {
-      const client = yield* makeTypedClient({ baseUrl: apiBaseUrl });
+      const client = yield* makeClient({ baseUrl: apiBaseUrl });
       const body = yield* client.root.message();
       return body.message;
     }).pipe(Effect.provide(FetchHttpClient.layer))}</output>`,

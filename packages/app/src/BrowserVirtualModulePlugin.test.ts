@@ -219,6 +219,7 @@ describe("BrowserVirtualModulePlugin", () => {
 
     expect(source).not.toContain("installTypedDevtoolsBridge");
     expect(source).not.toContain("makeDomRegistry");
+    expect(source).not.toContain("makeDevtoolsRuntime");
     expect(source).not.toContain("devtools?: boolean");
     expect(source).toContain("createAppDomTemplateRuntime()");
   });
@@ -227,7 +228,11 @@ describe("BrowserVirtualModulePlugin", () => {
     const source = buildBrowser("typed:browser?routes=*&devtools=1") as string;
 
     expect(source).toContain("installTypedDevtoolsBridge");
+    expect(source).toContain("makeDevtoolsRuntime");
     expect(source).toContain("makeDomRegistry");
+    expect(source).toContain("const devtoolsRuntime = makeDevtoolsRuntime({ enabled: true });");
+    expect(source).toContain("const domRegistry = makeDomRegistry({ runtime: devtoolsRuntime });");
+    expect(source).toContain("runtime: devtoolsRuntime");
     expect(source).toContain("devtools: { enabled: true, domRegistry }");
   });
 

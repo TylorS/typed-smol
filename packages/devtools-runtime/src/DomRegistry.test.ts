@@ -10,6 +10,7 @@ import {
 import * as Effect from "effect/Effect";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { makeDevtoolsBridge } from "./Bridge.js";
+import { makeDevtoolsRuntime } from "./Layer.js";
 import { makeDomRegistry, type DomRegistry } from "./DomRegistry.js";
 
 describe("DOM DevTools registry", () => {
@@ -189,6 +190,30 @@ describe("DOM DevTools registry", () => {
       bindingId,
       component,
     });
+  });
+
+  it("emits component mount and unmount events into the shared runtime bus", () => {
+    const runtime = makeDevtoolsRuntime({ enabled: true });
+    const registry = makeDomRegistry({ now: () => 42, runtime });
+    const component = componentSummary("instrumented-template", "Instrumented");
+    const root = element();
+    const view = element(root);
+
+    registry.registerComponent(component);
+    registry.observer.onTemplateMounted?.({
+      nodes: [view],
+      root,
+      templateHash: "instrumented-template",
+    });
+    registry.observer.onTemplateUnmounted?.({
+      root,
+      templateHash: "instrumented-template",
+    });
+
+    expect(runtime.snapshot()).toEqual([
+      { _tag: "ComponentMounted", component, timestamp: 42 },
+      { _tag: "ComponentUnmounted", componentId: component.componentId, timestamp: 42 },
+    ]);
   });
 
   it("preserves registry type inference", () => {

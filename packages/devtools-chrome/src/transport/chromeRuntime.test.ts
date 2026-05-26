@@ -91,6 +91,31 @@ describe("Chrome runtime RPC transport", () => {
     ).resolves.toEqual(DevtoolsProtocolFixtures.handshakeResponse);
   });
 
+  it("rejects malformed runtime responses before they reach the panel", async () => {
+    const runtime = makeFakeRuntime((request) => [
+      {
+        id: request.id,
+        protocol: request.protocol,
+        success: { acceptedCapabilities: ["browser-only"] },
+        tag: "Handshake",
+      },
+    ]);
+    const client = makeChromeRuntimeRpcClient(runtime);
+
+    await expect(
+      client.request("Handshake", DevtoolsProtocolFixtures.handshakeRequest),
+    ).rejects.toThrow("invalid Typed DevTools RPC response");
+  });
+
+  it("removes pending requests when postMessage throws synchronously", async () => {
+    const client = makeChromeRuntimeRpcClient(makeThrowingRuntime());
+
+    await expect(
+      client.request("Handshake", DevtoolsProtocolFixtures.handshakeRequest),
+    ).rejects.toThrow("postMessage failed");
+    client.disconnect();
+  });
+
   it("keeps protocol payload inference at the transport boundary", () => {
     expectTypeOf<
       ChromeRuntimeRpcRequest<"Handshake">["payload"]
@@ -145,6 +170,29 @@ function makeFakeRuntime(
               }
             }
           });
+        },
+      };
+    },
+  };
+}
+
+function makeThrowingRuntime() {
+  return {
+    connectedNames: [] as string[],
+    connect(options?: { readonly name?: string }) {
+      this.connectedNames.push(options?.name ?? "");
+      return {
+        disconnect: () => undefined,
+        onDisconnect: {
+          addListener: () => undefined,
+          removeListener: () => undefined,
+        },
+        onMessage: {
+          addListener: () => undefined,
+          removeListener: () => undefined,
+        },
+        postMessage: () => {
+          throw new Error("postMessage failed");
         },
       };
     },

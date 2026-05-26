@@ -61,7 +61,6 @@ const API_FILE_GLOBS: readonly string[] = [
 const REQUIRED_ENDPOINT_EXPORTS = ["route", "method", "handler"] as const;
 const CLIENT_SAFE_EXPORTS = new Set([
   "Api",
-  "DependenciesLayer",
   "OpenApi",
   "Client",
   "makeClient",

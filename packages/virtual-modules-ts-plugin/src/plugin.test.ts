@@ -204,6 +204,26 @@ describe("virtual-modules-ts-plugin", () => {
     `);
   });
 
+  it("emits opt-in timing diagnostics for startup and semantic diagnostics", () => {
+    const dir = createTempDirInWorkspace();
+    const entryPath = join(dir, "entry.ts");
+    const logs: string[] = [];
+    writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: {} }), "utf8");
+    writeFileSync(entryPath, "export const value = 1;\n", "utf8");
+
+    const service = createPluginLanguageService(dir, entryPath, {
+      config: { debugTimings: true },
+      log: (message) => logs.push(message),
+    });
+
+    expect(logs.some((message) => message.includes("timing create.total"))).toBe(true);
+    expect(logs.some((message) => message.includes("timing fallbackProgram.create"))).toBe(false);
+
+    service.getSemanticDiagnostics(entryPath);
+
+    expect(logs.some((message) => message.includes("timing semanticDiagnostics"))).toBe(true);
+  });
+
   it("materializes create() virtual modules through the shared artifact store", () => {
     const dir = createTempDirInWorkspace();
     const pluginPath = join(dir, "test-plugin.mjs");
@@ -458,6 +478,77 @@ export default {
       service.cleanupSemanticCache();
       expect(service.getSemanticDiagnostics(virtualPath)).toHaveLength(0);
       expect(globalState.__typedTsPluginBuildCount).toBeGreaterThan(1);
+    } finally {
+      delete globalState.__typedTsPluginBuildCount;
+    }
+  });
+
+  it("does not reuse persisted artifacts when dependency snapshots differ from disk on boot", () => {
+    const dir = createTempDirInWorkspace();
+    writeFileSync(
+      join(dir, "test-plugin.mjs"),
+      `import path from "node:path";
+globalThis.__typedTsPluginBuildCount = globalThis.__typedTsPluginBuildCount ?? 0;
+export default {
+  name: "snapshot-boot-test",
+  shouldResolve: (id) => id === "virtual:snapshot-boot",
+  build: (id, importer, api) => {
+    globalThis.__typedTsPluginBuildCount++;
+    const dep = api.file("./dep.ts", { baseDir: path.dirname(importer), watch: true });
+    if (!dep.ok) throw new Error("dep.ts was not available");
+    return "export interface SnapshotBootValue { n: number }";
+  }
+};
+`,
+      "utf8",
+    );
+    writeFileSync(join(dir, "vmc.config.ts"), `export default { plugins: ["./test-plugin.mjs"] };`);
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ESNext",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+        },
+        files: ["entry.ts", "dep.ts"],
+      }),
+      "utf8",
+    );
+    const entryPath = join(dir, "entry.ts");
+    const depPath = join(dir, "dep.ts");
+    writeFileSync(
+      entryPath,
+      'import type { SnapshotBootValue } from "virtual:snapshot-boot";\nexport const value: SnapshotBootValue = { n: 1 };\n',
+      "utf8",
+    );
+    writeFileSync(depPath, "export const dep = 1;\n", "utf8");
+
+    const globalState = globalThis as { __typedTsPluginBuildCount?: number };
+    try {
+      globalState.__typedTsPluginBuildCount = 0;
+      const first = createPluginLanguageService(dir, entryPath, {
+        scriptFileNames: [entryPath, depPath],
+      });
+      expect(first.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(1);
+
+      const second = createPluginLanguageService(dir, entryPath, {
+        scriptFileNames: [entryPath, depPath],
+        scriptTextByPath: new Map([
+          [entryPath, readFileSync(entryPath, "utf8")],
+          [depPath, "export const dep = 2;\n"],
+        ]),
+        scriptVersionByPath: new Map([
+          [entryPath, "1"],
+          [depPath, "2"],
+        ]),
+      });
+      expect(second.getSemanticDiagnostics(entryPath)).toHaveLength(0);
+      expect(globalState.__typedTsPluginBuildCount).toBe(2);
     } finally {
       delete globalState.__typedTsPluginBuildCount;
     }
@@ -857,6 +948,8 @@ export default { plugins: [plugin] };
 });
 
 interface CreatePluginLanguageServiceOptions {
+  readonly config?: unknown;
+  readonly log?: (message: string) => void;
   readonly scriptFileNames?: readonly string[];
   readonly scriptTextByPath?: ReadonlyMap<string, string>;
   readonly scriptVersionByPath?: ReadonlyMap<string, string>;
@@ -876,7 +969,10 @@ function createPluginLanguageService(
     skipLibCheck: true,
   };
 
-  const host: ts.LanguageServiceHost & { configFilePath?: string } = {
+  const host: ts.LanguageServiceHost & {
+    configFilePath?: string;
+    projectService?: { logger?: { info?: (message: string) => void } };
+  } = {
     getCompilationSettings: () => compilerOptions,
     getScriptFileNames: () => [...(options.scriptFileNames ?? [entryPath])],
     getScriptVersion: (fileName: string) => options.scriptVersionByPath?.get(fileName) ?? "1",
@@ -893,6 +989,7 @@ function createPluginLanguageService(
     readDirectory: (...args) => ts.sys.readDirectory(...args),
   };
   host.configFilePath = join(dir, "tsconfig.json");
+  if (options.log) host.projectService = { logger: { info: options.log } };
 
   const languageService = ts.createLanguageService(host);
   const pluginDistPath = join(__dirname, "..", "dist", "plugin.js");
@@ -908,7 +1005,7 @@ function createPluginLanguageService(
   return init({ typescript: ts }).create({
     languageService,
     project: host,
-    config: {},
+    config: options.config ?? {},
   });
 }
 
