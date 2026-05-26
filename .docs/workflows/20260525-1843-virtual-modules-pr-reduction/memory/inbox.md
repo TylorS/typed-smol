@@ -45,3 +45,12 @@
 - `Api`, `OpenApi`, `Client`, `makeClient`, `makeClientWith`, and `makeUrlBuilder` production permutations have focused pruning coverage.
 - Type-only requested exports count as declaration demand for HttpApi output. `import type { Api }` now keeps the generated `Api` declaration and is covered by generated-source type checking.
 - A shared core helper for value-or-type export demand was not added in this slice because app tests resolve `@typed/virtual-modules` through built `dist`; revisit as a dedicated core change if other plugins need the same helper.
+
+## 2026-05-26 - T3b2b1 path composable production pruning
+
+- Path composable plugins now honor production requested exports for `typed:api-handler` and `typed:route-template`.
+- `typed:api-handler` metadata-only output avoids endpoint and `ApiHandlers` imports; handler output imports `ApiHandlers` only when requested.
+- `typed:api-handler` optional endpoint exports such as `body` can be emitted without unrelated endpoint exports.
+- `typed:route-template` route-only output avoids handler/helper imports; handler-only output imports only the generated handler helpers and route module.
+- `typed:route-template` concern exports such as `guard` can be emitted independently.
+- Browser/server files are dirty from other work and remain untouched. Component, route-handler, and browser/server plugin families remain for the next split.

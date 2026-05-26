@@ -154,6 +154,31 @@
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
 
+### T3b2b1 First-party plugin pruning: path-based composable modules
+
+- task_id: T3b2b1
+- parent_task_id: T3
+- requirement_ids: FR-1, FR-2, FR-3, NFR-2, AC-1, AC-2, AC-3
+- ts_scenarios: TS-3, TS-4 partial, TS-5 partial
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` failed on 6 new production-pruning assertions for `typed:api-handler` and `typed:route-template`.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` passed with 1 file, 33 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts src/RouterVirtualModulePlugin.test.ts src/HttpApiVirtualModulePlugin.test.ts` passed with 3 files, 216 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 35 files, 487 tests, and no type errors.
+  - `git diff --check` over T3b2b1 owner files passed.
+  - Banned wrapper-name scan over T3b2b1 owner files found no `TypedClient`, `TypedClientInput`, `TypedRawClient`, `makeTypedClient`, `makeTypedClientWith`, `makeTypedClientFromRaw`, or `OptionalEndpoint` matches.
+  - Spec compliance review approved with no findings.
+  - Code-quality review approved with no findings after optional API export and route-template concern pruning tests were added.
+- commit: `c7bb40f` - `feat(app): prune path composable module outputs`
+- deviations_or_replans:
+  - Browser/server plugin files remain dirty from other work, so they were not touched.
+  - T3b2b1 covers only `typed:api-handler` and `typed:route-template`. Component, route-handler, and browser/server plugin families remain T3b2b2.
+- context_updates: none
+- memory_updates:
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
+
 ## Deferred Work
 
-- T3b2b through T9 remain pending.
+- T3b2b2 through T9 remain pending.

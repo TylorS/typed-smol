@@ -74,3 +74,15 @@
   - `pnpm --filter @typed/app test` passed with 35 files, 479 tests, and no type errors.
   - Spec compliance and code-quality re-reviews both approved with no findings.
 - outcome: committed `f96ac51` (`feat(app): prune httpapi production client output`); T3b2b remains for component, browser/server, route-handler, and path-based composable plugin families.
+
+## T3b2b1 - Path composable production pruning
+
+- objective: make `typed:api-handler` and `typed:route-template` path-based virtual modules emit only requested production exports and concrete imports.
+- evidence:
+  - `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` failed first on 6 production-pruning assertions.
+  - `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` passed with 1 file, 33 tests, and no type errors.
+  - `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts src/RouterVirtualModulePlugin.test.ts src/HttpApiVirtualModulePlugin.test.ts` passed with 3 files, 216 tests, and no type errors.
+  - `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - `pnpm --filter @typed/app test` passed with 35 files, 487 tests, and no type errors.
+  - Spec compliance and code-quality reviews approved with no findings after optional API export and route-template concern pruning tests were added.
+- outcome: committed `c7bb40f` (`feat(app): prune path composable module outputs`); component, route-handler, and browser/server plugin families remain.
