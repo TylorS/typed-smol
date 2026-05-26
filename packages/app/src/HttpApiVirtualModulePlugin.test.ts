@@ -126,6 +126,32 @@ function getSourceText(result: unknown): string | undefined {
   return undefined;
 }
 
+function productionContext(
+  id: string,
+  importer: string,
+  names: readonly string[],
+  typeOnlyNames: readonly string[] = [],
+): VirtualModuleBuildContext {
+  return {
+    id,
+    rootImporter: importer,
+    containingFile: importer,
+    consumer: "client",
+    requestedExports: {
+      kind: "names",
+      names: new Set(names),
+      typeOnlyNames: new Set(typeOnlyNames),
+    },
+    closure: {
+      kind: "partial",
+      requested: new Set([...names, ...typeOnlyNames]),
+      pluginDeclared: new Set(),
+      typeInfoReachable: new Set(),
+      routeOrAppReachable: new Set(),
+    },
+  };
+}
+
 function expectHttpApiGeneratedSourceToTypeCheck(
   fixture: ReturnType<typeof createApiFixture>,
   sourceText: string,
@@ -569,11 +595,6 @@ export const ServerOnly = { use: readFileSync };
   });
 
   it("emits client-only API module when build context requests only Client", () => {
-    const requestedExports = {
-      kind: "names" as const,
-      names: new Set(["Client"]),
-      typeOnlyNames: new Set<string>(),
-    };
     const fixture = createApiFixture({
       "src/domain.ts": `
 import * as Schema from "effect/Schema";
@@ -597,21 +618,14 @@ import { readFileSync } from "node:fs";
 export const ServerOnly = { use: readFileSync };
 `,
     });
+    const id = "typed:api?dir=./apis";
     const sourceText = getSourceText(
-      buildApiFromExistingFixture(fixture, undefined, "typed:api?dir=./apis", {
-        id: "typed:api?dir=./apis",
-        rootImporter: fixture.importer,
-        containingFile: fixture.importer,
-        consumer: "client",
-        requestedExports,
-        closure: {
-          kind: "partial",
-          requested: new Set(["Client"]),
-          pluginDeclared: new Set(),
-          typeInfoReachable: new Set(),
-          routeOrAppReachable: new Set(),
-        },
-      }),
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["Client"]),
+      ),
     );
 
     expect(sourceText).toBeDefined();
@@ -623,6 +637,258 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).not.toContain("node:fs");
     expect(sourceText).not.toContain("export const serve");
     expect(sourceText).not.toContain("export const ApiLayer");
+    expect(sourceText).not.toContain("makeClient");
+    expect(sourceText).not.toContain("makeClientWith");
+    expect(sourceText).not.toContain("makeUrlBuilder");
+    expect(sourceText).not.toContain("import type * as HttpClient");
+    expect(sourceText).not.toContain("OpenApiModule");
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+    expect(sourceText).not.toContain("export const OpenApi");
+  });
+
+  it("emits only makeClient and dependencies for production makeClient output", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["makeClient"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).toContain("export const makeClient = ");
+    expect(sourceText).toContain("HttpApiClient.make(Api, options)");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClientWith = ");
+    expect(sourceText).not.toContain("export const makeUrlBuilder = ");
+    expect(sourceText).not.toContain("import type * as HttpClient");
+    expect(sourceText).not.toContain("OpenApiModule");
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+    expect(sourceText).not.toContain("export const OpenApi");
+  });
+
+  it("emits only makeClientWith and dependencies for production makeClientWith output", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["makeClientWith"]),
+      ),
+    );
+
+    expect(sourceText).toContain('import type * as HttpClient from "effect/unstable/http/HttpClient";');
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).toContain("export const makeClientWith = ");
+    expect(sourceText).toContain("HttpApiClient.makeWith(Api, { ...options, httpClient })");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const makeUrlBuilder = ");
+    expect(sourceText).not.toContain("OpenApiModule");
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+    expect(sourceText).not.toContain("export const OpenApi");
+  });
+
+  it("emits only DependenciesLayer for production DependenciesLayer output", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["DependenciesLayer"]),
+      ),
+    );
+
+    expect(sourceText).toContain('import * as Layer from "effect/Layer";');
+    expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
+    expect(sourceText).not.toContain("export const Api = ");
+    expect(sourceText).not.toContain("HttpApiClient");
+    expect(sourceText).not.toContain("HttpApiEndpoint");
+    expect(sourceText).not.toContain("HttpApiGroup");
+    expect(sourceText).not.toContain("OpenApiModule");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const makeClientWith = ");
+    expect(sourceText).not.toContain("export const makeUrlBuilder = ");
+    expect(sourceText).not.toContain("export const OpenApi");
+  });
+
+  it("emits Api-only production output without client helper imports", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["Api"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).not.toContain("HttpApiClient");
+    expect(sourceText).not.toContain("OpenApiModule");
+    expect(sourceText).not.toContain('import * as Layer from "effect/Layer";');
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+    expect(sourceText).not.toContain("export const OpenApi");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const makeClientWith = ");
+    expect(sourceText).not.toContain("export const makeUrlBuilder = ");
+  });
+
+  it("emits OpenApi production output with Api dependency but without client helpers", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["OpenApi"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).toContain(
+      'import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";',
+    );
+    expect(sourceText).toContain("export const OpenApi = OpenApiModule.fromApi(Api);");
+    expect(sourceText).not.toContain("HttpApiClient");
+    expect(sourceText).not.toContain('import * as Layer from "effect/Layer";');
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const makeClientWith = ");
+    expect(sourceText).not.toContain("export const makeUrlBuilder = ");
+  });
+
+  it("emits makeUrlBuilder and dependencies for production makeUrlBuilder output", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["makeUrlBuilder"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).toContain("export const makeUrlBuilder = ");
+    expect(sourceText).toContain("HttpApiClient.urlBuilder(Api, options)");
+    expect(sourceText).not.toContain('import type * as HttpClient from "effect/unstable/http/HttpClient";');
+    expect(sourceText).not.toContain('import * as Layer from "effect/Layer";');
+    expect(sourceText).not.toContain("OpenApiModule");
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+    expect(sourceText).not.toContain("export const OpenApi");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const makeClientWith = ");
+  });
+
+  it("emits Api declaration for production type-only Api output", () => {
+    const fixture = createApiFixture({
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+      "src/consumer.ts": `
+import type { Api } from "./api.generated.js";
+type ApiDeclaration = typeof Api;
+export type ConsumerApiDeclaration = ApiDeclaration;
+`,
+    });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, [], ["Api"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).not.toContain("HttpApiClient");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+    expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
+  });
+
+  it("emits mixed type-only Api and value makeClient production output", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["makeClient"], ["Api"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).toContain("export const makeClient = ");
+    expect(sourceText).toContain("HttpApiClient.make(Api, options)");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const makeClientWith = ");
+    expect(sourceText).not.toContain("export const DependenciesLayer");
+  });
+
+  it("keeps explicit client-mode output broad even with production build context", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis&mode=client";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["Client"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Client = HttpApiClient.make(Api);");
+    expect(sourceText).toContain("export const makeClient = ");
+    expect(sourceText).toContain("export const makeClientWith = ");
+    expect(sourceText).toContain("export const makeUrlBuilder = ");
+    expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
+    expect(sourceText).toContain("export const OpenApi = OpenApiModule.fromApi(Api);");
+  });
+
+  it("imports OpenApiModule for production helper output when annotations require it", () => {
+    const fixture = createApiFixture({
+      "src/apis/_api.ts": `
+export const openapi = {
+  annotations: {
+    title: "Status API" as const,
+  },
+};
+`,
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+    });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["makeClient"]),
+      ),
+    );
+
+    expect(sourceText).toContain(
+      'import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";',
+    );
+    expect(sourceText).toContain("OpenApiModule.annotations");
+    expect(sourceText).toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const OpenApi = OpenApiModule.fromApi(Api);");
   });
 
   it("omits discovered API dependencies from client-only modules", () => {

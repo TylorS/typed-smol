@@ -31,6 +31,10 @@ import type {
   OpenApiGenerationConfig,
 } from "./httpapiOpenApiConfig.js";
 import type { PrefixByScope } from "./validatePrefixConventions.js";
+import {
+  mustEmitAllExports,
+  type VirtualModuleBuildContext,
+} from "@typed/virtual-modules";
 
 const ROOT_GROUP_KEY = "__root__";
 
@@ -691,6 +695,7 @@ export function emitHttpApiSource(input: {
     ReadonlyMap<string, HttpApiExportExpression>
   >;
   readonly projectRoot: string;
+  readonly context?: VirtualModuleBuildContext;
 }): string {
   const directoryConventions = indexDirectoryConventions(input.tree);
   const endpointSpecs = buildEndpointRenderSpecs(input.tree, directoryConventions);
@@ -727,6 +732,7 @@ export function emitHttpApiSource(input: {
       prefixByScope: input.prefixByScope,
       pathPrefix: input.pathPrefix,
       openapiPlan: input.openapiPlan,
+      context: input.context,
     });
   }
 
@@ -1047,20 +1053,37 @@ function emitHttpApiClientSource(input: {
   readonly prefixByScope?: PrefixByScope;
   readonly pathPrefix?: `/${string}`;
   readonly openapiPlan?: HttpApiOpenApiPlan;
+  readonly context?: VirtualModuleBuildContext;
 }): string {
   void input.directoryOptionNameByPath;
   const imports = new ClientImportBuilder(input.importerDir, input.targetDirectory);
-  const targetSpecifier = toVirtualTargetSpecifier(input.importerDir, input.targetDirectory, "");
+  const plan = clientEmitPlan(input.context);
+  const needsApi = clientPlanNeedsApi(plan);
+  const needsHttpApiClient = clientPlanNeedsHttpApiClient(plan);
   const importLines: string[] = [
-    `import * as Route from "@typed/router";`,
-    `import type * as HttpClient from "effect/unstable/http/HttpClient";`,
-    `import * as Layer from "effect/Layer";`,
-    `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
-    `import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`,
-    `import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";`,
-    `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
-    `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
+    ...(needsApi ? [`import * as Route from "@typed/router";`] : []),
+    ...(plan.makeClientWith
+      ? [`import type * as HttpClient from "effect/unstable/http/HttpClient";`]
+      : []),
+    ...(plan.dependenciesLayer ? [`import * as Layer from "effect/Layer";`] : []),
+    ...(needsApi ? [`import * as HttpApi from "effect/unstable/httpapi/HttpApi";`] : []),
+    ...(needsHttpApiClient
+      ? [`import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`]
+      : []),
+    ...(needsApi
+      ? [
+          `import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";`,
+          `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
+        ]
+      : []),
+    ...(plan.openApi ? [`import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`] : []),
   ];
+  if (!needsApi) {
+    const exportLines = clientExportLines(plan);
+    return `${importLines.join("\n")}
+
+${exportLines.length > 0 ? exportLines : "export {};"}`;
+  }
 
   const groupExprs: string[] = [];
   const groupSpecByKey = new Map(input.groupSpecs.map((spec) => [spec.key, spec]));
@@ -1156,25 +1179,101 @@ function emitHttpApiClientSource(input: {
   );
   const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
   const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
+  if (!plan.openApi && apiExpr.includes("OpenApiModule.")) {
+    importLines.push(`import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`);
+  }
 
   return `${[...importLines, ...imports.lines()].join("\n")}${openApiHelperBlock}
 
 ${renderRouteBindingDeclarations(routeBindings)}
 
 export const Api = ${apiExpr};
-export const DependenciesLayer = Layer.empty;
-export const OpenApi = OpenApiModule.fromApi(Api);
-export const Client = HttpApiClient.make(Api);
+${clientExportLines(plan)}`;
+}
 
-export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>
-  HttpApiClient.make(Api, options);
-export const makeClientWith = <E, R>(
-  httpClient: HttpClient.HttpClient.With<E, R>,
-  options?: { readonly baseUrl?: URL | string },
-) => HttpApiClient.makeWith(Api, { ...options, httpClient });
-export const makeUrlBuilder = (options?: { readonly baseUrl?: URL | string }) =>
-  HttpApiClient.urlBuilder(Api, options);
-`;
+interface ClientEmitPlan {
+  readonly api: boolean;
+  readonly dependenciesLayer: boolean;
+  readonly openApi: boolean;
+  readonly client: boolean;
+  readonly makeClient: boolean;
+  readonly makeClientWith: boolean;
+  readonly makeUrlBuilder: boolean;
+}
+
+function clientEmitPlan(context: VirtualModuleBuildContext | undefined): ClientEmitPlan {
+  const emitAll = mustEmitAllExports(context);
+  return {
+    api: emitAll || requestsExportDeclaration(context, "Api"),
+    dependenciesLayer: emitAll || requestsExportDeclaration(context, "DependenciesLayer"),
+    openApi: emitAll || requestsExportDeclaration(context, "OpenApi"),
+    client: emitAll || requestsExportDeclaration(context, "Client"),
+    makeClient: emitAll || requestsExportDeclaration(context, "makeClient"),
+    makeClientWith: emitAll || requestsExportDeclaration(context, "makeClientWith"),
+    makeUrlBuilder: emitAll || requestsExportDeclaration(context, "makeUrlBuilder"),
+  };
+}
+
+function requestsExportDeclaration(
+  context: VirtualModuleBuildContext | undefined,
+  exportName: string,
+): boolean {
+  if (!context || context.requestedExports.kind === "all") return true;
+  return (
+    context.requestedExports.names.has(exportName) ||
+    context.requestedExports.typeOnlyNames.has(exportName)
+  );
+}
+
+function clientPlanNeedsApi(plan: ClientEmitPlan): boolean {
+  return (
+    plan.api ||
+    plan.openApi ||
+    plan.client ||
+    plan.makeClient ||
+    plan.makeClientWith ||
+    plan.makeUrlBuilder
+  );
+}
+
+function clientPlanNeedsHttpApiClient(plan: ClientEmitPlan): boolean {
+  return plan.client || plan.makeClient || plan.makeClientWith || plan.makeUrlBuilder;
+}
+
+function clientExportLines(plan: ClientEmitPlan): string {
+  return [
+    plan.dependenciesLayer ? "export const DependenciesLayer = Layer.empty;" : "",
+    plan.openApi ? "export const OpenApi = OpenApiModule.fromApi(Api);" : "",
+    plan.client ? "export const Client = HttpApiClient.make(Api);" : "",
+    plan.makeClient ? makeClientSource() : "",
+    plan.makeClientWith ? makeClientWithSource() : "",
+    plan.makeUrlBuilder ? makeUrlBuilderSource() : "",
+  ]
+    .filter((line) => line.length > 0)
+    .join("\n");
+}
+
+function makeClientSource(): string {
+  return [
+    "export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>",
+    "  HttpApiClient.make(Api, options);",
+  ].join("\n");
+}
+
+function makeClientWithSource(): string {
+  return [
+    "export const makeClientWith = <E, R>(",
+    "  httpClient: HttpClient.HttpClient.With<E, R>,",
+    "  options?: { readonly baseUrl?: URL | string },",
+    ") => HttpApiClient.makeWith(Api, { ...options, httpClient });",
+  ].join("\n");
+}
+
+function makeUrlBuilderSource(): string {
+  return [
+    "export const makeUrlBuilder = (options?: { readonly baseUrl?: URL | string }) =>",
+    "  HttpApiClient.urlBuilder(Api, options);",
+  ].join("\n");
 }
 
 function shouldEmitClientRouteSchemas(path: string | undefined): boolean {

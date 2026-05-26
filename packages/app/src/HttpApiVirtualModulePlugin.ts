@@ -203,8 +203,13 @@ function httpApiEmitModeFor(
 ): "full" | "client" {
   if (mode === "client") return "client";
   if (!context || context.requestedExports.kind === "all") return "full";
-  for (const name of context.requestedExports.names) {
-    if (!CLIENT_SAFE_EXPORTS.has(name)) return "full";
+  for (const requestedNames of [
+    context.requestedExports.names,
+    context.requestedExports.typeOnlyNames,
+  ]) {
+    for (const name of requestedNames) {
+      if (!CLIENT_SAFE_EXPORTS.has(name)) return "full";
+    }
   }
   return "client";
 }
@@ -966,6 +971,7 @@ export const createHttpApiVirtualModulePlugin = (
         }
       }
 
+      const mode = httpApiEmitModeFor(resolved.mode, context);
       const sourceText = emitHttpApiSource({
         tree,
         targetDirectory: resolved.targetDirectory,
@@ -977,9 +983,10 @@ export const createHttpApiVirtualModulePlugin = (
         prefixByScope,
         pathPrefix: options.pathPrefix,
         openapiPlan,
-        mode: httpApiEmitModeFor(resolved.mode, context),
+        mode,
         groupNamesByPath,
         exportExpressionsByPath,
+        context: resolved.mode === "client" ? undefined : context,
       });
       if (tree.diagnostics.length > 0) {
         return {
