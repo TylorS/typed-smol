@@ -2,6 +2,7 @@ import { statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
 import type {
   TypeInfoFileSnapshot,
+  VirtualModuleBuildContext,
   VirtualModuleBuildError,
   VirtualModulePlugin,
 } from "@typed/virtual-modules";
@@ -121,7 +122,7 @@ export function createRouteHandlersVirtualModulePlugin(
       const resolved = resolveRouteHandlersTargetDirectory(id, importer, prefix);
       return resolved.ok && isExistingDirectory(resolved.targetDirectory);
     },
-    build(id, importer, api) {
+    build(id, importer, api, context) {
       const resolved = resolveRouteHandlersTargetDirectory(id, importer, prefix);
       if (!resolved.ok) {
         return { errors: [{ code: "RHVM-ID-001", message: resolved.reason, pluginName: name }] };
@@ -137,6 +138,7 @@ export function createRouteHandlersVirtualModulePlugin(
           ],
         } satisfies VirtualModuleBuildError;
       }
+      if (!shouldEmitRouteHandlersDefault(context)) return "export {};";
       return emitRouteHandlersSource(
         api.directory(ROUTE_HANDLER_GLOBS, {
           baseDir: resolved.targetDirectory,
@@ -148,6 +150,14 @@ export function createRouteHandlersVirtualModulePlugin(
       );
     },
   };
+}
+
+function shouldEmitRouteHandlersDefault(context: VirtualModuleBuildContext | undefined): boolean {
+  if (!context || context.requestedExports.kind === "all") return true;
+  return (
+    context.requestedExports.names.has("default") ||
+    context.requestedExports.typeOnlyNames.has("default")
+  );
 }
 
 function isExistingDirectory(absolutePath: string): boolean {

@@ -248,14 +248,14 @@ function emitConcernDir(
 ): VirtualModuleBuildResult {
   const paths = discoverConcernPaths(kind, targetDir);
   const importerDir = dirname(toPosixPath(importer));
-  if (mustEmitAllExports(context)) {
+  if (!context || context.requestedExports.kind === "all") {
     return emitFullConcernDir(kind, paths, targetDir, importerDir, api);
   }
   if (!requestsAnyExport(context, concernExportsFor(kind))) {
     return "export {};";
   }
   const partial = partialConcernSourcesFor(kind, paths, targetDir, api, context);
-  if (!Array.isArray(partial)) return buildError(kind, partial);
+  if ("code" in partial) return buildError(kind, partial);
   if (partial.length === 0) return "export {};";
   const source = partial.join("\n");
   return emitVirtualModuleSource(
@@ -341,7 +341,7 @@ function emitApiHandlerLeaf(
   const optionalLines = optionalExports
     .map((name) => `export const ${name} = Endpoint.${name};`)
     .join("\n");
-  if (!mustEmitAllExports(context)) {
+  if (context && context.requestedExports.kind === "names") {
     return emitPartialApiHandlerLeaf(
       specifier,
       mode,
@@ -491,7 +491,7 @@ function emitRouteTemplateLeaf(
   const entrypoint = routeEntrypointFor(snapshot.snapshot, api);
   if (!entrypoint.ok) return buildError("route-template", entrypoint);
   const imports = createImportCollector();
-  if (!mustEmitAllExports(context)) {
+  if (context && context.requestedExports.kind === "names") {
     return emitPartialRouteTemplateLeaf(
       snapshot.snapshot,
       specifier,
@@ -975,7 +975,7 @@ function partialServicesSourcesFor(
   ]);
   if (!needsServiceMap) return sources;
   const refs = validDependencyRefsFor(paths, targetDir, api);
-  if (!Array.isArray(refs)) return refs;
+  if ("code" in refs) return refs;
   const pruned = [...sources];
   if (requestsExport(context, "dependencyInputs")) {
     pruned.push(dependencyInputsSource(refs));

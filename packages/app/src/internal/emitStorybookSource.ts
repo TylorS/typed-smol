@@ -1,9 +1,4 @@
-import {
-  mustEmitAllExports,
-  requestsAnyExport,
-  requestsExport,
-  type VirtualModuleBuildContext,
-} from "@typed/virtual-modules";
+import { requestsAnyExport, requestsExport, type VirtualModuleBuildContext } from "@typed/virtual-modules";
 import type { TypedVirtualModuleId } from "./frameworkVirtualModuleId.js";
 
 type StorybookId = Extract<TypedVirtualModuleId, { readonly kind: "storybook" }>;
@@ -28,7 +23,7 @@ export function emitStorybookSource(
 }
 
 function emitRuntime(parsed: RuntimeId, context: VirtualModuleBuildContext | undefined): string {
-  if (!mustEmitAllExports(context)) {
+  if (context && context.requestedExports.kind === "names") {
     return emitPrunedRuntime(parsed, context);
   }
   return [

@@ -1,9 +1,4 @@
-import {
-  mustEmitAllExports,
-  requestsAnyExport,
-  requestsExport,
-  type VirtualModuleBuildContext,
-} from "@typed/virtual-modules";
+import { requestsAnyExport, requestsExport, type VirtualModuleBuildContext } from "@typed/virtual-modules";
 
 const DEFAULT_OUTLET = "<!--typed-ssr-outlet-->";
 const RUNTIME_EXPORTS = ["loadHtml", "renderHtml"] as const;
@@ -18,7 +13,7 @@ export interface EmitHtmlSourceInput {
 
 export function emitHtmlSource(input: EmitHtmlSourceInput): string {
   if (!requestsAnyExport(input.context, HTML_EXPORTS)) return "export {};";
-  if (mustEmitAllExports(input.context)) return fullHtmlSource(input);
+  if (!input.context || input.context.requestedExports.kind === "all") return fullHtmlSource(input);
   return prunedHtmlSource(input, input.context);
 }
 
