@@ -70,4 +70,15 @@ describe("analyzeRequestedExports", () => {
       reason: "export star",
     });
   });
+
+  it("falls back to all with reasons for conservative import forms", () => {
+    expect(names('import "typed:api?dir=./api";')).toEqual({
+      kind: "all",
+      reason: "side-effect import",
+    });
+    expect(names('import Api from "typed:api?dir=./api";')).toEqual({
+      kind: "all",
+      reason: "default import",
+    });
+  });
 });

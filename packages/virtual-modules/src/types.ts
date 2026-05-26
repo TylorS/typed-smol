@@ -378,12 +378,54 @@ export type VirtualModuleRequestedExports =
       readonly typeOnlyNames: ReadonlySet<string>;
     };
 
+export type VirtualModuleDependencyClosure =
+  | { readonly kind: "all"; readonly reason: string }
+  | {
+      readonly kind: "partial";
+      readonly requested: ReadonlySet<string>;
+      readonly pluginDeclared: ReadonlySet<string>;
+      readonly typeInfoReachable: ReadonlySet<string>;
+      readonly routeOrAppReachable: ReadonlySet<string>;
+    };
+
+export interface CreatePartialDependencyClosureInput {
+  readonly requestedExports: Extract<VirtualModuleRequestedExports, { readonly kind: "names" }>;
+  readonly pluginDeclared?: Iterable<string>;
+  readonly typeInfoReachable?: Iterable<string>;
+  readonly routeOrAppReachable?: Iterable<string>;
+}
+
+export function createAllDependencyClosure(reason: string): VirtualModuleDependencyClosure {
+  return { kind: "all", reason };
+}
+
+export function createPartialDependencyClosure(
+  input: CreatePartialDependencyClosureInput,
+): VirtualModuleDependencyClosure {
+  return {
+    kind: "partial",
+    requested: new Set([...input.requestedExports.names, ...input.requestedExports.typeOnlyNames]),
+    pluginDeclared: new Set(input.pluginDeclared ?? []),
+    typeInfoReachable: new Set(input.typeInfoReachable ?? []),
+    routeOrAppReachable: new Set(input.routeOrAppReachable ?? []),
+  };
+}
+
+export function createDependencyClosure(
+  requestedExports: VirtualModuleRequestedExports,
+): VirtualModuleDependencyClosure {
+  return requestedExports.kind === "all"
+    ? createAllDependencyClosure(requestedExports.reason)
+    : createPartialDependencyClosure({ requestedExports });
+}
+
 export interface VirtualModuleBuildContext {
   readonly id: string;
   readonly rootImporter: string;
   readonly containingFile: string;
   readonly consumer: VirtualModuleConsumer;
   readonly requestedExports: VirtualModuleRequestedExports;
+  readonly closure: VirtualModuleDependencyClosure;
 }
 
 export function requestsExport(

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { PluginManager } from "./PluginManager.js";
+import { createPartialDependencyClosure } from "./types.js";
 import type { VirtualModuleBuildContext } from "./types.js";
 
 describe("PluginManager", () => {
@@ -178,16 +179,23 @@ describe("PluginManager", () => {
 
   it("passes build context to the matching plugin", () => {
     let received: VirtualModuleBuildContext | undefined;
+    const requestedExports = {
+      kind: "names" as const,
+      names: new Set(["Client"]),
+      typeOnlyNames: new Set<string>(),
+    };
     const context: VirtualModuleBuildContext = {
       id: "virtual:x",
       rootImporter: "/project/src/main.ts",
       containingFile: "/project/src/main.ts",
       consumer: "client",
-      requestedExports: {
-        kind: "names",
-        names: new Set(["Client"]),
-        typeOnlyNames: new Set(),
-      },
+      requestedExports,
+      closure: createPartialDependencyClosure({
+        requestedExports,
+        pluginDeclared: ["makeClient"],
+        typeInfoReachable: ["Api"],
+        routeOrAppReachable: ["Routes"],
+      }),
     };
     const manager = new PluginManager([
       {
@@ -208,5 +216,12 @@ describe("PluginManager", () => {
 
     expect(resolved.status).toBe("resolved");
     expect(received).toBe(context);
+    expect(received?.closure).toEqual({
+      kind: "partial",
+      requested: new Set(["Client"]),
+      pluginDeclared: new Set(["makeClient"]),
+      typeInfoReachable: new Set(["Api"]),
+      routeOrAppReachable: new Set(["Routes"]),
+    });
   });
 });

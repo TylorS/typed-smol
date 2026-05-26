@@ -3,10 +3,11 @@ import { dirname, extname, resolve } from "node:path";
 import * as Vite from "vite";
 import type { Plugin, ResolvedConfig } from "vite";
 import {
+  analyzeRequestedExports,
+  createDependencyClosure,
   createPluginConfigFingerprint,
   createSourceInputFingerprint,
   createVirtualArtifactStore,
-  analyzeRequestedExports,
 } from "@typed/virtual-modules";
 import type {
   ArtifactStoreFingerprints,
@@ -304,16 +305,20 @@ const createBuildContext = (input: {
   readonly containingFile: string;
   readonly consumer: VirtualModuleConsumer;
   readonly command: "build" | "serve";
-}): VirtualModuleBuildContext => ({
-  id: input.id,
-  rootImporter: input.rootImporter,
-  containingFile: input.containingFile,
-  consumer: input.consumer,
-  requestedExports:
+}): VirtualModuleBuildContext => {
+  const requestedExports =
     input.command === "build"
       ? requestedExportsFromContainingFile(input.containingFile, input.id)
-      : { kind: "all", reason: "dev mode" },
-});
+      : { kind: "all" as const, reason: "dev mode" };
+  return {
+    id: input.id,
+    rootImporter: input.rootImporter,
+    containingFile: input.containingFile,
+    consumer: input.consumer,
+    requestedExports,
+    closure: createDependencyClosure(requestedExports),
+  };
+};
 
 const requestedExportsFromContainingFile = (
   containingFile: string,
@@ -466,6 +471,21 @@ const fingerprintBuildContext = (context: VirtualModuleBuildContext | undefined)
     rootImporter: context.rootImporter,
     containingFile: context.containingFile,
     requestedExports,
+    closure: fingerprintDependencyClosure(context.closure),
+  };
+};
+
+const fingerprintDependencyClosure = (
+  closure: VirtualModuleBuildContext["closure"] | undefined,
+): unknown => {
+  if (!closure) return undefined;
+  if (closure.kind === "all") return closure;
+  return {
+    kind: "partial",
+    requested: [...closure.requested].sort(),
+    pluginDeclared: [...closure.pluginDeclared].sort(),
+    typeInfoReachable: [...closure.typeInfoReachable].sort(),
+    routeOrAppReachable: [...closure.routeOrAppReachable].sort(),
   };
 };
 

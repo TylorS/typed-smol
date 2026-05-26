@@ -185,6 +185,13 @@ describe("virtualModulesVitePlugin", () => {
       names: new Set(["Client"]),
       typeOnlyNames: new Set(),
     });
+    expect(context?.closure).toEqual({
+      kind: "partial",
+      requested: new Set(["Client"]),
+      pluginDeclared: new Set(),
+      typeInfoReachable: new Set(),
+      routeOrAppReachable: new Set(),
+    });
   });
 
   it("uses all requested exports during dev", async () => {
@@ -210,6 +217,112 @@ describe("virtualModulesVitePlugin", () => {
     await (plugin.load! as Load)(resolvedId);
 
     expect(context?.requestedExports).toEqual({ kind: "all", reason: "dev mode" });
+    expect(context?.closure).toEqual({ kind: "all", reason: "dev mode" });
+  });
+
+  it("falls back to all requested exports when importer source is unavailable", async () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "missing.ts");
+    let context: VirtualModuleBuildContext | undefined;
+    const manager = new PluginManager([
+      {
+        name: "api",
+        shouldResolve: (id) => id === "virtual:api",
+        build: (_id, _importer, _api, buildContext) => {
+          context = buildContext;
+          return "export const Client = 1;";
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager, projectRoot });
+    plugin.configResolved?.({ root: projectRoot, command: "build" } as never);
+    const resolvedId = (plugin.resolveId! as ResolveId)("virtual:api", importer) as string;
+
+    await (plugin.load! as Load)(resolvedId);
+
+    expect(context?.requestedExports).toEqual({
+      kind: "all",
+      reason: "importer source unavailable",
+    });
+    expect(context?.closure).toEqual({ kind: "all", reason: "importer source unavailable" });
+  });
+
+  it("falls back to all requested exports when the containing file is virtual", async () => {
+    const projectRoot = createTempDir();
+    const rootImporter = join(projectRoot, "src", "main.ts");
+    const virtualImporter = encodeVirtualId("virtual:parent", rootImporter);
+    let context: VirtualModuleBuildContext | undefined;
+    const manager = new PluginManager([
+      {
+        name: "nested",
+        shouldResolve: (id) => id === "virtual:nested",
+        build: (_id, _importer, _api, buildContext) => {
+          context = buildContext;
+          return "export const nested = 1;";
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager, projectRoot });
+    plugin.configResolved?.({ root: projectRoot, command: "build" } as never);
+    const resolvedId = (plugin.resolveId! as ResolveId)(
+      "virtual:nested",
+      virtualImporter,
+    ) as string;
+
+    await (plugin.load! as Load)(resolvedId);
+
+    expect(context?.rootImporter).toBe(rootImporter);
+    expect(context?.containingFile).toBe(virtualImporter);
+    expect(context?.requestedExports).toEqual({
+      kind: "all",
+      reason: "virtual importer source unavailable",
+    });
+    expect(context?.closure).toEqual({
+      kind: "all",
+      reason: "virtual importer source unavailable",
+    });
+  });
+
+  it("fingerprints production closure context for artifact reuse", async () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { value } from "virtual:closure";', "utf8");
+    const fingerprints = createCacheFingerprints();
+    const staleStore = createVirtualArtifactStore({
+      projectRoot,
+      pluginName: "closure",
+      fingerprints,
+    });
+    staleStore.materialize({
+      id: "virtual:closure",
+      importer,
+      sourceText: 'export const value = "stale";',
+      sourceInputFingerprints: [createSourceInputFingerprint(importer)],
+    });
+    let buildCount = 0;
+    const manager = new PluginManager([
+      {
+        name: "closure",
+        shouldResolve: (id) => id === "virtual:closure",
+        build: () => {
+          buildCount += 1;
+          return 'export const value = "fresh";';
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({
+      resolver: manager,
+      projectRoot,
+      artifactStore: { fingerprints },
+    });
+    plugin.configResolved?.({ root: projectRoot, command: "build" } as never);
+    const resolvedId = (plugin.resolveId! as ResolveId)("virtual:closure", importer) as string;
+
+    const code = await loadCode(plugin.load! as Load, resolvedId);
+
+    expect(code).toContain('const value = "fresh";');
+    expect(buildCount).toBe(1);
   });
 
   it("load returns transpiled sourceText for encoded virtual id", async () => {

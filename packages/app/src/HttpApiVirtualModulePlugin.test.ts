@@ -569,6 +569,11 @@ export const ServerOnly = { use: readFileSync };
   });
 
   it("emits client-only API module when build context requests only Client", () => {
+    const requestedExports = {
+      kind: "names" as const,
+      names: new Set(["Client"]),
+      typeOnlyNames: new Set<string>(),
+    };
     const fixture = createApiFixture({
       "src/domain.ts": `
 import * as Schema from "effect/Schema";
@@ -598,10 +603,13 @@ export const ServerOnly = { use: readFileSync };
         rootImporter: fixture.importer,
         containingFile: fixture.importer,
         consumer: "client",
-        requestedExports: {
-          kind: "names",
-          names: new Set(["Client"]),
-          typeOnlyNames: new Set(),
+        requestedExports,
+        closure: {
+          kind: "partial",
+          requested: new Set(["Client"]),
+          pluginDeclared: new Set(),
+          typeInfoReachable: new Set(),
+          routeOrAppReachable: new Set(),
         },
       }),
     );
