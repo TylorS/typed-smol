@@ -35,3 +35,16 @@
   - Spec review requested required build-context closure and direct fallback tests; both were fixed and re-reviewed as approved.
   - Code-quality review approved with a residual non-blocking note that stale-artifact invalidation currently proves build-context fingerprinting rather than isolating the closure field alone.
 - outcome: shared closure semantics are in core; Vite derives and fingerprints closure for non-dev contexts; dev all-output mode is preserved.
+
+## T3a - Router, Storybook, env, config, and html production pruning
+
+- objective: make the first split of app-level virtual-module plugins honor production requested exports without relying on bundler tree-shaking.
+- evidence:
+  - Initial Storybook/html regression tests failed on multi-API `makeClient` output, `DependenciesLayer` output without `apiLayers`, and `renderHtml`-only html output.
+  - Final Storybook regression tests failed before the quality fix on single-route/no-route `Routes` output and no-API `makeClient` output.
+  - `pnpm --filter @typed/app exec vitest run src/StorybookVirtualModulePlugin.test.ts` passed with 1 file, 12 tests, and no type errors.
+  - `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts src/EnvVirtualModulePlugin.test.ts src/ConfigVirtualModulePlugin.test.ts src/HtmlVirtualModulePlugin.test.ts` passed with 5 files, 130 tests, and no type errors.
+  - `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - `pnpm --filter @typed/app test` passed with 35 files, 463 tests, and no type errors.
+  - Spec compliance and code-quality re-reviews both approved with no findings.
+- outcome: committed `66a01eb` (`feat(app): prune production virtual module outputs`); T3b remains for HttpApi, composable modules, component, browser/server, and route-handler/plugin families.

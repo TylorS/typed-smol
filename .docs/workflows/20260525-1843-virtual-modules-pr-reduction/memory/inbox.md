@@ -21,3 +21,11 @@
 - Conservative Vite production fallbacks are explicit for missing importer source and virtual importer source.
 - `packages/virtual-modules-vite/vitest.config.ts` aliases `@typed/virtual-modules` to workspace source; otherwise the package test suite can accidentally execute stale `dist` from the core package.
 - T2 intentionally seeds empty `pluginDeclared`, `typeInfoReachable`, and `routeOrAppReachable` sets. T3/T6 must populate those dimensions instead of creating plugin-local closure semantics.
+
+## 2026-05-26 - T3a plugin production pruning
+
+- T3 is split. T3a covers router, Storybook, env, config, and html only; HttpApi, composable modules, component, browser/server, and route-handler families remain T3b.
+- Router production partial output keeps route-template imports but skips unused `typed:services`, `typed:guard`, `typed:layout`, and `typed:catch` imports when the requested exports do not need those concerns.
+- Storybook runtime production partial output now emits only requested runtime exports and direct dependencies. `makeClient`-only imports only the primary API target, `DependenciesLayer`-only does not require an emitted `apiLayers` binding, `@typed/router` appears only for multi-route merge output, and the no-API `HttpClient` type import appears only for `makeClientWith`.
+- Env/config production partial output filters by requested key exports before validation/serialization, so invalid or unserializable unrequested keys do not poison the requested subset.
+- Html production partial output can emit only `html` or only `renderHtml` without pulling filesystem, `typed:config`, `loadHtml`, or build-path helpers.

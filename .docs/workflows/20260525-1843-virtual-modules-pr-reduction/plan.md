@@ -106,6 +106,12 @@ This is a multi-day release-hardening plan. Do not collapse it into one uninterr
 - [ ] Add generated-source scans for unrequested imports/helpers/handlers.
 - [ ] Run app and Vite tests, then commit.
 
+#### T3 Split Status
+
+- [x] Split T3 after inventory because more than two first-party plugin families need pruning rewrites.
+- [x] T3a: router, Storybook, env, config, and html production-pruning emitters and tests.
+- [ ] T3b: HttpApi, composable plugin modules, component, browser/server, and remaining route-handler/plugin families.
+
 ### T4 TS Plugin and VS Code Shared Cache Stability
 
 - [ ] Add TS plugin tests for repeated hover/diagnostics/definition requests and count fallback program/session creation.

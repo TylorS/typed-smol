@@ -77,6 +77,31 @@
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
 
+### T3a First-party plugin pruning: router, Storybook, env, config, html
+
+- task_id: T3a
+- parent_task_id: T3
+- requirement_ids: FR-1, FR-2, FR-3, NFR-2, AC-1, AC-2, AC-3
+- ts_scenarios: TS-3, TS-4 partial, TS-5 partial, TS-7 partial
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app exec vitest run src/StorybookVirtualModulePlugin.test.ts src/HtmlVirtualModulePlugin.test.ts` failed before the spec-review fixes on Storybook multi-API `makeClient`, Storybook `DependenciesLayer`, and html `renderHtml`-only pruning.
+  - RED: `pnpm --filter @typed/app exec vitest run src/StorybookVirtualModulePlugin.test.ts` failed before the code-quality fixes on single-route/no-route `Routes` output and no-API `makeClient` output.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/StorybookVirtualModulePlugin.test.ts` passed with 1 file, 12 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts src/EnvVirtualModulePlugin.test.ts src/ConfigVirtualModulePlugin.test.ts src/HtmlVirtualModulePlugin.test.ts` passed with 5 files, 130 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 35 files, 463 tests, and no type errors.
+  - `git diff --check` over T3a owner files passed.
+  - Spec compliance re-review approved with no findings.
+  - Code-quality re-review approved with no findings.
+- commit: `66a01eb` - `feat(app): prune production virtual module outputs`
+- deviations_or_replans:
+  - T3 was split because more than two plugin families need pruning rewrites. T3a covers router, Storybook, env, config, and html only.
+  - Remaining plugin families are deferred to T3b: HttpApi, composable plugin modules, component, browser/server, and route-handler/plugin families.
+- context_updates: none
+- memory_updates:
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
+
 ## Deferred Work
 
-- T3 through T9 remain pending.
+- T3b through T9 remain pending.
