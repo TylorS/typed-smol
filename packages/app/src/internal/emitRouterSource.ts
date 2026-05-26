@@ -21,6 +21,7 @@ import {
 import { ModuleSource } from "./moduleSource.js";
 import { makeUniqueVarNames, pathToIdentifier, routeModuleIdentifier } from "./routeIdentifiers.js";
 import { toPosixPath } from "./path.js";
+import { mustEmitAllExports, type VirtualModuleBuildContext } from "@typed/virtual-modules";
 
 /** Canonical root directory: Node's dirname returns "." for root-level files; we use "" consistently. */
 function normalizeDir(dir: string): string {
@@ -97,6 +98,7 @@ export function emitRouterMatchSource(
   catchExportByPath: CatchExportByPath,
   catchFormByPath: CatchFormByPath,
   depsFormByPath: DepsFormByPath,
+  context?: VirtualModuleBuildContext,
 ): string {
   const importerDir = dirname(toPosixPath(importer));
   const depPaths = collectOrderedCompanionPaths(descriptors, "dependencies");
@@ -117,10 +119,23 @@ export function emitRouterMatchSource(
   ];
   const varNameByPath = makeUniqueVarNames(nameEntries);
   const targetSpecifier = toVirtualTargetSpecifier(importerDir, targetDirectory, "");
-  const servicesModule = source.importNamespace("RouteServices", `typed:services?dir=${targetSpecifier}`);
-  const guardsModule = source.importNamespace("RouteGuards", `typed:guard?dir=${targetSpecifier}`);
-  const layoutsModule = source.importNamespace("RouteLayouts", `typed:layout?dir=${targetSpecifier}`);
-  const catchesModule = source.importNamespace("RouteCatches", `typed:catch?dir=${targetSpecifier}`);
+  const emitAllExports = mustEmitAllExports(context);
+  const servicesModule =
+    emitAllExports || depPaths.length > 0
+      ? source.importNamespace("RouteServices", `typed:services?dir=${targetSpecifier}`)
+      : undefined;
+  const guardsModule =
+    emitAllExports || guardPaths.length > 0
+      ? source.importNamespace("RouteGuards", `typed:guard?dir=${targetSpecifier}`)
+      : undefined;
+  const layoutsModule =
+    emitAllExports || layoutPaths.length > 0
+      ? source.importNamespace("RouteLayouts", `typed:layout?dir=${targetSpecifier}`)
+      : undefined;
+  const catchesModule =
+    emitAllExports || catchPaths.length > 0
+      ? source.importNamespace("RouteCatches", `typed:catch?dir=${targetSpecifier}`)
+      : undefined;
 
   const dirToCompanions = directoryCompanionPaths(descriptors);
   const descriptorTree = buildRouterDescriptorTree({
@@ -203,9 +218,10 @@ export default router;`);
 
 function concernExpressionMap(
   paths: readonly string[],
-  moduleName: string,
+  moduleName: string | undefined,
   exportName: string,
 ): ReadonlyMap<string, string> {
+  if (!moduleName) return new Map();
   return new Map(paths.map((path) => [path, `${moduleName}.${exportName}[${JSON.stringify(path)}]`]));
 }
 

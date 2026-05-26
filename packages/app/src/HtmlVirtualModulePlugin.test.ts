@@ -1,10 +1,29 @@
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import type { VirtualModuleBuildContext, VirtualModuleBuildError } from "@typed/virtual-modules";
 import { describe, expect, it } from "vitest";
 import { createHtmlVirtualModulePlugin } from "./index.js";
 import { applySsrOutlet, normalizeClientHtmlPath } from "./internal/emitHtmlSource.js";
 
-const buildHtml = (id: string) =>
-  createHtmlVirtualModulePlugin().build(id, "/project/src/entry.server.ts", {} as never);
+const buildHtml = (id: string, context?: VirtualModuleBuildContext) =>
+  createHtmlVirtualModulePlugin().build(id, "/project/src/entry.server.ts", {} as never, context);
+
+const namedContext = (names: readonly string[]): VirtualModuleBuildContext => ({
+  id: "typed:html?path=./index.html",
+  rootImporter: "/project/src/entry.server.ts",
+  containingFile: "/project/src/entry.server.ts",
+  consumer: "server",
+  requestedExports: {
+    kind: "names",
+    names: new Set(names),
+    typeOnlyNames: new Set<string>(),
+  },
+  closure: {
+    kind: "partial",
+    requested: new Set(names),
+    pluginDeclared: new Set(),
+    typeInfoReachable: new Set(),
+    routeOrAppReachable: new Set(),
+  },
+});
 
 describe("HtmlVirtualModulePlugin", () => {
   it("resolves valid typed:html ids", () => {
@@ -131,6 +150,38 @@ describe("HtmlVirtualModulePlugin", () => {
         return \`\${template.slice(0, insertAt)}\${markup}\${template.slice(insertAt)}\`;
       }"
     `);
+  });
+
+  it("emits only the html export when requested by build context", () => {
+    const source = buildHtml("typed:html?path=./index.html", namedContext(["html"])) as string;
+
+    expect(source).toMatchInlineSnapshot(`"export const html = "/project/src/index.html";"`);
+    expect(source).not.toContain("readFile");
+    expect(source).not.toContain("typed:config");
+    expect(source).not.toContain("loadHtml");
+    expect(source).not.toContain("renderHtml");
+  });
+
+  it("emits only renderHtml and outlet state when requested by build context", () => {
+    const source = buildHtml(
+      "typed:html?path=./index.html&outlet=%3C%21--app--%3E",
+      namedContext(["renderHtml"]),
+    ) as string;
+
+    expect(source).toMatchInlineSnapshot(`
+      "const outlet = "<!--app-->";
+      export function renderHtml(template: string, markup: string): string {
+        if (template.includes(outlet)) return template.replace(outlet, markup);
+        const bodyMatch = /<body\\b[^>]*>/i.exec(template);
+        if (!bodyMatch) return \`\${template}\${markup}\`;
+        const insertAt = bodyMatch.index + bodyMatch[0].length;
+        return \`\${template.slice(0, insertAt)}\${markup}\${template.slice(insertAt)}\`;
+      }"
+    `);
+    expect(source).not.toContain("readFile");
+    expect(source).not.toContain("typed:config");
+    expect(source).not.toContain("loadHtml");
+    expect(source).not.toContain("export const html");
   });
 
   it("emits custom outlet metadata", () => {

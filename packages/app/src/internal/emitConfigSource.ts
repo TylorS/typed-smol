@@ -1,4 +1,8 @@
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import {
+  requestsExport,
+  type VirtualModuleBuildContext,
+  type VirtualModuleBuildError,
+} from "@typed/virtual-modules";
 
 const RESERVED_WORDS = new Set([
   "break",
@@ -41,9 +45,11 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 export function emitConfigSource(
   config: Readonly<object>,
   pluginName: string,
+  context?: VirtualModuleBuildContext,
 ): string | VirtualModuleBuildError {
   const lines: string[] = [];
   for (const [key, value] of Object.entries(config)) {
+    if (!requestsExport(context, key)) continue;
     if (!isValidExportName(key)) return invalidConfigKey(key, pluginName);
     const serialized = JSON.stringify(value);
     if (serialized === undefined) return unserializableConfigKey(key, pluginName);

@@ -9,7 +9,7 @@ import {
   PluginManager,
   resolveTypeTargetsFromSpecs,
 } from "@typed/virtual-modules";
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import type { VirtualModuleBuildContext, VirtualModuleBuildError } from "@typed/virtual-modules";
 import {
   createRouterVirtualModulePlugin,
   parseRouterVirtualModuleId,
@@ -77,6 +77,7 @@ function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[]) {
 function buildRouterFromExistingFixture(
   fixture: ReturnType<typeof createFixture>,
   programFiles?: string[],
+  context?: VirtualModuleBuildContext,
 ) {
   const plugin = createRouterVirtualModulePlugin();
   const files = programFiles ?? fixture.paths;
@@ -93,7 +94,32 @@ function buildRouterFromExistingFixture(
     program,
     typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
   });
-  return plugin.build("typed:router?dir=./routes", fixture.importer, session.api);
+  return plugin.build("typed:router?dir=./routes", fixture.importer, session.api, context);
+}
+
+function productionContext(
+  id: string,
+  importer: string,
+  names: readonly string[],
+): VirtualModuleBuildContext {
+  return {
+    id,
+    rootImporter: importer,
+    containingFile: importer,
+    consumer: "client",
+    requestedExports: {
+      kind: "names",
+      names: new Set(names),
+      typeOnlyNames: new Set(),
+    },
+    closure: {
+      kind: "partial",
+      requested: new Set(names),
+      pluginDeclared: new Set(),
+      typeInfoReachable: new Set(),
+      routeOrAppReachable: new Set(),
+    },
+  };
 }
 
 function expectRouterGeneratedSourceToTypeCheck(
@@ -419,6 +445,23 @@ describe("RouterVirtualModulePlugin", () => {
       export default router;
       "
     `);
+  });
+
+  it("omits unused concern virtual imports in production partial output", () => {
+    const fixture = createFixture({
+      "src/routes/users.ts": route("/", "export const handler = 1;"),
+    });
+    const source = buildRouterFromExistingFixture(
+      fixture,
+      undefined,
+      productionContext("typed:router?dir=./routes", fixture.importer, ["default"]),
+    ) as string;
+
+    expect(source).toContain('import * as Users from "typed:route-template?path=./routes/users.ts";');
+    expect(source).not.toContain("typed:services?dir=./routes");
+    expect(source).not.toContain("typed:guard?dir=./routes");
+    expect(source).not.toContain("typed:layout?dir=./routes");
+    expect(source).not.toContain("typed:catch?dir=./routes");
   });
 
   it("build throws when entrypoint export exists without route export", () => {

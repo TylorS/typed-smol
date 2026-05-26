@@ -1,5 +1,8 @@
 import process from "node:process";
-import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
+import type {
+  VirtualModuleBuildError,
+  VirtualModulePlugin,
+} from "@typed/virtual-modules";
 import { emitEnvSource } from "./internal/emitEnvSource.js";
 import { parseTypedVirtualModuleId } from "./internal/frameworkVirtualModuleId.js";
 
@@ -22,11 +25,11 @@ export function createEnvVirtualModulePlugin(
       const parsed = parseTypedVirtualModuleId(id);
       return parsed.ok && parsed.kind === "env";
     },
-    build(id) {
+    build(id, _importer, _api, context) {
       const parsed = parseTypedVirtualModuleId(id);
       if (!parsed.ok) return buildError(parsed.code, parsed.reason, name);
       if (parsed.kind !== "env") return buildError("TVM-ID-001", "expected typed:env", name);
-      return emitEnvSource(env, name);
+      return emitEnvSource(env, name, context);
     },
   };
 }

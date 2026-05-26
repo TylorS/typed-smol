@@ -187,7 +187,7 @@ export const createRouterVirtualModulePlugin = (
       if (id === ROUTE_TYPES_MODULE_ID && importer) return true;
       return Boolean(importer) && isRouterVirtualModuleId(id, prefix);
     },
-    build(id, importer, api) {
+    build(id, importer, api, context) {
       if (id === ROUTE_TYPES_MODULE_ID) {
         return emitRouteTypesModule(importer, api, name);
       }
@@ -256,6 +256,7 @@ export const createRouterVirtualModulePlugin = (
         catchExportByPath,
         catchFormByPath,
         depsFormByPath,
+        context,
       );
     },
   };

@@ -1,4 +1,7 @@
-import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
+import type {
+  VirtualModuleBuildError,
+  VirtualModulePlugin,
+} from "@typed/virtual-modules";
 import { dirname, resolve } from "node:path";
 import { emitHtmlSource } from "./internal/emitHtmlSource.js";
 import { parseTypedVirtualModuleId } from "./internal/frameworkVirtualModuleId.js";
@@ -22,7 +25,7 @@ export function createHtmlVirtualModulePlugin(
       const parsed = parseTypedVirtualModuleId(applyHtmlDefaults(id, options));
       return parsed.ok && parsed.kind === "html";
     },
-    build(id, importer) {
+    build(id, importer, _api, context) {
       const parsed = parseTypedVirtualModuleId(applyHtmlDefaults(id, options));
       if (!parsed.ok) return buildError(parsed.code, parsed.reason, name);
       if (parsed.kind !== "html") return buildError("TVM-ID-001", "expected typed:html", name);
@@ -30,6 +33,7 @@ export function createHtmlVirtualModulePlugin(
         sourcePath: resolve(dirname(importer), parsed.path),
         clientPath: parsed.path,
         outlet: parsed.outlet,
+        context,
       });
     },
   };

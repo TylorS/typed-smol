@@ -1,9 +1,31 @@
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import type { VirtualModuleBuildContext, VirtualModuleBuildError } from "@typed/virtual-modules";
 import { describe, expect, it } from "vitest";
 import { createEnvVirtualModulePlugin } from "./index.js";
 
-const buildEnv = (id: string, env: Readonly<Record<string, string>>) =>
-  createEnvVirtualModulePlugin({ env }).build(id, "/project/src/entry.ts", {} as never);
+const buildEnv = (
+  id: string,
+  env: Readonly<Record<string, string | undefined>>,
+  context?: VirtualModuleBuildContext,
+) => createEnvVirtualModulePlugin({ env }).build(id, "/project/src/entry.ts", {} as never, context);
+
+const namedContext = (names: readonly string[]): VirtualModuleBuildContext => ({
+  id: "typed:env",
+  rootImporter: "/project/src/entry.ts",
+  containingFile: "/project/src/entry.ts",
+  consumer: "server",
+  requestedExports: {
+    kind: "names",
+    names: new Set(names),
+    typeOnlyNames: new Set<string>(),
+  },
+  closure: {
+    kind: "partial",
+    requested: new Set(names),
+    pluginDeclared: new Set(),
+    typeInfoReachable: new Set(),
+    routeOrAppReachable: new Set(),
+  },
+});
 
 describe("EnvVirtualModulePlugin", () => {
   it("resolves exactly typed:env", () => {
@@ -24,6 +46,24 @@ describe("EnvVirtualModulePlugin", () => {
     expect(buildEnv("typed:env", { QUOTED: 'a"b', NEWLINE: "a\nb" })).toBe(
       'export const QUOTED = "a\\"b";\nexport const NEWLINE = "a\\nb";',
     );
+  });
+
+  it("emits only requested environment exports", () => {
+    expect(buildEnv("typed:env", { FOO: "bar", BAZ: "qux" }, namedContext(["BAZ"]))).toBe(
+      'export const BAZ = "qux";',
+    );
+  });
+
+  it("ignores invalid unrequested environment keys", () => {
+    expect(buildEnv("typed:env", { FOO: "bar", "BAD-NAME": "nope" }, namedContext(["FOO"]))).toBe(
+      'export const FOO = "bar";',
+    );
+  });
+
+  it("emits an empty module when no requested environment export exists", () => {
+    expect(
+      buildEnv("typed:env", { FOO: "bar", "BAD-NAME": "nope" }, namedContext(["MISSING"])),
+    ).toBe("export {};");
   });
 
   it("rejects invalid JavaScript export names", () => {

@@ -1,12 +1,28 @@
+import {
+  mustEmitAllExports,
+  requestsAnyExport,
+  requestsExport,
+  type VirtualModuleBuildContext,
+} from "@typed/virtual-modules";
+
 const DEFAULT_OUTLET = "<!--typed-ssr-outlet-->";
+const RUNTIME_EXPORTS = ["loadHtml", "renderHtml"] as const;
+const HTML_EXPORTS = ["html", ...RUNTIME_EXPORTS] as const;
 
 export interface EmitHtmlSourceInput {
   readonly sourcePath: string;
   readonly clientPath?: string;
   readonly outlet?: string;
+  readonly context?: VirtualModuleBuildContext;
 }
 
 export function emitHtmlSource(input: EmitHtmlSourceInput): string {
+  if (!requestsAnyExport(input.context, HTML_EXPORTS)) return "export {};";
+  if (mustEmitAllExports(input.context)) return fullHtmlSource(input);
+  return prunedHtmlSource(input, input.context);
+}
+
+function fullHtmlSource(input: EmitHtmlSourceInput): string {
   const outlet = input.outlet ?? DEFAULT_OUTLET;
   return [
     'import { readFile } from "node:fs/promises";',
@@ -36,6 +52,27 @@ export function emitHtmlSource(input: EmitHtmlSourceInput): string {
   ].join("\n");
 }
 
+function prunedHtmlSource(
+  input: EmitHtmlSourceInput,
+  context: VirtualModuleBuildContext,
+): string {
+  const needsHtml = requestsExport(context, "html");
+  const needsLoadHtml = requestsExport(context, "loadHtml");
+  const needsRenderHtml = requestsExport(context, "renderHtml");
+  const outlet = input.outlet ?? DEFAULT_OUTLET;
+  return [
+    ...(needsLoadHtml ? loadHtmlImportsAndTypes() : []),
+    ...(needsLoadHtml ? loadHtmlPathState(input) : []),
+    needsRenderHtml ? `const outlet = ${JSON.stringify(outlet)};` : "",
+    needsHtml ? htmlExportSource(input.sourcePath, needsLoadHtml) : "",
+    needsLoadHtml ? clientBuildPathSource() : "",
+    needsLoadHtml ? loadHtmlSource() : "",
+    needsRenderHtml ? renderHtmlSource() : "",
+  ]
+    .filter((line) => line.length > 0)
+    .join("\n");
+}
+
 export function applySsrOutlet(
   template: string,
   markup: string,
@@ -63,6 +100,43 @@ function loadHtmlSource(): string {
     '  return read(builtHtmlPath, "utf8");',
     "}",
   ].join("\n");
+}
+
+function htmlSource(value: string): string {
+  return `export const html = ${JSON.stringify(value)};`;
+}
+
+function htmlExportSource(sourcePath: string, usesSourceConst: boolean): string {
+  return usesSourceConst ? "export const html = sourceHtmlPath;" : htmlSource(sourcePath);
+}
+
+function loadHtmlImportsAndTypes(): readonly string[] {
+  return [
+    'import { readFile } from "node:fs/promises";',
+    'import * as TypedConfigModule from "typed:config";',
+    "interface LoadHtmlOptions {",
+    '  readonly readFile?: (path: string, encoding: "utf8") => Promise<string>;',
+    "  readonly dev?: boolean;",
+    "  readonly devServer?: { readonly transformIndexHtml: (url: string, html: string) => string | Promise<string> };",
+    "  readonly url?: string;",
+    "}",
+    "type TypedConfigBuildOptions = {",
+    "  readonly build?: {",
+    "    readonly outDir?: string;",
+    "    readonly clientOutDir?: string;",
+    "  };",
+    "};",
+  ];
+}
+
+function loadHtmlPathState(input: EmitHtmlSourceInput): readonly string[] {
+  return [
+    `const sourceHtmlPath = ${JSON.stringify(input.sourcePath)};`,
+    `const clientHtmlPath = ${JSON.stringify(input.clientPath ?? input.sourcePath)};`,
+    "const typedConfig = TypedConfigModule as TypedConfigBuildOptions;",
+    "const typedBuildConfig = typedConfig.build ?? {};",
+    "const builtHtmlPath = joinClientBuildPath(clientHtmlPath);",
+  ];
 }
 
 function clientBuildPathSource(): string {

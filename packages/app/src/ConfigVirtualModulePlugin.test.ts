@@ -1,12 +1,34 @@
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import type { VirtualModuleBuildContext, VirtualModuleBuildError } from "@typed/virtual-modules";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createConfigVirtualModulePlugin } from "./index.js";
 
-const buildConfig = (id: string, config: Readonly<Record<string, unknown>>) =>
-  createConfigVirtualModulePlugin({ config }).build(id, "/project/src/entry.ts", {} as never);
+const buildConfig = (
+  id: string,
+  config: Readonly<Record<string, unknown>>,
+  context?: VirtualModuleBuildContext,
+) => createConfigVirtualModulePlugin({ config }).build(id, "/project/src/entry.ts", {} as never, context);
+
+const namedContext = (names: readonly string[]): VirtualModuleBuildContext => ({
+  id: "typed:config",
+  rootImporter: "/project/src/entry.ts",
+  containingFile: "/project/src/entry.ts",
+  consumer: "server",
+  requestedExports: {
+    kind: "names",
+    names: new Set(names),
+    typeOnlyNames: new Set<string>(),
+  },
+  closure: {
+    kind: "partial",
+    requested: new Set(names),
+    pluginDeclared: new Set(),
+    typeInfoReachable: new Set(),
+    routeOrAppReachable: new Set(),
+  },
+});
 
 describe("ConfigVirtualModulePlugin", () => {
   it("resolves exactly typed:config", () => {
@@ -33,6 +55,36 @@ describe("ConfigVirtualModulePlugin", () => {
 
   it("emits a module marker for empty computed config", () => {
     expect(buildConfig("typed:config", {})).toMatchInlineSnapshot(`"export {};"`);
+  });
+
+  it("emits only requested config exports", () => {
+    expect(
+      buildConfig(
+        "typed:config",
+        { entry: "server.ts", server: { port: 3000 } },
+        namedContext(["server"]),
+      ),
+    ).toMatchInlineSnapshot(`"export const server = {"port":3000};"`);
+  });
+
+  it("ignores invalid and unserializable unrequested config keys", () => {
+    const source = buildConfig(
+      "typed:config",
+      { entry: "server.ts", "bad-name": true, server: () => 3000 },
+      namedContext(["entry"]),
+    );
+
+    expect(source).toMatchInlineSnapshot(`"export const entry = "server.ts";"`);
+  });
+
+  it("emits an empty module when no requested config export exists", () => {
+    const source = buildConfig(
+      "typed:config",
+      { entry: "server.ts", "bad-name": true, server: () => 3000 },
+      namedContext(["missing"]),
+    );
+
+    expect(source).toMatchInlineSnapshot(`"export {};"`);
   });
 
   it("loads the typed config nearest to the importer when no config is provided", () => {

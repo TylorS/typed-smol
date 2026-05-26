@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createStorybookVirtualModulePlugin } from "./StorybookVirtualModulePlugin.js";
+import type { VirtualModuleBuildContext } from "@typed/virtual-modules";
 
 const importer = "/project/src/story.ts";
 
@@ -7,8 +8,30 @@ function buildStorybook(
   id: string,
   options: Parameters<typeof createStorybookVirtualModulePlugin>[0] = {},
   importerPath = importer,
+  context?: VirtualModuleBuildContext,
 ) {
-  return createStorybookVirtualModulePlugin(options).build(id, importerPath, {} as never);
+  return createStorybookVirtualModulePlugin(options).build(id, importerPath, {} as never, context);
+}
+
+function productionContext(id: string, names: readonly string[]): VirtualModuleBuildContext {
+  return {
+    id,
+    rootImporter: importer,
+    containingFile: importer,
+    consumer: "client",
+    requestedExports: {
+      kind: "names",
+      names: new Set(names),
+      typeOnlyNames: new Set(),
+    },
+    closure: {
+      kind: "partial",
+      requested: new Set(names),
+      pluginDeclared: new Set(),
+      typeInfoReachable: new Set(),
+      routeOrAppReachable: new Set(),
+    },
+  };
 }
 
 describe("StorybookVirtualModulePlugin", () => {
@@ -91,6 +114,81 @@ describe("StorybookVirtualModulePlugin", () => {
     expect(source).toContain("_options?: { readonly baseUrl?: URL | string },");
     expect(source).toContain('throw new Error("Storybook runtime has no api targets configured");');
     expect(source).not.toContain(["make", "Typed", "Client"].join(""));
+  });
+
+  it("omits route and layer imports when production output requests only makeClient", () => {
+    const id = "typed:storybook/runtime?routes=./routes&api=./api&path=/dashboard";
+    const source = buildStorybook(id, {}, importer, productionContext(id, ["makeClient"])) as string;
+
+    expect(source).toContain('import * as Api0 from "typed:api?dir=./api&mode=client";');
+    expect(source).toContain("export const makeClient = Api0.makeClient;");
+    expect(source).not.toContain('import * as Layer from "effect/Layer";');
+    expect(source).not.toContain('import * as TypedRouter from "@typed/router";');
+    expect(source).not.toContain('import Routes0 from "typed:router?dir=./routes";');
+    expect(source).not.toContain("export const makeClientWith");
+    expect(source).not.toContain("export const routeModules");
+    expect(source).not.toContain("export const apiLayers");
+    expect(source).not.toContain("export const DependenciesLayer");
+    expect(source).not.toContain("export function makeStoryRuntime");
+    expect(source).not.toContain("export const parameters");
+  });
+
+  it("imports only the primary api target when production output requests only makeClient", () => {
+    const id = "typed:storybook/runtime?api=./api&api=./admin-api&path=/dashboard";
+    const source = buildStorybook(id, {}, importer, productionContext(id, ["makeClient"])) as string;
+
+    expect(source).toContain('import * as Api0 from "typed:api?dir=./api&mode=client";');
+    expect(source).toContain("export const makeClient = Api0.makeClient;");
+    expect(source).not.toContain('import * as Api1 from "typed:api?dir=./admin-api&mode=client";');
+    expect(source).not.toContain("export const apiModules");
+    expect(source).not.toContain("export const apiLayers");
+  });
+
+  it("emits pruned DependenciesLayer without requiring an apiLayers export", () => {
+    const id = "typed:storybook/runtime?api=./api&path=/dashboard";
+    const source = buildStorybook(
+      id,
+      {},
+      importer,
+      productionContext(id, ["DependenciesLayer"]),
+    ) as string;
+
+    expect(source).toContain('import * as Layer from "effect/Layer";');
+    expect(source).toContain('import * as Api0 from "typed:api?dir=./api&mode=client";');
+    expect(source).toContain(
+      "export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...[Api0.DependenciesLayer]);",
+    );
+    expect(source).not.toContain("export const apiLayers");
+    expect(source).not.toContain("...apiLayers");
+  });
+
+  it("omits the router merge import for single-route pruned Routes output", () => {
+    const id = "typed:storybook/runtime?routes=./routes&path=/dashboard";
+    const source = buildStorybook(id, {}, importer, productionContext(id, ["Routes"])) as string;
+
+    expect(source).toContain('import Routes0 from "typed:router?dir=./routes";');
+    expect(source).toContain("export const Routes = Routes0;");
+    expect(source).not.toContain('import * as TypedRouter from "@typed/router";');
+  });
+
+  it("omits the router merge import for no-route pruned Routes output", () => {
+    const id = "typed:storybook/runtime?path=/dashboard";
+    const source = buildStorybook(id, {}, importer, productionContext(id, ["Routes"])) as string;
+
+    expect(source).toContain("export const Routes = undefined;");
+    expect(source).not.toContain('import * as TypedRouter from "@typed/router";');
+    expect(source).not.toContain("typed:router?dir=");
+  });
+
+  it("omits the HttpClient type import for no-api makeClient-only output", () => {
+    const id = "typed:storybook/runtime?path=/dashboard";
+    const source = buildStorybook(id, {}, importer, productionContext(id, ["makeClient"])) as string;
+
+    expect(source).toContain(
+      "export const makeClient = (_options?: { readonly baseUrl?: URL | string }) => {",
+    );
+    expect(source).not.toContain('import type * as HttpClient from "effect/unstable/http/HttpClient";');
+    expect(source).not.toContain("export const makeClientWith");
   });
 
   it("emits short runtime imports from plugin defaults", () => {

@@ -28,13 +28,13 @@ export function createStorybookVirtualModulePlugin(
       const parsed = parseTypedVirtualModuleId(id);
       return parsed.ok && parsed.kind === "storybook";
     },
-    build(id, importer) {
+    build(id, importer, _api, context) {
       const parsed = parseTypedVirtualModuleId(id);
       if (!parsed.ok) return buildError(parsed.code, parsed.reason, name);
       if (parsed.kind !== "storybook") {
         return buildError("TVM-ID-001", "expected typed:storybook", name);
       }
-      return emitStorybookSource(withRuntimeDefaults(parsed, importer, options.runtimeDefaults));
+      return emitStorybookSource(withRuntimeDefaults(parsed, importer, options.runtimeDefaults), context);
     },
   };
 }

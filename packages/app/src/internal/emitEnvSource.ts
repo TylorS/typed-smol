@@ -1,4 +1,8 @@
-import type { VirtualModuleBuildError } from "@typed/virtual-modules";
+import {
+  requestsExport,
+  type VirtualModuleBuildContext,
+  type VirtualModuleBuildError,
+} from "@typed/virtual-modules";
 
 const RESERVED_WORDS = new Set([
   "break",
@@ -41,12 +45,15 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 export function emitEnvSource(
   env: Readonly<Record<string, string | undefined>>,
   pluginName: string,
+  context?: VirtualModuleBuildContext,
 ): string | VirtualModuleBuildError {
   const lines: string[] = [];
   for (const [key, value] of Object.entries(env)) {
+    if (!requestsExport(context, key)) continue;
     if (!isValidExportName(key)) return invalidEnvKey(key, pluginName);
     lines.push(`export const ${key} = ${JSON.stringify(value)};`);
   }
+  if (context?.requestedExports.kind === "names" && lines.length === 0) return "export {};";
   return lines.join("\n");
 }
 

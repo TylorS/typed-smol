@@ -1,5 +1,8 @@
 import process from "node:process";
-import type { VirtualModuleBuildError, VirtualModulePlugin } from "@typed/virtual-modules";
+import type {
+  VirtualModuleBuildError,
+  VirtualModulePlugin,
+} from "@typed/virtual-modules";
 import ts from "typescript";
 import type { LoadTypedConfigResult } from "./config/index.js";
 import { findTypedConfigRoot, loadTypedConfig } from "./config/index.js";
@@ -25,13 +28,13 @@ export function createConfigVirtualModulePlugin(
       const parsed = parseTypedVirtualModuleId(id);
       return parsed.ok && parsed.kind === "config";
     },
-    build(id, importer) {
+    build(id, importer, _api, context) {
       const parsed = parseTypedVirtualModuleId(id);
       if (!parsed.ok) return buildError(parsed.code, parsed.reason, name);
       if (parsed.kind !== "config") return buildError("TVM-ID-001", "expected typed:config", name);
       const config = resolveConfig(options, importer);
       if (!config.ok) return buildError("TVM-CONFIG-001", config.message, name);
-      return emitConfigSource(config.value, name);
+      return emitConfigSource(config.value, name, context);
     },
   };
 }
