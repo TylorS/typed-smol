@@ -542,6 +542,87 @@ export function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.s
     `);
   });
 
+  it("emits only requested api handler route output in production partial builds", () => {
+    const f = fixture({
+      "src/api/status.ts":
+        "export const route = { path: '/status' }; export const method = 'GET'; export const handler = () => null;",
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
+    const id = "typed:api-handler?path=./api/status.ts";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "route",
+    ]));
+
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Endpoint from "./api/status.js";
+
+      export const route = Endpoint.route;
+      "
+    `);
+  });
+
+  it("emits api handler metadata without endpoint imports in production partial builds", () => {
+    const f = fixture({
+      "src/api/status.ts":
+        "export const route = { path: '/status' }; export const method = 'GET'; export const handler = () => null;",
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
+    const id = "typed:api-handler?path=./api/status.ts";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "metadata",
+    ]));
+
+    expect(source).toMatchInlineSnapshot(`
+      "export const metadata = { bodyMode: "empty", raw: false } as const;
+      "
+    `);
+  });
+
+  it("emits only requested optional api handler exports in production partial builds", () => {
+    const f = fixture({
+      "src/api/status.ts": `
+export const route = { path: '/status' };
+export const method = 'POST';
+export const body = {};
+export const success = {};
+export const handler = () => null;
+`,
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
+    const id = "typed:api-handler?path=./api/status.ts";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "body",
+    ]));
+
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Endpoint from "./api/status.js";
+
+      export const body = Endpoint.body;
+      "
+    `);
+  });
+
+  it("returns an empty api handler module when no requested production export matches", () => {
+    const f = fixture({
+      "src/api/status.ts":
+        "export const route = { path: '/status' }; export const method = 'GET'; export const handler = () => null;",
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-api-handler-virtual-module",
+    )!;
+    const id = "typed:api-handler?path=./api/status.ts";
+
+    expect(
+      plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, ["missing"])),
+    ).toBe("export {};");
+  });
+
   it("generates api handler payload mode when the endpoint exports body", () => {
     const f = fixture({
       "src/api/status.ts": `
@@ -780,5 +861,103 @@ export const template = "<main/>";
 
       "
     `);
+  });
+
+  it("emits only requested route template route output in production partial builds", () => {
+    const f = fixture({
+      "src/routes/home.ts": `
+import * as Route from "@typed/router";
+export const route = Route.Slash;
+export const template = "<main/>";
+`,
+      "src/entry.ts": 'import "typed:route-template?path=./routes/home.ts";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-route-template-virtual-module",
+    )!;
+    const id = "typed:route-template?path=./routes/home.ts";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "route",
+    ]));
+
+    expect(source).toMatchInlineSnapshot(`
+      "import * as RouteModule from "./routes/home.js";
+
+      export const route = RouteModule.route;
+      "
+    `);
+  });
+
+  it("emits only requested route template handler output in production partial builds", () => {
+    const f = fixture({
+      "src/routes/home.ts": `
+import * as Route from "@typed/router";
+export const route = Route.Slash;
+export const template = "<main/>";
+`,
+      "src/entry.ts": 'import "typed:route-template?path=./routes/home.ts";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-route-template-virtual-module",
+    )!;
+    const id = "typed:route-template?path=./routes/home.ts";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "handler",
+    ]));
+
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Fx from "@typed/fx/Fx";
+      import { constant } from "effect/Function";
+      import * as RouteModule from "./routes/home.js";
+
+      export const handler = constant(Fx.succeed(RouteModule.template));
+      "
+    `);
+  });
+
+  it("emits only requested route template concern output in production partial builds", () => {
+    const f = fixture({
+      "src/routes/home.ts": `
+import * as Route from "@typed/router";
+export const route = Route.Slash;
+export const template = "<main/>";
+export const guard = () => null;
+export const layout = (x: unknown) => x;
+`,
+      "src/entry.ts": 'import "typed:route-template?path=./routes/home.ts";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-route-template-virtual-module",
+    )!;
+    const id = "typed:route-template?path=./routes/home.ts";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "guard",
+    ]));
+
+    expect(source).toMatchInlineSnapshot(`
+      "import * as RouteModule from "./routes/home.js";
+
+      export const guard = RouteModule.guard;
+      "
+    `);
+  });
+
+  it("returns an empty route template module when no requested production export matches", () => {
+    const f = fixture({
+      "src/routes/home.ts": `
+import * as Route from "@typed/router";
+export const route = Route.Slash;
+export const template = "<main/>";
+`,
+      "src/entry.ts": 'import "typed:route-template?path=./routes/home.ts";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-route-template-virtual-module",
+    )!;
+    const id = "typed:route-template?path=./routes/home.ts";
+
+    expect(
+      plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, ["missing"])),
+    ).toBe("export {};");
   });
 });

@@ -69,6 +69,27 @@ const DIR_KINDS = new Set<ComposableKind>([
 ]);
 const PATH_KINDS = new Set<ComposableKind>(["route-template", "api-handler"]);
 const SCRIPT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"]);
+const API_HANDLER_EXPORTS = [
+  "endpoint",
+  "route",
+  "method",
+  "headers",
+  "body",
+  "success",
+  "error",
+  "metadata",
+  "handler",
+] as const;
+const ROUTE_TEMPLATE_EXPORTS = [
+  "route",
+  "entrypoint",
+  "template",
+  "handler",
+  "guard",
+  "layout",
+  "dependencies",
+  "catcher",
+] as const;
 
 const DIR_FILE_BY_KIND: Partial<Record<ComposableKind, string>> = {
   services: "_dependencies.ts",
@@ -212,8 +233,8 @@ function createPathPlugin(
         return buildError(kind, `target file does not exist: ${resolved.path}`);
       }
       return kind === "api-handler"
-        ? emitApiHandlerLeaf(resolved.path, importer, api)
-        : emitRouteTemplateLeaf(resolved.path, importer, api);
+        ? emitApiHandlerLeaf(resolved.path, importer, api, context)
+        : emitRouteTemplateLeaf(resolved.path, importer, api, context);
     },
   };
 }
@@ -294,7 +315,14 @@ function emitApiHandlerLeaf(
   path: string,
   importer: string,
   api: TypeInfoApi,
+  context?: VirtualModuleBuildContext,
 ): VirtualModuleBuildResult {
+  if (
+    !mustEmitAllExports(context) &&
+    !requestsAnyExportDeclaration(context, API_HANDLER_EXPORTS)
+  ) {
+    return "export {};";
+  }
   const specifier = toImportSpecifier(
     dirname(toPosixPath(importer)),
     dirname(path),
@@ -313,6 +341,16 @@ function emitApiHandlerLeaf(
   const optionalLines = optionalExports
     .map((name) => `export const ${name} = Endpoint.${name};`)
     .join("\n");
+  if (!mustEmitAllExports(context)) {
+    return emitPartialApiHandlerLeaf(
+      specifier,
+      mode,
+      optionalExports,
+      options,
+      handlerFactory,
+      context,
+    );
+  }
   return `import * as Endpoint from ${JSON.stringify(specifier)};
 import { ApiHandlers } from "@typed/app/httpapi/Handlers";
 
@@ -323,6 +361,74 @@ ${optionalLines}
 export const metadata = { bodyMode: ${JSON.stringify(mode.bodyMode)}, raw: ${mode.raw ? "true" : "false"} } as const;
 export const handler = ApiHandlers.${handlerFactory}(Endpoint${options});
 `;
+}
+
+function emitPartialApiHandlerLeaf(
+  specifier: string,
+  mode: Extract<ApiHandlerMode, { readonly ok: true }>,
+  optionalExports: readonly string[],
+  options: string,
+  handlerFactory: "handler" | "rawHandler",
+  context: VirtualModuleBuildContext,
+): string {
+  const imports = partialApiHandlerImports(specifier, optionalExports, context);
+  const lines = partialApiHandlerLines(mode, optionalExports, options, handlerFactory, context);
+  return lines.length === 0 ? "export {};" : emitVirtualModuleSource(imports, lines.join("\n"));
+}
+
+function partialApiHandlerImports(
+  specifier: string,
+  optionalExports: readonly string[],
+  context: VirtualModuleBuildContext,
+): readonly string[] {
+  const endpointExports = ["endpoint", "route", "method", ...optionalExports];
+  const needsEndpoint =
+    requestsAnyExportDeclaration(context, endpointExports) ||
+    requestsExportDeclaration(context, "handler");
+  return [
+    ...(needsEndpoint
+      ? [`import * as Endpoint from ${JSON.stringify(specifier)};`]
+      : []),
+    ...(requestsExportDeclaration(context, "handler")
+      ? ['import { ApiHandlers } from "@typed/app/httpapi/Handlers";']
+      : []),
+  ];
+}
+
+function partialApiHandlerLines(
+  mode: Extract<ApiHandlerMode, { readonly ok: true }>,
+  optionalExports: readonly string[],
+  options: string,
+  handlerFactory: "handler" | "rawHandler",
+  context: VirtualModuleBuildContext,
+): readonly string[] {
+  const lines: string[] = [];
+  if (requestsExportDeclaration(context, "endpoint")) {
+    lines.push("export const endpoint = Endpoint;");
+  }
+  if (requestsExportDeclaration(context, "route")) {
+    lines.push("export const route = Endpoint.route;");
+  }
+  if (requestsExportDeclaration(context, "method")) {
+    lines.push("export const method = Endpoint.method;");
+  }
+  for (const name of optionalExports) {
+    if (requestsExportDeclaration(context, name)) {
+      lines.push(`export const ${name} = Endpoint.${name};`);
+    }
+  }
+  if (requestsExportDeclaration(context, "metadata")) {
+    lines.push(apiHandlerMetadataSource(mode));
+  }
+  if (requestsExportDeclaration(context, "handler")) {
+    lines.push(`export const handler = ApiHandlers.${handlerFactory}(Endpoint${options});`);
+  }
+  return lines;
+}
+
+function apiHandlerMetadataSource(mode: Extract<ApiHandlerMode, { readonly ok: true }>): string {
+  const raw = mode.raw ? "true" : "false";
+  return `export const metadata = { bodyMode: ${JSON.stringify(mode.bodyMode)}, raw: ${raw} } as const;`;
 }
 
 type ApiHandlerMode =
@@ -365,7 +471,14 @@ function emitRouteTemplateLeaf(
   path: string,
   importer: string,
   api: TypeInfoApi,
+  context?: VirtualModuleBuildContext,
 ): VirtualModuleBuildResult {
+  if (
+    !mustEmitAllExports(context) &&
+    !requestsAnyExportDeclaration(context, ROUTE_TEMPLATE_EXPORTS)
+  ) {
+    return "export {};";
+  }
   const specifier = toImportSpecifier(
     dirname(toPosixPath(importer)),
     dirname(path),
@@ -378,6 +491,16 @@ function emitRouteTemplateLeaf(
   const entrypoint = routeEntrypointFor(snapshot.snapshot, api);
   if (!entrypoint.ok) return buildError("route-template", entrypoint);
   const imports = createImportCollector();
+  if (!mustEmitAllExports(context)) {
+    return emitPartialRouteTemplateLeaf(
+      snapshot.snapshot,
+      specifier,
+      entrypoint,
+      imports,
+      api,
+      context,
+    );
+  }
   const handler = handlerExprFor(
     entrypoint.runtimeKind,
     entrypoint.isFunction,
@@ -410,26 +533,126 @@ ${localConcernExports}
 `;
 }
 
+function emitPartialRouteTemplateLeaf(
+  snapshot: TypeInfoFileSnapshot,
+  specifier: string,
+  entrypoint: Extract<RouteEntrypoint, { readonly ok: true }>,
+  imports: ReturnType<typeof createImportCollector>,
+  api: TypeInfoApi,
+  context: VirtualModuleBuildContext,
+): string {
+  const lines = [
+    ...partialRouteTemplateBaseLines(entrypoint, context),
+    ...partialRouteTemplateHandlerLines(entrypoint, imports, context),
+    ...partialRouteTemplateConcernLines(snapshot, imports.helpers, api, context),
+  ];
+  if (lines.length === 0) return "export {};";
+  return emitPartialRouteTemplateSource(specifier, imports, lines.join("\n"));
+}
+
+function partialRouteTemplateBaseLines(
+  entrypoint: Extract<RouteEntrypoint, { readonly ok: true }>,
+  context: VirtualModuleBuildContext,
+): readonly string[] {
+  const lines: string[] = [];
+  if (requestsExportDeclaration(context, "route")) {
+    lines.push("export const route = RouteModule.route;");
+  }
+  if (requestsExportDeclaration(context, "entrypoint")) {
+    lines.push(`export const entrypoint = ${JSON.stringify({
+      exportName: entrypoint.exportName,
+      runtimeKind: entrypoint.runtimeKind,
+      isFunction: entrypoint.isFunction,
+      expectsRefSubject: entrypoint.expectsRefSubject,
+    })} as const;`);
+  }
+  if (
+    requestsExportDeclaration(context, "template") &&
+    (entrypoint.exportName === "template" || entrypoint.exportName === "default")
+  ) {
+    lines.push(`export const template = RouteModule.${entrypoint.exportName};`);
+  }
+  return lines;
+}
+
+function partialRouteTemplateHandlerLines(
+  entrypoint: Extract<RouteEntrypoint, { readonly ok: true }>,
+  imports: ReturnType<typeof createImportCollector>,
+  context: VirtualModuleBuildContext,
+): readonly string[] {
+  if (requestsExportDeclaration(context, "handler")) {
+    return [
+      `export const handler = ${handlerExprFor(
+        entrypoint.runtimeKind,
+        entrypoint.isFunction,
+        entrypoint.expectsRefSubject,
+        "RouteModule",
+        entrypoint.exportName,
+        imports.helpers,
+      )};`,
+    ];
+  }
+  return [];
+}
+
+function partialRouteTemplateConcernLines(
+  snapshot: TypeInfoFileSnapshot,
+  imports: RouterExpressionImports,
+  api: TypeInfoApi,
+  context: VirtualModuleBuildContext,
+): readonly string[] {
+  const localConcernExports = routeTemplateLocalConcernExports(
+    snapshot,
+    "RouteModule",
+    imports,
+    api,
+    context,
+  );
+  return localConcernExports.length > 0 ? [localConcernExports] : [];
+}
+
+function emitPartialRouteTemplateSource(
+  specifier: string,
+  imports: ReturnType<typeof createImportCollector>,
+  body: string,
+): string {
+  const routeModuleImport = body.includes("RouteModule.")
+    ? `import * as RouteModule from ${JSON.stringify(specifier)};\n`
+    : "";
+  const header = `${imports.lines()}${routeModuleImport}`;
+  return header.length === 0 ? `${body}\n` : `${header}\n${body}\n`;
+}
+
 function routeTemplateLocalConcernExports(
   snapshot: TypeInfoFileSnapshot,
   moduleName: string,
   imports: RouterExpressionImports,
   api: TypeInfoApi,
+  context?: VirtualModuleBuildContext,
 ): string {
   const lines: string[] = [];
-  if (snapshot.exports.some((exp) => exp.name === "guard")) {
+  if (
+    requestsExportDeclaration(context, "guard") &&
+    snapshot.exports.some((exp) => exp.name === "guard")
+  ) {
     lines.push(`export const guard = ${moduleName}.guard;`);
   }
-  if (snapshot.exports.some((exp) => exp.name === "layout")) {
+  if (
+    requestsExportDeclaration(context, "layout") &&
+    snapshot.exports.some((exp) => exp.name === "layout")
+  ) {
     lines.push(`export const layout = ${moduleName}.layout;`);
   }
-  if (snapshot.exports.some((exp) => exp.name === "dependencies")) {
+  if (
+    requestsExportDeclaration(context, "dependencies") &&
+    snapshot.exports.some((exp) => exp.name === "dependencies")
+  ) {
     lines.push(`export const dependencies = ${moduleName}.dependencies;`);
   }
   const catchExport =
     snapshot.exports.find((exp) => exp.name === "catch") ??
     snapshot.exports.find((exp) => exp.name === "catchFn");
-  if (catchExport) {
+  if (requestsExportDeclaration(context, "catcher") && catchExport) {
     lines.push(
       `export const catcher = ${catchExprFor(
         classifyCatchForm(catchExport.type, api),
@@ -440,6 +663,25 @@ function routeTemplateLocalConcernExports(
     );
   }
   return lines.join("\n");
+}
+
+function requestsExportDeclaration(
+  context: VirtualModuleBuildContext | undefined,
+  exportName: string,
+): boolean {
+  if (!context || context.requestedExports.kind === "all") return true;
+  return (
+    context.requestedExports.names.has(exportName) ||
+    context.requestedExports.typeOnlyNames.has(exportName)
+  );
+}
+
+function requestsAnyExportDeclaration(
+  context: VirtualModuleBuildContext | undefined,
+  exportNames: readonly string[],
+): boolean {
+  if (!context || context.requestedExports.kind === "all") return true;
+  return exportNames.some((exportName) => requestsExportDeclaration(context, exportName));
 }
 
 function discoverConcernPaths(kind: ComposableKind, targetDir: string): readonly string[] {
