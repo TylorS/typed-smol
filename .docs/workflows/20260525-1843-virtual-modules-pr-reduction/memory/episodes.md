@@ -48,3 +48,15 @@
   - `pnpm --filter @typed/app test` passed with 35 files, 463 tests, and no type errors.
   - Spec compliance and code-quality re-reviews both approved with no findings.
 - outcome: committed `66a01eb` (`feat(app): prune production virtual module outputs`); T3b remains for HttpApi, composable modules, component, browser/server, and route-handler/plugin families.
+
+## T3b1 - Directory composable production pruning
+
+- objective: make directory composable virtual modules emit only requested production exports while preserving broad dev/no-context output.
+- evidence:
+  - Implementation subagent reported `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` failed first with 5 expected pruning failures.
+  - `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` passed with 1 file, 25 tests, and no type errors.
+  - `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts` passed with 2 files, 107 tests, and no type errors.
+  - `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - `pnpm --filter @typed/app test` passed with 35 files, 469 tests, and no type errors.
+  - Spec compliance and code-quality reviews both approved with no findings.
+- outcome: directory composable plugins prune `modules` and concern-map exports through shared request helpers; T3b2 remains for HttpApi, component, browser/server, route-handler, and path-based composable families.

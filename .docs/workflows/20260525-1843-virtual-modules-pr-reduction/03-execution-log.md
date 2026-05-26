@@ -102,6 +102,30 @@
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
 
+### T3b1 First-party plugin pruning: directory composable modules
+
+- task_id: T3b1
+- parent_task_id: T3
+- requirement_ids: FR-1, FR-2, FR-3, NFR-2, AC-1, AC-2, AC-3
+- ts_scenarios: TS-3, TS-4 partial, TS-5 partial
+- validation_evidence:
+  - RED: implementation subagent reported `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` failed with 5 expected pruning failures before implementation.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/TypedVirtualModulePlugins.test.ts` passed with 1 file, 25 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/RouterVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts` passed with 2 files, 107 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 35 files, 469 tests, and no type errors.
+  - `git diff --check` over T3b1 owner files passed.
+  - Spec compliance review approved with no findings.
+  - Code-quality review approved with no findings.
+- commit: `5c1ddd1` - `feat(app): prune composable virtual module outputs`
+- deviations_or_replans:
+  - T3b1 covers only directory-based composable modules. Path plugins `typed:route-template` and `typed:api-handler` remain unchanged.
+  - T3b2 remains for HttpApi, component, browser/server, route-handler, and path-based composable plugin families.
+- context_updates: none
+- memory_updates:
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
+
 ## Deferred Work
 
-- T3b through T9 remain pending.
+- T3b2 through T9 remain pending.

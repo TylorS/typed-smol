@@ -29,3 +29,11 @@
 - Storybook runtime production partial output now emits only requested runtime exports and direct dependencies. `makeClient`-only imports only the primary API target, `DependenciesLayer`-only does not require an emitted `apiLayers` binding, `@typed/router` appears only for multi-route merge output, and the no-API `HttpClient` type import appears only for `makeClientWith`.
 - Env/config production partial output filters by requested key exports before validation/serialization, so invalid or unserializable unrequested keys do not poison the requested subset.
 - Html production partial output can emit only `html` or only `renderHtml` without pulling filesystem, `typed:config`, `loadHtml`, or build-path helpers.
+
+## 2026-05-26 - T3b1 directory composable production pruning
+
+- Directory composable plugins now honor production requested exports for `modules` and each concern map export.
+- `typed:services` can emit `dependencyInputs`, `dependencyLayers`, `dependencyLayerList`, and `DependenciesLayer` independently; partial `DependenciesLayer` no longer requires an emitted `dependencyLayerList` binding.
+- Directory concern plugins return `export {};` when a production build requests no matching export.
+- Path composable plugins `typed:route-template` and `typed:api-handler` were intentionally left unchanged in T3b1.
+- Residual risk: tests cover services, guard, and headers as representative families. Layout, catch, errors, middlewares, prefix, and openapi share the same map-pruning core.
