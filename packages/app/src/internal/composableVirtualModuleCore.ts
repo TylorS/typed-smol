@@ -10,6 +10,11 @@ import type {
   VirtualModulePlugin,
 } from "@typed/virtual-modules";
 import {
+  mustEmitAllExports,
+  requestsAnyExport,
+  requestsExport,
+} from "@typed/virtual-modules";
+import {
   getCallableReturnType,
   classifyCatchForm,
   classifyDepsExport,
@@ -188,7 +193,7 @@ function createDirPlugin(
       if (!isExistingDirectory(resolved.path)) {
         return buildError(kind, `target directory does not exist: ${resolved.path}`);
       }
-      return emitConcernDir(kind, resolved.path, importer, api);
+      return emitConcernDir(kind, resolved.path, importer, api, context);
     },
   };
 }
@@ -218,25 +223,71 @@ function emitConcernDir(
   targetDir: string,
   importer: string,
   api: TypeInfoApi,
+  context?: VirtualModuleBuildContext,
 ): VirtualModuleBuildResult {
   const paths = discoverConcernPaths(kind, targetDir);
   const importerDir = dirname(toPosixPath(importer));
-  const imports = paths.map((path) => {
+  if (mustEmitAllExports(context)) {
+    return emitFullConcernDir(kind, paths, targetDir, importerDir, api);
+  }
+  if (!requestsAnyExport(context, concernExportsFor(kind))) {
+    return "export {};";
+  }
+  const partial = partialConcernSourcesFor(kind, paths, targetDir, api, context);
+  if (!Array.isArray(partial)) return buildError(kind, partial);
+  if (partial.length === 0) return "export {};";
+  const source = partial.join("\n");
+  return emitVirtualModuleSource(
+    [
+      ...concernRuntimeImportsFor(kind, source, false),
+      ...moduleImportsFor(kind, paths, importerDir, targetDir),
+    ],
+    source,
+  );
+}
+
+function emitFullConcernDir(
+  kind: ComposableKind,
+  paths: readonly string[],
+  targetDir: string,
+  importerDir: string,
+  api: TypeInfoApi,
+): VirtualModuleBuildResult {
+  const normalized = normalizedConcernFor(kind, paths, targetDir, api);
+  if (typeof normalized !== "string") return buildError(kind, normalized);
+  const source = `${modulesSourceFor(kind, paths)}${normalized}`;
+  return emitVirtualModuleSource(
+    [
+      ...concernRuntimeImportsFor(kind, source, true),
+      ...moduleImportsFor(kind, paths, importerDir, targetDir),
+    ],
+    source,
+  );
+}
+
+function moduleImportsFor(
+  kind: ComposableKind,
+  paths: readonly string[],
+  importerDir: string,
+  targetDir: string,
+): readonly string[] {
+  return paths.map((path) => {
     const name = moduleNameFor(kind, path);
     return `import * as ${name} from ${JSON.stringify(toImportSpecifier(importerDir, targetDir, path))};`;
   });
+}
+
+function modulesSourceFor(kind: ComposableKind, paths: readonly string[]): string {
   const entries = paths
     .map((path) => `  ${JSON.stringify(path)}: ${moduleNameFor(kind, path)}`)
     .join(",\n");
-  const normalized = normalizedConcernFor(kind, paths, targetDir, api);
-  if (typeof normalized !== "string") return buildError(kind, normalized);
-  const runtimeImports = concernRuntimeImportsFor(kind, normalized);
-  return `${[...runtimeImports, ...imports].join("\n")}
-
-export const modules = {
+  return `export const modules = {
 ${entries}
-} as const;${normalized}
-`;
+} as const;`;
+}
+
+function emitVirtualModuleSource(imports: readonly string[], source: string): string {
+  return imports.length === 0 ? `${source}\n` : `${imports.join("\n")}\n\n${source}\n`;
 }
 
 function emitApiHandlerLeaf(
@@ -487,6 +538,33 @@ function normalizedConcernFor(
     case "services":
       return normalizedServicesFor(paths, targetDir, api);
     case "guard":
+    case "layout":
+    case "catch":
+    case "headers":
+    case "errors":
+    case "middlewares":
+    case "prefix":
+    case "openapi":
+      return normalizedConcernMapFor(kind, paths, targetDir, api);
+    case "route-template":
+    case "api-handler":
+      return "";
+  }
+}
+
+type NormalizedConcernKind = Exclude<
+  ComposableKind,
+  "services" | "route-template" | "api-handler"
+>;
+
+function normalizedConcernMapFor(
+  kind: NormalizedConcernKind,
+  paths: readonly string[],
+  targetDir: string,
+  api: TypeInfoApi,
+): string | { readonly code: string; readonly reason: string } {
+  switch (kind) {
+    case "guard":
       return normalizedExportMapFor(
         kind,
         "guards",
@@ -513,10 +591,89 @@ function normalizedConcernFor(
       return normalizedExportMapFor(kind, "prefixes", paths, targetDir, api, ["prefix", "default"]);
     case "openapi":
       return normalizedExportMapFor(kind, "openapi", paths, targetDir, api, ["openapi", "default"]);
+  }
+}
+
+function concernExportsFor(kind: ComposableKind): readonly string[] {
+  switch (kind) {
+    case "services":
+      return [
+        "modules",
+        "dependencyInputs",
+        "dependencyLayers",
+        "dependencyLayerList",
+        "DependenciesLayer",
+      ];
+    case "guard":
+      return ["modules", "guards"];
+    case "layout":
+      return ["modules", "layouts"];
+    case "catch":
+      return ["modules", "catchers"];
+    case "headers":
+      return ["modules", "headers"];
+    case "errors":
+      return ["modules", "errors"];
+    case "middlewares":
+      return ["modules", "middlewares"];
+    case "prefix":
+      return ["modules", "prefixes"];
+    case "openapi":
+      return ["modules", "openapi"];
     case "route-template":
     case "api-handler":
-      return "";
+      return [];
   }
+}
+
+function concernMapExportNameFor(kind: NormalizedConcernKind): string {
+  switch (kind) {
+    case "guard":
+      return "guards";
+    case "layout":
+      return "layouts";
+    case "catch":
+      return "catchers";
+    case "headers":
+      return "headers";
+    case "errors":
+      return "errors";
+    case "middlewares":
+      return "middlewares";
+    case "prefix":
+      return "prefixes";
+    case "openapi":
+      return "openapi";
+  }
+}
+
+function partialConcernSourcesFor(
+  kind: ComposableKind,
+  paths: readonly string[],
+  targetDir: string,
+  api: TypeInfoApi,
+  context: VirtualModuleBuildContext,
+): readonly string[] | { readonly code: string; readonly reason: string } {
+  const sources: string[] = [];
+  if (requestsExport(context, "modules")) {
+    sources.push(modulesSourceFor(kind, paths));
+  }
+  if (kind === "services") {
+    return partialServicesSourcesFor(sources, paths, targetDir, api, context);
+  }
+  if (kind === "route-template" || kind === "api-handler") {
+    return sources;
+  }
+  const exportName = concernMapExportNameFor(kind);
+  if (!requestsExport(context, exportName)) return sources;
+  const normalized = normalizedConcernMapFor(kind, paths, targetDir, api);
+  if (typeof normalized !== "string") return normalized;
+  sources.push(withoutLeadingLineBreak(normalized));
+  return sources;
+}
+
+function withoutLeadingLineBreak(source: string): string {
+  return source.startsWith("\n") ? source.slice(1) : source;
 }
 
 function normalizedServicesFor(
@@ -559,20 +716,127 @@ ${layerListEntries}
 export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...dependencyLayerList);`;
 }
 
-function concernRuntimeImportsFor(kind: ComposableKind, source: string): readonly string[] {
+type ValidDependencyRef = Extract<DependencyRef, { readonly ok: true }>;
+
+function partialServicesSourcesFor(
+  sources: readonly string[],
+  paths: readonly string[],
+  targetDir: string,
+  api: TypeInfoApi,
+  context: VirtualModuleBuildContext,
+): readonly string[] | { readonly code: string; readonly reason: string } {
+  const needsServiceMap = requestsAnyExport(context, [
+    "dependencyInputs",
+    "dependencyLayers",
+    "dependencyLayerList",
+    "DependenciesLayer",
+  ]);
+  if (!needsServiceMap) return sources;
+  const refs = validDependencyRefsFor(paths, targetDir, api);
+  if (!Array.isArray(refs)) return refs;
+  const pruned = [...sources];
+  if (requestsExport(context, "dependencyInputs")) {
+    pruned.push(dependencyInputsSource(refs));
+  }
+  if (requestsExport(context, "dependencyLayers")) {
+    pruned.push(dependencyLayersSource(refs));
+  }
+  if (requestsExport(context, "dependencyLayerList")) {
+    pruned.push(dependencyLayerListSource(refs));
+  }
+  if (requestsExport(context, "DependenciesLayer")) {
+    pruned.push(dependenciesLayerSource(refs));
+  }
+  return pruned;
+}
+
+function validDependencyRefsFor(
+  paths: readonly string[],
+  targetDir: string,
+  api: TypeInfoApi,
+): readonly ValidDependencyRef[] | { readonly code: string; readonly reason: string } {
+  const dependencyRefs = dependencyRefsFor(paths, targetDir, api);
+  const failedDependency = dependencyRefs.find((ref) => !ref.ok);
+  if (failedDependency && !failedDependency.ok) return failedDependency;
+  return dependencyRefs.filter((ref): ref is ValidDependencyRef => ref.ok);
+}
+
+function dependencyInputsSource(refs: readonly ValidDependencyRef[]): string {
+  if (refs.length === 0) return "export const dependencyInputs = {} as const;";
+  return `export const dependencyInputs = {
+${dependencyInputEntries(refs)}
+} as const;`;
+}
+
+function dependencyLayersSource(refs: readonly ValidDependencyRef[]): string {
+  if (refs.length === 0) return "export const dependencyLayers = {} as const;";
+  return `export const dependencyLayers = {
+${dependencyLayerEntries(refs)}
+} as const;`;
+}
+
+function dependencyLayerListSource(refs: readonly ValidDependencyRef[]): string {
+  if (refs.length === 0) return "export const dependencyLayerList = [] as const;";
+  return `export const dependencyLayerList = [
+${dependencyLayerExpressionEntries(refs)}
+] as const;`;
+}
+
+function dependenciesLayerSource(refs: readonly ValidDependencyRef[]): string {
+  if (refs.length === 0) return "export const DependenciesLayer = Layer.empty;";
+  return `export const DependenciesLayer = Layer.mergeAll(Layer.empty, ...[
+${dependencyLayerExpressionEntries(refs)}
+] as const);`;
+}
+
+function dependencyInputEntries(refs: readonly ValidDependencyRef[]): string {
+  return refs
+    .map(
+      (ref) =>
+        `  ${JSON.stringify(ref.path)}: ${moduleNameFor("services", ref.path)}.${ref.exportName}`,
+    )
+    .join(",\n");
+}
+
+function dependencyLayerEntries(refs: readonly ValidDependencyRef[]): string {
+  return refs
+    .map((ref) => `  ${JSON.stringify(ref.path)}: ${dependencyLayerExprFor(ref)}`)
+    .join(",\n");
+}
+
+function dependencyLayerExpressionEntries(refs: readonly ValidDependencyRef[]): string {
+  return refs.map((ref) => `  ${dependencyLayerExprFor(ref)}`).join(",\n");
+}
+
+function concernRuntimeImportsFor(
+  kind: ComposableKind,
+  source: string,
+  emitAllExports: boolean,
+): readonly string[] {
   if (kind === "services") {
     return [
-      'import * as Layer from "effect/Layer";',
+      ...(source.includes("Layer.") ? ['import * as Layer from "effect/Layer";'] : []),
       ...(source.includes("Router.") ? ['import * as Router from "@typed/router";'] : []),
     ];
   }
   if (kind === "catch") {
+    if (emitAllExports) {
+      return [
+        'import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";',
+        'import * as Cause from "effect/Cause";',
+        'import * as Effect from "effect/Effect";',
+        'import * as Result from "effect/Result";',
+        'import * as Fx from "@typed/fx/Fx";',
+      ];
+    }
     return [
-      'import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";',
-      'import * as Cause from "effect/Cause";',
-      'import * as Effect from "effect/Effect";',
-      'import * as Result from "effect/Result";',
-      'import * as Fx from "@typed/fx/Fx";',
+      ...(source.includes("RefSubject")
+        ? ['import type { RefSubject } from "@typed/fx/RefSubject/RefSubject";']
+        : []),
+      ...(source.includes("Cause.") ? ['import * as Cause from "effect/Cause";'] : []),
+      ...(source.includes("Effect.") ? ['import * as Effect from "effect/Effect";'] : []),
+      ...(source.includes("Result.") ? ['import * as Result from "effect/Result";'] : []),
+      ...(source.includes("Fx.") ? ['import * as Fx from "@typed/fx/Fx";'] : []),
     ];
   }
   return [];

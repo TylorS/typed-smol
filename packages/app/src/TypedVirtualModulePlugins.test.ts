@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import ts from "typescript";
-import { createTypeInfoApiSession } from "@typed/virtual-modules";
+import { createTypeInfoApiSession, type VirtualModuleBuildContext } from "@typed/virtual-modules";
 import * as App from "./index.js";
 import { createApiHandlerVirtualModulePlugin } from "./ApiHandlerVirtualModulePlugin.js";
 import { createCatchVirtualModulePlugin } from "./CatchVirtualModulePlugin.js";
@@ -63,6 +63,31 @@ function apiFor(f: ReturnType<typeof fixture>) {
     program,
     typeTargetSpecs: [...ROUTER_TYPE_TARGET_SPECS, ...HTTPAPI_TYPE_TARGET_SPECS],
   }).api;
+}
+
+function productionContext(
+  id: string,
+  importer: string,
+  names: readonly string[],
+): VirtualModuleBuildContext {
+  return {
+    id,
+    rootImporter: importer,
+    containingFile: importer,
+    consumer: "server",
+    requestedExports: {
+      kind: "names",
+      names: new Set(names),
+      typeOnlyNames: new Set(),
+    },
+    closure: {
+      kind: "partial",
+      requested: new Set(names),
+      pluginDeclared: new Set(),
+      typeInfoReachable: new Set(),
+      routeOrAppReachable: new Set(),
+    },
+  };
 }
 
 afterEach(() => {
@@ -185,6 +210,37 @@ describe("createTypedVirtualModulePlugins", () => {
     `);
   });
 
+  it("emits only requested service dependency layers in production partial builds", () => {
+    const f = fixture({
+      "src/routes/_dependencies.ts": "export default [];",
+      "src/routes/dashboard.dependencies.ts": "export const dependencies = [];",
+      "src/entry.ts": 'import "typed:services?dir=./routes";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-services-virtual-module",
+    )!;
+    const id = "typed:services?dir=./routes";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "dependencyLayers",
+    ]));
+
+    expect(source).not.toContain("export const modules");
+    expect(source).not.toContain("dependencyInputs");
+    expect(source).not.toContain("dependencyLayerList");
+    expect(source).not.toContain("DependenciesLayer");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Router from "@typed/router";
+      import * as RootDependencies from "./routes/_dependencies.js";
+      import * as DashboardDependencies from "./routes/dashboard.dependencies.js";
+
+      export const dependencyLayers = {
+        "_dependencies.ts": Router.normalizeDependencyInput(RootDependencies.default),
+        "dashboard.dependencies.ts": Router.normalizeDependencyInput(DashboardDependencies.dependencies)
+      } as const;
+      "
+    `);
+  });
+
   it("generates an empty service layer for directories without service companions", () => {
     const f = fixture({
       "src/routes/home.ts": "export const route = {}; export const template = '';",
@@ -267,6 +323,21 @@ export const dependencies = Layer.succeed(DashboardService, { value: "dashboard"
     expect(result).toMatchObject({ errors: [{ code: "CVM-SERVICES-002" }] });
   });
 
+  it("returns an empty service module when no requested production export matches", () => {
+    const f = fixture({
+      "src/routes/_dependencies.ts": "export default [];",
+      "src/entry.ts": 'import "typed:services?dir=./routes";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-services-virtual-module",
+    )!;
+    const id = "typed:services?dir=./routes";
+
+    expect(
+      plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, ["missing"])),
+    ).toBe("export {};");
+  });
+
   it("generates strict guard maps", () => {
     const f = fixture({
       "src/routes/_guard.ts": `
@@ -308,6 +379,53 @@ export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
     const result = plugin.build("typed:guard?dir=./routes", f.importer, apiFor(f));
 
     expect(result).toMatchObject({ errors: [{ code: "CVM-GUARD-001" }] });
+  });
+
+  it("rejects invalid guards when the guards export is requested in production", () => {
+    const f = fixture({
+      "src/routes/_guard.ts": `
+import * as Effect from "effect/Effect";
+export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
+`,
+      "src/entry.ts": 'import "typed:guard?dir=./routes";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-guard-virtual-module",
+    )!;
+    const id = "typed:guard?dir=./routes";
+    const result = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "guards",
+    ]));
+
+    expect(result).toMatchObject({ errors: [{ code: "CVM-GUARD-001" }] });
+  });
+
+  it("emits only requested guard maps in production partial builds", () => {
+    const f = fixture({
+      "src/routes/_guard.ts": `
+import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
+export function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.succeed(Option.none()); }
+`,
+      "src/entry.ts": 'import "typed:guard?dir=./routes";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-guard-virtual-module",
+    )!;
+    const id = "typed:guard?dir=./routes";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "guards",
+    ]));
+
+    expect(source).not.toContain("export const modules");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Guard from "./routes/_guard.js";
+
+      export const guards = {
+        "_guard.ts": Guard.guard
+      } as const;
+      "
+    `);
   });
 
   it("generates strict layout maps", () => {
@@ -359,6 +477,45 @@ export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
       } as const;
       "
     `);
+  });
+
+  it("emits only requested headers maps in production partial builds", () => {
+    const f = fixture({
+      "src/api/_headers.ts": "export const headers = {};",
+      "src/entry.ts": 'import "typed:headers?dir=./api";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-headers-virtual-module",
+    )!;
+    const id = "typed:headers?dir=./api";
+    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
+      "headers",
+    ]));
+
+    expect(source).not.toContain("export const modules");
+    expect(source).toMatchInlineSnapshot(`
+      "import * as Headers from "./api/_headers.js";
+
+      export const headers = {
+        "_headers.ts": Headers.headers
+      } as const;
+      "
+    `);
+  });
+
+  it("returns an empty headers module when no requested production export matches", () => {
+    const f = fixture({
+      "src/api/_headers.ts": "export const headers = {};",
+      "src/entry.ts": 'import "typed:headers?dir=./api";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-headers-virtual-module",
+    )!;
+    const id = "typed:headers?dir=./api";
+
+    expect(
+      plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, ["missing"])),
+    ).toBe("export {};");
   });
 
   it("generates api handler leaf modules", () => {
