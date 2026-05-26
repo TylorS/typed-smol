@@ -86,3 +86,16 @@
   - `pnpm --filter @typed/app test` passed with 35 files, 487 tests, and no type errors.
   - Spec compliance and code-quality reviews approved with no findings after optional API export and route-template concern pruning tests were added.
 - outcome: committed `c7bb40f` (`feat(app): prune path composable module outputs`); component, route-handler, and browser/server plugin families remain.
+
+## T3b2b2a - Route-handlers production pruning
+
+- objective: make `route-handlers:` honor production requested exports while preserving broad dev/no-context default output.
+- evidence:
+  - `pnpm --filter @typed/app exec vitest run src/RouteHandlersVirtualModulePlugin.test.ts` failed first because a missing production export request still emitted the full default handler graph.
+  - `pnpm --filter @typed/app exec vitest run src/RouteHandlersVirtualModulePlugin.test.ts` passed with 1 file, 6 tests, and no type errors.
+  - `pnpm --filter @typed/app exec vitest run src/RouteHandlersVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts src/HtmlVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts` passed with 4 files, 65 tests, and no type errors.
+  - `pnpm --filter @typed/app exec tsc --noEmit --pretty false` passed after fixing non-predicate context and union narrowing in route-handlers plus earlier pruning emitters.
+  - `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - `pnpm --filter @typed/app test` passed with 35 files, 490 tests, and no type errors.
+  - Spec compliance review approved with no findings; code-quality re-review approved after the strict compiler fix.
+- outcome: committed `4834919` (`feat(app): prune route handlers production output`); component and browser/server plugin families remain.

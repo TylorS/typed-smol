@@ -179,6 +179,33 @@
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
 
+### T3b2b2a First-party plugin pruning: route-handlers default export
+
+- task_id: T3b2b2a
+- parent_task_id: T3
+- requirement_ids: FR-1, FR-2, FR-3, NFR-2, AC-1, AC-2, AC-3
+- ts_scenarios: TS-3, TS-4 partial, TS-5 partial
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app exec vitest run src/RouteHandlersVirtualModulePlugin.test.ts` failed before implementation because a production request for a missing export still emitted the full default handler graph.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/RouteHandlersVirtualModulePlugin.test.ts` passed with 1 file, 6 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/RouteHandlersVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts src/HtmlVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts` passed with 4 files, 65 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec tsc --noEmit --pretty false` passed after strict context and union narrowing fixes.
+  - GREEN: `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 35 files, 490 tests, and no type errors.
+  - `git diff --check` over T3b2b2a owner files passed.
+  - Banned wrapper-name scan over T3b2b2a owner files found no `TypedClient`, `TypedClientInput`, `TypedRawClient`, `makeTypedClient`, `makeTypedClientWith`, `makeTypedClientFromRaw`, or `OptionalEndpoint` matches.
+  - Spec compliance review approved with no findings.
+  - Code-quality re-review approved with no findings after `tsc --noEmit` caught and the patch fixed non-predicate narrowing in route-handlers plus earlier pruning emitters.
+- commit: `4834919` - `feat(app): prune route handlers production output`
+- deviations_or_replans:
+  - The route-handlers module has only a default export, so production partial pruning is a default/no-match gate rather than per-named-export source pruning.
+  - `tsc --noEmit` is now part of this slice's evidence because Vitest did not catch strict TypeScript narrowing failures.
+  - Component and browser/server plugin families remain T3b2b2b; browser/server files are still dirty from other work and were not touched.
+- context_updates: none
+- memory_updates:
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
+
 ## Deferred Work
 
-- T3b2b2 through T9 remain pending.
+- T3b2b2b through T9 remain pending.

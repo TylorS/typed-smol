@@ -113,7 +113,8 @@ This is a multi-day release-hardening plan. Do not collapse it into one uninterr
 - [x] T3b1: directory-based composable plugin modules (`typed:services`, `typed:guard`, `typed:layout`, `typed:catch`, `typed:headers`, `typed:errors`, `typed:middlewares`, `typed:prefix`, `typed:openapi`).
 - [x] T3b2a: HttpApi production client-safe export pruning.
 - [x] T3b2b1: path-based composable plugin families (`typed:api-handler`, `typed:route-template`).
-- [ ] T3b2b2: component, route-handler, and browser/server plugin families.
+- [x] T3b2b2a: route-handler production default export pruning.
+- [ ] T3b2b2b: component and browser/server plugin families.
 
 ### T4 TS Plugin and VS Code Shared Cache Stability
 

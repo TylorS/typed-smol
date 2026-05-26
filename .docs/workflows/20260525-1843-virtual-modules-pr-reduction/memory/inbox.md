@@ -54,3 +54,11 @@
 - `typed:route-template` route-only output avoids handler/helper imports; handler-only output imports only the generated handler helpers and route module.
 - `typed:route-template` concern exports such as `guard` can be emitted independently.
 - Browser/server files are dirty from other work and remain untouched. Component, route-handler, and browser/server plugin families remain for the next split.
+
+## 2026-05-26 - T3b2b2a route-handlers production pruning
+
+- `route-handlers:` exposes only a default export, so production partial pruning is a default/no-match gate.
+- Value or type-only `default` requests emit the existing full route handler graph.
+- Missing production requests return `export {};` before directory discovery imports are emitted.
+- `pnpm --filter @typed/app exec tsc --noEmit --pretty false` caught non-predicate narrowing errors that Vitest missed. Keep `tsc --noEmit` in later T3/T4 gates when changing virtual-module build context code.
+- Strictness fixes landed for earlier pruning code in composable path/dir emitters, html, and Storybook runtime by replacing boolean-helper assumptions with explicit context discriminant checks.
