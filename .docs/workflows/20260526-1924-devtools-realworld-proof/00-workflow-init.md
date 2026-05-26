@@ -1,0 +1,75 @@
+## Workflow Init
+
+- objective: Prove Typed DevTools works end-to-end against the RealWorld example for Fx graphs, component tree/source deep links, RefSubject states, HMR, Navigation, and OTEL, while coordinating with the parallel compiler-capability finalization work.
+- started_at: 2026-05-26T19:25:52-0400
+- started_by: human request in Codex
+- source_context_reviewed:
+  - `AGENTS.md`
+  - `.cursor/rules/modes/strict.mdc`
+  - `.cursor/rules/stages/brainstorming.mdc`
+  - `.cursor/rules/effect-skill-loading.mdc`
+  - `.cursor/rules/agent-collaboration.mdc`
+  - `.cursor/skills/effect-skill-router/SKILL.md`
+  - `.cursor/skills/effect-module-effect/SKILL.md`
+  - `.cursor/skills/effect-module-stream/SKILL.md`
+  - `.cursor/skills/effect-module-layer/SKILL.md`
+  - `.cursor/skills/effect-module-unstable-devtools/SKILL.md`
+  - `.cursor/skills/effect-module-unstable-observability/SKILL.md`
+  - `.docs/_templates/workflow-init.md`
+  - `.docs/_templates/brainstorming.md`
+  - `.docs/adrs/20260523-1703-typed-devtools-protocol-boundaries.md`
+  - `.docs/specs/typed-devtools/spec.md`
+  - `.docs/specs/typed-devtools/testing-strategy.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/intent.md`
+  - `.docs/workflows/20260523-1548-developer-tooling-chrome-extension/scope.md`
+  - `.docs/workflows/20260524-1047-cohesion-remediation-plan/developer-tooling-handoff.md`
+  - `.docs/workflows/20260524-1047-cohesion-remediation-plan/requirements.md`
+  - `packages/devtools-protocol/src/Schemas.ts`
+  - `packages/devtools-runtime/src/Layer.ts`
+  - `packages/devtools-runtime/src/Bridge.ts`
+  - `packages/devtools-runtime/src/DomRegistry.ts`
+  - `packages/devtools-runtime/src/FxCapture.ts`
+  - `packages/devtools-runtime/src/RefSubjectCapture.ts`
+  - `packages/devtools-runtime/src/NavigationCapture.ts`
+  - `packages/devtools-chrome/src/panel/app.ts`
+  - `packages/devtools-chrome/src/panel/state.ts`
+  - `packages/devtools-chrome/src/transport/inspectedWindow.ts`
+  - `packages/app/src/runtime/devtools.ts`
+  - `packages/app/src/runtime/devtoolsBridge.ts`
+  - `packages/app/src/runtime/domTemplateRuntime.ts`
+  - `packages/app/src/internal/emitBrowserSource.ts`
+  - `packages/compiler/src/devtools/componentFacts.ts`
+  - `packages/compiler/src/devtools/hmrFacts.ts`
+  - `packages/fx/src/Fx/devtools.ts`
+  - `packages/fx/src/RefSubject/devtools.ts`
+  - `examples/realworld/typed.config.ts`
+  - `examples/realworld/package.json`
+  - Chrome DevTools extension docs: https://developer.chrome.com/docs/extensions/how-to/devtools/extend-devtools
+  - Chrome inspectedWindow docs: https://developer.chrome.com/docs/extensions/reference/api/devtools/inspectedWindow
+  - Chrome extension messaging docs: https://developer.chrome.com/docs/extensions/develop/concepts/messaging
+  - OpenTelemetry specification overview: https://opentelemetry.io/docs/specs/otel/overview/
+  - OpenTelemetry JavaScript docs: https://opentelemetry.io/docs/languages/js/
+- explicit_reuse_override: false
+
+## Notes
+
+- initial constraints:
+  - Mode: `strict`.
+  - Finalization strategy: `merge`.
+  - Existing workflow folders are reference-only.
+  - The checkout is dirty across RealWorld, app runtime, DevTools protocol/runtime/Chrome, Storybook, VS Code, TS plugin, and compiler-adjacent files. Do not revert or absorb another agent's changes.
+  - Another agent is currently finalizing compiler capabilities. This workflow should consume and prove those capabilities through RealWorld, not silently take over broad compiler ownership.
+  - RealWorld is the required proof target, not a toy fixture.
+  - The proof must cover live runtime data and explicit unavailable states; fixture-backed panel data is not proof of end-to-end functionality.
+  - DevTools instrumentation remains development-only and opt-in.
+  - Chrome-specific behavior stays behind `@typed/devtools-chrome`; shared contracts stay in `@typed/devtools-protocol`.
+  - OTEL visualization must preserve OpenTelemetry trace/span identity rather than inventing a Typed-only trace model.
+- initial risks:
+  - The current RealWorld config does not enable devtools, so the proof likely needs a deliberate smoke-mode opt-in path.
+  - Existing browser source tests assert devtools code is absent by default; new proof must preserve that default while adding an explicit devtools path.
+  - The app bridge currently advertises only a narrow runtime capability set, so Fx, RefSubject, HMR, Navigation, and OTEL may need bridge capability/stream hardening.
+  - The panel state currently stores Components/Fx/RefSubjects but treats HMR, Navigation, and OTEL mostly as filtered event rows.
+  - Source deep links require compiler/source Analyzer facts or a reliable unavailable-state path until the dev-server bridge exists.
+  - RealWorld acceptance may remain blocked by environment prerequisites such as missing `hurl`.
+  - Repo policy requires subagent routing for broad/specialist work, but the available Codex subagent tool requires explicit user authorization before spawning; direct workflow setup is recorded until authorization is explicit.
+
