@@ -6,12 +6,12 @@ import { ApiClient, decodedRouteApiClient } from "./common/routeData.js";
 import {
   Routes,
   apiBaseUrl,
+  makeClient,
   makeStoryRuntime,
-  makeTypedClient,
 } from "typed:storybook/runtime?path=/";
 
 const StorybookApiLayer = ApiClient.layer(
-  Effect.map(makeTypedClient({ baseUrl: apiBaseUrl }), decodedRouteApiClient),
+  Effect.map(makeClient({ baseUrl: apiBaseUrl }), decodedRouteApiClient),
 ).pipe(Layer.provideMerge(FetchHttpClient.layer));
 
 const meta = {

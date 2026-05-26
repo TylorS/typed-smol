@@ -141,6 +141,22 @@ function expectHttpApiGeneratedSourceToTypeCheck(
   expect(typeCheck.diagnostics).toEqual([]);
 }
 
+const BANNED_RAW_CLIENT_SURFACE_NAMES = [
+  ["Typed", "Client"],
+  ["Typed", "ClientInput"],
+  ["Typed", "RawClient"],
+  ["make", "Typed", "Client"],
+  ["make", "Typed", "ClientWith"],
+  ["make", "Typed", "ClientFromRaw"],
+  ["Optional", "Endpoint"],
+] as const;
+
+function expectNoGeneratedClientWrappers(sourceText: string): void {
+  for (const parts of BANNED_RAW_CLIENT_SURFACE_NAMES) {
+    expect(sourceText).not.toContain(parts.join(""));
+  }
+}
+
 const NM = join(APP_ROOT, "node_modules");
 
 const HTTPAPI_MODULE_FALLBACKS: Record<string, string> = {
@@ -540,12 +556,7 @@ export const ServerOnly = { use: readFileSync };
     expect(sourceText).toContain("HttpApiClient.makeWith(Api, { ...options, httpClient })");
     expect(sourceText).toContain("export const makeUrlBuilder = ");
     expect(sourceText).toContain("HttpApiClient.urlBuilder(Api, options)");
-    expect(sourceText).toContain("export const makeTypedClient = ");
-    expect(sourceText).toContain("Effect.map(makeClient(options), makeTypedClientFromRaw)");
-    expect(sourceText).toContain(
-      "type TypedRawClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>",
-    );
-    expect(sourceText).not.toContain("type TypedClientInput");
+    expectNoGeneratedClientWrappers(sourceText);
     expect(sourceText).not.toContain("? (...args: Args) => unknown");
     expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
     expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
@@ -668,27 +679,29 @@ export const handler = () => Effect.succeed({ ok: true });
     );
     expect(sourceText).not.toContain("params: StatusRoute.pathSchema");
     expect(sourceText).not.toContain("query: StatusRoute.querySchema");
-    expect(sourceText).toContain(
-      '"status": ((request?: Parameters<RawClient["root"]["status"]>[0]) => optionalEndpoint(client["root"]["status"], request)) as OptionalEndpoint<RawClient["root"]["status"]>',
-    );
+    expectNoGeneratedClientWrappers(sourceText);
+    expect(sourceText).not.toContain(["optional", "Endpoint"].join(""));
   });
 
-  it("propagates custom HttpClient error and service channels through typed clients", () => {
+  it("propagates custom HttpClient error and service channels through raw clients", () => {
     const fixture = createApiFixture({
       "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
       "src/consumer.ts": `
 import type * as Effect from "effect/Effect";
 import type * as HttpClient from "effect/unstable/http/HttpClient";
 import type * as HttpClientError from "effect/unstable/http/HttpClientError";
-import { makeTypedClientWith } from "./api.generated.js";
+import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";
+import { Api, makeClientWith } from "./api.generated.js";
 
 type TransportError = { readonly _tag: "TransportError" };
 type TransportService = { readonly _tag: "TransportService" };
 type Assert<T extends true> = T;
 
 declare const httpClient: HttpClient.HttpClient.With<TransportError, TransportService>;
-const clientEffect = makeTypedClientWith(httpClient);
+const clientEffect = makeClientWith(httpClient);
 type Client = Effect.Success<typeof clientEffect>;
+type RawClient = HttpApiClient.ForApi<typeof Api, TransportError, TransportService>;
+type _ClientIsRaw = Assert<Client extends RawClient ? true : false>;
 declare const client: Client;
 const result = client.root.status({ responseMode: "decoded-only" });
 
@@ -707,12 +720,12 @@ type _PropagatesTransportService = Assert<TransportService extends ResultService
     expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
   });
 
-  it("does not erase typed client endpoint returns to unknown", () => {
+  it("does not erase raw client endpoint returns to unknown", () => {
     const fixture = createApiFixture({
       "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
       "src/consumer.ts": `
 import type * as Effect from "effect/Effect";
-import { makeTypedClient } from "./api.generated.js";
+import { makeClient } from "./api.generated.js";
 
 type Assert<T extends true> = T;
 type IsAny<T> = 0 extends (1 & T) ? true : false;
@@ -721,7 +734,7 @@ type Equals<A, B> =
   (<T>() => T extends A ? 1 : 2) extends
   (<T>() => T extends B ? 1 : 2) ? true : false;
 
-const clientEffect = makeTypedClient();
+const clientEffect = makeClient();
 type Client = Effect.Success<typeof clientEffect>;
 declare const client: Client;
 const result = client.root.status({ responseMode: "decoded-only" });
@@ -741,8 +754,7 @@ type _servicesIsNotAny = Assert<Equals<IsAny<ResultServices>, false>>;
     );
 
     expect(sourceText).toBeDefined();
-    expect(sourceText).not.toContain("type TypedClientInput");
-    expect(sourceText).not.toContain("TypedRawClient<any, any>");
+    expectNoGeneratedClientWrappers(sourceText);
     expect(sourceText).not.toContain("? (...args: Args) => unknown");
     expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
   });

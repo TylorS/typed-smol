@@ -67,8 +67,6 @@ const CLIENT_SAFE_EXPORTS = new Set([
   "makeClient",
   "makeClientWith",
   "makeUrlBuilder",
-  "makeTypedClient",
-  "makeTypedClientWith",
 ]);
 
 export interface HttpApiVirtualModulePluginOptions {

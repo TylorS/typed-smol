@@ -1054,7 +1054,6 @@ function emitHttpApiClientSource(input: {
   const importLines: string[] = [
     `import * as Route from "@typed/router";`,
     `import type * as HttpClient from "effect/unstable/http/HttpClient";`,
-    `import * as Effect from "effect/Effect";`,
     `import * as Layer from "effect/Layer";`,
     `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
     `import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`,
@@ -1064,7 +1063,6 @@ function emitHttpApiClientSource(input: {
   ];
 
   const groupExprs: string[] = [];
-  const typedClientGroups: string[] = [];
   const groupSpecByKey = new Map(input.groupSpecs.map((spec) => [spec.key, spec]));
   const routeBindings = createRouteBindingPlan({
     endpointSpecs: input.endpointSpecs,
@@ -1090,7 +1088,6 @@ function emitHttpApiClientSource(input: {
     const endpointsInGroup = input.endpointSpecs.filter((e) => e.groupKey === groupSpec.key);
     if (endpointsInGroup.length === 0) continue;
     const groupName = input.groupNamesByPath.get(groupSpec.dirPath) ?? groupSpec.defaultName;
-    const typedClientEndpoints: string[] = [];
 
     const endpointExprs = endpointsInGroup.map((endpoint) => {
       const literals = input.extractedLiteralsByPath.get(endpoint.path);
@@ -1134,9 +1131,6 @@ function emitHttpApiClientSource(input: {
           if (expression) optsParts.push(`${optionName}: ${expression}`);
         }
       }
-      typedClientEndpoints.push(
-        renderTypedClientEndpoint(groupName, name, endpointNeedsClientRequest(optsParts)),
-      );
 
       return renderAnnotatedEndpointExpression(
         `HttpApiEndpoint.${factory}(${JSON.stringify(name)}, ${effectiveRouteExpr}.path, { ${optsParts.join(", ")} })`,
@@ -1146,7 +1140,6 @@ function emitHttpApiClientSource(input: {
 
     const suffix = "";
     const groupChain = endpointExprs.map((expr) => `.add(${expr})`).join("");
-    typedClientGroups.push(renderTypedClientGroup(groupName, typedClientEndpoints));
     groupExprs.push(
       renderAnnotatedGroupExpression(
         `HttpApiGroup.make(${JSON.stringify(groupName)})${groupChain}${suffix}`,
@@ -1172,9 +1165,6 @@ export const Api = ${apiExpr};
 export const DependenciesLayer = Layer.empty;
 export const OpenApi = OpenApiModule.fromApi(Api);
 export const Client = HttpApiClient.make(Api);
-type TypedRawClient<E = never, R = never> = HttpApiClient.ForApi<typeof Api, E, R>;
-type OptionalEndpoint<Method extends (...args: ReadonlyArray<any>) => unknown> =
-  (() => ReturnType<Method>) & Method;
 
 export const makeClient = (options?: { readonly baseUrl?: URL | string }) =>
   HttpApiClient.make(Api, options);
@@ -1184,58 +1174,7 @@ export const makeClientWith = <E, R>(
 ) => HttpApiClient.makeWith(Api, { ...options, httpClient });
 export const makeUrlBuilder = (options?: { readonly baseUrl?: URL | string }) =>
   HttpApiClient.urlBuilder(Api, options);
-
-function optionalEndpoint<Method extends (...args: ReadonlyArray<any>) => unknown>(
-  method: Method,
-  request: Parameters<Method>[0] | undefined,
-): ReturnType<Method> {
-  const input = request === undefined ? ({} as Parameters<Method>[0]) : request;
-  return method(input) as ReturnType<Method>;
-}
-
-function makeTypedClientFromRaw<E, R, const RawClient extends TypedRawClient<E, R>>(client: RawClient) {
-  return {
-${typedClientGroups.map((group) => `    ${group}`).join(",\n")}
-  } as const;
-}
-
-export const makeTypedClient = (options?: { readonly baseUrl?: URL | string }) =>
-  Effect.map(makeClient(options), makeTypedClientFromRaw);
-export const makeTypedClientWith = <E, R>(
-  httpClient: HttpClient.HttpClient.With<E, R>,
-  options?: { readonly baseUrl?: URL | string },
-) =>
-  Effect.map(makeClientWith(httpClient, options), makeTypedClientFromRaw);
 `;
-}
-
-function renderTypedClientGroup(groupName: string, endpointEntries: readonly string[]): string {
-  return `${JSON.stringify(groupName)}: {\n${endpointEntries.map((entry) => `      ${entry}`).join(",\n")}\n    }`;
-}
-
-function renderTypedClientEndpoint(
-  groupName: string,
-  endpointName: string,
-  requestRequired: boolean,
-): string {
-  const groupKey = JSON.stringify(groupName);
-  const endpointKey = JSON.stringify(endpointName);
-  const methodType = `RawClient[${groupKey}][${endpointKey}]`;
-  const methodCall = `client[${groupKey}][${endpointKey}]`;
-  if (requestRequired) {
-    return `${endpointKey}: ${methodCall}`;
-  }
-  return `${endpointKey}: ((request?: Parameters<${methodType}>[0]) => optionalEndpoint(${methodCall}, request)) as OptionalEndpoint<${methodType}>`;
-}
-
-function endpointNeedsClientRequest(optionParts: readonly string[]): boolean {
-  return optionParts.some(
-    (part) =>
-      part.startsWith("params:") ||
-      part.startsWith("query:") ||
-      part.startsWith("payload:") ||
-      part.startsWith("headers:"),
-  );
 }
 
 function shouldEmitClientRouteSchemas(path: string | undefined): boolean {

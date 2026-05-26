@@ -21,6 +21,9 @@ export function emitStorybookSource(parsed: StorybookId): string {
 function emitRuntime(parsed: RuntimeId): string {
   return [
     'import * as Layer from "effect/Layer";',
+    ...(parsed.apis.length === 0
+      ? ['import type * as HttpClient from "effect/unstable/http/HttpClient";']
+      : []),
     'import type { LayerOrGroup } from "@typed/app/runtime";',
     'import { defineTypedStoryRuntime } from "@typed/storybook";',
     'import * as TypedRouter from "@typed/router";',
@@ -106,14 +109,20 @@ function jsonOrDefault(value: string | undefined, fallback: string): string {
 function apiClientExports(apiModules: readonly string[]): string {
   if (apiModules.length === 0) {
     return [
-      "export const makeTypedClient = () => {",
+      "export const makeClient = (_options?: { readonly baseUrl?: URL | string }) => {",
+      '  throw new Error("Storybook runtime has no api targets configured");',
+      "};",
+      "export const makeClientWith = <E, R>(",
+      "  _httpClient: HttpClient.HttpClient.With<E, R>,",
+      "  _options?: { readonly baseUrl?: URL | string },",
+      ") => {",
       '  throw new Error("Storybook runtime has no api targets configured");',
       "};",
     ].join("\n");
   }
   const primary = apiModules[0]!;
   return [
-    `export const makeTypedClient = ${primary}.makeTypedClient;`,
-    `export const makeTypedClientWith = ${primary}.makeTypedClientWith;`,
+    `export const makeClient = ${primary}.makeClient;`,
+    `export const makeClientWith = ${primary}.makeClientWith;`,
   ].join("\n");
 }
