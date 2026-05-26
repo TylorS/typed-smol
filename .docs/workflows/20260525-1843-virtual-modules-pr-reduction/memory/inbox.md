@@ -37,3 +37,11 @@
 - Directory concern plugins return `export {};` when a production build requests no matching export.
 - Path composable plugins `typed:route-template` and `typed:api-handler` were intentionally left unchanged in T3b1.
 - Residual risk: tests cover services, guard, and headers as representative families. Layout, catch, errors, middlewares, prefix, and openapi share the same map-pruning core.
+
+## 2026-05-26 - T3b2a HttpApi production pruning
+
+- HttpApi implicit production partial output now emits only requested client-safe exports plus concrete dependencies; explicit `mode=client` stays broad.
+- `DependenciesLayer`-only output emits only `Layer.empty`, without `Api`, `HttpApiClient`, endpoint, group, or OpenApi imports.
+- `Api`, `OpenApi`, `Client`, `makeClient`, `makeClientWith`, and `makeUrlBuilder` production permutations have focused pruning coverage.
+- Type-only requested exports count as declaration demand for HttpApi output. `import type { Api }` now keeps the generated `Api` declaration and is covered by generated-source type checking.
+- A shared core helper for value-or-type export demand was not added in this slice because app tests resolve `@typed/virtual-modules` through built `dist`; revisit as a dedicated core change if other plugins need the same helper.

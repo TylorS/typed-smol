@@ -126,6 +126,34 @@
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
   - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
 
+### T3b2a First-party plugin pruning: HttpApi production client-safe output
+
+- task_id: T3b2a
+- parent_task_id: T3
+- requirement_ids: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-18, NFR-1, NFR-2, AC-1, AC-2, AC-3, AC-4, AC-5, AC-6
+- ts_scenarios: TS-2, TS-3, TS-4 partial, TS-5 partial
+- validation_evidence:
+  - RED: `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts` failed before implementation on 3 production pruning assertions for `Client`, `makeClient`, and `makeClientWith`.
+  - RED: spec review then identified `DependenciesLayer`-only production output still emitted `Api` and imported HttpApi client machinery; new assertions failed on `DependenciesLayer`-only, `Api`-only, and `OpenApi`-only output.
+  - RED: code-quality review then identified type-only requested exports were pruned to `export {};`; new `import type { Api }` generated-source test failed with missing `Api`.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts` passed with 1 file, 101 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts` passed with 3 files, 138 tests, and no type errors.
+  - GREEN: `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - GREEN: `pnpm --filter @typed/app test` passed with 35 files, 479 tests, and no type errors.
+  - `git diff --check` over T3b2a owner files passed.
+  - Banned wrapper-name scan over T3b2a owner files found no `TypedClient`, `TypedClientInput`, `TypedRawClient`, `makeTypedClient`, `makeTypedClientWith`, `makeTypedClientFromRaw`, or `OptionalEndpoint` matches.
+  - Spec compliance re-review approved with no findings.
+  - Code-quality re-review approved with no findings.
+- commit: `f96ac51` - `feat(app): prune httpapi production client output`
+- deviations_or_replans:
+  - Explicit `mode=client` remains broad even when production build context is available; only implicit full-mode production partial output prunes.
+  - A shared core helper for value-or-type export demand was considered but backed out because app tests resolve `@typed/virtual-modules` through built `dist`; this slice keeps declaration-demand logic local to HttpApi.
+  - T3b2a covers only HttpApi. Component, browser/server, route-handler, and path-based composable plugin families remain T3b2b.
+- context_updates: none
+- memory_updates:
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/inbox.md`
+  - `.docs/workflows/20260525-1843-virtual-modules-pr-reduction/memory/episodes.md`
+
 ## Deferred Work
 
-- T3b2 through T9 remain pending.
+- T3b2b through T9 remain pending.

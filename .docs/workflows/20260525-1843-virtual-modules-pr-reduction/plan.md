@@ -111,7 +111,8 @@ This is a multi-day release-hardening plan. Do not collapse it into one uninterr
 - [x] Split T3 after inventory because more than two first-party plugin families need pruning rewrites.
 - [x] T3a: router, Storybook, env, config, and html production-pruning emitters and tests.
 - [x] T3b1: directory-based composable plugin modules (`typed:services`, `typed:guard`, `typed:layout`, `typed:catch`, `typed:headers`, `typed:errors`, `typed:middlewares`, `typed:prefix`, `typed:openapi`).
-- [ ] T3b2: HttpApi, component, browser/server, route-handler, and path-based composable plugin families.
+- [x] T3b2a: HttpApi production client-safe export pruning.
+- [ ] T3b2b: component, browser/server, route-handler, and path-based composable plugin families.
 
 ### T4 TS Plugin and VS Code Shared Cache Stability
 

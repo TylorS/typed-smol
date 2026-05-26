@@ -60,3 +60,17 @@
   - `pnpm --filter @typed/app test` passed with 35 files, 469 tests, and no type errors.
   - Spec compliance and code-quality reviews both approved with no findings.
 - outcome: directory composable plugins prune `modules` and concern-map exports through shared request helpers; T3b2 remains for HttpApi, component, browser/server, route-handler, and path-based composable families.
+
+## T3b2a - HttpApi production client-safe pruning
+
+- objective: make HttpApi implicit production partial output emit only requested client-safe exports and concrete dependencies while preserving raw Effect client fidelity.
+- evidence:
+  - Initial focused HttpApi tests failed before implementation on production `Client`, `makeClient`, and `makeClientWith` pruning.
+  - Spec review found `DependenciesLayer`-only output still emitted `Api` and imported client machinery; added failing coverage for `DependenciesLayer`-only, `Api`-only, `OpenApi`-only, and `makeUrlBuilder`.
+  - Code-quality review found type-only requested exports were pruned to `export {};`; added failing generated-source coverage for `import type { Api }`.
+  - `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts` passed with 1 file, 101 tests, and no type errors.
+  - `pnpm --filter @typed/app exec vitest run src/HttpApiVirtualModulePlugin.test.ts src/StorybookVirtualModulePlugin.test.ts src/TypedVirtualModulePlugins.test.ts` passed with 3 files, 138 tests, and no type errors.
+  - `pnpm --filter @typed/virtual-modules-vite test` passed with 3 files and 25 tests.
+  - `pnpm --filter @typed/app test` passed with 35 files, 479 tests, and no type errors.
+  - Spec compliance and code-quality re-reviews both approved with no findings.
+- outcome: committed `f96ac51` (`feat(app): prune httpapi production client output`); T3b2b remains for component, browser/server, route-handler, and path-based composable plugin families.
