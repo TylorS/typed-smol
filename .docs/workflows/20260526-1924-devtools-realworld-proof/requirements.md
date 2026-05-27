@@ -1,6 +1,6 @@
 # Requirements - DevTools RealWorld End-To-End Proof
 
-Status: approved on 2026-05-26.
+Status: approved on 2026-05-26 after production-grade review.
 
 ## Functional Requirements
 
@@ -11,7 +11,7 @@ Status: approved on 2026-05-26.
 - FR-5: Fixture-backed panel data must not count as proof for RealWorld Components, Fx, RefSubjects, HMR, Navigation, OTEL, DOM, or Sources functionality.
 - FR-6: RealWorld component/template mount events must appear in the runtime event stream and populate the component tree.
 - FR-7: DOM deep links must resolve from a mounted RealWorld DOM binding to its owning component/template when the DOM registry has a binding.
-- FR-8: Source deep links must resolve through compiler/source facts when available, or show a precise source-analyzer unavailable state when that bridge is missing.
+- FR-8: Source deep links must resolve through compiler/source facts to an exact RealWorld resource, line, and column in production-grade completion. Source-analyzer unavailable is an intermediate diagnostic state only.
 - FR-9: At least one RealWorld Fx path must emit live `FxNodeEvent` data through the runtime stream.
 - FR-10: If full Fx topology is unavailable, the UI and docs must distinguish event capture from graph topology support.
 - FR-11: At least one RealWorld RefSubject path must emit snapshot or update data with id, version, value summary, and subscriber count when available.
@@ -24,6 +24,21 @@ Status: approved on 2026-05-26.
 - FR-18: OTEL requirements and implementation must preserve OpenTelemetry trace/span identity rather than replacing it with a Typed-only trace format.
 - FR-19: Any compiler capability missing from RealWorld proof must be documented as a precise dependency with the missing fact/event/id and the smallest reproducing command or interaction.
 - FR-20: The proof must include runnable local commands or browser automation steps for RealWorld devtools startup, interaction, and assertion.
+- FR-21: Production-grade completion must require live RealWorld proof for Components, DOM links, Source links, Fx, RefSubjects, HMR, Navigation, and OTEL. A documented blocker is evidence for replanning, not acceptance.
+- FR-22: The runtime event protocol must include enough data to render a real Fx graph, not only a flat Fx event table: stable node ids, labels, owner ids, parent/child or producer/consumer edges, lifecycle phase, timestamps, and last value/error summaries.
+- FR-23: Component tree rows must include stable component id, display name, source location when available, template hash when available, DOM binding ids, owned Fx node ids, owned RefSubject ids, and HMR boundary id when available.
+- FR-24: Source deep links must open the exact RealWorld source resource and line through Chrome DevTools or an automated equivalent; source-analyzer unavailable is a failure for production-grade completion.
+- FR-25: RefSubject state rows must include stable id, owner/service identity when available, current value summary, version, subscriber count, update timestamp, and bounded update history.
+- FR-26: HMR rows must include boundary id, module id, template optimization status, stateful-HMR status, service ids when eligible, structured rejection reasons when rejected, and update timestamp.
+- FR-27: Navigation rows must include event id, type, origin URL when available, destination URL, committed/current entry id when available, timestamp, and correlation ids to route/component/Fx/RefSubject/OTEL data when available.
+- FR-28: OTEL rows must include trace id, span id, parent span id when available, span name, start time, duration or end time, status, attributes summary, events count, links count, and Typed correlation ids.
+- FR-29: The panel must render first-class views for Component Tree, Fx Graph, RefSubject States, HMR, Navigation, OTEL, and Sources. A generic event list is not sufficient for production-grade completion.
+- FR-30: The RealWorld smoke must exercise a deterministic scripted scenario that triggers all required lanes in one run or a documented sequence of runs.
+- FR-31: The final proof must run against the built Chrome extension panel or a browser automation harness that uses the same panel code and inspected-window bridge. Unit-only and fixture-only proof is insufficient.
+- FR-32: The final proof must include reload/reconnect behavior: initial connect, page reload, panel replay after reconnect, and no stale fixture state after reconnect.
+- FR-33: The devtools bridge must reject invalid protocol payloads and tolerate bridge exceptions without crashing the inspected RealWorld app.
+- FR-34: Production-grade completion must include at least one negative test proving devtools-disabled RealWorld exposes no `__TYPED_DEVTOOLS__` bridge.
+- FR-35: Production-grade completion must include a release checklist for extension artifact completeness: manifest, devtools page, panel assets, background/service worker, and load-unpacked smoke instructions or automation.
 
 ## Non-Functional Requirements
 
@@ -40,6 +55,13 @@ Status: approved on 2026-05-26.
 - NFR-11: Tests should be focused and fail before implementation during Phase 4.
 - NFR-12: RealWorld acceptance claims must name any environment blockers, including missing `hurl`, instead of treating blocked gates as passing.
 - NFR-13: Workflow memory must capture stable proof commands, blockers, and cross-agent dependency facts before each task commit.
+- NFR-14: All requested capabilities are P0 for this workflow. None may remain `should_have` or `could_have` at finalization.
+- NFR-15: Production-grade acceptance requires deterministic automation where feasible; any manual smoke is a temporary supplement and must have exact click/path/assertion steps.
+- NFR-16: Runtime capture overhead in devtools mode must be bounded by retention limits and must not create unbounded event/value history.
+- NFR-17: Redaction and serialization limits must apply before data leaves the inspected page.
+- NFR-18: Capability negotiation must be fail-closed: unsupported or failed capabilities render unavailable states and must not silently emit partial fake data.
+- NFR-19: Browser/Chrome-specific behavior must be tested at the Chrome boundary or explicitly documented with a manual load-unpacked smoke until automation exists.
+- NFR-20: Every task must name exact files, tests, commands, expected failures, and expected passing outputs before implementation begins.
 
 ## Acceptance Criteria
 
@@ -47,35 +69,33 @@ Status: approved on 2026-05-26.
 - AC-2: A runtime/bridge test proves one `DevtoolsRuntimeService` event bus is shared by DOM registry, bridge handshake, and event replay. Maps to FR-2, FR-3, NFR-3.
 - AC-3: A panel or inspected-window smoke connects to RealWorld, reports `runtime connected`, and receives no fixture-only runtime rows. Maps to FR-4, FR-5, NFR-6, NFR-7.
 - AC-4: RealWorld component/template mount data appears in the panel component tree after hydration. Maps to FR-6, NFR-8.
-- AC-5: A mounted RealWorld DOM binding can be inspected or resolved to its component/template, or the test records the exact missing binding dependency. Maps to FR-7, FR-19.
-- AC-6: Source action output either opens/resolves a RealWorld source target from compiler/source facts or shows the source-analyzer unavailable state with no fabricated browser-only analysis. Maps to FR-8, FR-19, NFR-4.
-- AC-7: A RealWorld interaction emits at least one live Fx row or records the exact compiler/runtime instrumentation gap preventing Fx proof. Maps to FR-9, FR-10, FR-19, NFR-3.
-- AC-8: A RealWorld interaction emits at least one RefSubject snapshot/update row or records the exact missing RefSubject owner/service instrumentation gap. Maps to FR-11, FR-12, FR-19.
+- AC-5: A mounted RealWorld DOM binding can be inspected or resolved to its component/template. Maps to FR-7, FR-19.
+- AC-6: Source action output opens or resolves a RealWorld source target from compiler/source facts with no fabricated browser-only analysis. Maps to FR-8, FR-19, NFR-4.
+- AC-7: A RealWorld interaction emits a live Fx graph with at least two connected nodes or a single node with an explicit no-edge reason rooted in real runtime topology. Maps to FR-9, FR-10, FR-21, FR-22, NFR-3.
+- AC-8: A RealWorld interaction emits at least one RefSubject snapshot and one update row with value summary, version, and timestamp. Maps to FR-11, FR-12, FR-21, FR-25.
 - AC-9: RealWorld HMR proof shows template optimization separately from stateful-HMR status and rejection reasons. Maps to FR-13, FR-14.
 - AC-10: RealWorld route transitions emit Navigation rows in the panel. Maps to FR-15, FR-16.
-- AC-11: OTEL rows render span identity and Typed correlations from the selected first-pass trace source, or the requirements/spec explicitly mark OTEL as blocked by a named source decision. Maps to FR-17, FR-18, FR-19.
+- AC-11: OTEL rows render at least one trace with parent/child span identity, timing, status, attributes summary, and at least one Typed correlation id from RealWorld. Maps to FR-17, FR-18, FR-21, FR-28.
 - AC-12: Local proof instructions list commands, ports, browser/extension setup, expected visible rows, and known environment blockers. Maps to FR-20, NFR-12, NFR-13.
 - AC-13: Every Phase 4 task links back to one or more FR/NFR ids and updates workflow memory before commit. Maps to NFR-11, NFR-13.
+- AC-14: The panel has distinct views for Component Tree, Fx Graph, RefSubject States, HMR, Navigation, OTEL, and Sources, and each view is populated by live RealWorld data in final proof. Maps to FR-21, FR-29.
+- AC-15: The RealWorld smoke runs a deterministic scenario that triggers every required capability lane and fails if any lane is absent. Maps to FR-30, NFR-15.
+- AC-16: Chrome extension artifact smoke loads the built extension or equivalent panel harness and proves connect, reload, replay, and no stale fixture state. Maps to FR-31, FR-32, FR-35, NFR-19.
+- AC-17: Invalid bridge payload tests fail closed and do not crash RealWorld. Maps to FR-33, NFR-18.
+- AC-18: Devtools-disabled RealWorld exposes no `__TYPED_DEVTOOLS__` bridge. Maps to FR-34, NFR-1, NFR-2.
+- AC-19: Final plan tasks name exact file paths, tests, commands, expected failing output, and expected passing output. Maps to NFR-20.
 
 ## Prioritization
 
 - must_have:
-  - FR-1 through FR-8
-  - FR-13 through FR-16
-  - FR-19 through FR-20
-  - NFR-1 through NFR-13
-  - AC-1 through AC-6
-  - AC-9 through AC-13
+  - FR-1 through FR-35
+  - NFR-1 through NFR-20
+  - AC-1 through AC-19
 - should_have:
-  - FR-9 through FR-12
-  - FR-17 through FR-18
-  - AC-7
-  - AC-8
-  - AC-11
+  - none for production-grade completion
 - could_have:
   - richer Navigation transition details beyond type and destination
-  - full Fx graph topology if runtime/compiler facts are ready
-  - automated Chrome extension smoke if an inspected-window smoke proves the same live bridge first
+  - additional visual polish after truthful live data is complete
 
 ## Research Notes
 

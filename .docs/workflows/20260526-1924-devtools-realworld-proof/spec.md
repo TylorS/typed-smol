@@ -1,6 +1,6 @@
 # Specification - DevTools RealWorld End-To-End Proof
 
-Status: approved on 2026-05-26.
+Status: approved on 2026-05-26 after production-grade review.
 
 ## System Context and Scope
 
@@ -15,6 +15,8 @@ The proof system is not a new DevTools architecture. It is a RealWorld acceptanc
 - compiler capability output remains a dependency owned by the parallel compiler-capability lane unless this workflow receives explicit expanded ownership.
 
 The first proof target is a devtools smoke mode for RealWorld. Normal RealWorld builds must continue to prove devtools is disabled by default.
+
+Production-grade means every named capability is live against RealWorld, deterministic to verify, bounded in memory, fail-closed at untrusted boundaries, and represented by a first-class panel view. An unavailable state is acceptable during development and for optional host features, but it is not a final acceptance state for Components, DOM links, Source links, Fx Graph, RefSubject States, HMR, Navigation, or OTEL in this workflow.
 
 ## Component Responsibilities and Interfaces
 
@@ -65,6 +67,23 @@ Runtime event families:
 - `NavigationEvent`;
 - `OtelSpan`.
 
+The event bus must retain bounded replay state with explicit `RuntimeReplayState` metadata. Replay state must report retained events, dropped events, reconnectability, session id, and session mismatch rather than silently returning partial history.
+
+### Capability Data Contracts
+
+Production-grade proof requires these minimum live contracts:
+
+| capability | required live data |
+| ---------- | ------------------ |
+| Component Tree | component id, display name, template hash when available, source location when available, DOM binding ids, Fx ids, RefSubject ids, HMR boundary id |
+| DOM Links | binding id, component id, template part id when available, and inspect action result |
+| Sources | resource path, line, column, source location id, and panel action that opens the RealWorld source target |
+| Fx Graph | stable node id, label, owner id, edges, lifecycle phase, timestamp, last value/error summary |
+| RefSubject States | stable id, owner/service identity, current value summary, version, subscriber count, update timestamp, bounded history |
+| HMR | boundary id, module id, template optimization, stateful status, service ids, rejection reasons, timestamp |
+| Navigation | event id, type, origin when available, destination, entry id when available, timestamp, correlation ids when available |
+| OTEL | trace id, span id, parent span id when available, name, start/end or duration, status, attributes summary, events count, links count, Typed correlation ids |
+
 ### Chrome Panel And Inspected-Window Transport
 
 Responsibilities:
@@ -79,6 +98,17 @@ Interface:
 - inspected-window RPC expressions call `globalThis.__TYPED_DEVTOOLS__`;
 - panel state is derived from `RuntimeEventStreamItem` replay plus live event envelopes;
 - source and DOM actions use protocol ids and Chrome DevTools APIs only at the Chrome boundary.
+
+The panel must expose first-class views for Component Tree, Fx Graph, RefSubject States, HMR, Navigation, OTEL, and Sources. Generic runtime event rows are useful for diagnostics but cannot satisfy production-grade acceptance for these capabilities.
+
+### Extension Artifact And Reconnect Behavior
+
+Responsibilities:
+
+- Build a complete load-unpacked extension artifact with manifest, devtools page, panel assets, and background/service-worker assets.
+- Prove panel connection to RealWorld after first load.
+- Prove page reload followed by panel replay without stale fixture rows.
+- Prove the disabled RealWorld build exposes no page bridge.
 
 ### Compiler Capability Dependency
 
@@ -134,7 +164,7 @@ sequenceDiagram
 5. The Chrome panel calls inspected-window RPC expressions against that bridge.
 6. The bridge handshakes accepted capabilities from actual runtime services.
 7. The bridge returns replay state and runtime event envelopes from the shared event bus.
-8. RealWorld interactions produce events through mounted components, route navigation, state updates, HMR smoke, Fx capture, and the selected OTEL source where wired.
+8. RealWorld interactions produce events through mounted components, route navigation, state updates, HMR smoke, Fx capture, and OTEL spans.
 9. The panel renders live rows or explicit unavailable states.
 10. Missing compiler facts become dependency records with exact missing id/event/fact.
 
@@ -146,12 +176,15 @@ sequenceDiagram
 | Panel shows fixture rows while connected to RealWorld | Add connected-state assertions that fixture ids are absent unless the runtime source is a fixture. |
 | Multiple runtimes fragment replay state | Test that DOM registry, bridge, and replay share one `DevtoolsRuntimeService`. |
 | Handshake advertises unwired capabilities | Derive accepted capabilities from installed runtime/registry/analyzer support. |
-| Source links are missing | Render source-analyzer unavailable state and document the compiler/dev-server dependency. |
-| Fx events exist but graph topology does not | Label first proof as event capture and mark graph topology unavailable. |
+| Source links are missing | Treat as a production-grade blocker; source-analyzer unavailable is only an intermediate diagnostic state. |
+| Fx events exist but graph topology does not | Treat as a production-grade blocker unless the graph has a single real node and a protocol-backed no-edge reason. |
 | RefSubject values are too large or sensitive | Serialize through bounded protocol helpers before crossing the bridge. |
 | HMR status collapses to a boolean | Keep template optimization and stateful-HMR status as separate facts. |
 | OTEL proof invents a trace model | Preserve OpenTelemetry trace/span ids and add Typed correlations as metadata. |
 | RealWorld gates are blocked by environment | Record blocker, exact command, and error instead of claiming pass. |
+| Bridge receives malformed payload | Decode through protocol schemas, return fail-closed unavailable/error result, and do not crash RealWorld. |
+| Event history grows without bound | Enforce retention limits and expose dropped-event metadata in replay state. |
+| Chrome panel reconnects after reload with stale state | Reset stale session state and require fresh replay from the inspected runtime. |
 
 ## Requirement Traceability
 
@@ -168,6 +201,9 @@ sequenceDiagram
 | FR-15, FR-16 | Navigation capture | Real route transitions produce panel-visible events. |
 | FR-17, FR-18 | OTEL correlation | Span identity is preserved with optional Typed correlations. |
 | FR-20, NFR-11, NFR-12, NFR-13 | Verification and memory | Commands, blockers, and task traceability are persisted. |
+| FR-21, NFR-14 | Production-grade completion definition | All named capabilities must be live against RealWorld before final success. |
+| FR-22 through FR-29 | Capability Data Contracts | Minimum field-level contracts for each panel view. |
+| FR-30 through FR-35, NFR-15 through NFR-20 | Extension, smoke, security, and plan completeness | Deterministic automation, artifact completeness, fail-closed bridge behavior, and exact implementation tasks. |
 
 ## Memory Design
 
