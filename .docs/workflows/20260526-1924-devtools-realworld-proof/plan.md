@@ -2,6 +2,13 @@
 
 Status: approved on 2026-05-26 after production-grade review.
 
+## Execution Status
+
+| task_id | status | latest evidence |
+| ------- | ------ | --------------- |
+| T0 | completed on 2026-05-26 20:01 EDT | Preflight facts recorded in `memories.md`: dirty state, missing `hurl`, and package test baselines. |
+| T1 | pending | Planned write to `examples/realworld/package.json` overlaps an existing dirty file; reread and preserve the current hunk before any edit. |
+
 ## Subgoal DAG
 
 | subgoal_id | objective | prerequisites | risk | requirement_links | success_check |
