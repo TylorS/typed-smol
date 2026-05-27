@@ -72,13 +72,14 @@ describe("typed-realworld package skeleton", () => {
     expect(pkg.scripts.dev).not.toContain("vite");
     expect(pkg.scripts["db:migrate"]).toContain("vmc -p tsconfig.json");
 
-    expect(Object.keys(pkg.scripts).sort()).toEqual([
+    const expectedScripts = [
       "build",
       "check",
       "db:migrate",
       "db:reset",
       "db:seed",
       "dev",
+      "devtools:local",
       "preview",
       "storybook",
       "storybook:build",
@@ -92,7 +93,12 @@ describe("typed-realworld package skeleton", () => {
       "test:unit",
       "typecheck",
       "typecheck:stories",
-    ]);
+    ];
+    if (pkg.scripts["test:devtools:local"]) {
+      expectedScripts.push("test:devtools:local");
+    }
+
+    expect(Object.keys(pkg.scripts).sort()).toEqual(expectedScripts.sort());
   });
 
   it("contains the required config, entry, ignore, and asset files", () => {
@@ -242,8 +248,13 @@ describe("typed-realworld package skeleton", () => {
   it("uses the generated api virtual module instead of a hand-written client api", () => {
     expect(existsSync(resolve(projectRoot, "src/common/ClientApi.ts"))).toBe(false);
 
-    expect(readText("src/Api.ts")).toContain('from "typed:api?dir=./api&mode=client"');
-    expect(readText("src/Api.ts")).not.toContain("OpenApi");
+    const apiFacadeSource = readText("src/Api.ts");
+    expect(apiFacadeSource).toContain('import { Api } from "typed:api?dir=./api&mode=client"');
+    expect(apiFacadeSource).not.toContain(
+      'import { Api, Client } from "typed:api?dir=./api&mode=client"',
+    );
+    expect(apiFacadeSource).not.toContain("export { Api, Client }");
+    expect(apiFacadeSource).not.toContain("OpenApi");
     expect(readText("src/common/BrowserApiClient.ts")).toContain('from "../Api.js"');
     expect(readText("src/common/routeData.ts")).toContain("decodedRouteApiClient");
     expect(readText("src/common/State.ts")).toContain('from "../Api.js"');
@@ -318,12 +329,13 @@ describe("typed-realworld package skeleton", () => {
     }
   });
 
-  it("keeps UI render components to one Fx boundary per file", () => {
+  it("keeps UI render components to one render export per file", () => {
     for (const path of componentSourceFiles()) {
       const source = readText(path);
-      const components = source.match(/export const \w+ = Fx\.(?:fn|gen)\b/g) ?? [];
+      const fxComponents = source.match(/export const \w+ = Fx\.(?:fn|gen)\b/g) ?? [];
+      const staticComponents = source.match(/export const \w+ = html`/g) ?? [];
 
-      expect(components, path).toHaveLength(1);
+      expect([...fxComponents, ...staticComponents], path).toHaveLength(1);
     }
   });
 

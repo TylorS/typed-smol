@@ -1031,6 +1031,10 @@ function init(modules: { typescript: typeof import("typescript") }): {
             apiUsed = true;
             return getSession().api.isAssignableTo(node as never, targetId, projection as never);
           },
+          schemaOrigin: (node: unknown) => {
+            apiUsed = true;
+            return getSession().api.schemaOrigin(node as never);
+          },
         },
         consumeDependencies: () => (apiUsed ? getSession().consumeDependencies() : ([] as const)),
       };

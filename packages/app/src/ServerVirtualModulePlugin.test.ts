@@ -83,7 +83,7 @@ describe("ServerVirtualModulePlugin", () => {
       import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
       import { ssrForHttp } from "@typed/ui";
       import * as TypedConfigModule from "typed:config";
-      import * as Api0 from "typed:api?dir=./api";
+      import { ApiLayer as Api0ApiLayer, DependenciesLayer as Api0DependenciesLayer } from "typed:api?dir=./api";
       import Routes0 from "typed:router?dir=./routes1";
       import Routes1 from "typed:router?dir=./routes2";
       type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
@@ -121,11 +121,11 @@ describe("ServerVirtualModulePlugin", () => {
         readonly preview?: ServerListenConfig;
       };
       type ServerRunOptionsWithLayers<Layers extends ServerLayerInputs> = ServerRunOptions<Layers> & { readonly layers: Layers };
-      const apiModules = [Api0];
+      const apiModules = [{ ApiLayer: Api0ApiLayer, DependenciesLayer: Api0DependenciesLayer }];
       const routeModules = [Routes0, Routes1];
       const primaryRoutes = routeModules[0];
       const pageEntries: readonly ServerPageEntry[] = [];
-      const apiLayers = [Api0.ApiLayer.pipe(Layer.provideMerge(Api0.DependenciesLayer), HttpRouter.provideRequest(Api0.DependenciesLayer))];
+      const apiLayers = [Api0ApiLayer.pipe(Layer.provideMerge(Api0DependenciesLayer), HttpRouter.provideRequest(Api0DependenciesLayer))];
       const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0))), HttpRouter.use(ssrForHttp(routeModules[1], documentOptions(1)))];
       const companionPages = [];
       const companionLayers: readonly [] = [];
@@ -221,10 +221,18 @@ describe("ServerVirtualModulePlugin", () => {
     const source = buildServer("typed:server?routes=./routes&api=./api1&api=./api2") as string;
 
     expect(source.indexOf('import Routes0 from "typed:router?dir=./routes";')).toBeLessThan(
-      source.indexOf('import * as Api0 from "typed:api?dir=./api1";'),
+      source.indexOf(
+        'import { ApiLayer as Api0ApiLayer, DependenciesLayer as Api0DependenciesLayer } from "typed:api?dir=./api1";',
+      ),
     );
-    expect(source.indexOf('import * as Api0 from "typed:api?dir=./api1";')).toBeLessThan(
-      source.indexOf('import * as Api1 from "typed:api?dir=./api2";'),
+    expect(
+      source.indexOf(
+        'import { ApiLayer as Api0ApiLayer, DependenciesLayer as Api0DependenciesLayer } from "typed:api?dir=./api1";',
+      ),
+    ).toBeLessThan(
+      source.indexOf(
+        'import { ApiLayer as Api1ApiLayer, DependenciesLayer as Api1DependenciesLayer } from "typed:api?dir=./api2";',
+      ),
     );
     expect(source).toMatchInlineSnapshot(`
       "import * as Cause from "effect/Cause";
@@ -240,8 +248,8 @@ describe("ServerVirtualModulePlugin", () => {
       import { ssrForHttp } from "@typed/ui";
       import * as TypedConfigModule from "typed:config";
       import Routes0 from "typed:router?dir=./routes";
-      import * as Api0 from "typed:api?dir=./api1";
-      import * as Api1 from "typed:api?dir=./api2";
+      import { ApiLayer as Api0ApiLayer, DependenciesLayer as Api0DependenciesLayer } from "typed:api?dir=./api1";
+      import { ApiLayer as Api1ApiLayer, DependenciesLayer as Api1DependenciesLayer } from "typed:api?dir=./api2";
       type ServerLayer<ROut, E, RIn> = Layer.Layer<ROut, E, RIn>;
       type ServerLayerInputs = readonly LayerOrGroup[];
       type ServerBaseLayer = typeof ServerLayer;
@@ -277,11 +285,11 @@ describe("ServerVirtualModulePlugin", () => {
         readonly preview?: ServerListenConfig;
       };
       type ServerRunOptionsWithLayers<Layers extends ServerLayerInputs> = ServerRunOptions<Layers> & { readonly layers: Layers };
-      const apiModules = [Api0, Api1];
+      const apiModules = [{ ApiLayer: Api0ApiLayer, DependenciesLayer: Api0DependenciesLayer }, { ApiLayer: Api1ApiLayer, DependenciesLayer: Api1DependenciesLayer }];
       const routeModules = [Routes0];
       const primaryRoutes = routeModules[0];
       const pageEntries: readonly ServerPageEntry[] = [];
-      const apiLayers = [Api0.ApiLayer.pipe(Layer.provideMerge(Api0.DependenciesLayer), HttpRouter.provideRequest(Api0.DependenciesLayer)), Api1.ApiLayer.pipe(Layer.provideMerge(Api1.DependenciesLayer), HttpRouter.provideRequest(Api1.DependenciesLayer))];
+      const apiLayers = [Api0ApiLayer.pipe(Layer.provideMerge(Api0DependenciesLayer), HttpRouter.provideRequest(Api0DependenciesLayer)), Api1ApiLayer.pipe(Layer.provideMerge(Api1DependenciesLayer), HttpRouter.provideRequest(Api1DependenciesLayer))];
       const routeLayers = [HttpRouter.use(ssrForHttp(routeModules[0], documentOptions(0)))];
       const companionPages = [];
       const companionLayers: readonly [] = [];

@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import type { Module } from "node:module";
 import { runInThisContext } from "node:vm";
-import { pathIsUnderBase, resolvePathUnderBase } from "./internal/path.js";
+import { pathIsUnderBase, resolvePathUnderBase, toPosixPath } from "./internal/path.js";
 import { sanitizeErrorMessage } from "./internal/sanitize.js";
 import { validatePathSegment } from "./internal/validation.js";
 import type { VirtualModulePlugin, VirtualModuleResolver } from "./types.js";
@@ -373,9 +373,13 @@ function addDependencyPath(
   baseDir: string,
   dependencyPaths: Set<string>,
 ): boolean {
-  if (!isCachePathUnderBase(filePath, baseDir)) return false;
+  if (isThirdPartyModulePath(filePath)) return false;
   dependencyPaths.add(filePath);
   return true;
+}
+
+function isThirdPartyModulePath(filePath: string): boolean {
+  return toPosixPath(filePath).includes("/node_modules/");
 }
 
 function isCachePathUnderBase(filePath: string, baseDir: string): boolean {

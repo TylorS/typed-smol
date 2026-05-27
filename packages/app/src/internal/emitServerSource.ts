@@ -104,7 +104,9 @@ function emitImports(imports: readonly OrderedImport[]): readonly string[] {
     if (entry.kind === "routes") {
       return [`import ${binding} from ${JSON.stringify(moduleId)};`];
     }
-    return [`import * as ${binding} from ${JSON.stringify(moduleId)};`];
+    return [
+      `import { ApiLayer as ${binding}ApiLayer, DependenciesLayer as ${binding}DependenciesLayer } from ${JSON.stringify(moduleId)};`,
+    ];
   });
 }
 
@@ -127,7 +129,10 @@ function emitConstants(
   return [
     `const apiModules = [${imports
       .filter((i) => i.kind === "api")
-      .map((i) => `Api${i.index}`)
+      .map((i) => {
+        const binding = `Api${i.index}`;
+        return `{ ApiLayer: ${binding}ApiLayer, DependenciesLayer: ${binding}DependenciesLayer }`;
+      })
       .join(", ")}];`,
     `const routeModules = [${imports
       .filter((i) => i.kind === "routes")
@@ -139,7 +144,7 @@ function emitConstants(
       .filter((i) => i.kind === "api")
       .map(
         (i) =>
-          `Api${i.index}.ApiLayer.pipe(Layer.provideMerge(Api${i.index}.DependenciesLayer), HttpRouter.provideRequest(Api${i.index}.DependenciesLayer))`,
+          `Api${i.index}ApiLayer.pipe(Layer.provideMerge(Api${i.index}DependenciesLayer), HttpRouter.provideRequest(Api${i.index}DependenciesLayer))`,
       )
       .join(", ")}];`,
     `const routeLayers = [${imports

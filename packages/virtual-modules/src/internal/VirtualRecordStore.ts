@@ -3,13 +3,19 @@ import { dirname, relative } from "node:path";
 import type {
   ResolveVirtualModuleOptions,
   VirtualArtifactStoreFactory,
+  VirtualModuleConsumer,
   VirtualModulePluginNameResolution,
+  VirtualModuleBuildContext,
   VirtualModuleDiagnostic,
+  VirtualModuleRequestedExports,
   VirtualModuleRecord,
   VirtualModuleResolution,
 } from "../types.js";
+import { createDependencyClosure } from "../types.js";
+import { analyzeRequestedExports } from "../importUsageAnalyzer.js";
 import type { ResolveVirtualArtifactResult } from "./ArtifactStore.js";
 import type { VirtualArtifactMessage } from "./ArtifactManifest.js";
+import { createPluginConfigFingerprint } from "./ArtifactFingerprint.js";
 import { rewriteSourceForPreviewLocation } from "./materializeVirtualFile.js";
 import {
   createVirtualFileName,
@@ -21,6 +27,7 @@ import {
 export type MutableVirtualRecord = Omit<VirtualModuleRecord, "version" | "stale"> & {
   version: number;
   stale: boolean;
+  context?: VirtualModuleBuildContext;
 };
 
 export interface ResolveRecordResultResolved {
@@ -254,13 +261,16 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     id: string,
     importer: string,
     previous?: MutableVirtualRecord,
+    context?: VirtualModuleBuildContext,
   ): ResolveRecordResult => {
     onBeforeResolve?.();
     try {
-      const key = createVirtualKey(id, importer);
+      const activeContext = context ?? previous?.context;
+      const key = createVirtualRecordKey(id, importer, activeContext);
       const resolveOptions: ResolveVirtualModuleOptions = {
         id,
         importer,
+        ...(activeContext ? { context: activeContext } : {}),
         createTypeInfoApiSession: options.createTypeInfoApiSession,
       };
 
@@ -278,6 +288,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
           sourceText: cached.sourceText,
           dependencies: cached.dependencies,
           ...(cached.warnings?.length ? { warnings: cached.warnings } : {}),
+          ...(activeContext ? { context: activeContext } : {}),
           version: previous ? previous.version + 1 : 1,
           stale: false,
         };
@@ -312,9 +323,17 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
         importer,
         virtualFileName,
         (nestedId) => {
-          const nested = getOrBuildRecord(nestedId, importer);
+          const nestedContext = createBuildContextFromSource({
+            id: nestedId,
+            rootImporter: importer,
+            containingFile: virtualFileName,
+            sourceText: resolution.sourceText,
+            consumer: activeContext?.consumer,
+          });
+          const nested = getOrBuildRecord(nestedId, importer, nestedContext);
           return nested.status === "resolved" ? nested.record.virtualFileName : undefined;
         },
+        activeContext,
       );
       if (materialized.status === "error") {
         return materialized;
@@ -328,6 +347,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
         sourceText: materialized.sourceText,
         dependencies: resolution.dependencies,
         ...(resolution.warnings?.length ? { warnings: resolution.warnings } : {}),
+        ...(activeContext ? { context: activeContext } : {}),
         version: previous ? previous.version + 1 : 1,
         stale: false,
       };
@@ -338,10 +358,14 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
     }
   };
 
-  const getOrBuildRecord = (id: string, importer: string): ResolveRecordResult => {
+  const getOrBuildRecord = (
+    id: string,
+    importer: string,
+    context?: VirtualModuleBuildContext,
+  ): ResolveRecordResult => {
     evictStaleImporters();
 
-    const key = createVirtualKey(id, importer);
+    const key = createVirtualRecordKey(id, importer, context);
     const existing = recordsByKey.get(key);
     if (existing && !validateRecordForReuse(existing).stale) {
       return {
@@ -350,7 +374,7 @@ export function createVirtualRecordStore(options: VirtualRecordStoreOptions) {
       };
     }
 
-    return resolveRecord(id, importer, existing);
+    return resolveRecord(id, importer, existing, context);
   };
 
   const findRecordByVirtualFile = (fileName: string): MutableVirtualRecord | undefined => {
@@ -490,6 +514,7 @@ const materializeRecordSource = (
   importer: string,
   fallbackVirtualFileName: string,
   resolveNestedVirtualModule?: (id: string) => string | undefined,
+  context?: VirtualModuleBuildContext,
 ):
   | { readonly status: "resolved"; readonly virtualFileName: string; readonly sourceText: string }
   | ResolveRecordResultError => {
@@ -555,6 +580,7 @@ const materializeRecordSource = (
       virtualKey,
       sourceText,
       dependencyDescriptors: resolution.dependencies,
+      ...(context ? { debugMetadata: { buildContext: fingerprintBuildContext(context) } } : {}),
       warnings: resolution.warnings?.map((warning) => ({
         severity: "warning",
         code: warning.code,
@@ -606,6 +632,83 @@ const toRelativeJavaScriptSpecifier = (fromFile: string, toFile: string): string
     ? withJavaScriptExtension
     : `./${withJavaScriptExtension}`;
 };
+
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
+type JsonObject = { readonly [key: string]: JsonValue };
+
+export const createBuildContextFromSource = (input: {
+  readonly id: string;
+  readonly rootImporter: string;
+  readonly containingFile: string;
+  readonly sourceText?: string;
+  readonly consumer?: VirtualModuleConsumer;
+}): VirtualModuleBuildContext => {
+  const requestedExports = input.sourceText
+    ? analyzeRequestedExports(input.sourceText, input.id)
+    : ({ kind: "all", reason: "importer source unavailable" } as const);
+  return {
+    id: input.id,
+    rootImporter: input.rootImporter,
+    containingFile: input.containingFile,
+    consumer: input.consumer ?? "unknown",
+    requestedExports,
+    closure: createDependencyClosure(requestedExports),
+  };
+};
+
+export const createVirtualRecordKey = (
+  id: string,
+  importer: string,
+  context: VirtualModuleBuildContext | undefined,
+): string => {
+  const baseKey = createVirtualKey(id, importer);
+  const fingerprint = contextFingerprint(context);
+  return fingerprint ? `${baseKey}::context:${fingerprint}` : baseKey;
+};
+
+const contextFingerprint = (context: VirtualModuleBuildContext | undefined): string | undefined => {
+  if (!context) return undefined;
+  const fingerprint = createPluginConfigFingerprint(
+    "virtual-module-build-context",
+    fingerprintBuildContext(context),
+  );
+  return "hash" in fingerprint && fingerprint.hash
+    ? fingerprint.hash.replace(/^sha256:/, "")
+    : undefined;
+};
+
+const fingerprintBuildContext = (context: VirtualModuleBuildContext): JsonObject => ({
+  consumer: context.consumer,
+  rootImporter: context.rootImporter,
+  containingFile: context.containingFile,
+  requestedExports: fingerprintRequestedExports(context.requestedExports),
+  closure: fingerprintDependencyClosure(context.closure),
+});
+
+const fingerprintRequestedExports = (
+  requestedExports: VirtualModuleRequestedExports,
+): JsonObject =>
+  requestedExports.kind === "all"
+    ? { kind: "all", reason: requestedExports.reason }
+    : {
+        kind: "names",
+        names: [...requestedExports.names].sort(),
+        typeOnlyNames: [...requestedExports.typeOnlyNames].sort(),
+      };
+
+const fingerprintDependencyClosure = (
+  closure: VirtualModuleBuildContext["closure"],
+): JsonObject =>
+  closure.kind === "all"
+    ? { kind: "all", reason: closure.reason }
+    : {
+        kind: "partial",
+        requested: [...closure.requested].sort(),
+        pluginDeclared: [...closure.pluginDeclared].sort(),
+        typeInfoReachable: [...closure.typeInfoReachable].sort(),
+        routeOrAppReachable: [...closure.routeOrAppReachable].sort(),
+      };
 
 const resolveArtifactStoreEntry = (
   options: VirtualRecordStoreOptions,

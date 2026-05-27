@@ -194,6 +194,80 @@ describe("virtualModulesVitePlugin", () => {
     });
   });
 
+  it("analyzes requested exports against the source import before mapped-id resolution", async () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { makeClient } from "virtual:api";\nvoid makeClient;', "utf8");
+    let context: VirtualModuleBuildContext | undefined;
+    const manager = new PluginManager([
+      {
+        name: "api",
+        shouldResolve: (id) => id === "virtual:api?mode=client",
+        build: (_id, _importer, _api, buildContext) => {
+          context = buildContext;
+          return "export const makeClient = 1;";
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({
+      resolver: manager,
+      projectRoot,
+      mapId: ({ id, consumer }) => (consumer === "client" ? `${id}?mode=client` : id),
+    });
+    plugin.configResolved?.({ root: projectRoot, command: "build" } as never);
+    const resolvedId = plugin.resolveId!.call(
+      { environment: { name: "client", config: { consumer: "client" } } },
+      "virtual:api",
+      importer,
+    ) as string;
+
+    await (plugin.load! as Load)(resolvedId);
+
+    expect(context?.id).toBe("virtual:api?mode=client");
+    expect(context?.requestedExports).toEqual({
+      kind: "names",
+      names: new Set(["makeClient"]),
+      typeOnlyNames: new Set(),
+    });
+  });
+
+  it("analyzes requested exports from already-loaded virtual parent modules", async () => {
+    const projectRoot = createTempDir();
+    const importer = join(projectRoot, "src", "main.ts");
+    mkdirSync(join(projectRoot, "src"), { recursive: true });
+    writeFileSync(importer, 'import { entry } from "virtual:parent";\nvoid entry;', "utf8");
+    let childContext: VirtualModuleBuildContext | undefined;
+    const manager = new PluginManager([
+      {
+        name: "parent",
+        shouldResolve: (id) => id === "virtual:parent",
+        build: () => 'import { ApiLayer, DependenciesLayer } from "virtual:api";\nexport const entry = [ApiLayer, DependenciesLayer];',
+      },
+      {
+        name: "api",
+        shouldResolve: (id) => id === "virtual:api",
+        build: (_id, _importer, _api, buildContext) => {
+          childContext = buildContext;
+          return "export const ApiLayer = 1; export const DependenciesLayer = 2;";
+        },
+      },
+    ]);
+    const plugin = virtualModulesVitePlugin({ resolver: manager, projectRoot });
+    plugin.configResolved?.({ root: projectRoot, command: "build" } as never);
+    const parentId = (plugin.resolveId! as ResolveId)("virtual:parent", importer) as string;
+    await (plugin.load! as Load)(parentId);
+    const childId = (plugin.resolveId! as ResolveId)("virtual:api", parentId) as string;
+
+    await (plugin.load! as Load)(childId);
+
+    expect(childContext?.requestedExports).toEqual({
+      kind: "names",
+      names: new Set(["ApiLayer", "DependenciesLayer"]),
+      typeOnlyNames: new Set(),
+    });
+  });
+
   it("uses all requested exports during dev", async () => {
     const projectRoot = createTempDir();
     const importer = join(projectRoot, "src", "main.ts");

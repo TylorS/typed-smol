@@ -35,6 +35,8 @@ TOPO_ORDER=(
   packages/ui
   # Level 4
   packages/vite-plugin
+  # Level 5
+  packages/storybook
 )
 
 add_files_field() {

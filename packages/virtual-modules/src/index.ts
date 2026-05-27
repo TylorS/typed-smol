@@ -13,6 +13,7 @@ export {
 export * from "./NodeModulePluginLoader.js";
 export * from "./LanguageServiceAdapter.js";
 export * from "./CompilerHostAdapter.js";
+export { createBuildContextFromSource, createVirtualRecordKey } from "./internal/VirtualRecordStore.js";
 export * from "./VmcConfigLoader.js";
 export * from "./VmcResolverLoader.js";
 export {

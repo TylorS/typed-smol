@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { attachLanguageServiceAdapter } from "./LanguageServiceAdapter.js";
 import { PluginManager } from "./PluginManager.js";
 import { createTypeInfoApiSession } from "./TypeInfoApi.js";
-import type { LanguageServiceWatchHost } from "./types.js";
+import type { LanguageServiceWatchHost, VirtualModuleBuildContext } from "./types.js";
 import type { VirtualLogicalIdentity } from "./internal/ArtifactIdentity.js";
 import type {
   MaterializeVirtualArtifactParams,
@@ -63,6 +63,15 @@ const createFakeArtifactStore = (
     },
     __unsafeReleaseLockForTesting: () => {},
   };
+};
+
+const requestedNames = (
+  context: VirtualModuleBuildContext | undefined,
+): readonly string[] | string => {
+  if (!context || context.requestedExports.kind === "all") {
+    return context?.requestedExports.reason ?? "missing";
+  }
+  return [...context.requestedExports.names].sort();
 };
 
 afterEach(() => {
@@ -236,6 +245,77 @@ export const value: Foo = { n: 1 };
     expect(languageService.getProgram()?.getSourceFile(artifactA)).toBeDefined();
     expect(languageService.getProgram()?.getSourceFile(artifactB)).toBeDefined();
     expect(cleanCalls).toBe(0);
+  });
+
+  it("passes requested exports from real and nested virtual importers", () => {
+    const dir = createTempDir();
+    const entryFile = join(dir, "entry.ts");
+    const artifactA = join(dir, "node_modules/.typed/virtual/virtual-a/artifact-a.ts");
+    const artifactB = join(dir, "node_modules/.typed/virtual/virtual-b/artifact-b.ts");
+    writeFileSync(entryFile, `import { x } from "virtual:a"; export const out = x;`, "utf8");
+
+    const files = new Map<string, { version: number; content: string }>([
+      [entryFile, { version: 1, content: ts.sys.readFile(entryFile) ?? "" }],
+    ]);
+    const host: ts.LanguageServiceHost = {
+      getCompilationSettings: () => ({
+        strict: true,
+        noEmit: true,
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        skipLibCheck: true,
+      }),
+      getScriptFileNames: () => [...files.keys()],
+      getScriptVersion: (fileName) => String(files.get(fileName)?.version ?? 0),
+      getScriptSnapshot: (fileName) => {
+        const content = files.get(fileName)?.content ?? ts.sys.readFile(fileName);
+        if (!content) return undefined;
+        return ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: () => dir,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: (fileName) => files.has(fileName) || ts.sys.fileExists(fileName),
+      readFile: (fileName) => files.get(fileName)?.content ?? ts.sys.readFile(fileName),
+      readDirectory: (...args: Parameters<typeof ts.sys.readDirectory>) =>
+        ts.sys.readDirectory(...args),
+    };
+    const languageService = ts.createLanguageService(host);
+    const requestedById = new Map<string, readonly string[] | string>();
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: (_id, _importer, _api, context) => {
+          requestedById.set("virtual:a", requestedNames(context));
+          return `import { y } from "virtual:b"; export const x = y; export const z = 2;`;
+        },
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: (_id, _importer, _api, context) => {
+          requestedById.set("virtual:b", requestedNames(context));
+          return `export const y = 1; export const unused = 2;`;
+        },
+      },
+    ]);
+
+    attachLanguageServiceAdapter({
+      ts,
+      languageService,
+      languageServiceHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: ({ pluginName }) =>
+        createFakeArtifactStore(pluginName === "virtual-a" ? artifactA : artifactB),
+    });
+
+    const diagnostics = languageService.getSemanticDiagnostics(entryFile);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(requestedById.get("virtual:a")).toEqual(["x"]);
+    expect(requestedById.get("virtual:b")).toEqual(["y"]);
   });
 
   it("uses artifact cache hits without rebuilding or rematerializing", () => {

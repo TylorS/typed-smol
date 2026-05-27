@@ -985,7 +985,7 @@ export const createHttpApiVirtualModulePlugin = (
         mode,
         groupNamesByPath,
         exportExpressionsByPath,
-        context: resolved.mode === "client" ? undefined : context,
+        context,
       });
       if (tree.diagnostics.length > 0) {
         return {

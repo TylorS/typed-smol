@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
@@ -60,6 +60,40 @@ export default {
     const second = result.config.plugins?.[1];
     expect(typeof first).toBe("object");
     expect(typeof second).toBe("string");
+  });
+
+  it("tracks first-party config dependency modules outside project root", () => {
+    const workspace = createTempDir();
+    const projectRoot = join(workspace, "project");
+    mkdirSync(join(projectRoot, "node_modules", "third-party"), { recursive: true });
+    const sharedPath = join(workspace, "shared-plugin.cjs");
+    const thirdPartyPath = join(projectRoot, "node_modules", "third-party", "index.js");
+    mkdirSync(projectRoot, { recursive: true });
+    writeFileSync(
+      sharedPath,
+      `exports.plugin = {
+  name: "shared",
+  shouldResolve: () => false,
+  build: () => "export {};",
+};`,
+      "utf8",
+    );
+    writeFileSync(thirdPartyPath, `exports.value = 1;`, "utf8");
+    writeFileSync(
+      join(projectRoot, "vmc.config.ts"),
+      `require("third-party");
+const { plugin } = require("../shared-plugin.cjs");
+export default { plugins: [plugin] };
+`,
+      "utf8",
+    );
+
+    const result = loadVmcConfig({ projectRoot, ts });
+
+    expect(result.status).toBe("loaded");
+    if (result.status !== "loaded") return;
+    expect(result.dependencyPaths).toContain(realpathSync(sharedPath));
+    expect(result.dependencyPaths).not.toContain(realpathSync(thirdPartyPath));
   });
 
   it("returns error when configPath is not a string", () => {

@@ -4,6 +4,7 @@ import {
   type LanguageServiceAdapterOptions,
   type LanguageServiceWatchHost,
   type VirtualModuleAdapterHandle,
+  type VirtualModuleBuildContext,
 } from "./types.js";
 import { unlinkSync } from "node:fs";
 import {
@@ -11,6 +12,7 @@ import {
   rewriteSourceForPreviewLocation,
 } from "./internal/materializeVirtualFile.js";
 import {
+  createBuildContextFromSource,
   createVirtualRecordStore,
   toResolvedModule,
   type MutableVirtualRecord,
@@ -203,7 +205,38 @@ export const attachLanguageServiceAdapter = (
 
   const { recordsByVirtualFile } = store;
 
-  const getOrBuildRecord = (id: string, importer: string): ResolveRecordResult => {
+  const readSnapshotText = (fileName: string): string | undefined => {
+    const snapshot = originalGetScriptSnapshot?.(fileName);
+    return snapshot?.getText(0, snapshot.getLength());
+  };
+
+  const getContainingSourceText = (
+    containingFile: string,
+    containingSourceFile: ts.SourceFile | undefined,
+  ): string | undefined =>
+    containingSourceFile?.text ??
+    store.findRecordByVirtualFile(containingFile)?.sourceText ??
+    readSnapshotText(containingFile) ??
+    originalReadFile?.(containingFile);
+
+  const createBuildContext = (
+    id: string,
+    rootImporter: string,
+    containingFile: string,
+    containingSourceFile: ts.SourceFile | undefined,
+  ): VirtualModuleBuildContext =>
+    createBuildContextFromSource({
+      id,
+      rootImporter,
+      containingFile,
+      sourceText: getContainingSourceText(containingFile, containingSourceFile),
+    });
+
+  const getOrBuildRecord = (
+    id: string,
+    importer: string,
+    context?: VirtualModuleBuildContext,
+  ): ResolveRecordResult => {
     store.evictStaleImporters();
 
     if (inResolveRecord) {
@@ -218,7 +251,7 @@ export const attachLanguageServiceAdapter = (
       };
     }
 
-    return store.getOrBuildRecord(id, importer);
+    return store.getOrBuildRecord(id, importer, context);
   };
 
   const rebuildRecordIfNeeded = (record: MutableVirtualRecord): MutableVirtualRecord => {
@@ -348,7 +381,13 @@ export const attachLanguageServiceAdapter = (
       let hadVirtualError = false;
       let hadUnresolvedVirtual = false;
       const results = moduleNames.map((moduleName, index) => {
-        const resolved = getOrBuildRecord(moduleName, importerForVirtual);
+        const context = createBuildContext(
+          moduleName,
+          importerForVirtual,
+          effectiveContainingFile,
+          containingSourceFile,
+        );
+        const resolved = getOrBuildRecord(moduleName, importerForVirtual, context);
         if (resolved.status === "resolved") {
           pendingRetry = false;
           return toResolvedModule(options.ts, resolved.record.virtualFileName);
@@ -449,7 +488,13 @@ export const attachLanguageServiceAdapter = (
       let hadVirtualError = false;
       let hadUnresolvedVirtual = false;
       const results = moduleLiterals.map((moduleLiteral, index) => {
-        const resolved = getOrBuildRecord(moduleLiteral.text, importerForVirtual);
+        const context = createBuildContext(
+          moduleLiteral.text,
+          importerForVirtual,
+          effectiveContainingFile,
+          containingSourceFile,
+        );
+        const resolved = getOrBuildRecord(moduleLiteral.text, importerForVirtual, context);
         if (resolved.status === "resolved") {
           pendingRetry = false;
           return {

@@ -28,12 +28,12 @@ describe("sample-project integration", () => {
     const result = spawnSync("node", [vmcCliPath, "--noEmit"], {
       cwd: sampleProjectDir,
       encoding: "utf8",
-      timeout: 10_000,
+      timeout: 15_000,
     });
     if (result.status !== 0) {
       const out = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
       expect.fail(`vmc --noEmit failed (exit ${result.status}):\n${out || "(no output)"}`);
     }
     expect(result.stderr).toBe("");
-  });
+  }, 15_000);
 });

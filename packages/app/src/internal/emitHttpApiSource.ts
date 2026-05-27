@@ -738,7 +738,9 @@ export function emitHttpApiSource(input: {
     });
   }
 
-  if (shouldEmitDependenciesLayerOnly(input.context)) {
+  const plan = fullEmitPlan(input.context);
+
+  if (shouldEmitDependenciesLayerOnly(plan)) {
     const imports = [`import * as Layer from "effect/Layer";`];
     if (groupDependencyPaths.length > 0) {
       imports.push(`import * as ApiServices from "typed:services?dir=${targetSpecifier}";`);
@@ -767,36 +769,65 @@ export const DependenciesLayer = ${renderDependenciesLayer(
     "ApiPrefixes",
     "prefixes",
   );
+  const middlewaresPath = apiSpec.directoryCompanions["_middlewares.ts"][0];
+  const hasMiddlewares = Boolean(middlewaresPath);
 
   const importLines: string[] = [
-    `import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";`,
-    `import { resolveConfig } from "@typed/app/internal/resolveConfig";`,
-    `import { TypedHttpServer } from "@typed/app/TypedHttpServer";`,
-    `import * as Effect from "effect/Effect";`,
-    `import * as Layer from "effect/Layer";`,
-    `import * as HttpApi from "effect/unstable/httpapi/HttpApi";`,
-    `import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";`,
-    `import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`,
-    `import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";`,
-    `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
-    `import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";`,
-    `import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";`,
-    `import * as HttpServer from "effect/unstable/http/HttpServer";`,
-    `import * as HttpRouter from "effect/unstable/http/HttpRouter";`,
-    `import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`,
-    `import * as ApiServices from "typed:services?dir=${targetSpecifier}";`,
-    `import * as ApiHeaders from "typed:headers?dir=${targetSpecifier}";`,
-    `import * as ApiErrors from "typed:errors?dir=${targetSpecifier}";`,
-    `import * as ApiMiddlewares from "typed:middlewares?dir=${targetSpecifier}";`,
-    `import * as ApiPrefixes from "typed:prefix?dir=${targetSpecifier}";`,
-    `import * as ApiOpenApi from "typed:openapi?dir=${targetSpecifier}";`,
-    `import * as TypedConfigModule from "typed:config";`,
+    ...(plan.app || plan.serve
+      ? [`import { composeWithLayers, type LayerOrGroup } from "@typed/app/runtime";`]
+      : []),
+    ...(plan.serve ? [`import { resolveConfig } from "@typed/app/internal/resolveConfig";`] : []),
+    ...(plan.serve ? [`import { TypedHttpServer } from "@typed/app/TypedHttpServer";`] : []),
+    ...(plan.serve ? [`import * as Effect from "effect/Effect";`] : []),
+    ...(plan.dependenciesLayer || plan.apiLayer || plan.serve ? [`import * as Layer from "effect/Layer";`] : []),
+    ...(plan.api ? [`import * as HttpApi from "effect/unstable/httpapi/HttpApi";`] : []),
+    ...(plan.apiLayer
+      ? [`import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";`]
+      : []),
+    ...(plan.client
+      ? [`import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";`]
+      : []),
+    ...(plan.api
+      ? [
+          `import * as HttpApiEndpoint from "effect/unstable/httpapi/HttpApiEndpoint";`,
+          `import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";`,
+        ]
+      : []),
+    ...(plan.scalar
+      ? [`import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";`]
+      : []),
+    ...(plan.swagger
+      ? [`import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";`]
+      : []),
+    ...(plan.app || plan.serve
+      ? [`import * as HttpRouter from "effect/unstable/http/HttpRouter";`]
+      : []),
+    ...(plan.openApi
+      ? [`import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`]
+      : []),
+    ...(plan.dependenciesLayer && groupDependencyPaths.length > 0
+      ? [`import * as ApiServices from "typed:services?dir=${targetSpecifier}";`]
+      : []),
+    ...(plan.api
+      ? [
+          `import * as ApiHeaders from "typed:headers?dir=${targetSpecifier}";`,
+          `import * as ApiErrors from "typed:errors?dir=${targetSpecifier}";`,
+          `import * as ApiPrefixes from "typed:prefix?dir=${targetSpecifier}";`,
+        ]
+      : []),
+    ...(hasMiddlewares && (plan.app || plan.serve)
+      ? [`import * as ApiMiddlewares from "typed:middlewares?dir=${targetSpecifier}";`]
+      : []),
+    ...(plan.api && input.openapiPlan
+      ? [`import * as ApiOpenApi from "typed:openapi?dir=${targetSpecifier}";`]
+      : []),
+    ...(plan.serve ? [`import * as TypedConfigModule from "typed:config";`] : []),
   ];
-  if (prefixRoutePaths.length > 0) {
-    importLines.splice(importLines.length - 1, 0, `import * as Route from "@typed/router";`);
+  if (prefixRoutePaths.length > 0 && plan.api) {
+    importLines.push(`import * as Route from "@typed/router";`);
   }
 
-  for (const path of endpointPaths) {
+  for (const path of plan.api ? endpointPaths : []) {
     const importSpecifier = `typed:api-handler?path=${toVirtualTargetSpecifier(importerDir, input.targetDirectory, path)}`;
     importLines.push(
       `import * as ${varNameByPath.get(path)} from ${JSON.stringify(importSpecifier)};`,
@@ -934,89 +965,39 @@ export const DependenciesLayer = ${renderDependenciesLayer(
     serviceLayerExpressionByPath,
   );
 
-  const middlewaresPath = apiSpec.directoryCompanions["_middlewares.ts"][0];
-  const hasMiddlewares = Boolean(middlewaresPath);
-
   const serveOptions = hasMiddlewares
     ? `{ disableListenLog, middleware: ApiMiddlewares.middlewares[${JSON.stringify(middlewaresPath)}] }`
     : `{ disableListenLog }`;
 
   const openApiHelpers = renderOpenApiHelpers(input.openapiPlan?.api.generation);
   const openApiHelperBlock = openApiHelpers ? `\n${openApiHelpers}` : "";
+  if (!plan.openApi && apiExpr.includes("OpenApiModule.")) {
+    importLines.push(`import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";`);
+  }
 
-  return `${importLines.join("\n")}${openApiHelperBlock}
+  const blocks = [
+    plan.api ? renderRouteBindingDeclarations(routeBindings) : "",
+    plan.api ? `export const Api = ${apiExpr};` : "",
+    plan.dependenciesLayer ? `export const DependenciesLayer = ${dependenciesLayer};` : "",
+    plan.apiLayer ? `export const ApiLayer = ${mergedApiLayer};` : "",
+    plan.openApi ? "export const OpenApi = OpenApiModule.fromApi(Api);" : "",
+    plan.swagger ? `export const Swagger = ${swaggerExpr};` : "",
+    plan.scalar ? `export const Scalar = ${scalarExpr};` : "",
+    plan.client ? "export const Client = HttpApiClient.make(Api);" : "",
+    plan.serve ? typedConfigBuildOptionsSource() : "",
+    plan.serve
+      ? 'const typedConfig = TypedConfigModule as TypedConfigBuildOptions;\nconst typedBuildConfig = typedConfig.build ?? {};\nconst clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");'
+      : "",
+    plan.serve ? joinBuildPathSource() : "",
+    plan.app || plan.serve ? httpApiRuntimeConfigSource() : "",
+    plan.serve ? isDevImportMetaSource() : "",
+    plan.app ? appSource(serveOptions) : "",
+    plan.serve ? serveSource(input.projectRoot) : "",
+  ].filter(Boolean);
 
-${renderRouteBindingDeclarations(routeBindings)}
+  return `${importLines.join("\n")}${plan.api ? openApiHelperBlock : ""}
 
-export const Api = ${apiExpr};
-export const DependenciesLayer = ${dependenciesLayer};
-export const ApiLayer = ${mergedApiLayer};
-export const OpenApi = OpenApiModule.fromApi(Api);
-export const Swagger = ${swaggerExpr};
-export const Scalar = ${scalarExpr};
-export const Client = HttpApiClient.make(Api);
-
-type TypedConfigBuildOptions = {
-  readonly build?: {
-    readonly outDir?: string;
-    readonly clientOutDir?: string;
-  };
-};
-
-const typedConfig = TypedConfigModule as TypedConfigBuildOptions;
-const typedBuildConfig = typedConfig.build ?? {};
-const clientOutDir = typedBuildConfig.clientOutDir ?? joinBuildPath(typedBuildConfig.outDir ?? "dist", "client");
-
-function joinBuildPath(...parts: readonly string[]): string {
-  return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
-}
-
-type HttpApiRuntimeConfig = {
-  readonly disableListenLog?: boolean;
-  readonly host?: string;
-  readonly port?: number;
-};
-
-function isDevImportMeta(meta: ImportMeta & { readonly env?: { readonly DEV?: boolean } }): boolean {
-  return meta.env?.DEV === true;
-}
-
-export const App = <const Layers extends readonly LayerOrGroup[]>(
-  config: HttpApiRuntimeConfig = {},
-  ...layersToMergeIntoRouter: Layers
-) => {
-  const disableListenLog = config?.disableListenLog ?? false;
-  const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);
-  return HttpRouter.serve(appLayer, ${serveOptions})
-};
-
-export const serve = <const Layers extends readonly LayerOrGroup[]>(
-  config: HttpApiRuntimeConfig = {},
-  ...layersToMergeIntoRouter: Layers
-) =>
-  Layer.unwrap(
-    Effect.gen(function* () {
-      const host = yield* resolveConfig(config?.host, "0.0.0.0");
-      const port = yield* resolveConfig(config?.port, 3000);
-      const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);
-      const dev = isDevImportMeta(import.meta);
-      const appConfig = { disableListenLog };
-      const staticAssetsLayer = TypedHttpServer.staticAssets({
-        projectRoot: ${JSON.stringify(input.projectRoot)},
-        clientOutDir,
-        dev,
-      });
-      const appLayers = [staticAssetsLayer, ...layersToMergeIntoRouter] as const;
-      const appLayer = App(appConfig, ...appLayers);
-      const serverLayer = TypedHttpServer.layer({
-        host,
-        port,
-        projectRoot: ${JSON.stringify(input.projectRoot)},
-        dev,
-      });
-      return appLayer.pipe(Layer.provide(serverLayer));
-    }),
-  );
+${blocks.join("\n\n")}
 `;
 }
 
@@ -1033,13 +1014,144 @@ function renderDependenciesLayer(
   return layers.length === 0 ? "Layer.empty" : `Layer.mergeAll(Layer.empty, ${layers.join(", ")})`;
 }
 
-function shouldEmitDependenciesLayerOnly(context: VirtualModuleBuildContext | undefined): boolean {
-  if (!context || context.requestedExports.kind === "all") return false;
-  const names = new Set([
-    ...context.requestedExports.names,
-    ...context.requestedExports.typeOnlyNames,
-  ]);
-  return names.size === 1 && names.has("DependenciesLayer");
+interface FullEmitPlan {
+  readonly api: boolean;
+  readonly dependenciesLayer: boolean;
+  readonly apiLayer: boolean;
+  readonly openApi: boolean;
+  readonly swagger: boolean;
+  readonly scalar: boolean;
+  readonly client: boolean;
+  readonly app: boolean;
+  readonly serve: boolean;
+}
+
+function fullEmitPlan(context: VirtualModuleBuildContext | undefined): FullEmitPlan {
+  const emitAll = mustEmitAllExports(context);
+  const serve = emitAll || requestsExportDeclaration(context, "serve");
+  const app = emitAll || requestsExportDeclaration(context, "App") || serve;
+  const apiLayer = emitAll || requestsExportDeclaration(context, "ApiLayer") || app;
+  const openApi = emitAll || requestsExportDeclaration(context, "OpenApi");
+  const swagger = emitAll || requestsExportDeclaration(context, "Swagger");
+  const scalar = emitAll || requestsExportDeclaration(context, "Scalar");
+  const client = emitAll || requestsExportDeclaration(context, "Client");
+  return {
+    api:
+      emitAll ||
+      requestsExportDeclaration(context, "Api") ||
+      apiLayer ||
+      app ||
+      serve ||
+      openApi ||
+      swagger ||
+      scalar ||
+      client,
+    dependenciesLayer:
+      emitAll || requestsExportDeclaration(context, "DependenciesLayer") || apiLayer || app || serve,
+    apiLayer,
+    openApi,
+    swagger,
+    scalar,
+    client,
+    app,
+    serve,
+  };
+}
+
+function shouldEmitDependenciesLayerOnly(plan: FullEmitPlan): boolean {
+  return (
+    plan.dependenciesLayer &&
+    !plan.api &&
+    !plan.apiLayer &&
+    !plan.openApi &&
+    !plan.swagger &&
+    !plan.scalar &&
+    !plan.client &&
+    !plan.app &&
+    !plan.serve
+  );
+}
+
+function typedConfigBuildOptionsSource(): string {
+  return [
+    "type TypedConfigBuildOptions = {",
+    "  readonly build?: {",
+    "    readonly outDir?: string;",
+    "    readonly clientOutDir?: string;",
+    "  };",
+    "};",
+  ].join("\n");
+}
+
+function joinBuildPathSource(): string {
+  return [
+    "function joinBuildPath(...parts: readonly string[]): string {",
+    '  return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");',
+    "}",
+  ].join("\n");
+}
+
+function httpApiRuntimeConfigSource(): string {
+  return [
+    "type HttpApiRuntimeConfig = {",
+    "  readonly disableListenLog?: boolean;",
+    "  readonly host?: string;",
+    "  readonly port?: number;",
+    "};",
+  ].join("\n");
+}
+
+function isDevImportMetaSource(): string {
+  return [
+    "function isDevImportMeta(meta: ImportMeta & { readonly env?: { readonly DEV?: boolean } }): boolean {",
+    "  return meta.env?.DEV === true;",
+    "}",
+  ].join("\n");
+}
+
+function appSource(serveOptions: string): string {
+  return [
+    "export const App = <const Layers extends readonly LayerOrGroup[]>(",
+    "  config: HttpApiRuntimeConfig = {},",
+    "  ...layersToMergeIntoRouter: Layers",
+    ") => {",
+    "  const disableListenLog = config?.disableListenLog ?? false;",
+    "  const appLayer = composeWithLayers(ApiLayer, layersToMergeIntoRouter);",
+    `  return HttpRouter.serve(appLayer, ${serveOptions})`,
+    "};",
+  ].join("\n");
+}
+
+function serveSource(projectRoot: string): string {
+  return [
+    "export const serve = <const Layers extends readonly LayerOrGroup[]>(",
+    "  config: HttpApiRuntimeConfig = {},",
+    "  ...layersToMergeIntoRouter: Layers",
+    ") =>",
+    "  Layer.unwrap(",
+    "    Effect.gen(function* () {",
+    '      const host = yield* resolveConfig(config?.host, "0.0.0.0");',
+    "      const port = yield* resolveConfig(config?.port, 3000);",
+    "      const disableListenLog = yield* resolveConfig(config?.disableListenLog, false);",
+    "      const dev = isDevImportMeta(import.meta);",
+    "      const appConfig = { disableListenLog };",
+    "      const staticAssetsLayer = TypedHttpServer.staticAssets({",
+    `        projectRoot: ${JSON.stringify(projectRoot)},`,
+    "        clientOutDir,",
+    "        dev,",
+    "      });",
+    "      const appLayers = [staticAssetsLayer, ...layersToMergeIntoRouter] as const;",
+    "      const appLayer = App(appConfig, ...appLayers);",
+    "      const serverLayer = TypedHttpServer.layer({",
+    "        host,",
+    "        port,",
+    `        projectRoot: ${JSON.stringify(projectRoot)},`,
+    "        dev,",
+    "      });",
+    "      return appLayer.pipe(Layer.provide(serverLayer));",
+    "    }),",
+    "  );",
+  ].join("\n");
 }
 
 function concernExpressionMap(

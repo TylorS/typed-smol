@@ -418,13 +418,10 @@ describe("createHttpApiVirtualModulePlugin", () => {
       import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
       import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
       import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
-      import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
-      import * as ApiServices from "typed:services?dir=./apis";
       import * as ApiHeaders from "typed:headers?dir=./apis";
       import * as ApiErrors from "typed:errors?dir=./apis";
-      import * as ApiMiddlewares from "typed:middlewares?dir=./apis";
       import * as ApiPrefixes from "typed:prefix?dir=./apis";
       import * as ApiOpenApi from "typed:openapi?dir=./apis";
       import * as TypedConfigModule from "typed:config";
@@ -433,11 +430,17 @@ describe("createHttpApiVirtualModulePlugin", () => {
       const StatusRoute = Status.route;
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: StatusRoute.pathSchema, query: StatusRoute.querySchema, success: Status.success, error: Status.error })));
+
       export const DependenciesLayer = Layer.empty;
+
       export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", Status.handler))));
+
       export const OpenApi = OpenApiModule.fromApi(Api);
+
       export const Swagger = HttpApiSwagger.layer(Api);
+
       export const Scalar = HttpApiScalar.layer(Api);
+
       export const Client = HttpApiClient.make(Api);
 
       type TypedConfigBuildOptions = {
@@ -753,6 +756,80 @@ export default Layer.succeed(RootApiService, { root: "root" });
     expect(sourceText).not.toContain("HttpApiEndpoint");
   });
 
+  it("emits only server layer dependencies for production server API consumers", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["ApiLayer", "DependenciesLayer"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const Api = ");
+    expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
+    expect(sourceText).toContain("export const ApiLayer = ");
+    expect(sourceText).not.toContain("HttpApiClient");
+    expect(sourceText).not.toContain("OpenApiModule");
+    expect(sourceText).not.toContain("HttpApiSwagger");
+    expect(sourceText).not.toContain("HttpApiScalar");
+    expect(sourceText).not.toContain("@typed/app/TypedHttpServer");
+    expect(sourceText).not.toContain("export const Client = ");
+    expect(sourceText).not.toContain("export const OpenApi = ");
+    expect(sourceText).not.toContain("export const Swagger = ");
+    expect(sourceText).not.toContain("export const Scalar = ");
+    expect(sourceText).not.toContain("export const App = ");
+    expect(sourceText).not.toContain("export const serve = ");
+    expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
+  });
+
+  it("imports OpenApiModule when ApiLayer output includes OpenAPI annotations", () => {
+    const fixture = createApiFixture({
+      "src/apis/_api.ts": `
+export const openapi = {
+  generation: { additionalProperties: false as const },
+};
+`,
+      "src/apis/status.ts": VALID_ENDPOINT_SOURCE,
+    });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["ApiLayer", "DependenciesLayer"]),
+      ),
+    );
+
+    expect(sourceText).toContain(
+      'import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";',
+    );
+    expect(sourceText).toContain("OpenApiModule.annotations");
+    expect(sourceText).toContain("export const ApiLayer = ");
+    expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
+  });
+
+  it("emits App when production serve output references it", () => {
+    const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
+    const id = "typed:api?dir=./apis";
+    const sourceText = getSourceText(
+      buildApiFromExistingFixture(
+        fixture,
+        undefined,
+        id,
+        productionContext(id, fixture.importer, ["serve"]),
+      ),
+    );
+
+    expect(sourceText).toContain("export const serve = ");
+    expect(sourceText).toContain("export const App = ");
+    expect(sourceText).not.toContain("export const Client = ");
+    expectHttpApiGeneratedSourceToTypeCheck(fixture, sourceText!);
+  });
+
   it("emits Api-only production output without client helper imports", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
     const id = "typed:api?dir=./apis";
@@ -877,7 +954,7 @@ export type ConsumerApiDeclaration = ApiDeclaration;
     expect(sourceText).not.toContain("export const DependenciesLayer");
   });
 
-  it("keeps explicit client-mode output broad even with production build context", () => {
+  it("prunes explicit client-mode output with production build context", () => {
     const fixture = createApiFixture({ "src/apis/status.ts": VALID_ENDPOINT_SOURCE });
     const id = "typed:api?dir=./apis&mode=client";
     const sourceText = getSourceText(
@@ -890,11 +967,11 @@ export type ConsumerApiDeclaration = ApiDeclaration;
     );
 
     expect(sourceText).toContain("export const Client = HttpApiClient.make(Api);");
-    expect(sourceText).toContain("export const makeClient = ");
-    expect(sourceText).toContain("export const makeClientWith = ");
-    expect(sourceText).toContain("export const makeUrlBuilder = ");
-    expect(sourceText).toContain("export const DependenciesLayer = Layer.empty;");
-    expect(sourceText).toContain("export const OpenApi = OpenApiModule.fromApi(Api);");
+    expect(sourceText).not.toContain("export const makeClient = ");
+    expect(sourceText).not.toContain("export const makeClientWith = ");
+    expect(sourceText).not.toContain("export const makeUrlBuilder = ");
+    expect(sourceText).not.toContain("export const DependenciesLayer = Layer.empty;");
+    expect(sourceText).not.toContain("export const OpenApi = OpenApiModule.fromApi(Api);");
   });
 
   it("imports OpenApiModule for production helper output when annotations require it", () => {
@@ -1648,13 +1725,10 @@ export const handler = (({ headers, query, body }) => {
       import * as HttpApiGroup from "effect/unstable/httpapi/HttpApiGroup";
       import * as HttpApiScalar from "effect/unstable/httpapi/HttpApiScalar";
       import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger";
-      import * as HttpServer from "effect/unstable/http/HttpServer";
       import * as HttpRouter from "effect/unstable/http/HttpRouter";
       import * as OpenApiModule from "effect/unstable/httpapi/OpenApi";
-      import * as ApiServices from "typed:services?dir=./apis";
       import * as ApiHeaders from "typed:headers?dir=./apis";
       import * as ApiErrors from "typed:errors?dir=./apis";
-      import * as ApiMiddlewares from "typed:middlewares?dir=./apis";
       import * as ApiPrefixes from "typed:prefix?dir=./apis";
       import * as ApiOpenApi from "typed:openapi?dir=./apis";
       import * as TypedConfigModule from "typed:config";
@@ -1663,11 +1737,17 @@ export const handler = (({ headers, query, body }) => {
       const StatusRoute = Status.route;
 
       export const Api = HttpApi.make("apis").add(HttpApiGroup.make("root").add(HttpApiEndpoint.get("status", Status.route.path, { params: StatusRoute.pathSchema, query: StatusRoute.querySchema, success: Status.success, error: Status.error })));
+
       export const DependenciesLayer = Layer.empty;
+
       export const ApiLayer = HttpApiBuilder.layer(Api).pipe(Layer.provideMerge(HttpApiBuilder.group(Api, "root", (handlers) => handlers.handle("status", Status.handler))));
+
       export const OpenApi = OpenApiModule.fromApi(Api);
+
       export const Swagger = HttpApiSwagger.layer(Api);
+
       export const Scalar = HttpApiScalar.layer(Api);
+
       export const Client = HttpApiClient.make(Api);
 
       type TypedConfigBuildOptions = {

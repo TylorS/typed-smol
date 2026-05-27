@@ -5,6 +5,7 @@ import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { attachCompilerHostAdapter } from "./CompilerHostAdapter.js";
 import { PluginManager } from "./PluginManager.js";
+import type { VirtualModuleBuildContext } from "./types.js";
 import type {
   MaterializeVirtualArtifactParams,
   ResolveVirtualArtifactParams,
@@ -55,6 +56,15 @@ const createFakeArtifactStore = (
     },
     __unsafeReleaseLockForTesting: () => {},
   };
+};
+
+const requestedNames = (
+  context: VirtualModuleBuildContext | undefined,
+): readonly string[] | string => {
+  if (!context || context.requestedExports.kind === "all") {
+    return context?.requestedExports.reason ?? "missing";
+  }
+  return [...context.requestedExports.names].sort();
 };
 
 afterEach(() => {
@@ -336,6 +346,60 @@ export const value: Foo = { n: 1 };
     expect(artifactAOutput?.[1]).toContain(`from "../virtual-b/artifact-b.js"`);
     expect(artifactAOutput?.[1]).not.toContain("virtual:b");
     expect(artifactBOutput).toBeDefined();
+  });
+
+  it("passes requested exports from real and nested virtual importers", () => {
+    const dir = createTempDir();
+    const entry = join(dir, "entry.ts");
+    const artifactA = join(dir, "node_modules/.typed/virtual/virtual-a/artifact-a.ts");
+    const artifactB = join(dir, "node_modules/.typed/virtual/virtual-b/artifact-b.ts");
+    writeFileSync(entry, `import { x } from "virtual:a"; export const out = x;`, "utf8");
+
+    const requestedById = new Map<string, readonly string[] | string>();
+    const manager = new PluginManager([
+      {
+        name: "virtual-a",
+        shouldResolve: (id) => id === "virtual:a",
+        build: (_id, _importer, _api, context) => {
+          requestedById.set("virtual:a", requestedNames(context));
+          return `import { y } from "virtual:b"; export const x = y; export const z = 2;`;
+        },
+      },
+      {
+        name: "virtual-b",
+        shouldResolve: (id) => id === "virtual:b",
+        build: (_id, _importer, _api, context) => {
+          requestedById.set("virtual:b", requestedNames(context));
+          return `export const y = 1; export const unused = 2;`;
+        },
+      },
+    ]);
+
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      outDir: join(dir, "dist"),
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      skipLibCheck: true,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+
+    attachCompilerHostAdapter({
+      ts,
+      compilerHost: host,
+      resolver: manager,
+      projectRoot: dir,
+      artifactStoreFactory: ({ pluginName }) =>
+        createFakeArtifactStore(pluginName === "virtual-a" ? artifactA : artifactB),
+    });
+
+    const program = ts.createProgram([entry], compilerOptions, host);
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+
+    expect(diagnostics).toHaveLength(0);
+    expect(requestedById.get("virtual:a")).toEqual(["x"]);
+    expect(requestedById.get("virtual:b")).toEqual(["y"]);
   });
 
   it("uses artifact cache hits without rebuilding or rematerializing", () => {

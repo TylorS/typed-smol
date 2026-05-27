@@ -3,10 +3,12 @@ import { dirname, relative, resolve } from "node:path";
 import {
   type CompilerHostAdapterOptions,
   type VirtualModuleAdapterHandle,
+  type VirtualModuleBuildContext,
   type VirtualModuleDiagnostic,
 } from "./types.js";
 import { rewriteSourceForPreviewLocation } from "./internal/materializeVirtualFile.js";
 import {
+  createBuildContextFromSource,
   createVirtualRecordStore,
   toResolvedModule,
   type MutableVirtualRecord,
@@ -92,8 +94,33 @@ export const attachCompilerHostAdapter = (
     });
   };
 
-  const getOrBuildRecord = (id: string, importer: string): MutableVirtualRecord | undefined => {
-    const result = store.getOrBuildRecord(id, importer);
+  const getContainingSourceText = (
+    containingFile: string,
+    containingSourceFile: ts.SourceFile | undefined,
+  ): string | undefined =>
+    containingSourceFile?.text ??
+    store.findRecordByVirtualFile(containingFile)?.sourceText ??
+    originalReadFile(containingFile);
+
+  const createBuildContext = (
+    id: string,
+    rootImporter: string,
+    containingFile: string,
+    containingSourceFile: ts.SourceFile | undefined,
+  ): VirtualModuleBuildContext =>
+    createBuildContextFromSource({
+      id,
+      rootImporter,
+      containingFile,
+      sourceText: getContainingSourceText(containingFile, containingSourceFile),
+    });
+
+  const getOrBuildRecord = (
+    id: string,
+    importer: string,
+    context?: VirtualModuleBuildContext,
+  ): MutableVirtualRecord | undefined => {
+    const result = store.getOrBuildRecord(id, importer, context);
     if (result.status === "error") {
       reportAdapterDiagnostic(result.diagnostic);
     }
@@ -176,7 +203,13 @@ export const attachCompilerHostAdapter = (
       if (relativeVirtualRecord) {
         return toResolvedModule(options.ts, relativeVirtualRecord.virtualFileName);
       }
-      const record = getOrBuildRecord(moduleName, effectiveImporter);
+      const context = createBuildContext(
+        moduleName,
+        effectiveImporter,
+        containingFile,
+        containingSourceFile,
+      );
+      const record = getOrBuildRecord(moduleName, effectiveImporter, context);
       if (!record) {
         return fallback[index];
       }
@@ -221,7 +254,13 @@ export const attachCompilerHostAdapter = (
           resolvedModule: toResolvedModule(options.ts, relativeVirtualRecord.virtualFileName),
         };
       }
-      const record = getOrBuildRecord(moduleLiteral.text, effectiveImporter);
+      const context = createBuildContext(
+        moduleLiteral.text,
+        effectiveImporter,
+        containingFile,
+        containingSourceFile,
+      );
+      const record = getOrBuildRecord(moduleLiteral.text, effectiveImporter, context);
       if (!record) {
         return fallback[index];
       }

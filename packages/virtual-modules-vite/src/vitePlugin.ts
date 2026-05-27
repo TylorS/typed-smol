@@ -8,6 +8,7 @@ import {
   createPluginConfigFingerprint,
   createSourceInputFingerprint,
   createVirtualArtifactStore,
+  createVirtualRecordKey,
 } from "@typed/virtual-modules";
 import type {
   ArtifactStoreFingerprints,
@@ -93,7 +94,8 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
   const { resolver, createTypeInfoApiSession, warnOnError = true } = options;
   let projectRoot = resolveOptionalProjectRoot(options.projectRoot);
   let viteCommand: "build" | "serve" = "serve";
-  const contextByResolvedId = new Map<string, VirtualModuleBuildContext>();
+  const contextByResolvedId = new Map<string, ResolvedVirtualContext>();
+  const sourceByResolvedId = new Map<string, string>();
 
   return {
     name: PLUGIN_NAME,
@@ -131,10 +133,21 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       const mappedId = mapVirtualId(options, id, effectiveImporter, this?.environment);
       const context = createBuildContext({
         id: mappedId,
+        requestedExportsId: id,
         rootImporter: effectiveImporter,
         containingFile: importer,
         consumer: consumerFromEnvironment(this?.environment),
         command: viteCommand,
+        sourceByResolvedId,
+      });
+      const artifactContext = createBuildContext({
+        id: mappedId,
+        requestedExportsId: id,
+        rootImporter: effectiveImporter,
+        containingFile: importer,
+        consumer: consumerFromEnvironment(this?.environment),
+        command: "build",
+        sourceByResolvedId,
       });
       const resolveOptions = {
         id: mappedId,
@@ -145,7 +158,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       const pluginResolution = resolver.resolvePluginName?.(resolveOptions);
       if (pluginResolution?.status === "resolved") {
         const encoded = encodeVirtualId(mappedId, effectiveImporter);
-        contextByResolvedId.set(encoded, context);
+        contextByResolvedId.set(encoded, { context, artifactContext });
         return encoded;
       }
       if (pluginResolution?.status === "error") {
@@ -160,7 +173,7 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
       const result = resolver.resolveModule(resolveOptions);
       if (result.status === "resolved") {
         const encoded = encodeVirtualId(mappedId, effectiveImporter);
-        contextByResolvedId.set(encoded, context);
+        contextByResolvedId.set(encoded, { context, artifactContext });
         return encoded;
       }
       if (result.status === "error") {
@@ -185,14 +198,28 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         return null;
       }
       const { id, importer } = parsed;
+      const resolvedContext = contextByResolvedId.get(resolvedId);
       const context =
-        contextByResolvedId.get(resolvedId) ??
+        resolvedContext?.context ??
         createBuildContext({
           id,
+          requestedExportsId: id,
           rootImporter: importer,
           containingFile: importer,
           consumer: "unknown",
           command: viteCommand,
+          sourceByResolvedId,
+        });
+      const artifactContext =
+        resolvedContext?.artifactContext ??
+        createBuildContext({
+          id,
+          requestedExportsId: id,
+          rootImporter: importer,
+          containingFile: importer,
+          consumer: "unknown",
+          command: "build",
+          sourceByResolvedId,
         });
       const cached = resolveCachedArtifact({
         options,
@@ -200,8 +227,10 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
         id,
         importer,
         context,
+        artifactContext,
       });
       if (cached.status === "hit") {
+        sourceByResolvedId.set(resolvedId, cached.sourceText);
         return transformVirtualModuleSource(cached.sourceText, parsed.id);
       }
       if (cached.status === "error") {
@@ -224,9 +253,11 @@ export function virtualModulesVitePlugin(options: VirtualModulesVitePluginOption
           id,
           importer,
           context,
+          artifactContext: isDevModeContext(context) ? undefined : artifactContext,
           resolution: result,
           warnOnError,
         });
+        sourceByResolvedId.set(resolvedId, sourceText);
         return transformVirtualModuleSource(sourceText, id);
       }
       if (result.status === "error" && shouldWarnDiagnostic(result.diagnostic)) {
@@ -247,6 +278,7 @@ interface ArtifactRequest {
   readonly id: string;
   readonly importer: string;
   readonly context?: VirtualModuleBuildContext;
+  readonly artifactContext?: VirtualModuleBuildContext;
 }
 
 type CachedArtifactResult =
@@ -254,7 +286,20 @@ type CachedArtifactResult =
   | { readonly status: "miss" }
   | { readonly status: "error"; readonly diagnostic: VirtualModuleDiagnostic };
 
+interface ResolvedVirtualContext {
+  readonly context: VirtualModuleBuildContext;
+  readonly artifactContext: VirtualModuleBuildContext;
+}
+
 const resolveCachedArtifact = (request: ArtifactRequest): CachedArtifactResult => {
+  const primary = resolveCachedArtifactRequest(request);
+  if (primary.status !== "miss" || !isDevModeContext(request.context)) {
+    return primary;
+  }
+  return resolveCachedArtifactRequest({ ...request, artifactContext: undefined });
+};
+
+const resolveCachedArtifactRequest = (request: ArtifactRequest): CachedArtifactResult => {
   const pluginName = resolvePluginName(request);
   if (pluginName.status !== "resolved") {
     return pluginName;
@@ -263,9 +308,11 @@ const resolveCachedArtifact = (request: ArtifactRequest): CachedArtifactResult =
   try {
     const store = createRequestArtifactStore(request, pluginName.pluginName);
     if (!store) return { status: "miss" };
+    const virtualKey = createRequestVirtualKey(request);
     const result = store.resolve({
       id: request.id,
       importer: request.importer,
+      virtualKey,
       fingerprints: createRequestFingerprints(request),
     });
     return result.status === "hit"
@@ -301,14 +348,20 @@ const consumerFromEnvironment = (
 
 const createBuildContext = (input: {
   readonly id: string;
+  readonly requestedExportsId: string;
   readonly rootImporter: string;
   readonly containingFile: string;
   readonly consumer: VirtualModuleConsumer;
   readonly command: "build" | "serve";
+  readonly sourceByResolvedId: ReadonlyMap<string, string>;
 }): VirtualModuleBuildContext => {
   const requestedExports =
     input.command === "build"
-      ? requestedExportsFromContainingFile(input.containingFile, input.id)
+      ? requestedExportsFromContainingFile(
+          input.containingFile,
+          input.requestedExportsId,
+          input.sourceByResolvedId,
+        )
       : { kind: "all" as const, reason: "dev mode" };
   return {
     id: input.id,
@@ -323,9 +376,13 @@ const createBuildContext = (input: {
 const requestedExportsFromContainingFile = (
   containingFile: string,
   id: string,
+  sourceByResolvedId: ReadonlyMap<string, string>,
 ): VirtualModuleBuildContext["requestedExports"] => {
   if (isVirtualId(containingFile)) {
-    return { kind: "all", reason: "virtual importer source unavailable" };
+    const sourceText = sourceByResolvedId.get(containingFile);
+    return sourceText
+      ? analyzeRequestedExports(sourceText, id)
+      : { kind: "all", reason: "virtual importer source unavailable" };
   }
   try {
     return analyzeRequestedExports(readFileSync(containingFile, "utf8"), id);
@@ -381,9 +438,11 @@ const materializeArtifact = (
   try {
     const store = createRequestArtifactStore(request, request.resolution.pluginName);
     if (!store) return request.resolution.sourceText;
+    const virtualKey = createRequestVirtualKey(request);
     store.materialize({
       id: request.id,
       importer: request.importer,
+      virtualKey,
       sourceText: request.resolution.sourceText,
       sourceInputFingerprints: createRequestFingerprints(request).sourceInputFingerprints,
       dependencyDescriptors: request.resolution.dependencies,
@@ -425,12 +484,20 @@ const createRequestArtifactStore = (request: ArtifactRequest, pluginName: string
   return createVirtualArtifactStore({
     projectRoot: request.projectRoot,
     pluginName,
+    virtualKey: createRequestVirtualKey(request),
     fingerprints: createStoreFingerprints(request.options),
     lockTimeoutMs: artifactOptions.lockTimeoutMs,
     lockRetryMs: artifactOptions.lockRetryMs,
     staleLockMs: artifactOptions.staleLockMs,
   });
 };
+
+const createRequestVirtualKey = (request: ArtifactRequest): string =>
+  createVirtualRecordKey(
+    request.id,
+    request.importer,
+    request.artifactContext ?? (isDevModeContext(request.context) ? undefined : request.context),
+  );
 
 const createRequestFingerprints = (request: ArtifactRequest): ArtifactStoreFingerprints => ({
   sourceInputFingerprints: [
@@ -452,9 +519,11 @@ const contextFingerprints = (
       ]
     : [];
 
+const isDevModeContext = (context: VirtualModuleBuildContext | undefined): boolean =>
+  context?.requestedExports.kind === "all" && context.requestedExports.reason === "dev mode";
+
 const shouldFingerprintBuildContext = (context: VirtualModuleBuildContext | undefined): boolean =>
-  context !== undefined &&
-  !(context.requestedExports.kind === "all" && context.requestedExports.reason === "dev mode");
+  context !== undefined && !isDevModeContext(context);
 
 const fingerprintBuildContext = (context: VirtualModuleBuildContext | undefined): unknown => {
   if (!context) return { requestedExports: "all", reason: "missing context" };

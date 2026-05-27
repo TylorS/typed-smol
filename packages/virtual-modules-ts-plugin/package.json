@@ -20,7 +20,8 @@
     "build": "tsup && cp src/plugin.d.ts dist/plugin.d.ts",
     "build:plugins": "pnpm --filter virtual-modules-ts-plugin-sample run build:plugins",
     "pretest": "pnpm --filter @typed/virtual-modules run build && pnpm --filter @typed/compiler run build && pnpm run build && pnpm --filter @typed/virtual-modules-compiler run build",
-    "test": "vitest run --passWithNoTests"
+    "test": "pnpm run test:typecheck && vitest run --passWithNoTests",
+    "test:typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@typed/compiler": "workspace:*",
