@@ -56,3 +56,15 @@
 - check_command: `pnpm --filter typed-realworld check`
 - check_result: blocked outside T1 after T1 formatting was fixed. Remaining errors are `node_modules/.typed/virtual/httpapi-virtual-module/4585439fb101fbc7.ts(87,5611): error TS2304: Cannot find name 'OpenApiModule'.` and formatting in existing dirty `src/common/components/CommentForm.ts`.
 - ownership_note: do not fix the `OpenApiModule` or `CommentForm.ts` blockers inside T1 without approval because they overlap concurrent RealWorld and HttpApi virtual-module work.
+
+## T2 - Shared Runtime And Bridge Wiring
+
+- status: verified existing implementation; no code change required.
+- ownership_check: T2 target files were clean before inspection: `packages/app/src/internal/emitBrowserSource.ts`, `packages/app/src/BrowserVirtualModulePlugin.test.ts`, `packages/app/src/runtime/devtoolsBridge.ts`, `packages/app/src/runtime/devtoolsBridge.test.ts`, `packages/app/src/runtime/domTemplateRuntime.ts`, and `packages/app/src/runtime/domTemplateRuntime.test.ts`.
+- evidence: `BrowserVirtualModulePlugin.test.ts` already asserts devtools browser source emits `makeDevtoolsRuntime({ enabled: true })`, `makeDomRegistry({ runtime: devtoolsRuntime })`, `installTypedDevtoolsBridge`, `runtime: devtoolsRuntime`, and `devtools: { enabled: true, domRegistry }`.
+- evidence: `devtoolsBridge.test.ts` already proves a wired runtime advertises `components` and `dom`, returns `RuntimeReplayState`, and replays live runtime events from the same runtime event bus.
+- evidence: `domTemplateRuntime.test.ts` already proves `createAppDomTemplateRuntime` uses `domRegistry.observer` only when devtools are enabled.
+- broad_command: `pnpm --filter @typed/app test -- BrowserVirtualModulePlugin.test.ts runtime/devtoolsBridge.test.ts runtime/domTemplateRuntime.test.ts`
+- broad_result: passed but ran the full package because the package script consumes the extra args after its own command shape; Vitest reported 35 files, 499 tests, no type errors, duration 97.20s.
+- focused_command: `pnpm --filter @typed/app exec vitest run --passWithNoTests BrowserVirtualModulePlugin.test.ts runtime/devtoolsBridge.test.ts runtime/domTemplateRuntime.test.ts`
+- focused_result: passed. Vitest reported 3 files, 18 tests, no type errors, duration 2.42s.

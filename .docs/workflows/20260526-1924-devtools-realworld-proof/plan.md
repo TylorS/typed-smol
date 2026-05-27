@@ -8,6 +8,7 @@ Status: approved on 2026-05-26 after production-grade review.
 | ------- | ------ | --------------- |
 | T0 | completed on 2026-05-26 20:01 EDT | Preflight facts recorded in `memories.md`: dirty state, missing `hurl`, and package test baselines. |
 | T1 | focused slice accepted; full check blocked externally | Focused Vitest gate passes; `pnpm --filter typed-realworld check` is blocked by existing dirty `CommentForm.ts` formatting and generated HttpApi `OpenApiModule` type error outside this slice. |
+| T2 | completed on 2026-05-26 20:11 EDT | Existing implementation already satisfies shared runtime/bridge wiring; focused app gate passed with 3 files, 18 tests, no type errors. |
 
 ## Subgoal DAG
 
