@@ -96,3 +96,10 @@
 - dist_note: RealWorld imports `@typed/app` from package `dist`, so `devtools:local` and `test:devtools:local` run `pnpm --filter @typed/app build` before `vmc` and Playwright.
 - green_command: `pnpm --filter typed-realworld test:devtools:local`
 - green_result: passed. Playwright reported 1 Chromium test passing and logged `RealWorld DevTools accepted capabilities: components,dom`.
+
+## T5 - Component Tree And DOM Binding Proof
+
+- preflight_command: `rg -n "registerComponent\\(" packages examples -g '*.ts'`
+- preflight_result: `DomRegistry.registerComponent` is implemented, but every call site is currently in tests. No production app/compiler/generated-runtime path registers RealWorld component summaries with the DOM registry.
+- blocker: RealWorld can expose the devtools bridge and replay state, but component rows require compiler/generated runtime component facts that map template hashes to `ComponentSummary`.
+- ownership_note: do not synthesize fake component rows from raw template hashes as a production-grade substitute. T5 needs ownership direction to patch the compiler/generated runtime component-fact path or wait for the compiler-capability agent.

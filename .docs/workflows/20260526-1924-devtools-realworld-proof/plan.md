@@ -11,6 +11,7 @@ Status: approved on 2026-05-26 after production-grade review.
 | T2 | completed on 2026-05-26 20:11 EDT | Existing implementation already satisfies shared runtime/bridge wiring; focused app gate passed with 3 files, 18 tests, no type errors. |
 | T3 | completed on 2026-05-26 20:13 EDT | Panel replay state now clears stale rows on every replay boundary; devtools-chrome package gate passed with 8 files, 41 tests. |
 | T4 | completed on 2026-05-26 20:26 EDT | RealWorld devtools Playwright smoke passed, accepted `components,dom`, and proved inspected-page runtime replay. |
+| T5 | blocked pending ownership direction | Production code exposes `DomRegistry.registerComponent`, but only tests call it; RealWorld cannot emit component rows until compiler/generated runtime component facts are wired. |
 
 ## Subgoal DAG
 
