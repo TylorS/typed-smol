@@ -227,11 +227,17 @@ describe("BrowserVirtualModulePlugin", () => {
   it("emits devtools instrumentation only for explicit browser devtools modules", () => {
     const source = buildBrowser("typed:browser?routes=*&devtools=1") as string;
 
+    expect(source).toContain(
+      'import Routes0, { __typedDevtoolsComponentSummaries as Routes0DevtoolsComponentSummaries } from "typed:router?dir=*&devtools=1";',
+    );
     expect(source).toContain("installTypedDevtoolsBridge");
     expect(source).toContain("makeDevtoolsRuntime");
     expect(source).toContain("makeDomRegistry");
     expect(source).toContain("const devtoolsRuntime = makeDevtoolsRuntime({ enabled: true });");
     expect(source).toContain("const domRegistry = makeDomRegistry({ runtime: devtoolsRuntime });");
+    expect(source).toContain(
+      "  for (const component of [...Routes0DevtoolsComponentSummaries]) domRegistry.registerComponent(component as unknown as Parameters<typeof domRegistry.registerComponent>[0]);",
+    );
     expect(source).toContain("runtime: devtoolsRuntime");
     expect(source).toContain("devtools: { enabled: true, domRegistry }");
   });

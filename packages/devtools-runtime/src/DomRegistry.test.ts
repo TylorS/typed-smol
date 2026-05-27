@@ -211,7 +211,14 @@ describe("DOM DevTools registry", () => {
     });
 
     expect(runtime.snapshot()).toEqual([
-      { _tag: "ComponentMounted", component, timestamp: 42 },
+      {
+        _tag: "ComponentMounted",
+        component: {
+          ...component,
+          domBindingIds: [makeDomBindingId("instrumented-template#root:0")],
+        },
+        timestamp: 42,
+      },
       { _tag: "ComponentUnmounted", componentId: component.componentId, timestamp: 42 },
     ]);
   });

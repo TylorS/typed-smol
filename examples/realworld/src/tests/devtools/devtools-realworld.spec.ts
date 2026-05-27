@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 const DEVTOOLS_PROTOCOL_VERSION = "0.1.0" as const;
+const DEVTOOLS_SMOKE_PATH = process.env.DEVTOOLS_SMOKE_PATH ?? "/login";
+const DEVTOOLS_WAIT_TIMEOUT_MS = Number(process.env.DEVTOOLS_WAIT_TIMEOUT_MS ?? "15000");
 
 test("RealWorld devtools smoke page exposes inspected runtime replay", async ({ page }) => {
   await page.route(
-    (url) => url.pathname === "/devtools-smoke.html",
+    (url) => url.pathname === DEVTOOLS_SMOKE_PATH,
     async (route) => {
       await route.fulfill({
         body: [
@@ -26,11 +28,15 @@ test("RealWorld devtools smoke page exposes inspected runtime replay", async ({ 
     },
   );
 
-  await page.goto("/devtools-smoke.html");
-  await page.waitForFunction(() => {
-    const bridge = (globalThis as { readonly __TYPED_DEVTOOLS__?: unknown }).__TYPED_DEVTOOLS__;
-    return typeof bridge === "object" && bridge !== null && "handshake" in bridge;
-  });
+  await page.goto(DEVTOOLS_SMOKE_PATH);
+  await page.waitForFunction(
+    () => {
+      const bridge = (globalThis as { readonly __TYPED_DEVTOOLS__?: unknown }).__TYPED_DEVTOOLS__;
+      return typeof bridge === "object" && bridge !== null && "handshake" in bridge;
+    },
+    undefined,
+    { timeout: DEVTOOLS_WAIT_TIMEOUT_MS },
+  );
 
   const handshake = await page.evaluate((version) => {
     const bridge = (globalThis as DevtoolsWindow).__TYPED_DEVTOOLS__;
@@ -60,18 +66,33 @@ test("RealWorld devtools smoke page exposes inspected runtime replay", async ({ 
   expect(handshake.acceptedCapabilities).toContain("components");
   expect(handshake.acceptedCapabilities).toContain("dom");
 
-  const runtimeItems = await page.evaluate(
-    (request) => {
-      const bridge = (globalThis as DevtoolsWindow).__TYPED_DEVTOOLS__;
-      return bridge.subscribeRuntimeEvents(request);
-    },
-    {
-      capabilities: ["components"],
-      replay: true,
-      sessionId: handshake.sessionId,
-      sinceSequence: 0,
-    },
-  );
+  await expect(page.locator(".auth-page")).toBeAttached({ timeout: DEVTOOLS_WAIT_TIMEOUT_MS });
+
+  let runtimeItems: readonly RuntimeEventStreamItem[] = [];
+  await expect
+    .poll(
+      async () => {
+        runtimeItems = await page.evaluate(
+          (request) => {
+            const bridge = (globalThis as DevtoolsWindow).__TYPED_DEVTOOLS__;
+            return bridge.subscribeRuntimeEvents(request);
+          },
+          {
+            capabilities: ["components"],
+            replay: true,
+            sessionId: handshake.sessionId,
+            sinceSequence: 0,
+          },
+        );
+        return runtimeItems.some((item) => {
+          return (
+            item._tag === "ComponentMounted" && (item.component?.domBindingIds.length ?? 0) > 0
+          );
+        });
+      },
+      { timeout: DEVTOOLS_WAIT_TIMEOUT_MS },
+    )
+    .toBe(true);
 
   expect(Array.isArray(runtimeItems)).toBe(true);
   expect(runtimeItems[0]).toMatchObject({
@@ -82,11 +103,41 @@ test("RealWorld devtools smoke page exposes inspected runtime replay", async ({ 
       sessionId: handshake.sessionId,
     },
   });
+
+  const componentEvent = runtimeItems.find((item): item is ComponentMountedStreamItem => {
+    return item._tag === "ComponentMounted" && (item.component?.domBindingIds.length ?? 0) > 0;
+  });
+
+  expect(componentEvent).toBeDefined();
+  expect(componentEvent!.component).toMatchObject({
+    componentId: expect.stringMatching(/^cmp:/),
+    displayName: expect.any(String),
+    templateHash: expect.stringMatching(/^tpl:/),
+  });
+
+  const bindingId = componentEvent!.component.domBindingIds[0]!;
+  const resolution = await page.evaluate(
+    (request) => {
+      const bridge = (globalThis as DevtoolsWindow).__TYPED_DEVTOOLS__;
+      return bridge.resolveDomBinding(request);
+    },
+    { bindingId, includeRelated: true },
+  );
+
+  expect(resolution).toMatchObject({
+    _tag: "Resolved",
+    bindingId,
+    component: {
+      componentId: componentEvent!.component.componentId,
+      displayName: componentEvent!.component.displayName,
+    },
+  });
 });
 
 interface DevtoolsWindow {
   readonly __TYPED_DEVTOOLS__: {
     readonly handshake: (request: DevtoolsHandshakeRequest) => DevtoolsHandshakeResponse;
+    readonly resolveDomBinding: (request: DomBindingRequest) => DomBindingResolution;
     readonly subscribeRuntimeEvents: (
       request: RuntimeEventSubscriptionRequest,
     ) => readonly RuntimeEventStreamItem[];
@@ -118,9 +169,39 @@ interface RuntimeEventSubscriptionRequest {
 
 interface RuntimeEventStreamItem {
   readonly _tag: string;
+  readonly component?: {
+    readonly componentId: string;
+    readonly displayName: string;
+    readonly domBindingIds: readonly string[];
+    readonly templateHash?: string;
+  };
   readonly state?: {
     readonly _tag: string;
     readonly reconnectable?: boolean;
     readonly sessionId?: string;
+  };
+}
+
+interface ComponentMountedStreamItem extends RuntimeEventStreamItem {
+  readonly _tag: "ComponentMounted";
+  readonly component: {
+    readonly componentId: string;
+    readonly displayName: string;
+    readonly domBindingIds: readonly string[];
+    readonly templateHash: string;
+  };
+}
+
+interface DomBindingRequest {
+  readonly bindingId: string;
+  readonly includeRelated?: boolean;
+}
+
+interface DomBindingResolution {
+  readonly _tag: string;
+  readonly bindingId: string;
+  readonly component?: {
+    readonly componentId: string;
+    readonly displayName: string;
   };
 }

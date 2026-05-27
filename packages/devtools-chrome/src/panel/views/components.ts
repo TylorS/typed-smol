@@ -1,10 +1,16 @@
-import type { ComponentId, HmrBoundaryId, TemplateHash } from "@typed/devtools-protocol";
+import type {
+  ComponentId,
+  DomBindingId,
+  HmrBoundaryId,
+  TemplateHash,
+} from "@typed/devtools-protocol";
 import { devtoolsDeepLink, type TypedDevtoolsPanelState } from "../state.js";
 
 export interface ComponentPanelRow {
   readonly componentId: ComponentId;
   readonly deepLink: string;
   readonly displayName: string;
+  readonly domBindingIds: readonly DomBindingId[];
   readonly fxCount: number;
   readonly hmrBoundaryId?: HmrBoundaryId;
   readonly refSubjectCount: number;
@@ -23,6 +29,7 @@ export function componentRows(state: TypedDevtoolsPanelState): readonly Componen
     componentId: component.componentId,
     deepLink: devtoolsDeepLink("component", component.componentId),
     displayName: component.displayName,
+    domBindingIds: component.domBindingIds ?? [],
     fxCount: component.fxNodeIds.length,
     ...(component.hmrBoundaryId && { hmrBoundaryId: component.hmrBoundaryId }),
     refSubjectCount: component.refSubjectIds.length,

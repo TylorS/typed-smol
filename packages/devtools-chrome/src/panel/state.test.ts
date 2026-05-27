@@ -44,6 +44,7 @@ describe("Typed DevTools panel state", () => {
         componentId: "cmp:app/root",
         deepLink: "typed://component/cmp%3Aapp%2Froot",
         displayName: "Root",
+        domBindingIds: [],
         fxCount: 1,
         hmrBoundaryId: "hmr:module:/src/App.tsx",
         refSubjectCount: 1,

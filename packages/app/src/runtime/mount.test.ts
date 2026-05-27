@@ -69,6 +69,28 @@ describe("mount compiled templates", () => {
     await Effect.runPromise(mounted.dispose);
   });
 
+  it("passes the DOM devtools observer to runtime html fallback templates", async () => {
+    const window = new Window();
+    const root = window.document.createElement("main");
+    const mountedTemplates: string[] = [];
+
+    const mounted = await Effect.runPromise(
+      mount(html`<section class="instrumented">Mounted</section>`, {
+        root,
+        runtime: {
+          devtools: {
+            onTemplateMounted: (event) => {
+              mountedTemplates.push(event.root.className);
+            },
+          },
+        },
+      }),
+    );
+
+    expect(mountedTemplates).toEqual(["instrumented"]);
+    await Effect.runPromise(mounted.dispose);
+  });
+
   it("preserves form control edits made before hydration finishes", async () => {
     const window = new Window();
     const root = window.document.createElement("main");

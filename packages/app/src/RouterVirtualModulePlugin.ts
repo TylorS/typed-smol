@@ -13,11 +13,7 @@ import {
   toPosixPath,
 } from "./internal/path.js";
 import { typeNodeIsRouteCompatible } from "./internal/routeTypeNode.js";
-import {
-  dependencyLayerType,
-  TypeModuleSource,
-  typeTuple,
-} from "./internal/typeModuleSource.js";
+import { dependencyLayerType, TypeModuleSource, typeTuple } from "./internal/typeModuleSource.js";
 import { validateNonEmptyString, validatePathSegment } from "./internal/validation.js";
 import type {
   TypeInfoApi,
@@ -48,7 +44,7 @@ export interface RouterVirtualModulePluginOptions {
 }
 
 export type ParseRouterVirtualModuleIdResult =
-  | { readonly ok: true; readonly relativeDirectory: string }
+  | { readonly ok: true; readonly relativeDirectory: string; readonly devtools?: true }
   | { readonly ok: false; readonly code: string; readonly reason: string };
 
 function isRouterVirtualModuleId(id: string, prefix: string): boolean {
@@ -69,7 +65,7 @@ export function parseRouterVirtualModuleId(
 
   const query = id === prefix ? "" : id.slice(prefix.length + 1);
   const params = new URLSearchParams(query);
-  const unsupported = [...params.keys()].find((key) => key !== "dir");
+  const unsupported = [...params.keys()].find((key) => key !== "dir" && key !== "devtools");
   if (unsupported !== undefined) {
     return {
       ok: false,
@@ -102,12 +98,33 @@ export function parseRouterVirtualModuleId(
   if (!relativeResult.ok) {
     return { ok: false, code: "RVM-ID-DIR-002", reason: relativeResult.reason };
   }
+  const devtools = parseRouterDevtools(params);
+  if (!devtools.ok) return devtools;
 
-  return { ok: true, relativeDirectory: relativeResult.value };
+  return {
+    ok: true,
+    relativeDirectory: relativeResult.value,
+    ...(devtools.value ? { devtools: true } : {}),
+  };
+}
+
+function parseRouterDevtools(
+  params: URLSearchParams,
+):
+  | { readonly ok: true; readonly value: boolean }
+  | { readonly ok: false; readonly code: string; readonly reason: string } {
+  const values = params.getAll("devtools");
+  if (values.length === 0) return { ok: true, value: false };
+  if (values.length === 1 && values[0] === "1") return { ok: true, value: true };
+  return {
+    ok: false,
+    code: "RVM-ID-QUERY-002",
+    reason: 'typed:router devtools must be "1" when present',
+  };
 }
 
 export type ResolveRouterTargetDirectoryResult =
-  | { readonly ok: true; readonly targetDirectory: string }
+  | { readonly ok: true; readonly targetDirectory: string; readonly devtools?: true }
   | { readonly ok: false; readonly code: string; readonly reason: string };
 
 export function resolveRouterTargetDirectory(
@@ -140,7 +157,11 @@ export function resolveRouterTargetDirectory(
     };
   }
 
-  return { ok: true, targetDirectory: toPosixPath(resolved.path) };
+  return {
+    ok: true,
+    targetDirectory: toPosixPath(resolved.path),
+    ...(parsed.devtools ? { devtools: true } : {}),
+  };
 }
 
 function isExistingDirectory(absolutePath: string): boolean {
@@ -257,6 +278,7 @@ export const createRouterVirtualModulePlugin = (
         catchFormByPath,
         depsFormByPath,
         context,
+        { devtools: resolved.devtools === true },
       );
     },
   };

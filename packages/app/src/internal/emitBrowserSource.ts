@@ -13,7 +13,7 @@ export function emitBrowserSource(input: EmitBrowserSourceInput): string {
     'import * as Layer from "effect/Layer";',
     ...emitRuntimeImports(input.parsed.devtools),
     'import * as TypedRouter from "@typed/router";',
-    ...emitRouteImports(input.parsed.routes),
+    ...emitRouteImports(input.parsed.routes, input.parsed.devtools),
     ...emitCompanionImports(input.companions ?? []),
     emitTypes(),
     emitRuntime(input.parsed, input.companions ?? []),
@@ -54,9 +54,11 @@ function emitTypes(): string {
   ].join("\n");
 }
 
-function emitRouteImports(routes: readonly string[]): readonly string[] {
+function emitRouteImports(routes: readonly string[], devtools: boolean): readonly string[] {
   return routes.map((target, index) => {
-    return `import Routes${index} from "typed:router?dir=${toRouterTarget(target)}";`;
+    const id = `typed:router?dir=${toRouterTarget(target)}${devtools ? "&devtools=1" : ""}`;
+    if (!devtools) return `import Routes${index} from ${JSON.stringify(id)};`;
+    return `import Routes${index}, { __typedDevtoolsComponentSummaries as Routes${index}DevtoolsComponentSummaries } from ${JSON.stringify(id)};`;
   });
 }
 
@@ -97,7 +99,7 @@ function emitRuntime(
     "  companionLayers,",
     "};",
     "function makeRenderLayer(win: Window, root: HTMLElement, options: BrowserOptions<readonly []> | BrowserOptionsWithLayers<BrowserLayerInputs>) {",
-    ...emitDomRuntime(parsed.devtools),
+    ...emitDomRuntime(parsed.devtools, parsed.routes.length),
     "  return Layer.effectDiscard(mountRuntime(Routes, { root, runtime: domRuntime })).pipe(",
     "    Layer.provideMerge(TypedRouter.BrowserRouter(win)),",
     "  );",
@@ -139,12 +141,13 @@ function emitRuntime(
   ].join("\n");
 }
 
-function emitDomRuntime(devtools: boolean): readonly string[] {
+function emitDomRuntime(devtools: boolean, routeCount: number): readonly string[] {
   if (!devtools) return ["  const domRuntime = createAppDomTemplateRuntime();"];
 
   return [
     "  const devtoolsRuntime = makeDevtoolsRuntime({ enabled: true });",
     "  const domRegistry = makeDomRegistry({ runtime: devtoolsRuntime });",
+    `  for (const component of [${routeComponentSummarySpreads(routeCount)}]) domRegistry.registerComponent(component as unknown as Parameters<typeof domRegistry.registerComponent>[0]);`,
     "  installTypedDevtoolsBridge({",
     "    enabled: true,",
     "    domRegistry,",
@@ -155,6 +158,13 @@ function emitDomRuntime(devtools: boolean): readonly string[] {
     "    devtools: { enabled: true, domRegistry },",
     "  });",
   ];
+}
+
+function routeComponentSummarySpreads(routeCount: number): string {
+  return Array.from(
+    { length: routeCount },
+    (_, index) => `...Routes${index}DevtoolsComponentSummaries`,
+  ).join(", ");
 }
 
 function routeExpression(routes: readonly string[]): string {

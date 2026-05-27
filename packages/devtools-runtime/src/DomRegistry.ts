@@ -172,8 +172,12 @@ function recordComponentMounted(
 ): void {
   const component = state.componentsByTemplate.get(templateHash);
   if (!component) return;
-  state.rootComponents.set(root, component);
-  state.runtime?.emit({ _tag: "ComponentMounted", component, timestamp: state.now() });
+  const mounted = {
+    ...component,
+    domBindingIds: [...(state.rootBindings.get(root) ?? [])],
+  };
+  state.rootComponents.set(root, mounted);
+  state.runtime?.emit({ _tag: "ComponentMounted", component: mounted, timestamp: state.now() });
 }
 
 function rootRecord(

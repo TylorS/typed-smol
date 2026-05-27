@@ -113,6 +113,18 @@ describe("parseComposableTypedVirtualModuleId", () => {
     });
   });
 
+  it("parses explicit route-template devtools leaf modules", () => {
+    expect(
+      parseComposableTypedVirtualModuleId("typed:route-template?path=./routes/home.ts&devtools=1"),
+    ).toEqual({
+      ok: true,
+      kind: "route-template",
+      target: "path",
+      value: "./routes/home.ts",
+      devtools: true,
+    });
+  });
+
   it("rejects URL-shaped targets", () => {
     expect(parseComposableTypedVirtualModuleId("typed:services?dir=https://example.com")).toEqual({
       ok: false,
@@ -126,6 +138,16 @@ describe("parseComposableTypedVirtualModuleId", () => {
       ok: false,
       code: "CVM-ID-QUERY-001",
       reason: 'typed:guard does not support query option "url"',
+    });
+  });
+
+  it("rejects non-canonical route-template devtools options", () => {
+    expect(
+      parseComposableTypedVirtualModuleId("typed:route-template?path=./routes/home.ts&devtools=0"),
+    ).toEqual({
+      ok: false,
+      code: "CVM-ID-QUERY-002",
+      reason: 'typed:route-template devtools must be "1" when present',
     });
   });
 });
@@ -220,9 +242,12 @@ describe("createTypedVirtualModulePlugins", () => {
       (p) => p.name === "typed-services-virtual-module",
     )!;
     const id = "typed:services?dir=./routes";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "dependencyLayers",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["dependencyLayers"]),
+    );
 
     expect(source).not.toContain("export const modules");
     expect(source).not.toContain("dependencyInputs");
@@ -393,9 +418,12 @@ export const guard = (): Effect.Effect<string> => Effect.succeed("nope");
       (p) => p.name === "typed-guard-virtual-module",
     )!;
     const id = "typed:guard?dir=./routes";
-    const result = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "guards",
-    ]));
+    const result = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["guards"]),
+    );
 
     expect(result).toMatchObject({ errors: [{ code: "CVM-GUARD-001" }] });
   });
@@ -413,9 +441,12 @@ export function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.s
       (p) => p.name === "typed-guard-virtual-module",
     )!;
     const id = "typed:guard?dir=./routes";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "guards",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["guards"]),
+    );
 
     expect(source).not.toContain("export const modules");
     expect(source).toMatchInlineSnapshot(`
@@ -488,9 +519,12 @@ export function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.s
       (p) => p.name === "typed-headers-virtual-module",
     )!;
     const id = "typed:headers?dir=./api";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "headers",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["headers"]),
+    );
 
     expect(source).not.toContain("export const modules");
     expect(source).toMatchInlineSnapshot(`
@@ -551,9 +585,12 @@ export function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.s
       (p) => p.name === "typed-api-handler-virtual-module",
     )!;
     const id = "typed:api-handler?path=./api/status.ts";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "route",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["route"]),
+    );
 
     expect(source).toMatchInlineSnapshot(`
       "import * as Endpoint from "./api/status.js";
@@ -572,9 +609,12 @@ export function guard(): Effect.Effect<Option.Option<unknown>> { return Effect.s
       (p) => p.name === "typed-api-handler-virtual-module",
     )!;
     const id = "typed:api-handler?path=./api/status.ts";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "metadata",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["metadata"]),
+    );
 
     expect(source).toMatchInlineSnapshot(`
       "export const metadata = { bodyMode: "empty", raw: false } as const;
@@ -596,9 +636,12 @@ export const handler = () => null;
       (p) => p.name === "typed-api-handler-virtual-module",
     )!;
     const id = "typed:api-handler?path=./api/status.ts";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "body",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["body"]),
+    );
 
     expect(source).toMatchInlineSnapshot(`
       "import * as Endpoint from "./api/status.js";
@@ -858,9 +901,34 @@ export const template = "<main/>";
       export const entrypoint = {"exportName":"template","runtimeKind":"plain","isFunction":false,"expectsRefSubject":false} as const;
       export const template = RouteModule.template;
       export const handler = constant(Fx.succeed(RouteModule.template));
-
       "
     `);
+  });
+
+  it("exports route template devtools component summaries only for explicit devtools route templates", () => {
+    const f = fixture({
+      "src/routes/home.ts": `
+import * as Route from "@typed/router";
+import { html } from "@typed/template";
+export const route = Route.Slash;
+export const template = html\`<main>Home</main>\`;
+`,
+      "src/entry.ts": 'import "typed:route-template?path=./routes/home.ts";',
+    });
+    const plugin = createTypedVirtualModulePlugins().find(
+      (p) => p.name === "typed-route-template-virtual-module",
+    )!;
+    const source = plugin.build(
+      "typed:route-template?path=./routes/home.ts&devtools=1",
+      f.importer,
+      apiFor(f),
+    );
+
+    expect(source).toContain("export const __typedDevtoolsComponentSummaries = [");
+    expect(source).toContain('"componentId":"cmp:./routes/home.ts#template"');
+    expect(source).toContain('"displayName":"HomeRoute"');
+    expect(source).toContain('"sourceLocationId":"src:./routes/home.ts:');
+    expect(source).toContain('"templateHash":"tpl:');
   });
 
   it("emits only requested route template route output in production partial builds", () => {
@@ -876,9 +944,12 @@ export const template = "<main/>";
       (p) => p.name === "typed-route-template-virtual-module",
     )!;
     const id = "typed:route-template?path=./routes/home.ts";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "route",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["route"]),
+    );
 
     expect(source).toMatchInlineSnapshot(`
       "import * as RouteModule from "./routes/home.js";
@@ -901,9 +972,12 @@ export const template = "<main/>";
       (p) => p.name === "typed-route-template-virtual-module",
     )!;
     const id = "typed:route-template?path=./routes/home.ts";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "handler",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["handler"]),
+    );
 
     expect(source).toMatchInlineSnapshot(`
       "import * as Fx from "@typed/fx/Fx";
@@ -930,9 +1004,12 @@ export const layout = (x: unknown) => x;
       (p) => p.name === "typed-route-template-virtual-module",
     )!;
     const id = "typed:route-template?path=./routes/home.ts";
-    const source = plugin.build(id, f.importer, apiFor(f), productionContext(id, f.importer, [
-      "guard",
-    ]));
+    const source = plugin.build(
+      id,
+      f.importer,
+      apiFor(f),
+      productionContext(id, f.importer, ["guard"]),
+    );
 
     expect(source).toMatchInlineSnapshot(`
       "import * as RouteModule from "./routes/home.js";

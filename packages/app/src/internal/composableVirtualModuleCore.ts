@@ -1,5 +1,7 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
+import { analyzeTemplateModule, createComponentDevtoolsFact } from "@typed/compiler";
+import type { ComponentSummary } from "@typed/devtools-protocol";
 import type {
   ExportedTypeInfo,
   TypeInfoApi,
@@ -9,11 +11,7 @@ import type {
   VirtualModuleBuildResult,
   VirtualModulePlugin,
 } from "@typed/virtual-modules";
-import {
-  mustEmitAllExports,
-  requestsAnyExport,
-  requestsExport,
-} from "@typed/virtual-modules";
+import { mustEmitAllExports, requestsAnyExport, requestsExport } from "@typed/virtual-modules";
 import {
   getCallableReturnType,
   classifyCatchForm,
@@ -53,6 +51,7 @@ type ParsedComposableId =
       readonly kind: ComposableKind;
       readonly target: "dir" | "path";
       readonly value: string;
+      readonly devtools?: true;
     }
   | { readonly ok: false; readonly code: string; readonly reason: string };
 
@@ -89,6 +88,7 @@ const ROUTE_TEMPLATE_EXPORTS = [
   "layout",
   "dependencies",
   "catcher",
+  "__typedDevtoolsComponentSummaries",
 ] as const;
 
 const DIR_FILE_BY_KIND: Partial<Record<ComposableKind, string>> = {
@@ -125,7 +125,8 @@ export function parseComposableTypedVirtualModuleId(id: string): ParsedComposabl
     return { ok: false, code: "CVM-ID-001", reason: `unsupported typed virtual module "${kind}"` };
   }
   const target = DIR_KINDS.has(kind) ? "dir" : "path";
-  const unsupported = [...params.keys()].find((key) => key !== target);
+  const allowedOptions = routeTemplateOptions(kind, target);
+  const unsupported = [...params.keys()].find((key) => !allowedOptions.has(key));
   if (unsupported) {
     return {
       ok: false,
@@ -133,6 +134,8 @@ export function parseComposableTypedVirtualModuleId(id: string): ParsedComposabl
       reason: `typed:${kind} does not support query option "${unsupported}"`,
     };
   }
+  const devtools = routeTemplateDevtools(kind, params);
+  if (!devtools.ok) return devtools;
   const values = params.getAll(target);
   if (values.length !== 1) {
     return {
@@ -143,7 +146,33 @@ export function parseComposableTypedVirtualModuleId(id: string): ParsedComposabl
   }
   const value = normalizeRelativeTarget(values[0]!, `typed:${kind} ${target}`);
   if (!value.ok) return value;
-  return { ok: true, kind, target, value: value.value };
+  return {
+    ok: true,
+    kind,
+    target,
+    value: value.value,
+    ...(devtools.value ? { devtools: true } : {}),
+  };
+}
+
+function routeTemplateOptions(kind: ComposableKind, target: "dir" | "path"): ReadonlySet<string> {
+  return kind === "route-template" ? new Set([target, "devtools"]) : new Set([target]);
+}
+
+function routeTemplateDevtools(
+  kind: ComposableKind,
+  params: URLSearchParams,
+):
+  | { readonly ok: true; readonly value: boolean }
+  | { readonly ok: false; readonly code: string; readonly reason: string } {
+  const values = kind === "route-template" ? params.getAll("devtools") : [];
+  if (values.length === 0) return { ok: true, value: false };
+  if (values.length === 1 && values[0] === "1") return { ok: true, value: true };
+  return {
+    ok: false,
+    code: "CVM-ID-QUERY-002",
+    reason: 'typed:route-template devtools must be "1" when present',
+  };
 }
 
 export function createServicesVirtualModulePlugin(): VirtualModulePlugin {
@@ -234,7 +263,7 @@ function createPathPlugin(
       }
       return kind === "api-handler"
         ? emitApiHandlerLeaf(resolved.path, importer, api, context)
-        : emitRouteTemplateLeaf(resolved.path, importer, api, context);
+        : emitRouteTemplateLeaf(resolved.path, importer, api, context, resolved.devtools === true);
     },
   };
 }
@@ -317,10 +346,7 @@ function emitApiHandlerLeaf(
   api: TypeInfoApi,
   context?: VirtualModuleBuildContext,
 ): VirtualModuleBuildResult {
-  if (
-    !mustEmitAllExports(context) &&
-    !requestsAnyExportDeclaration(context, API_HANDLER_EXPORTS)
-  ) {
+  if (!mustEmitAllExports(context) && !requestsAnyExportDeclaration(context, API_HANDLER_EXPORTS)) {
     return "export {};";
   }
   const specifier = toImportSpecifier(
@@ -386,9 +412,7 @@ function partialApiHandlerImports(
     requestsAnyExportDeclaration(context, endpointExports) ||
     requestsExportDeclaration(context, "handler");
   return [
-    ...(needsEndpoint
-      ? [`import * as Endpoint from ${JSON.stringify(specifier)};`]
-      : []),
+    ...(needsEndpoint ? [`import * as Endpoint from ${JSON.stringify(specifier)};`] : []),
     ...(requestsExportDeclaration(context, "handler")
       ? ['import { ApiHandlers } from "@typed/app/httpapi/Handlers";']
       : []),
@@ -472,6 +496,7 @@ function emitRouteTemplateLeaf(
   importer: string,
   api: TypeInfoApi,
   context?: VirtualModuleBuildContext,
+  devtools = false,
 ): VirtualModuleBuildResult {
   if (
     !mustEmitAllExports(context) &&
@@ -491,6 +516,10 @@ function emitRouteTemplateLeaf(
   const entrypoint = routeEntrypointFor(snapshot.snapshot, api);
   if (!entrypoint.ok) return buildError("route-template", entrypoint);
   const imports = createImportCollector();
+  const emitDevtools = devtools || requestsRouteTemplateDevtoolsSummary(context);
+  const devtoolsComponentSummaries = emitDevtools
+    ? routeTemplateDevtoolsComponentSummaries(path, importer, entrypoint)
+    : [];
   if (context && context.requestedExports.kind === "names") {
     return emitPartialRouteTemplateLeaf(
       snapshot.snapshot,
@@ -499,6 +528,7 @@ function emitRouteTemplateLeaf(
       imports,
       api,
       context,
+      devtoolsComponentSummaries,
     );
   }
   const handler = handlerExprFor(
@@ -519,6 +549,13 @@ function emitRouteTemplateLeaf(
     imports.helpers,
     api,
   );
+  const optionalExports = [
+    localConcernExports,
+    devtools ? devtoolsComponentSummariesSource(devtoolsComponentSummaries) : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const optionalBlock = optionalExports.length > 0 ? `${optionalExports}\n` : "";
   return `${imports.lines()}import * as RouteModule from ${JSON.stringify(specifier)};
 
 export const route = RouteModule.route;
@@ -529,8 +566,7 @@ export const entrypoint = ${JSON.stringify({
     expectsRefSubject: entrypoint.expectsRefSubject,
   })} as const;
 ${templateExport}export const handler = ${handler};
-${localConcernExports}
-`;
+${optionalBlock}`;
 }
 
 function emitPartialRouteTemplateLeaf(
@@ -540,11 +576,13 @@ function emitPartialRouteTemplateLeaf(
   imports: ReturnType<typeof createImportCollector>,
   api: TypeInfoApi,
   context: VirtualModuleBuildContext,
+  devtoolsComponentSummaries: readonly ComponentSummary[],
 ): string {
   const lines = [
     ...partialRouteTemplateBaseLines(entrypoint, context),
     ...partialRouteTemplateHandlerLines(entrypoint, imports, context),
     ...partialRouteTemplateConcernLines(snapshot, imports.helpers, api, context),
+    ...partialRouteTemplateDevtoolsLines(context, devtoolsComponentSummaries),
   ];
   if (lines.length === 0) return "export {};";
   return emitPartialRouteTemplateSource(specifier, imports, lines.join("\n"));
@@ -559,12 +597,14 @@ function partialRouteTemplateBaseLines(
     lines.push("export const route = RouteModule.route;");
   }
   if (requestsExportDeclaration(context, "entrypoint")) {
-    lines.push(`export const entrypoint = ${JSON.stringify({
-      exportName: entrypoint.exportName,
-      runtimeKind: entrypoint.runtimeKind,
-      isFunction: entrypoint.isFunction,
-      expectsRefSubject: entrypoint.expectsRefSubject,
-    })} as const;`);
+    lines.push(
+      `export const entrypoint = ${JSON.stringify({
+        exportName: entrypoint.exportName,
+        runtimeKind: entrypoint.runtimeKind,
+        isFunction: entrypoint.isFunction,
+        expectsRefSubject: entrypoint.expectsRefSubject,
+      })} as const;`,
+    );
   }
   if (
     requestsExportDeclaration(context, "template") &&
@@ -609,6 +649,54 @@ function partialRouteTemplateConcernLines(
     context,
   );
   return localConcernExports.length > 0 ? [localConcernExports] : [];
+}
+
+function partialRouteTemplateDevtoolsLines(
+  context: VirtualModuleBuildContext,
+  summaries: readonly ComponentSummary[],
+): readonly string[] {
+  if (!requestsExportDeclaration(context, "__typedDevtoolsComponentSummaries")) return [];
+  return [devtoolsComponentSummariesSource(summaries)];
+}
+
+function requestsRouteTemplateDevtoolsSummary(
+  context: VirtualModuleBuildContext | undefined,
+): boolean {
+  return (
+    context?.requestedExports.kind === "names" &&
+    requestsExportDeclaration(context, "__typedDevtoolsComponentSummaries")
+  );
+}
+
+function devtoolsComponentSummariesSource(summaries: readonly ComponentSummary[]): string {
+  return `export const __typedDevtoolsComponentSummaries = ${JSON.stringify(summaries)} as const;`;
+}
+
+function routeTemplateDevtoolsComponentSummaries(
+  path: string,
+  importer: string,
+  entrypoint: Extract<RouteEntrypoint, { readonly ok: true }>,
+): readonly ComponentSummary[] {
+  const moduleId = routeTemplateSourceModuleId(path, importer);
+  const sourceText = readFileSync(path, "utf8");
+  const analysis = analyzeTemplateModule({ moduleId, sourceText });
+  const displayName = `${pathToIdentifier(basename(path))}Route`;
+
+  return analysis.templates.map(
+    (template, index) =>
+      createComponentDevtoolsFact({
+        displayName: index === 0 ? displayName : `${displayName}Template${index + 1}`,
+        exportName: index === 0 ? entrypoint.exportName : `${entrypoint.exportName}:${index}`,
+        moduleId,
+        sourceText,
+        template,
+      }).summary,
+  );
+}
+
+function routeTemplateSourceModuleId(path: string, importer: string): string {
+  const rel = toPosixPath(relative(dirname(toPosixPath(importer)), toPosixPath(path)));
+  return rel.startsWith(".") ? rel : `./${rel}`;
 }
 
 function emitPartialRouteTemplateSource(
@@ -794,10 +882,7 @@ function normalizedConcernFor(
   }
 }
 
-type NormalizedConcernKind = Exclude<
-  ComposableKind,
-  "services" | "route-template" | "api-handler"
->;
+type NormalizedConcernKind = Exclude<ComposableKind, "services" | "route-template" | "api-handler">;
 
 function normalizedConcernMapFor(
   kind: NormalizedConcernKind,
@@ -1310,7 +1395,12 @@ function resolveTarget(
   importer: string,
   context?: VirtualModuleBuildContext,
 ):
-  | { readonly ok: true; readonly target: "dir" | "path"; readonly path: string }
+  | {
+      readonly ok: true;
+      readonly target: "dir" | "path";
+      readonly path: string;
+      readonly devtools?: true;
+    }
   | { readonly ok: false; readonly code: string; readonly reason: string } {
   const parsed = parseComposableTypedVirtualModuleId(id);
   if (!parsed.ok) return parsed;
@@ -1324,7 +1414,12 @@ function resolveTarget(
       reason: "resolved target escapes importer base directory",
     };
   }
-  return { ok: true, target: parsed.target, path: toPosixPath(resolved.path) };
+  return {
+    ok: true,
+    target: parsed.target,
+    path: toPosixPath(resolved.path),
+    ...(parsed.devtools ? { devtools: true } : {}),
+  };
 }
 
 function normalizeRelativeTarget(

@@ -10,6 +10,11 @@ import * as Context from "effect/Context";
 import { isStream } from "effect/Stream";
 import { Fx, Sink } from "@typed/fx";
 import { CouldNotFindCommentError, isHydrationError } from "./errors.js";
+import {
+  notifyDomTemplateMounted,
+  notifyDomTemplateUnmounted,
+  type DomTemplateDevtoolsObserver,
+} from "./compiler-runtime/devtools.js";
 import * as EventHandler from "./EventHandler.js";
 import { type EventSource, makeEventSource } from "./EventSource.js";
 import { HydrateContext, makeHydrateContext } from "./HydrateContext.js";
@@ -67,6 +72,17 @@ import { getAllSiblingsBetween, isText, persistent, type Rendered } from "./Wire
 export const CurrentRenderDocument = Context.Reference<Document>("RenderDocument", {
   defaultValue: () => document,
 });
+
+export interface DomRenderTemplateOptions {
+  readonly devtools?: DomTemplateDevtoolsObserver;
+}
+
+export const CurrentDomRenderTemplateOptions = Context.Reference<DomRenderTemplateOptions>(
+  "DomRenderTemplateOptions",
+  {
+    defaultValue: () => ({}),
+  },
+);
 
 /**
  * A service that manages the queue of DOM updates.
@@ -155,6 +171,7 @@ export const DomRenderTemplate = Object.assign(
     RenderTemplate,
     Effect.gen(function* () {
       const document = yield* CurrentRenderDocument;
+      const options = yield* CurrentDomRenderTemplateOptions;
       const templateCache = new WeakMap<TemplateStringsArray, Template.Template>();
       const getTemplate = (templateStrings: TemplateStringsArray) => {
         let template = templateCache.get(templateStrings);
@@ -252,6 +269,11 @@ export const DomRenderTemplate = Object.assign(
 
               // Setup our event listeners for our rendered content.
               yield* ctx.eventSource.setup(rendered, ctx.scope, ctx.parentScope);
+              const devtoolsMount = yield* notifyRuntimeTemplateMounted(
+                options.devtools,
+                rendered,
+                template.hash,
+              );
 
               // If we're hydrating, we need to mark this part of the stack as hydrated
               if (hydration !== undefined) {
@@ -265,7 +287,12 @@ export const DomRenderTemplate = Object.assign(
               // so event listeners are kept attached to the current Scope.
               return yield* Effect.never.pipe(
                 // Close our scope whenever the current Fiber is interrupted
-                Effect.onExit((exit) => Scope.close(ctx.scope, exit)),
+                Effect.onExit((exit) =>
+                  Effect.flatMap(
+                    notifyRuntimeTemplateUnmounted(options.devtools, devtoolsMount),
+                    () => Scope.close(ctx.scope, exit),
+                  ),
+                ),
               );
             }).pipe(
               Effect.catchDefect((defect) => {
@@ -282,8 +309,11 @@ export const DomRenderTemplate = Object.assign(
     }),
   ),
   {
-    using: (document: Document) =>
-      DomRenderTemplate.pipe(Layer.provide(Layer.succeed(CurrentRenderDocument, document))),
+    using: (document: Document, options: DomRenderTemplateOptions = {}) =>
+      DomRenderTemplate.pipe(
+        Layer.provide(Layer.succeed(CurrentRenderDocument, document)),
+        Layer.provide(Layer.succeed(CurrentDomRenderTemplateOptions, options)),
+      ),
   } as const,
 );
 
@@ -387,6 +417,45 @@ function getNodesFromRendered(rendered: Rendered): Array<globalThis.Node> {
   return Array.isArray(value) ? value : [value];
 }
 
+interface RuntimeTemplateMount {
+  readonly root: HTMLElement;
+  readonly templateHash: string;
+}
+
+function notifyRuntimeTemplateMounted(
+  devtools: DomTemplateDevtoolsObserver | undefined,
+  rendered: Rendered,
+  templateHash: string,
+): Effect.Effect<RuntimeTemplateMount | undefined> {
+  return Effect.sync(() => {
+    const nodes = getTemplateNodesFromRendered(rendered);
+    const root = firstElementNode(nodes);
+    if (!root) return undefined;
+    notifyDomTemplateMounted(devtools, { nodes, root, templateHash });
+    return { root, templateHash };
+  });
+}
+
+function notifyRuntimeTemplateUnmounted(
+  devtools: DomTemplateDevtoolsObserver | undefined,
+  mount: RuntimeTemplateMount | undefined,
+): Effect.Effect<void> {
+  return Effect.sync(() => {
+    if (mount) notifyDomTemplateUnmounted(devtools, mount);
+  });
+}
+
+function getTemplateNodesFromRendered(rendered: Rendered): Array<globalThis.Node> {
+  const value = rendered.valueOf() as globalThis.Node | Array<globalThis.Node>;
+  if (Array.isArray(value)) return value;
+  if (value.nodeType === 11) return Array.from((value as DocumentFragment).childNodes);
+  return [value];
+}
+
+function firstElementNode(nodes: readonly globalThis.Node[]): HTMLElement | undefined {
+  return nodes.find((node): node is HTMLElement => node.nodeType === 1);
+}
+
 interface FormControlState {
   readonly key: string;
   readonly value: string;
@@ -412,7 +481,9 @@ function restoreFormControlState(root: ParentNode, state: readonly FormControlSt
   }
 }
 
-function formControls(root: ParentNode): Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> {
+function formControls(
+  root: ParentNode,
+): Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> {
   return Array.from(root.querySelectorAll("input, textarea, select"));
 }
 

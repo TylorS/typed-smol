@@ -90,7 +90,11 @@ function mountRenderedFx<E, R>(
   return Effect.gen(function* () {
     const scope = yield* Scope.make();
     yield* render(fx, options.root).pipe(
-      FxRuntime.provide(DomRenderTemplate.using(options.root.ownerDocument)),
+      FxRuntime.provide(
+        DomRenderTemplate.using(options.root.ownerDocument, {
+          devtools: options.runtime?.devtools,
+        }),
+      ),
       FxRuntime.take(1),
       FxRuntime.collectAll,
       Effect.provideService(Scope.Scope, scope),

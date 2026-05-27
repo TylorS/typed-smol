@@ -1,10 +1,10 @@
 import { spawn, type ChildProcess } from "node:child_process";
 
-const appHost = process.env.APP_HOST ?? "127.0.0.1";
+const appHost = process.env.APP_HOST ?? "localhost";
 const appPort = Number(process.env.APP_PORT ?? "3200");
 const appBase = process.env.APP_BASE ?? `http://${appHost}:${appPort}`;
 const readinessPath = process.env.DEVTOOLS_READY_PATH ?? "/src/browser.devtools.ts";
-const smokePath = process.env.DEVTOOLS_SMOKE_PATH ?? "/devtools-smoke.html";
+const smokePath = process.env.DEVTOOLS_SMOKE_PATH ?? "/login";
 
 try {
   const server = startAppServer();

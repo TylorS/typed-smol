@@ -99,6 +99,7 @@ export function emitRouterMatchSource(
   catchFormByPath: CatchFormByPath,
   depsFormByPath: DepsFormByPath,
   context?: VirtualModuleBuildContext,
+  options: { readonly devtools?: boolean } = {},
 ): string {
   const importerDir = dirname(toPosixPath(importer));
   const depPaths = collectOrderedCompanionPaths(descriptors, "dependencies");
@@ -201,19 +202,47 @@ export function emitRouterMatchSource(
   for (const d of descriptors) {
     source.importNamespace(
       varNameByPath.get(d.filePath)!,
-      `typed:route-template?path=${toVirtualTargetSpecifier(importerDir, targetDirectory, d.filePath)}`,
+      routeTemplateVirtualSpecifier(importerDir, targetDirectory, d.filePath, options.devtools),
     );
   }
   for (const p of entrypointPaths) {
     source.importNamespace(
       varNameByPath.get(p)!,
-      `typed:route-template?path=${toVirtualTargetSpecifier(importerDir, targetDirectory, p)}`,
+      routeTemplateVirtualSpecifier(importerDir, targetDirectory, p, options.devtools),
     );
   }
 
+  if (options.devtools) {
+    source.add(
+      routeTemplateDevtoolsSummariesExport(
+        [...descriptors.map((descriptor) => descriptor.filePath), ...entrypointPaths],
+        varNameByPath,
+      ),
+    );
+  }
   source.add(`const router = ${rootSource};
 export default router;`);
   return `${source.emit()}\n`;
+}
+
+function routeTemplateVirtualSpecifier(
+  importerDir: string,
+  targetDirectory: string,
+  filePath: string,
+  devtools: boolean | undefined,
+): string {
+  const path = toVirtualTargetSpecifier(importerDir, targetDirectory, filePath);
+  return `typed:route-template?path=${path}${devtools ? "&devtools=1" : ""}`;
+}
+
+function routeTemplateDevtoolsSummariesExport(
+  paths: readonly string[],
+  varNameByPath: ReadonlyMap<string, string>,
+): string {
+  const spreads = paths
+    .map((path) => `...${varNameByPath.get(path)!}.__typedDevtoolsComponentSummaries`)
+    .join(", ");
+  return `export const __typedDevtoolsComponentSummaries = [${spreads}] as const;`;
 }
 
 function concernExpressionMap(
@@ -222,7 +251,9 @@ function concernExpressionMap(
   exportName: string,
 ): ReadonlyMap<string, string> {
   if (!moduleName) return new Map();
-  return new Map(paths.map((path) => [path, `${moduleName}.${exportName}[${JSON.stringify(path)}]`]));
+  return new Map(
+    paths.map((path) => [path, `${moduleName}.${exportName}[${JSON.stringify(path)}]`]),
+  );
 }
 
 function withInFileExpressions(

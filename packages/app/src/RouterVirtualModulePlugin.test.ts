@@ -69,15 +69,16 @@ const validGuardExport =
  * If programFiles is omitted, uses fixture.paths (importer + all written files).
  * Returns string on success or VirtualModuleBuildError on validation failure.
  */
-function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[]) {
+function buildRouterFromFixture(spec: FixtureSpec, programFiles?: string[], id?: string) {
   const fixture = createFixture(spec);
-  return buildRouterFromExistingFixture(fixture, programFiles);
+  return buildRouterFromExistingFixture(fixture, programFiles, undefined, id);
 }
 
 function buildRouterFromExistingFixture(
   fixture: ReturnType<typeof createFixture>,
   programFiles?: string[],
   context?: VirtualModuleBuildContext,
+  id = "typed:router?dir=./routes",
 ) {
   const plugin = createRouterVirtualModulePlugin();
   const files = programFiles ?? fixture.paths;
@@ -94,7 +95,7 @@ function buildRouterFromExistingFixture(
     program,
     typeTargetSpecs: ROUTER_TYPE_TARGET_SPECS,
   });
-  return plugin.build("typed:router?dir=./routes", fixture.importer, session.api, context);
+  return plugin.build(id, fixture.importer, session.api, context);
 }
 
 function productionContext(
@@ -345,6 +346,11 @@ describe("RouterVirtualModulePlugin", () => {
     expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes" });
   });
 
+  it("parses devtools router ids as an explicit instrumentation opt-in", () => {
+    const parsed = parseRouterVirtualModuleId("typed:router?dir=./routes&devtools=1");
+    expect(parsed).toEqual({ ok: true, relativeDirectory: "./routes", devtools: true });
+  });
+
   it("rejects target query ids because router modules are environment agnostic", () => {
     const parsed = parseRouterVirtualModuleId("typed:router?dir=./routes&target=browser");
     expect(parsed.ok).toBe(false);
@@ -447,6 +453,25 @@ describe("RouterVirtualModulePlugin", () => {
     `);
   });
 
+  it("exports aggregated route-template component summaries for browser devtools registration", () => {
+    const source = buildRouterFromFixture(
+      {
+        "src/routes/home.ts": `
+import * as Route from "@typed/router";
+import { html } from "@typed/template";
+export const route = Route.Slash;
+export const template = html\`<main>Home</main>\`;
+`,
+      },
+      undefined,
+      "typed:router?dir=./routes&devtools=1",
+    );
+
+    expect(source).toContain(
+      "export const __typedDevtoolsComponentSummaries = [...Home.__typedDevtoolsComponentSummaries] as const;",
+    );
+  });
+
   it("omits unused concern virtual imports in production partial output", () => {
     const fixture = createFixture({
       "src/routes/users.ts": route("/", "export const handler = 1;"),
@@ -457,7 +482,9 @@ describe("RouterVirtualModulePlugin", () => {
       productionContext("typed:router?dir=./routes", fixture.importer, ["default"]),
     ) as string;
 
-    expect(source).toContain('import * as Users from "typed:route-template?path=./routes/users.ts";');
+    expect(source).toContain(
+      'import * as Users from "typed:route-template?path=./routes/users.ts";',
+    );
     expect(source).not.toContain("typed:services?dir=./routes");
     expect(source).not.toContain("typed:guard?dir=./routes");
     expect(source).not.toContain("typed:layout?dir=./routes");

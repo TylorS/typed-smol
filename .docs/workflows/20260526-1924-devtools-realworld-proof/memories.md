@@ -92,8 +92,8 @@
 - bridge_fix: `installTypedDevtoolsBridge` now stamps non-disabled replay states with `request.sessionId` when the runtime/event bus did not already provide a session id.
 - bridge_green_command: `pnpm --filter @typed/app exec vitest run --passWithNoTests runtime/devtoolsBridge.test.ts`
 - bridge_green_result: passed. Vitest reported 1 file, 6 tests, no type errors.
-- harness_note: `/` can hang on current Typed SSR during package churn, so the devtools smoke uses Playwright to fulfill a same-origin `/devtools-smoke.html` document and load `/src/browser.devtools.ts` from Vite. Readiness checks `/src/browser.devtools.ts` with a 2s timeout.
-- dist_note: RealWorld imports `@typed/app` from package `dist`, so `devtools:local` and `test:devtools:local` run `pnpm --filter @typed/app build` before `vmc` and Playwright.
+- harness_note: the devtools smoke uses Playwright to fulfill a same-origin RealWorld route document and load `/src/browser.devtools.ts` from Vite. Readiness checks `/src/browser.devtools.ts` with a 2s timeout.
+- dist_note: RealWorld imports workspace packages from package `dist`, so `devtools:local` and `test:devtools:local` run `pnpm --filter @typed/app... build` before `vmc` and Playwright.
 - green_command: `pnpm --filter typed-realworld test:devtools:local`
 - green_result: passed. Playwright reported 1 Chromium test passing and logged `RealWorld DevTools accepted capabilities: components,dom`.
 
@@ -103,3 +103,21 @@
 - preflight_result: `DomRegistry.registerComponent` is implemented, but every call site is currently in tests. No production app/compiler/generated-runtime path registers RealWorld component summaries with the DOM registry.
 - blocker: RealWorld can expose the devtools bridge and replay state, but component rows require compiler/generated runtime component facts that map template hashes to `ComponentSummary`.
 - ownership_note: do not synthesize fake component rows from raw template hashes as a production-grade substitute. T5 needs ownership direction to patch the compiler/generated runtime component-fact path or wait for the compiler-capability agent.
+- ownership_resolution: direct execution was sufficient after the compiler fact exports were available in the current checkout; no broad compiler ownership patch was needed for T5.
+- red_command: `pnpm --filter typed-realworld test:devtools:local`
+- red_result: after router/component summary registration was wired, the smoke still failed because the original `/devtools-smoke.html` fixture was not a RealWorld route and then because runtime `html` templates did not emit DOM devtools mount events.
+- focused_red_command: `pnpm --filter @typed/template exec vitest run --passWithNoTests src/Render.devtools.test.ts`
+- focused_red_result: failed with `expected [] to deeply equal [{ nodeCount: 1, rootTag: "SECTION" }]`, proving runtime `html` templates ignored the devtools observer.
+- fix: `DomRenderTemplate.using(document, { devtools })` now emits mounted/unmounted diagnostics for runtime `html` templates, and `@typed/app` `mount` passes its app DOM runtime devtools observer into that renderer.
+- harness_fix: the RealWorld smoke targets `/login`, a real route that renders without initial API I/O under the Vite-only devtools runner, and polls replay until `ComponentMounted` is retained.
+- green_commands:
+  - `pnpm --filter @typed/template exec vitest run --passWithNoTests src/Render.devtools.test.ts`: passed, 1 file, 1 test.
+  - `pnpm --filter @typed/app exec vitest run --passWithNoTests src/runtime/mount.test.ts`: passed, 1 file, 5 tests, no type errors.
+  - `pnpm --filter @typed/app exec vitest run --passWithNoTests RouterVirtualModulePlugin.test.ts`: passed, 1 file, 84 tests, no type errors.
+  - `pnpm --filter @typed/app exec vitest run --passWithNoTests src/runtime/mount.test.ts BrowserVirtualModulePlugin.test.ts TypedVirtualModulePlugins.test.ts`: passed, 3 files, 52 tests, no type errors.
+  - `pnpm --filter @typed/devtools-runtime exec vitest run --passWithNoTests src/DomRegistry.test.ts`: passed, 1 file, 7 tests.
+  - `pnpm --filter @typed/devtools-chrome test -- src/panel/app.test.ts`: passed, 8 files, 41 tests.
+  - `pnpm --filter typed-realworld test:devtools:local`: passed, 1 Chromium test, accepted `components,dom`.
+  - `git diff --check`: passed.
+  - `pnpm exec oxfmt --check <T5-owned files>`: passed, 21 files.
+- app_test_note: running `src/runtime/mount.test.ts BrowserVirtualModulePlugin.test.ts TypedVirtualModulePlugins.test.ts RouterVirtualModulePlugin.test.ts` together once hit a router fixture temp-directory miss, but the router file passed in isolation and the other three app files passed together.

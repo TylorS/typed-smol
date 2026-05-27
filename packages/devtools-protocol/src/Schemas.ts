@@ -95,6 +95,7 @@ export type DevtoolsHandshakeResponse = typeof DevtoolsHandshakeResponseSchema.T
 export const ComponentSummarySchema = Schema.Struct({
   componentId: ComponentIdSchema,
   displayName: Schema.String,
+  domBindingIds: Schema.optional(Schema.Array(DomBindingIdSchema)),
   fxNodeIds: Schema.Array(FxNodeIdSchema),
   hmrBoundaryId: Schema.optional(HmrBoundaryIdSchema),
   refSubjectIds: Schema.Array(RefSubjectIdSchema),
