@@ -60,7 +60,7 @@ describe("transformTemplateModule", () => {
           return Effect.all([bindNode(getCommentAtPath(instance.root, [
         0,
         1
-      ]), values[0], "unknown", runtime)], { concurrency: "unbounded" });
+      ]), values[0], "effect", runtime)], { concurrency: "unbounded" });
         }
       });
 
@@ -166,7 +166,9 @@ describe("transformTemplateModule", () => {
 
     expect(result.diagnostics).toEqual([]);
     expect(result.transformed).toBe(true);
-    expect(result.sourceText).toContain('html: "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\">Toggle</button>"');
+    expect(result.sourceText).toContain(
+      'html: "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\">Toggle</button>"',
+    );
     expect(result.sourceText).toMatchInlineSnapshot(`
       "import { EventHandler, html } from "@typed/template";
       import type { Component } from "./Reactive.js";
@@ -213,7 +215,9 @@ describe("transformTemplateModule", () => {
 
     expect(result.diagnostics).toEqual([]);
     expect(result.transformed).toBe(true);
-    expect(result.sourceText).toContain('"text": "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\""');
+    expect(result.sourceText).toContain(
+      '"text": "<button data-ui=\\"cmp:/src/Disclosure.ts#Button\\""',
+    );
     expect(result.sourceText).toMatchInlineSnapshot(`
       "import { EventHandler, html } from "@typed/template";
       import type { Component } from "./Reactive.js";

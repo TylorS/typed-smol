@@ -46,6 +46,34 @@ interface TextEdit {
   readonly text: string;
 }
 
+type TemplateValueKind =
+  | "plain"
+  | "effect"
+  | "stream"
+  | "fx"
+  | "nested-template"
+  | "html-render-event"
+  | "dom-render-event"
+  | "unknown";
+
+type TemplateValueKinds = ReadonlyMap<number, TemplateValueKind>;
+
+interface ValueKindFacts {
+  readonly effectNamespaces: ReadonlySet<string>;
+  readonly fxNamespaces: ReadonlySet<string>;
+  readonly streamNamespaces: ReadonlySet<string>;
+  readonly bindings: ReadonlyMap<string, TemplateValueKind>;
+}
+
+interface MutableValueKindFacts {
+  readonly effectNamespaces: Set<string>;
+  readonly fxNamespaces: Set<string>;
+  readonly streamNamespaces: Set<string>;
+  readonly bindings: Map<string, TemplateValueKind>;
+}
+
+const EMPTY_VALUE_KINDS: TemplateValueKinds = new Map();
+
 export function transformTemplateModule(
   input: TransformTemplateModuleInput,
 ): TransformTemplateModuleResult {
@@ -200,7 +228,9 @@ function functionLikeName(node: ts.Node): string | undefined {
   if (ts.isFunctionDeclaration(node) && node.name) return node.name.text;
   if (!ts.isArrowFunction(node) && !ts.isFunctionExpression(node)) return undefined;
   const parent = node.parent;
-  return ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name) ? parent.name.text : undefined;
+  return ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)
+    ? parent.name.text
+    : undefined;
 }
 
 function isRouteTemplateExport(
@@ -361,6 +391,7 @@ function directTemplateDeclarations(
   actionDescriptors: ReadonlyMap<string, object>,
 ): string {
   const effectNamespace = findNamespaceImport(sourceFile, "effect/Effect");
+  const valueKinds = templateValueKinds(sourceFile, templates);
   const importText =
     target === "dom"
       ? `${effectNamespace ? "" : 'import * as __typedTemplateEffect from "effect/Effect";\n'}import { ${domRuntimeImports(templates, actionDescriptors)} } from "@typed/template/compiler-runtime/dom";`
@@ -376,11 +407,13 @@ function directTemplateDeclarations(
             bindings[index] ?? "__typed_template",
             effectRuntime,
             actionDescriptors,
+            valueKinds.get(template) ?? EMPTY_VALUE_KINDS,
           )
         : serverTemplateDeclaration(
             template,
             bindings[index] ?? "__typed_template",
             actionDescriptors,
+            valueKinds.get(template) ?? EMPTY_VALUE_KINDS,
           ),
     ),
   ].join("\n");
@@ -403,7 +436,9 @@ function domRuntimeImports(
     ...(templates.some((template) => hasActionResumeDescriptor(template, actionDescriptors))
       ? ["bootActionResume"]
       : []),
-    ...(templates.some((template) => hasRouteResumeMarker(template.plan)) ? ["bootRouteResume"] : []),
+    ...(templates.some((template) => hasRouteResumeMarker(template.plan))
+      ? ["bootRouteResume"]
+      : []),
     "defineDomTemplate",
     "getCommentAtPath",
     "getElementAtPath",
@@ -426,6 +461,161 @@ function findNamespaceImport(sourceFile: ts.SourceFile, moduleSpecifier: string)
 function directTemplateCall(template: TemplateModuleTemplate, binding: string): string {
   const expressions = template.expressions.map((expression) => expression.sourceText);
   return `${binding}(${expressions.join(", ")})`;
+}
+
+function templateValueKinds(
+  sourceFile: ts.SourceFile,
+  templates: readonly TemplateModuleTemplate[],
+): ReadonlyMap<TemplateModuleTemplate, TemplateValueKinds> {
+  const facts = collectValueKindFacts(sourceFile);
+  return new Map(
+    templates.map((template) => [
+      template,
+      new Map(
+        template.expressions.map((expression) => [
+          expression.index,
+          valueKindForTemplateExpression(sourceFile, expression, facts),
+        ]),
+      ),
+    ]),
+  );
+}
+
+function collectValueKindFacts(sourceFile: ts.SourceFile): ValueKindFacts {
+  const facts: MutableValueKindFacts = {
+    bindings: new Map(),
+    effectNamespaces: new Set(),
+    fxNamespaces: new Set(),
+    streamNamespaces: new Set(),
+  };
+  for (const statement of sourceFile.statements) collectRenderableImport(statement, facts);
+  for (const statement of sourceFile.statements) collectValueKindBindings(statement, facts);
+  return facts;
+}
+
+function collectRenderableImport(statement: ts.Statement, facts: MutableValueKindFacts): void {
+  if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) return;
+  const bindings = statement.importClause?.namedBindings;
+  if (!bindings) return;
+  const moduleSpecifier = statement.moduleSpecifier.text;
+  if (ts.isNamespaceImport(bindings)) {
+    registerNamespaceImport(moduleSpecifier, bindings.name.text, facts);
+    return;
+  }
+  for (const element of bindings.elements) {
+    registerNamedImport(
+      moduleSpecifier,
+      element.propertyName?.text ?? element.name.text,
+      element.name.text,
+      facts,
+    );
+  }
+}
+
+function registerNamespaceImport(
+  moduleSpecifier: string,
+  localName: string,
+  facts: MutableValueKindFacts,
+): void {
+  if (moduleSpecifier === "effect/Effect") facts.effectNamespaces.add(localName);
+  if (moduleSpecifier === "effect/Stream") facts.streamNamespaces.add(localName);
+  if (moduleSpecifier === "@typed/fx") facts.fxNamespaces.add(localName);
+}
+
+function registerNamedImport(
+  moduleSpecifier: string,
+  importedName: string,
+  localName: string,
+  facts: MutableValueKindFacts,
+): void {
+  if (moduleSpecifier === "effect" && importedName === "Effect")
+    facts.effectNamespaces.add(localName);
+  if (moduleSpecifier === "effect" && importedName === "Stream")
+    facts.streamNamespaces.add(localName);
+  if (moduleSpecifier === "@typed/fx" && importedName === "Fx") facts.fxNamespaces.add(localName);
+}
+
+function collectValueKindBindings(statement: ts.Statement, facts: MutableValueKindFacts): void {
+  if (!ts.isVariableStatement(statement)) return;
+  for (const declaration of statement.declarationList.declarations) {
+    if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+    facts.bindings.set(declaration.name.text, expressionValueKind(declaration.initializer, facts));
+  }
+}
+
+function valueKindForTemplateExpression(
+  sourceFile: ts.SourceFile,
+  expression: TemplateModuleTemplate["expressions"][number],
+  facts: ValueKindFacts,
+): TemplateValueKind {
+  const node = findExpressionAtSpan(sourceFile, expression.span.start, expression.span.end);
+  return node ? expressionValueKind(node, facts) : "unknown";
+}
+
+function findExpressionAtSpan(
+  sourceFile: ts.SourceFile,
+  start: number,
+  end: number,
+): ts.Expression | null {
+  let found: ts.Expression | null = null;
+  const visit = (node: ts.Node): void => {
+    if (found !== null) return;
+    if (ts.isExpression(node) && node.getStart(sourceFile) === start && node.end === end) {
+      found = node;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
+function expressionValueKind(expression: ts.Expression, facts: ValueKindFacts): TemplateValueKind {
+  const unwrapped = unwrapExpression(expression);
+  if (ts.isIdentifier(unwrapped)) return facts.bindings.get(unwrapped.text) ?? "unknown";
+  if (ts.isCallExpression(unwrapped)) return callExpressionValueKind(unwrapped, facts);
+  if (ts.isPropertyAccessExpression(unwrapped))
+    return namespaceValueKind(unwrapped.expression, facts);
+  return literalValueKind(unwrapped);
+}
+
+function callExpressionValueKind(
+  expression: ts.CallExpression,
+  facts: ValueKindFacts,
+): TemplateValueKind {
+  const callee = unwrapExpression(expression.expression);
+  if (!ts.isPropertyAccessExpression(callee)) return "unknown";
+  if (callee.name.text === "pipe") return expressionValueKind(callee.expression, facts);
+  return namespaceValueKind(callee.expression, facts);
+}
+
+function namespaceValueKind(expression: ts.Expression, facts: ValueKindFacts): TemplateValueKind {
+  const root = rootIdentifier(unwrapExpression(expression));
+  if (root && facts.effectNamespaces.has(root)) return "effect";
+  if (root && facts.fxNamespaces.has(root)) return "fx";
+  if (root && facts.streamNamespaces.has(root)) return "stream";
+  return "unknown";
+}
+
+function rootIdentifier(expression: ts.Expression): string | undefined {
+  if (ts.isIdentifier(expression)) return expression.text;
+  if (ts.isPropertyAccessExpression(expression)) return rootIdentifier(expression.expression);
+  if (ts.isCallExpression(expression))
+    return rootIdentifier(unwrapExpression(expression.expression));
+  return undefined;
+}
+
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  if (ts.isParenthesizedExpression(expression)) return unwrapExpression(expression.expression);
+  if (ts.isAsExpression(expression) || ts.isSatisfiesExpression(expression)) {
+    return unwrapExpression(expression.expression);
+  }
+  if (ts.isNonNullExpression(expression)) return unwrapExpression(expression.expression);
+  return expression;
+}
+
+function literalValueKind(_expression: ts.Expression): TemplateValueKind {
+  return "unknown";
 }
 
 function actionDescriptorMap(
@@ -502,42 +692,49 @@ function domTemplateDeclaration(
   binding: string,
   effectRuntime: string,
   actionDescriptors: ReadonlyMap<string, object>,
+  valueKinds: TemplateValueKinds,
 ): string {
   if (template.plan.parts.length > 32) {
-    return tableDomTemplateDeclaration(template, binding, effectRuntime, actionDescriptors);
+    return tableDomTemplateDeclaration(
+      template,
+      binding,
+      effectRuntime,
+      actionDescriptors,
+      valueKinds,
+    );
   }
   const effects = [
     ...template.plan.parts.map((part) => {
-    if (part.kind === "node") {
-      const anchorPath = nodePartAnchorPath(template.plan, part.valueIndex) ?? part.path;
-      return `bindNode(getCommentAtPath(instance.root, ${jsonSource(anchorPath)}), values[${part.valueIndex}], "unknown", runtime)`;
-    }
-    if (part.kind === "text" || part.kind === "comment") {
-      return `bindText(getNodeAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}], "unknown", runtime)`;
-    }
-    if (part.kind === "attr") {
-      return `bindAttr(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}], "unknown", runtime)`;
-    }
-    if (part.kind === "property") {
-      return `bindProperty(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}], "unknown", runtime)`;
-    }
-    if (part.kind === "boolean") {
-      return `bindBoolean(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}], "unknown", runtime)`;
-    }
-    if (part.kind === "className") {
-      return `bindClass(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}], "unknown", runtime)`;
-    }
-    if (part.kind === "data") {
-      return `bindData(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}], "unknown", runtime)`;
-    }
-    if (part.kind === "event") {
-      return `bindEvent(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}]${actionDescriptorArgument(template, part.valueIndex, actionDescriptors)})`;
-    }
-    if (part.kind === "ref") {
-      return `bindRef(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}])`;
-    }
-    if (part.kind === "properties") return `${effectRuntime}.void`;
-    return `${effectRuntime}.void`;
+      if (part.kind === "node") {
+        const anchorPath = nodePartAnchorPath(template.plan, part.valueIndex) ?? part.path;
+        return `bindNode(getCommentAtPath(instance.root, ${jsonSource(anchorPath)}), values[${part.valueIndex}], ${valueKindSource(valueKinds, part.valueIndex)}, runtime)`;
+      }
+      if (part.kind === "text" || part.kind === "comment") {
+        return `bindText(getNodeAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}], ${valueKindSource(valueKinds, part.valueIndex)}, runtime)`;
+      }
+      if (part.kind === "attr") {
+        return `bindAttr(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}], ${valueKindSource(valueKinds, part.valueIndex)}, runtime)`;
+      }
+      if (part.kind === "property") {
+        return `bindProperty(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}], ${valueKindSource(valueKinds, part.valueIndex)}, runtime)`;
+      }
+      if (part.kind === "boolean") {
+        return `bindBoolean(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}], ${valueKindSource(valueKinds, part.valueIndex)}, runtime)`;
+      }
+      if (part.kind === "className") {
+        return `bindClass(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}], ${valueKindSource(valueKinds, part.valueIndex)}, runtime)`;
+      }
+      if (part.kind === "data") {
+        return `bindData(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}], ${valueKindSource(valueKinds, part.valueIndex)}, runtime)`;
+      }
+      if (part.kind === "event") {
+        return `bindEvent(getElementAtPath(instance.root, ${jsonSource(part.path)}), ${JSON.stringify(part.name)}, values[${part.valueIndex}]${actionDescriptorArgument(template, part.valueIndex, actionDescriptors)})`;
+      }
+      if (part.kind === "ref") {
+        return `bindRef(getElementAtPath(instance.root, ${jsonSource(part.path)}), values[${part.valueIndex}])`;
+      }
+      if (part.kind === "properties") return `${effectRuntime}.void`;
+      return `${effectRuntime}.void`;
     }),
     ...(hasActionResumeDescriptor(template, actionDescriptors)
       ? ["bootActionResume(instance.root, runtime)"]
@@ -560,8 +757,9 @@ function tableDomTemplateDeclaration(
   binding: string,
   effectRuntime: string,
   actionDescriptors: ReadonlyMap<string, object>,
+  valueKinds: TemplateValueKinds,
 ): string {
-  const bindingEffect = `mountDomTemplateBindings(instance, values, runtime, ${jsonSource(domBindingTable(template, actionDescriptors))})`;
+  const bindingEffect = `mountDomTemplateBindings(instance, values, runtime, ${jsonSource(domBindingTable(template, actionDescriptors, valueKinds))})`;
   const effects = [
     bindingEffect,
     ...(hasActionResumeDescriptor(template, actionDescriptors)
@@ -607,6 +805,7 @@ function hasRouteResumeAttribute(attributes: readonly TemplatePlanAttribute[]): 
 function domBindingTable(
   template: TemplateModuleTemplate,
   actionDescriptors: ReadonlyMap<string, object>,
+  valueKinds: TemplateValueKinds,
 ): readonly object[] {
   return template.plan.parts.map((part) => {
     if (part.kind === "node") {
@@ -614,7 +813,7 @@ function domBindingTable(
         kind: "node",
         path: nodePartAnchorPath(template.plan, part.valueIndex) ?? part.path,
         valueIndex: part.valueIndex,
-        valueKind: "unknown",
+        valueKind: valueKindFor(valueKinds, part.valueIndex),
       };
     }
     if (part.kind === "text" || part.kind === "comment") {
@@ -622,7 +821,7 @@ function domBindingTable(
         kind: part.kind,
         path: part.path,
         valueIndex: part.valueIndex,
-        valueKind: "unknown",
+        valueKind: valueKindFor(valueKinds, part.valueIndex),
       };
     }
     if (part.kind === "attr" || part.kind === "boolean" || part.kind === "property") {
@@ -631,7 +830,7 @@ function domBindingTable(
         name: part.name,
         path: part.path,
         valueIndex: part.valueIndex,
-        valueKind: "unknown",
+        valueKind: valueKindFor(valueKinds, part.valueIndex),
       };
     }
     if (part.kind === "className" || part.kind === "data" || part.kind === "properties") {
@@ -639,7 +838,7 @@ function domBindingTable(
         kind: part.kind,
         path: part.path,
         valueIndex: part.valueIndex,
-        valueKind: "unknown",
+        valueKind: valueKindFor(valueKinds, part.valueIndex),
       };
     }
     if (part.kind === "event") {
@@ -662,8 +861,14 @@ function serverTemplateDeclaration(
   template: TemplateModuleTemplate,
   binding: string,
   actionDescriptors: ReadonlyMap<string, object>,
+  valueKinds: TemplateValueKinds,
 ): string {
-  const chunks = serverChunks(template, actionDescriptors, componentIdForTemplate(template, actionDescriptors));
+  const chunks = serverChunks(
+    template,
+    actionDescriptors,
+    componentIdForTemplate(template, actionDescriptors),
+    valueKinds,
+  );
   return [
     `const ${binding} = defineServerTemplate({`,
     `  templateHash: ${JSON.stringify(template.plan.templateHash)},`,
@@ -680,10 +885,7 @@ function domStaticHtml(plan: TemplatePlan, componentId: string | undefined): str
   return plan.nodes.map((node) => domNodeHtml(node, injection)).join("");
 }
 
-function domNodeHtml(
-  node: TemplatePlanNode,
-  injection: ComponentDataUiInjection,
-): string {
+function domNodeHtml(node: TemplatePlanNode, injection: ComponentDataUiInjection): string {
   switch (node.kind) {
     case "element":
       return `<${node.tagName}${domAttributesHtml(node.attributes, injection)}>${node.children
@@ -724,6 +926,7 @@ function domTextContentHtml(node: TemplatePlanTextContent): string {
 interface ComponentDataUiInjection {
   componentId: string | undefined;
   used: boolean;
+  valueKinds?: TemplateValueKinds;
 }
 
 function domAttributesHtml(
@@ -731,17 +934,21 @@ function domAttributesHtml(
   injection: ComponentDataUiInjection,
 ): string {
   const explicit = hasDataUiAttribute(attributes);
-  const injected = !explicit && !injection.used && injection.componentId
-    ? ` data-ui="${escapeAttribute(injection.componentId)}"`
-    : "";
+  const injected =
+    !explicit && !injection.used && injection.componentId
+      ? ` data-ui="${escapeAttribute(injection.componentId)}"`
+      : "";
   if (injected) injection.used = true;
-  return injected + attributes
-    .filter((attribute) => attribute.kind === "attribute")
-    .map((attribute) => {
-      const value = attribute.value === "" ? "" : `="${escapeAttribute(attribute.value)}"`;
-      return ` ${attribute.name}${value}`;
-    })
-    .join("");
+  return (
+    injected +
+    attributes
+      .filter((attribute) => attribute.kind === "attribute")
+      .map((attribute) => {
+        const value = attribute.value === "" ? "" : `="${escapeAttribute(attribute.value)}"`;
+        return ` ${attribute.name}${value}`;
+      })
+      .join("")
+  );
 }
 
 function hasDataUiAttribute(attributes: readonly TemplatePlanAttribute[]): boolean {
@@ -761,8 +968,13 @@ function serverChunks(
   template: TemplateModuleTemplate,
   actionDescriptors: ReadonlyMap<string, object>,
   componentId: string | undefined,
+  valueKinds: TemplateValueKinds,
 ): readonly object[] {
-  return flattenServerNodes(template.plan.nodes, template, actionDescriptors, { componentId, used: false });
+  return flattenServerNodes(template.plan.nodes, template, actionDescriptors, {
+    componentId,
+    used: false,
+    valueKinds,
+  });
 }
 
 function flattenServerNodes(
@@ -784,7 +996,7 @@ function serverNodeChunks(
     case "element":
       return [
         textChunk(`<${node.tagName}${serverDataUiAttr(node.attributes, injection)}`),
-        ...serverAttributeChunks(node.attributes, template, actionDescriptors),
+        ...serverAttributeChunks(node.attributes, template, actionDescriptors, injection),
         textChunk(">"),
         ...flattenServerNodes(node.children, template, actionDescriptors, injection),
         textChunk(`</${node.tagName}>`),
@@ -792,48 +1004,54 @@ function serverNodeChunks(
     case "selfClosingElement":
       return [
         textChunk(`<${node.tagName}${serverDataUiAttr(node.attributes, injection)}`),
-        ...serverAttributeChunks(node.attributes, template, actionDescriptors),
+        ...serverAttributeChunks(node.attributes, template, actionDescriptors, injection),
         textChunk("/>"),
       ];
     case "textOnlyElement":
       return [
         textChunk(`<${node.tagName}${serverDataUiAttr(node.attributes, injection)}`),
-        ...serverAttributeChunks(node.attributes, template, actionDescriptors),
+        ...serverAttributeChunks(node.attributes, template, actionDescriptors, injection),
         textChunk(">"),
-        ...(node.textContent ? serverTextContentChunks(node.textContent) : []),
+        ...(node.textContent ? serverTextContentChunks(node.textContent, injection) : []),
         textChunk(`</${node.tagName}>`),
       ];
     case "text":
       return [textChunk(escapeHtml(node.value))];
     case "sparseText":
-      return sparseChunks(node.nodes);
+      return sparseChunks(node.nodes, injection);
     case "part":
       return [
         textChunk(`<!--n_${node.valueIndex}-->`),
-        slotChunk(node.valueIndex),
+        slotChunk(node.valueIndex, injection),
         textChunk(`<!--/n_${node.valueIndex}-->`),
       ];
     case "commentPart":
-      return [textChunk("<!--"), slotChunk(node.valueIndex), textChunk("-->")];
+      return [textChunk("<!--"), slotChunk(node.valueIndex, injection), textChunk("-->")];
     case "comment":
       return [textChunk(`<!--${node.value}-->`)];
     case "sparseComment":
-      return [textChunk("<!--"), ...sparseChunks(node.nodes), textChunk("-->")];
+      return [textChunk("<!--"), ...sparseChunks(node.nodes, injection), textChunk("-->")];
     case "doctype":
       return [textChunk(`<!DOCTYPE ${node.name}>`)];
   }
 }
 
-function serverTextContentChunks(node: TemplatePlanTextContent): readonly object[] {
+function serverTextContentChunks(
+  node: TemplatePlanTextContent,
+  injection: ComponentDataUiInjection,
+): readonly object[] {
   if (node.kind === "text") return [textChunk(node.value)];
-  if (node.kind === "sparseText") return sparseChunks(node.nodes);
-  if (node.kind === "part") return [slotChunk(node.valueIndex)];
+  if (node.kind === "sparseText") return sparseChunks(node.nodes, injection);
+  if (node.kind === "part") return [slotChunk(node.valueIndex, injection)];
   return [];
 }
 
-function sparseChunks(parts: readonly TemplatePlanSparsePart[]): readonly object[] {
+function sparseChunks(
+  parts: readonly TemplatePlanSparsePart[],
+  injection: ComponentDataUiInjection,
+): readonly object[] {
   return parts.map((part) =>
-    part.kind === "text" ? textChunk(part.value) : slotChunk(part.valueIndex),
+    part.kind === "text" ? textChunk(part.value) : slotChunk(part.valueIndex, injection),
   );
 }
 
@@ -841,21 +1059,23 @@ function serverAttributeChunks(
   attributes: readonly TemplatePlanAttribute[],
   template: TemplateModuleTemplate,
   actionDescriptors: ReadonlyMap<string, object>,
+  injection: ComponentDataUiInjection,
 ): readonly object[] {
   return attributes.flatMap((attribute) => {
     if (attribute.kind === "attribute")
       return [textChunk(` ${attribute.name}="${attribute.value}"`)];
     if (attribute.kind === "dynamicAttribute" || attribute.kind === "className") {
-      return [slotChunk(attribute.valueIndex, "attr", attribute.name)];
+      return [slotChunk(attribute.valueIndex, injection, "attr", attribute.name)];
     }
     if (attribute.kind === "boolean")
-      return [slotChunk(attribute.valueIndex, "boolean", attribute.name)];
+      return [slotChunk(attribute.valueIndex, injection, "boolean", attribute.name)];
     if (attribute.kind === "property")
-      return [slotChunk(attribute.valueIndex, "attr", attribute.name)];
+      return [slotChunk(attribute.valueIndex, injection, "attr", attribute.name)];
     if (attribute.kind === "event")
       return [
         slotChunk(
           attribute.valueIndex,
+          injection,
           "event",
           attribute.name,
           actionDescriptorForValue(template, attribute.valueIndex, actionDescriptors),
@@ -869,8 +1089,20 @@ function textChunk(text: string): object {
   return { kind: "text", text };
 }
 
+function valueKindFor(
+  valueKinds: TemplateValueKinds | undefined,
+  valueIndex: number,
+): TemplateValueKind {
+  return valueKinds?.get(valueIndex) ?? "unknown";
+}
+
+function valueKindSource(valueKinds: TemplateValueKinds, valueIndex: number): string {
+  return JSON.stringify(valueKindFor(valueKinds, valueIndex));
+}
+
 function slotChunk(
   valueIndex: number,
+  injection: ComponentDataUiInjection,
   mode: string = "node",
   name?: string,
   action?: object,
@@ -879,7 +1111,7 @@ function slotChunk(
     ...(action ? { action } : {}),
     kind: "slot",
     valueIndex,
-    valueKind: "unknown",
+    valueKind: valueKindFor(injection.valueKinds, valueIndex),
     mode,
     ...(name ? { name } : {}),
   };
