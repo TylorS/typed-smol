@@ -18,6 +18,7 @@
     "test:acceptance:local": "vmc -p tsconfig.json && node dist/types/scripts/run-acceptance-local.js",
     "test:e2e:local": "vmc -p tsconfig.json && node dist/types/scripts/run-e2e-local.js",
     "test:hmr:local": "node scripts/run-hmr-local.js",
+    "devtools:local": "vmc -p tsconfig.json && node dist/types/scripts/run-devtools-local.js",
     "test:api:hurl:local": "vmc -p tsconfig.json && node dist/types/scripts/run-hurl-local.js",
     "db:migrate": "vmc -p tsconfig.json && node dist/types/scripts/db.js migrate",
     "db:seed": "vmc -p tsconfig.json && node dist/types/scripts/db.js seed",

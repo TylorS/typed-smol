@@ -7,7 +7,7 @@ Status: approved on 2026-05-26 after production-grade review.
 | task_id | status | latest evidence |
 | ------- | ------ | --------------- |
 | T0 | completed on 2026-05-26 20:01 EDT | Preflight facts recorded in `memories.md`: dirty state, missing `hurl`, and package test baselines. |
-| T1 | pending | Planned write to `examples/realworld/package.json` overlaps an existing dirty file; reread and preserve the current hunk before any edit. |
+| T1 | focused slice accepted; full check blocked externally | Focused Vitest gate passes; `pnpm --filter typed-realworld check` is blocked by existing dirty `CommentForm.ts` formatting and generated HttpApi `OpenApiModule` type error outside this slice. |
 
 ## Subgoal DAG
 
@@ -74,18 +74,20 @@ Status: approved on 2026-05-26 after production-grade review.
 ### T1 - RealWorld Devtools Smoke Opt-In
 
 - files:
-  - modify: `examples/realworld/src/browser.ts`
+  - verify unchanged: `examples/realworld/src/browser.ts`
+  - create: `examples/realworld/src/browser.devtools.ts`
+  - create: `examples/realworld/index.devtools.html`
   - modify: `examples/realworld/src/tests/presentation/devtools-smoke-mode.test.ts`
   - create or modify: `examples/realworld/scripts/run-devtools-local.*`
   - modify: `examples/realworld/package.json`
 - failing test:
-  - add a test in `devtools-smoke-mode.test.ts` that expects the smoke-mode browser module id to include `typed:browser?routes=./routes&devtools=1` while the default browser source does not.
+  - add a test in `devtools-smoke-mode.test.ts` that expects the smoke-mode browser module id to include `typed:browser?routes=./routes&devtools=1`, `index.devtools.html` to load the smoke entry, and the default browser source to stay devtools-free.
 - fail command:
-  - `pnpm --filter typed-realworld test:ssr -- src/tests/presentation/devtools-smoke-mode.test.ts`
+  - `pnpm --filter typed-realworld exec vitest run --passWithNoTests src/tests/presentation/devtools-smoke-mode.test.ts`
 - expected failure:
   - assertion failure because no explicit smoke-mode entry or script exists yet.
 - pass command:
-  - same command passes, and `pnpm --filter typed-realworld check` still keeps default devtools disabled.
+  - same focused Vitest command passes, and `pnpm --filter typed-realworld check` still keeps default devtools disabled.
 
 ### T2 - Shared Runtime And Bridge Wiring
 

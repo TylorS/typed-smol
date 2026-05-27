@@ -45,3 +45,14 @@
 - T1 intends to edit `examples/realworld/package.json`, which already has another agent's hunk changing `typecheck:stories` from `pnpm storybook:build` to `vmc --noEmit -p tsconfig.storybook.json && pnpm storybook:build`.
 - Preserve existing dirty hunks and stage only workflow-owned changes.
 - Reread any overlapping file before editing because concurrent agent work is active in RealWorld, app virtual-module tests, compiler host adapter files, virtual-modules vite plugin files, and publish scripts.
+
+## T1 - RealWorld Devtools Smoke Opt-In
+
+- red_command: `pnpm --filter typed-realworld exec vitest run --passWithNoTests src/tests/presentation/devtools-smoke-mode.test.ts`
+- red_result: failed as expected because `src/browser.devtools.ts`, `index.devtools.html`, and `scripts.run-devtools-local.ts` did not exist and `devtools:local` was missing.
+- green_command: `pnpm --filter typed-realworld exec vitest run --passWithNoTests src/tests/presentation/devtools-smoke-mode.test.ts`
+- green_result: passed. Vitest reported 1 file and 3 tests.
+- command_refinement: `pnpm --filter typed-realworld test:ssr -- src/tests/presentation/devtools-smoke-mode.test.ts` runs the whole presentation directory because the package script already includes `src/tests/presentation`; use the focused Vitest command for T1.
+- check_command: `pnpm --filter typed-realworld check`
+- check_result: blocked outside T1 after T1 formatting was fixed. Remaining errors are `node_modules/.typed/virtual/httpapi-virtual-module/4585439fb101fbc7.ts(87,5611): error TS2304: Cannot find name 'OpenApiModule'.` and formatting in existing dirty `src/common/components/CommentForm.ts`.
+- ownership_note: do not fix the `OpenApiModule` or `CommentForm.ts` blockers inside T1 without approval because they overlap concurrent RealWorld and HttpApi virtual-module work.
