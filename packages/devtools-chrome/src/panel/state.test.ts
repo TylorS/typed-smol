@@ -116,6 +116,36 @@ describe("Typed DevTools panel state", () => {
     expect(updated.replay?._tag).toBe("SessionMismatch");
   });
 
+  it("clears stale rows when a connected ready replay has no retained runtime rows", () => {
+    const state = [
+      ...DevtoolsProtocolFixtures.runtimeStreamItems,
+      {
+        _tag: "FxNodeEvent" as const,
+        fxNodeId: makeFxNodeId("fixture/fx"),
+        phase: "emitted" as const,
+        timestamp: 9,
+        value: serializeDevtoolsValue("fixture"),
+      },
+    ].reduce(applyRuntimeStreamItem, createTypedDevtoolsPanelState());
+
+    const updated = applyRuntimeStreamItem(state, {
+      _tag: "RuntimeReplayState",
+      state: {
+        _tag: "Ready",
+        droppedEvents: 0,
+        nextSequence: 1,
+        reconnectable: true,
+        retainedEvents: 0,
+        sessionId: DevtoolsProtocolFixtures.ids.session,
+      },
+    });
+
+    expect(componentRows(updated)).toEqual([]);
+    expect(fxRows(updated)).toEqual([]);
+    expect(refSubjectRows(updated)).toEqual([]);
+    expect(updated.replay?._tag).toBe("Ready");
+  });
+
   it("preserves RefSubject subscriber count across value updates", () => {
     const refSubjectId = makeRefSubjectId("component/root/user");
     const snapshot = applyRuntimeStreamItem(createTypedDevtoolsPanelState(), {

@@ -42,15 +42,11 @@ export function applyRuntimeStreamItem(
   state: TypedDevtoolsPanelState,
   item: RuntimeEventStreamItem,
 ): TypedDevtoolsPanelState {
-  if (item._tag === "RuntimeReplayState") return applyReplayState(state, item.state);
+  if (item._tag === "RuntimeReplayState") return applyReplayState(item.state);
   return applyRuntimeEvent(state, item);
 }
 
-function applyReplayState(
-  state: TypedDevtoolsPanelState,
-  replay: RuntimeReplayState,
-): TypedDevtoolsPanelState {
-  if (replay._tag === "Ready") return { ...state, replay };
+function applyReplayState(replay: RuntimeReplayState): TypedDevtoolsPanelState {
   return { ...createTypedDevtoolsPanelState(), replay };
 }
 

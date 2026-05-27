@@ -68,3 +68,15 @@
 - broad_result: passed but ran the full package because the package script consumes the extra args after its own command shape; Vitest reported 35 files, 499 tests, no type errors, duration 97.20s.
 - focused_command: `pnpm --filter @typed/app exec vitest run --passWithNoTests BrowserVirtualModulePlugin.test.ts runtime/devtoolsBridge.test.ts runtime/domTemplateRuntime.test.ts`
 - focused_result: passed. Vitest reported 3 files, 18 tests, no type errors, duration 2.42s.
+
+## T3 - Connected Panel Must Not Seed Fixture Rows
+
+- red_command: `pnpm --filter @typed/devtools-chrome exec vitest run --passWithNoTests src/panel/state.test.ts`
+- red_result: failed as expected. A connected `Ready` replay with `retainedEvents: 0` preserved stale component rows from previous state, including `Root`.
+- fix: `applyReplayState` now resets derived panel rows for every replay boundary, including `Ready`, before replay/live events are applied.
+- green_command: `pnpm --filter @typed/devtools-chrome exec vitest run --passWithNoTests src/panel/state.test.ts`
+- green_result: passed. Vitest reported 1 file, 6 tests.
+- focused_panel_command: `pnpm --filter @typed/devtools-chrome exec vitest run --passWithNoTests src/panel/app.test.ts src/panel/state.test.ts`
+- focused_panel_result: passed. Vitest reported 2 files, 12 tests.
+- package_command: `pnpm --filter @typed/devtools-chrome test -- src/panel/app.test.ts src/panel/state.test.ts`
+- package_result: passed after fixing the unused replay-state parameter. The package script includes typecheck and broadened Vitest to all package tests; Vitest reported 8 files and 41 tests.
