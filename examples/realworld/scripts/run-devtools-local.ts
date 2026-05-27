@@ -3,7 +3,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 const appHost = process.env.APP_HOST ?? "127.0.0.1";
 const appPort = Number(process.env.APP_PORT ?? "3200");
 const appBase = process.env.APP_BASE ?? `http://${appHost}:${appPort}`;
-const smokePath = process.env.DEVTOOLS_SMOKE_PATH ?? "/index.devtools.html";
+const readinessPath = process.env.DEVTOOLS_READY_PATH ?? "/src/browser.devtools.ts";
+const smokePath = process.env.DEVTOOLS_SMOKE_PATH ?? "/devtools-smoke.html";
 
 try {
   const server = startAppServer();
@@ -11,7 +12,7 @@ try {
   try {
     await waitForServer(server);
     console.log(`RealWorld DevTools smoke URL: ${appBase}${smokePath}`);
-    await waitForExit(server);
+    await runPlaywright();
   } finally {
     await stopAppServer(server);
   }
@@ -50,10 +51,6 @@ async function waitForServer(server: ServerProcess): Promise<void> {
   );
 }
 
-function waitForExit(server: ServerProcess): Promise<void> {
-  return new Promise((resolve) => server.child.once("exit", () => resolve()));
-}
-
 async function stopAppServer(server: ServerProcess): Promise<void> {
   if (server.child.exitCode !== null) return;
   const closed = new Promise<void>((resolve) => server.child.once("close", () => resolve()));
@@ -64,6 +61,43 @@ async function stopAppServer(server: ServerProcess): Promise<void> {
       if (server.child.exitCode === null) server.child.kill("SIGKILL");
     }),
   ]);
+}
+
+function runPlaywright(): Promise<void> {
+  const child = spawn(
+    "pnpm",
+    ["exec", "playwright", "test", "--config", "playwright.devtools.config.ts"],
+    {
+      env: { ...process.env, APP_BASE: appBase },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+
+  let output = "";
+  const push = (chunk: Buffer) => {
+    const text = chunk.toString();
+    output += text;
+    process.stdout.write(text);
+  };
+
+  child.stdout?.on("data", push);
+  child.stderr?.on("data", push);
+
+  return new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (isMissingPlaywrightBrowser(output)) {
+        console.error(
+          [
+            "Playwright browsers are required for `pnpm --filter typed-realworld test:devtools:local`.",
+            "Run `pnpm --filter typed-realworld exec playwright install chromium`, then rerun this command.",
+          ].join("\n"),
+        );
+      }
+      if (code === 0) resolve();
+      else reject(new Error("RealWorld DevTools Playwright suite failed"));
+    });
+  });
 }
 
 function pipeServerLogs(server: ServerProcess): void {
@@ -79,7 +113,10 @@ function pipeServerLogs(server: ServerProcess): void {
 
 async function serverResponds(): Promise<boolean> {
   try {
-    const response = await fetch(`${appBase}${smokePath}`, { method: "GET" });
+    const response = await fetch(`${appBase}${readinessPath}`, {
+      method: "GET",
+      signal: AbortSignal.timeout(2_000),
+    });
     return response.status < 500;
   } catch {
     return false;
@@ -88,6 +125,10 @@ async function serverResponds(): Promise<boolean> {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isMissingPlaywrightBrowser(output: string): boolean {
+  return output.includes("Executable doesn't exist") || output.includes("playwright install");
 }
 
 type ServerProcess = {

@@ -30,11 +30,12 @@ describe("RealWorld DevTools smoke mode", () => {
 
   it("declares a local devtools smoke script without changing the default dev script", () => {
     const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
+    const devtoolsCommand =
+      "pnpm --filter @typed/app build && vmc -p tsconfig.json && node dist/types/scripts/run-devtools-local.js";
 
     expect(pkg.scripts.dev).toBe("typed dev");
-    expect(pkg.scripts["devtools:local"]).toBe(
-      "vmc -p tsconfig.json && node dist/types/scripts/run-devtools-local.js",
-    );
+    expect(pkg.scripts["devtools:local"]).toBe(devtoolsCommand);
+    expect(pkg.scripts["test:devtools:local"]).toBe(devtoolsCommand);
     expect(existsSync(resolve(root, "scripts/run-devtools-local.ts"))).toBe(true);
   });
 });

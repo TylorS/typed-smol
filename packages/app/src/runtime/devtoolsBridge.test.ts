@@ -144,6 +144,44 @@ describe("installTypedDevtoolsBridge", () => {
     ]);
   });
 
+  it("uses the requested session id for replay state when runtime has no configured session", () => {
+    const registry = makeDomRegistry();
+    const runtime = makeDevtoolsRuntime({ enabled: true });
+    const globalObject: Record<PropertyKey, unknown> = {};
+    runtime.emit(DevtoolsProtocolFixtures.runtimeEvents[0]);
+
+    installTypedDevtoolsBridge({
+      enabled: true,
+      domRegistry: registry,
+      globalObject,
+      runtime,
+    });
+
+    const api = globalObject.__TYPED_DEVTOOLS__ as {
+      readonly handshake: (request: unknown) => unknown;
+      readonly subscribeRuntimeEvents: (request: unknown) => unknown;
+    };
+
+    expect(api.handshake(DevtoolsProtocolFixtures.handshakeRequest)).toMatchObject({
+      sessionId: DevtoolsProtocolFixtures.ids.session,
+    });
+    expect(api.subscribeRuntimeEvents(DevtoolsProtocolFixtures.runtimeSubscriptionRequest)).toEqual([
+      {
+        _tag: "RuntimeReplayState",
+        state: {
+          _tag: "Ready",
+          droppedEvents: 0,
+          nextSequence: 2,
+          oldestRetainedSequence: 1,
+          reconnectable: true,
+          retainedEvents: 1,
+          sessionId: DevtoolsProtocolFixtures.ids.session,
+        },
+      },
+      DevtoolsProtocolFixtures.runtimeEvents[0],
+    ]);
+  });
+
   it("does not install the bridge when disabled", () => {
     const globalObject: Record<PropertyKey, unknown> = {};
 

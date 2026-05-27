@@ -8,6 +8,7 @@ import {
   type SourceAnalyzerRequest,
   type SourceAnalyzerResponse,
   type RuntimeEventSubscriptionRequest,
+  type RuntimeReplayState,
 } from "@typed/devtools-protocol";
 import type { DevtoolsRuntimeService, DomRegistry } from "@typed/devtools-runtime";
 import * as Effect from "effect/Effect";
@@ -131,7 +132,18 @@ function runtimeEventStreamItems(
   request: RuntimeEventSubscriptionRequest,
 ) {
   const replay = runtime.eventBus.replay(request);
-  return [{ _tag: "RuntimeReplayState", state: replay.state }, ...replay.events];
+  return [
+    { _tag: "RuntimeReplayState", state: replayStateWithSession(replay.state, request) },
+    ...replay.events,
+  ];
+}
+
+function replayStateWithSession(
+  state: RuntimeReplayState,
+  request: RuntimeEventSubscriptionRequest,
+): RuntimeReplayState {
+  if (state._tag === "Disabled") return state;
+  return { ...state, sessionId: state.sessionId ?? request.sessionId };
 }
 
 function disabledRuntimeReplay() {

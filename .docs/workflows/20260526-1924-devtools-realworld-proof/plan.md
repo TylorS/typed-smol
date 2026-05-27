@@ -7,9 +7,10 @@ Status: approved on 2026-05-26 after production-grade review.
 | task_id | status | latest evidence |
 | ------- | ------ | --------------- |
 | T0 | completed on 2026-05-26 20:01 EDT | Preflight facts recorded in `memories.md`: dirty state, missing `hurl`, and package test baselines. |
-| T1 | focused slice accepted; full check blocked externally | Focused Vitest gate passes; `pnpm --filter typed-realworld check` is blocked by existing dirty `CommentForm.ts` formatting and generated HttpApi `OpenApiModule` type error outside this slice. |
+| T1 | completed on 2026-05-26 20:26 EDT | Focused smoke-mode test passes and `pnpm --filter typed-realworld check` now passes. |
 | T2 | completed on 2026-05-26 20:11 EDT | Existing implementation already satisfies shared runtime/bridge wiring; focused app gate passed with 3 files, 18 tests, no type errors. |
 | T3 | completed on 2026-05-26 20:13 EDT | Panel replay state now clears stale rows on every replay boundary; devtools-chrome package gate passed with 8 files, 41 tests. |
+| T4 | completed on 2026-05-26 20:26 EDT | RealWorld devtools Playwright smoke passed, accepted `components,dom`, and proved inspected-page runtime replay. |
 
 ## Subgoal DAG
 
@@ -129,16 +130,17 @@ Status: approved on 2026-05-26 after production-grade review.
 
 - files:
   - create: `examples/realworld/src/tests/devtools/devtools-realworld.spec.ts`
+  - create: `examples/realworld/playwright.devtools.config.ts`
   - create or modify: `examples/realworld/scripts/run-devtools-local.*`
   - modify: `examples/realworld/package.json`
 - failing test:
   - add Playwright or equivalent browser harness that starts RealWorld smoke mode, evaluates `globalThis.__TYPED_DEVTOOLS__.handshake(...)`, then subscribes to runtime events and asserts `RuntimeReplayState` plus `runtime connected` behavior.
 - fail command:
-  - `pnpm --filter typed-realworld test:devtools:local`
+  - `pnpm --dir examples/realworld run test:devtools:local`
 - expected failure:
   - missing script or bridge global.
 - pass command:
-  - same command passes and logs inspected page URL plus accepted capabilities.
+  - `pnpm --filter typed-realworld test:devtools:local` passes and logs inspected page URL plus accepted capabilities.
 
 ### T5 - Component Tree And DOM Binding Proof
 
