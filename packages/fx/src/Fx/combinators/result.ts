@@ -1,9 +1,7 @@
 import * as Cause from "effect/Cause";
 import * as Result from "effect/Result";
-import type { Sink } from "../../Sink/Sink.js";
 import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
-import { Effect } from "effect/Effect";
 
 /**
  * Materializes success and failure of an Fx as `Result` values.

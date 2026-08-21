@@ -12,3 +12,4 @@ export * from "./interrupt.js";
 export * from "./make.js";
 export * from "./periodic.js";
 export * from "./succeed.js";
+export * from "./suspend.js";

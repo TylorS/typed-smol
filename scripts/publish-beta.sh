@@ -16,22 +16,14 @@ TOPO_ORDER=(
   packages/fx
   packages/guard
   packages/id
-  packages/virtual-modules
   # Level 1: depend only on level 0
   packages/navigation
   packages/template
-  packages/virtual-modules-compiler
-  packages/virtual-modules-ts-plugin
-  packages/virtual-modules-vite
-  packages/virtual-modules-vscode
   # Level 2
   packages/router
   packages/tsconfig
   # Level 3
-  packages/app
   packages/ui
-  # Level 4
-  packages/vite-plugin
 )
 
 add_files_field() {

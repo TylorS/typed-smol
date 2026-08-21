@@ -11,7 +11,6 @@
 - **Typed SPAs** — `BrowserRouter()` + `run(matcher)` for client-side routing; matcher cases yield Fx that switch as the path changes.
 - **SSR** — `ServerRouter({ initialMemory })` for server rendering with in-memory navigation.
 - **Tests** — `TestRouter()` with deterministic IDs for predictable route tests.
-- **File-based routing** — `@typed/app` virtual modules generate Matcher source from route files; use `import { Matcher } from "router:./routes"` with typedVitePlugin or vmc.
 
 ## Architecture
 
@@ -52,8 +51,6 @@ const filterState = Router.match(Router.Slash, "all")
 
 // Provide Router.BrowserRouter() and use filterState (or other matchers) in your layers
 ```
-
-For file-based routing, see `@typed/app` and its virtual `router:./routes` imports.
 
 ## API reference
 
