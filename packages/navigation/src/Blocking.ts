@@ -105,7 +105,7 @@ function blockedToBlocking(navigation: Navigation["Service"], state: Blocked): B
   return {
     ...state.event,
     cancel: Effect.flatMap(
-      Deferred.failSync(state.deferred, () => new CancelNavigation({})),
+      Deferred.failSync(state.deferred, () => new CancelNavigation()),
       () => navigation.currentEntry,
     ),
     confirm: Effect.flatMap(

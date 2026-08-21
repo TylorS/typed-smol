@@ -878,7 +878,7 @@ export function merge<const Matchers extends ReadonlyArray<Matcher.Any>>(
   >;
 }
 
-export class RouteGuardError extends Schema.ErrorClass<RouteGuardError>(
+export class RouteGuardError extends Schema.Error<RouteGuardError>(
   "@typed/router/RouteGuardError",
 )({
   _tag: Schema.tag("RouteGuardError"),
@@ -886,12 +886,12 @@ export class RouteGuardError extends Schema.ErrorClass<RouteGuardError>(
   causes: Schema.Array(Schema.Unknown),
 }) {}
 
-export class RouteNotFound extends Schema.ErrorClass<RouteNotFound>("@typed/router/RouteNotFound")({
+export class RouteNotFound extends Schema.Error<RouteNotFound>("@typed/router/RouteNotFound")({
   _tag: Schema.tag("RouteNotFound"),
   path: Schema.String,
 }) {}
 
-export class RouteDecodeError extends Schema.ErrorClass<RouteDecodeError>(
+export class RouteDecodeError extends Schema.Error<RouteDecodeError>(
   "@typed/router/RouteDecodeError",
 )({
   _tag: Schema.tag("RouteDecodeError"),

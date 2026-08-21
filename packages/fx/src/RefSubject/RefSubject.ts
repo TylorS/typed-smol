@@ -312,7 +312,7 @@ export const CurrentComputedBehavior = Context.Reference("@typed/fx/CurrentCompu
 });
 
 const checkIsMultiple = (ctx: Context.Context<any>): ctx is Context.Context<"multiple"> =>
-  Context.getReferenceUnsafe(ctx, CurrentComputedBehavior) === "multiple";
+  Context.getUnsafe(ctx, CurrentComputedBehavior) === "multiple";
 
 class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
   extends Versioned.VersionedTransform<
@@ -500,16 +500,16 @@ class ComputedScanImpl<R0, E0, A, E, R, E2, R2, S, E3, R3>
 
     this._computed = Subject.hold(
       unwrap(
-        Effect.map(Effect.services(), (ctx) => {
+        Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
-            return fromYieldable(input).pipe(
+            return fxFromEffect(input).pipe(
               continueWith(() => input),
               skipRepeats,
               fxScanEffect(initial, f),
             );
           }
 
-          return fxFromEffect(Effect.flatMap(input.asEffect(), (a) => f(initial, a)));
+          return fxFromEffect(Effect.flatMap(input, (a) => f(initial, a)));
         }),
       ),
     );

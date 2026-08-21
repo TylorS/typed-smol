@@ -47,14 +47,14 @@ export const NavigationEvent = Schema.Struct({
 });
 export type NavigationEvent = typeof NavigationEvent.Type;
 
-export class NavigationError extends Schema.TaggedErrorClass<NavigationError>()(
+export class NavigationError extends Schema.TaggedError<NavigationError>()(
   `@typed/navigation/NavigationError`,
   {
     error: Schema.Unknown,
   },
 ) {}
 
-export class RedirectError extends Schema.TaggedErrorClass<RedirectError>()(
+export class RedirectError extends Schema.TaggedError<RedirectError>()(
   `@typed/navigation/RedirectError`,
   {
     url: Schema.Union([Schema.URLFromString, Schema.String]),
@@ -67,7 +67,7 @@ export class RedirectError extends Schema.TaggedErrorClass<RedirectError>()(
   },
 ) {}
 
-export class CancelNavigation extends Schema.TaggedErrorClass<CancelNavigation>()(
+export class CancelNavigation extends Schema.TaggedError<CancelNavigation>()(
   `@typed/navigation/CancelNavigation`,
   {},
 ) {}

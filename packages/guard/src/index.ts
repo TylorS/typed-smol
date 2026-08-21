@@ -2,6 +2,7 @@
  * @since 1.0.0
  */
 
+import type * as Arr from "effect/Array";
 import type * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import { dual } from "effect/Function";
@@ -11,6 +12,7 @@ import type * as Predicate from "effect/Predicate";
 import * as Schema from "effect/Schema";
 import type { ParseOptions } from "effect/SchemaAST";
 import type * as Context from "effect/Context";
+import type { ExcludeTag, ExtractTag, NoInfer, Tags } from "effect/Types";
 
 /**
  * @since 1.0.0
@@ -340,36 +342,55 @@ export { catchAll as catch };
  * @since 1.0.0
  */
 export const catchTag: {
-  <E, K extends E extends { _tag: string } ? E["_tag"] : never, O2, E2, R2>(
+  <const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>, E, O2, E2, R2>(
     tag: K,
-    f: (e: Extract<E, { _tag: K }>) => Effect.Effect<O2, E2, R2>,
+    f: (
+      e: ExtractTag<NoInfer<E>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    ) => Effect.Effect<O2, E2, R2>,
   ): <I, O, R>(
     guard: GuardInput<I, O, E, R>,
-  ) => Guard<I, O | O2, E2 | Exclude<E, { _tag: K }>, R | R2>;
+  ) => Guard<
+    I,
+    O | O2,
+    E2 | ExcludeTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    R | R2
+  >;
 
-  <I, O, E, R, K extends E extends { _tag: string } ? E["_tag"] : never, O2, E2, R2>(
+  <I, O, E, R, const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>, O2, E2, R2>(
     guard: GuardInput<I, O, E, R>,
     tag: K,
-    f: (e: Extract<E, { _tag: K }>) => Effect.Effect<O2, E2, R2>,
-  ): Guard<I, O | O2, E2 | Exclude<E, { _tag: K }>, R | R2>;
-} = dual(3, function catchTag<
-  I,
-  O,
-  E,
-  R,
-  K extends E extends { _tag: string } ? E["_tag"] : never,
-  O2,
-  E2,
-  R2,
->(guard: GuardInput<I, O, E, R>, tag: K, f: (e: Extract<E, { _tag: K }>) => Effect.Effect<O2, E2, R2>): Guard<
-  I,
-  O | O2,
-  Exclude<E, { _tag: K }> | E2,
-  R | R2
-> {
-  const g = getGuard(guard);
-  return (i: I) => Effect.catchTag(g(i), tag as any, (e) => Effect.asSome(f(e as any)));
-});
+    f: (
+      e: ExtractTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    ) => Effect.Effect<O2, E2, R2>,
+  ): Guard<
+    I,
+    O | O2,
+    E2 | ExcludeTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    R | R2
+  >;
+} = dual(
+  3,
+  <I, O, E, R, const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>, O2, E2, R2>(
+    guard: GuardInput<I, O, E, R>,
+    tag: K,
+    f: (
+      e: ExtractTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    ) => Effect.Effect<O2, E2, R2>,
+  ): Guard<
+    I,
+    O | O2,
+    E2 | ExcludeTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    R | R2
+  > => {
+    const g = getGuard(guard);
+    return ((i: I) => Effect.catchTag(g(i), tag, (e) => Effect.asSome(f(e)))) as Guard<
+      I,
+      O | O2,
+      E2 | ExcludeTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+      R | R2
+    >;
+  },
+);
 
 /**
  * @since 1.0.0

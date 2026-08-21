@@ -1,4 +1,4 @@
-import { schedule as schedule_Effect } from "effect/Effect";
+import { catchCause, schedule as schedule_Effect } from "effect/Effect";
 import type { Schedule } from "effect/Schedule";
 import type { Fx } from "../Fx.js";
 import { make } from "./make.js";
@@ -15,4 +15,6 @@ import { make } from "./make.js";
 export const fromSchedule = <Error, Env>(
   schedule: Schedule<unknown, unknown, Error, Env>,
 ): Fx<void, Error, Env> =>
-  /*#__PURE__*/ make<void, Error, Env>((sink) => schedule_Effect(sink.onSuccess(), schedule));
+  /*#__PURE__*/ make<void, Error, Env>((sink) =>
+    catchCause(schedule_Effect(sink.onSuccess(), schedule), sink.onFailure),
+  );
