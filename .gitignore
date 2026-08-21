@@ -44,4 +44,4 @@ tmp-*/
 *.local
 
 .trigger-tree/
-.graphify-out/
+graphify-out/
