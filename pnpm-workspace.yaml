@@ -5,8 +5,10 @@ packages:
 catalog:
   effect: 4.0.0-rc.111
   "@effect/platform-node": 4.0.0-rc.111
-  oxlint: 1.79.0
+  "@effect/tsgo": 0.36.5
+  oxlint: 1.78.0
   oxfmt: 0.64.0
+  oxlint-tsgolint: 7.0.2001
   typescript: 7.0.2
   vite: 8.2.2
   vitest: 4.1.11

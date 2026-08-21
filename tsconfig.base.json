@@ -1,4 +1,5 @@
 {
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -10,7 +11,12 @@
     "incremental": true,
     "noEmit": false,
     "outDir": "dist",
-    "composite": true
+    "composite": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service"
+      }
+    ]
   },
   "exclude": ["node_modules", "dist"]
 }
