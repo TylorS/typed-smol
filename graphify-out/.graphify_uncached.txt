@@ -1,0 +1,14 @@
+/Users/tylorsteinberger/code/typed-smol/README.md
+/Users/tylorsteinberger/code/typed-smol/examples/counter/README.md
+/Users/tylorsteinberger/code/typed-smol/examples/counter/index.html
+/Users/tylorsteinberger/code/typed-smol/examples/todomvc/README.md
+/Users/tylorsteinberger/code/typed-smol/examples/todomvc/index.html
+/Users/tylorsteinberger/code/typed-smol/packages/async-data/README.md
+/Users/tylorsteinberger/code/typed-smol/packages/fx/README.md
+/Users/tylorsteinberger/code/typed-smol/packages/guard/README.md
+/Users/tylorsteinberger/code/typed-smol/packages/id/README.md
+/Users/tylorsteinberger/code/typed-smol/packages/navigation/README.md
+/Users/tylorsteinberger/code/typed-smol/packages/router/README.md
+/Users/tylorsteinberger/code/typed-smol/packages/template/README.md
+/Users/tylorsteinberger/code/typed-smol/packages/ui/README.md
+/Users/tylorsteinberger/code/typed-smol/pnpm-workspace.yaml
