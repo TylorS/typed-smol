@@ -3,6 +3,7 @@ import * as Result from "effect/Result";
 import type { Sink } from "../../Sink/Sink.js";
 import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
+import { Effect } from "effect/Effect";
 
 /**
  * Materializes success and failure of an Fx as `Result` values.
@@ -27,8 +28,8 @@ export const result = <A, E, R>(fx: Fx<A, E, R>): Fx<Result.Result<A, Cause.Caus
 
 class ResultSink<A, E, R> implements Sink<A, E, R> {
   readonly sink: Sink<Result.Result<A, Cause.Cause<E>>, never, R>;
-  readonly onSuccess: (value: A) => import("effect/Effect").Effect<unknown, never, R>;
-  readonly onFailure: (cause: Cause.Cause<E>) => import("effect/Effect").Effect<unknown, never, R>;
+  readonly onSuccess: (value: A) => Effect<unknown, never, R>;
+  readonly onFailure: (cause: Cause.Cause<E>) => Effect<unknown, never, R>;
 
   constructor(sink: Sink<Result.Result<A, Cause.Cause<E>>, never, R>) {
     this.sink = sink;
