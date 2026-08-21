@@ -16,8 +16,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "dependencies": {
-    "@typed/virtual-modules-ts-plugin": "workspace:*"
   }
 }

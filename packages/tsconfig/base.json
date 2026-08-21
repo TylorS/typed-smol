@@ -5,13 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
-    "skipLibCheck": true,
-    "plugins": [
-      {
-        "name": "@typed/virtual-modules-ts-plugin",
-        "debounceMs": 50
-      }
-    ]
+    "skipLibCheck": true
   },
   "exclude": ["node_modules", "dist"]
 }
