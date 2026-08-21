@@ -26,7 +26,7 @@
   "dependencies": {
     "@typed/fx": "workspace:*",
     "effect": "catalog:",
-    "html5parser": "2.0.2"
+    "html5parser": "3.0.0"
   },
   "devDependencies": {
     "happy-dom": "catalog:",
