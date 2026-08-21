@@ -1,0 +1,27 @@
+{
+  "name": "typed-todomvc",
+  "private": true,
+  "version": "1.0.0",
+  "description": "TodoMVC example",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@typed/fx": "workspace:*",
+    "@typed/router": "workspace:*",
+    "@typed/template": "workspace:*",
+    "@typed/ui": "workspace:*",
+    "effect": "catalog:",
+    "todomvc-app-css": "^2.4.3",
+    "todomvc-common": "^1.0.5"
+  },
+  "devDependencies": {
+    "@typed/tsconfig": "workspace:*",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

@@ -1,0 +1,64 @@
+import { DateTime, Effect, Layer, Context } from "effect";
+import * as Option from "effect/Option";
+import { Fx } from "@typed/fx";
+import * as Router from "@typed/router";
+import * as KeyValueStore from "effect/unstable/persistence/KeyValueStore";
+import * as App from "./application";
+import * as Domain from "./domain";
+
+const TODOS_STORAGE_KEY = `@typed/todomvc/todos`;
+
+class Todos extends Context.Service<Todos>()("TodosService", {
+  make: Effect.gen(function* () {
+    const kv = yield* KeyValueStore.KeyValueStore;
+    return KeyValueStore.toSchemaStore(kv, Domain.TodoList);
+  }),
+}) {
+  static readonly get = Todos.pipe(
+    Effect.flatMap((service) => service.get(TODOS_STORAGE_KEY)),
+    Effect.map(Option.getOrElse(() => [])),
+    Effect.catchCause(() => Effect.succeed([])),
+  );
+
+  static readonly set = (todos: Domain.TodoList) =>
+    Effect.flatMap(Todos, (service) => service.set(TODOS_STORAGE_KEY, todos)).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logError("Failed to write todos to key value store", cause),
+      ),
+    );
+
+  static readonly replicateToStorage = App.TodoList.pipe(Fx.observeLayer(Todos.set));
+
+  static readonly local = Layer.effect(Todos, this.make).pipe(
+    Layer.provideMerge(KeyValueStore.layerStorage(() => localStorage)),
+  );
+}
+
+const FilterState = Router.match(Router.Slash, "all")
+  .match(Router.Parse("active"), "active")
+  .match(Router.Parse("completed"), "completed")
+  .pipe(Router.redirectTo("/"));
+
+const Model = Layer.mergeAll(
+  App.TodoList.make(Todos.get),
+  App.FilterState.make(FilterState),
+  App.TodoText.make(""),
+);
+
+const CreateTodo = Layer.sync(
+  App.CreateTodo,
+  () => (text: string) =>
+    Effect.sync(
+      (): Domain.Todo => ({
+        id: Domain.TodoId.make(crypto.randomUUID()),
+        text,
+        completed: false,
+        timestamp: DateTime.makeUnsafe(new Date()),
+      }),
+    ),
+);
+
+export const Services = Layer.mergeAll(CreateTodo, Todos.replicateToStorage).pipe(
+  Layer.provideMerge(Model),
+  Layer.provideMerge([Todos.local, Router.BrowserRouter()]),
+);

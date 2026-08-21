@@ -1,0 +1,23 @@
+{
+  "name": "typed-counter",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Simple Vite counter example",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@typed/fx": "workspace:*",
+    "@typed/template": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@typed/tsconfig": "workspace:*",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}
