@@ -24,17 +24,8 @@ import { Effect } from "effect/Effect";
  * @category combinators
  */
 export const result = <A, E, R>(fx: Fx<A, E, R>): Fx<Result.Result<A, Cause.Cause<E>>, never, R> =>
-  make<Result.Result<A, Cause.Cause<E>>, never, R>((sink) => fx.run(new ResultSink(sink)));
+  make<Result.Result<A, Cause.Cause<E>>, never, R>((sink) => fx.run({
+    onSuccess: (value) => sink.onSuccess(Result.succeed(value)),
+    onFailure: (cause) => sink.onSuccess(Result.fail(cause)),
+  }));
 
-class ResultSink<A, E, R> implements Sink<A, E, R> {
-  readonly sink: Sink<Result.Result<A, Cause.Cause<E>>, never, R>;
-  readonly onSuccess: (value: A) => Effect<unknown, never, R>;
-  readonly onFailure: (cause: Cause.Cause<E>) => Effect<unknown, never, R>;
-
-  constructor(sink: Sink<Result.Result<A, Cause.Cause<E>>, never, R>) {
-    this.sink = sink;
-    const s = sink;
-    this.onSuccess = (value) => s.onSuccess(Result.succeed(value));
-    this.onFailure = (cause) => s.onSuccess(Result.fail(cause));
-  }
-}
