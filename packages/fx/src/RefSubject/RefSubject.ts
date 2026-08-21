@@ -22,6 +22,7 @@ import { compact as fxCompact } from "../Fx/combinators/compact.js";
 import { continueWith } from "../Fx/combinators/continueWith.js";
 import { filterMapEffect as fxFilterMapEffect } from "../Fx/combinators/filterMapEffect.js";
 import { mapEffect as fxMapEffect } from "../Fx/combinators/mapEffect.js";
+import { scanEffect as fxScanEffect } from "../Fx/combinators/scan.js";
 import { skipRepeats } from "../Fx/combinators/skipRepeats.js";
 import type { Bounds } from "../Fx/combinators/slice.js";
 import { slice as fxSlice } from "../Fx/combinators/slice.js";
@@ -374,6 +375,149 @@ export function makeComputed<R0, E0, A, E, R, E2, R2, C, E3, R3>(
   f: (a: A) => Effect.Effect<C, E3, R3>,
 ): Computed<C, E0 | E | E2 | E3, R0 | R2 | R3 | Exclude<R, Scope.Scope>> {
   return new ComputedImpl(input, f);
+}
+
+/**
+ * Stateful scan over a `RefSubject` / `Computed`, producing a `Computed` of the accumulated state.
+ *
+ * Fx subscriptions follow `Fx.scan` semantics (emit `initial`, then fold each source value).
+ * Effect sampling accumulates across source versions via a private state ref (do not mix heavy
+ * subscribe + sample on the same scan if you need a single shared accumulator).
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export const scan: {
+  <S, A>(
+    initial: S,
+    f: (s: S, a: A) => S,
+  ): <E, R>(
+    ref: RefSubject<A, E, R> | Computed<A, E, R>,
+  ) => Computed<S, E, R>;
+
+  <A, E, R, S>(
+    ref: RefSubject<A, E, R> | Computed<A, E, R>,
+    initial: S,
+    f: (s: S, a: A) => S,
+  ): Computed<S, E, R>;
+
+  <R0, E0, A, E, R, E2, R2, S>(
+    versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
+    initial: S,
+    f: (s: S, a: A) => S,
+  ): Computed<S, E0 | E | E2, R0 | R2 | Exclude<R, Scope.Scope>>;
+} = dual(3, function scan<R0, E0, A, E, R, E2, R2, S>(
+  versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
+  initial: S,
+  f: (s: S, a: A) => S,
+): Computed<S, E0 | E | E2, R0 | R2 | Exclude<R, Scope.Scope>> {
+  return new ComputedScanImpl(versioned, initial, (s, a) => Effect.succeed(f(s, a)));
+});
+
+/**
+ * Effectful stateful scan over a `RefSubject` / `Computed`, producing a `Computed` of the accumulated state.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
+export const scanEffect: {
+  <S, A, E3, R3>(
+    initial: S,
+    f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
+  ): <E, R>(
+    ref: RefSubject<A, E, R> | Computed<A, E, R>,
+  ) => Computed<S, E | E3, R | R3>;
+
+  <A, E, R, S, E3, R3>(
+    ref: RefSubject<A, E, R> | Computed<A, E, R>,
+    initial: S,
+    f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
+  ): Computed<S, E | E3, R | R3>;
+
+  <R0, E0, A, E, R, E2, R2, S, E3, R3>(
+    versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
+    initial: S,
+    f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
+  ): Computed<S, E0 | E | E2 | E3, R0 | R2 | R3 | Exclude<R, Scope.Scope>>;
+} = dual(3, function scanEffect<R0, E0, A, E, R, E2, R2, S, E3, R3>(
+  versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
+  initial: S,
+  f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
+): Computed<S, E0 | E | E2 | E3, R0 | R2 | R3 | Exclude<R, Scope.Scope>> {
+  return new ComputedScanImpl(versioned, initial, f);
+});
+
+class ComputedScanImpl<R0, E0, A, E, R, E2, R2, S, E3, R3>
+  extends Versioned.VersionedTransform<
+    R0,
+    E0,
+    A,
+    E,
+    R,
+    A,
+    E2,
+    R2,
+    S,
+    E0 | E | E2 | E3,
+    R0 | Exclude<R, Scope.Scope> | R2 | R3 | Scope.Scope,
+    S,
+    E0 | E | E2 | E3,
+    R0 | Exclude<R, Scope.Scope> | R2 | R3
+  >
+  implements Computed<S, E0 | E | E2 | E3, R0 | Exclude<R, Scope.Scope> | R2 | R3>
+{
+  readonly [ComputedTypeId]: ComputedTypeId = ComputedTypeId;
+  private _computed: Fx<S, E0 | E | E2 | E3, R0 | R | Scope.Scope | R2 | R3>;
+
+  override input: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>;
+  readonly initial: S;
+  readonly f: (s: S, a: A) => Effect.Effect<S, E3, R3>;
+
+  constructor(
+    input: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
+    initial: S,
+    f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
+  ) {
+    const state = MutableRef.make(initial);
+
+    super(
+      input,
+      (fx) => fxScanEffect(fx, initial, f) as any,
+      (effect) =>
+        Effect.flatMap(effect, (a) =>
+          Effect.flatMap(f(MutableRef.get(state), a), (next) =>
+            Effect.sync(() => {
+              MutableRef.set(state, next);
+              return next;
+            }),
+          ),
+        ),
+    );
+
+    this.input = input;
+    this.initial = initial;
+    this.f = f;
+
+    this._computed = Subject.hold(
+      unwrap(
+        Effect.map(Effect.services(), (ctx) => {
+          if (checkIsMultiple(ctx)) {
+            return fromYieldable(input).pipe(
+              continueWith(() => input),
+              skipRepeats,
+              fxScanEffect(initial, f),
+            );
+          }
+
+          return fxFromEffect(Effect.flatMap(input.asEffect(), (a) => f(initial, a)));
+        }),
+      ),
+    );
+  }
+
+  override run<RSink>(sink: Sink.Sink<S, E0 | E | E2 | E3, RSink>) {
+    return this._computed.run(sink) as any;
+  }
 }
 
 export function makeFiltered<R0, E0, A, E, R, E2, R2, C, E3, R3>(

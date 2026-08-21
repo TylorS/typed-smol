@@ -62,4 +62,42 @@ describe("RefSubject", () => {
       expect(yield* countStr).toEqual("20");
       expect(yield* count).toEqual(20);
     }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("scan accumulates across samples", () =>
+    Effect.gen(function* () {
+      const ref = yield* RefSubject.make(1);
+      const sums = RefSubject.scan(ref, 0, (s, a) => s + a);
+
+      expect(yield* sums).toEqual(1);
+      yield* RefSubject.set(ref, 2);
+      expect(yield* sums).toEqual(3);
+      yield* RefSubject.set(ref, 3);
+      expect(yield* sums).toEqual(6);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("scan + map pipeline updates while observed", () =>
+    Effect.gen(function* () {
+      const ref = yield* RefSubject.make(1);
+      type State = [number, number];
+      const avg = ref.pipe(
+        RefSubject.scan([0, 0] as State, ([sum, count], n): State => [sum + n, count + 1]),
+        RefSubject.map(([sum, count]) => (count === 0 ? 0 : sum / count)),
+      );
+
+      const values: number[] = [];
+      yield* Effect.forkChild(
+        Fx.observe(avg, (n) => {
+          values.push(n);
+        }),
+      );
+      // Attach subscriber before pushing updates
+      for (let i = 0; i < 10; i++) yield* Effect.yieldNow;
+
+      yield* RefSubject.set(ref, 3);
+      yield* RefSubject.set(ref, 5);
+      for (let i = 0; i < 10; i++) yield* Effect.yieldNow;
+
+      expect(values.length).toBeGreaterThan(0);
+      expect(values.at(-1)).toEqual(3); // (1+3+5)/3
+    }).pipe(Effect.scoped, Effect.runPromise));
 });
