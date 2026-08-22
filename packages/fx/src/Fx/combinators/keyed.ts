@@ -176,6 +176,7 @@ function runKeyed<A, E, R, B extends PropertyKey, C, E2, R2, R3>(
                 scheduleNextEmit,
               });
             } else {
+              changed = true;
               yield* updateValue(state, values, patch);
             }
           }
