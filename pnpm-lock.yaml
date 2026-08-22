@@ -259,9 +259,6 @@ importers:
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx
-      '@typed/id':
-        specifier: workspace:*
-        version: link:../id
       '@typed/navigation':
         specifier: workspace:*
         version: link:../navigation
@@ -278,6 +275,9 @@ importers:
         specifier: 'catalog:'
         version: 20.11.6
     devDependencies:
+      '@typed/id':
+        specifier: workspace:*
+        version: link:../id
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

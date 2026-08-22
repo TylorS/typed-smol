@@ -26,7 +26,6 @@
   "dependencies": {
     "@effect/platform-node": "catalog:",
     "@typed/fx": "workspace:*",
-    "@typed/id": "workspace:*",
     "@typed/navigation": "workspace:*",
     "@typed/router": "workspace:*",
     "@typed/template": "workspace:*",
@@ -34,6 +33,7 @@
     "happy-dom": "catalog:"
   },
   "devDependencies": {
+    "@typed/id": "workspace:*",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

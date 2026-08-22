@@ -1217,7 +1217,10 @@ export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledE
 
 function applyPrefixes(route: Route.Any, prefixes: ReadonlyArray<RouteAst>): Route.Any {
   if (prefixes.length === 0) return route;
-  const prefixRoutes = prefixes.map((prefix) => makeRoute(prefix));
+  const prefixRoutes = prefixes
+    .map((prefix) => makeRoute(prefix))
+    .filter((prefix) => prefix.path !== "/");
+  if (prefixRoutes.length === 0) return route;
   return Join(...prefixRoutes, route);
 }
 

@@ -71,6 +71,73 @@ describe("typed/ui/Link", () => {
       assert(pathAfter === "/" || pathAfter === "");
     }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
   });
+
+  it("keeps an ordinary href available without a router or JavaScript", () => {
+    const [window] = createHappyDomLayer();
+    return Effect.gen(function* () {
+      const [root] = yield* render(
+        Link({ href: "/download/report.csv", content: "Download report" }),
+        window.document.body,
+      ).pipe(Fx.provide(DomRenderTemplate.using(window.document)), Fx.take(1), Fx.collectAll);
+
+      const anchor = root as HTMLAnchorElement;
+      assert.strictEqual(anchor.tagName, "A");
+      assert.strictEqual(anchor.getAttribute("href"), "/download/report.csv");
+      assert.strictEqual(anchor.textContent, "Download report");
+    }).pipe(Effect.scoped, Effect.runPromise);
+  });
+
+  it("leaves external and targeted links to the browser", () => {
+    const [window, layer] = createHappyDomLayer();
+    return Effect.gen(function* () {
+      for (const [options, intercepted] of [
+        [{ href: "https://example.com", target: "_blank" }, false],
+        [{ href: "/other", target: "_blank" }, false],
+        [{ href: "https://example.com", target: "_self" }, false],
+      ] as const) {
+        const [root] = yield* render(
+          Link({ ...options, content: "Open" }),
+          window.document.body,
+        ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+        const anchor = root as HTMLAnchorElement;
+        const event = new window.MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+        });
+        anchor.dispatchEvent(event);
+        yield* Effect.sleep(10);
+        assert.strictEqual(event.defaultPrevented, intercepted);
+      }
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
+  it("does not intercept native downloads", () => {
+    const [window, layer] = createHappyDomLayer();
+    return Effect.gen(function* () {
+      const [root] = yield* render(
+        Link({ href: "/report.csv", content: "Download", download: "report.csv" }),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      const anchor = root as HTMLAnchorElement;
+      const event = new window.MouseEvent("click", { bubbles: true, cancelable: true });
+      anchor.dispatchEvent(event);
+      yield* Effect.sleep(10);
+      assert.strictEqual(event.defaultPrevented, false);
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
+  it("keeps keyboard activation as an anchor affordance", () => {
+    const [window] = createHappyDomLayer();
+    return Effect.gen(function* () {
+      const [root] = yield* render(
+        Link({ href: "/keyboard", content: "Keyboard destination" }),
+        window.document.body,
+      ).pipe(Fx.provide(DomRenderTemplate.using(window.document)), Fx.take(1), Fx.collectAll);
+      const anchor = root as HTMLAnchorElement;
+      anchor.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      assert.strictEqual(anchor.getAttribute("href"), "/keyboard");
+    }).pipe(Effect.scoped, Effect.runPromise);
+  });
 });
 
 function createHappyDomLayer(...params: ConstructorParameters<typeof Window>) {

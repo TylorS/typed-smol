@@ -3,7 +3,6 @@ import * as Effect from "effect/Effect";
 import { type Pipeable, pipeArguments } from "effect/Pipeable";
 import { singleton } from "effect/Record";
 import * as Schema from "effect/Schema";
-import * as Parser from "effect/SchemaParser";
 import * as Transformation from "effect/SchemaTransformation";
 import type { Simplify } from "effect/Types";
 import * as AST from "./AST.js";
@@ -234,18 +233,13 @@ export const ParamWithSchema = <
     S["EncodingServices"]
   >
 > => {
-  const decode = Parser.decodeEffect(schema);
-  const encode = Parser.encodeEffect(schema);
-
   return make(
     AST.transform(
       AST.path(AST.parameter(paramName)),
-      Schema.Struct(singleton(paramName, schema.Type)),
-      Transformation.transformOrFail({
-        decode: (input: Record<P, S["Encoded"]>) =>
-          Effect.map(decode(input[paramName]), (decoded) => singleton(paramName, decoded)),
-        encode: (output: Record<P, S["Type"]>) =>
-          Effect.map(encode(output[paramName]), (encoded) => singleton(paramName, encoded)),
+      schema,
+      Transformation.transform({
+        decode: x => singleton(paramName, x),
+        encode: x => x[paramName],
       }),
     ),
   );

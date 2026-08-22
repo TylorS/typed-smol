@@ -256,8 +256,21 @@ describe("typed/router/Matcher", () => {
       Effect.runPromise,
     ));
 
-  // RouteDecodeError requires Route.ParamWithSchema which has a bug (uses schema.Type instead of schema)
-  // TODO: Add RouteDecodeError test once Route.ParamWithSchema is fixed
+  it("reports malformed schema-backed parameters as RouteDecodeError", () =>
+    Effect.gen(function* () {
+      const route = Route.Int("id");
+      const fx = Matcher.empty.match(route, "task");
+      const result = yield* Fx.collectAll(Fx.take(fx, 1)).pipe(
+        Effect.as("matched" as const),
+        Effect.catchTag("RouteDecodeError", (error) => Effect.succeed(error.path)),
+      );
+
+      assert.strictEqual(result, "/not-an-integer");
+    }).pipe(
+      Effect.provide(ServerRouter({ url: "http://localhost/not-an-integer" })),
+      Effect.scoped,
+      Effect.runPromise,
+    ));
 
   it("ignores trailing slashes", () =>
     Effect.gen(function* () {

@@ -34,9 +34,9 @@ type WritableKeys<T> = {
 }[keyof T];
 
 type AnchorProperties = {
-  readonly [K in WritableKeys<HTMLAnchorElement> as K extends EventHandlerProperty | "ref"
-    ? never
-    : K]?: Renderable<HTMLAnchorElement[K], any, any>;
+  readonly [
+    K in WritableKeys<HTMLAnchorElement> as K extends EventHandlerProperty | "ref" ? never : K
+  ]?: Renderable<HTMLAnchorElement[K], any, any>;
 };
 
 export interface LinkOptions extends AnchorEventHandlers, AnchorRef, AnchorProperties {
@@ -62,6 +62,7 @@ function makeLinkClickHandler(
       if (ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
       const t = ev.currentTarget.target;
       if (t && t !== "_self") return;
+      if (ev.currentTarget.hasAttribute("download")) return;
       const nav = yield* Navigation;
       const target = getUrl(nav.origin, href);
       if (target.origin !== nav.origin) return;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import * as Schema from "effect/Schema";
 import * as Route from "./Route.js";
 
@@ -43,6 +44,20 @@ describe("typed/router/Route", () => {
 
       expect(route.path).toEqual("/:userId");
     });
+
+    it("constructs Int routes and rejects malformed encoded values", () =>
+      Effect.gen(function* () {
+        const route = Route.Int("id");
+        const decoded = yield* Schema.decodeEffect(route.paramsSchema)({ id: "42" });
+        const encoded = yield* Schema.encodeEffect(route.paramsSchema)({ id: 42 });
+        const malformed = yield* Effect.exit(
+          Schema.decodeEffect(route.paramsSchema)({ id: "not-an-integer" }),
+        );
+
+        expect(decoded).toEqual({ id: 42 });
+        expect(encoded).toEqual({ id: "42" });
+        expect(Exit.isFailure(malformed)).toBe(true);
+      }).pipe(Effect.scoped, Effect.runPromise));
   });
 
   describe("join", () => {
