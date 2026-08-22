@@ -214,18 +214,22 @@ export const filterMap: {
 export const filter: {
   <O, O2 extends O>(
     predicate: (o: O) => o is O2,
-  ): <I, R, E>(guard: GuardInput<I, O, E, R>) => Guard<I, O, E, R>;
+  ): <I, R, E>(guard: GuardInput<I, O, E, R>) => Guard<I, O2, E, R>;
   <O>(predicate: (o: O) => boolean): <I, R, E>(guard: GuardInput<I, O, E, R>) => Guard<I, O, E, R>;
   <I, O, E, R, O2 extends O>(
     guard: GuardInput<I, O, E, R>,
     predicate: (o: O) => o is O2,
-  ): Guard<I, O, E, R>;
+  ): Guard<I, O2, E, R>;
   <I, O, E, R>(guard: GuardInput<I, O, E, R>, predicate: (o: O) => boolean): Guard<I, O, E, R>;
 } = dual(
   2,
-  <I, O, E, R>(guard: GuardInput<I, O, E, R>, predicate: (o: O) => boolean): Guard<I, O, E, R> => {
+  <I, O, E, R, O2 extends O>(
+    guard: GuardInput<I, O, E, R>,
+    predicate: ((o: O) => o is O2) | ((o: O) => boolean),
+  ): Guard<I, O2, E, R> => {
     const g = getGuard(guard);
-    return (i) => Effect.mapEager(g(i), Option.filter(predicate));
+    return (i) =>
+      Effect.mapEager(g(i), Option.filter(predicate)) as Effect.Effect<Option.Option<O2>, E, R>;
   },
 );
 

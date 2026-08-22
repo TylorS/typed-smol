@@ -140,6 +140,14 @@ describe("@typed/guard", () => {
   });
 
   describe("filter", () => {
+    it("narrows the output when given a refinement predicate", async () => {
+      type Positive = number & { readonly Positive: unique symbol };
+      const base = liftPredicate((n: number) => n >= 0);
+      const positive: Guard<number, Positive> = filter(base, (n: number): n is Positive => n > 0);
+      const result = await run(positive(50));
+      expect(Option.isSome(result)).toBe(true);
+    });
+
     it("keeps output when predicate holds", async () => {
       const base = liftPredicate((n: number) => n >= 0);
       const g = filter(base, (n) => n < 100);
