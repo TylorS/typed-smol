@@ -1,5 +1,4 @@
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
-import { Ids } from "@typed/id";
 import { HtmlRenderTemplate } from "@typed/template";
 import { handleHttpServerError, ssrForHttp } from "@typed/ui";
 import { Effect, Layer } from "effect";
@@ -23,7 +22,7 @@ const HttpRoutes = HttpRouter.use(
 
 export const runServer = (options: ServerOptions) =>
   makeHost(HttpRoutes, options.vite).pipe(
-    Layer.provideMerge([Ids.Default, NodeHttpServer.layer(Http.createServer, options)]),
+    Layer.provideMerge([NodeHttpServer.layer(Http.createServer, options)]),
     Layer.launch,
     NodeRuntime.runMain,
   );
