@@ -7,7 +7,7 @@ export default defineConfig(({ isSsrBuild }) => ({
         emptyOutDir: true,
         target: "node24",
         sourcemap: true,
-        rollupOptions: {
+        rolldownOptions: {
           output: { entryFileNames: "server.js" },
         },
       }
@@ -16,7 +16,7 @@ export default defineConfig(({ isSsrBuild }) => ({
         emptyOutDir: true,
         target: "es2022",
         sourcemap: true,
-        rollupOptions: {
+        rolldownOptions: {
           input: "src/client.ts",
           output: { entryFileNames: "client.js" },
         },
