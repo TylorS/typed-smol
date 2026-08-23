@@ -54,8 +54,8 @@ export const diff = (
       // [1, 2, 3, 4, 5]
       // [1, 2, 3, 5, 6, 4]
       const node = get(a[--aEnd], -0).nextSibling;
-      parentNode.insertBefore(get(b[bStart++], 1), get(a[aStart++], -0).nextSibling);
-      parentNode.insertBefore(get(b[--bEnd], 1), node);
+      insertOrMoveBefore(parentNode, get(b[bStart++], 1), get(a[aStart++], -0).nextSibling);
+      insertOrMoveBefore(parentNode, get(b[--bEnd], 1), node);
       // mark the future index as identical (yeah, it's dirty, but cheap 👍)
       // The main reason to do this, is that when a[aEnd] will be reached,
       // the loop will likely be on the fast path, as identical to b[bEnd].
@@ -107,7 +107,7 @@ export const diff = (
           if (sequence > index - bStart) {
             const node = get(a[aStart], 0);
             while (bStart < index) {
-              parentNode.insertBefore(get(b[bStart++], 1), node);
+              insertOrMoveBefore(parentNode, get(b[bStart++], 1), node);
             }
           } // if the effort wasn't good enough, fallback to a replace,
           // moving both source and target indexes forward, hoping that some
@@ -125,3 +125,21 @@ export const diff = (
   }
   return b;
 };
+
+function insertOrMoveBefore(parentNode: ParentNode, node: Node, before: Node | null) {
+  // If the node is already in the DOM, try to move it to preserve internal states of the node.
+  // e.g. the internal states of a custom element.
+  if (node.parentNode !== null) {
+    tryMoveBefore(parentNode, node, before);
+  } else {
+    parentNode.insertBefore(node, before);
+  }
+}
+
+function tryMoveBefore(parentNode: ParentNode, node: Node, before: Node | null) {
+  try {
+    parentNode.moveBefore(node, before);
+  } catch {
+    parentNode.insertBefore(node, before);
+  }
+}
