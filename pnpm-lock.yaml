@@ -85,6 +85,43 @@ importers:
         specifier: 'catalog:'
         version: 8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(yaml@2.9.0)
 
+  examples/fullstack:
+    dependencies:
+      '@effect/platform-node':
+        specifier: 'catalog:'
+        version: 4.0.0-rc.111(effect@4.0.0-rc.111)(redis@6.2.1)
+      '@typed/fx':
+        specifier: workspace:*
+        version: link:../../packages/fx
+      '@typed/id':
+        specifier: workspace:*
+        version: link:../../packages/id
+      '@typed/router':
+        specifier: workspace:*
+        version: link:../../packages/router
+      '@typed/template':
+        specifier: workspace:*
+        version: link:../../packages/template
+      '@typed/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-rc.111
+    devDependencies:
+      '@typed/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(yaml@2.9.0)
+
   examples/todomvc:
     dependencies:
       '@typed/fx':
