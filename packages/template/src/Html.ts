@@ -223,8 +223,19 @@ function renderPart<E, R>(
   const { node, render } = chunk;
   const renderable = values[node.index];
 
-  // We don't render ref and event nodes via HTML
-  if (node._tag === "ref" || node._tag === "event") return Fx.empty;
+  if (node._tag === "event") return Fx.empty;
+
+  if (node._tag === "ref") {
+    if (!RefSubject.isHydrationRef(renderable)) return Fx.empty;
+    if (isStatic) {
+      return Fx.make(() => renderable[RefSubject.HydrationRefTypeId].server);
+    }
+    return Fx.unwrap(
+      Effect.map(renderable[RefSubject.HydrationRefTypeId].toAttribute, (encoded) =>
+        Fx.succeed(HtmlRenderEvent(render(encoded), last)),
+      ),
+    );
+  }
 
   // Node need to handle all possible value types including arrays
   if (node._tag === "node") {

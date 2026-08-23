@@ -967,7 +967,10 @@ function initializeCoreAndTap<A, E, R, R2>(
   lock: boolean,
 ): Effect.Effect<A, E, Exclude<R, R2>> {
   return Effect.flatMapEager(initializeCoreEffect(core, lock), () =>
-    tapEventCore(core, core.deferredRef),
+    // Kind of weird hack, but this second clause will happen for HydrationRefs that are already hydrated
+    core.deferredRef.current === core.subject.lastValue
+      ? tapEventCore(core, core.deferredRef)
+      : core.deferredRef,
   );
 }
 
@@ -1483,6 +1486,7 @@ export function Service<Self, A, E = never>() {
       /// Service
 
       static {
+        // @effect-diagnostics-next-line floatingEffect:off
         Object.assign(this, service);
         Object.setPrototypeOf(this, Object.getPrototypeOf(service));
       }
@@ -2785,3 +2789,5 @@ class FilteredFromService<R, A, E, R2>
     );
   }
 }
+
+export * from "./Hydration.js";

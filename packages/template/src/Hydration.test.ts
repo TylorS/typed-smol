@@ -1,7 +1,7 @@
 import { assert, describe, it } from "vitest";
 import type { Scope } from "effect";
-import { Effect } from "effect";
-import { Fx } from "@typed/fx";
+import { Effect, Schema } from "effect";
+import { Fx, RefSubject } from "@typed/fx";
 import type { Renderable, Rendered, RenderTemplate } from "./index.js";
 import {
   DomRenderTemplate,
@@ -164,6 +164,52 @@ describe("Hydration", () => {
         element = el;
       }}></div>`;
       assert(element === refExample);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("restores hydrated RefSubjects before reactive attributes start", () =>
+    Effect.gen(function* () {
+      const view = (count: RefSubject.HydratedRefSubject<number, any, any, any>) =>
+        html`<button data-count=${count} ref=${count.hydrateFromElement}>${count}</button>`;
+      const serverCount = yield* RefSubject.hydrate(Schema.Number, 7);
+      const htmlString = yield* renderToHtmlString(view(serverCount)).pipe(
+        Effect.provide(HtmlRenderTemplate),
+      );
+      const [window, layer] = createHappyDomLayer();
+      const body = window.document.body;
+      body.innerHTML = htmlString;
+      const original = body.querySelector("button");
+      assert(original);
+      const observer = new window.MutationObserver(() => {});
+      observer.observe(original, {
+        attributes: true,
+        attributeFilter: ["data-count"],
+        attributeOldValue: true,
+      });
+
+      let initialized = 0;
+      const clientCount = yield* RefSubject.hydrate(
+        Schema.Number,
+        Effect.sync(() => {
+          initialized++;
+          return 0;
+        }),
+      );
+      const [current] = yield* render(view(clientCount), body).pipe(
+        Fx.provide(layer),
+        Fx.take(1),
+        Fx.collectUpTo(1),
+      );
+      const records = observer.takeRecords();
+
+      assert.strictEqual(current, original);
+      assert.strictEqual(initialized, 0);
+      assert.strictEqual(yield* clientCount, 7);
+      assert.strictEqual(original.getAttribute("data-count"), "7");
+      assert.strictEqual(
+        records.some((record) => record.oldValue === "0"),
+        false,
+      );
+      assert.strictEqual(original.getAttribute(RefSubject.HYDRATION_ATTRIBUTE), null);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("supports sparse attributes", () =>

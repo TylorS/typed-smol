@@ -3,6 +3,7 @@ import * as Array from "effect/Array";
 import { constVoid } from "effect/Function";
 import * as Order from "effect/Order";
 import * as Predicate from "effect/Predicate";
+import { RefSubject } from "@typed/fx";
 import { renderToEscapedString, renderToString } from "./internal/encoding.js";
 import { TEMPLATE_END_COMMENT, TEMPLATE_START_COMMENT } from "./internal/meta.js";
 
@@ -320,8 +321,15 @@ const attributeMap: AttributeMap = {
       addAttributeSpace(Predicate.isObject(v) ? recordWithPrefix(``, v) : "", placement),
     ),
 
-  // Don't have HTML representations for these
-  ref: constVoid,
+  ref: (builder, attribute, placement) =>
+    builder.part(attribute, (v) =>
+      addAttributeSpace(
+        `${RefSubject.HYDRATION_ATTRIBUTE}="${renderToEscapedString(v, "")}"`,
+        placement,
+      ),
+    ),
+
+  // Event handlers do not have an HTML representation.
   event: constVoid,
 };
 

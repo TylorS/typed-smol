@@ -8,7 +8,7 @@ import { map as mapRecord } from "effect/Record";
 import * as Scope from "effect/Scope";
 import * as Context from "effect/Context";
 import { isStream } from "effect/Stream";
-import { Fx, Sink } from "@typed/fx";
+import { Fx, RefSubject, Sink } from "@typed/fx";
 import { CouldNotFindCommentError, isHydrationError } from "./errors.js";
 import * as EventHandler from "./EventHandler.js";
 import { type EventSource, makeEventSource } from "./EventSource.js";
@@ -206,11 +206,11 @@ export const DomRenderTemplate = Object.assign(
             return yield* Effect.gen(function* () {
               const hydration = attemptHydration(ctx, template.hash);
 
-              let effects: Array<Effect.Effect<void, any, any>>;
+              let setup: PartSetup;
               let rendered: Rendered | undefined;
 
               if (hydration) {
-                effects = setupHydrationParts(template.parts, {
+                setup = setupHydrationParts(template.parts, {
                   ...ctx,
                   ...hydration,
                   makeHydrateContext: (where: HydrationNode): HydrateContext => ({
@@ -221,12 +221,20 @@ export const DomRenderTemplate = Object.assign(
 
                 rendered = getRendered(hydration.where);
               } else {
-                effects = setupRenderParts(template.parts, fragment, ctx);
+                setup = setupRenderParts(template.parts, fragment, ctx);
               }
 
-              if (effects.length > 0) {
+              if (setup.hydration.length > 0) {
+                yield* Effect.all(setup.hydration, { concurrency: 1 }).pipe(
+                  Effect.catchCause(ctx.onCause),
+                );
+              }
+
+              if (setup.remaining.length > 0) {
                 yield* Effect.all(
-                  effects.map(flow(Effect.catchCause(ctx.onCause), Effect.forkIn(ctx.scope))),
+                  setup.remaining.map(
+                    flow(Effect.catchCause(ctx.onCause), Effect.forkIn(ctx.scope)),
+                  ),
                 );
 
                 if (ctx.expected > 0 && ctx.refCounter.expect(ctx.expected)) {
@@ -391,16 +399,35 @@ function setupRenderParts(
   parts: Template.Template["parts"],
   fragment: DocumentFragment,
   ctx: TemplateContext,
-): Array<Effect.Effect<unknown>> {
-  const effects: Array<Effect.Effect<unknown>> = [];
+): PartSetup {
+  const setup = makePartSetup();
   for (const [part, path] of parts) {
     const effect = setupRenderPart(part, findPath(fragment, path), ctx);
     if (effect !== undefined) {
-      effects.push(effect);
+      addPartEffect(setup, part, effect, ctx);
     }
   }
 
-  return effects;
+  return setup;
+}
+
+type PartSetup = {
+  readonly hydration: Array<Effect.Effect<unknown, any, any>>;
+  readonly remaining: Array<Effect.Effect<unknown, any, any>>;
+};
+
+function makePartSetup(): PartSetup {
+  return { hydration: [], remaining: [] };
+}
+
+function addPartEffect(
+  setup: PartSetup,
+  part: Template.PartNode | Template.SparsePartNode,
+  effect: Effect.Effect<unknown, any, any>,
+  ctx: TemplateContext,
+): void {
+  const hydration = part._tag === "ref" && RefSubject.isHydrationRef(ctx.values[part.index]);
+  (hydration ? setup.hydration : setup.remaining).push(effect);
 }
 
 const withCurrentRenderPriority = (
@@ -520,16 +547,16 @@ type HydrateTemplateContext<R = never> = TemplateContext<R> & {
 function setupHydrationParts<E, R>(
   parts: Template.Template["parts"],
   ctx: HydrateTemplateContext<R>,
-): Array<Effect.Effect<unknown, E, R>> {
-  const effects: Array<Effect.Effect<unknown, E, R>> = [];
+): PartSetup {
+  const setup = makePartSetup();
   for (const [part, path] of parts) {
     const effect = setupHydrationPart<E, R>(part, path, ctx);
     if (effect !== undefined) {
-      effects.push(effect);
+      addPartEffect(setup, part, effect, ctx);
     }
   }
 
-  return effects;
+  return setup;
 }
 
 function setupHydrationPart<E, R>(

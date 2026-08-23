@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Scope } from "effect";
-import { Effect } from "effect";
-import { Fx } from "@typed/fx";
+import { Effect, Schema } from "effect";
+import { Fx, RefSubject } from "@typed/fx";
 import type { RenderEvent, RenderTemplate } from "./index.js";
 import {
   html,
@@ -15,6 +15,38 @@ import {
 import { escape } from "./internal/encoding.js";
 
 describe("Html", () => {
+  it("renders hydrated RefSubject metadata for interactive HTML", () =>
+    Effect.gen(function* () {
+      const count = yield* RefSubject.hydrate(Schema.Number, 7);
+      const output = (yield* getHtmlRenderEvents(
+        html`<button ref=${count.hydrateFromElement}>${count}</button>`,
+      )).join("");
+
+      expect(output).toContain(
+        'data-typed-refsubject="{&quot;version&quot;:1,&quot;values&quot;:[7]}"',
+      );
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("omits hydrated RefSubject metadata for static HTML", () =>
+    Effect.gen(function* () {
+      const count = yield* RefSubject.hydrate(Schema.Number, 7);
+      const output = yield* getStaticHtml(
+        html`<button ref=${count.hydrateFromElement}>${count}</button>`,
+      );
+
+      expect(output).not.toContain(RefSubject.HYDRATION_ATTRIBUTE);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("keeps ordinary ref callbacks out of server HTML", () =>
+    Effect.gen(function* () {
+      const output = (
+        yield* getHtmlRenderEvents(html`<button ref=${() => {}}>Click</button>`)
+      ).join("");
+
+      expect(output).not.toContain(RefSubject.HYDRATION_ATTRIBUTE);
+      expect(output).toContain("<button>Click</button>");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("static template", () =>
     Effect.gen(function* () {
       expect(yield* getStaticHtml(html` <div>Hello, world!</div> `)).toMatchInlineSnapshot(

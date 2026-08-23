@@ -1,26 +1,25 @@
 import * as Effect from "effect/Effect";
-import * as Exit from "effect/Exit";
 import { dual } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Scope from "effect/Scope";
 import * as Context from "effect/Context";
+import { hasProperty } from "effect/Predicate";
 import { type HttpRouter, type Route, RouteContext } from "effect/unstable/http/HttpRouter";
 import * as HttpServerError from "effect/unstable/http/HttpServerError";
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
-import { RefSubject } from "@typed/fx";
 import {
   type CurrentRouteTree,
   type CompiledEntry,
   compile,
   CurrentRoute,
-  makeCatchManager,
-  makeLayerManager,
-  makeLayoutManager,
+  makeRouteExecutor,
   type Matcher,
   Join,
   Parse,
+  type RouteDecodeError,
+  type RouteGuardError,
   type Router,
 } from "@typed/router";
 import { initialMemory } from "@typed/navigation";
@@ -44,8 +43,22 @@ export const ssrForHttp: {
     });
     const entries = compile(matcher.cases);
     const currentServices = yield* Effect.context<R>();
+    const candidatesByPath = new Map<string, Array<CompiledEntry>>();
 
-    yield* router.addAll(entries.map((e: CompiledEntry) => toRoute(e, currentServices)));
+    for (const entry of entries) {
+      const candidates = candidatesByPath.get(entry.route.path);
+      if (candidates === undefined) {
+        candidatesByPath.set(entry.route.path, [entry]);
+      } else {
+        candidates.push(entry);
+      }
+    }
+
+    yield* router.addAll(
+      Array.from(candidatesByPath.values(), (candidates) =>
+        toRoute<E, R>(candidates, currentServices),
+      ),
+    );
   });
 });
 
@@ -71,14 +84,15 @@ function getStatus(error: HttpServerError.HttpServerError): number {
   }
 }
 
-function toRoute(entry: CompiledEntry, currentServices: Context.Context<never>): Route<any, any> {
+function toRoute<E, R>(
+  candidates: ReadonlyArray<CompiledEntry>,
+  currentServices: Context.Context<R>,
+): Route<any, any> {
   return {
     ["~effect/http/HttpRouter/Route"]: "~effect/http/HttpRouter/Route",
     method: "GET",
-    path: entry.route.path,
+    path: candidates[0].route.path,
     handler: Effect.gen(function* () {
-      const fiberId = yield* Effect.fiberId;
-      const rootScope = yield* Effect.scope;
       const routeContext = yield* RouteContext;
       const request = yield* HttpServerRequest.HttpServerRequest;
       const searchParams = yield* HttpServerRequest.ParsedSearchParams;
@@ -103,58 +117,35 @@ function toRoute(entry: CompiledEntry, currentServices: Context.Context<never>):
         ),
       );
       const input = { ...routeContext.params, ...searchParams };
-
-      const params = yield* Effect.mapError(
-        entry.decode(input),
-        (cause) =>
-          new HttpServerError.HttpServerError({
-            reason: new HttpServerError.RequestParseError({ request, cause }),
-          }),
+      const requestServices = Context.merge(currentServices, yield* Effect.context<any>());
+      const executor = yield* makeRouteExecutor<RenderEvent, E, R>().pipe(
+        Effect.provideContext(requestServices),
       );
+      const rendered = yield* executor
+        .transition({
+          path: request.url,
+          input,
+          candidates,
+          layers: [provided],
+        })
+        .pipe(
+          Effect.catchIf(
+            isRouteDecodeError,
+            (error) =>
+              new HttpServerError.HttpServerError({
+                reason: new HttpServerError.RequestParseError({ request, cause: error }),
+              }),
+          ),
+          Effect.catchIf(
+            isRouteGuardError,
+            () =>
+              new HttpServerError.HttpServerError({
+                reason: new HttpServerError.RouteNotFound({ request }),
+              }),
+          ),
+        );
 
-      const memoMap = yield* Layer.makeMemoMap;
-      const layerManager = makeLayerManager(memoMap, rootScope, fiberId);
-      const layoutManager = makeLayoutManager(rootScope, fiberId);
-      const catchManager = makeCatchManager(rootScope, fiberId);
-      const prepared = yield* layerManager.prepare(entry.layers.concat(provided));
-
-      const guardExit = yield* entry
-        .guard(params)
-        .pipe(Effect.provideContext(prepared.services), Effect.exit);
-
-      if (Exit.isFailure(guardExit) || Option.isNone(guardExit.value)) {
-        yield* prepared.rollback;
-        return yield* new HttpServerError.HttpServerError({
-          reason: new HttpServerError.RouteNotFound({ request }),
-        });
-      }
-
-      const matchedParams = guardExit.value.value;
-      yield* prepared.commit;
-
-      const scope = yield* Scope.fork(rootScope);
-      const paramsRef = yield* RefSubject.make(matchedParams).pipe(Scope.provide(scope));
-
-      const preparedServices = prepared.services as Context.Context<any>;
-      const handlerServices = Context.merge(
-        Context.merge(currentServices, preparedServices),
-        Context.make(Scope.Scope, scope),
-      );
-
-      const handlerFx = entry.handler(paramsRef);
-
-      const withLayouts = yield* layoutManager.apply(
-        entry.layouts,
-        matchedParams,
-        handlerFx,
-        preparedServices,
-      );
-
-      const withCatches = yield* catchManager.apply(entry.catches, withLayouts, preparedServices);
-
-      const html = yield* renderToHtmlString(withCatches).pipe(
-        Effect.provideContext(handlerServices),
-      );
+      const html = yield* renderToHtmlString(rendered).pipe(Effect.provideContext(requestServices));
       return HttpServerResponse.text(html, {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
@@ -162,4 +153,22 @@ function toRoute(entry: CompiledEntry, currentServices: Context.Context<never>):
     uninterruptible: false,
     prefix: Option.none(),
   };
+}
+
+function hasTag<const Tag extends string>(
+  value: unknown,
+  tag: Tag,
+): value is { readonly _tag: Tag } {
+  return (
+    hasProperty(value, "_tag") &&
+    value._tag === tag
+  );
+}
+
+function isRouteDecodeError(value: unknown): value is RouteDecodeError {
+  return hasTag(value, "RouteDecodeError");
+}
+
+function isRouteGuardError(value: unknown): value is RouteGuardError {
+  return hasTag(value, "RouteGuardError");
 }

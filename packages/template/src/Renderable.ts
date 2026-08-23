@@ -4,6 +4,7 @@
 import type * as Effect from "effect/Effect";
 import type * as Stream from "effect/Stream";
 import type { Fx } from "@typed/fx";
+import type { HydrationRef } from "@typed/fx/RefSubject";
 import type { RenderEvent } from "./RenderEvent.js";
 
 /**
@@ -83,7 +84,9 @@ export declare namespace Renderable {
   export type Services<T> =
     | Fx.Services<T>
     | (T extends Stream.Stream<any, any, any> ? Stream.Services<T> : never)
-    | Effect.Services<T>;
+    | Effect.Services<T>
+    | (T extends HydrationRef<any, infer R> ? R : never)
+    | (T extends (...args: Array<any>) => infer U ? Services<U> : never);
 
   /**
    * Extracts the error type from a Renderable type.
@@ -91,7 +94,9 @@ export declare namespace Renderable {
   export type Error<T> =
     | Fx.Error<T>
     | (T extends Stream.Stream<any, any, any> ? Stream.Error<T> : never)
-    | Effect.Error<T>;
+    | Effect.Error<T>
+    | (T extends HydrationRef<infer E, any> ? E : never)
+    | (T extends (...args: Array<any>) => infer U ? Error<U> : never);
 
   /**
    * Extracts the success type from a Renderable type.

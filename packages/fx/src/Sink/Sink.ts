@@ -132,6 +132,7 @@ export function Service<Self, A, E = never>() {
       static readonly service = service;
 
       static {
+        // @effect-diagnostics-next-line floatingEffect:off
         Object.assign(this, service);
         Object.assign(this.prototype, Object.getPrototypeOf(service));
       }

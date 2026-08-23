@@ -1,7 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import * as Effect from "effect/Effect";
 import { type Pipeable, pipeArguments } from "effect/Pipeable";
-import { singleton } from "effect/Record";
 import * as Schema from "effect/Schema";
 import * as Transformation from "effect/SchemaTransformation";
 import type { Simplify } from "effect/Types";
@@ -233,15 +231,9 @@ export const ParamWithSchema = <
     S["EncodingServices"]
   >
 > => {
+  const paramsSchema = Schema.Struct({ [paramName]: schema });
   return make(
-    AST.transform(
-      AST.path(AST.parameter(paramName)),
-      schema,
-      Transformation.transform({
-        decode: x => singleton(paramName, x),
-        encode: x => x[paramName],
-      }),
-    ),
+    AST.transform(AST.path(AST.parameter(paramName)), paramsSchema, Transformation.passthrough()),
   );
 };
 
@@ -253,7 +245,7 @@ export const Number = <const P extends string>(
 export const Int = <const P extends string>(
   paramName: P,
 ): Route<`/:${P}`, Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>> =>
-  ParamWithSchema(paramName, Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)));
+  ParamWithSchema(paramName, Schema.NumberFromString.pipe(Schema.check(Schema.isInt())));
 
 export type Join<Routes extends ReadonlyArray<Route<any, any>>> = [
   Route<

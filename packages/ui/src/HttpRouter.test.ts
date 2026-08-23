@@ -75,6 +75,67 @@ describe("typed/ui/HttpRouter", () => {
     }).pipe(Effect.provide(Live), Effect.scoped, Effect.runPromise);
   });
 
+  it("falls through guarded alternatives registered for the same path", () => {
+    const route = Route.Parse("guarded");
+    const matcher = Matcher.empty
+      .match(route, () => Effect.succeedNone, html`<p>first</p>`)
+      .match(route, () => Effect.succeedSome("allowed"), html`<p>second</p>`);
+    const Live = HttpRouter.use(ssrForHttp(matcher)).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      HttpRouter.serve,
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
+    );
+
+    return Effect.gen(function* () {
+      const body = yield* HttpClient.get("/guarded").pipe(
+        Effect.flatMap((response) => response.text),
+      );
+      assert.strictEqual(body, "<p>second</p>");
+    }).pipe(Effect.provide(Live), Effect.scoped, Effect.runPromise);
+  });
+
+  it("maps exhausted guards to Effect's route-not-found response", () => {
+    const matcher = Matcher.empty.match(
+      Route.Parse("guarded"),
+      () => Effect.succeedNone,
+      html`<p>unreachable</p>`,
+    );
+    const Live = HttpRouter.use(
+      Effect.fn(function* (router) {
+        yield* ssrForHttp(router, matcher);
+        yield* handleHttpServerError(router);
+      }),
+    ).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      HttpRouter.serve,
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
+    );
+
+    return Effect.gen(function* () {
+      const response = yield* HttpClient.get("/guarded");
+      assert.strictEqual(response.status, 404);
+    }).pipe(Effect.provide(Live), Effect.scoped, Effect.runPromise);
+  });
+
+  it("maps route Schema failures to Effect's request-parse response", () => {
+    const matcher = Matcher.empty.match(Route.Int("id"), html`<p>integer</p>`);
+    const Live = HttpRouter.use(
+      Effect.fn(function* (router) {
+        yield* ssrForHttp(router, matcher);
+        yield* handleHttpServerError(router);
+      }),
+    ).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      HttpRouter.serve,
+      Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
+    );
+
+    return Effect.gen(function* () {
+      const response = yield* HttpClient.get("/not-an-integer");
+      assert.strictEqual(response.status, 400);
+    }).pipe(Effect.provide(Live), Effect.scoped, Effect.runPromise);
+  });
+
   it("returns 404 for unmatched routes", () => {
     const matcher = Matcher.empty.match(Route.Parse("home"), html` <div>Home</div> `);
     const Live = HttpRouter.use(
