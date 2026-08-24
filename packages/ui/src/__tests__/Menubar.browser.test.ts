@@ -1,0 +1,114 @@
+import { Effect } from "effect";
+import { Fx } from "@typed/fx";
+import { DomRenderTemplate, html, render } from "@typed/template";
+import { assert, describe, it } from "vitest";
+import * as Menu from "../Menu.js";
+import * as Menubar from "../Menubar.js";
+
+describe("typed/ui/Menubar in browsers", () => {
+  it("focuses its first item when the menubar receives focus", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Menubar.makeState();
+      const collection = yield* Menubar.makeCollection();
+      yield* render(
+        Menubar.Root({
+          state,
+          collection,
+          content: html`${Menubar.Item({ state, collection, id: "file", content: "File" })}${Menubar.Item({ state, collection, id: "edit", content: "Edit" })}`,
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      (document.querySelector('[role="menubar"]') as HTMLDivElement).focus();
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).activeId, "file");
+      assert.strictEqual(document.activeElement?.id, "file");
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("opens a nested menu from its active submenu trigger", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Menubar.makeState({ activeId: "file" });
+      const collection = yield* Menubar.makeCollection();
+      const submenu = yield* Menu.makeState({ id: "file-menu" });
+      const submenuCollection = yield* Menu.makeCollection();
+      yield* render(
+        html`${Menubar.Root({
+          state,
+          collection,
+          content: html`${Menu.SubmenuTrigger({ state, submenu, collection, id: "file", content: "File" })}${Menubar.Item({ state, collection, id: "view", content: "View" })}`,
+        })}${Menu.Content({
+          state: submenu,
+          collection: submenuCollection,
+          content: Menu.Item({ state: submenu, collection: submenuCollection, id: "new", content: "New" }),
+        })}`,
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      const trigger = document.querySelector("#file") as HTMLButtonElement;
+      trigger.focus();
+      trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      yield* Effect.sleep(0);
+
+      assert.strictEqual((yield* submenu).open, true);
+      assert.strictEqual(document.activeElement?.id, "new");
+
+      (document.querySelector("#new") as HTMLDivElement).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* submenu).open, false);
+      assert.strictEqual((yield* state).activeId, "file");
+      assert.strictEqual(document.activeElement, trigger);
+
+      trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      yield* Effect.sleep(0);
+      (document.querySelector("#new") as HTMLDivElement).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
+      );
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* submenu).open, false);
+      assert.strictEqual((yield* state).activeId, "view");
+      assert.strictEqual(document.activeElement?.id, "view");
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("keeps disabled items focusable while moving through the menubar", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Menubar.makeState({ activeId: "file" });
+      const collection = yield* Menubar.makeCollection();
+      yield* render(
+        Menubar.Root({
+          state,
+          collection,
+          content: html`${Menubar.Item({ state, collection, id: "file", textValue: "File", content: "File" })}${Menubar.Item({ state, collection, id: "edit", disabled: true, content: "Edit" })}${Menubar.Item({ state, collection, id: "view", content: "View" })}`,
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      const file = document.querySelector("#file") as HTMLDivElement;
+      const view = document.querySelector("#view") as HTMLDivElement;
+      file.focus();
+      file.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      yield* Effect.sleep(0);
+
+      assert.strictEqual((yield* state).activeId, "edit");
+      assert.strictEqual(document.activeElement?.id, "edit");
+
+      (document.querySelector("#edit") as HTMLDivElement).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).activeId, "view");
+      assert.strictEqual(document.activeElement, view);
+
+      view.dispatchEvent(new KeyboardEvent("keydown", { key: "f", bubbles: true }));
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).activeId, "file");
+      assert.strictEqual(document.activeElement, file);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+});

@@ -1,0 +1,23 @@
+import { Effect } from "effect";
+import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { assert, describe, it } from "vitest";
+import * as Hovercard from "../Hovercard.js";
+
+describe("typed/ui/Hovercard", () => {
+  it("renders a manual dialog popover related to its anchor", () =>
+    Effect.gen(function* () {
+      const state = yield* Hovercard.makeState({ id: "card" });
+      const markup = yield* renderToHtmlString(
+        html`${Hovercard.Anchor({ state, content: "Account" })}${Hovercard.Content({
+          state,
+          content: "Account details",
+        })}`,
+      );
+
+      assert.match(markup, /aria-controls="card"/);
+      assert.match(markup, /id="card"/);
+      assert.match(markup, /role="dialog"/);
+      assert.match(markup, /popover="manual"/);
+      assert.strictEqual(markup.includes("aria-expanded"), false);
+    }).pipe(Effect.provide(HtmlRenderTemplate), Effect.scoped, Effect.runPromise));
+});

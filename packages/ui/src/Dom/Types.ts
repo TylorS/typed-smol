@@ -100,6 +100,13 @@ export type TemplateAttributeProps = {
   readonly className?: StringAttributeValue;
   readonly for?: StringAttributeValue;
   readonly tabindex?: AttributeValue;
+  readonly value?: AttributeValue;
+  readonly min?: AttributeValue;
+  readonly max?: AttributeValue;
+  readonly low?: AttributeValue;
+  readonly high?: AttributeValue;
+  readonly optimum?: AttributeValue;
+  readonly step?: AttributeValue;
   readonly role?: StringAttributeValue;
   readonly style?: StyleValue;
   readonly popover?: StringAttributeValue;

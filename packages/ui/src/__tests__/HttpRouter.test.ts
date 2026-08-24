@@ -1,13 +1,19 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { assert, describe, it } from "vitest";
 import { Effect, Layer } from "effect";
+import type { Scope } from "effect/Scope";
 import { Fx } from "@typed/fx";
 import { Ids } from "@typed/id";
-import { Navigation } from "@typed/navigation";
+import { Navigation, type Navigation as NavigationService } from "@typed/navigation";
 import { CurrentRoute } from "@typed/router/CurrentRoute";
 import * as Matcher from "@typed/router/Matcher";
 import * as Route from "@typed/router/Route";
-import { html, StaticHtmlRenderTemplate, type RenderEvent } from "@typed/template";
+import {
+  html,
+  StaticHtmlRenderTemplate,
+  type RenderEvent,
+  type RenderTemplate,
+} from "@typed/template";
 import { handleHttpServerError, ssrForHttp, streamingSsrForHttp } from "../HttpRouter.js";
 import { HttpClient, HttpRouter as EffectHttpRouter } from "effect/unstable/http";
 import * as HttpServerError from "effect/unstable/http/HttpServerError";
@@ -15,37 +21,45 @@ import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 import type { Matcher as RouterMatcher } from "@typed/router";
 
-function bufferedSsrLive<E, R>(matcher: RouterMatcher<RenderEvent, E, R>, options?: { withIds?: boolean }) {
-  const serverLayers =
-    options?.withIds === false
-      ? [NodeHttpServer.layerTest]
-      : [Ids.Test(), NodeHttpServer.layerTest];
+const testServer = Layer.mergeAll(Ids.Test(), NodeHttpServer.layerTest);
+
+function bufferedSsrLive(
+  matcher: RouterMatcher<RenderEvent, never, RenderTemplate | Scope>,
+  options?: { withIds?: boolean },
+) {
+  const serverLayer = options?.withIds === false ? NodeHttpServer.layerTest : testServer;
   return EffectHttpRouter.use(ssrForHttp(matcher)).pipe(
     Layer.provide(StaticHtmlRenderTemplate),
     EffectHttpRouter.serve,
-    Layer.provideMerge(serverLayers),
+    Layer.provideMerge(serverLayer),
   );
 }
 
-function streamingSsrLive<E, R>(matcher: RouterMatcher<RenderEvent, E, R>) {
+function bufferedSsrLiveWithNavigation(
+  matcher: RouterMatcher<RenderEvent, never, RenderTemplate | Scope | NavigationService>,
+) {
+  return EffectHttpRouter.use(ssrForHttp(matcher)).pipe(
+    Layer.provide(StaticHtmlRenderTemplate),
+    EffectHttpRouter.serve,
+    Layer.provideMerge(testServer),
+  );
+}
+
+function bufferedSsrLiveWithRoute(
+  matcher: RouterMatcher<RenderEvent, never, RenderTemplate | Scope | CurrentRoute>,
+) {
+  return EffectHttpRouter.use(ssrForHttp(matcher)).pipe(
+    Layer.provide(StaticHtmlRenderTemplate),
+    EffectHttpRouter.serve,
+    Layer.provideMerge(testServer),
+  );
+}
+
+function streamingSsrLive(matcher: RouterMatcher<RenderEvent, never, RenderTemplate | Scope>) {
   return EffectHttpRouter.use(streamingSsrForHttp(matcher)).pipe(
     Layer.provide(StaticHtmlRenderTemplate),
     EffectHttpRouter.serve,
-    Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
-  );
-}
-
-function ssrLiveWithHandler(
-  register: (router: EffectHttpRouter.HttpRouter) => Effect.Effect<void, never, any>,
-  options?: { extra?: Layer.Layer<any, any, any> },
-) {
-  return EffectHttpRouter.use(Effect.fn(function* (router) {
-    yield* register(router);
-  })).pipe(
-    Layer.provide(StaticHtmlRenderTemplate),
-    EffectHttpRouter.serve,
-    Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
-    ...(options?.extra ? [Layer.provide(options.extra)] : []),
+    Layer.provideMerge(testServer),
   );
 }
 
@@ -166,10 +180,16 @@ describe("typed/ui/HttpRouter", () => {
       () => Effect.succeedNone,
       html`<p>unreachable</p>`,
     );
-    const Live = ssrLiveWithHandler(function* (router) {
-      yield* ssrForHttp(router, matcher);
-      yield* handleHttpServerError(router);
-    });
+    const Live = EffectHttpRouter.use(
+      Effect.fn(function* (router) {
+        yield* ssrForHttp(router, matcher);
+        yield* handleHttpServerError(router);
+      }),
+    ).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      EffectHttpRouter.serve,
+      Layer.provideMerge(testServer),
+    );
 
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/guarded");
@@ -179,10 +199,16 @@ describe("typed/ui/HttpRouter", () => {
 
   it("maps route Schema failures to Effect's request-parse response", () => {
     const matcher = Matcher.empty.match(Route.Int("id"), html`<p>integer</p>`);
-    const Live = ssrLiveWithHandler(function* (router) {
-      yield* ssrForHttp(router, matcher);
-      yield* handleHttpServerError(router);
-    });
+    const Live = EffectHttpRouter.use(
+      Effect.fn(function* (router) {
+        yield* ssrForHttp(router, matcher);
+        yield* handleHttpServerError(router);
+      }),
+    ).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      EffectHttpRouter.serve,
+      Layer.provideMerge(testServer),
+    );
 
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/not-an-integer");
@@ -192,10 +218,16 @@ describe("typed/ui/HttpRouter", () => {
 
   it("returns 404 for unmatched routes", () => {
     const matcher = Matcher.empty.match(Route.Parse("home"), html` <div>Home</div> `);
-    const Live = ssrLiveWithHandler(function* (router) {
-      yield* ssrForHttp(router, matcher);
-      yield* handleHttpServerError(router);
-    });
+    const Live = EffectHttpRouter.use(
+      Effect.fn(function* (router) {
+        yield* ssrForHttp(router, matcher);
+        yield* handleHttpServerError(router);
+      }),
+    ).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      EffectHttpRouter.serve,
+      Layer.provideMerge(testServer),
+    );
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/notfound");
       assert.strictEqual(response.status, 404);
@@ -246,7 +278,10 @@ describe("typed/ui/HttpRouter", () => {
           );
           yield* handleHttpServerError(router);
         }),
-      ).pipe(EffectHttpRouter.serve, Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]));
+      ).pipe(
+        EffectHttpRouter.serve,
+        Layer.provideMerge(Layer.mergeAll(Ids.Test(), NodeHttpServer.layerTest)),
+      );
 
       return Effect.gen(function* () {
         const response = yield* HttpClient.get("/error");
@@ -288,16 +323,22 @@ describe("typed/ui/HttpRouter", () => {
       Route.Parse("failure"),
       html`<main>${Effect.fail(failure)}</main>`,
     );
-    const Live = ssrLiveWithHandler(function* (router) {
-      yield* ssrForHttp(router, matcher);
-      yield* router.addGlobalMiddleware(
-        Effect.catch((error: unknown) =>
-          error === failure
-            ? Effect.succeed(HttpServerResponse.text("handled", { status: 503 }))
-            : Effect.fail(error),
-        ),
-      );
-    });
+    const Live = EffectHttpRouter.use(
+      Effect.fn(function* (router) {
+        yield* ssrForHttp(router, matcher);
+        yield* router.addGlobalMiddleware(
+          Effect.catch((error: unknown) =>
+            error === failure
+              ? Effect.succeed(HttpServerResponse.text("handled", { status: 503 }))
+              : Effect.fail(error),
+          ),
+        );
+      }),
+    ).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      EffectHttpRouter.serve,
+      Layer.provideMerge(testServer),
+    );
 
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/failure");
@@ -344,10 +385,16 @@ describe("typed/ui/HttpRouter", () => {
 
   it("returns 404 for unmatched streaming routes", () => {
     const matcher = Matcher.empty.match(Route.Parse("home"), html` <div>Home</div> `);
-    const Live = ssrLiveWithHandler(function* (router) {
-      yield* streamingSsrForHttp(router, matcher);
-      yield* handleHttpServerError(router);
-    });
+    const Live = EffectHttpRouter.use(
+      Effect.fn(function* (router) {
+        yield* streamingSsrForHttp(router, matcher);
+        yield* handleHttpServerError(router);
+      }),
+    ).pipe(
+      Layer.provide(StaticHtmlRenderTemplate),
+      EffectHttpRouter.serve,
+      Layer.provideMerge(testServer),
+    );
 
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/notfound");
@@ -386,7 +433,7 @@ describe("typed/ui/HttpRouter", () => {
         ></div>`;
       }),
     );
-    const Live = bufferedSsrLive(matcher);
+    const Live = bufferedSsrLiveWithNavigation(matcher);
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/test", {
         headers: {
@@ -410,7 +457,7 @@ describe("typed/ui/HttpRouter", () => {
         return html`<div data-path="${currentRoute.route.path}"></div>`;
       }),
     );
-    const Live = bufferedSsrLive(matcher);
+    const Live = bufferedSsrLiveWithRoute(matcher);
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/users").pipe(Effect.flatMap((r) => r.text));
       assert.ok(response.includes('data-path="/users"'));
@@ -426,7 +473,7 @@ describe("typed/ui/HttpRouter", () => {
         return html`<div data-has-parent="${hasParent}"></div>`;
       }),
     );
-    const Live = bufferedSsrLive(matcher);
+    const Live = bufferedSsrLiveWithRoute(matcher);
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/home").pipe(Effect.flatMap((r) => r.text));
       assert.ok(response.includes('data-has-parent="false"'));
@@ -445,7 +492,7 @@ describe("typed/ui/HttpRouter", () => {
         return html`<div data-has-parent="${hasParent}" data-parent-path="${parentPath}"></div>`;
       }),
     );
-    const Live = bufferedSsrLive(matcher).pipe(Layer.provide(CurrentRoute.extend(api)));
+    const Live = bufferedSsrLiveWithRoute(matcher).pipe(Layer.provide(CurrentRoute.extend(api)));
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/api/users").pipe(Effect.flatMap((r) => r.text));
       assert.ok(response.includes('data-has-parent="true"'));
@@ -461,7 +508,7 @@ describe("typed/ui/HttpRouter", () => {
         return html`<div data-pathname="${currentEntry.url.pathname}"></div>`;
       }),
     );
-    const Live = bufferedSsrLive(matcher);
+    const Live = bufferedSsrLiveWithNavigation(matcher);
     return Effect.gen(function* () {
       const response = yield* HttpClient.get("/about").pipe(Effect.flatMap((r) => r.text));
       assert.ok(response.includes('data-pathname="/about"'));

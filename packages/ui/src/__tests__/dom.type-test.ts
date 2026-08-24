@@ -5,7 +5,18 @@ import { RefSubject } from "@typed/fx";
 import type * as Fx from "@typed/fx/Fx";
 import { EventHandler, type Renderable } from "@typed/template";
 import type { RenderEvent, RenderTemplate } from "@typed/template";
+import * as Dialog from "../Dialog.js";
 import * as Dom from "../Dom.js";
+import * as Form from "../Form.js";
+
+const numericInputAttributes = {
+  min: 0,
+  max: 100,
+  step: 1,
+  value: 50,
+} satisfies Dom.HostProps<HTMLInputElement>;
+
+void numericInputAttributes;
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -165,3 +176,22 @@ const invalidCommand = {
 } satisfies Dom.HostPropsForTag<"button">;
 
 void invalidCommand;
+
+declare const formState: Form.FormState<{ readonly email: string; readonly quantity: number }>;
+Form.EmailInput({ state: formState, name: "email" });
+Form.NumberInput({ state: formState, name: "quantity" });
+// @ts-expect-error string fields cannot use number controls
+Form.NumberInput({ state: formState, name: "email" });
+// @ts-expect-error numeric fields cannot use text controls
+Form.TextInput({ state: formState, name: "quantity" });
+
+declare const dialogState: Dialog.ContentOptions["state"];
+Dialog.Content({ state: dialogState, content: "Body", label: "Delete account" });
+Dialog.Content({ state: dialogState, content: "Body", labelledBy: "delete-title" });
+// @ts-expect-error dialogs have one accessible-name source
+Dialog.Content({
+  state: dialogState,
+  content: "Body",
+  label: "Delete account",
+  labelledBy: "delete-title",
+});

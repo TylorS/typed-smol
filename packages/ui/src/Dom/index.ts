@@ -28,7 +28,7 @@ export type {
   TemplateEventHandlers,
   WritableKeys,
 } from "./Types.js";
-export { chainEvent } from "./Events.js";
+export { chainEvent, currentTarget, toggleState } from "./Events.js";
 export { composeRefs } from "./Refs.js";
 export { mergeProps, type MergedHostProps, type RenderHostProps } from "./Props.js";
 export { renderDivHost, renderHost, splitRef } from "./Render.js";

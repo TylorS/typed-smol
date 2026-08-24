@@ -1,0 +1,118 @@
+import { Effect } from "effect";
+import { Fx } from "@typed/fx";
+import { DomRenderTemplate, EventHandler, html, render } from "@typed/template";
+import { assert, describe, it } from "vitest";
+import * as Dialog from "../Dialog.js";
+
+describe("typed/ui/Dialog in Chromium", () => {
+  it("synchronizes state after an accepted programmatic close request", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Dialog.makeState();
+      yield* render(
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, content: "Body" })}`,
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      (document.querySelector("button") as HTMLButtonElement).click();
+      yield* Effect.sleep(0);
+      yield* Dialog.requestClose(state);
+      yield* Effect.sleep(0);
+
+      assert.strictEqual(document.querySelector("dialog")?.open, false);
+      assert.strictEqual((yield* state).open, false);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("requests a cancelable native close from hydrated dialog state", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Dialog.makeState();
+      let canceled = false;
+      yield* render(
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({
+          state,
+          content: "Body",
+          props: {
+            oncancel: EventHandler.make((event) =>
+              Effect.sync(() => {
+                canceled = true;
+                event.preventDefault();
+              }),
+            ),
+          },
+        })}`,
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      (document.querySelector("button") as HTMLButtonElement).click();
+      yield* Effect.sleep(0);
+      yield* Dialog.requestClose(state);
+      yield* Effect.sleep(0);
+
+      assert.strictEqual(canceled, true);
+      assert.strictEqual(document.querySelector("dialog")?.open, true);
+      assert.strictEqual((yield* state).open, true);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("opens an initially hydrated dialog after its host is attached", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Dialog.makeState({ open: true });
+      yield* render(
+        Dialog.Content({ state, content: "Body" }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+      yield* Effect.sleep(0);
+
+      assert.strictEqual(document.querySelector("dialog")?.open, true);
+      yield* Dialog.setOpen(state, false);
+      yield* Effect.sleep(0);
+      assert.strictEqual(document.querySelector("dialog")?.open, false);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("synchronizes the native dialog close lifecycle", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Dialog.makeState();
+      yield* render(
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, content: "Body" })}`,
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      const trigger = document.querySelector("button")!;
+      const dialog = document.querySelector("dialog")!;
+      trigger.click();
+      yield* Effect.sleep(0);
+      assert.strictEqual(dialog.open, true);
+      assert.strictEqual((yield* state).open, true);
+
+      dialog.close();
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).open, false);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("uses request-close to synchronize a native command dialog", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Dialog.makeState();
+      yield* render(
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, id: "confirm", content: "Body" })}${Dialog.RequestClose({ state, controls: "confirm", content: "Cancel" })}`,
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      const dialog = document.querySelector("dialog")!;
+      (document.querySelector("button") as HTMLButtonElement).click();
+      yield* Effect.sleep(0);
+      assert.strictEqual(dialog.open, true);
+      (document.querySelectorAll("button")[1] as HTMLButtonElement).click();
+      yield* Effect.sleep(0);
+
+      assert.strictEqual(dialog.open, false);
+      assert.strictEqual((yield* state).open, false);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+});
