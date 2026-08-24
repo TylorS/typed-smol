@@ -11,6 +11,7 @@ export const appRoutes = Router.match(
   Fx.gen(function* () {
     const count = yield* RefSubject.hydrate(
       Schema.Number,
+      // This is can be *ANY* Value/Effect/Stream/Fx -- imagine fetching data from your API here
       Effect.sync(() => (typeof document === "undefined" ? 42 : 0)),
     );
 
