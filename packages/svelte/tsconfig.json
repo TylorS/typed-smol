@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src/lib",
+    "outDir": "dist",
+    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
+    "lib": ["DOM", "ES2024", "ESNext.Disposable"],
+    "allowJs": true,
+    "checkJs": true,
+    "isolatedModules": true
+  },
+  "include": ["src/lib"],
+  "exclude": ["**/*.test.ts", "**/*.type-test.ts"],
+  "references": [{ "path": "../fx" }, { "path": "../template" }]
+}

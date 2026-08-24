@@ -1,0 +1,52 @@
+{
+  "name": "@typed/svelte",
+  "version": "1.0.0-beta.4",
+  "description": "Bidirectional Svelte integration for Typed templates.",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/svelte#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/svelte"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc && mkdir -p dist/internal && cp src/lib/internal/Bridge.svelte dist/internal/Bridge.svelte",
+    "test": "pnpm run test:node && pnpm run test:browser && pnpm run test:types",
+    "test:node": "vitest run --config vitest.config.ts",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json && tsc -p tsconfig.tests.json"
+  },
+  "dependencies": {
+    "@typed/fx": "workspace:*",
+    "@typed/template": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "playwright": "^1.62.1",
+    "svelte": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "svelte": "^5.29.0"
+  }
+}
