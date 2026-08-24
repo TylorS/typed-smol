@@ -885,9 +885,10 @@ class RefSubjectImpl<A, E, R, R2>
   run<R3>(
     sink: Sink.Sink<A, E, R3>,
   ): Effect.Effect<unknown, never, Exclude<R, R2> | R3 | Scope.Scope> {
+    const subscribe = Effect.provide(this.core.subject.run(sink), this.core.services);
     return Effect.matchCauseEffect(getOrInitializeCore(this.core, true), {
-      onFailure: (cause) => sink.onFailure(cause),
-      onSuccess: () => Effect.provide(this.core.subject.run(sink), this.core.services),
+      onFailure: () => subscribe,
+      onSuccess: () => subscribe,
     });
   }
 
@@ -1619,7 +1620,12 @@ export const modify: {
  * @category guards
  */
 export function isRefSubject(value: any): value is RefSubject<any, any, any> {
-  return value && typeof value === "object" && value[RefSubjectTypeId] === RefSubjectTypeId;
+  return (
+    value !== null &&
+    value !== undefined &&
+    (typeof value === "object" || typeof value === "function") &&
+    value[RefSubjectTypeId] === RefSubjectTypeId
+  );
 }
 
 const isRefSubjectDataFirst = (args: IArguments) => isRefSubject(args[0]);

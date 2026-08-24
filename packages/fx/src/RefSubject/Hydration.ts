@@ -1,3 +1,4 @@
+import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
@@ -9,6 +10,7 @@ import { unwrap as fxUnwrap } from "../Fx/combinators/unwrap.js";
 import { fromEffect as fxFromEffect } from "../Fx/constructors/fromEffect.js";
 import { isFx } from "../Fx/TypeId.js";
 import { fromStream as fxFromStream } from "../Fx/stream.js";
+import * as Sink from "../Sink/Sink.js";
 import {
   CurrentComputedBehavior,
   make,
@@ -21,44 +23,46 @@ export type HydrationRefTypeId = typeof HydrationRefTypeId;
 
 export const HYDRATION_ATTRIBUTE = "data-typed-refsubject";
 
+const allUnbounded = <A, E, R>(effects: Iterable<Effect.Effect<A, E, R>>) =>
+  Effect.all(effects, { concurrency: "unbounded" });
+
+export interface HydrationAttribute {
+  readonly name: string;
+  readonly value: string;
+}
+
 export interface HydrationElement {
   getAttribute(name: string): string | null;
+  setAttribute(name: string, value: string): void;
   removeAttribute(name: string): void;
 }
 
+type CodecEffect<A> = Effect.Effect<A, Schema.SchemaError, any>;
+
 interface HydrationMember {
   readonly schema: Schema.Top;
+  readonly attributeName: string | undefined;
+  readonly ref: RefSubject<any, any, any>;
   readonly server: Effect.Effect<void>;
-  readonly sample: Effect.Effect<any, any, any>;
-  readonly set: (value: unknown) => Effect.Effect<unknown, never, any>;
-  readonly fail: (error: Schema.SchemaError) => Effect.Effect<unknown, never, any>;
+  readonly hydrate: (value: Effect.Effect<any, Schema.SchemaError>) => Effect.Effect<void>;
 }
 
 export interface HydrationRef<E = never, R = never> {
-  (element: HydrationElement): Effect.Effect<void, never, R>;
+  (element: HydrationElement): Effect.Effect<void, never, R | Scope.Scope>;
   readonly [HydrationRefTypeId]: {
     readonly members: ReadonlyArray<HydrationMember>;
     readonly server: Effect.Effect<void>;
-    readonly toAttribute: Effect.Effect<string, E, R>;
+    readonly toAttributes: Effect.Effect<ReadonlyArray<HydrationAttribute>, E, R>;
   };
 }
 
-export interface HydratedRefSubject<A, E = never, R = never, RH = R> extends RefSubject<A, E, R> {
-  readonly hydrateFromElement: HydrationRef<E, RH>;
-}
+export interface HydratedRefSubject<A, E = never, R = never, RH = R>
+  extends RefSubject<A, E, R>, HydrationRef<E, RH> {}
 
 export declare namespace HydratedRefSubject {
   export type Any = HydratedRefSubject<any, any, any, any>;
-  export type HydrationError<T> = T extends {
-    readonly hydrateFromElement: HydrationRef<infer E, any>;
-  }
-    ? E
-    : never;
-  export type HydrationServices<T> = T extends {
-    readonly hydrateFromElement: HydrationRef<any, infer R>;
-  }
-    ? R
-    : never;
+  export type HydrationError<T> = T extends HydrationRef<infer E, any> ? E : never;
+  export type HydrationServices<T> = T extends HydrationRef<any, infer R> ? R : never;
 }
 
 export function isHydrationRef(value: unknown): value is HydrationRef<any, any> {
@@ -70,15 +74,13 @@ export function isHydrationRef(value: unknown): value is HydrationRef<any, any> 
   );
 }
 
-export function hydrate<S extends Schema.Top, E = never, R = never>(
-  schema: S,
-  effect:
-    | Schema.Schema.Type<S>
-    | Effect.Effect<Schema.Schema.Type<S>, E, R>
-    | Stream.Stream<Schema.Schema.Type<S>, E, R>
-    | Fx.Fx<Schema.Schema.Type<S>, E, R>,
-  options?: RefSubjectOptions<Schema.Schema.Type<S>>,
-): Effect.Effect<
+export interface HydrateOptions<A> extends RefSubjectOptions<A> {
+  readonly name?: string;
+}
+
+type HydrationInput<A, E, R> = A | Effect.Effect<A, E, R> | Stream.Stream<A, E, R> | Fx.Fx<A, E, R>;
+
+type HydrateEffect<S extends Schema.Top, E, R> = Effect.Effect<
   HydratedRefSubject<
     Schema.Schema.Type<S>,
     E | Schema.SchemaError,
@@ -87,34 +89,61 @@ export function hydrate<S extends Schema.Top, E = never, R = never>(
   >,
   never,
   R | Scope.Scope
-> {
+>;
+
+export function hydrate<S extends Schema.Codec<any, string, any, any>, E = never, R = never>(
+  schema: S,
+  effect: HydrationInput<Schema.Schema.Type<S>, E, R>,
+  options: HydrateOptions<Schema.Schema.Type<S>> & { readonly name: string },
+): HydrateEffect<S, E, R>;
+export function hydrate<S extends Schema.Top, E = never, R = never>(
+  schema: S,
+  effect: HydrationInput<Schema.Schema.Type<S>, E, R>,
+  options?: HydrateOptions<Schema.Schema.Type<S>> & { readonly name?: undefined },
+): HydrateEffect<S, E, R>;
+export function hydrate<S extends Schema.Top, E = never, R = never>(
+  schema: S,
+  effect: HydrationInput<Schema.Schema.Type<S>, E, R>,
+  options?: HydrateOptions<Schema.Schema.Type<S>>,
+): HydrateEffect<S, E, R> {
+  const attributeName =
+    options?.name === undefined ? undefined : toHydrationAttributeName(options.name);
   return Effect.gen(function* () {
-    const behavior = yield* CurrentComputedBehavior;
     const initializer = yield* makeHydrationInitializer(
       normalizeHydrationInitializer<Schema.Schema.Type<S>, E, R>(effect),
     );
-    if (behavior === "one") yield* initializer.server;
     const ref = yield* make<Schema.Schema.Type<S>, E | Schema.SchemaError, R>(initializer.value, {
       ...options,
       eq: options?.eq ?? Schema.toEquivalence(schema),
     });
     const member: HydrationMember = {
       schema,
+      attributeName,
+      ref,
       server: initializer.server,
-      sample: ref,
-      set: (value) => initializer.dom(Effect.succeed(value as Schema.Schema.Type<S>)),
-      fail: (error) => initializer.dom(Effect.fail(error)),
+      hydrate: initializer.dom,
     };
 
-    return Object.assign(ref, {
-      hydrateFromElement: makeHydrationRef([member]),
-    }) as HydratedRefSubject<
+    const initializeForCurrentBehavior = Effect.flatMap(CurrentComputedBehavior, (behavior) =>
+      behavior === "one" ? initializer.server : Effect.void,
+    );
+    const hydrationRef = Object.assign(makeHydrationRef([member]), {
+      run: <RSink>(sink: Sink.Sink<Schema.Schema.Type<S>, E | Schema.SchemaError, RSink>) =>
+        Effect.andThen(initializeForCurrentBehavior, ref.run(sink)),
+      toEffect: () => Effect.andThen(initializeForCurrentBehavior, ref),
+    });
+
+    return Object.setPrototypeOf(hydrationRef, ref) as HydratedRefSubject<
       Schema.Schema.Type<S>,
       E | Schema.SchemaError,
       never,
       Schema.Codec.DecodingServices<S> | Schema.Codec.EncodingServices<S>
     >;
   });
+}
+
+function toHydrationAttributeName(name: string): string {
+  return `data-${name}`.toLowerCase();
 }
 
 type HydrationEnvironment = "server" | "dom";
@@ -178,80 +207,138 @@ function normalizeHydrationInitializer<A, E, R>(
 }
 
 export function hydrateAll<
-  First extends HydratedRefSubject.Any,
-  const Rest extends ReadonlyArray<HydratedRefSubject.Any>,
+  const Refs extends readonly [HydratedRefSubject.Any, ...HydratedRefSubject.Any[]],
 >(
-  first: First,
-  ...rest: Rest
+  ...refs: Refs
 ): HydrationRef<
-  HydratedRefSubject.HydrationError<First | Rest[number]>,
-  HydratedRefSubject.HydrationServices<First | Rest[number]>
+  HydratedRefSubject.HydrationError<Refs[number]>,
+  HydratedRefSubject.HydrationServices<Refs[number]>
 > {
-  return makeHydrationRef(
-    [first, ...rest].flatMap((ref) => ref.hydrateFromElement[HydrationRefTypeId].members),
-  ) as HydrationRef<
-    HydratedRefSubject.HydrationError<First | Rest[number]>,
-    HydratedRefSubject.HydrationServices<First | Rest[number]>
-  >;
+  return makeHydrationRef(refs.flatMap((ref) => ref[HydrationRefTypeId].members));
 }
 
 function makeHydrationRef(members: ReadonlyArray<HydrationMember>): HydrationRef<any, any> {
-  const tuple = Schema.Tuple(members.map((member) => member.schema) as any);
+  const unnamed = members.filter((member) => member.attributeName === undefined);
+  const named = members.filter((member) => member.attributeName !== undefined);
+  const names = new Set<string>();
+  for (const member of named) {
+    const attributeName = member.attributeName!;
+    if (names.has(attributeName)) {
+      throw new TypeError(`Duplicate hydration attribute: ${attributeName}`);
+    }
+    names.add(attributeName);
+  }
+
+  const tuple = Schema.Tuple(unnamed.map((member) => member.schema) as any);
   const envelope = Schema.Struct({
     version: Schema.Literal(1),
     values: tuple,
   });
   const codec = Schema.fromJsonString(Schema.toCodecJson(envelope));
-  const server = Effect.asVoid(
-    Effect.all(
-      members.map((member) => member.server),
-      { concurrency: 1 },
-    ),
-  );
-  const toAttribute = Effect.flatMap(
-    Effect.andThen(
-      server,
-      Effect.all(
-        members.map((member) => member.sample),
-        { concurrency: 1 },
+  const server = Effect.asVoid(allUnbounded(members.map((member) => member.server)));
+  const attributeEffects = [
+    ...(unnamed.length === 0
+      ? []
+      : [
+          Effect.flatMap(allUnbounded(unnamed.map((member) => member.ref)), (values) =>
+            Effect.map(Schema.encodeEffect(codec)({ version: 1, values } as any), (value) => ({
+              name: HYDRATION_ATTRIBUTE,
+              value,
+            })),
+          ),
+        ]),
+    ...named.map((member) =>
+      Effect.flatMap(member.ref, (value) =>
+        Effect.map(encodeMember(member, value), (value) => ({
+          name: member.attributeName!,
+          value,
+        })),
       ),
     ),
-    (values) => Schema.encodeEffect(codec)({ version: 1, values } as any),
-  );
+  ];
+  const toAttributes = Effect.andThen(server, allUnbounded(attributeEffects));
 
-  const hydrateFromElement = (element: HydrationElement) => {
+  const hydrateUnnamed = (element: HydrationElement) => {
+    if (unnamed.length === 0) return Effect.void;
     const encoded = element.getAttribute(HYDRATION_ATTRIBUTE);
     if (encoded === null) {
-      return Effect.asVoid(
-        Effect.all(
-          members.map((member) => member.server),
-          { concurrency: 1 },
-        ),
-      );
+      return Effect.asVoid(allUnbounded(unnamed.map((member) => member.server)));
     }
 
     return Effect.matchEffect(Schema.decodeEffect(codec)(encoded), {
       onFailure: (error) =>
-        Effect.asVoid(
-          Effect.all(
-            members.map((member) => member.fail(error)),
-            {
-              concurrency: 1,
-            },
-          ),
-        ),
+        Effect.asVoid(allUnbounded(unnamed.map((member) => member.hydrate(Effect.fail(error))))),
       onSuccess: ({ values }) =>
         Effect.andThen(
-          Effect.all(
-            members.map((member, index) => member.set(values[index])),
-            { concurrency: 1 },
+          allUnbounded(
+            unnamed.map((member, index) => member.hydrate(Effect.succeed(values[index]))),
           ),
           Effect.sync(() => element.removeAttribute(HYDRATION_ATTRIBUTE)),
         ),
     });
   };
 
-  return Object.assign(hydrateFromElement, {
-    [HydrationRefTypeId]: { members, server, toAttribute },
+  const hydrateNamed = (member: HydrationMember, element: HydrationElement) => {
+    const attributeName = member.attributeName!;
+    const encoded = element.getAttribute(attributeName);
+    if (encoded !== null) {
+      return Effect.matchEffect(decodeMember(member, encoded), {
+        onFailure: (error) => member.hydrate(Effect.fail(error)),
+        onSuccess: (value) => member.hydrate(Effect.succeed(value)),
+      });
+    }
+
+    return Effect.andThen(
+      member.server,
+      Effect.matchCauseEffect(member.ref, {
+        onFailure: () => Effect.void,
+        onSuccess: (value) => writeNamed(member, element, value),
+      }),
+    );
+  };
+
+  const hydrateElement = (element: HydrationElement) =>
+    Effect.andThen(
+      allUnbounded([
+        hydrateUnnamed(element),
+        ...named.map((member) => hydrateNamed(member, element)),
+      ]),
+      Effect.asVoid(
+        allUnbounded(named.map((member) => Effect.forkScoped(synchronizeNamed(member, element)))),
+      ),
+    );
+
+  return Object.assign(hydrateElement, {
+    [HydrationRefTypeId]: { members, server, toAttributes },
   });
+}
+
+function encodeMember(member: HydrationMember, value: unknown): CodecEffect<string> {
+  return Schema.encodeEffect(member.schema)(value as any) as any;
+}
+
+function decodeMember(member: HydrationMember, value: string): CodecEffect<unknown> {
+  return Schema.decodeEffect(member.schema)(value as any) as any;
+}
+
+function writeAttribute(element: HydrationElement, name: string, value: string) {
+  return Effect.sync(() => {
+    if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+  });
+}
+
+function writeNamed(member: HydrationMember, element: HydrationElement, value: unknown) {
+  return Effect.matchEffect(encodeMember(member, value), {
+    onFailure: (error) => member.ref.onFailure(Cause.fail(error)),
+    onSuccess: (encoded) => writeAttribute(element, member.attributeName!, encoded),
+  });
+}
+
+function synchronizeNamed(member: HydrationMember, element: HydrationElement) {
+  return member.ref.run(
+    Sink.make(
+      () => Effect.void,
+      (value) => writeNamed(member, element, value),
+    ),
+  );
 }

@@ -212,6 +212,8 @@ Mutable reactive reference: observable state that can be read (as Effect), updat
 **Constructors**
 
 - `make(initial, options?)` — Create RefSubject from value, Effect, or Fx; options include `eq` (equivalence).
+- `hydrate(schema, initial, options?)` — Create a callable `HydratedRefSubject` that is both reactive state and its DOM hydration ref. A named hydration requires a string-encoded schema.
+- `hydrateAll(first, ...rest)` — Compose hydrated states into one DOM ref invocation.
 - `fromEffect(effect)` — RefSubject driven by an Effect (e.g. initial value from async source).
 - `fromFx(fx)` — RefSubject that follows an Fx stream.
 - `fromStream(stream)` — RefSubject from an Effect Stream.
@@ -229,6 +231,17 @@ Mutable reactive reference: observable state that can be read (as Effect), updat
 - `decrement(ref)` — Subtract 1 from a number RefSubject; returns new value.
 - `proxy(ref)` — Create a proxy RefSubject that forwards to the given ref.
 - `isRefSubject(value)` — Type guard for RefSubject.
+
+**Hydration**
+
+```ts
+const count = yield * RefSubject.hydrate(Schema.Number, 0);
+const page = yield * RefSubject.hydrate(Schema.NumberFromString, 1, { name: "page" });
+
+html`<section ref=${RefSubject.hydrateAll(count, page)}>${count}</section>`;
+```
+
+The returned state is directly callable as the specialized DOM ref; there is no separate hydration property. Unnamed states share a versioned `data-typed-refsubject` tuple that is consumed and removed without installing an ongoing subscription. A named state uses its string codec directly in `data-<name>`, retains that attribute, and keeps it synchronized with exactly one scope-owned subscription. Closing the scope stops named synchronization.
 
 **Derived**
 

@@ -1,4 +1,3 @@
-import type { Scope } from "effect";
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import type { RenderEvent, RenderTemplate } from "../../index.js";
@@ -17,7 +16,7 @@ export function getStaticHtml<E, R>(
 
 export function getInteractiveHtml<E, R>(
   renderable: Fx.Fx<RenderEvent, E, R>,
-): Effect.Effect<string, E, Exclude<R, RenderTemplate | Scope.Scope>> {
+): Effect.Effect<string, E, Exclude<R, RenderTemplate>> {
   return renderToHtmlString(renderable).pipe(Effect.provide(HtmlRenderTemplate));
 }
 

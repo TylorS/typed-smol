@@ -39,6 +39,7 @@ Dynamic `textarea` and `title` values are escaped. Dynamic `script`, `style`, an
 - HTML rendering is a finite snapshot. Reactive interpolation and `many` consume the first value needed for that response; use DOM rendering for a live subscription.
 - `many` keys must be unique within each emitted list; duplicates fail with `Cause.IllegalArgumentError`. A retained key keeps its child scope and receives the new item through its `RefSubject`; removing the key closes that child scope.
 - Hydration adopts a compatible marker range or constructs the template when marker adoption fails. Matching markers do not currently validate all static DOM, so applications must not treat existing hydration DOM as sanitized content.
+- A callable `RefSubject.hydrate` value can be placed directly in `ref`. Interactive SSR serializes every attribute entry supplied by its symbol-backed hydration protocol, and DOM rendering invokes the composed ref once before starting ordinary reactive parts. Outside `ref`, the same callable value remains a normal `RefSubject`/`Fx` in direct and nested render positions.
 
 ## API overview
 

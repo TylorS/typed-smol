@@ -232,8 +232,8 @@ function renderPart<E, R>(
       return Fx.make(() => renderable[RefSubject.HydrationRefTypeId].server);
     }
     return Fx.unwrap(
-      Effect.map(renderable[RefSubject.HydrationRefTypeId].toAttribute, (encoded) =>
-        Fx.succeed(HtmlRenderEvent(render(encoded), last)),
+      Effect.map(renderable[RefSubject.HydrationRefTypeId].toAttributes, (attributes) =>
+        Fx.succeed(HtmlRenderEvent(render(attributes), last)),
       ),
     );
   }
@@ -343,7 +343,11 @@ function liftRenderableToFx<E, R>(
 ): Fx.Fx<any, E, R> {
   switch (typeof renderable) {
     case "function":
-      return isStatic ? Fx.empty : Fx.succeed(HtmlRenderEvent(TEXT_START, true));
+      return Fx.isFx(renderable)
+        ? takeOneIfNotRenderEvent(renderable)
+        : isStatic
+          ? Fx.empty
+          : Fx.succeed(HtmlRenderEvent(TEXT_START, true));
     case "undefined":
     case "object": {
       if (isNullish(renderable)) {
