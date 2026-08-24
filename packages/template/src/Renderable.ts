@@ -55,7 +55,8 @@ export type Renderable<A, E = never, R = never> =
   | ReadonlyArray<Renderable<A, E, R>>
   | Effect.Effect<A, E, R>
   | Stream.Stream<A, E, R>
-  | Fx.Fx<A, E, R>;
+  | Fx.Fx<A, E, R>
+  | HydrationRef<E, R>;
 
 export declare namespace Renderable {
   /**

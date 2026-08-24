@@ -1,6 +1,8 @@
 import { assert, describe, it } from "vitest";
 import type { Scope } from "effect";
 import { Effect, Schema } from "effect";
+import * as Exit from "effect/Exit";
+import * as ScopeApi from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
 import type { Renderable, Rendered, RenderTemplate } from "../index.js";
 import {
@@ -168,8 +170,10 @@ describe("Hydration", () => {
 
   it("restores hydrated RefSubjects before reactive attributes start", () =>
     Effect.gen(function* () {
-      const view = (count: RefSubject.HydratedRefSubject<number, any, any, any>) =>
-        html`<button data-count=${count} ref=${count.hydrateFromElement}>${count}</button>`;
+      const view = (
+        count: RefSubject.HydratedRefSubject<number, any, any, any>,
+        ref: RefSubject.HydrationRef<any, any> = count,
+      ) => html`<button data-count=${count} ref=${ref}>${count}</button>`;
       const serverCount = yield* RefSubject.hydrate(Schema.Number, 7);
       const htmlString = yield* renderToHtmlString(view(serverCount)).pipe(
         Effect.provide(HtmlRenderTemplate),
@@ -194,7 +198,17 @@ describe("Hydration", () => {
           return 0;
         }),
       );
-      const [current] = yield* render(view(clientCount), body).pipe(
+      let hydrationCalls = 0;
+      const countedHydration: RefSubject.HydrationRef<any, any> = Object.assign(
+        (element: RefSubject.HydrationElement) => {
+          hydrationCalls++;
+          return clientCount(element);
+        },
+        {
+          [RefSubject.HydrationRefTypeId]: clientCount[RefSubject.HydrationRefTypeId],
+        },
+      );
+      const [current] = yield* render(view(clientCount, countedHydration), body).pipe(
         Fx.provide(layer),
         Fx.take(1),
         Fx.collectUpTo(1),
@@ -202,6 +216,7 @@ describe("Hydration", () => {
       const records = observer.takeRecords();
 
       assert.strictEqual(current, original);
+      assert.strictEqual(hydrationCalls, 1);
       assert.strictEqual(initialized, 0);
       assert.strictEqual(yield* clientCount, 7);
       assert.strictEqual(original.getAttribute("data-count"), "7");
@@ -210,6 +225,70 @@ describe("Hydration", () => {
         false,
       );
       assert.strictEqual(original.getAttribute(RefSubject.HYDRATION_ATTRIBUTE), null);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("hydrates unnamed and named state from SSR with distinct lifecycles", () =>
+    Effect.gen(function* () {
+      const view = (
+        count: RefSubject.HydratedRefSubject<number, any, any, any>,
+        page: RefSubject.HydratedRefSubject<number, any, any, any>,
+        ref: RefSubject.HydrationRef<any, any> = RefSubject.hydrateAll(count, page),
+      ) => html`<section ref=${ref}></section>`;
+      const serverCount = yield* RefSubject.hydrate(Schema.Number, 1);
+      const serverPage = yield* RefSubject.hydrate(Schema.FiniteFromString, 3, {
+        name: "page",
+      });
+      const htmlString = yield* renderToHtmlString(view(serverCount, serverPage)).pipe(
+        Effect.provide(HtmlRenderTemplate),
+      );
+      const [window, layer] = createHappyDomLayer();
+      const body = window.document.body;
+      body.innerHTML = htmlString;
+      const original = body.querySelector("section");
+      assert(original);
+
+      const clientCount = yield* RefSubject.hydrate(Schema.Number, 0);
+      const clientPage = yield* RefSubject.hydrate(Schema.FiniteFromString, 0, {
+        name: "page",
+      });
+      const hydration = RefSubject.hydrateAll(clientCount, clientPage);
+      let hydrationCalls = 0;
+      const countedHydration: RefSubject.HydrationRef<any, any> = Object.assign(
+        (element: RefSubject.HydrationElement) => {
+          hydrationCalls++;
+          return hydration(element);
+        },
+        { [RefSubject.HydrationRefTypeId]: hydration[RefSubject.HydrationRefTypeId] },
+      );
+      const renderScope = yield* ScopeApi.make();
+      const [current] = yield* render(view(clientCount, clientPage, countedHydration), body).pipe(
+        Fx.provide(layer),
+        Fx.take(1),
+        Fx.collectUpTo(1),
+        Effect.provideService(ScopeApi.Scope, renderScope),
+      );
+      yield* Effect.sleep(20);
+
+      assert.strictEqual(current, original);
+      assert.strictEqual(hydrationCalls, 1);
+      assert.strictEqual(yield* clientCount, 1);
+      assert.strictEqual(yield* clientPage, 3);
+      assert.strictEqual(original.getAttribute(RefSubject.HYDRATION_ATTRIBUTE), null);
+      assert.strictEqual(original.getAttribute("data-page"), "3");
+      assert.strictEqual(yield* clientCount.subscriberCount, 0);
+      assert.strictEqual(yield* clientPage.subscriberCount, 1);
+
+      yield* RefSubject.set(clientPage, 4);
+      yield* Effect.sleep(20);
+      assert.strictEqual(original.getAttribute("data-page"), "4");
+
+      yield* ScopeApi.close(renderScope, Exit.void);
+      yield* Effect.sleep(20);
+      assert.strictEqual(yield* clientPage.subscriberCount, 0);
+
+      yield* RefSubject.set(clientPage, 5);
+      yield* Effect.sleep(20);
+      assert.strictEqual(original.getAttribute("data-page"), "4");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("supports sparse attributes", () =>

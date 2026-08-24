@@ -952,7 +952,7 @@ function liftRenderableToFx<E = never, R = never>(
 ): Fx.Fx<any, E, R> {
   switch (typeof renderable) {
     case "function":
-      return Fx.null;
+      return Fx.isFx(renderable) ? renderable : Fx.null;
     case "undefined":
     case "object": {
       if (isNullish(renderable)) {

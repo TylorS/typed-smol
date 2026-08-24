@@ -18,7 +18,7 @@ export const appRoutes = Router.match(
     return html`<main>
         <h1>Full-stack counter</h1>
         <button type="button" onclick=${RefSubject.increment(count)}>Increment</button>
-        <output ref=${count.hydrateFromElement}>${count}</output>
+        <output ref=${count}>${count}</output>
         <button type="button" onclick=${RefSubject.decrement(count)}>Decrement</button>
       </main>
       <script type="module" src=${clientScriptUrl}></script>`;

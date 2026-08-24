@@ -2,6 +2,7 @@ import type * as Effect from "effect/Effect";
 import type * as Cause from "effect/Cause";
 import type * as Scope from "effect/Scope";
 import type * as FxType from "@typed/fx/Fx";
+import type * as RefSubject from "@typed/fx/RefSubject";
 import { EventHandler, html, many, render, type RenderTemplate } from "@typed/template";
 
 type Equal<A, B> =
@@ -13,6 +14,7 @@ type EffectService = { readonly EffectService: unique symbol };
 type FxService = { readonly FxService: unique symbol };
 type HandlerService = { readonly HandlerService: unique symbol };
 type ListService = { readonly ListService: unique symbol };
+type HydrationService = { readonly HydrationService: unique symbol };
 
 declare const effectValue: Effect.Effect<string, "effect-error", EffectService>;
 declare const fxValue: FxType.Fx<number, "fx-error", FxService>;
@@ -58,4 +60,22 @@ type _DirectRenderErrors = Assert<
 >;
 type _CurriedRenderServices = Assert<
   Equal<FxType.Services<typeof curriedRender>, FxType.Services<typeof mixed>>
+>;
+
+declare const hydrated: RefSubject.HydratedRefSubject<
+  number,
+  "hydration-error",
+  never,
+  HydrationService
+>;
+
+const hydratedTemplate = html`<button ref=${hydrated}>${hydrated}</button>`;
+
+type _HydratedErrors = Assert<Equal<FxType.Error<typeof hydratedTemplate>, "hydration-error">>;
+type HydratedServices = HydrationService | Scope.Scope | RenderTemplate;
+type _HydratedServicesAreRequired = Assert<
+  Extends<HydratedServices, FxType.Services<typeof hydratedTemplate>>
+>;
+type _HydratedServicesAreExact = Assert<
+  Extends<FxType.Services<typeof hydratedTemplate>, HydratedServices>
 >;
