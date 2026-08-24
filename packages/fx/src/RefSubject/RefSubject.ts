@@ -1572,7 +1572,7 @@ export const modifyEffect: {
 >(ref: RefSubject<A, E, R>, f: (value: A) => Effect.Effect<readonly [B, A], E2, R2>) {
   return ref.updates((ref) =>
     Effect.flatMap(ref.get, (value) =>
-      Effect.flatMap(f(value), ([b, a]) => Effect.flatMap(ref.set(a), () => Effect.succeed(b))),
+      Effect.flatMap(f(value), ([b, a]) => Effect.as(ref.set(a), b)),
     ),
   );
 });

@@ -222,12 +222,12 @@ describe("typed/ui/Link", () => {
   });
 
   it("keeps an ordinary href available without a router or JavaScript", () => {
-    const [window] = createHappyDomLayer();
+    const [window, layer] = createHappyDomLayer();
     return Effect.gen(function* () {
       const [root] = yield* render(
         Link({ href: "/download/report.csv", content: "Download report" }),
         window.document.body,
-      ).pipe(Fx.provide(DomRenderTemplate.using(window.document)), Fx.take(1), Fx.collectAll);
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
 
       const anchor = root as HTMLAnchorElement;
       assert.strictEqual(anchor.tagName, "A");
@@ -314,12 +314,12 @@ describe("typed/ui/Link", () => {
   });
 
   it("keeps keyboard activation as an anchor affordance", () => {
-    const [window] = createHappyDomLayer();
+    const [window, layer] = createHappyDomLayer();
     return Effect.gen(function* () {
       const [root] = yield* render(
         Link({ href: "/keyboard", content: "Keyboard destination" }),
         window.document.body,
-      ).pipe(Fx.provide(DomRenderTemplate.using(window.document)), Fx.take(1), Fx.collectAll);
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
       const anchor = root as HTMLAnchorElement;
       anchor.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       assert.strictEqual(anchor.getAttribute("href"), "/keyboard");

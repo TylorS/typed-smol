@@ -7,7 +7,7 @@ import { zeroRandomValues } from "./helpers.js";
 
 describe("nanoId", () => {
   it("maps zero entropy to the default alphabet and fixed length", async () => {
-    const id = await Effect.runPromise(Effect.provide(nanoId, zeroRandomValues()));
+    const id = await Effect.runPromise(Effect.provide(nanoId, zeroRandomValues));
 
     expect(id).toBe("000000000000000000000");
     expect(id).toHaveLength(21);

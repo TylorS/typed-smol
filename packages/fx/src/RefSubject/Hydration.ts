@@ -93,12 +93,12 @@ type HydrateEffect<S extends Schema.Top, E, R> = Effect.Effect<
 
 export function hydrate<S extends Schema.Codec<any, string, any, any>, E = never, R = never>(
   schema: S,
-  effect: HydrationInput<Schema.Schema.Type<S>, E, R>,
+  effect: HydrationInput<NoInfer<Schema.Schema.Type<S>>, E, R>,
   options: HydrateOptions<Schema.Schema.Type<S>> & { readonly name: string },
 ): HydrateEffect<S, E, R>;
 export function hydrate<S extends Schema.Top, E = never, R = never>(
   schema: S,
-  effect: HydrationInput<Schema.Schema.Type<S>, E, R>,
+  effect: HydrationInput<NoInfer<Schema.Schema.Type<S>>, E, R>,
   options?: HydrateOptions<Schema.Schema.Type<S>> & { readonly name?: undefined },
 ): HydrateEffect<S, E, R>;
 export function hydrate<S extends Schema.Top, E = never, R = never>(

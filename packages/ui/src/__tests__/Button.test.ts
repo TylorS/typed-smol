@@ -17,7 +17,7 @@ describe("typed/ui/Button", () => {
       Effect.provide(StaticHtmlRenderTemplate),
       Effect.scoped,
       Effect.map((markup) => {
-        assert.match(markup, /^<button\s+type="button">Save<\/button>$/);
+        assert.strictEqual(markup, '<button type="button">Save</button>');
       }),
       Effect.runPromise,
     ));
@@ -27,7 +27,7 @@ describe("typed/ui/Button", () => {
       Effect.provide(StaticHtmlRenderTemplate),
       Effect.scoped,
       Effect.map((markup) => {
-        assert.match(markup, /^<button\s+type="button">Save<\/button>$/);
+        assert.strictEqual(markup, '<button type="button">Save</button>');
       }),
       Effect.runPromise,
     ));

@@ -5,14 +5,12 @@ import { Fx, RefSubject } from "@typed/fx";
 import type { Renderable, RenderTemplate } from "../index.js";
 import {
   CurrentRenderQueue,
-  DomRenderTemplate,
   EventHandler,
   html,
   render,
   RenderQueue,
 } from "../index.js";
 import type { Rendered } from "../Wire.js";
-import { Window } from "happy-dom";
 import { createHappyDomLayer } from "./helpers/dom-layer.js";
 
 describe("Render", () => {

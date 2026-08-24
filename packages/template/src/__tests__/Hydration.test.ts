@@ -6,7 +6,6 @@ import * as ScopeApi from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
 import type { Renderable, Rendered, RenderTemplate } from "../index.js";
 import {
-  DomRenderTemplate,
   EventHandler,
   html,
   HtmlRenderTemplate,

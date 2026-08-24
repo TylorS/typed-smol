@@ -28,6 +28,12 @@ const spreadDiv = html`<div ...${{ id: "safe" }}></div>`;
 const dataDiv = html`<div .data=${{ safe: "value" }}></div>`;
 const nodeDiv = html`<div>${label}</div>`;
 
+void effectEvent;
+void booleanDiv;
+void refDiv;
+void spreadDiv;
+void dataDiv;
+
 type _NodeServices = Assert<
   Equal<Fx.Services<typeof nodeDiv>, Scope.Scope | RenderTemplate>
 >;

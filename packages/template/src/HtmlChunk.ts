@@ -323,7 +323,7 @@ const attributeMap: AttributeMap = {
   properties: (builder, attribute, placement) =>
     builder.part(attribute, (v) => {
       const attributes = renderSpreadAttributes(v);
-      return addAttributeSpace(attributes === "" ? "" : ` ${attributes}`, placement);
+      return addAttributeSpace(attributes, placement);
     }),
 
   ref: (builder, attribute, placement) =>
@@ -333,10 +333,9 @@ const attributeMap: AttributeMap = {
   event: constVoid,
 };
 
-function addAttributeSpace(str: string, placement: Placement) {
+function addAttributeSpace(str: string, _placement: Placement) {
   if (str.length === 0) return str;
-  if (placement.isFirst) return " " + str + (placement.isLast ? "" : " ");
-  return str + (placement.isLast ? "" : " ");
+  return " " + str;
 }
 
 const AttributeOrder = Order.mapInput(

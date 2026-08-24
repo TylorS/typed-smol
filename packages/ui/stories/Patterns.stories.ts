@@ -1,0 +1,387 @@
+import * as Effect from "effect/Effect";
+import { Fx, RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+import * as CarouselComponent from "../src/Carousel.js";
+import * as ComboboxComponent from "../src/Combobox.js";
+import * as DialogComponent from "../src/Dialog.js";
+import * as DisclosureComponent from "../src/Disclosure.js";
+import * as GridComponent from "../src/Grid.js";
+import * as HovercardComponent from "../src/Hovercard.js";
+import * as ListboxComponent from "../src/Listbox.js";
+import * as MenuComponent from "../src/Menu.js";
+import * as MenubarComponent from "../src/Menubar.js";
+import * as PopoverComponent from "../src/Popover.js";
+import * as SelectComponent from "../src/Select.js";
+import * as TabComponent from "../src/Tab.js";
+import * as TabsComponent from "../src/Tabs.js";
+import * as ToolbarComponent from "../src/Toolbar.js";
+import * as TooltipComponent from "../src/Tooltip.js";
+import * as TreeComponent from "../src/Tree.js";
+import * as TreeGridComponent from "../src/TreeGrid.js";
+import * as WindowSplitterComponent from "../src/WindowSplitter.js";
+import { story } from "./story.js";
+
+export default { title: "Patterns" };
+
+const carousel = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* CarouselComponent.makeState({ activeId: "first" });
+    const collection = yield* CarouselComponent.makeCollection();
+
+    return CarouselComponent.Root({
+      state,
+      collection,
+      label: "Featured stories",
+      content: html`${CarouselComponent.Slide({
+        state,
+        collection,
+        id: "first",
+        label: "1 of 2",
+        content: "First story",
+      })}${CarouselComponent.Slide({
+        state,
+        collection,
+        id: "second",
+        label: "2 of 2",
+        content: "Second story",
+      })}${CarouselComponent.Previous({ state, collection, content: "Previous" })}${CarouselComponent.Next({ state, collection, content: "Next" })}${CarouselComponent.RotationControl({ state, content: "Pause rotation" })}`,
+    });
+  }),
+);
+
+export const Carousel = story(carousel);
+
+const combobox = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* ComboboxComponent.makeState({ id: "search" });
+    const collection = yield* ComboboxComponent.makeCollection();
+    const values = ["Alpine", "Basil", "Cedar"] as const;
+    const hiddenWhenNotMatching = (value: string) =>
+      RefSubject.map(state, (current) =>
+        current.value.length > 0 && !value.toLocaleLowerCase().includes(current.value.toLocaleLowerCase()),
+      );
+    const results = RefSubject.map(
+      state,
+      (current) => {
+        const count = values.filter((value) =>
+          value.toLocaleLowerCase().includes(current.value.toLocaleLowerCase()),
+        ).length;
+        return `${count} result${count === 1 ? "" : "s"}`;
+      },
+    );
+
+    return html`<div class="story-field">
+      <label for="search-input">Search herbs</label>
+      ${ComboboxComponent.Input({
+        state,
+        collection,
+        placeholder: "Type to filter",
+        props: { id: "search-input" },
+      })}
+      <output aria-live="polite">${results}</output>
+      ${ComboboxComponent.Popover({
+        state,
+        collection,
+        content: html`${ComboboxComponent.Item({
+          state,
+          collection,
+          id: "alpine",
+          value: "Alpine",
+          content: "Alpine",
+          props: { "?hidden": hiddenWhenNotMatching("Alpine") },
+        })}${ComboboxComponent.Item({
+          state,
+          collection,
+          id: "basil",
+          value: "Basil",
+          content: "Basil",
+          props: { "?hidden": hiddenWhenNotMatching("Basil") },
+        })}${ComboboxComponent.Item({
+          state,
+          collection,
+          id: "cedar",
+          value: "Cedar",
+          content: "Cedar",
+          props: { "?hidden": hiddenWhenNotMatching("Cedar") },
+        })}`,
+      })}
+    </div>`;
+  }),
+);
+
+export const Combobox = story(combobox);
+
+const dialog = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* DialogComponent.makeState();
+
+    return html`${DialogComponent.Trigger({ state, content: "Open dialog" })}
+      ${DialogComponent.Content({
+        state,
+        label: "Confirm deletion",
+        content: html`<p>This action cannot be undone.</p>${DialogComponent.Close({ state, content: "Cancel" })}`,
+      })}`;
+  }),
+);
+
+export const Dialog = story(dialog);
+
+const disclosure = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* DisclosureComponent.makeState();
+
+    return DisclosureComponent.Content({
+      state,
+      content: html`${DisclosureComponent.Button({ content: "More details" })}<p>Details are synchronized with the native disclosure host.</p>`,
+    });
+  }),
+);
+
+export const Disclosure = story(disclosure);
+
+const grid = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* GridComponent.makeState({ activeId: "a1" });
+    const collection = yield* GridComponent.makeCollection();
+
+    return GridComponent.Root({
+      state,
+      collection,
+      label: "Invoices",
+      content: html`${GridComponent.Row({
+        content: html`${GridComponent.ColumnHeader({ state, collection, id: "header-invoice", rowId: "header", columnIndex: 1, content: "Invoice" })}${GridComponent.ColumnHeader({ state, collection, id: "header-amount", rowId: "header", columnIndex: 2, content: "Amount" })}`,
+      })}${GridComponent.Row({
+        content: html`${GridComponent.Cell({ state, collection, id: "a1", rowId: "a", columnIndex: 1, content: "A-100" })}${GridComponent.Cell({ state, collection, id: "a2", rowId: "a", columnIndex: 2, content: "$100" })}`,
+      })}${GridComponent.Row({
+        content: html`${GridComponent.Cell({ state, collection, id: "b1", rowId: "b", columnIndex: 1, content: "B-200" })}${GridComponent.Cell({ state, collection, id: "b2", rowId: "b", columnIndex: 2, content: "$200" })}`,
+      })}`,
+    });
+  }),
+);
+
+export const Grid = story(grid);
+
+const hovercard = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* HovercardComponent.makeState({ id: "account-card" });
+
+    return html`${HovercardComponent.Anchor({ state, content: "Account", props: { tabindex: 0 } })}
+      ${HovercardComponent.Content({ state, content: "Account details" })}`;
+  }),
+);
+
+export const Hovercard = story(hovercard);
+
+const listbox = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* ListboxComponent.makeState({ value: "one" });
+    const collection = yield* ListboxComponent.makeCollection();
+
+    return ListboxComponent.Root({
+      state,
+      collection,
+      label: "Choices",
+      content: html`${ListboxComponent.Option({ state, collection, id: "one", value: "one", content: "One" })}${ListboxComponent.Option({ state, collection, id: "two", value: "two", content: "Two" })}`,
+    });
+  }),
+);
+
+export const Listbox = story(listbox);
+
+const menu = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* MenuComponent.makeState({ id: "actions" });
+    const collection = yield* MenuComponent.makeCollection();
+
+    return html`${MenuComponent.Trigger({ state, content: "Actions" })}
+      ${MenuComponent.Content({
+        state,
+        collection,
+        label: "Actions",
+        content: html`${MenuComponent.Item({ state, collection, id: "edit", content: "Edit" })}${MenuComponent.CheckboxItem({ state, collection, id: "pin", checked: true, content: "Pin" })}${MenuComponent.Separator({})}${MenuComponent.Item({ state, collection, id: "delete", content: "Delete" })}`,
+      })}`;
+  }),
+);
+
+export const Menu = story(menu);
+
+const menubar = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* MenubarComponent.makeState({ activeId: "file" });
+    const collection = yield* MenubarComponent.makeCollection();
+
+    return MenubarComponent.Root({
+      state,
+      collection,
+      label: "Application menu",
+      content: html`${MenubarComponent.Item({ state, collection, id: "file", content: "File" })}${MenubarComponent.Item({ state, collection, id: "edit", content: "Edit" })}${MenubarComponent.Item({ state, collection, id: "view", content: "View" })}`,
+    });
+  }),
+);
+
+export const Menubar = story(menubar);
+
+const popover = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* PopoverComponent.makeState();
+
+    return html`${PopoverComponent.Trigger({ state, content: "Open popover" })}
+      ${PopoverComponent.Content({ state, content: "Popover content" })}`;
+  }),
+);
+
+export const Popover = story(popover);
+
+const select = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* SelectComponent.makeState({ id: "size", value: "small" });
+    const collection = yield* SelectComponent.makeCollection();
+
+    return html`${SelectComponent.Trigger({ state, content: "Small" })}
+      ${SelectComponent.Content({
+        state,
+        collection,
+        content: html`${SelectComponent.Option({ state, collection, id: "small", value: "small", content: "Small" })}${SelectComponent.Option({ state, collection, id: "large", value: "large", content: "Large" })}`,
+      })}`;
+  }),
+);
+
+export const Select = story(select);
+
+function tabs() {
+  return Fx.unwrap(
+    Effect.gen(function* () {
+      const state = yield* TabsComponent.makeState({ selectedId: "first" });
+      const collection = yield* TabsComponent.makeCollection();
+
+      return html`${TabsComponent.List({
+        state,
+        collection,
+        content: html`${TabsComponent.Tab({ state, collection, id: "first", panelId: "first-panel", content: "First" })}${TabsComponent.Tab({ state, collection, id: "second", panelId: "second-panel", content: "Second" })}`,
+      })}${TabsComponent.Panel({ state, id: "first-panel", tabId: "first", content: "First panel" })}${TabsComponent.Panel({ state, id: "second-panel", tabId: "second", content: "Second panel" })}`;
+    }),
+  );
+}
+
+export const Tab = story(tabs());
+export const Tabs = story(tabs());
+
+const toolbar = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* ToolbarComponent.makeState({ activeId: "bold" });
+    const collection = yield* ToolbarComponent.makeCollection();
+
+    return ToolbarComponent.Root({
+      state,
+      collection,
+      label: "Text formatting",
+      content: html`${ToolbarComponent.Item({ state, collection, id: "bold", content: "Bold" })}${ToolbarComponent.Item({ state, collection, id: "italic", content: "Italic" })}${ToolbarComponent.Item({ state, collection, id: "underline", content: "Underline" })}`,
+    });
+  }),
+);
+
+export const Toolbar = story(toolbar);
+
+const tooltip = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* TooltipComponent.makeState({ id: "save-tip" });
+
+    return html`${TooltipComponent.Anchor({ state, content: "Save", props: { tabindex: 0 } })}
+      ${TooltipComponent.Content({ state, content: "Save your changes" })}`;
+  }),
+);
+
+export const Tooltip = story(tooltip);
+
+const tree = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* TreeComponent.makeState({ activeId: "root", expandedIds: ["root"] });
+    const collection = yield* TreeComponent.makeCollection();
+
+    return TreeComponent.Root({
+      state,
+      collection,
+      label: "Files",
+      content: TreeComponent.Item({
+        state,
+        collection,
+        id: "root",
+        hasChildren: true,
+        content: html`Source${TreeComponent.Group({
+          state,
+          parentId: "root",
+          content: TreeComponent.Item({
+            state,
+            collection,
+            id: "child",
+            parentId: "root",
+            content: "index.ts",
+          }),
+        })}`,
+      }),
+    });
+  }),
+);
+
+export const Tree = story(tree);
+
+const treeGrid = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* TreeGridComponent.makeState({
+      activeId: "root-name",
+      expandedIds: ["root"],
+    });
+    const collection = yield* TreeGridComponent.makeCollection();
+
+    return TreeGridComponent.Root({
+      state,
+      collection,
+      label: "Files",
+      content: html`${TreeGridComponent.Row({
+        state,
+        rowId: "root",
+        hasChildren: true,
+        content: html`${TreeGridComponent.Cell({ state, collection, id: "root-name", rowId: "root", columnIndex: 1, hasChildren: true, content: "Source" })}${TreeGridComponent.Cell({ state, collection, id: "root-size", rowId: "root", columnIndex: 2, content: "1 KB" })}`,
+      })}${TreeGridComponent.Group({
+        state,
+        parentId: "root",
+        content: TreeGridComponent.Row({
+          state,
+          rowId: "child",
+          parentId: "root",
+          content: html`${TreeGridComponent.Cell({ state, collection, id: "child-name", rowId: "child", parentId: "root", columnIndex: 1, content: "index.ts" })}${TreeGridComponent.Cell({ state, collection, id: "child-size", rowId: "child", parentId: "root", columnIndex: 2, content: "2 KB" })}`,
+        }),
+      })}`,
+    });
+  }),
+);
+
+export const TreeGrid = story(treeGrid);
+
+const windowSplitter = Fx.unwrap(
+  Effect.gen(function* () {
+    const state = yield* WindowSplitterComponent.makeState({ value: 40, step: 10 });
+    const paneSizes = RefSubject.map(
+      state,
+      (current) => `--primary-size: ${current.value}fr; --secondary-size: ${100 - current.value}fr;`,
+    );
+    const valueText = RefSubject.map(
+      state,
+      (current) => `${current.value}% table of contents, ${100 - current.value}% document`,
+    );
+
+    return html`<div class="story-split-view" style=${paneSizes}>
+        <aside id="contents">Table of contents</aside>
+        ${WindowSplitterComponent.WindowSplitter({
+          state,
+          primaryPaneId: "contents",
+          label: "Table of contents",
+          valueText,
+        })}
+        <main>Document</main>
+      </div>
+      <output aria-live="polite">${valueText}</output>`;
+  }),
+);
+
+export const WindowSplitter = story(windowSplitter);

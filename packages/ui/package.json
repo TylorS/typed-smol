@@ -31,8 +31,13 @@
     "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
     "test": "pnpm run test:node && pnpm run test:browser",
     "test:node": "vitest run --config vitest.config.ts",
-    "test:browser": "vitest run --config vitest.browser.config.ts",
-    "test:types": "tsc -p tsconfig.type-tests.json"
+    "test:browser": "vitest run --config vitest.browser.config.ts --project firefox && vitest run --config vitest.browser.config.ts --project chromium && vitest run --config vitest.browser.config.ts --project webkit",
+    "test:types": "tsc -p tsconfig.type-tests.json && tsc -p tsconfig.tests.json && tsc -p tsconfig.stories.json",
+    "storybook": "storybook dev --ci --port 6006",
+    "storybook:build": "storybook build",
+    "storybook:serve": "vite preview --outDir storybook-static --port 6007 --strictPort",
+    "test:storybook": "test-storybook --url http://localhost:6007",
+    "test:a11y": "pnpm run storybook:build && start-server-and-test storybook:serve http://localhost:6007 test:storybook"
   },
   "dependencies": {
     "@typed/fx": "workspace:*",
@@ -44,9 +49,17 @@
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
+    "@storybook/addon-a11y": "10.5.10",
+    "@storybook/html-vite": "10.5.10",
+    "@storybook/test-runner": "0.24.4",
+    "@tailwindcss/vite": "^4.3.3",
     "@vitest/browser-playwright": "catalog:",
+    "daisyui": "^5.7.22",
     "happy-dom": "catalog:",
     "playwright": "^1.62.1",
+    "start-server-and-test": "3.0.12",
+    "storybook": "10.5.10",
+    "tailwindcss": "^4.3.3",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

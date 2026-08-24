@@ -17,7 +17,7 @@ const fixedTime = (timestamp: number) =>
 describe("ksuid", () => {
   it("encodes the timestamp and payload with zero entropy", async () => {
     const id = await Effect.runPromise(
-      Effect.provide(ksuid, Layer.mergeAll(zeroRandomValues(), fixedTime(1_700_000_000_123))),
+      Effect.provide(ksuid, Layer.mergeAll(zeroRandomValues, fixedTime(1_700_000_000_123))),
     );
 
     expect(id).toBe("2YBXZHqCHEdmhp5sdLmoTEW73NQ");
