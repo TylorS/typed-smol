@@ -62,9 +62,9 @@ export declare namespace Renderable {
   /**
    * A type alias for any Renderable value with any error/context.
    */
-  export type Any =
-    | Renderable<any, any, any>
-    | Renderable<any, never, never>
+  export type Any<A = any> =
+    | Renderable<A, any, any>
+    | Renderable<A, never, never>
     | Renderable<never, any, any>
     | Renderable<never, never, any>;
 
@@ -80,6 +80,11 @@ export declare namespace Renderable {
     | undefined
     | void
     | RenderEvent;
+
+  export type Effects =
+    | Effect.Effect<any, any, any>
+    | Fx.Fx<any, any, any>
+    | Stream.Stream<any, any, any>;
 
   /**
    * Extracts the required services from a Renderable type.
@@ -107,7 +112,7 @@ export declare namespace Renderable {
    */
   export type ServicesFromObject<T> = [
     {
-      [K in keyof T]: T[K] extends (...args: Array<any>) => any
+      [K in keyof T]-?: T[K] extends (...args: Array<any>) => any
         ? FunctionServices<ReturnType<T[K]>>
         : Services<T[K]>;
     }[keyof T],
@@ -121,7 +126,7 @@ export declare namespace Renderable {
    */
   export type ErrorFromObject<T> = [
     {
-      [K in keyof T]: T[K] extends (...args: Array<any>) => any
+      [K in keyof T]-?: T[K] extends (...args: Array<any>) => any
         ? FunctionError<ReturnType<T[K]>>
         : Error<T[K]>;
     }[keyof T],
@@ -153,12 +158,11 @@ type RenderableErrorSingle<T> =
   | NestedError<T>;
 
 type NestedServices<T> = T extends
-  | Fx.Fx<any, any, any>
-  | Stream.Stream<any, any, any>
-  | Effect.Effect<any, any, any>
+  | Renderable.Effects
   | Option.Option<any>
   | HydrationRef<any, any>
   | EventHandler.EventHandler<any, any, any>
+  | AtomicObject
   ? never
   : T extends (...args: Array<any>) => infer U
     ? FunctionServices<U>
@@ -169,12 +173,11 @@ type NestedServices<T> = T extends
         : never;
 
 type NestedError<T> = T extends
-  | Fx.Fx<any, any, any>
-  | Stream.Stream<any, any, any>
-  | Effect.Effect<any, any, any>
+  | Renderable.Effects
   | Option.Option<any>
   | HydrationRef<any, any>
   | EventHandler.EventHandler<any, any, any>
+  | AtomicObject
   ? never
   : T extends (...args: Array<any>) => infer U
     ? FunctionError<U>
@@ -186,19 +189,22 @@ type NestedError<T> = T extends
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
-type FunctionServices<T> = T extends
-  | Fx.Fx<any, any, any>
-  | Stream.Stream<any, any, any>
-  | Effect.Effect<any, any, any>
+type AtomicObject =
+  | globalThis.Event
+  | globalThis.EventTarget
+  | globalThis.CSSRule
+  | globalThis.CSSStyleDeclaration
+  | globalThis.StyleSheet
+  | Date
+  | RegExp;
+
+type FunctionServices<T> = T extends Renderable.Effects
   ? Renderable.Services<T>
   : T extends ReadonlyArray<infer U>
     ? FunctionServices<U>
     : never;
 
-type FunctionError<T> = T extends
-  | Fx.Fx<any, any, any>
-  | Stream.Stream<any, any, any>
-  | Effect.Effect<any, any, any>
+type FunctionError<T> = T extends Renderable.Effects
   ? Renderable.Error<T>
   : T extends ReadonlyArray<infer U>
     ? FunctionError<U>

@@ -37,7 +37,8 @@ declare const nestedEffect: Effect.Effect<string, "nested-error", NestedService>
 declare const refEffect: Effect.Effect<void, "ref-error", NestedService>;
 declare const fxValue: Fx.Fx<number, "fx-error", FxService>;
 
-const mixedChannels = html`<div>${nestedEffect}${fxValue}</div><button onclick=${onclick}></button>`;
+const mixedChannels = html`<div>${nestedEffect}${fxValue}</div>
+  <button onclick=${onclick}></button>`;
 type MixedChannelServices = Fx.Services<typeof mixedChannels>;
 type _MixedHasNestedService = Assert<NestedService extends MixedChannelServices ? true : false>;
 type _MixedHasFxService = Assert<FxService extends MixedChannelServices ? true : false>;
@@ -63,3 +64,6 @@ type _RefErrors = Assert<Equal<Fx.Error<typeof referenced>, "ref-error">>;
 type _RefServices = Assert<
   Equal<Fx.Services<typeof referenced>, NestedService | Scope.Scope | RenderTemplate>
 >;
+
+type _NativeDomHasNoErrorChannel = Assert<Equal<Renderable.Error<HTMLButtonElement>, never>>;
+type _NativeDomHasNoServiceChannel = Assert<Equal<Renderable.Services<HTMLButtonElement>, never>>;

@@ -38,6 +38,7 @@ import { FxTypeId, isFx } from "../Fx/TypeId.js";
 import * as Sink from "../Sink/Sink.js";
 import * as Subject from "../Subject/Subject.js";
 import * as Versioned from "../Versioned/Versioned.js";
+import { hasProperty } from "effect/Predicate";
 
 export const RefSubjectTypeId = Symbol.for("@typed/fx/RefSubject");
 export type RefSubjectTypeId = typeof RefSubjectTypeId;
@@ -392,9 +393,7 @@ export const scan: {
   <S, A>(
     initial: S,
     f: (s: S, a: A) => S,
-  ): <E, R>(
-    ref: RefSubject<A, E, R> | Computed<A, E, R>,
-  ) => Computed<S, E, R>;
+  ): <E, R>(ref: RefSubject<A, E, R> | Computed<A, E, R>) => Computed<S, E, R>;
 
   <A, E, R, S>(
     ref: RefSubject<A, E, R> | Computed<A, E, R>,
@@ -407,11 +406,20 @@ export const scan: {
     initial: S,
     f: (s: S, a: A) => S,
   ): Computed<S, E0 | E | E2, R0 | R2 | Exclude<R, Scope.Scope>>;
-} = dual(3, function scan<R0, E0, A, E, R, E2, R2, S>(
-  versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
-  initial: S,
-  f: (s: S, a: A) => S,
-): Computed<S, E0 | E | E2, R0 | R2 | Exclude<R, Scope.Scope>> {
+} = dual(3, function scan<
+  R0,
+  E0,
+  A,
+  E,
+  R,
+  E2,
+  R2,
+  S,
+>(versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>, initial: S, f: (s: S, a: A) => S): Computed<
+  S,
+  E0 | E | E2,
+  R0 | R2 | Exclude<R, Scope.Scope>
+> {
   return new ComputedScanImpl(versioned, initial, (s, a) => Effect.succeed(f(s, a)));
 });
 
@@ -425,9 +433,7 @@ export const scanEffect: {
   <S, A, E3, R3>(
     initial: S,
     f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
-  ): <E, R>(
-    ref: RefSubject<A, E, R> | Computed<A, E, R>,
-  ) => Computed<S, E | E3, R | R3>;
+  ): <E, R>(ref: RefSubject<A, E, R> | Computed<A, E, R>) => Computed<S, E | E3, R | R3>;
 
   <A, E, R, S, E3, R3>(
     ref: RefSubject<A, E, R> | Computed<A, E, R>,
@@ -440,11 +446,22 @@ export const scanEffect: {
     initial: S,
     f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
   ): Computed<S, E0 | E | E2 | E3, R0 | R2 | R3 | Exclude<R, Scope.Scope>>;
-} = dual(3, function scanEffect<R0, E0, A, E, R, E2, R2, S, E3, R3>(
-  versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
-  initial: S,
-  f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
-): Computed<S, E0 | E | E2 | E3, R0 | R2 | R3 | Exclude<R, Scope.Scope>> {
+} = dual(3, function scanEffect<
+  R0,
+  E0,
+  A,
+  E,
+  R,
+  E2,
+  R2,
+  S,
+  E3,
+  R3,
+>(versioned: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>, initial: S, f: (s: S, a: A) => Effect.Effect<S, E3, R3>): Computed<
+  S,
+  E0 | E | E2 | E3,
+  R0 | R2 | R3 | Exclude<R, Scope.Scope>
+> {
   return new ComputedScanImpl(versioned, initial, f);
 });
 
@@ -660,33 +677,31 @@ function getTupleTransactionAccess(
     return undefined;
   }
 
-  return Effect.map(
-    Effect.all(accessEffects, UNBOUNDED),
-    (accessOptions) =>
-      Option.map(Option.all(accessOptions), (accesses) => ({
-        cores: combineTransactionCores(accesses),
-        getSetDelete: (recordCommit: (commit: TransactionCommit) => void) => {
-          const transactions = accesses.map((access) => access.getSetDelete(recordCommit));
-          return {
-            get: Effect.all(
-              transactions.map((transaction) => transaction.get),
+  return Effect.map(Effect.all(accessEffects, UNBOUNDED), (accessOptions) =>
+    Option.map(Option.all(accessOptions), (accesses) => ({
+      cores: combineTransactionCores(accesses),
+      getSetDelete: (recordCommit: (commit: TransactionCommit) => void) => {
+        const transactions = accesses.map((access) => access.getSetDelete(recordCommit));
+        return {
+          get: Effect.all(
+            transactions.map((transaction) => transaction.get),
+            UNBOUNDED,
+          ),
+          set: (value: ReadonlyArray<any>) =>
+            Effect.all(
+              transactions.map((transaction, index) => transaction.set(value[index])),
               UNBOUNDED,
             ),
-            set: (value: ReadonlyArray<any>) =>
-              Effect.all(
-                transactions.map((transaction, index) => transaction.set(value[index])),
-                UNBOUNDED,
-              ),
-            delete: Effect.map(
-              Effect.all(
-                transactions.map((transaction) => transaction.delete),
-                UNBOUNDED,
-              ),
-              Option.all,
+          delete: Effect.map(
+            Effect.all(
+              transactions.map((transaction) => transaction.delete),
+              UNBOUNDED,
             ),
-          };
-        },
-      })),
+            Option.all,
+          ),
+        };
+      },
+    })),
   );
 }
 
@@ -699,37 +714,35 @@ function getStructTransactionAccess(
     return undefined;
   }
 
-  return Effect.map(
-    Effect.all(accessEffects, UNBOUNDED),
-    (accessOptions) =>
-      Option.map(Option.all(accessOptions), (accesses) => ({
-        cores: combineTransactionCores(accesses),
-        getSetDelete: (recordCommit: (commit: TransactionCommit) => void) => {
-          const transactions = accesses.map((access) => access.getSetDelete(recordCommit));
-          return {
-            get: Effect.map(
-              Effect.all(
-                transactions.map((transaction) => transaction.get),
-                UNBOUNDED,
-              ),
-              (values) => Object.fromEntries(keys.map((key, index) => [key, values[index]])),
+  return Effect.map(Effect.all(accessEffects, UNBOUNDED), (accessOptions) =>
+    Option.map(Option.all(accessOptions), (accesses) => ({
+      cores: combineTransactionCores(accesses),
+      getSetDelete: (recordCommit: (commit: TransactionCommit) => void) => {
+        const transactions = accesses.map((access) => access.getSetDelete(recordCommit));
+        return {
+          get: Effect.map(
+            Effect.all(
+              transactions.map((transaction) => transaction.get),
+              UNBOUNDED,
             ),
-            set: (value: Readonly<Record<string, any>>) =>
-              Effect.all(
-                transactions.map((transaction, index) => transaction.set(value[keys[index]])),
-                UNBOUNDED,
-              ),
-            delete: Effect.map(
-              Effect.all(
-                transactions.map((transaction) => transaction.delete),
-                UNBOUNDED,
-              ),
-              (values) =>
-                Option.all(Object.fromEntries(keys.map((key, index) => [key, values[index]]))),
+            (values) => Object.fromEntries(keys.map((key, index) => [key, values[index]])),
+          ),
+          set: (value: Readonly<Record<string, any>>) =>
+            Effect.all(
+              transactions.map((transaction, index) => transaction.set(value[keys[index]])),
+              UNBOUNDED,
             ),
-          };
-        },
-      })),
+          delete: Effect.map(
+            Effect.all(
+              transactions.map((transaction) => transaction.delete),
+              UNBOUNDED,
+            ),
+            (values) =>
+              Option.all(Object.fromEntries(keys.map((key, index) => [key, values[index]]))),
+          ),
+        };
+      },
+    })),
   );
 }
 
@@ -818,9 +831,13 @@ function runTransaction<A, E, R>(
 
     return Effect.flatMap(Effect.exit(transaction), (exit) =>
       Effect.andThen(
-        Effect.forEach(commits, ([core, commit, version]) => sendCurrentEvent(core, commit, version), {
-          discard: true,
-        }),
+        Effect.forEach(
+          commits,
+          ([core, commit, version]) => sendCurrentEvent(core, commit, version),
+          {
+            discard: true,
+          },
+        ),
         exit,
       ),
     );
@@ -1620,15 +1637,14 @@ export const modify: {
  * @category guards
  */
 export function isRefSubject(value: any): value is RefSubject<any, any, any> {
-  return (
-    value !== null &&
-    value !== undefined &&
-    (typeof value === "object" || typeof value === "function") &&
-    value[RefSubjectTypeId] === RefSubjectTypeId
-  );
+  return hasProperty(value, RefSubjectTypeId) && value[RefSubjectTypeId] === RefSubjectTypeId;
 }
 
 const isRefSubjectDataFirst = (args: IArguments) => isRefSubject(args[0]);
+
+export function isComputed(value: any): value is Computed<any, any, any> {
+  return hasProperty(value, ComputedTypeId) && value[ComputedTypeId] === ComputedTypeId;
+}
 
 /**
  * Runs an effect that can modify a `RefSubject` transactionally, with optional interrupt handling.
@@ -2792,10 +2808,7 @@ class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>
     this.refs = refs;
     this.versioned = (
       refs.length > 0 && getTupleTransactionAccess(refs)
-        ? makeCompositeVersioned(
-            refs,
-            Effect.all(refs.map(sampleRefSubject), UNBOUNDED),
-          )
+        ? makeCompositeVersioned(refs, Effect.all(refs.map(sampleRefSubject), UNBOUNDED))
         : Versioned.hold(Versioned.tuple(refs))
     ) as any;
     this.version = this.versioned.version;

@@ -6,6 +6,8 @@
 
 ## Capabilities
 
+- **UI substrate** — `Dom` provides typed native host props, exact Effect/Fx channel preservation, user-first event composition, and hydration-aware ref composition. Stateful components use `RefSubject.hydrate` / `hydrateAll` directly; there is no parallel UI state abstraction.
+- **Button** — A headless native `<button>` host with a safe `type="button"` default, reactive disabled state, typed click handling, caller props, and custom-host support.
 - **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics (href, target, keyboard, right-click).
 - **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for buffered server-side rendering. `streamingSsrForHttp` uses the same routing pipeline but streams HTML chunks as they are rendered. `handleHttpServerError` adds global middleware for 404/400/500.
 
@@ -22,6 +24,8 @@ The Node HTTP platform and `happy-dom` are development dependencies used by the 
 
 ## API overview
 
+- **Button** — `Button.Button(options)` renders a native `<button>` and accepts `content`, `type`, `disabled`, `onclick`, standard button props, and an optional custom host.
+- **Dom** — Typed host/ref/event composition shared by the UI components. Its host attributes target Baseline 2026 and include native popover and invoker-command attributes.
 - **Link** — `Link(options)` renders an `<a href="...">` that intercepts same-origin, same-document clicks and calls `Navigation.navigate` instead of a full page load. Options include `href`, `content`, `replace`, and standard anchor props. Requires **Navigation** and **RenderTemplate** in context (e.g. browser router).
 - **SSR:** `ssrForHttp(router, matcher)` — registers buffered route handlers on an Effect **HttpRouter**; `streamingSsrForHttp(router, matcher)` — same routing with streamed HTML output; `handleHttpServerError(router)` — global middleware for HTTP server errors.
 

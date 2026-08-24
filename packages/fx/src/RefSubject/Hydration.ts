@@ -143,7 +143,31 @@ export function hydrate<S extends Schema.Top, E = never, R = never>(
 }
 
 function toHydrationAttributeName(name: string): string {
-  return `data-${name}`.toLowerCase();
+  const attributeName = `data-${name}`.toLowerCase();
+  if (
+    name.length === 0 ||
+    attributeName === HYDRATION_ATTRIBUTE ||
+    !isValidAttributeName(attributeName)
+  ) {
+    throw new TypeError(`Invalid hydration attribute name: ${name}`);
+  }
+  return attributeName;
+}
+
+const forbiddenAttributeNameCharacters = new Set(['"', "'", "/", ">", "=", "<"]);
+
+function isValidAttributeName(name: string): boolean {
+  for (const character of name) {
+    const codePoint = character.codePointAt(0)!;
+    if (
+      codePoint <= 0x20 ||
+      (codePoint >= 0x7f && codePoint <= 0x9f) ||
+      forbiddenAttributeNameCharacters.has(character)
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 type HydrationEnvironment = "server" | "dom";
