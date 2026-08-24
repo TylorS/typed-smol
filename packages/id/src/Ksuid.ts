@@ -1,10 +1,12 @@
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { DateTimes } from "./DateTimes.js";
 import { RandomValues } from "./RandomValues.js";
 
 // Constants
-const EPOCH = 14e11; // 2014-03-01T00:00:00Z
+const EPOCH = 14e11; // 2014-05-13T16:53:20Z
+const TIMESTAMP_MAX = EPOCH + 2 ** 32 * 1_000 - 1;
 const TIMESTAMP_BYTES = 4;
 const PAYLOAD_BYTES = 16;
 const TOTAL_BYTES = TIMESTAMP_BYTES + PAYLOAD_BYTES;
@@ -23,17 +25,18 @@ export const isKsuid: (value: string) => value is Ksuid = Schema.is(Ksuid);
 type KsuidSeed = Uint8Array & { length: 16 };
 
 // Public API
-export const ksuid: Effect.Effect<Ksuid, never, DateTimes | RandomValues> = Effect.zipWith(
-  DateTimes.now,
-  RandomValues.call<KsuidSeed>(PAYLOAD_BYTES),
-  (timestamp, payload) => {
+export const ksuid: Effect.Effect<Ksuid, Cause.IllegalArgumentError, DateTimes | RandomValues> =
+  Effect.gen(function* () {
+    const timestamp = yield* DateTimes.now;
+    if (!Number.isSafeInteger(timestamp) || timestamp < EPOCH || timestamp > TIMESTAMP_MAX) {
+      return yield* new Cause.IllegalArgumentError(
+        `KSUID timestamp must be a safe integer between ${EPOCH} and ${TIMESTAMP_MAX}, received ${timestamp}`,
+      );
+    }
+
+    const payload: KsuidSeed = yield* RandomValues.call(PAYLOAD_BYTES);
     // Create the combined bytes
     const bytes = new Uint8Array(TOTAL_BYTES);
-
-    // Support for timestamps before the epoch, usually for testing
-    if (timestamp < EPOCH) {
-      timestamp += EPOCH;
-    }
 
     // Write timestamp (4 bytes, big-endian)
     const seconds = Math.floor((timestamp - EPOCH) / 1000);
@@ -47,8 +50,7 @@ export const ksuid: Effect.Effect<Ksuid, never, DateTimes | RandomValues> = Effe
 
     // Encode as base62
     return Ksuid.make(base62Encode(bytes));
-  },
-);
+  });
 
 // Utilities
 const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

@@ -33,6 +33,8 @@ pnpm-debug.log*
 # Test / coverage
 coverage/
 .nyc_output/
+**/__screenshots__/
+**/.vitest-attachments/
 
 # Misc
 .cache/
@@ -42,3 +44,7 @@ tmp-*/
 # Test workspace
 .test-workspace/
 *.local
+
+.trigger-tree/
+graphify-out/
+.superpowers/

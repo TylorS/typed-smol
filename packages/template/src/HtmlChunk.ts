@@ -2,8 +2,10 @@ import type * as Template from "./Template.js";
 import * as Array from "effect/Array";
 import { constVoid } from "effect/Function";
 import * as Order from "effect/Order";
-import * as Predicate from "effect/Predicate";
+import { isObject } from "effect/Predicate";
+import { RefSubject } from "@typed/fx";
 import { renderToEscapedString, renderToString } from "./internal/encoding.js";
+import { keyToPartType } from "./internal/keyToPartType.js";
 import { TEMPLATE_END_COMMENT, TEMPLATE_START_COMMENT } from "./internal/meta.js";
 
 /**
@@ -220,20 +222,24 @@ function textOnlyElementToHtmlChunks(builder: HtmlChunksBuilder, node: Template.
   addAttributes(builder, node.attributes);
   builder.text(">");
   if (node.textContent !== null) {
-    textContentToHtml(builder, node.textContent);
+    textContentToHtml(builder, node.tagName, node.textContent);
   }
 
   builder.text(`</${node.tagName}>`);
 }
 
-function textContentToHtml(builder: HtmlChunksBuilder, textContent: Template.Text) {
+function textContentToHtml(
+  builder: HtmlChunksBuilder,
+  tagName: string,
+  textContent: Template.Text,
+) {
   switch (textContent._tag) {
     case "text":
       return builder.text(textContent.value);
     case "text-part":
-      return builder.part(textContent, (v) => renderToString(v, ""));
+      return builder.part(textContent, (v) => renderTextOnlyValue(tagName, v));
     case "sparse-text":
-      return builder.sparsePart(textContent, (v) => renderToString(v, ""));
+      return builder.sparsePart(textContent, (v) => renderTextOnlyValue(tagName, v));
   }
 }
 
@@ -309,19 +315,27 @@ const attributeMap: AttributeMap = {
     builder.sparsePart(attribute, (v) =>
       addAttributeSpace(`class="${renderToEscapedString(v, "")}"`, placement),
     ),
-  data: (builder, attribute) =>
-    builder.part(attribute, (v) => (Predicate.isObject(v) ? recordWithPrefix(`data-`, v) : "")),
+  data: (builder, attribute, placement) =>
+    builder.part(attribute, (v) => addAttributeSpace(renderDataAttributes(v), placement)),
   property: (builder, attribute, placement) =>
     builder.part(attribute, (v) =>
       addAttributeSpace(`${attribute.name}="${renderToEscapedString(v, "")}"`, placement),
     ),
   properties: (builder, attribute, placement) =>
+    builder.part(attribute, (v) => {
+      const attributes = renderSpreadAttributes(v);
+      return addAttributeSpace(attributes === "" ? "" : ` ${attributes}`, placement);
+    }),
+
+  ref: (builder, attribute, placement) =>
     builder.part(attribute, (v) =>
-      addAttributeSpace(Predicate.isObject(v) ? recordWithPrefix(``, v) : "", placement),
+      addAttributeSpace(
+        `${RefSubject.HYDRATION_ATTRIBUTE}="${renderToEscapedString(v, "")}"`,
+        placement,
+      ),
     ),
 
-  // Don't have HTML representations for these
-  ref: constVoid,
+  // Event handlers do not have an HTML representation.
   event: constVoid,
 };
 
@@ -329,18 +343,6 @@ function addAttributeSpace(str: string, placement: Placement) {
   if (str.length === 0) return str;
   if (placement.isFirst) return " " + str + (placement.isLast ? "" : " ");
   return str + (placement.isLast ? "" : " ");
-}
-
-function recordWithPrefix(prefix: string, r: {}) {
-  const s = Object.entries(r)
-    .map(([key, value]) =>
-      value === undefined
-        ? `${prefix}${key}`
-        : `${prefix}${key}="${renderToEscapedString(value, "")}"`,
-    )
-    .join(" ");
-
-  return s.length === 0 ? "" : " " + s;
 }
 
 const AttributeOrder = Order.mapInput(
@@ -362,4 +364,106 @@ const sparseAttributes = new Set<Template.Attribute["_tag"]>(["sparse-attr", "sp
 
 function isSparseAttribute(attr: Template.Attribute) {
   return sparseAttributes.has(attr._tag);
+}
+
+const forbiddenDynamicKeys = new Set(["__proto__", "prototype", "constructor"]);
+const forbiddenAttributeNameCharacters = new Set(['"', "'", "/", ">", "=", "<"]);
+
+function renderTextOnlyValue(tagName: string, value: unknown): string {
+  switch (tagName) {
+    case "textarea":
+    case "title":
+      return renderToEscapedString(value, "");
+    case "script":
+      return neutralizeClosingTag(tagName, renderToString(value, ""), "\\u003c");
+    case "style":
+      return neutralizeClosingTag(tagName, renderToString(value, ""), "\\3C ");
+    case "xmp":
+      return neutralizeClosingTag(tagName, renderToString(value, ""), "&lt;");
+    default:
+      return renderToEscapedString(value, "");
+  }
+}
+
+function neutralizeClosingTag(tagName: string, value: string, replacement: string): string {
+  const closingTagStart = new RegExp(`<(?=/${tagName}(?:[\\t\\n\\f\\r />]|$))`, "giu");
+  return value.replace(closingTagStart, replacement);
+}
+
+function renderDataAttributes(value: unknown): string {
+  if (!isObject(value)) return "";
+
+  return Object.entries(value)
+    .flatMap(([key, entry]) => {
+      if (!isSafeDynamicKey(key)) return [];
+      const name = `data-${key}`;
+      if (!isValidAttributeName(name)) return [];
+      return [renderAttribute(name, entry)];
+    })
+    .join(" ");
+}
+
+function renderSpreadAttributes(value: unknown, ancestors = new Set<object>()): string {
+  if (!isObject(value)) return "";
+  if (ancestors.has(value)) return "";
+  ancestors.add(value);
+
+  try {
+    return Object.entries(value)
+      .flatMap(([key, entry]) => {
+        if (!isSafeDynamicKey(key) || /^on/i.test(key)) return [];
+
+        const [kind, name] = keyToPartType(key);
+        switch (kind) {
+          case "event":
+          case "property":
+          case "ref":
+            return [];
+          case "boolean":
+            return entry && isSerializableAttributeName(name) ? [name] : [];
+          case "class":
+            return [renderAttribute("class", entry)];
+          case "data": {
+            const attributes = renderDataAttributes(entry);
+            return attributes === "" ? [] : [attributes];
+          }
+          case "properties": {
+            const attributes = renderSpreadAttributes(entry, ancestors);
+            return attributes === "" ? [] : [attributes];
+          }
+          case "attr":
+            return isSerializableAttributeName(name) ? [renderAttribute(name, entry)] : [];
+        }
+      })
+      .join(" ");
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function isSafeDynamicKey(key: string): boolean {
+  return !forbiddenDynamicKeys.has(key);
+}
+
+function isValidAttributeName(name: string): boolean {
+  if (name.length === 0) return false;
+  for (const character of name) {
+    const codePoint = character.codePointAt(0)!;
+    if (
+      codePoint <= 0x20 ||
+      (codePoint >= 0x7f && codePoint <= 0x9f) ||
+      forbiddenAttributeNameCharacters.has(character)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isSerializableAttributeName(name: string): boolean {
+  return isValidAttributeName(name) && !/^on/i.test(name);
+}
+
+function renderAttribute(name: string, value: unknown): string {
+  return value === undefined ? name : `${name}="${renderToEscapedString(value, "")}"`;
 }

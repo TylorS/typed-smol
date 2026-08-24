@@ -4,19 +4,13 @@ import * as Context from "effect/Context";
 import { RefArray, RefSubject } from "@typed/fx";
 import * as Domain from "./domain";
 
-/* #region Services */
-
 export class CreateTodo extends Context.Service<
   CreateTodo,
   (text: string) => Effect.Effect<Domain.Todo>
 >()("CreateTodo") {
-  static override readonly call = (text: string) =>
+  static readonly call = (text: string) =>
     Effect.flatMap(CreateTodo, (createTodo) => createTodo(text));
 }
-
-/* #endregion */
-
-/* #region Model */
 
 export class TodoList extends RefSubject.Service<TodoList, Domain.TodoList>()("TodoList") {}
 
@@ -49,10 +43,6 @@ export const AllAreCompleted: RefSubject.Computed<boolean, never, TodoList> = Re
   TodoList,
   Domain.allAreCompleted,
 );
-
-/* #endregion */
-
-/* #region Intent */
 
 export const createTodo: Effect.Effect<
   Option.Option<Domain.Todo>,
@@ -88,5 +78,3 @@ export const clearCompletedTodos: Effect.Effect<Domain.TodoList, never, TodoList
 
 export const toggleAllCompleted: Effect.Effect<Domain.TodoList, never, TodoList> =
   RefSubject.update(TodoList, Domain.toggleAllCompleted);
-
-/* #endregion */

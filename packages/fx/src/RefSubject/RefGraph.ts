@@ -488,21 +488,20 @@ export const neighborsDirected: {
   (
     nodeIndex: Graph.NodeIndex,
     direction: Graph.Direction,
-  ): <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>,
+  ): <N, E, Err, R>(
+    ref: RefGraph<N, E, "directed", Err, R>,
   ) => RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>;
-  <N, E, T extends Graph.Kind, Err, R>(
-    ref: RefGraph<N, E, T, Err, R>,
+  <N, E, Err, R>(
+    ref: RefGraph<N, E, "directed", Err, R>,
     nodeIndex: Graph.NodeIndex,
     direction: Graph.Direction,
   ): RefSubject.Computed<Array<Graph.NodeIndex>, Err, R>;
 } = dual(3, function neighborsDirected<
   N,
   E,
-  T extends Graph.Kind,
   Err,
   R,
->(ref: RefGraph<N, E, T, Err, R>, nodeIndex: Graph.NodeIndex, direction: Graph.Direction) {
+>(ref: RefGraph<N, E, "directed", Err, R>, nodeIndex: Graph.NodeIndex, direction: Graph.Direction) {
   return RefSubject.map(ref, Graph.neighborsDirected(nodeIndex, direction));
 });
 
@@ -539,8 +538,8 @@ export const connectedComponents = <N, E, Err, R>(
  * @since 1.18.0
  * @category computed
  */
-export const stronglyConnectedComponents = <N, E, T extends Graph.Kind, Err, R>(
-  ref: RefGraph<N, E, T, Err, R>,
+export const stronglyConnectedComponents = <N, E, Err, R>(
+  ref: RefGraph<N, E, "directed", Err, R>,
 ): RefSubject.Computed<Array<Array<Graph.NodeIndex>>, Err, R> =>
   RefSubject.map(ref, Graph.stronglyConnectedComponents);
 

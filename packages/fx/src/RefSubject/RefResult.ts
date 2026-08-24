@@ -19,10 +19,10 @@ import * as RefSubject from "./RefSubject.js";
  */
 export interface RefResult<
   in out A,
-  in out E,
+  in out ResultE,
   in out Err = never,
   out R = never,
-> extends RefSubject.RefSubject<Result.Result<A, E>, Err, R> {}
+> extends RefSubject.RefSubject<Result.Result<A, ResultE>, Err, R> {}
 
 /**
  * Creates a new `RefResult` from a Result, `Effect`, or `Fx`.
@@ -42,14 +42,14 @@ export interface RefResult<
  * @since 1.18.0
  * @category constructors
  */
-export function make<A, E, Err = never, R = never>(
+export function make<A, ResultE, Err = never, R = never>(
   initial:
-    | Result.Result<A, E>
-    | Effect.Effect<Result.Result<A, E>, Err, R>
-    | Fx.Fx<Result.Result<A, E>, Err, R>,
+    | Result.Result<A, ResultE>
+    | Effect.Effect<Result.Result<A, ResultE>, Err, R>
+    | Fx.Fx<Result.Result<A, ResultE>, Err, R>,
   successEq: Equivalence<A> = Equivalence_.strictEqual(),
-  failureEq: Equivalence<E> = Equivalence_.strictEqual(),
-): Effect.Effect<RefResult<A, E, Err, R>, never, R | Scope.Scope> {
+  failureEq: Equivalence<ResultE> = Equivalence_.strictEqual(),
+): Effect.Effect<RefResult<A, ResultE, Err, R>, never, R | Scope.Scope> {
   return RefSubject.make(initial, { eq: Result.makeEquivalence(successEq, failureEq) });
 }
 
@@ -59,9 +59,16 @@ export function make<A, E, Err = never, R = never>(
  * @category combinators
  */
 export const setSuccess: {
-  <A>(value: A): <E, R>(ref: RefResult<A, E, R>) => Effect.Effect<Result.Result<A, E>, E, R>;
-  <A, E, R>(ref: RefResult<A, E, R>, value: A): Effect.Effect<Result.Result<A, E>, E, R>;
-} = dual(2, function setSuccess<A, E, R>(ref: RefResult<A, E, R>, value: A) {
+  <A>(
+    value: A,
+  ): <ResultE, Err, R>(
+    ref: RefResult<A, ResultE, Err, R>,
+  ) => Effect.Effect<Result.Result<A, ResultE>, Err, R>;
+  <A, ResultE, Err, R>(
+    ref: RefResult<A, ResultE, Err, R>,
+    value: A,
+  ): Effect.Effect<Result.Result<A, ResultE>, Err, R>;
+} = dual(2, function setSuccess<A, ResultE, Err, R>(ref: RefResult<A, ResultE, Err, R>, value: A) {
   return RefSubject.set(ref, Result.succeed(value));
 });
 
@@ -71,9 +78,21 @@ export const setSuccess: {
  * @category combinators
  */
 export const setFailure: {
-  <E>(error: E): <A, R>(ref: RefResult<A, E, R>) => Effect.Effect<Result.Result<A, E>, E, R>;
-  <A, E, R>(ref: RefResult<A, E, R>, error: E): Effect.Effect<Result.Result<A, E>, E, R>;
-} = dual(2, function setFailure<A, E, R>(ref: RefResult<A, E, R>, error: E) {
+  <ResultE>(
+    error: ResultE,
+  ): <A, Err, R>(
+    ref: RefResult<A, ResultE, Err, R>,
+  ) => Effect.Effect<Result.Result<A, ResultE>, Err, R>;
+  <A, ResultE, Err, R>(
+    ref: RefResult<A, ResultE, Err, R>,
+    error: ResultE,
+  ): Effect.Effect<Result.Result<A, ResultE>, Err, R>;
+} = dual(2, function setFailure<
+  A,
+  ResultE,
+  Err,
+  R,
+>(ref: RefResult<A, ResultE, Err, R>, error: ResultE) {
   return RefSubject.set(ref, Result.fail(error));
 });
 
@@ -89,12 +108,20 @@ export const setFailure: {
 export const map: {
   <A, B>(
     f: (a: A) => B,
-  ): <E, R>(ref: RefResult<A, E, R>) => RefSubject.Computed<Result.Result<B, E>, E, R>;
-  <A, E, R, B>(
-    ref: RefResult<A, E, R>,
+  ): <ResultE, Err, R>(
+    ref: RefResult<A, ResultE, Err, R>,
+  ) => RefSubject.Computed<Result.Result<B, ResultE>, Err, R>;
+  <A, ResultE, Err, R, B>(
+    ref: RefResult<A, ResultE, Err, R>,
     f: (a: A) => B,
-  ): RefSubject.Computed<Result.Result<B, E>, E, R>;
-} = dual(2, function map<A, E, R, B>(ref: RefResult<A, E, R>, f: (a: A) => B) {
+  ): RefSubject.Computed<Result.Result<B, ResultE>, Err, R>;
+} = dual(2, function map<
+  A,
+  ResultE,
+  Err,
+  R,
+  B,
+>(ref: RefResult<A, ResultE, Err, R>, f: (a: A) => B) {
   return RefSubject.map(ref, (self) => Result.map(self, f));
 });
 
@@ -104,14 +131,22 @@ export const map: {
  * @category computed
  */
 export const mapError: {
-  <E, E2>(
-    f: (e: E) => E2,
-  ): <A, R>(ref: RefResult<A, E, R>) => RefSubject.Computed<Result.Result<A, E2>, E, R>;
-  <A, E, R, E2>(
-    ref: RefResult<A, E, R>,
-    f: (e: E) => E2,
-  ): RefSubject.Computed<Result.Result<A, E2>, E, R>;
-} = dual(2, function mapError<A, E, R, E2>(ref: RefResult<A, E, R>, f: (e: E) => E2) {
+  <ResultE, ResultE2>(
+    f: (e: ResultE) => ResultE2,
+  ): <A, Err, R>(
+    ref: RefResult<A, ResultE, Err, R>,
+  ) => RefSubject.Computed<Result.Result<A, ResultE2>, Err, R>;
+  <A, ResultE, Err, R, ResultE2>(
+    ref: RefResult<A, ResultE, Err, R>,
+    f: (e: ResultE) => ResultE2,
+  ): RefSubject.Computed<Result.Result<A, ResultE2>, Err, R>;
+} = dual(2, function mapError<
+  A,
+  ResultE,
+  Err,
+  R,
+  ResultE2,
+>(ref: RefResult<A, ResultE, Err, R>, f: (e: ResultE) => ResultE2) {
   return RefSubject.map(ref, (self) => Result.mapError(self, f));
 });
 
@@ -121,20 +156,23 @@ export const mapError: {
  * @category computed
  */
 export const flatMap: {
-  <A, B, E2>(
-    f: (a: A) => Result.Result<B, E2>,
-  ): <E, R>(ref: RefResult<A, E, R>) => RefSubject.Computed<Result.Result<B, E | E2>, E, R>;
-  <A, E, R, B, E2>(
-    ref: RefResult<A, E, R>,
-    f: (a: A) => Result.Result<B, E2>,
-  ): RefSubject.Computed<Result.Result<B, E | E2>, E, R>;
+  <A, B, ResultE2>(
+    f: (a: A) => Result.Result<B, ResultE2>,
+  ): <ResultE, Err, R>(
+    ref: RefResult<A, ResultE, Err, R>,
+  ) => RefSubject.Computed<Result.Result<B, ResultE | ResultE2>, Err, R>;
+  <A, ResultE, Err, R, B, ResultE2>(
+    ref: RefResult<A, ResultE, Err, R>,
+    f: (a: A) => Result.Result<B, ResultE2>,
+  ): RefSubject.Computed<Result.Result<B, ResultE | ResultE2>, Err, R>;
 } = dual(2, function flatMap<
   A,
-  E,
+  ResultE,
+  Err,
   R,
   B,
-  E2,
->(ref: RefResult<A, E, R>, f: (a: A) => Result.Result<B, E2>) {
+  ResultE2,
+>(ref: RefResult<A, ResultE, Err, R>, f: (a: A) => Result.Result<B, ResultE2>) {
   return RefSubject.map(ref, (self) => Result.flatMap(self, f));
 });
 
@@ -143,8 +181,8 @@ export const flatMap: {
  * @since 1.18.0
  * @category computed
  */
-export const isSuccess = <A, E, Err, R>(
-  ref: RefResult<A, E, Err, R>,
+export const isSuccess = <A, ResultE, Err, R>(
+  ref: RefResult<A, ResultE, Err, R>,
 ): RefSubject.Computed<boolean, Err, R> => RefSubject.map(ref, Result.isSuccess);
 
 /**
@@ -152,8 +190,8 @@ export const isSuccess = <A, E, Err, R>(
  * @since 1.18.0
  * @category computed
  */
-export const isFailure = <A, E, Err, R>(
-  ref: RefResult<A, E, Err, R>,
+export const isFailure = <A, ResultE, Err, R>(
+  ref: RefResult<A, ResultE, Err, R>,
 ): RefSubject.Computed<boolean, Err, R> => RefSubject.map(ref, Result.isFailure);
 
 /**
@@ -162,24 +200,24 @@ export const isFailure = <A, E, Err, R>(
  * @category computed
  */
 export const match: {
-  <A, E, B>(options: {
+  <A, ResultE, B>(options: {
     readonly onSuccess: (a: A) => B;
-    readonly onFailure: (e: E) => B;
-  }): <R>(ref: RefResult<A, E, R>) => RefSubject.Computed<B, E, R>;
-  <A, E, R, B>(
-    ref: RefResult<A, E, R>,
+    readonly onFailure: (e: ResultE) => B;
+  }): <Err, R>(ref: RefResult<A, ResultE, Err, R>) => RefSubject.Computed<B, Err, R>;
+  <A, ResultE, Err, R, B>(
+    ref: RefResult<A, ResultE, Err, R>,
     options: {
       readonly onSuccess: (a: A) => B;
-      readonly onFailure: (e: E) => B;
+      readonly onFailure: (e: ResultE) => B;
     },
-  ): RefSubject.Computed<B, E, R>;
+  ): RefSubject.Computed<B, Err, R>;
 } = dual(
   2,
-  function match<A, E, R, B>(
-    ref: RefResult<A, E, R>,
+  function match<A, ResultE, Err, R, B>(
+    ref: RefResult<A, ResultE, Err, R>,
     options: {
       readonly onSuccess: (a: A) => B;
-      readonly onFailure: (e: E) => B;
+      readonly onFailure: (e: ResultE) => B;
     },
   ) {
     return RefSubject.map(ref, (self) => Result.match(self, options));
@@ -195,8 +233,8 @@ export const match: {
  * @since 1.18.0
  * @category filtered
  */
-export const getSuccess = <A, E, Err, R>(
-  ref: RefResult<A, E, Err, R>,
+export const getSuccess = <A, ResultE, Err, R>(
+  ref: RefResult<A, ResultE, Err, R>,
 ): RefSubject.Filtered<A, Err, R> => RefSubject.filterMap(ref, Result.getSuccess);
 
 /**
@@ -204,6 +242,6 @@ export const getSuccess = <A, E, Err, R>(
  * @since 1.18.0
  * @category filtered
  */
-export const getFailure = <A, E, Err, R>(
-  ref: RefResult<A, E, Err, R>,
-): RefSubject.Filtered<E, Err, R> => RefSubject.filterMap(ref, Result.getFailure);
+export const getFailure = <A, ResultE, Err, R>(
+  ref: RefResult<A, ResultE, Err, R>,
+): RefSubject.Filtered<ResultE, Err, R> => RefSubject.filterMap(ref, Result.getFailure);

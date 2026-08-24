@@ -13,7 +13,7 @@ export const isNanoId: (value: string) => value is NanoId = Schema.is(NanoId);
 type NanoIdSeed = Uint8Array & { length: 21 };
 
 export const nanoId: Effect.Effect<NanoId, never, RandomValues> = Effect.map(
-  RandomValues.call<NanoIdSeed>(21),
+  RandomValues.call(21),
   (seed: NanoIdSeed): NanoId => NanoId.make(Array.from(seed, numToCharacter).join("")),
 );
 

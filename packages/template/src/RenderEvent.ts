@@ -35,6 +35,9 @@ export type RenderEvent = DomRenderEvent | HtmlRenderEvent;
 export const RenderEventTypeId = Symbol.for("@typed/template/RenderEvent");
 export type RenderEventTypeId = typeof RenderEventTypeId;
 
+/** @internal Renderer-owned transport marker; not for application templates. */
+export const HtmlRenderTransportBrand = Symbol.for("@typed/template/HtmlRenderTransportBrand");
+
 /**
  * A RenderEvent containing DOM nodes.
  *
@@ -110,6 +113,7 @@ export const DomRenderEvent = (content: Rendered): DomRenderEvent => ({
  */
 export interface HtmlRenderEvent {
   readonly [RenderEventTypeId]: "html";
+  readonly [HtmlRenderTransportBrand]: true;
   /**
    * The rendered HTML string.
    */
@@ -123,7 +127,10 @@ export interface HtmlRenderEvent {
 }
 
 /**
- * Creates an `HtmlRenderEvent`.
+ * Creates renderer-owned HTML transport for custom integrations.
+ *
+ * This is not an application sanitization or raw-markup API. Ordinary template
+ * data must not call this constructor; use trusted renderer pipelines instead.
  *
  * @example
  * ```ts
@@ -143,6 +150,7 @@ export interface HtmlRenderEvent {
  */
 export const HtmlRenderEvent = (html: string, last: boolean): HtmlRenderEvent => ({
   [RenderEventTypeId]: "html",
+  [HtmlRenderTransportBrand]: true,
   html,
   last,
   toString: () => html,
@@ -201,5 +209,10 @@ export function isDomRenderEvent(event: unknown): event is DomRenderEvent {
  * @category guards
  */
 export function isHtmlRenderEvent(event: unknown): event is HtmlRenderEvent {
-  return isRenderEvent(event) && event[RenderEventTypeId] === "html";
+  return (
+    isRenderEvent(event) &&
+    event[RenderEventTypeId] === "html" &&
+    hasProperty(event, HtmlRenderTransportBrand) &&
+    event[HtmlRenderTransportBrand] === true
+  );
 }

@@ -23,12 +23,12 @@ export function makeAttributeValueUpdater(element: HTMLElement | SVGElement, att
   let isSet = false;
   const setValue = (value: string | null | undefined) => {
     if (isNullish(value)) {
-      element.removeAttribute(attr.name);
+      element.removeAttributeNS(attr.namespaceURI, attr.localName);
       isSet = false;
     } else {
       attr.value = value;
       if (isSet === false) {
-        element.setAttributeNode(attr);
+        element.setAttributeNodeNS(attr);
         isSet = true;
       }
     }
@@ -58,21 +58,52 @@ export function makeDatasetUpdater(element: HTMLElement | SVGElement) {
   // We do double-bookeeping such that we don't assume we know everything about the dataset
   // Other DOM-based libraries might have additional keys in the dataset, so we need to allow them to exist
   // outside of our control.
-  const previous = { ...element.dataset };
+  const previous = new Map<string, string>();
   return (value: unknown) => {
-    const diff = diffDataSet(previous, value as Record<string, string | undefined>);
-    if (diff) {
-      const { added, removed } = diff;
-      removed.forEach((k) => {
-        delete element.dataset[k];
-        delete previous[k];
-      });
-      added.forEach(([k, v]) => {
-        element.dataset[k] = v;
-        previous[k] = v;
-      });
+    const current = new Map<string, string>();
+    if (isObject(value)) {
+      for (const [key, entry] of Object.entries(value)) {
+        const name = `data-${key}`;
+        if (isSafeDynamicKey(key) && isValidAttributeName(name)) {
+          current.set(name, renderToString(entry, ""));
+        }
+      }
     }
+
+    for (const name of previous.keys()) {
+      if (!current.has(name)) element.removeAttribute(name);
+    }
+    for (const [name, entry] of current) {
+      if (previous.get(name) !== entry || element.getAttribute(name) !== entry) {
+        element.setAttribute(name, entry);
+      }
+    }
+
+    previous.clear();
+    for (const entry of current) previous.set(...entry);
   };
+}
+
+const forbiddenDynamicKeys = new Set(["__proto__", "prototype", "constructor"]);
+const forbiddenAttributeNameCharacters = new Set(['"', "'", "/", ">", "=", "<"]);
+
+function isSafeDynamicKey(key: string): boolean {
+  return !forbiddenDynamicKeys.has(key);
+}
+
+function isValidAttributeName(name: string): boolean {
+  if (name.length === 0) return false;
+  for (const character of name) {
+    const codePoint = character.codePointAt(0)!;
+    if (
+      codePoint <= 0x20 ||
+      (codePoint >= 0x7f && codePoint <= 0x9f) ||
+      forbiddenAttributeNameCharacters.has(character)
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function diffStrings(

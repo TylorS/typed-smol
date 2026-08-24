@@ -24,6 +24,22 @@
 
 Use `@typed/template` when building Effect-based web UIs, when you need SSR + hydration, or when you want type-safe templates and event handlers. For routing, combine with `@typed/router`. For Link and SSR helpers, use `@typed/ui` on top of template.
 
+## HTML security boundary
+
+Static strings in an `html` template are author-owned markup. Ordinary dynamic child strings and wrapped ordinary values render as text; server rendering HTML-escapes them. To compose renderer-owned markup, nest another `html` template instead of passing markup in an ordinary string.
+
+Dynamic `textarea` and `title` values are escaped. Dynamic `script`, `style`, and `xmp` values cannot close their host element, but this breakout defense is not a JavaScript, CSS, or application-content sanitizer. Dynamic spread and data keys that could select events, properties, refs, prototype-sensitive names, or invalid attribute syntax are not serialized by the HTML renderer. `many` keys are encoded into versioned comment-safe markers.
+
+`HtmlRenderEvent` is low-level renderer transport, not an application raw-markup or sanitization API. Ordinary application data should not construct it. The package currently has no application-facing trusted/raw HTML capability.
+
+## Rendering ownership and lifetime
+
+- `parse` returns a fresh AST. The DOM and HTML render layers separately cache their target-specific compiled entries by template-literal identity; a process that uses both targets may parse the same literal once per target.
+- DOM rendering is scoped. Keep the Effect layer returned by `Fx.drainLayer` alive for as long as the mounted template should remain active. Closing that scope removes delegated listeners, interrupts running handler fibers, disposes scheduled part updates, and releases removed keyed children.
+- HTML rendering is a finite snapshot. Reactive interpolation and `many` consume the first value needed for that response; use DOM rendering for a live subscription.
+- `many` keys must be unique within each emitted list; duplicates fail with `Cause.IllegalArgumentError`. A retained key keeps its child scope and receives the new item through its `RefSubject`; removing the key closes that child scope.
+- Hydration adopts a compatible marker range or constructs the template when marker adoption fails. Matching markers do not currently validate all static DOM, so applications must not treat existing hydration DOM as sanitized content.
+
 ## API overview
 
 - **Templates:** `html` tag; **Renderable**; **Template** module.
@@ -33,29 +49,37 @@ Use `@typed/template` when building Effect-based web UIs, when you need SSR + hy
 - **Hydration:** **HydrateContext**, **makeHydrateContext**.
 - **Other:** **Parser**, **Wire**; **HtmlChunk**, **RenderQueue**; subpaths `@typed/template/Render`, `@typed/template/Html`, `@typed/template/HtmlChunk`, etc.
 
+## Package layers
+
+The primary application layer is `@typed/template`, with `@typed/template/Html`, `@typed/template/Render`, `@typed/template/EventHandler`, and `@typed/template/many` as focused supported imports. Prefer the package root unless a focused subpath makes ownership clearer.
+
+Renderer-author and diagnostic machinery is a separate supported beta layer: `EventSource`, `HtmlChunk`, `HydrateContext`, `Parser`, `Renderable`, `RenderEvent`, `RenderQueue`, `RenderTemplate`, `Template`, and `Wire`. These modules expose lower-level ownership and transport contracts and are not necessary for ordinary application templates.
+
+The beta.4 wildcard export remains available unchanged for compatibility, including currently resolvable `internal/*` and other unlisted compiled modules. Those compatibility paths are not a stability promise. Physical `src` and `dist` paths are never supported imports. Published packages contain compiled output, declarations, the manifest, and this README; source files and tests are intentionally excluded. Narrowing the wildcard requires an explicit breaking-API decision.
+
+The release contract pack-installs this artifact and builds a browser consumer from it. The package does not currently declare `sideEffects: false` or promise parser/cache tree-shaking; either claim requires a separate measured release decision.
+
 ## Example
 
 ```ts
-import { Layer } from "effect";
+import { Effect, Layer } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 
 const Counter = Fx.gen(function* () {
   const count = yield* RefSubject.make(0);
-  return html`<div>
+
+  return html`<p>Count: ${count}</p>
     <button onclick=${RefSubject.increment(count)}>Increment</button>
-    <button onclick=${RefSubject.decrement(count)}>Decrement</button>
-    <p>Count: ${count}</p>
-  </div>`;
+    <button onclick=${RefSubject.decrement(count)}>Decrement</button>`;
 });
 
-// Inside Effect.gen(function* () { ... })
-yield *
-  render(Counter, document.body).pipe(
-    Fx.drainLayer,
-    Layer.provide(DomRenderTemplate),
-    Layer.launch,
-  );
+await render(Counter, document.body).pipe(
+  Fx.drainLayer,
+  Layer.provide(DomRenderTemplate),
+  Layer.launch,
+  Effect.runPromise,
+);
 ```
 
 See the [counter example](https://github.com/typed-smol/typed-smol/tree/main/examples/counter) for a full app.

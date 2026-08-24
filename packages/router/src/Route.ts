@@ -1,9 +1,9 @@
 /* eslint-disable no-restricted-syntax */
 import * as Effect from "effect/Effect";
 import { type Pipeable, pipeArguments } from "effect/Pipeable";
-import { singleton } from "effect/Record";
 import * as Schema from "effect/Schema";
-import * as Parser from "effect/SchemaParser";
+import * as SchemaIssue from "effect/SchemaIssue";
+import * as SchemaParser from "effect/SchemaParser";
 import * as Transformation from "effect/SchemaTransformation";
 import type { Simplify } from "effect/Types";
 import * as AST from "./AST.js";
@@ -45,7 +45,8 @@ export function make<
   const P extends string,
   S extends Schema.Codec<any, Path.Params<P>, any, any> = Schema.Codec<Path.Params<P>>,
 >(ast: AST.RouteAst): Route<P, S> {
-  const getParts = once(() => getPathAst(ast));
+  Path.assertUniqueDecodedRouteParamNames(ast);
+  const getParts = once(() => Path.flattenRouteAst(ast));
   const path = once(() => Path.join(getParts()) as P);
   const paramsSchema = once(() => getParamsSchema(ast) as S);
   const pathSchema = once(() => getPathSchema(ast) as Schema.Codec<Path.PathParams<P>>);
@@ -83,124 +84,110 @@ function once<T>(fn: () => T): () => T {
   };
 }
 
-function getPathAst(ast: AST.RouteAst): ReadonlyArray<AST.PathAst> {
-  switch (ast.type) {
-    case "path":
-      return [ast.path];
-    case "transform":
-      return getPathAst(ast.from);
-    case "join": {
-      const result: Array<AST.PathAst> = [];
-      for (let i = 0; i < ast.parts.length; i++) {
-        if (i > 0) {
-          result.push(AST.slash());
-        }
-        result.push(...getPathAst(ast.parts[i]));
-      }
-      return result;
-    }
-  }
-}
-
 function getParamsSchema(ast: AST.RouteAst): Schema.Top {
+  const parts = Path.flattenRouteAst(ast);
   switch (ast.type) {
     case "path": {
-      const { paramsSchema } = Path.getSchemas(getPathAst(ast));
-      return paramsSchema;
+      return makeFlatParamsSchema(parts, true, true);
     }
     case "transform": {
-      const { paramsSchema } = Path.getSchemas(getPathAst(ast.from));
-      return paramsSchema.pipe(Schema.decodeTo(ast.to, ast.transformation));
+      return getParamsSchema(ast.from).pipe(Schema.decodeTo(ast.to, ast.transformation));
     }
     case "join": {
-      const parts = ast.parts.map((part) => Path.getSchemaFields(getPathAst(part)));
-      const requiredFields: Array<[string, Schema.Top]> = [];
-      const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];
-      const queryParams: Array<
-        [
-          string,
-          {
-            readonly requiredFields: Array<[string, Schema.Top]>;
-            readonly optionalFields: Array<[Schema.Record.Key, Schema.Top]>;
-          },
-        ]
-      > = [];
-
-      for (const part of parts) {
-        requiredFields.push(...part.requiredFields);
-        optionalFields.push(...part.optionalFields);
-        queryParams.push(...part.queryParams);
-      }
-
-      const pathFields = Object.fromEntries(requiredFields);
-      const queryFields = Object.fromEntries(
-        queryParams.map(([name, { optionalFields, requiredFields }]) => [
-          name,
-          Schema.StructWithRest(
-            Schema.Struct(Object.fromEntries(requiredFields)),
-            optionalFields.map(([key, value]) => Schema.Record(key, value)),
-          ),
-        ]),
+      const encoded = makeFlatParamsSchema(parts, true, true);
+      const childParts = ast.parts.map((part) => ({
+        names: new Set(Path.flattenRouteAst(part).flatMap(Path.getDecodedParamNames)),
+        schema: getParamsSchema(part),
+      }));
+      return encoded.pipe(
+        Schema.decodeTo(
+          Schema.Unknown,
+          Transformation.transformOrFail<unknown, unknown, unknown, unknown>({
+            decode: (input, options) => {
+              return Effect.forEach(childParts, ({ names, schema }) =>
+                SchemaParser.decodeEffect(schema)(projectRecord(input, names), options),
+              ).pipe(Effect.flatMap((values) => mergeRecords(values, options)));
+            },
+            encode: (input, options) => {
+              const childOptions = { ...options, onExcessProperty: "ignore" as const };
+              return Effect.forEach(childParts, ({ names, schema }) =>
+                SchemaParser.encodeUnknownEffect(schema)(input, childOptions).pipe(
+                  Effect.map((encoded) => projectRecord(encoded, names)),
+                ),
+              ).pipe(Effect.flatMap((values) => mergeRecords(values, options)));
+            },
+          }),
+        ),
       );
-
-      const paramsSchema = Schema.StructWithRest(
-        Schema.Struct({ ...pathFields, ...queryFields }),
-        optionalFields.map(([key, value]) => Schema.Record(key, value)),
-      );
-
-      return paramsSchema;
     }
   }
 }
 
 function getPathSchema(ast: AST.RouteAst): Schema.Top {
-  if (ast.type !== "join") return Path.getSchemas(getPathAst(ast)).pathSchema;
-
-  const parts = ast.parts.map((part) => Path.getSchemaFields(getPathAst(part)));
-  const requiredFields: Array<[string, Schema.Top]> = [];
-  const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];
-
-  for (const part of parts) {
-    requiredFields.push(...part.requiredFields);
-    optionalFields.push(...part.optionalFields);
-  }
-
-  const pathFields = Object.fromEntries(requiredFields);
-  return Schema.StructWithRest(
-    Schema.Struct(pathFields),
-    optionalFields.map(([key, value]) => Schema.Record(key, value)),
-  );
+  return makeFlatParamsSchema(Path.flattenRouteAst(ast), true, false);
 }
 
 function getQuerySchema(ast: AST.RouteAst): Schema.Top {
-  if (ast.type !== "join") return Path.getSchemas(getPathAst(ast)).querySchema;
+  return makeFlatParamsSchema(Path.flattenRouteAst(ast), false, true);
+}
 
-  const parts = ast.parts.map((part) => Path.getSchemaFields(getPathAst(part)));
-  const queryParams: Array<
-    [
-      string,
-      {
-        readonly requiredFields: Array<[string, Schema.Top]>;
-        readonly optionalFields: Array<[Schema.Record.Key, Schema.Top]>;
-      },
-    ]
-  > = [];
+function makeFlatParamsSchema(
+  parts: ReadonlyArray<AST.PathAst>,
+  includePath: boolean,
+  includeQuery: boolean,
+): Schema.Top {
+  const fields = Path.getSchemaFields(parts);
+  const requiredFields: Array<[string, Schema.Top]> = includePath ? [...fields.requiredFields] : [];
+  const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = includePath
+    ? [...fields.optionalFields]
+    : [];
 
-  for (const part of parts) {
-    queryParams.push(...part.queryParams);
+  if (includeQuery) {
+    for (const [, query] of fields.queryParams) {
+      requiredFields.push(...query.requiredFields);
+      optionalFields.push(...query.optionalFields);
+    }
   }
 
-  const queryFields = Object.fromEntries(
-    queryParams.map(([name, { optionalFields, requiredFields }]) => [
-      name,
-      Schema.StructWithRest(
-        Schema.Struct(Object.fromEntries(requiredFields)),
-        optionalFields.map(([key, value]) => Schema.Record(key, value)),
-      ),
-    ]),
-  );
+  return Path.schemaFromFields({ requiredFields, optionalFields });
+}
 
-  return Schema.Struct(queryFields);
+function mergeRecords(
+  values: ReadonlyArray<unknown>,
+  options: Parameters<typeof SchemaParser.decodeUnknownEffect>[1],
+): Effect.Effect<Record<PropertyKey, unknown>, SchemaIssue.Issue> {
+  const output: Record<PropertyKey, unknown> = {};
+  const keys = new Set<PropertyKey>();
+  for (const value of values) {
+    if (typeof value === "object" && value !== null) {
+      for (const key of Reflect.ownKeys(value)) {
+        if (!Object.prototype.propertyIsEnumerable.call(value, key)) continue;
+        if (keys.has(key)) {
+          return Effect.fail(
+            new SchemaIssue.InvalidValue(
+              { message: `Duplicate decoded route parameter: ${String(key)}` },
+              values,
+              options,
+            ),
+          );
+        }
+        keys.add(key);
+        output[key] = (value as Record<PropertyKey, unknown>)[key];
+      }
+    }
+  }
+  return Effect.succeed(output);
+}
+
+function projectRecord(input: unknown, names: ReadonlySet<string>): Record<PropertyKey, unknown> {
+  const output: Record<PropertyKey, unknown> = {};
+  if (typeof input !== "object" || input === null) return output;
+  for (const name of names) {
+    if (Object.prototype.propertyIsEnumerable.call(input, name)) {
+      output[name] = (input as Record<PropertyKey, unknown>)[name];
+    }
+  }
+  return output;
 }
 
 export const Parse = <const P extends string>(path: P): Route<Path.Join<Path.ParseAsts<P>>> => {
@@ -234,32 +221,21 @@ export const ParamWithSchema = <
     S["EncodingServices"]
   >
 > => {
-  const decode = Parser.decodeEffect(schema);
-  const encode = Parser.encodeEffect(schema);
-
+  const paramsSchema = Schema.Struct({ [paramName]: schema });
   return make(
-    AST.transform(
-      AST.path(AST.parameter(paramName)),
-      Schema.Struct(singleton(paramName, schema.Type)),
-      Transformation.transformOrFail({
-        decode: (input: Record<P, S["Encoded"]>) =>
-          Effect.map(decode(input[paramName]), (decoded) => singleton(paramName, decoded)),
-        encode: (output: Record<P, S["Type"]>) =>
-          Effect.map(encode(output[paramName]), (encoded) => singleton(paramName, encoded)),
-      }),
-    ),
+    AST.transform(AST.path(AST.parameter(paramName)), paramsSchema, Transformation.passthrough()),
   );
 };
 
 export const Number = <const P extends string>(
   paramName: P,
 ): Route<`/:${P}`, Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>> =>
-  ParamWithSchema(paramName, Schema.NumberFromString);
+  ParamWithSchema(paramName, Schema.FiniteFromString);
 
 export const Int = <const P extends string>(
   paramName: P,
 ): Route<`/:${P}`, Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>> =>
-  ParamWithSchema(paramName, Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)));
+  ParamWithSchema(paramName, Schema.FiniteFromString.pipe(Schema.check(Schema.isInt())));
 
 export type Join<Routes extends ReadonlyArray<Route<any, any>>> = [
   Route<
@@ -293,15 +269,13 @@ const removeSlash = (ast: AST.RouteAst): ReadonlyArray<AST.RouteAst> => {
 
 export const Join = <const Routes extends AnyRoutes>(
   ...routes: Routes
-): Join<FlattenRoutes<Routes>> =>
-  make(
-    AST.join(
-      routes.flatMap((route) => {
-        if (Array.isArray(route)) return route.flatMap(removeSlash);
-        return removeSlash((route as Route<any, any>).ast);
-      }),
-    ),
-  );
+): Join<FlattenRoutes<Routes>> => {
+  const parts = routes.flatMap((route) => {
+    if (Array.isArray(route)) return route.flatMap(removeSlash);
+    return removeSlash((route as Route<any, any>).ast);
+  });
+  return make(AST.join(parts));
+};
 
 type UnionToIntersection<T> = (T extends any ? (x: T) => any : never) extends (x: infer R) => any
   ? R

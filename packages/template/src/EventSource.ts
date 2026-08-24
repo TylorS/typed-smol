@@ -59,7 +59,18 @@ export interface EventSource {
   readonly setup: (rendered: Rendered, scope: Scope.Scope) => Effect.Effect<void>;
 }
 
-type Entry = readonly [Element, Handler<any>];
+type Entry = {
+  readonly element: Element;
+  readonly event: EventName;
+  readonly handler: Handler<any>;
+  readonly attachments: Set<Disposable>;
+};
+
+type Mount = {
+  readonly elements: ReadonlyArray<Element>;
+  readonly run: Run;
+  readonly attachments: Map<Entry, Disposable>;
+};
 type Run = <E, A>(effect: Effect.Effect<A, E>) => Fiber.Fiber<A, E>;
 
 const disposable = (f: () => void): Disposable => ({ [Symbol.dispose]: f });
@@ -94,81 +105,92 @@ const dispose = (d: Disposable): void => d[Symbol.dispose]();
  * @category constructors
  */
 export function makeEventSource(): EventSource {
-  const listeners = new Map<EventName, readonly [normal: Set<Entry>, once: Set<Entry>]>();
+  const listeners = new Map<EventName, Set<Entry>>();
+  const mounts = new Set<Mount>();
+
+  function removeEntry(entry: Entry) {
+    const entries = listeners.get(entry.event);
+    entries?.delete(entry);
+    if (entries?.size === 0) listeners.delete(entry.event);
+    for (const attachment of entry.attachments) dispose(attachment);
+    entry.attachments.clear();
+    for (const mount of mounts) mount.attachments.delete(entry);
+  }
+
+  function attachEntry(entry: Entry, mount: Mount): void {
+    const disposables: Array<Disposable> = [];
+    const { element: target, event, handler: eventHandler } = entry;
+
+    for (const element of mount.elements) {
+      const listener = (ev: Event) => {
+        if (!listeners.get(event)?.has(entry)) return;
+        const match = ev.target === target || target.contains(ev.target as Node);
+        if (!match) return;
+        if (eventHandler.options?.once === true) removeEntry(entry);
+        mount.run(eventHandler.handler(proxyCurrentTarget(ev, target)));
+      };
+      const options = eventHandler.options;
+      element.addEventListener(event, listener, {
+        capture: options?.capture,
+        passive: options?.passive,
+        signal: options?.signal,
+      });
+      disposables.push(
+        disposable(() => element.removeEventListener(event, listener, options?.capture)),
+      );
+    }
+
+    const attachment = disposable(() => disposables.forEach(dispose));
+    entry.attachments.add(attachment);
+    mount.attachments.set(entry, attachment);
+  }
 
   function addEventListener(
     element: EventTarget,
     event: EventName,
     handler: Handler<any>,
   ): Disposable {
-    const sets = listeners.get(event);
-    const entry: Entry = [element as Element, handler];
-    const isOnce = handler.options?.once === true;
-    const normal: Set<Entry> = sets?.[0] ?? new Set<Entry>();
-    const once: Set<Entry> = sets?.[1] ?? new Set<Entry>();
-    if (sets === undefined) {
-      listeners.set(event, [normal, once]);
-    }
-    if (isOnce) {
-      once.add(entry);
-      return disposable(() => once.delete(entry));
-    } else {
-      normal.add(entry);
-      return disposable(() => normal.delete(entry));
-    }
-  }
-
-  function setupListeners(element: Element, run: Run) {
-    const disposables: Array<Disposable> = [];
-
-    for (const [event, sets] of listeners) {
-      for (const handlers of sets) {
-        if (handlers.size === 0) continue;
-        const listener = (ev: Event) =>
-          run(
-            Effect.forEach(handlers, ([el, { handler }]) => {
-              const match = ev.target === el || el.contains(ev.target as Node);
-              return match ? handler(proxyCurrentTarget(ev, el)) : Effect.void;
-            }),
-          );
-        element.addEventListener(event, listener, getDerivedAddEventListenerOptions(handlers));
-        disposables.push(disposable(() => element.removeEventListener(event, listener)));
-      }
-    }
-
-    return disposables;
+    const entries = listeners.get(event) ?? new Set<Entry>();
+    const entry: Entry = {
+      element: element as Element,
+      event,
+      handler,
+      attachments: new Set(),
+    };
+    if (!listeners.has(event)) listeners.set(event, entries);
+    entries.add(entry);
+    for (const mount of mounts) attachEntry(entry, mount);
+    return disposable(() => removeEntry(entry));
   }
 
   function setup(rendered: Rendered, scope: Scope.Scope) {
-    if (listeners.size === 0) return Effect.void;
-
     const elements = getElements(rendered);
     if (elements.length === 0) return Effect.void;
 
-    const disposables: Array<Disposable> = [];
-    const fibers = new Map<symbol, Fiber.Fiber<any, any>>();
+    const fibers = new Set<Fiber.Fiber<any, any>>();
     const run: Run = <E, A>(effect: Effect.Effect<A, E>) => {
-      const id = Symbol();
-      const fiber = Effect.runFork(
-        Effect.onExit(effect, () => Effect.sync(() => fibers.delete(id))),
-      );
-      fibers.set(id, fiber);
+      const fiber = Effect.runFork(effect);
+      fibers.add(fiber);
+      fiber.addObserver(() => fibers.delete(fiber));
       return fiber;
     };
 
-    if (listeners.size > 0) {
-      for (const element of elements) {
-        // eslint-disable-next-line no-restricted-syntax
-        disposables.push(...setupListeners(element, run));
-      }
+    const mount: Mount = { elements, run, attachments: new Map() };
+    mounts.add(mount);
+    for (const entries of listeners.values()) {
+      for (const entry of entries) attachEntry(entry, mount);
     }
 
     return Scope.addFinalizer(
       scope,
       Effect.suspend(() => {
-        disposables.forEach(dispose);
+        mounts.delete(mount);
+        for (const attachment of mount.attachments.values()) {
+          dispose(attachment);
+        }
+        mount.attachments.clear();
         if (fibers.size === 0) return Effect.void;
-        return Fiber.interruptAll(fibers.values());
+        return Fiber.interruptAll(fibers);
       }),
     );
   }
@@ -188,15 +210,4 @@ function proxyCurrentTarget<E extends Event>(event: E, currentTarget: Element): 
       return value;
     },
   });
-}
-
-function getDerivedAddEventListenerOptions(entries: Set<Entry>): AddEventListenerOptions {
-  let once = true;
-  let passive = true;
-  for (const h of entries) {
-    if (h[1].options?.once !== true) once = false;
-    if (h[1].options?.passive !== true) passive = false;
-    if (!once && !passive) break;
-  }
-  return { once, passive };
 }

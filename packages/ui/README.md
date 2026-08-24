@@ -7,22 +7,23 @@
 ## Capabilities
 
 - **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics (href, target, keyboard, right-click).
-- **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for server-side rendering. Requests are parsed, matched, and the corresponding Fx is rendered to HTML. `handleHttpServerError` adds global middleware for 404/400/500.
+- **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for buffered server-side rendering. `streamingSsrForHttp` uses the same routing pipeline but streams HTML chunks as they are rendered. `handleHttpServerError` adds global middleware for 404/400/500.
 
 ## Dependencies
 
 - `effect`
-- `@effect/platform-node`
 - `@typed/fx`
+- `@typed/id`
 - `@typed/navigation`
 - `@typed/router`
 - `@typed/template`
-- `happy-dom` (dev)
+
+The Node HTTP platform and `happy-dom` are development dependencies used by the integration tests; browser consumers do not install them through `@typed/ui`.
 
 ## API overview
 
 - **Link** — `Link(options)` renders an `<a href="...">` that intercepts same-origin, same-document clicks and calls `Navigation.navigate` instead of a full page load. Options include `href`, `content`, `replace`, and standard anchor props. Requires **Navigation** and **RenderTemplate** in context (e.g. browser router).
-- **SSR:** `ssrForHttp(router, matcher)` — registers route handlers on an Effect **HttpRouter** for server-side rendering; `handleHttpServerError(router)` — global middleware for HTTP server errors.
+- **SSR:** `ssrForHttp(router, matcher)` — registers buffered route handlers on an Effect **HttpRouter**; `streamingSsrForHttp(router, matcher)` — same routing with streamed HTML output; `handleHttpServerError(router)` — global middleware for HTTP server errors.
 
 ## API reference
 
@@ -54,7 +55,9 @@ In addition, `LinkOptions` accepts standard anchor event handlers (e.g. `onclick
 
 ### `ssrForHttp`
 
-Registers route handlers on an Effect **HttpRouter** for server-side rendering. The matcher's routes are compiled and each case is exposed as a GET route; requests are parsed, matched, and the corresponding Fx is rendered to HTML. Requires **Router** and **Scope** to be provided elsewhere; other matcher services remain in the effect requirement.
+Registers route handlers on an Effect **HttpRouter** for server-side rendering. The matcher's routes are compiled and each case is exposed as a GET route; requests are parsed, matched, and the corresponding Fx is rendered to HTML. Rendering is buffered: the complete HTML string is produced before the response begins. Requires **Router** and **Scope** to be provided elsewhere; other matcher services remain in the effect requirement. Matcher and render failures remain in Effect HTTP's request error channel so middleware can handle them.
+
+Path captures are authoritative. If a request supplies the same name in the query string, the matched path value is passed to route decoding. The adapter initializes navigation state from Effect's request URL conversion, including the request host and `x-forwarded-proto`; deployments must only accept forwarding headers behind a trusted proxy.
 
 **Overloads:**
 
@@ -63,16 +66,34 @@ Registers route handlers on an Effect **HttpRouter** for server-side rendering. 
 function ssrForHttp<E, R>(
   router: HttpRouter,
   input: Matcher<RenderEvent, E, R>,
-): Effect.Effect<void, never, Exclude<R, Scope | Router>>;
+): Effect.Effect<
+  void,
+  never,
+  Exclude<R, Scope | Router> | HttpRouter.Request.From<"Error", E | HttpServerError>
+>;
 
 // (matcher)(router) — curried
 function ssrForHttp<E, R>(
   input: Matcher<RenderEvent, E, R>,
-): (router: HttpRouter) => Effect.Effect<void, never, Exclude<R, Scope | Router>>;
+): (
+  router: HttpRouter,
+) => Effect.Effect<
+  void,
+  never,
+  Exclude<R, Scope | Router> | HttpRouter.Request.From<"Error", E | HttpServerError>
+>;
 ```
 
 - **`router`** — Effect `HttpRouter` to attach GET handlers to.
 - **`input`** — A **Matcher** from `@typed/router` whose cases produce `RenderEvent` Fx (e.g. templates). Route path and query params are decoded and passed to the handler; `Scope` and `Router` are provided by the SSR pipeline.
+
+---
+
+### `streamingSsrForHttp`
+
+Same routing and decoding behavior as `ssrForHttp`, but renders with `renderToHtml` and returns `HttpServerResponse.stream` so HTML chunks can be sent before rendering completes. Choose `ssrForHttp` when you need a fully buffered body (for example, middleware that inspects the complete HTML string) and `streamingSsrForHttp` when you want time-to-first-byte improvements.
+
+**Overloads:** identical curried and uncurried shapes to `ssrForHttp`.
 
 ---
 
@@ -86,8 +107,16 @@ Adds global middleware to an **HttpRouter** that catches `HttpServerError` and r
 | `RequestParseError`               | 400    |
 | `InternalError` / `ResponseError` | 500    |
 
+All four responses have empty bodies so request URLs, parse descriptions, service names, upstream response details, and other internal data are not reflected to clients. Non-`HttpServerError` failures are re-failed and remain visible in Effect HTTP's global error channel.
+
 ```ts
-function handleHttpServerError(router: HttpRouter): Effect.Effect<void, never, HttpRouter>;
+function handleHttpServerError(
+  router: HttpRouter,
+): Effect.Effect<
+  void,
+  never,
+  import("effect/unstable/http/HttpRouter").Request<"GlobalError", unknown>
+>;
 ```
 
 Use after registering routes (e.g. after `ssrForHttp`) so unhandled route and parse errors are converted to 404/400/500 instead of failing the server.
@@ -104,4 +133,4 @@ const nav = html`<nav>
 </nav>`;
 ```
 
-For SSR, provide the router and matcher to `ssrForHttp` when setting up the HTTP server; see Effect's `HttpRouter` and the TodoMVC example structure.
+For SSR, provide the router and matcher to `ssrForHttp` or `streamingSsrForHttp` when setting up the HTTP server; see Effect's `HttpRouter` and `examples/fullstack/src/server.ts` for the workspace's server wiring.

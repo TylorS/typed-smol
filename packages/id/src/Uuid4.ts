@@ -14,7 +14,7 @@ export const isUuid4: (value: string) => value is Uuid4 = Schema.is(Uuid4);
 type Uuid4Seed = Uint8Array & { length: 16 };
 
 export const uuid4: Effect.Effect<Uuid4, never, RandomValues> = Effect.map(
-  RandomValues.call<Uuid4Seed>(16),
+  RandomValues.call(16),
   (seed: Uuid4Seed): Uuid4 => {
     // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
     seed[6] = (seed[6] & 0x0f) | 0x40;

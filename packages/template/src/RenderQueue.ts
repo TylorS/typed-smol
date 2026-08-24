@@ -70,10 +70,23 @@ export abstract class RenderQueue implements Disposable {
     this.scheduled = undefined;
 
     while (shouldContinue(deadline) && this.buckets.length > 0) {
-      const [_priority, map] = this.buckets.shift()!;
-      for (const { dispose, task } of map.values()) {
-        task();
-        dispose();
+      const bucket = this.buckets[0];
+      const map = bucket[1];
+      const next = map.entries().next();
+
+      if (next.done) {
+        this.buckets.shift();
+        continue;
+      }
+
+      const [key, { dispose, task }] = next.value;
+      map.delete(key);
+      task();
+      dispose();
+
+      if (map.size === 0) {
+        const index = this.buckets.indexOf(bucket);
+        if (index >= 0) this.buckets.splice(index, 1);
       }
     }
 
@@ -87,7 +100,16 @@ export abstract class RenderQueue implements Disposable {
     }
 
     if (!this.scheduled) {
-      this.scheduled = this.schedule((deadline) => this.runTasks(deadline));
+      let completedSynchronously = false;
+      const scheduled = this.schedule((deadline) => {
+        completedSynchronously = true;
+        this.runTasks(deadline);
+      });
+      if (completedSynchronously) {
+        dispose(scheduled);
+      } else {
+        this.scheduled = scheduled;
+      }
     }
   }
 }
@@ -315,8 +337,8 @@ function insert<A>(
   onRemoved: (task: A) => void,
 ): void {
   const index = binarySearch(buckets, priority);
-  if (index === buckets.length) {
-    buckets.push([priority, new Map([[key, task]])]);
+  if (index === buckets.length || buckets[index][0] !== priority) {
+    buckets.splice(index, 0, [priority, new Map([[key, task]])]);
   } else {
     const map = buckets[index][1];
     const existing = map.get(key);
@@ -329,10 +351,12 @@ function insert<A>(
 
 function remove<A>(buckets: Array<KeyedPriorityBucket<A>>, priority: number, key: unknown): void {
   const index = binarySearch(buckets, priority);
-  if (index === buckets.length) {
+  if (index === buckets.length || buckets[index][0] !== priority) {
     return;
   }
-  buckets[index][1].delete(key);
+  const map = buckets[index][1];
+  map.delete(key);
+  if (map.size === 0) buckets.splice(index, 1);
 }
 
 function binarySearch<A>(buckets: Array<KeyedPriorityBucket<A>>, priority: number): number {

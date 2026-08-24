@@ -1,27 +1,35 @@
 {
   "name": "@typed/async-data",
   "version": "1.0.0-beta.4",
+  "description": "Async data states for Typed applications.",
+  "license": "MIT",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/async-data#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/async-data"
+  },
   "files": [
     "dist",
-    "src"
+    "src",
+    "!dist/**/*.test.*",
+    "!src/**/*.test.*"
   ],
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
+    "test": "vitest run --config vitest.config.ts",
+    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json"
   },
   "dependencies": {
     "effect": "catalog:"

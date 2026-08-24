@@ -1,9 +1,17 @@
 {
   "name": "@typed/template",
   "version": "1.0.0-beta.4",
+  "description": "Typed HTML templates, rendering, and hydration for Typed applications.",
+  "license": "MIT",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/template#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/template"
+  },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "type": "module",
   "exports": {
@@ -11,26 +19,84 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./EventHandler": {
+      "types": "./dist/EventHandler.d.ts",
+      "import": "./dist/EventHandler.js"
+    },
+    "./EventSource": {
+      "types": "./dist/EventSource.d.ts",
+      "import": "./dist/EventSource.js"
+    },
+    "./Html": {
+      "types": "./dist/Html.d.ts",
+      "import": "./dist/Html.js"
+    },
+    "./HtmlChunk": {
+      "types": "./dist/HtmlChunk.d.ts",
+      "import": "./dist/HtmlChunk.js"
+    },
+    "./HydrateContext": {
+      "types": "./dist/HydrateContext.d.ts",
+      "import": "./dist/HydrateContext.js"
+    },
+    "./Parser": {
+      "types": "./dist/Parser.d.ts",
+      "import": "./dist/Parser.js"
+    },
+    "./Render": {
+      "types": "./dist/Render.d.ts",
+      "import": "./dist/Render.js"
+    },
+    "./Renderable": {
+      "types": "./dist/Renderable.d.ts",
+      "import": "./dist/Renderable.js"
+    },
+    "./RenderEvent": {
+      "types": "./dist/RenderEvent.d.ts",
+      "import": "./dist/RenderEvent.js"
+    },
+    "./RenderQueue": {
+      "types": "./dist/RenderQueue.d.ts",
+      "import": "./dist/RenderQueue.js"
+    },
+    "./RenderTemplate": {
+      "types": "./dist/RenderTemplate.d.ts",
+      "import": "./dist/RenderTemplate.js"
+    },
+    "./Template": {
+      "types": "./dist/Template.d.ts",
+      "import": "./dist/Template.js"
+    },
+    "./Wire": {
+      "types": "./dist/Wire.d.ts",
+      "import": "./dist/Wire.js"
+    },
+    "./many": {
+      "types": "./dist/many.d.ts",
+      "import": "./dist/many.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc",
+    "test": "pnpm run test:node && pnpm run test:browser && pnpm run test:types",
+    "test:node": "vitest run --config vitest.config.ts",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json"
   },
   "dependencies": {
     "@typed/fx": "workspace:*",
     "effect": "catalog:",
-    "html5parser": "2.0.2"
+    "html5parser": "3.0.0"
   },
   "devDependencies": {
+    "@vitest/browser-playwright": "catalog:",
     "happy-dom": "catalog:",
+    "playwright": "^1.62.1",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   }
 }

@@ -15,6 +15,7 @@ export abstract class EffectableWithOverride<A, E = never, R = never> extends Ef
   abstract override: Effect.Effect<A, E, R>;
 }
 
+// @effect-diagnostics-next-line floatingEffect:off
 Object.defineProperty(EffectableWithOverride.prototype, EFFECT_EVALUATE_KEY, {
   value: function (this: EffectableWithOverride<unknown, unknown, unknown>) {
     return this.override;

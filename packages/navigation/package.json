@@ -1,9 +1,17 @@
 {
   "name": "@typed/navigation",
   "version": "1.0.0-beta.4",
+  "description": "Navigation state and browser history integration for Typed applications.",
+  "license": "MIT",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/navigation#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/navigation"
+  },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "type": "module",
   "exports": {
@@ -11,17 +19,38 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./Blocking": {
+      "types": "./dist/Blocking.d.ts",
+      "import": "./dist/Blocking.js"
+    },
+    "./Navigation": {
+      "types": "./dist/Navigation.d.ts",
+      "import": "./dist/Navigation.js"
+    },
+    "./_core": {
+      "types": "./dist/_core.d.ts",
+      "import": "./dist/_core.js"
+    },
+    "./fromWindow": {
+      "types": "./dist/fromWindow.d.ts",
+      "import": "./dist/fromWindow.js"
+    },
+    "./memory": {
+      "types": "./dist/memory.d.ts",
+      "import": "./dist/memory.js"
+    },
+    "./model": {
+      "types": "./dist/model.d.ts",
+      "import": "./dist/model.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
+    "test": "vitest run --config vitest.config.ts",
+    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json"
   },
   "dependencies": {
     "@typed/fx": "workspace:*",

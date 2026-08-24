@@ -75,9 +75,9 @@ export type Services<T> = Sink.Services<T>;
  * @since 1.0.0
  * @category constructors
  */
-export function make<A, E = never, R = never, R2 = never>(
+export function make<A, E = never, R = never, R2 = R>(
   onFailure: (cause: Cause.Cause<E>) => Effect<unknown, never, R>,
-  onSuccess: (value: A) => Effect<unknown, never, R>,
+  onSuccess: (value: A) => Effect<unknown, never, R2>,
 ): Sink<A, E, R | R2> {
   return {
     onSuccess,
@@ -132,6 +132,7 @@ export function Service<Self, A, E = never>() {
       static readonly service = service;
 
       static {
+        // @effect-diagnostics-next-line floatingEffect:off
         Object.assign(this, service);
         Object.assign(this.prototype, Object.getPrototypeOf(service));
       }

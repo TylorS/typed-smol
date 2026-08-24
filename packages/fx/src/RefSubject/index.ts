@@ -19,3 +19,4 @@ export * as RefStruct from "./RefStruct.js";
 export * as RefSubject from "./RefSubject.js";
 export * as RefTrie from "./RefTrie.js";
 export * as RefTuple from "./RefTuple.js";
+export * from "./Hydration.js";

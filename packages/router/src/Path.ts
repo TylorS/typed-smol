@@ -1,7 +1,7 @@
 import type { Arg0, TypeLambda1 } from "hkt-core";
 
 import * as Schema from "effect/Schema";
-import type { PathAst } from "./AST.js";
+import type { PathAst, RouteAst } from "./AST.js";
 import * as AST from "./AST.js";
 import type { Parser } from "./Parser.js";
 
@@ -50,7 +50,27 @@ type RegexParser = Parser.Map<
 >;
 
 type OptionalRegexParser = Parser.Optional<RegexParser>;
-type OptionalQuestionMarkParser = Parser.Optional<Parser.Char<"?">>;
+
+type StartsWithQueryParam<
+  Input extends string,
+  HasName extends boolean = false,
+> = Input extends `${infer Head}${infer Tail}`
+  ? Head extends Parser.AlphaNumeric
+    ? StartsWithQueryParam<Tail, true>
+    : Head extends "="
+      ? HasName
+      : false
+  : false;
+
+interface OptionalQuestionMarkParser extends Parser<"?" | undefined> {
+  readonly return: Arg0<this> extends infer Input extends string
+    ? Input extends `?${infer Rest}`
+      ? StartsWithQueryParam<Rest> extends true
+        ? readonly [undefined, Input]
+        : readonly ["?", Rest]
+      : readonly [undefined, Input]
+    : never;
+}
 
 type ParameterNameParser = Parser.Zip<Parser.Char<":">, Parser.TakeWhile1<Parser.AlphaNumeric>>;
 
@@ -384,8 +404,9 @@ type FormatAst<T extends PathAst> = [T] extends [PathAst.Literal]
           ? FormatQueryParamsAst<T["value"]>
           : never;
 
-type FormatParameterAst<T extends PathAst.Parameter> =
-  `:${T["name"]}${T["optional"] extends true ? "?" : ""}`;
+type FormatParameterAst<T extends PathAst.Parameter> = `:${T["name"]}${T["regex"] extends string
+  ? `(${T["regex"]})`
+  : ""}${T["optional"] extends true ? "?" : ""}`;
 type FormatQueryParamsAst<
   T extends ReadonlyArray<PathAst.QueryParam>,
   R extends string = "?",
@@ -407,7 +428,7 @@ function formatAst(ast: PathAst): string {
     case "literal":
       return ast.value;
     case "parameter":
-      return `:${ast.name}`;
+      return `:${ast.name}${ast.regex === undefined ? "" : `(${ast.regex})`}${ast.optional ? "?" : ""}`;
     case "wildcard":
       return "*";
     case "slash":
@@ -482,7 +503,7 @@ function parseParameter(input: string, index: number): Atom | undefined {
   }
 
   let optional: true | undefined = undefined;
-  if (input[i] === "?") {
+  if (input[i] === "?" && !startsWithQueryParam(input, i + 1)) {
     optional = true;
     i++;
   }
@@ -598,9 +619,48 @@ function isAlphaNumeric(char: string): boolean {
   );
 }
 
-/**
- * @internal
- */
+function startsWithQueryParam(input: string, index: number): boolean {
+  const start = index;
+  while (index < input.length && isAlphaNumeric(input[index])) index++;
+  return index > start && input[index] === "=";
+}
+
+export type SchemaField = readonly [string, Schema.Top];
+export type OptionalSchemaField = readonly [Schema.Record.Key, Schema.Top];
+export type SchemaFields = {
+  readonly requiredFields: ReadonlyArray<SchemaField>;
+  readonly optionalFields: ReadonlyArray<OptionalSchemaField>;
+};
+
+export function schemaFromFields({ requiredFields, optionalFields }: SchemaFields): Schema.Top {
+  const required = Schema.Struct(Object.fromEntries(requiredFields));
+  return optionalFields.length === 0
+    ? required
+    : Schema.StructWithRest(
+        required,
+        optionalFields.map(([key, value]) => Schema.Record(key, value)),
+      );
+}
+
+function schemaForParameter(param: PathAst.Parameter): Schema.Top {
+  return param.regex
+    ? Schema.String.pipe(Schema.check(Schema.isPattern(new RegExp(param.regex))))
+    : Schema.String;
+}
+
+export function schemaForQueryValue(
+  ast: PathAst.Literal | PathAst.Parameter | PathAst.Wildcard,
+): Schema.Top {
+  switch (ast.type) {
+    case "literal":
+      return Schema.Literal(ast.value);
+    case "parameter":
+      return schemaForParameter(ast);
+    case "wildcard":
+      return Schema.String;
+  }
+}
+
 export function getSchemaFields<const Parts extends ReadonlyArray<PathAst>>(parts: Parts) {
   const requiredFields: Array<[string, Schema.Top]> = [];
   const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];
@@ -615,9 +675,7 @@ export function getSchemaFields<const Parts extends ReadonlyArray<PathAst>>(part
   > = [];
 
   function addParameter(param: PathAst.Parameter) {
-    const base = param.regex
-      ? Schema.String.pipe(Schema.check(Schema.isPattern(new RegExp(param.regex))))
-      : Schema.String;
+    const base = schemaForParameter(param);
 
     if (param.optional) {
       optionalFields.push([Schema.optionalKey(Schema.Literal(param.name)), Schema.optional(base)]);
@@ -662,24 +720,13 @@ export function getSchemaFields<const Parts extends ReadonlyArray<PathAst>>(part
 
 export function getSchemas<const Parts extends ReadonlyArray<PathAst>>(parts: Parts) {
   const { optionalFields, queryParams, requiredFields } = getSchemaFields(parts);
-  const pathFields = Object.fromEntries(requiredFields);
+  const pathSchema = schemaFromFields({ requiredFields, optionalFields });
   const queryFields = Object.fromEntries(
-    queryParams.map(([name, { optionalFields, requiredFields }]) => [
-      name,
-      Schema.StructWithRest(
-        Schema.Struct(Object.fromEntries(requiredFields)),
-        optionalFields.map(([key, value]) => Schema.Record(key, value)),
-      ),
-    ]),
-  );
-
-  const pathSchema = Schema.StructWithRest(
-    Schema.Struct(pathFields),
-    optionalFields.map(([key, value]) => Schema.Record(key, value)),
+    queryParams.map(([name, fields]) => [name, schemaFromFields(fields)]),
   );
   const querySchema = Schema.Struct(queryFields);
   const paramsSchema = Schema.StructWithRest(
-    Schema.Struct({ ...pathFields, ...queryFields }),
+    Schema.Struct({ ...Object.fromEntries(requiredFields), ...queryFields }),
     optionalFields.map(([key, value]) => Schema.Record(key, value)),
   );
 
@@ -688,4 +735,105 @@ export function getSchemas<const Parts extends ReadonlyArray<PathAst>>(parts: Pa
     querySchema,
     paramsSchema,
   } as const;
+}
+
+export function flattenRouteAst(ast: RouteAst): ReadonlyArray<PathAst> {
+  switch (ast.type) {
+    case "path":
+      return [ast.path];
+    case "transform":
+      return flattenRouteAst(ast.from);
+    case "join": {
+      const result: Array<PathAst> = [];
+      for (let i = 0; i < ast.parts.length; i++) {
+        const part = flattenRouteAst(ast.parts[i]);
+        if (i > 0 && part[0]?.type !== "query-params") {
+          result.push(AST.slash());
+        }
+        result.push(...part);
+      }
+      return result;
+    }
+  }
+}
+
+export function getDecodedParamNames(ast: PathAst): ReadonlyArray<string> {
+  switch (ast.type) {
+    case "parameter":
+      return [ast.name];
+    case "wildcard":
+      return ["*"];
+    case "query-params":
+      return ast.value.flatMap((param) => getDecodedParamNames(param.value));
+    case "literal":
+    case "slash":
+      return [];
+  }
+}
+
+export function assertUniqueDecodedRouteParamNames(ast: RouteAst): void {
+  const names = new Set<string>();
+  for (const part of flattenRouteAst(ast)) {
+    for (const name of getDecodedParamNames(part)) {
+      if (names.has(name)) {
+        throw new TypeError(`Duplicate route parameter name: ${name}`);
+      }
+      names.add(name);
+    }
+  }
+}
+
+export type QueryInputParameter = {
+  readonly inputName: string;
+  readonly outputName?: string;
+  readonly ast: PathAst.Literal | PathAst.Parameter | PathAst.Wildcard;
+};
+
+export function getQueryInputParameters(ast: RouteAst): ReadonlyArray<QueryInputParameter> {
+  const output: Array<QueryInputParameter> = [];
+  const visitPath = (path: PathAst): void => {
+    if (path.type !== "query-params") return;
+    for (const parameter of path.value) {
+      const value = parameter.value;
+      if (value.type === "literal") {
+        output.push({ inputName: parameter.name, ast: value });
+      } else if (value.type === "parameter") {
+        output.push({ inputName: parameter.name, outputName: value.name, ast: value });
+      } else if (value.type === "wildcard") {
+        output.push({ inputName: parameter.name, outputName: "*", ast: value });
+      }
+    }
+  };
+  const visitRoute = (route: RouteAst): void => {
+    switch (route.type) {
+      case "path":
+        visitPath(route.path);
+        break;
+      case "transform":
+        visitRoute(route.from);
+        break;
+      case "join":
+        route.parts.forEach(visitRoute);
+        break;
+    }
+  };
+  visitRoute(ast);
+  return output;
+}
+
+export function getQueryInputSchema(ast: RouteAst): Schema.Top {
+  const requiredFields: Array<[string, Schema.Top]> = [];
+  const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];
+  for (const parameter of getQueryInputParameters(ast)) {
+    const schema = schemaForQueryValue(parameter.ast);
+    if (parameter.ast.type === "parameter" && parameter.ast.optional) {
+      optionalFields.push([
+        Schema.optionalKey(Schema.Literal(parameter.inputName)),
+        Schema.optional(schema),
+      ]);
+    } else {
+      requiredFields.push([parameter.inputName, schema]);
+    }
+  }
+  return schemaFromFields({ requiredFields, optionalFields });
 }

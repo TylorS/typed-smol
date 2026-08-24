@@ -4,12 +4,8 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import { RefSubject } from "@typed/fx";
 import { getUrl, makeNavigationCore, type NavigationState } from "./_core.js";
-import type {
-  BeforeNavigationEvent,
-  Destination,
-  NavigationError,
-  ProposedDestination,
-} from "./model.js";
+import type { BeforeNavigationEvent, Destination, ProposedDestination } from "./model.js";
+import { NavigationError } from "./model.js";
 import { Navigation } from "./Navigation.js";
 
 export interface MemoryOptions {
@@ -63,22 +59,22 @@ export const memory = (options: MemoryOptions) =>
         limitEntries(maxEntries),
       );
 
-      return yield* makeNavigationCore(
-        origin,
-        base,
-        state,
+      const commit =
         options.commit ??
-          ((before, runHandlers) =>
-            Effect.provideService(defaultCommit(before, runHandlers), Ids, ids)),
-      );
+        ((
+          before: BeforeNavigationEvent,
+          runHandlers: (destination: Destination) => Effect.Effect<void>,
+        ) => Effect.provideService(defaultCommit(before, runHandlers), Ids, ids));
+
+      return yield* makeNavigationCore(origin, base, state, commit);
     }),
   );
 
 export const initialMemory = (options: InitialMemoryOptions) =>
   Layer.unwrap(
     Effect.gen(function* () {
-      const key = yield* Ids.uuid7;
-      const id = yield* Ids.uuid7;
+      const key = yield* navigationId;
+      const id = yield* navigationId;
       const origin = options.origin ?? "http://localhost";
       const url = getUrl(origin, options.url);
       const entry = proposedToDestination(
@@ -105,12 +101,20 @@ const defaultCommit = (
   runHandlers: (destination: Destination) => Effect.Effect<void>,
 ) =>
   Effect.gen(function* () {
-    const key = yield* Ids.uuid7;
-    const id = yield* Ids.uuid7;
+    if (before.type === "traverse") {
+      const destination = before.to as Destination;
+      yield* runHandlers(destination);
+      return destination;
+    }
+
+    const key = yield* navigationId;
+    const id = yield* navigationId;
     const destination = proposedToDestination(before.to, key, id);
     yield* runHandlers(destination);
     return destination;
   });
+
+const navigationId = Ids.uuid7.pipe(Effect.mapError((error) => new NavigationError({ error })));
 
 const proposedToDestination = (
   before: ProposedDestination,

@@ -1,12 +1,7 @@
-import type { Brand } from "effect/Brand";
 import * as Schema from "effect/Schema";
 
-export type { Brand };
-
-/* #region Model */
-
 export const TodoId = Schema.String.pipe(Schema.brand("TodoId"));
-export type TodoId = Schema.Schema.Type<typeof TodoId>;
+export type TodoId = typeof TodoId.Type;
 
 export const Todo = Schema.Struct({
   id: TodoId,
@@ -14,23 +9,15 @@ export const Todo = Schema.Struct({
   completed: Schema.Boolean,
   timestamp: Schema.DateTimeUtcFromString,
 });
-export type TodoJson = Schema.Codec.Encoded<typeof Todo>;
-export type Todo = Schema.Schema.Type<typeof Todo>;
+export type TodoJson = typeof Todo.Encoded;
+export type Todo = typeof Todo.Type;
 
 export const TodoList = Schema.Array(Todo);
-export type TodoListJson = Schema.Codec.Encoded<typeof TodoList>;
-export type TodoList = Schema.Schema.Type<typeof TodoList>;
+export type TodoListJson = typeof TodoList.Encoded;
+export type TodoList = typeof TodoList.Type;
 
-export const FilterState = Schema.Union([
-  Schema.Literal("all"),
-  Schema.Literal("active"),
-  Schema.Literal("completed"),
-]);
-export type FilterState = Schema.Schema.Type<typeof FilterState>;
-
-/* #endregion */
-
-/* #region Services */
+export const FilterState = Schema.Literals(["all", "active", "completed"]);
+export type FilterState = typeof FilterState.Type;
 
 export function updateTodo(list: TodoList, id: TodoId, f: (todo: Todo) => Todo): TodoList {
   return list.map((todo) => (todo.id === id ? f(todo) : todo));
@@ -99,5 +86,3 @@ export function filterTodoList({ list, state }: { list: TodoList; state: FilterS
 export function updateText(text: string) {
   return (todo: Todo): Todo => ({ ...todo, text });
 }
-
-/* #endregion */

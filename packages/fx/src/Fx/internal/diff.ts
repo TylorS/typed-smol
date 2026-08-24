@@ -172,20 +172,14 @@ export function* diffIterator<A, B extends PropertyKey>(
   }
 }
 
-const keysMaps = new WeakMap<any, Map<PropertyKey, number>>();
-
 export function getKeyMap<A>(
   a: ReadonlyArray<A>,
   getKey: (a: A) => PropertyKey,
 ): Map<PropertyKey, number> {
-  let keyMap = keysMaps.get(a);
-  if (keyMap === undefined) {
-    keyMap = new Map();
-    keysMaps.set(a, keyMap);
-    const len = a.length;
-    for (let i = 0; i < len; ++i) {
-      keyMap.set(getKey(a[i]), i);
-    }
+  const keyMap = new Map<PropertyKey, number>();
+  const len = a.length;
+  for (let i = 0; i < len; ++i) {
+    keyMap.set(getKey(a[i]), i);
   }
   return keyMap;
 }

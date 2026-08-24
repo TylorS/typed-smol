@@ -23,7 +23,9 @@ export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
   Fx.Services<FX[number]>
 > {
   if (fxs.length === 0) return succeed([] as { readonly [K in keyof FX]: Fx.Success<FX[K]> });
-  if (fxs.length === 1) return fxs[0];
+  if (fxs.length === 1) {
+    return map(fxs[0], (value) => [value] as { readonly [K in keyof FX]: Fx.Success<FX[K]> });
+  }
 
   type Result = { readonly [K in keyof FX]: Fx.Success<FX[K]> };
   return make(
@@ -43,7 +45,7 @@ export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
                 result[i] = value;
                 filled.add(i);
                 if (filled.size === len) {
-                  yield* sink.onSuccess(result as Result);
+                  yield* sink.onSuccess(result.slice(0) as Result);
                 }
               }),
             ),

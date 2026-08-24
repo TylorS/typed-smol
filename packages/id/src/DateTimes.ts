@@ -1,4 +1,5 @@
 import * as Clock from "effect/Clock";
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Context from "effect/Context";
@@ -20,7 +21,11 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
       Effect.gen(function* () {
         const clock = yield* Clock.Clock;
         const base = new Date(baseDate);
-        const baseN = BigInt(base.getTime());
+        const baseMillis = base.getTime();
+        if (!Number.isFinite(baseMillis)) {
+          return yield* new Cause.IllegalArgumentError(`Invalid base date: ${String(baseDate)}`);
+        }
+        const baseN = BigInt(baseMillis);
         const startMillis = yield* clock.currentTimeMillis;
         const now = clock.currentTimeMillis.pipe(
           Effect.map((millis) =>

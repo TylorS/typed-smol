@@ -1,4 +1,5 @@
-import type * as Cause from "effect/Cause";
+import * as Cause from "effect/Cause";
+import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
@@ -10,6 +11,7 @@ import { pipeArguments } from "effect/Pipeable";
 import * as Scope from "effect/Scope";
 import * as Context from "effect/Context";
 import type * as Fx from "../Fx/index.js";
+import { fail } from "../Fx/constructors/fail.js";
 import { RingBuffer } from "../Fx/internal/ring-buffer.js";
 import { awaitScopeClose, withExtendedScope } from "../Fx/internal/scope.js";
 import { FxTypeId } from "../Fx/TypeId.js";
@@ -38,7 +40,7 @@ export declare namespace Subject {
   export interface Service<Self, Id extends string, A, E> extends Subject<A, E, Self> {
     readonly id: Id;
     readonly service: Context.Service<Self, Subject<A, E>>;
-    readonly make: (replay?: number) => Layer.Layer<Self, never, Scope.Scope>;
+    readonly make: (replay?: number) => Layer.Layer<Self, Cause.IllegalArgumentError, Scope.Scope>;
   }
 
   export interface Class<Self, Id extends string, A, E> extends Service<Self, Id, A, E> {
@@ -81,6 +83,16 @@ const VARIANCE: Fx.Fx.Variance<any, any, any> = {
   _R: identity,
 };
 
+const MAX_REPLAY_CAPACITY = 0xffff_ffff;
+const INVALID_REPLAY_CAPACITY_MESSAGE =
+  "Replay capacity must be an integer from 0 through 4294967295";
+
+const isReplayCapacity = (capacity: number): boolean =>
+  Number.isInteger(capacity) && capacity >= 0 && capacity <= MAX_REPLAY_CAPACITY;
+
+const invalidReplayCapacity = (): Cause.IllegalArgumentError =>
+  new Cause.IllegalArgumentError(INVALID_REPLAY_CAPACITY_MESSAGE);
+
 export class Share<A, E, R, R2> implements Fx.Fx<A, E, R | R2 | Scope.Scope> {
   readonly [FxTypeId]: Fx.Fx.Variance<A, E, R | R2 | Scope.Scope> = VARIANCE;
 
@@ -102,10 +114,13 @@ export class Share<A, E, R, R2> implements Fx.Fx<A, E, R | R2 | Scope.Scope> {
   }
 
   run<R3>(sink: Sink.Sink<A, E, R3>): Effect.Effect<unknown, never, R | R2 | R3 | Scope.Scope> {
-    return Effect.flatMap(this.initialize(), () =>
-      Effect.onExit(this.i1.run(sink), () =>
-        this._RefCount.decrement() === 0 ? this.interrupt() : Effect.void,
+    return Effect.onExit(
+      Effect.acquireUseRelease(
+        Effect.forkScoped(this.i1.run(sink), { startImmediately: true }),
+        (fiber) => Effect.andThen(this.initialize(), Fiber.join(fiber)),
+        Fiber.interrupt,
       ),
+      () => (this._RefCount.decrement() === 0 ? this.interrupt() : Effect.void),
     );
   }
 
@@ -167,24 +182,39 @@ export function hold<A, E, R>(fx: Fx.Fx<A, E, R>): Fx.Fx<A, E, R | Scope.Scope> 
 /**
  * Replays the last `capacity` values emitted by the Fx to new subscribers.
  *
- * @param capacity - The number of values to buffer and replay.
+ * @param capacity - An integer from 0 through 4,294,967,295. The buffer can retain up to
+ * `capacity` values, so callers own the memory policy for valid capacities. Invalid capacities
+ * fail through the Fx error channel with `Cause.IllegalArgumentError`.
  * @param fx - The source Fx.
  * @returns A shared `Fx` that replays values.
  * @since 1.0.0
  * @category combinators
  */
 export const replay: {
-  (capacity: number): <A, E, R>(fx: Fx.Fx<A, E, R>) => Fx.Fx<A, E, R>;
-  <A, E, R>(fx: Fx.Fx<A, E, R>, capacity: number): Fx.Fx<A, E, R>;
+  (
+    capacity: number,
+  ): <A, E, R>(fx: Fx.Fx<A, E, R>) => Fx.Fx<A, E | Cause.IllegalArgumentError, R | Scope.Scope>;
+  <A, E, R>(
+    fx: Fx.Fx<A, E, R>,
+    capacity: number,
+  ): Fx.Fx<A, E | Cause.IllegalArgumentError, R | Scope.Scope>;
 } = dual(2, function replay<A, E, R>(fx: Fx.Fx<A, E, R>, capacity: number): Fx.Fx<
   A,
-  E,
+  E | Cause.IllegalArgumentError,
   R | Scope.Scope
 > {
+  if (!isReplayCapacity(capacity)) {
+    return fail(invalidReplayCapacity());
+  }
   return new Share(fx, unsafeMake<A, E>(capacity));
 });
 
 const DISCARD = { discard: true } as const;
+
+interface Publication<A, E> {
+  readonly exit: Exit.Exit<A, E>;
+  readonly acknowledgement: Deferred.Deferred<void>;
+}
 
 /**
  * @internal
@@ -193,6 +223,10 @@ export class SubjectImpl<A, E> implements Subject<A, E> {
   readonly [FxTypeId]: Fx.Fx.Variance<A, E, Scope.Scope> = VARIANCE;
   protected sinks: Set<readonly [Sink.Sink<A, E, any>, Context.Context<any>, Scope.Closeable]> =
     new Set();
+  private readonly publications: Array<Publication<A, E>> = [];
+  private publicationIndex = 0;
+  private activePublication: Publication<A, E> | undefined;
+  private activeDrainFiberId: number | null = null;
 
   constructor() {
     this.onFailure = this.onFailure.bind(this);
@@ -245,27 +279,91 @@ export class SubjectImpl<A, E> implements Subject<A, E> {
   readonly subscriberCount: Effect.Effect<number> = Effect.sync(() => this.sinks.size);
 
   protected onEvent(a: A): Effect.Effect<void, never, never> {
-    if (this.sinks.size === 0) return Effect.void;
-    else if (this.sinks.size === 1) {
-      const [sink, ctx] = this.sinks.values().next().value!;
-      return runSinkEvent(sink, ctx, a);
-    } else {
-      return Effect.forEach(this.sinks, ([sink, ctx]) => runSinkEvent(sink, ctx, a), DISCARD);
-    }
+    return this.enqueue(Exit.succeed(a));
   }
 
   protected onCause(cause: Cause.Cause<E>) {
-    if (this.sinks.size === 0) return Effect.void;
-    else if (this.sinks.size === 1) {
-      const [sink, ctx, scope] = this.sinks.values().next().value!;
-      return runSinkCause(sink, ctx, scope, cause);
-    } else {
-      return Effect.forEach(
-        this.sinks,
-        ([sink, ctx, scope]) => runSinkCause(sink, ctx, scope, cause),
-        DISCARD,
+    return this.enqueue(Exit.failCause(cause));
+  }
+
+  private enqueue(exit: Exit.Exit<A, E>): Effect.Effect<void, never, never> {
+    return Effect.withFiber((fiber) =>
+      Effect.suspend(() => {
+        const publication: Publication<A, E> = {
+          exit,
+          acknowledgement: Deferred.makeUnsafe(),
+        };
+        this.publications.push(publication);
+
+        if (this.activeDrainFiberId === fiber.id) {
+          return Effect.void;
+        } else if (this.activeDrainFiberId !== null) {
+          return Deferred.await(publication.acknowledgement);
+        }
+
+        const ownerFiberId = fiber.id;
+        this.activeDrainFiberId = ownerFiberId;
+        return Effect.onExit(this.drain(ownerFiberId), (exit) =>
+          this.clearDrain(ownerFiberId, exit),
+        );
+      }),
+    );
+  }
+
+  private drain(ownerFiberId: number): Effect.Effect<void, never, never> {
+    return Effect.suspend(() => {
+      const publication = this.publications[this.publicationIndex++];
+      if (publication === undefined) {
+        this.publications.length = 0;
+        this.publicationIndex = 0;
+        if (this.activeDrainFiberId === ownerFiberId) {
+          this.activeDrainFiberId = null;
+        }
+        return Effect.void;
+      }
+
+      this.activePublication = publication;
+      const sinks = Array.from(this.sinks);
+      const deliver = Exit.match(publication.exit, {
+        onFailure: (cause) =>
+          Effect.forEach(
+            sinks,
+            ([sink, ctx, scope]) => runSinkCause(sink, ctx, scope, cause),
+            DISCARD,
+          ),
+        onSuccess: (value) =>
+          Effect.forEach(sinks, ([sink, ctx]) => runSinkEvent(sink, ctx, value), DISCARD),
+      });
+
+      return Effect.andThen(
+        deliver,
+        Effect.sync(() => {
+          Deferred.doneUnsafe(publication.acknowledgement, Effect.void);
+          this.activePublication = undefined;
+        }).pipe(Effect.andThen(() => this.drain(ownerFiberId))),
       );
-    }
+    });
+  }
+
+  private clearDrain(ownerFiberId: number, exit: Exit.Exit<void, never>) {
+    return Effect.sync(() => {
+      if (Exit.isSuccess(exit) || this.activeDrainFiberId !== ownerFiberId) {
+        return;
+      }
+
+      const completion = Exit.asVoid(exit);
+      if (this.activePublication !== undefined) {
+        Deferred.doneUnsafe(this.activePublication.acknowledgement, completion);
+      }
+      for (let i = this.publicationIndex; i < this.publications.length; i++) {
+        Deferred.doneUnsafe(this.publications[i]!.acknowledgement, completion);
+      }
+
+      this.publications.length = 0;
+      this.publicationIndex = 0;
+      this.activePublication = undefined;
+      this.activeDrainFiberId = null;
+    });
   }
 }
 
@@ -367,12 +465,16 @@ export class ReplaySubjectImpl<A, E> extends SubjectImpl<A, E> {
 }
 
 /**
- * Creates a `Subject` that replays the last `replay` values. You will need to manually call `interrupt` on the subject to clear resources.
- * @param replay - The number of values to replay.
+ * Creates a `Subject` that replays the last `replay` values. You will need to manually call
+ * `interrupt` on the subject to clear resources.
+ * @param replay - An integer from 0 through 4,294,967,295. The buffer can retain up to
+ * `replay` values, so callers own the memory policy for valid capacities.
  * @returns A `Subject` that replays the last `replay` values.
  */
 export function unsafeMake<A, E = never>(replay: number = 0): Subject<A, E> {
-  replay = Math.max(0, replay);
+  if (!isReplayCapacity(replay)) {
+    throw invalidReplayCapacity();
+  }
 
   if (replay === 0) {
     return new SubjectImpl<A, E>();
@@ -385,12 +487,17 @@ export function unsafeMake<A, E = never>(replay: number = 0): Subject<A, E> {
 
 /**
  * Create a Subject which utilizes a Scope to manage the lifecycle of the subject's resources.
+ * Invalid replay capacities fail with `Cause.IllegalArgumentError`.
  */
 export function make<A, E = never>(
   replay?: number,
-): Effect.Effect<Subject<A, E>, never, Scope.Scope> {
+): Effect.Effect<Subject<A, E>, Cause.IllegalArgumentError, Scope.Scope> {
+  const capacity = replay ?? 0;
+  if (!isReplayCapacity(capacity)) {
+    return Effect.fail(invalidReplayCapacity());
+  }
   return Effect.acquireRelease(
-    Effect.sync(() => unsafeMake(replay)),
+    Effect.sync(() => unsafeMake(capacity)),
     (subject) => subject.interrupt,
   );
 }
@@ -405,11 +512,14 @@ export function Service<Self, A, E = never>() {
       static readonly service = service;
 
       static {
+        // @effect-diagnostics-next-line floatingEffect:off
         Object.assign(this, service);
         Object.assign(this.prototype, Object.getPrototypeOf(service));
       }
 
-      static readonly make = (replay?: number): Layer.Layer<Self, never, Scope.Scope> =>
+      static readonly make = (
+        replay?: number,
+      ): Layer.Layer<Self, Cause.IllegalArgumentError, Scope.Scope> =>
         Layer.effect(service, make<A, E>(replay));
 
       static readonly [FxTypeId] = VARIANCE;

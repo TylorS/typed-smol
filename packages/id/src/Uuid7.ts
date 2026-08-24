@@ -1,3 +1,4 @@
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
@@ -16,9 +17,12 @@ export const isUuid7: (value: string) => value is Uuid7 = Schema.is(Uuid7);
 
 export type Uuid7Seed = {
   readonly timestamp: number;
+  /** Unsigned 32-bit sequence integer in the range [0, 0xffffffff]. */
   readonly seq: number;
   readonly randomBytes: Uint8Array & { length: 16 };
 };
+
+const maximumTimestamp = 2 ** 48 - 1;
 
 export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7State", {
   make: Effect.gen(function* () {
@@ -30,27 +34,53 @@ export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7St
     };
 
     function updateV7State(now: number, randomBytes: Uint8Array) {
+      let msecs: number;
+      let seq: number;
+
       if (now > state.msecs) {
         // Time has moved on! Pick a new random sequence number
-        state.seq =
-          (randomBytes[6] << 23) | (randomBytes[7] << 16) | (randomBytes[8] << 8) | randomBytes[9];
-        state.msecs = now;
+        seq =
+          ((randomBytes[6] << 24) |
+            (randomBytes[7] << 16) |
+            (randomBytes[8] << 8) |
+            randomBytes[9]) >>>
+          0;
+        msecs = now;
       } else {
         // Bump sequence counter w/ 32-bit rollover
-        state.seq = (state.seq + 1) | 0;
+        seq = (state.seq + 1) >>> 0;
+        msecs = state.msecs;
 
         // In case of rollover, bump timestamp to preserve monotonicity. This is
         // allowed by the RFC and should self-correct as the system clock catches
         // up. See https://www.rfc-editor.org/rfc/rfc9562.html#section-6.2-9.4
-        if (state.seq === 0) {
-          state.msecs++;
+        if (seq === 0) {
+          msecs++;
         }
       }
+
+      state.msecs = msecs;
+      state.seq = seq;
     }
 
     return Effect.gen(function* () {
-      const randomBytes = yield* getRandomValues<Uuid7Seed["randomBytes"]>(16);
-      updateV7State(yield* now, randomBytes);
+      const timestamp = yield* now;
+      if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > maximumTimestamp) {
+        return yield* new Cause.IllegalArgumentError(
+          `UUIDv7 timestamp must be a safe integer between 0 and ${maximumTimestamp}, received ${timestamp}`,
+        );
+      }
+      if (
+        timestamp <= state.msecs &&
+        state.msecs === maximumTimestamp &&
+        state.seq === 0xffffffff
+      ) {
+        return yield* new Cause.IllegalArgumentError(
+          "UUIDv7 sequence rollover exceeds its 48-bit timestamp field",
+        );
+      }
+      const randomBytes = yield* getRandomValues(16);
+      updateV7State(timestamp, randomBytes);
       return { timestamp: state.msecs, seq: state.seq, randomBytes };
     });
   }),
@@ -58,11 +88,11 @@ export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7St
   static readonly next = Effect.flatten(Uuid7State);
 
   static readonly Default = Layer.effect(Uuid7State, Uuid7State.make).pipe(
-    Layer.provideMerge([DateTimes.Default, RandomValues.Default]),
+    Layer.provide([DateTimes.Default, RandomValues.Default]),
   );
 }
 
-export const uuid7: Effect.Effect<Uuid7, never, Uuid7State> = Effect.map(
+export const uuid7: Effect.Effect<Uuid7, Cause.IllegalArgumentError, Uuid7State> = Effect.map(
   Uuid7State.next,
   uuid7FromSeed,
 );

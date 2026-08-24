@@ -949,6 +949,8 @@ class FlipSink<A, E, R> implements Sink<E, A, R> {
   readonly sink: Sink<A, E, R>;
   constructor(sink: Sink<A, E, R>) {
     this.sink = sink;
+    this.onSuccess = this.onSuccess.bind(this);
+    this.onFailure = this.onFailure.bind(this);
   }
 
   onSuccess(value: E) {
@@ -968,6 +970,8 @@ class ExitSink<A, E, R> implements Sink<A, E, R> {
   readonly sink: Sink<Exit.Exit<A, E>, never, R>;
   constructor(sink: Sink<Exit.Exit<A, E>, never, R>) {
     this.sink = sink;
+    this.onSuccess = this.onSuccess.bind(this);
+    this.onFailure = this.onFailure.bind(this);
   }
 
   onSuccess(value: A) {

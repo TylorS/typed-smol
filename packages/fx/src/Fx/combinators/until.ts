@@ -1,8 +1,9 @@
-import { Effect, Fiber, Scope } from "effect";
+import { Cause, Deferred, Effect, Exit, Fiber, Ref, Scope } from "effect";
 import { dual } from "effect/Function";
 import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
 import { observe } from "../run/observe.js";
+import { take } from "./take.js";
 
 /**
  * Forwards `events` until `signal` emits, then interrupts `events`.
@@ -16,17 +17,67 @@ export const until: {
 } = dual(
   2,
   <A, E, R, B, E2, R2>(events: Fx<A, E, R>, signal: Fx<B, E2, R2>): Fx<A, E | E2, R | R2> =>
-    make(
+    make<A, E | E2, R | R2>(
       Effect.fn(function* (sink) {
         const scope = yield* Scope.make();
+        const cancellingSignal = yield* Ref.make(false);
 
-        yield* signal.pipe(
-          observe(() => Fiber.interrupt(eventsFiber)),
-          Effect.forkIn(scope),
+        yield* Effect.gen(function* () {
+          const startupGate = yield* Deferred.make<void>();
+          const eventsFiberRef = yield* Ref.make<Fiber.Fiber<unknown, never> | null>(null);
+          const signaled = yield* Ref.make(false);
+
+          const stopEvents = Effect.uninterruptible(
+            Effect.gen(function* () {
+              yield* Ref.set(signaled, true);
+              const eventsFiber = yield* Ref.get(eventsFiberRef);
+              if (eventsFiber !== null) yield* Fiber.interrupt(eventsFiber);
+            }),
+          );
+
+          const signalFiber = yield* Effect.forkIn(
+            Deferred.await(startupGate).pipe(
+              Effect.andThen(
+                signal.pipe(
+                  take(1),
+                  observe(() => stopEvents),
+                ),
+              ),
+              Effect.catchCause((cause) =>
+                Effect.flatMap(Ref.get(cancellingSignal), (didCancelSignal) =>
+                  didCancelSignal
+                    ? Effect.failCause(cause)
+                    : Effect.uninterruptible(
+                        sink.onFailure(cause).pipe(Effect.andThen(stopEvents)),
+                      ),
+                ),
+              ),
+            ),
+            scope,
+          );
+          const eventsFiber = yield* Effect.forkIn(
+            Deferred.await(startupGate).pipe(Effect.andThen(events.run(sink))),
+            scope,
+          );
+
+          yield* Ref.set(eventsFiberRef, eventsFiber);
+          yield* Deferred.succeed(startupGate, undefined);
+
+          const eventsExit = yield* Fiber.await(eventsFiber);
+          yield* Ref.set(cancellingSignal, true);
+          yield* Fiber.interrupt(signalFiber);
+
+          if (Exit.isFailure(eventsExit)) {
+            const didSignal = yield* Ref.get(signaled);
+            if (!(didSignal && Cause.hasInterruptsOnly(eventsExit.cause))) {
+              return yield* Effect.failCause(eventsExit.cause);
+            }
+          }
+        }).pipe(
+          Effect.onExit((exit) =>
+            Ref.set(cancellingSignal, true).pipe(Effect.andThen(Scope.close(scope, exit))),
+          ),
         );
-        const eventsFiber = yield* Effect.forkIn(events.run(sink), scope);
-
-        yield* Fiber.join(eventsFiber).pipe(Effect.onExit((exit) => Scope.close(scope, exit)));
       }),
     ),
 );

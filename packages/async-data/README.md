@@ -39,6 +39,14 @@ AsyncData(A, E): Schema.Codec<AsyncData<A, E>, ...>
 
 Builds an Effect Schema codec for `AsyncData` given value schema `A` and error schema `E`.
 
+`Failure.cause` uses the full Effect `Cause` model. Its encoded form is an ordered JSON array of
+`Fail`, `Die`, and `Interrupt` reasons; defects are normalized with `Schema.Defect()`. For example,
+`failure(Cause.fail("offline"))` encodes its cause as
+`[{ _tag: "Fail", error: "offline" }]` and decodes back to a `Cause.Cause<string>`.
+
+Progress codecs accept finite numbers, including negative and fractional values. They reject
+`NaN`, `Infinity`, and `-Infinity` without imposing count or percentage semantics.
+
 ### Constructors
 
 ```ts
@@ -65,15 +73,13 @@ isPending<A, E>(asyncData: AsyncData<A, E>): asyncData is Loading | Refreshing<A
 ### Pattern matching
 
 ```ts
-data.pipe(
-  AsyncData.match({
-    NoData: (data) => R1,
-    Loading: (data) => R2,
-    Failure: (cause, data) => R3,
-    Success: (value, data) => R4,
-    Optimistic: (value, data) => R5,
-  }),
-);
+const label = AsyncData.match(AsyncData.success(1), {
+  NoData: () => "no data",
+  Loading: () => "loading",
+  Failure: () => "failure",
+  Success: (value) => `success: ${value}`,
+  Optimistic: (value) => `optimistic: ${value}`,
+});
 ```
 
 Returns a unified result type from the matching branch. Callbacks receive the variant payload (and full variant for `Failure`/`Success`/`Optimistic`).
@@ -103,19 +109,26 @@ Extract the success value, failure cause, or first error from the variant (or `O
 ### Transformers
 
 ```ts
-data.pipe(AsyncData.map((a: A) => B));
+const mapped = AsyncData.map(AsyncData.success(1), (value) => value + 1);
 ```
 
 Maps the success/optimistic value; NoData, Loading, and Failure are unchanged.
 
 ```ts
-data.pipe(AsyncData.flatMap((value: A, data: Success<A> | Optimistic<A, E>) => AsyncData<B, E2>));
+const chained = AsyncData.flatMap(AsyncData.success(1), (value) =>
+  AsyncData.success(String(value)),
+);
 ```
 
 Chains on success or optimistic; NoData, Loading, and Failure are unchanged.
 
 ```ts
-data.pipe(AsyncData.mapError((e: E) => E2));
+import * as Cause from "effect/Cause";
+
+const mappedFailure = AsyncData.mapError(
+  AsyncData.failure(Cause.fail("offline")),
+  (error) => new Error(error),
+);
 ```
 
 Maps the failure error type; Success, NoData, Loading unchanged; Optimistic recurs on `previous`.
@@ -135,15 +148,13 @@ import * as AsyncData from "@typed/async-data";
 
 // Success and match
 const data = AsyncData.success({ id: 1, name: "Alice" });
-const message = data.pipe(
-  AsyncData.match({
-    NoData: () => "no data",
-    Loading: () => "loading...",
-    Failure: (cause) => `error: ${cause}`,
-    Success: (user) => `user: ${user.name}`,
-    Optimistic: (user) => `optimistic: ${user.name}`,
-  }),
-);
+const message = AsyncData.match(data, {
+  NoData: () => "no data",
+  Loading: () => "loading...",
+  Failure: (cause) => `error: ${cause}`,
+  Success: (user) => `user: ${user.name}`,
+  Optimistic: (user) => `optimistic: ${user.name}`,
+});
 // message === "user: Alice"
 
 // From Result and getSuccess

@@ -4,6 +4,8 @@
 
 TodoMVC-style app demonstrating **routing**, **layered architecture**, and full use of typed-smol. It uses **@typed/fx**, **@typed/router**, **@typed/template**, and **@typed/ui** with a clear split: domain, application, presentation, and infrastructure. Routing is used for the filter (all/active/completed); TodoMVC CSS is included.
 
+This is a standard [Vite](https://vite.dev) + TypeScript app. From the repo root, install and build workspace packages first, then start the Vite dev server.
+
 ## Packages used
 
 - `@typed/fx`
@@ -27,7 +29,7 @@ Then, from the repo root:
 cd examples/todomvc && pnpm dev
 ```
 
-This starts the Vite dev server (e.g. [http://localhost:5173](http://localhost:5173)).
+This starts the Vite dev server at [http://localhost:5173](http://localhost:5173).
 
 **Other commands** (run from `examples/todomvc`):
 

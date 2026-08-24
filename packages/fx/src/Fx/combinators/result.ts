@@ -1,6 +1,5 @@
 import * as Cause from "effect/Cause";
 import * as Result from "effect/Result";
-import type { Sink } from "../../Sink/Sink.js";
 import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
 
@@ -23,17 +22,8 @@ import type { Fx } from "../Fx.js";
  * @category combinators
  */
 export const result = <A, E, R>(fx: Fx<A, E, R>): Fx<Result.Result<A, Cause.Cause<E>>, never, R> =>
-  make<Result.Result<A, Cause.Cause<E>>, never, R>((sink) => fx.run(new ResultSink(sink)));
+  make<Result.Result<A, Cause.Cause<E>>, never, R>((sink) => fx.run({
+    onSuccess: (value) => sink.onSuccess(Result.succeed(value)),
+    onFailure: (cause) => sink.onSuccess(Result.fail(cause)),
+  }));
 
-class ResultSink<A, E, R> implements Sink<A, E, R> {
-  readonly sink: Sink<Result.Result<A, Cause.Cause<E>>, never, R>;
-  readonly onSuccess: (value: A) => import("effect/Effect").Effect<unknown, never, R>;
-  readonly onFailure: (cause: Cause.Cause<E>) => import("effect/Effect").Effect<unknown, never, R>;
-
-  constructor(sink: Sink<Result.Result<A, Cause.Cause<E>>, never, R>) {
-    this.sink = sink;
-    const s = sink;
-    this.onSuccess = (value) => s.onSuccess(Result.succeed(value));
-    this.onFailure = (cause) => s.onSuccess(Result.fail(cause));
-  }
-}

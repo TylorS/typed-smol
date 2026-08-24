@@ -197,38 +197,20 @@ class PushImpl<A, E, R, B, E2, R2> implements Push<A, E, R, B, E2, R2> {
  * @category combinators
  */
 export const mapInput: {
-  <P extends Push.Any, C>(
-    f: (c: C) => Sink.Success<P>,
-  ): (
-    push: P,
-  ) => Push<
-    Sink.Services<P>,
-    Sink.Error<P>,
-    C,
-    Fx.Fx.Services<P>,
-    Fx.Fx.Error<P>,
-    Fx.Fx.Success<P>
-  >;
+  <C, A>(
+    f: (c: C) => A,
+  ): <E, R, B, E2, R2>(push: Push<A, E, R, B, E2, R2>) => Push<C, E, R, B, E2, R2>;
 
-  <P extends Push.Any, C>(
-    push: P,
-    f: (c: C) => Sink.Sink.Success<P>,
-  ): Push<
-    Sink.Sink.Services<P>,
-    Sink.Sink.Error<P>,
-    C,
-    Fx.Fx.Services<P>,
-    Fx.Fx.Error<P>,
-    Fx.Fx.Success<P>
-  >;
-} = dual(2, function mapInput<P extends Push.Any, C>(push: P, f: (c: C) => Sink.Success<P>): Push<
-  Sink.Services<P>,
-  Sink.Error<P>,
+  <A, E, R, B, E2, R2, C>(push: Push<A, E, R, B, E2, R2>, f: (c: C) => A): Push<C, E, R, B, E2, R2>;
+} = dual(2, function mapInput<
+  A,
+  E,
+  R,
+  B,
+  E2,
+  R2,
   C,
-  Fx.Fx.Services<P>,
-  Fx.Fx.Error<P>,
-  Fx.Fx.Success<P>
-> {
+>(push: Push<A, E, R, B, E2, R2>, f: (c: C) => A): Push<C, E, R, B, E2, R2> {
   return make(Sink.map(push, f), push);
 });
 
@@ -264,16 +246,7 @@ export const mapInputEffect: {
 export const filterInput: {
   <A>(
     f: (a: A) => boolean,
-  ): <P extends Push.Any>(
-    push: P,
-  ) => Push<
-    Sink.Services<P>,
-    Sink.Error<P>,
-    A,
-    Fx.Fx.Services<P>,
-    Fx.Fx.Error<P>,
-    Fx.Fx.Success<P>
-  >;
+  ): <E, R, B, E2, R2>(push: Push<A, E, R, B, E2, R2>) => Push<A, E, R, B, E2, R2>;
   <A, E, R, B, E2, R2>(
     push: Push<A, E, R, B, E2, R2>,
     f: (a: A) => boolean,
@@ -650,7 +623,7 @@ export const switchMap: {
     f: (b: B) => Fx.Fx<C, E3, R3>,
   ): <A, E, R, E2, R2>(
     push: Push<A, E, R, B, E2, R2>,
-  ) => Push<A, E, R, Scope.Scope | C, E2 | E3, R2 | R3>;
+  ) => Push<A, E, R, C, E2 | E3, R2 | R3 | Scope.Scope>;
   <A, E, R, B, E2, R2, C, E3, R3>(
     push: Push<A, E, R, B, E2, R2>,
     f: (b: B) => Fx.Fx<C, E3, R3>,
@@ -681,11 +654,11 @@ export const switchMapEffect: {
     f: (b: B) => Effect.Effect<C, E3, R3>,
   ): <A, E, R, E2, R2>(
     push: Push<A, E, R, B, E2, R2>,
-  ) => Push<A, E, R, Scope.Scope | C, E2 | E3, R2 | R3>;
+  ) => Push<A, E, R, C, E2 | E3, R2 | R3 | Scope.Scope>;
   <A, E, R, B, E2, R2, C, E3, R3>(
     push: Push<A, E, R, B, E2, R2>,
     f: (b: B) => Effect.Effect<C, E3, R3>,
-  ): Push<A, E, R, Scope.Scope | C, E2 | E3, R2 | R3>;
+  ): Push<A, E, R, C, E2 | E3, R2 | R3 | Scope.Scope>;
 } = dual(2, function switchMapEffect<
   A,
   E,
@@ -781,7 +754,7 @@ export const flatMapEffect: {
   <A, E, R, B, E2, R2, C, E3, R3>(
     push: Push<A, E, R, B, E2, R2>,
     f: (b: B) => Effect.Effect<C, E3, R3>,
-  ): Push<A, E, R, Scope.Scope | C, E2 | E3, R2 | R3>;
+  ): Push<A, E, R, C, E2 | E3, R2 | R3 | Scope.Scope>;
 } = dual(2, function flatMapEffect<
   A,
   E,
@@ -843,7 +816,7 @@ export const exhaustMapEffect: {
   <A, E, R, B, E2, R2, C, E3, R3>(
     push: Push<A, E, R, B, E2, R2>,
     f: (b: B) => Effect.Effect<C, E3, R3>,
-  ): Push<A, E, R, Scope.Scope | C, E2 | E3, R2 | R3>;
+  ): Push<A, E, R, C, E2 | E3, R2 | R3 | Scope.Scope>;
 } = dual(2, function exhaustMapEffect<
   A,
   E,
@@ -905,7 +878,7 @@ export const exhaustLatestMapEffect: {
   <A, E, R, B, E2, R2, C, E3, R3>(
     push: Push<A, E, R, B, E2, R2>,
     f: (b: B) => Effect.Effect<C, E3, R3>,
-  ): Push<A, E, R, Scope.Scope | C, E2 | E3, R2 | R3>;
+  ): Push<A, E, R, C, E2 | E3, R2 | R3 | Scope.Scope>;
 } = dual(2, function exhaustLatestMapEffect<
   A,
   E,

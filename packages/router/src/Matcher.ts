@@ -2,36 +2,43 @@ import * as findMyWay from "find-my-way-ts";
 import type * as Arr from "effect/Array";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
-import * as Exit from "effect/Exit";
-import { interrupt } from "effect/Exit";
 import { dual, identity } from "effect/Function";
 import * as Result from "effect/Result";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 import { type Pipeable, pipeArguments } from "effect/Pipeable";
 import * as Schema from "effect/Schema";
-import { makeFormatterDefault } from "effect/SchemaIssue";
 import * as Scope from "effect/Scope";
 import * as Context from "effect/Context";
 import * as Stream from "effect/Stream";
 import type { ExcludeTag, ExtractTag, NoInfer, Tags } from "effect/Types";
-import { exit } from "@typed/fx/Fx";
 import { mapEffect } from "@typed/fx/Fx/combinators/mapEffect";
-import { provideContext } from "@typed/fx/Fx/combinators/provide";
 import { skipRepeats } from "@typed/fx/Fx/combinators/skipRepeats";
 import { switchMap } from "@typed/fx/Fx/combinators/switchMap";
 import { unwrap } from "@typed/fx/Fx/combinators/unwrap";
-import { fromEffect, never } from "@typed/fx/Fx/constructors/fromEffect";
+import { make as makeFx } from "@typed/fx/Fx";
+import { fromEffect } from "@typed/fx/Fx/constructors/fromEffect";
 import { succeed } from "@typed/fx/Fx/constructors/succeed";
 import type * as Fx from "@typed/fx/Fx/Fx";
 import { fromStream } from "@typed/fx/Fx/stream";
 import { FxTypeId, isFx } from "@typed/fx/Fx/TypeId";
 import { RefSubject } from "@typed/fx/RefSubject";
+import { getGuard } from "@typed/guard";
+import type { AsGuard, Guard as GuardType, GuardInput } from "@typed/guard";
 import { CurrentPath, Navigation } from "@typed/navigation/Navigation";
 import type { MatchAst, RouteAst } from "./AST.js";
 import * as AST from "./AST.js";
 import { CurrentRoute } from "./CurrentRoute.js";
+import * as Path from "./Path.js";
 import { Join, make as makeRoute, type Route } from "./Route.js";
+import {
+  makeCatchManager,
+  makeLayerManager,
+  makeLayoutManager,
+  makeRouteExecutor,
+  RouteDecodeError,
+  RouteGuardError,
+  RouteNotFound,
+} from "./RouteExecutor.js";
 import type { Router } from "./Router.js";
 import { Sink } from "@typed/fx";
 
@@ -60,8 +67,10 @@ export type AnyLayer =
 
 export type AnyServiceMap = Context.Context<any> | Context.Context<never>;
 export type AnyDependency = AnyLayer | AnyServiceMap;
-type AnyLayout = Layout<any, any, any, any, any, any, any>;
-type AnyCatch = CatchHandler<any, any, any, any>;
+/** @internal */
+export type AnyLayout = Layout<any, any, any, any, any, any, any>;
+/** @internal */
+export type AnyCatch = CatchHandler<any, any, any, any>;
 type AnyGuard = GuardType<any, any, any, any>;
 type AnyMatchHandler = (params: RefSubject.RefSubject<any>) => Fx.Fx<any, any, any>;
 
@@ -78,32 +87,11 @@ type LayerSuccess<L> = L extends Layer.Layer<infer Provided, any, any> ? Provide
 type LayerError<L> = L extends Layer.Layer<any, infer E, any> ? E : never;
 type LayerServices<L> = L extends Layer.Layer<any, any, infer R> ? R : never;
 
-export type GuardType<I, O, E = never, R = never> = (
-  input: I,
-) => Effect.Effect<Option.Option<O>, E, R>;
-export interface AsGuard<I, O, E = never, R = never> {
-  readonly asGuard: () => GuardType<I, O, E, R>;
-}
-export type GuardInput<I, O, E = never, R = never> = GuardType<I, O, E, R> | AsGuard<I, O, E, R>;
+export type { AsGuard, GuardInput, GuardType };
 
-export type GuardOutput<G> =
-  G extends GuardType<any, infer O, any, any>
-    ? O
-    : G extends AsGuard<any, infer O, any, any>
-      ? O
-      : never;
-export type GuardError<G> =
-  G extends GuardType<any, any, infer E, any>
-    ? E
-    : G extends AsGuard<any, any, infer E, any>
-      ? E
-      : never;
-export type GuardServices<G> =
-  G extends GuardType<any, any, any, infer R>
-    ? R
-    : G extends AsGuard<any, any, any, infer R>
-      ? R
-      : never;
+export type GuardOutput<G> = GuardType.Output<G>;
+export type GuardError<G> = GuardType.Error<G>;
+export type GuardServices<G> = GuardType.Services<G>;
 
 type MatchOptions<Rt extends Route.Any, B, E2, R2, D, LB, LE2, LR2, C> = {
   readonly route: Rt;
@@ -674,136 +662,52 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
 
   run<RSink>(sink: Sink.Sink<A, E | RouteNotFound | RouteDecodeError | RouteGuardError, RSink>) {
     return Effect.gen({ self: this }, function* () {
-      const fiberId = yield* Effect.fiberId;
-      const rootScope = yield* Effect.scope;
       const current = yield* CurrentRoute;
       const prefixed = this.prefix(current.route);
-      const entries = compile(prefixed.cases);
+      const entries = yield* Effect.try({
+        try: () => compile(prefixed.cases),
+        catch: (error) =>
+          new RouteDecodeError({
+            path: current.route.path,
+            cause: error instanceof Error ? error.message : String(error),
+          }),
+      });
+      const executor = yield* makeRouteExecutor<A, E, R>();
       const router = findMyWay.make<ReadonlyArray<CompiledEntry>>({
         ignoreTrailingSlash: true,
         caseSensitive: false,
       });
       const handlersByPath = new Map<string, Array<CompiledEntry>>();
-      const memoMap = yield* Layer.makeMemoMap;
-      const layerManager = makeLayerManager(memoMap, rootScope, fiberId);
-      const layoutManager = makeLayoutManager(rootScope, fiberId);
-      const catchManager = makeCatchManager(rootScope, fiberId);
-
       for (const entry of entries) {
-        const path = entry.route.path;
-        const existing = handlersByPath.get(path);
-        if (existing !== undefined) {
-          existing.push(entry);
-        } else {
-          const list: Array<CompiledEntry> = [entry];
-          handlersByPath.set(path, list);
-          router.all(path, list);
+        for (const path of getMatcherPaths(entry.route.ast)) {
+          const existing = handlersByPath.get(path);
+          if (existing !== undefined) {
+            existing.push(entry);
+          } else {
+            const list: Array<CompiledEntry> = [entry];
+            handlersByPath.set(path, list);
+            yield* Effect.try({
+              try: () => router.on("GET", path, list),
+              catch: (error) =>
+                new RouteDecodeError({
+                  path,
+                  cause: error instanceof Error ? error.message : String(error),
+                }),
+            });
+          }
         }
       }
-
-      let currentState: {
-        entry: CompiledEntry;
-        params: RefSubject.RefSubject<any>;
-        fx: Fx.Fx<A, E, R | Scope.Scope | Router>;
-        scope: Scope.Closeable;
-      } | null = null;
 
       const stream = CurrentPath.pipe(
         mapEffect(
           Effect.fn(function* (path) {
             const result = router.find("GET", path);
             if (result === undefined) return yield* new RouteNotFound({ path });
-
-            const input = { ...result.params, ...result.searchParams };
-            const entries = result.handler;
-            const guardCauses: Array<Cause.Cause<any>> = [];
-            let matchedEntry: CompiledEntry | undefined = undefined;
-            let matchedParams: any = undefined;
-            let matchedPrepared:
-              | {
-                  services: AnyServiceMap;
-                  commit: Effect.Effect<void>;
-                  rollback: Effect.Effect<void>;
-                }
-              | undefined = undefined;
-
-            for (const entry of entries) {
-              const params = yield* Effect.mapErrorEager(
-                entry.decode(input),
-                (cause) =>
-                  new RouteDecodeError({ path, cause: makeFormatterDefault()(cause.issue) }),
-              );
-
-              const prepared = yield* layerManager.prepare(entry.layers);
-              const guardExit = yield* entry
-                .guard(params)
-                .pipe(Effect.provideContext(prepared.services), Effect.exit);
-
-              if (Exit.isFailure(guardExit)) {
-                guardCauses.push(guardExit.cause);
-                yield* prepared.rollback;
-                continue;
-              }
-
-              if (Option.isNone(guardExit.value)) {
-                yield* prepared.rollback;
-                continue;
-              }
-
-              matchedEntry = entry;
-              matchedParams = guardExit.value.value;
-              matchedPrepared = prepared;
-              break;
-            }
-
-            if (matchedEntry === undefined || matchedPrepared === undefined) {
-              return yield* new RouteGuardError({ path, causes: guardCauses });
-            }
-
-            yield* matchedPrepared.commit;
-
-            if (currentState !== null && currentState.entry === matchedEntry) {
-              yield* RefSubject.set(currentState.params, matchedParams);
-              yield* layoutManager.updateParams(matchedEntry.layouts, matchedParams);
-              return currentState.fx;
-            }
-
-            if (currentState !== null) {
-              yield* Scope.close(currentState.scope, interrupt(fiberId));
-              currentState = null;
-            }
-
-            const scope = yield* Scope.fork(rootScope);
-            const paramsRef = yield* RefSubject.make(matchedParams).pipe(Scope.provide(scope));
-
-            const preparedServices = matchedPrepared.services as Context.Context<any>;
-            const handlerServices = Context.merge(
-              preparedServices,
-              Context.make(Scope.Scope, scope),
-            );
-
-            const handlerFx = matchedEntry.handler(paramsRef).pipe(provideContext(handlerServices));
-            const withLayouts = yield* layoutManager.apply(
-              matchedEntry.layouts,
-              matchedParams,
-              handlerFx,
-              preparedServices,
-            );
-            const withCatches = yield* catchManager.apply(
-              matchedEntry.catches,
-              withLayouts,
-              preparedServices,
-            );
-            const fx = withCatches;
-
-            currentState = {
-              entry: matchedEntry,
-              params: paramsRef,
-              scope,
-              fx,
-            };
-
-            return currentState.fx;
+            return yield* executor.transition({
+              path,
+              input: { ...result.searchParams, ...result.params },
+              candidates: result.handler,
+            });
           }),
         ),
         skipRepeats,
@@ -811,7 +715,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
       );
 
       return yield* stream.run(sink);
-    });
+    }).pipe(Effect.catchCause((cause) => sink.onFailure(cause)));
   }
 }
 
@@ -878,26 +782,7 @@ export function merge<const Matchers extends ReadonlyArray<Matcher.Any>>(
   >;
 }
 
-export class RouteGuardError extends Schema.ErrorClass<RouteGuardError>(
-  "@typed/router/RouteGuardError",
-)({
-  _tag: Schema.tag("RouteGuardError"),
-  path: Schema.String,
-  causes: Schema.Array(Schema.Unknown),
-}) {}
-
-export class RouteNotFound extends Schema.ErrorClass<RouteNotFound>("@typed/router/RouteNotFound")({
-  _tag: Schema.tag("RouteNotFound"),
-  path: Schema.String,
-}) {}
-
-export class RouteDecodeError extends Schema.ErrorClass<RouteDecodeError>(
-  "@typed/router/RouteDecodeError",
-)({
-  _tag: Schema.tag("RouteDecodeError"),
-  path: Schema.String,
-  cause: Schema.String,
-}) {}
+export { RouteDecodeError, RouteGuardError, RouteNotFound } from "./RouteExecutor.js";
 
 /**
  * @internal
@@ -988,15 +873,25 @@ export { catch_ as catch };
 export const catchTag: {
   <
     I extends Fx.Fx.Any | Matcher.Any,
-    const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>,
-    E,
+    const K extends Tags<InputError<I>> | Arr.NonEmptyReadonlyArray<Tags<InputError<I>>>,
     B,
     E2,
     R2,
   >(
     k: K,
-    f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
-  ): (input: I) => Fx.Fx<InputSucces<I> | B, E2, InputServices<I> | R2 | Router | Scope.Scope>;
+    f: (
+      e: ExtractTag<
+        NoInfer<InputError<I>>,
+        K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K
+      >,
+    ) => Fx.Fx<B, E2, R2>,
+  ): (
+    input: I,
+  ) => Fx.Fx<
+    InputSucces<I> | B,
+    E2 | ExcludeTag<InputError<I>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    InputServices<I> | R2 | Router | Scope.Scope
+  >;
 
   <
     I extends Fx.Fx.Any | Matcher.Any,
@@ -1027,8 +922,25 @@ export const catchTag: {
     input: I,
     k: K,
     f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
-  ): Fx.Fx<InputSucces<I> | B, E2, InputServices<I> | R2 | Router | Scope.Scope> =>
-    catchCause(input, (causeRef) =>
+  ): Fx.Fx<
+    InputSucces<I> | B,
+    E2 | ExcludeTag<InputError<I>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    InputServices<I> | R2 | Router | Scope.Scope
+  > => {
+    type RemainingError = ExcludeTag<
+      InputError<I>,
+      K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K
+    >;
+    const rethrow = (
+      cause: Cause.Cause<InputError<I> | RouteNotFound | RouteDecodeError | RouteGuardError>,
+    ) =>
+      fromEffect(Effect.failCause(cause as Cause.Cause<RemainingError>)) as Fx.Fx<
+        B,
+        E2 | RemainingError,
+        R2
+      >;
+
+    return catchCause(input, (causeRef) =>
       unwrap(
         Effect.gen(function* () {
           const cause = yield* causeRef;
@@ -1044,25 +956,55 @@ export const catchTag: {
               >,
             );
           }
-          return fromEffect(Effect.fail(result.success.error as E2));
+          return rethrow(cause);
         }),
       ),
-    ),
+    );
+  },
 );
 
 export const redirectTo =
   (path: string) =>
   <I extends Fx.Fx.Any | Matcher.Any>(
     input: I,
-  ): Fx.Fx<InputSucces<I>, never, Router | Scope.Scope | InputServices<I>> =>
-    catchCause(input, (_) =>
-      Navigation.navigate(path).pipe(
-        Effect.matchCause({
-          onFailure: () => never,
-          onSuccess: () => never,
-        }),
-        unwrap,
-      ),
+  ): Fx.Fx<
+    InputSucces<I>,
+    Exclude<InputError<I>, RouteNotFound>,
+    Router | Scope.Scope | InputServices<I>
+  > =>
+    makeFx<
+      InputSucces<I>,
+      Exclude<InputError<I>, RouteNotFound>,
+      Router | Scope.Scope | InputServices<I>
+    >((sink) =>
+      Effect.gen(function* () {
+        let redirected = false;
+        const runOnce = (target: typeof sink) =>
+          input.run(
+            Sink.make(
+              (cause) =>
+                Effect.gen(function* () {
+                  if (redirected) return yield* target.onFailure(cause as Cause.Cause<any>);
+                  const failure = Cause.findFail(cause);
+                  if (
+                    Result.isFailure(failure) ||
+                    failure.success.error._tag !== "RouteNotFound"
+                  ) {
+                    return yield* target.onFailure(cause as Cause.Cause<any>);
+                  }
+                  redirected = true;
+                  yield* Navigation.navigate(path).pipe(
+                    Effect.catchCause((navCause) =>
+                      target.onFailure(navCause as Cause.Cause<any>),
+                    ),
+                  );
+                  return yield* input.run(target as any);
+                }) as Effect.Effect<unknown, never, any>,
+              (value) => target.onSuccess(value),
+            ),
+          );
+        return yield* runOnce(sink);
+      }),
     );
 
 const hasTag = (u: unknown): u is { readonly _tag: string } =>
@@ -1129,10 +1071,6 @@ export function normalizeDependencyInput<Deps extends AnyDependency | ReadonlyAr
   return mergeLayers(layers) as NormalizeDeps<Deps>;
 }
 
-function getGuard<I, O, E, R>(guard: GuardInput<I, O, E, R>): GuardType<I, O, E, R> {
-  return "asGuard" in guard ? guard.asGuard() : guard;
-}
-
 function defaultGuard<A>(): GuardType<A, A> {
   return Effect.succeedSome;
 }
@@ -1167,14 +1105,17 @@ export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledE
         case "route": {
           const baseRoute = makeRoute(match.route);
           const prefixedRoute = applyPrefixes(baseRoute, context.prefixes);
+          const guard = getGuard(match.guard as GuardInput<any, any, any, any>);
+          const handler = normalizeHandler(match.handler);
+          const decode = makeRouteDecoder(prefixedRoute);
           entries.push({
             route: prefixedRoute,
-            guard: getGuard(match.guard as GuardInput<any, any, any, any>),
-            handler: normalizeHandler(match.handler),
+            guard,
+            handler,
             layers: context.layers,
             layouts: context.layouts,
             catches: context.catches,
-            decode: Schema.decodeUnknownEffect(prefixedRoute.paramsSchema),
+            decode,
           });
           break;
         }
@@ -1215,246 +1156,65 @@ export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledE
   return entries;
 }
 
+function getMatcherPaths(ast: RouteAst): ReadonlyArray<findMyWay.PathInput> {
+  let variants: Array<Array<AST.PathAst>> = [[]];
+  for (const part of Path.flattenRouteAst(ast)) {
+    if (part.type === "query-params") continue;
+    if (part.type === "parameter" && part.optional) {
+      const required = AST.parameter(part.name, undefined, part.regex);
+      variants = variants.flatMap((variant) => [[...variant, required], variant]);
+    } else {
+      variants = variants.map((variant) => [...variant, part]);
+    }
+  }
+
+  return [...new Set(variants.map(formatMatcherPath))];
+}
+
+function formatMatcherPath(parts: ReadonlyArray<AST.PathAst>): findMyWay.PathInput {
+  const normalized: Array<AST.PathAst> = [];
+  for (const part of parts) {
+    if (part.type === "slash" && normalized.at(-1)?.type === "slash") continue;
+    normalized.push(part);
+  }
+  if (normalized.at(-1)?.type === "slash") normalized.pop();
+  return Path.join(normalized);
+}
+
+function makeRouteDecoder(route: Route.Any): CompiledEntry["decode"] {
+  const query = Path.getQueryInputParameters(route.ast);
+  const decodeParams = Schema.decodeUnknownEffect(route.paramsSchema);
+  const decodeQuery = Schema.decodeUnknownEffect(Path.getQueryInputSchema(route.ast));
+
+  return (input) => {
+    const normalized =
+      typeof input === "object" && input !== null
+        ? { ...(input as Record<PropertyKey, unknown>) }
+        : {};
+
+    if (query.length === 0) return decodeParams(normalized);
+
+    return decodeQuery(input).pipe(
+      Effect.flatMap((decoded) => {
+        const queryInput = decoded as Record<PropertyKey, unknown>;
+        for (const parameter of query) {
+          if (parameter.outputName !== undefined && parameter.inputName in queryInput) {
+            normalized[parameter.outputName] = queryInput[parameter.inputName];
+          }
+        }
+        return decodeParams(normalized);
+      }),
+    );
+  };
+}
+
 function applyPrefixes(route: Route.Any, prefixes: ReadonlyArray<RouteAst>): Route.Any {
   if (prefixes.length === 0) return route;
-  const prefixRoutes = prefixes.map((prefix) => makeRoute(prefix));
+  const prefixRoutes = prefixes
+    .map((prefix) => makeRoute(prefix))
+    .filter((prefix) => prefix.path !== "/");
+  if (prefixRoutes.length === 0) return route;
   return Join(...prefixRoutes, route);
 }
 
-// Parallel scope cleanup helper
-const closeScopes = (scopes: Iterable<Scope.Closeable>, fiberId: number) =>
-  Effect.forEach(scopes, (scope) => Scope.close(scope, interrupt(fiberId)), {
-    concurrency: "unbounded",
-    discard: true,
-  });
-
-/**
- * @internal
- */
-export function makeLayerManager(memoMap: Layer.MemoMap, rootScope: Scope.Scope, fiberId: number) {
-  const states = new Map<AnyLayer, { scope: Scope.Closeable; services: AnyServiceMap }>();
-  let order: ReadonlyArray<AnyLayer> = [];
-  let cachedDesiredSet: Set<AnyLayer> | undefined = undefined;
-  let cachedOrder: ReadonlyArray<AnyLayer> | undefined = undefined;
-
-  const prepare = (desired: ReadonlyArray<AnyLayer>) =>
-    Effect.gen(function* () {
-      const desiredSet =
-        cachedOrder === desired
-          ? cachedDesiredSet!
-          : ((cachedDesiredSet = new Set(desired)), (cachedOrder = desired), cachedDesiredSet);
-      const removed = order.filter((layer) => !desiredSet.has(layer));
-      const added: Array<AnyLayer> = [];
-      let services = Context.empty();
-
-      for (const layer of desired) {
-        const existing = states.get(layer);
-        if (existing) {
-          services = Context.merge(services, existing.services);
-          continue;
-        }
-
-        const scope = yield* Scope.fork(rootScope);
-        const buildExit = yield* Layer.buildWithMemoMap(layer, memoMap, scope).pipe(
-          Effect.provideContext(services),
-          Effect.exit,
-        );
-
-        if (Exit.isFailure(buildExit)) {
-          for (let i = added.length - 1; i >= 0; i--) {
-            const addedLayer = added[i];
-            const addedState = states.get(addedLayer);
-            if (addedState) {
-              states.delete(addedLayer);
-              yield* Scope.close(addedState.scope, interrupt(fiberId));
-            }
-          }
-          yield* Scope.close(scope, buildExit);
-          return yield* Effect.failCause(buildExit.cause);
-        }
-
-        const servicesForLayer = buildExit.value;
-        services = Context.merge(services, servicesForLayer);
-        states.set(layer, { scope, services: servicesForLayer });
-        added.push(layer);
-      }
-
-      const commit = Effect.gen(function* () {
-        for (let i = removed.length - 1; i >= 0; i--) {
-          const layer = removed[i];
-          const state = states.get(layer);
-          if (state) {
-            states.delete(layer);
-            yield* Scope.close(state.scope, interrupt(fiberId));
-          }
-        }
-        order = desired;
-      });
-
-      const rollback = Effect.gen(function* () {
-        for (let i = added.length - 1; i >= 0; i--) {
-          const layer = added[i];
-          const state = states.get(layer);
-          if (state) {
-            states.delete(layer);
-            yield* Scope.close(state.scope, interrupt(fiberId));
-          }
-        }
-      });
-
-      return { services, commit, rollback };
-    });
-
-  return { prepare };
-}
-
-/**
- * @internal
- */
-export function makeLayoutManager(rootScope: Scope.Scope, fiberId: number) {
-  const states = new Map<
-    AnyLayout,
-    {
-      params: RefSubject.RefSubject<any>;
-      content: RefSubject.RefSubject<Fx.Fx<any, any, any>>;
-      fx: Fx.Fx<any, any, any>;
-      scope: Scope.Closeable;
-    }
-  >();
-  let active: ReadonlyArray<AnyLayout> = [];
-
-  const removeUnused = (layouts: ReadonlyArray<AnyLayout>) =>
-    Effect.gen(function* () {
-      const next = new Set(layouts);
-      const removed = active.filter((layout) => !next.has(layout));
-      const scopes = removed.map((layout) => {
-        const state = states.get(layout)!;
-        states.delete(layout);
-        return state.scope;
-      });
-      yield* closeScopes(scopes, fiberId);
-      active = layouts;
-    });
-
-  const apply = (
-    layouts: ReadonlyArray<AnyLayout>,
-    paramsValue: any,
-    inner: Fx.Fx<any, any, any>,
-    services: Context.Context<any>,
-  ) =>
-    Effect.gen(function* () {
-      let current = inner;
-      for (let i = layouts.length - 1; i >= 0; i--) {
-        const layout = layouts[i];
-        const state = states.get(layout);
-        if (state === undefined) {
-          const scope = yield* Scope.fork(rootScope);
-          const params = yield* RefSubject.make(paramsValue).pipe(Scope.provide(scope));
-          const content = yield* RefSubject.make<Fx.Fx<any, any, any>>(Effect.succeed(current), {
-            eq: (left, right) => left === right,
-          }).pipe(Scope.provide(scope));
-          const fx = layout({ params, content: content.pipe(switchMap(identity)) }).pipe(
-            provideContext(Context.merge(services, Context.make(Scope.Scope, scope))),
-          );
-          states.set(layout, { params, content, fx, scope });
-          current = fx;
-        } else {
-          yield* RefSubject.set(state.params, paramsValue);
-          // @effect-diagnostics-next-line floatingEffect:off
-          yield* RefSubject.set(state.content, current);
-          current = state.fx;
-        }
-      }
-      yield* removeUnused(layouts);
-      return current;
-    });
-
-  const updateParams = (layouts: ReadonlyArray<AnyLayout>, paramsValue: any) =>
-    Effect.forEach(
-      layouts,
-      (layout) => {
-        const state = states.get(layout);
-        return state !== undefined ? RefSubject.set(state.params, paramsValue) : Effect.void;
-      },
-      { discard: true },
-    );
-
-  return { apply, updateParams };
-}
-
-/**
- * @internal
- */
-export function makeCatchManager(rootScope: Scope.Scope, fiberId: number) {
-  const states = new Map<
-    AnyCatch,
-    {
-      causes: RefSubject.RefSubject<Cause.Cause<any>>;
-      content: RefSubject.RefSubject<Fx.Fx<any, any, any>>;
-      fx: Fx.Fx<any, any, any>;
-      scope: Scope.Closeable;
-    }
-  >();
-  let active: ReadonlyArray<AnyCatch> = [];
-
-  const removeUnused = (catches: ReadonlyArray<AnyCatch>) =>
-    Effect.gen(function* () {
-      const next = new Set(catches);
-      const removed = active.filter((c) => !next.has(c));
-      const scopes = removed.map((c) => {
-        const state = states.get(c)!;
-        states.delete(c);
-        return state.scope;
-      });
-      yield* closeScopes(scopes, fiberId);
-      active = catches;
-    });
-
-  const apply = (
-    catches: ReadonlyArray<AnyCatch>,
-    inner: Fx.Fx<any, any, any>,
-    services: Context.Context<any>,
-  ) =>
-    Effect.gen(function* () {
-      let current = inner;
-      for (let i = catches.length - 1; i >= 0; i--) {
-        const catcher = catches[i];
-        const state = states.get(catcher);
-        if (state === undefined) {
-          const scope = yield* Scope.fork(rootScope);
-          const causes = yield* RefSubject.make<Cause.Cause<any>>(Cause.fail(undefined)).pipe(
-            Scope.provide(scope),
-          );
-          const content = yield* RefSubject.make<Fx.Fx<any, any, any>>(Effect.succeed(current), {
-            eq: (left, right) => left === right,
-          }).pipe(Scope.provide(scope));
-          const fallback = catcher(causes).pipe(
-            provideContext(Context.merge(services, Context.make(Scope.Scope, scope))),
-          );
-          const fx = content.pipe(
-            switchMap(identity),
-            exit,
-            mapEffect(
-              Effect.fn(function* (e) {
-                if (Exit.isSuccess(e)) return succeed(e.value);
-                yield* RefSubject.set(causes, e.cause);
-                return fallback;
-              }),
-            ),
-            skipRepeats,
-            switchMap(identity),
-          );
-          states.set(catcher, { causes, content, fx, scope });
-          current = fx;
-        } else {
-          // @effect-diagnostics-next-line floatingEffect:off
-          yield* RefSubject.set(state.content, current);
-          current = state.fx;
-        }
-      }
-      yield* removeUnused(catches);
-      return current;
-    });
-
-  return { apply };
-}
+export { makeCatchManager, makeLayerManager, makeLayoutManager };

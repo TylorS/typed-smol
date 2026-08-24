@@ -2,16 +2,17 @@
   "name": "typed-smol",
   "private": true,
   "scripts": {
-    "build": "pnpm -r build && tsc -b tsconfig.build.json && pnpm --filter @typed/virtual-modules-ts-plugin run build:plugins",
+    "build": "pnpm -r build && tsc -b tsconfig.build.json",
     "lint": "oxlint",
     "format": "oxfmt",
     "test": "pnpm -r run test",
-    "typed": "npx tsx ./packages/cli/src/index.ts \"$@\""
+    "prepare": "effect-tsgo patch --typescript --oxlint"
   },
   "devDependencies": {
-    "@typed/virtual-modules-ts-plugin": "workspace:*",
+    "@effect/tsgo": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

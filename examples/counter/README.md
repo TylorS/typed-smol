@@ -4,6 +4,8 @@
 
 Minimal counter app demonstrating **reactive state** and **DOM rendering** with typed-smol. It uses **@typed/fx** (Fx, RefSubject) for state and **@typed/template** (`html`, `render`, `DomRenderTemplate`) to render into the document. A good first example for seeing how RefSubject and the template tag work together.
 
+This is a standard [Vite](https://vite.dev) + TypeScript app. From the repo root, install and build workspace packages first, then start the Vite dev server.
+
 ## Packages used
 
 - `@typed/fx`
@@ -25,7 +27,7 @@ Then, from the repo root:
 cd examples/counter && pnpm dev
 ```
 
-This starts the Vite dev server (e.g. [http://localhost:5173](http://localhost:5173)).
+This starts the Vite dev server at [http://localhost:5173](http://localhost:5173).
 
 **Other commands** (run from `examples/counter`):
 

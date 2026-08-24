@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-unassigned-import
 import "./styles.css";
 
 import { Effect } from "effect";
@@ -61,7 +60,7 @@ export const TodoApp = html`<section class="todoapp ${App.FilterState}">
       </span>
 
       <ul class="filters">
-        ${Domain.FilterState.members.map((filter) => FilterLink(filter.literal))}
+        ${Domain.FilterState.literals.map((filter) => FilterLink(filter))}
       </ul>
 
       ${clearCompleted}
@@ -71,23 +70,12 @@ export const TodoApp = html`<section class="todoapp ${App.FilterState}">
 
 function TodoItem(todo: RefSubject.RefSubject<Domain.Todo>, id: Domain.TodoId) {
   return Fx.gen(function* () {
-    // Track whether this todo is being edited
     const isEditing = yield* RefSubject.make(false);
-
-    // Track whether the todo is marked as completed
     const isCompleted = RefSubject.map(todo, Domain.isCompleted);
-
-    // the current text
     const text = RefSubject.map(todo, (t) => t.text);
-
-    // Update the todo's text
     const updateText = (text: string) => RefSubject.update(todo, Domain.updateText(text));
-
-    // Reset the todo's text to the text value before editing it
     const reset = RefSubject.delete(todo).pipe(Effect.tap(() => RefSubject.set(isEditing, false)));
-
-    // Submit the todo when the user is done editing
-    const submit = text.asEffect().pipe(
+    const submit = text.pipe(
       Effect.flatMap((t) => App.editTodo(id, t)),
       Effect.flatMap(() => reset),
     );

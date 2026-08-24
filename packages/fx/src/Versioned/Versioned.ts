@@ -9,6 +9,7 @@
  */
 
 import * as Effect from "effect/Effect";
+import type * as Cause from "effect/Cause";
 import * as Exit from "effect/Exit";
 import { dual, flow, identity } from "effect/Function";
 import * as Layer from "effect/Layer";
@@ -58,7 +59,7 @@ export namespace Versioned {
    * @category type-level
    */
   export type Unify<T> = T extends
-    | Versioned<infer R1, infer E1, infer R2, infer E2, infer A2, infer R3, infer E3, infer A3>
+    | Versioned<infer R1, infer E1, infer A2, infer E2, infer R2, infer A3, infer E3, infer R3>
     | (infer _)
     ? Versioned<R1, E1, A2, E2, R2, A3, E3, R3>
     : never;
@@ -418,10 +419,10 @@ export function tuple<
 ): Versioned<
   Versioned.VersionContext<VS[number]>,
   Versioned.VersionError<VS[number]>,
-  { readonly [K in keyof VS]: Effect.Success<VS[K]> },
+  { readonly [K in keyof VS]: Fx.Success<VS[K]> },
   Fx.Error<VS[number]>,
   Fx.Services<VS[number]>,
-  { readonly [K in keyof VS]: Fx.Success<VS[K]> },
+  { readonly [K in keyof VS]: Effect.Success<VS[K]> },
   Effect.Error<VS[number]>,
   Effect.Services<VS[number]>
 > {
@@ -531,7 +532,7 @@ export function multicast<R0, E0, A, E, R, B, E2, R2>(
 export function replay<R0, E0, A, E, R, B, E2, R2>(
   versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
   bufferSize: number,
-): Versioned<R0, E0, A, E, R | Scope.Scope, B, E2, R2> {
+): Versioned<R0, E0, A, E | Cause.IllegalArgumentError, R | Scope.Scope, B, E2, R2> {
   return make(versioned.version, Subject.replay(versioned, bufferSize), versioned);
 }
 
@@ -551,6 +552,7 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
       static readonly service = service;
 
       static {
+        // @effect-diagnostics-next-line floatingEffect:off
         Object.assign(this, service);
         Object.assign(this.prototype, Object.getPrototypeOf(service));
       }
@@ -589,7 +591,7 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
         const v = yield* service;
         return yield* v;
       };
-    
+
       constructor() {
         return VersionedService;
       }

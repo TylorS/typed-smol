@@ -10,7 +10,7 @@
 
 ## API overview
 
-- **Fx** — Stream type `Fx.Fx<A, E, R>` with constructors (`succeed`, `fail`, `fromEffect`, `fromIterable`, `make`, `periodic`, etc.), combinators (`map`, `flatMap`, `filter`, `take`, `switchMap`, etc.), and run (`runPromise`, `collect`, `fork`, `observe`).
+- **Fx** — Stream type `Fx.Fx<A, E, R>` with constructors (`succeed`, `fail`, `fromEffect`, `fromIterable`, `make`, `periodic`, etc.), combinators (`map`, `flatMap`, `filter`, `take`, `switchMap`, etc.), and run (`runPromise`, `collectAll`, `fork`, `observe`).
 - **Push** — Push-based stream abstraction.
 - **RefSubject** — Mutable reactive refs; `RefSubject.make(initial)`; typed helpers like `RefSubject.increment` / `RefSubject.decrement` for numbers; `RefArray`, `RefBoolean`, `RefOption`, etc.
 - **Subject** — Multicast subject for Fx streams.
@@ -20,6 +20,7 @@
 ## Example
 
 ```ts
+import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 
 Fx.fromIterable([1, 2, 3]).pipe(
@@ -69,7 +70,6 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `never` — Run forever without emitting.
 - `fromEffect(effect)` — One-value Fx from an Effect (emit on success, fail on failure).
 - `fromIterable(iterable)` — Emit each element of the iterable then complete.
-- `fromYieldable(yieldable)` — Fx from any Yieldable (Effect, Promise, etc.).
 - `fromSchedule(schedule)` — Emit `void` each time the schedule fires.
 - `fromFailures(failures)` — Fx that fails with combined failures from an iterable.
 - `make(run)` — Low-level: build Fx from a function that runs a Sink.
@@ -85,15 +85,15 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `mapError(f)` — Transform typed failures.
 - `mapBoth({ onSuccess, onFailure })` — Transform both success values and typed failures.
 - `flatMap(f)` — Map to inner Fx and merge (concurrent; like mergeMap).
-- `flatMapEffect(f)` — FlatMap with an Effect returning Fx.
-- `flatMapConcurrently(f, concurrency?)` — FlatMap with a concurrency limit.
-- `flatMapConcurrentlyEffect(f, concurrency?)` — Same with Effect-based inner Fx.
+- `flatMapEffect(f)` — Map to an Effect and merge its successful values.
+- `flatMapConcurrently(f, concurrency)` — FlatMap with a positive safe-integer concurrency limit; invalid limits fail through the Fx error channel with `IllegalArgumentError`.
+- `flatMapConcurrentlyEffect(f, concurrency)` — Map to Effects with the same validated concurrency contract.
 - `switchMap(f)` — Map to inner Fx and switch to latest (cancels previous).
-- `switchMapEffect(f)` — SwitchMap with Effect returning Fx.
+- `switchMapEffect(f)` — Map to an Effect and switch to the latest execution.
 - `exhaustMap(f)` — Map to inner Fx, ignore new outer values while inner runs.
-- `exhaustMapEffect(f)` — ExhaustMap with Effect returning Fx.
+- `exhaustMapEffect(f)` — Map to an Effect, ignoring new values while it runs.
 - `exhaustLatestMap(f)` — Like exhaustMap but cancel previous inner when new outer arrives.
-- `exhaustLatestMapEffect(f)` — ExhaustLatestMap with Effect returning Fx.
+- `exhaustLatestMapEffect(f)` — Effect-based exhaustLatestMap.
 - `filter(f)` — Keep only values satisfying the predicate.
 - `filterEffect(f)` — Filter with an Effect predicate.
 - `filterMap(f)` — Filter and map to Option; compact.
@@ -101,8 +101,8 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `compact` — Filter out `None`, unwrap `Some`.
 - `take(n)` — Take first n elements.
 - `takeEffect(effect)` — Take first n elements, where n is computed by an Effect.
-- `takeUntil(fx)` — Take until another Fx emits.
-- `takeUntilEffect(f)` — Take until an effectful predicate returns true.
+- `takeUntil(predicate)` — Take values until the predicate matches; the matching value is excluded.
+- `takeUntilEffect(f)` — Take values until an effectful predicate matches; the matching value is excluded.
 - `takeWhile(f)` — Take while predicate holds.
 - `takeWhileEffect(f)` — Take while effectful predicate holds.
 - `skip(n)` — Skip first n elements.
@@ -128,10 +128,11 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `onExit(f)` — Run an effect on exit (success/failure/interrupt).
 - `onInterrupt(f)` — Run an effect on interrupt.
 - `ensuring(effect)` — Run effect when Fx ends (success, failure, or interrupt).
-- `provide(services)` — Provide context to the Fx.
+- `provide(layer)` — Provide services to the Fx from a Layer.
 - `provideService(tag, service)` — Provide a single service to the Fx.
 - `provideServiceEffect(tag, effect)` — Provide a service produced by an Effect.
-- `when(condition, fx)` — Run Fx only when condition holds.
+- `if(condition, { onTrue, onFalse })` — Switch between two Fx streams based on a boolean Fx.
+- `when(condition, { onTrue, onFalse })` — Map a boolean Fx to one of two values.
 - `unwrap` — Unwrap Fx of Fx (flatten one level).
 - `unwrapScoped` — Unwrap with Scope for inner Fx.
 - `gen(f)` — Build Fx from a generator (yield Effects, return Fx).
@@ -146,15 +147,15 @@ Reactive stream type with concurrency, error handling, and context, integrated w
 - `filterMapLoopEffect(initial, f)` — filterMapLoop with Effect.
 - `filterMapLoopCause(initial, f)` — filterMapLoop with Cause.
 - `filterMapLoopCauseEffect(initial, f)` — filterMapLoop with Cause and Effect.
-- `keyed(keyFn, f)` — Keyed stream (e.g. by id) with inner Fx per key.
-- `tapEffect(f)` — Run effect for each value, pass value through.
+- `keyed({ getKey, onValue, debounce? })` — Track array elements by key and run an inner Fx per key.
+- `tap(f)` — Run a function or Effect for each value, then pass the value through.
 - `exit` — Turn Fx of Exit into Fx that fails/succeeds accordingly.
 - `result` — Materialize successes/failures as `Result`.
 - `causes` — Expose failures as Cause emissions.
 - `continueWith(f)` — When Fx ends, continue with another Fx.
 - `flip` — Swap success and error types.
 - `tuple(...fxs)` — Combine Fx streams into tuple Fx.
-- `withSpan(name?, options?)` — Add tracing span around the Fx.
+- `withSpan(name, options?)` — Add tracing spans around the Fx and sink callbacks.
 
 **Run**
 
@@ -246,7 +247,7 @@ Mutable reactive reference: observable state that can be read (as Effect), updat
 
 **Typed refs** (each has `make` and domain-specific helpers)
 
-- `RefArray` — Array ref; e.g. prepend, append, remove.
+- `RefArray` — Array ref; e.g. prepend, append, insertAt, replaceAt, drop, and filterValues.
 - `RefBoolean` — Boolean ref; e.g. toggle, setTrue, setFalse.
 - `RefOption` — Option ref.
 - `RefResult` — Result ref.
@@ -279,15 +280,15 @@ Multicast point: both an Fx and a Sink; multiple subscribers share one run of th
 
 **Constructors**
 
-- `Subject.make(replay?)` — Create a subject; optional replay buffer size.
-- `Subject.unsafeMake(replay?)` — Create without Scope (unsafe for cleanup).
+- `Subject.make(replay?)` — Create a subject; optional replay buffer size must be an integer from 0 through 4,294,967,295, otherwise the Effect fails with `IllegalArgumentError`.
+- `Subject.unsafeMake(replay?)` — Create without Scope (unsafe for cleanup); replay capacity has the same bounds and throws `IllegalArgumentError` when invalid.
 
 **Combinators**
 
 - `Subject.share(fx, subject)` — Multicast Fx through a subject (one run, many subscribers).
 - `Subject.multicast(fx)` — Share Fx with a fresh subject.
 - `Subject.hold(fx)` — Fx that holds last value for late subscribers.
-- `Subject.replay(fx, n)` — Replay last n values to new subscribers.
+- `Subject.replay(fx, n)` — Replay the last `n` values to new subscribers. Invalid capacities fail through the Fx error channel with `IllegalArgumentError`; valid capacities retain storage under the caller's memory policy.
 
 **Service**
 
@@ -334,7 +335,7 @@ Consumer of values: two callbacks, one for success and one for failure.
 - `tapEffect(sink, f)` — Tap with Effect, pass value through.
 - `flip(sink)` — Swap success and error types.
 - `exit(sink)` — Sink for Exit (success/failure).
-- `dropAfter(sink, n)` — Drop values after the nth.
+- `dropAfter(sink, predicate, run)` — Run with a derived sink that forwards through the first predicate match, then exits early.
 - `skipInterrupt(sink)` — Ignore interrupt at the Sink.
 
 **Service**

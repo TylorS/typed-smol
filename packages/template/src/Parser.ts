@@ -18,7 +18,9 @@ let parser: Parser | undefined;
  * - Special attributes like `.property`, `@event`, `?boolean`.
  * - Self-closing tags and text-only elements (script, style).
  *
- * The result is a cached `Template` instance that contains the static AST and dynamic part locations.
+ * Each call returns a new `Template` instance containing the static AST and dynamic part locations.
+ * Render targets cache their compiled DOM fragments or HTML chunks independently by template-literal
+ * identity.
  *
  * @example
  * ```ts
@@ -255,6 +257,9 @@ class Parser {
   }
 
   private parseTextOnlyElementNode(name: string): Template.Node {
+    if (name === "plaintext") {
+      throw new TypeError("<plaintext> templates cannot be rendered or hydrated");
+    }
     const { attributes, wasSelfClosed } = this.parseAttributes();
     const textContent = wasSelfClosed ? null : this.parseTextOnlyChildren();
     return new Template.TextOnlyElement(name, attributes, textContent);
@@ -335,12 +340,14 @@ class Parser {
         ),
       };
     } else if (next.type === TokenKind.Whitespace) {
+      assertStaticAttribute(name);
       return {
         shouldContinue: true,
         isSelfClosed: false,
         attribute: new Template.BooleanNode(name),
       };
     } else if (next.type === TokenKind.OpenTagEnd) {
+      assertStaticAttribute(name);
       this.consumeWhitespace();
       return {
         shouldContinue: false,
@@ -389,17 +396,9 @@ class Parser {
     );
   }
 
-  private parseBooleanAttribute(
-    value: string,
-    name: string,
-  ): Template.BooleanNode | Template.BooleanPartNode {
-    return this.parseMultipleParts(
-      value,
-      (index) => new Template.BooleanPartNode(name, index),
-      () => new Template.BooleanNode(name),
-      () => {
-        throw new Error("Boolean attributes cannot have multiple parts");
-      },
+  private parseBooleanAttribute(value: string, name: string): Template.BooleanPartNode {
+    return this.addPart(
+      new Template.BooleanPartNode(name, parseDirectivePartIndex(value, `?${name}`)),
     );
   }
 
@@ -415,31 +414,33 @@ class Parser {
   }
 
   private parseDataAttribute(value: string): Template.AttributeNode | Template.DataPartNode {
-    return this.addPart(new Template.DataPartNode(unsafeParsePartIndex(value)));
+    return this.addPart(new Template.DataPartNode(parseDirectivePartIndex(value, ".data")));
   }
 
   private parseEventAttribute(
     value: string,
     name: string,
   ): Template.AttributeNode | Template.EventPartNode {
-    return this.addPart(new Template.EventPartNode(name, unsafeParsePartIndex(value)));
+    return this.addPart(new Template.EventPartNode(name, parseDirectivePartIndex(value, "event")));
   }
 
   private parsePropertyAttribute(
     value: string,
     name: string,
   ): Template.AttributeNode | Template.PropertyPartNode {
-    return this.addPart(new Template.PropertyPartNode(name, unsafeParsePartIndex(value)));
+    return this.addPart(
+      new Template.PropertyPartNode(name, parseDirectivePartIndex(value, `.${name}`)),
+    );
   }
 
   private parsePropertiesAttribute(
     value: string,
   ): Template.AttributeNode | Template.PropertiesPartNode {
-    return this.addPart(new Template.PropertiesPartNode(unsafeParsePartIndex(value)));
+    return this.addPart(new Template.PropertiesPartNode(parseDirectivePartIndex(value, "spread")));
   }
 
   private parseRefAttribute(value: string): Template.AttributeNode | Template.RefPartNode {
-    return this.addPart(new Template.RefPartNode(unsafeParsePartIndex(value)));
+    return this.addPart(new Template.RefPartNode(parseDirectivePartIndex(value, "ref")));
   }
 
   private parseTextOnlyChildren(): Template.Text | null {
@@ -592,9 +593,31 @@ function parseTextAndParts<T>(
   return out;
 }
 
-// Only to be utilized when parsing positions which MUST be a single part.
-function unsafeParsePartIndex(text: string): number {
-  return parseInt(text.slice(2, -2), 10);
+function parseDirectivePartIndex(text: string, name: string): number {
+  if (!text.startsWith("{{") || !text.endsWith("}}")) {
+    throw new TypeError(`${name} must contain exactly one interpolation`);
+  }
+
+  const index = text.slice(2, -2);
+  for (let i = 0; i < index.length; i++) {
+    const code = index.charCodeAt(i);
+    if (code < 48 || code > 57) {
+      throw new TypeError(`${name} must contain exactly one interpolation`);
+    }
+  }
+
+  const partIndex = Number(index);
+  if (index === "" || !Number.isSafeInteger(partIndex)) {
+    throw new TypeError(`${name} must contain exactly one interpolation`);
+  }
+  return partIndex;
+}
+
+function assertStaticAttribute(name: string): void {
+  const [partType] = keyToPartType(name);
+  if (partType !== "attr" && partType !== "class") {
+    throw new TypeError(`${name} must contain exactly one interpolation`);
+  }
 }
 
 function isSpreadAttribute(rawName: string): boolean {

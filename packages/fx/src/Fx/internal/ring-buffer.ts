@@ -1,9 +1,17 @@
+import * as Cause from "effect/Cause";
 import { type Effect, flatMap, void as void_ } from "effect/Effect";
+
+const MAX_ARRAY_LENGTH = 0xffff_ffff;
+const INVALID_CAPACITY_MESSAGE =
+  "Ring buffer capacity must be an integer from 1 through 4294967295";
 
 export class RingBuffer<A> {
   readonly capacity: number;
 
   constructor(capacity: number) {
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > MAX_ARRAY_LENGTH) {
+      throw new Cause.IllegalArgumentError(INVALID_CAPACITY_MESSAGE);
+    }
     this.capacity = capacity;
     this._buffer = Array(this.capacity);
   }

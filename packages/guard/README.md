@@ -1,12 +1,23 @@
 # @typed/guard
 
-> **Beta:** This package is in beta; APIs may change.
+> **Beta:** This package is in beta; APIs may change between beta releases. Review the
+> [repository releases](https://github.com/TylorS/typed-smol/releases) before upgrading.
 
 `@typed/guard` provides **Effect-based guards**: functions that take an input and produce `Effect<Option<O>, E, R>`. Guards can be composed with `pipe`, `map`, `filter`, `bind`, and integrated with Effect Schema (`fromSchemaDecode` / `fromSchemaEncode`, `decode` / `encode`). Use them for validation, parsing, and route matching when you want a composable “maybe this input becomes this output” with effects.
 
 ## Dependencies
 
 - `effect`
+
+## Outcome model
+
+A guard returns `Effect.Effect<Option.Option<O>, E, R>`. Its three outcomes are distinct:
+
+- `Some(output)` means the input matched and produced `output`.
+- `None` means the input did not match. It is a successful Effect, so recovery combinators do not run.
+- An Effect failure means evaluation failed in the typed `E` channel. Defects and interruption remain in the Effect cause.
+
+Guard combinators preserve this distinction. Sequential composition stops on `None`, propagates failures, and runs the next guard only for `Some`.
 
 ## API overview
 
@@ -29,7 +40,9 @@
 
 ### Core
 
-- **`getGuard(guard)`** — Normalizes a `GuardInput` to a `Guard` (unwraps `AsGuard`).
+- **`getGuard(guard)`** — Normalizes a `GuardInput` to a `Guard`. Functions are always used directly. An `AsGuard` object must have an own callable `asGuard` property, and `asGuard()` must return a function; invalid adapters throw `TypeError` during normalization.
+
+Class adapters must define `asGuard` as an own arrow field, such as `readonly asGuard = () => guard`. A prototype method is not a runtime adapter; use an own arrow field or a plain `{ asGuard: () => guard }` wrapper.
 
 ### Composition
 
@@ -44,12 +57,16 @@
 
 - **`liftPredicate(predicate)`** — Builds a guard from a predicate. With a refinement `(a: A) => a is B`, output is narrowed to `B`; otherwise `Guard<A, A>`.
 
+The predicate is deferred until the returned Effect runs. If it throws, the exception is an Effect defect rather than a typed error. Use an effectful `Guard` when failure belongs in the `E` channel.
+
 ```ts
 liftPredicate<A, B extends A>(predicate: (a: A) => a is B): Guard<A, B>;
 liftPredicate<A>(predicate: (a: A) => boolean): Guard<A, A>;
 ```
 
 - **`any(guards)`** — Takes an object of named guards and returns a guard whose input is the intersection of all guard inputs and whose output is the tagged union `{ _tag: key; value: output }`. Tries each guard in order and returns the first match.
+
+`any` snapshots own enumerable string and symbol keys when it is called. Inherited and non-enumerable properties are ignored. ECMAScript own-key order applies: integer-index strings in ascending order, other strings in insertion order, then symbols in insertion order. Candidate Effects run sequentially and evaluation stops after the first `Some`.
 
 ### Schema
 
@@ -69,34 +86,37 @@ liftPredicate<A>(predicate: (a: A) => boolean): Guard<A, A>;
 
 ### Struct helpers
 
-- **`addTag(guard, value)`** — Adds a readonly `_tag` property to the guard’s output. Dual.
-- **`bindTo(guard, key)`** — Wraps the guard’s output in an object under the given key: `{ [key]: O }`. Dual.
-- **`bind(guard, key, f)`** — Runs a second guard on the first’s output and merges the result under `key` into the output object. Dual.
-- **`let(guard, key, value)`** — Adds a fixed property to the guard’s output. Dual.
+- **`addTag(guard, value)`** — Adds a readonly `_tag` property to an object output that does not already have one. Dual.
+- **`bindTo(guard, key)`** — Wraps any guard output in an object under the given key: `{ [key]: O }`. Dual. Use this to enter the record-building workflow from a primitive, array, or class instance.
+- **`bind(guard, key, f)`** — Runs a second guard on the first’s object output and adds the result under a new `key`. Dual.
+- **`let(guard, key, value)`** — Adds a fixed property under a new key to an object output. Dual.
+
+`let`, `addTag`, and `bind` require object outputs and reject statically known key collisions. They use object spread and produce a new plain object. They copy own enumerable string and symbol properties; they do not preserve prototypes, inherited properties, or non-enumerable properties. Enumerable getters and proxy traps may run during the copy. Use `bindTo` to enter this record-building workflow from a primitive output.
 
 ## Example
+
+The [basic example](./examples/basic.ts) is runnable and checked by `test:types`.
 
 ```ts
 import { Effect, Option } from "effect";
 import * as Guard from "@typed/guard";
 import * as Schema from "effect/Schema";
 
-const Positive = Schema.Number.pipe(Schema.positive());
-const guardDecode = Guard.fromSchemaDecode(Positive);
+const Positive = Schema.Finite.check(Schema.isGreaterThan(0));
+const positive = Guard.fromSchemaDecode(Positive);
 
-// Inside Effect.gen(function* () { ... })
-const result =
-  yield *
-  guardDecode(42).pipe(
-    Effect.map(
-      Option.match({
-        onNone: () => "invalid",
-        onSome: (n) => `ok: ${n}`,
-      }),
-    ),
-  );
-// result === "ok: 42"
+const program = positive(42).pipe(
+  Effect.map(
+    Option.match({
+      onNone: () => "not a positive number",
+      onSome: (n) => `ok: ${n}`,
+    }),
+  ),
+);
+
+const result = await Effect.runPromise(program);
+console.log(result); // "ok: 42"
 
 const even = Guard.liftPredicate((n: number) => n % 2 === 0);
-const positiveEven = Guard.pipe(guardDecode, even);
+const positiveEven = Guard.pipe(positive, even);
 ```
