@@ -13,6 +13,34 @@ import type {
   Transition,
 } from "./model.js";
 
+/**
+ * @since 1.0.0
+ */
+export interface NavigationNavigateOptions {
+  readonly state?: unknown;
+  readonly info?: unknown;
+  readonly history?: "auto" | "push" | "replace";
+}
+
+/**
+ * @since 1.0.0
+ */
+export interface NavigationReloadOptions {
+  readonly state?: unknown;
+  readonly info?: unknown;
+}
+
+/**
+ * @since 1.0.0
+ */
+export interface NavigationInfoOptions {
+  readonly info?: unknown;
+}
+
+type DestinationState<S> = Omit<Destination, "state"> & {
+  readonly state: S;
+};
+
 export class Navigation extends Context.Service<
   Navigation,
   {
@@ -28,23 +56,20 @@ export class Navigation extends Context.Service<
       url: string | URL,
       options?: NavigationNavigateOptions,
     ) => Effect.Effect<Destination, NavigationError>;
-    readonly back: (options?: {
-      readonly info?: unknown;
-    }) => Effect.Effect<Destination, NavigationError>;
-    readonly forward: (options?: {
-      readonly info?: unknown;
-    }) => Effect.Effect<Destination, NavigationError>;
+    readonly back: (
+      options?: NavigationInfoOptions,
+    ) => Effect.Effect<Destination, NavigationError>;
+    readonly forward: (
+      options?: NavigationInfoOptions,
+    ) => Effect.Effect<Destination, NavigationError>;
     readonly traverseTo: (
       key: Destination["key"],
-      options?: { readonly info?: unknown },
+      options?: NavigationInfoOptions,
     ) => Effect.Effect<Destination, NavigationError>;
     readonly updateCurrentEntry: (options: {
       readonly state: unknown;
     }) => Effect.Effect<Destination, NavigationError>;
-    readonly reload: (options?: {
-      readonly info?: unknown;
-      readonly state?: unknown;
-    }) => Effect.Effect<Destination, NavigationError>;
+    readonly reload: (options?: NavigationReloadOptions) => Effect.Effect<Destination, NavigationError>;
 
     readonly onBeforeNavigation: <R = never, R2 = never>(
       handler: BeforeNavigationHandler<R, R2>,
@@ -71,18 +96,48 @@ export class Navigation extends Context.Service<
     Navigation.useSync((n) => n.canGoForward),
   );
 
-  static readonly navigate = (url: string | URL, options?: NavigationNavigateOptions) =>
-    Navigation.use((n) => n.navigate(url, options));
-  static readonly back = (options?: { readonly info?: unknown }) =>
+  static navigate<S>(
+    url: string | URL,
+    options: NavigationNavigateOptions & { readonly state: S },
+  ): Effect.Effect<DestinationState<S>, NavigationError, Navigation>;
+  static navigate(
+    url: string | URL,
+    options?: NavigationNavigateOptions,
+  ): Effect.Effect<Destination, NavigationError, Navigation>;
+  static navigate(url: string | URL, options?: NavigationNavigateOptions) {
+    return Navigation.use((n) => n.navigate(url, options));
+  }
+
+  static readonly back = (options?: NavigationInfoOptions) =>
     Navigation.use((n) => n.back(options));
-  static readonly forward = (options?: { readonly info?: unknown }) =>
+  static readonly forward = (options?: NavigationInfoOptions) =>
     Navigation.use((n) => n.forward(options));
-  static readonly traverseTo = (key: Destination["key"], options?: { readonly info?: unknown }) =>
+  static readonly traverseTo = (key: Destination["key"], options?: NavigationInfoOptions) =>
     Navigation.use((n) => n.traverseTo(key, options));
-  static readonly updateCurrentEntry = (options: { readonly state: unknown }) =>
-    Navigation.use((n) => n.updateCurrentEntry(options));
-  static readonly reload = (options?: { readonly info?: unknown; readonly state?: unknown }) =>
-    Navigation.use((n) => n.reload(options));
+
+  static updateCurrentEntry<S>(options: { readonly state: S }): Effect.Effect<
+    DestinationState<S>,
+    NavigationError,
+    Navigation
+  >;
+  static updateCurrentEntry(options: { readonly state: unknown }): Effect.Effect<
+    Destination,
+    NavigationError,
+    Navigation
+  >;
+  static updateCurrentEntry(options: { readonly state: unknown }) {
+    return Navigation.use((n) => n.updateCurrentEntry(options));
+  }
+
+  static reload<S>(
+    options: NavigationReloadOptions & { readonly state: S },
+  ): Effect.Effect<DestinationState<S>, NavigationError, Navigation>;
+  static reload(
+    options?: NavigationReloadOptions,
+  ): Effect.Effect<Destination, NavigationError, Navigation>;
+  static reload(options?: NavigationReloadOptions) {
+    return Navigation.use((n) => n.reload(options));
+  }
 
   static readonly onBeforeNavigation = <R = never, R2 = never>(
     handler: BeforeNavigationHandler<R, R2>,

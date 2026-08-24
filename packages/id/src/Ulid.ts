@@ -1,3 +1,4 @@
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { DateTimes } from "./DateTimes.js";
@@ -20,17 +21,18 @@ const TIME_MAX = 2 ** 48 - 1;
 const TIME_LEN = 10;
 const RANDOM_LEN = 16;
 
-export const ulid: Effect.Effect<Ulid, never, RandomValues | DateTimes> = Effect.zipWith(
-  DateTimes.now,
-  RandomValues.call<UlidSeed>(16),
-  (now, seed) => {
-    if (now > TIME_MAX) {
-      throw new Error("Cannot generate ULID due to timestamp overflow");
+export const ulid: Effect.Effect<Ulid, Cause.IllegalArgumentError, RandomValues | DateTimes> =
+  Effect.gen(function* () {
+    const now = yield* DateTimes.now;
+    if (!Number.isSafeInteger(now) || now < 0 || now > TIME_MAX) {
+      return yield* new Cause.IllegalArgumentError(
+        `ULID timestamp must be a safe integer between 0 and ${TIME_MAX}, received ${now}`,
+      );
     }
 
+    const seed: UlidSeed = yield* RandomValues.call(16);
     return Ulid.make(encodeTime(now, TIME_LEN) + encodeRandom(seed));
-  },
-);
+  });
 
 function encodeTime(now: number, len: number): string {
   let str = "";

@@ -8,6 +8,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { makeFormatterDefault } from "effect/SchemaIssue";
+import * as Semaphore from "effect/Semaphore";
 import * as Scope from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
 import { exit } from "@typed/fx/Fx";
@@ -49,6 +50,7 @@ export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
     const layerManager = makeLayerManager(memoMap, rootScope, fiberId);
     const layoutManager = makeLayoutManager(rootScope, fiberId);
     const catchManager = makeCatchManager(rootScope, fiberId);
+    const lock = Semaphore.makeUnsafe(1).withPermits(1);
 
     let currentState: {
       readonly entry: CompiledEntry;
@@ -64,6 +66,8 @@ export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
       layers = [],
     }: RouteTransition) {
       const guardCauses: Array<Cause.Cause<any>> = [];
+      let firstDecodeError: RouteDecodeError | undefined;
+      let decodedCandidate = false;
       let matchedEntry: CompiledEntry | undefined;
       let matchedParams: any;
       let matchedPrepared:
@@ -76,10 +80,20 @@ export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
       let matchedServices: Context.Context<any> | undefined;
 
       for (const entry of candidates) {
-        const params = yield* Effect.mapErrorEager(
-          entry.decode(input),
-          (cause) => new RouteDecodeError({ path, cause: makeFormatterDefault()(cause.issue) }),
+        const decoded = yield* entry.decode(input).pipe(
+          Effect.map(Option.some),
+          Effect.catch((cause) => {
+            firstDecodeError ??= new RouteDecodeError({
+              path,
+              cause: makeFormatterDefault()(cause.issue),
+            });
+            return Effect.succeedNone;
+          }),
         );
+        if (Option.isNone(decoded)) continue;
+
+        decodedCandidate = true;
+        const params = decoded.value;
         const prepared = yield* layerManager.prepare([...entry.layers, ...layers]);
         const services = Context.merge(ambient, prepared.services);
         const guardExit = yield* entry
@@ -108,6 +122,9 @@ export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
         matchedPrepared === undefined ||
         matchedServices === undefined
       ) {
+        if (!decodedCandidate && firstDecodeError !== undefined) {
+          return yield* firstDecodeError;
+        }
         return yield* new RouteGuardError({ path, causes: guardCauses });
       }
 
@@ -145,7 +162,7 @@ export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
       return currentState.fx;
     });
 
-    return { transition } as RouteExecutor<A, E, R>;
+    return { transition: (input) => lock(transition(input)) } satisfies RouteExecutor<A, E, R>;
   });
 }
 

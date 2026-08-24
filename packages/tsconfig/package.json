@@ -1,7 +1,17 @@
 {
   "name": "@typed/tsconfig",
   "version": "1.0.0-beta.4",
+  "description": "Shared TypeScript presets for Typed packages and applications.",
+  "license": "MIT",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/tsconfig#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/tsconfig"
+  },
   "files": [
+    "README.md",
     "base.json",
     "dom.json",
     "test.json",
@@ -16,5 +26,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.7 <8"
   }
 }

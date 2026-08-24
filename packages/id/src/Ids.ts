@@ -1,6 +1,8 @@
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import { dual } from "effect/Function";
 import * as Layer from "effect/Layer";
+import * as Random from "effect/Random";
 import * as Context from "effect/Context";
 import type { Cuid } from "./Cuid.js";
 import { cuid, CuidState } from "./Cuid.js";
@@ -19,17 +21,25 @@ import type { Uuid7 } from "./Uuid7.js";
 import { uuid7, Uuid7State } from "./Uuid7.js";
 import { TestClock } from "effect/testing";
 
+const testRandomValues = (): Layer.Layer<RandomValues> =>
+  Layer.effect(
+    RandomValues,
+    RandomValues.pipe(Effect.provide(RandomValues.Random), Random.withSeed("@typed/id/Ids.Test")),
+  );
+
 export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
   make: Effect.gen(function* () {
     const services = yield* Effect.context<DateTimes | RandomValues | CuidState | Uuid7State>();
 
     const uuid5_: {
-      (namespace: Uuid5Namespace): (name: string) => Effect.Effect<Uuid5>;
-      (name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5>;
-      readonly dns: (name: string) => Effect.Effect<Uuid5>;
-      readonly url: (name: string) => Effect.Effect<Uuid5>;
-      readonly oid: (name: string) => Effect.Effect<Uuid5>;
-      readonly x500: (name: string) => Effect.Effect<Uuid5>;
+      (
+        namespace: Uuid5Namespace,
+      ): (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      (name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly dns: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly url: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly oid: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly x500: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
     } = Object.assign(
       dual(2, (name: string, namespace: Uuid5Namespace) =>
         Effect.provide(uuid5(name, namespace), services),
@@ -55,7 +65,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
 }) {
   static readonly cuid: Effect.Effect<Cuid, never, Ids> = Effect.flatMap(Ids, ({ cuid }) => cuid);
 
-  static readonly ksuid: Effect.Effect<Ksuid, never, Ids> = Effect.flatMap(
+  static readonly ksuid: Effect.Effect<Ksuid, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
     Ids,
     ({ ksuid }) => ksuid,
   );
@@ -65,7 +75,10 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
     ({ nanoId }) => nanoId,
   );
 
-  static readonly ulid: Effect.Effect<Ulid, never, Ids> = Effect.flatMap(Ids, ({ ulid }) => ulid);
+  static readonly ulid: Effect.Effect<Ulid, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
+    Ids,
+    ({ ulid }) => ulid,
+  );
 
   static readonly uuid4: Effect.Effect<Uuid4, never, Ids> = Effect.flatMap(
     Ids,
@@ -73,12 +86,17 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
   );
 
   static readonly uuid5: {
-    (namespace: Uuid5Namespace): (name: string) => Effect.Effect<Uuid5, never, Ids>;
-    (name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5, never, Ids>;
-    readonly dns: (name: string) => Effect.Effect<Uuid5, never, Ids>;
-    readonly url: (name: string) => Effect.Effect<Uuid5, never, Ids>;
-    readonly oid: (name: string) => Effect.Effect<Uuid5, never, Ids>;
-    readonly x500: (name: string) => Effect.Effect<Uuid5, never, Ids>;
+    (
+      namespace: Uuid5Namespace,
+    ): (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    (
+      name: string,
+      namespace: Uuid5Namespace,
+    ): Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    readonly dns: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    readonly url: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    readonly oid: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    readonly x500: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
   } = Object.assign(
     dual(2, (name: string, namespace: Uuid5Namespace) =>
       Effect.flatMap(Ids, ({ uuid5 }) => uuid5(name, namespace)),
@@ -90,30 +108,74 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
       x500: (name: string) => Effect.flatMap(Ids, ({ uuid5 }) => uuid5.x500(name)),
     },
   );
-  static readonly uuid7: Effect.Effect<Uuid7, never, Ids> = Effect.flatMap(
+  static readonly uuid7: Effect.Effect<Uuid7, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
     Ids,
     ({ uuid7 }) => uuid7,
   );
 
   static readonly Default: Layer.Layer<Ids | DateTimes | RandomValues, never, never> = Layer.effect(
     Ids,
-    Ids.make,
-  ).pipe(
-    Layer.provide([CuidState.Default, Uuid7State.Default]),
-    Layer.provideMerge([DateTimes.Default, RandomValues.Default]),
-  );
+    makeLazyIds("node"),
+  ).pipe(Layer.provideMerge([DateTimes.Default, RandomValues.Default]));
 
   static readonly Test = (
-    options?: TestOptions,
-  ): Layer.Layer<Ids | DateTimes | RandomValues | TestClock.TestClock> =>
-    Layer.effect(Ids, Ids.make).pipe(
-      Layer.provide([
-        Layer.effect(CuidState, CuidState.make(options?.envData ?? "node")),
-        Uuid7State.Default,
-      ]),
-      Layer.provideMerge([DateTimes.Fixed(options?.currentTime ?? 0), RandomValues.Random]),
+    options: TestOptions = {},
+  ): Layer.Layer<
+    Ids | DateTimes | RandomValues | TestClock.TestClock,
+    Cause.IllegalArgumentError
+  > => {
+    const services = Layer.mergeAll(
+      DateTimes.Fixed(options.currentTime ?? 1_400_000_000_000),
+      testRandomValues(),
+    );
+
+    return Layer.effect(Ids, makeLazyIds(options.envData ?? "node")).pipe(
+      Layer.provide(services),
+      Layer.provideMerge(services),
       Layer.provideMerge(TestClock.layer({})),
     );
+  };
+}
+
+function makeLazyIds(envData: string) {
+  return Effect.gen(function* () {
+    const services = yield* Effect.context<DateTimes | RandomValues>();
+    const getCuidState = yield* Effect.cached(Effect.provide(CuidState.make(envData), services));
+    const getUuid7State = yield* Effect.cached(Effect.provide(Uuid7State.make, services));
+
+    const uuid5_: {
+      (
+        namespace: Uuid5Namespace,
+      ): (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      (name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly dns: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly url: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly oid: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+      readonly x500: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+    } = Object.assign(
+      dual(2, (name: string, namespace: Uuid5Namespace) =>
+        Effect.provide(uuid5(name, namespace), services),
+      ),
+      {
+        dns: uuid5(Uuid5Namespace.DNS),
+        url: uuid5(Uuid5Namespace.URL),
+        oid: uuid5(Uuid5Namespace.OID),
+        x500: uuid5(Uuid5Namespace.X500),
+      },
+    );
+
+    return {
+      cuid: Effect.flatMap(getCuidState, (state) => Effect.provideService(cuid, CuidState, state)),
+      ksuid: Effect.provide(ksuid, services),
+      nanoId: Effect.provide(nanoId, services),
+      ulid: Effect.provide(ulid, services),
+      uuid4: Effect.provide(uuid4, services),
+      uuid5: uuid5_,
+      uuid7: Effect.flatMap(getUuid7State, (state) =>
+        Effect.provideService(uuid7, Uuid7State, state),
+      ),
+    };
+  });
 }
 
 export type TestOptions = {

@@ -1,3 +1,4 @@
+import type * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -13,11 +14,12 @@ import {
   type RenderEvent,
 } from "./RenderEvent.js";
 
+const MANY_MARKER_PREFIX = "/m_";
+
 // We wrap the all the nodes in a single RenderEvent so that we can micro-optimize
 // the downstream behaviors of diffing/patching.
-const wrapInRenderEvent = Fx.map(
-  (events: ReadonlyArray<RenderEvent>): RenderEvent =>
-    DomRenderEvent(events.flatMap(getNodesFromRendered)),
+const wrapInRenderEvent = Fx.map((events: ReadonlyArray<RenderEvent>): RenderEvent =>
+  DomRenderEvent(events.flatMap(getNodesFromRendered)),
 );
 
 /**
@@ -86,7 +88,7 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
   values: Fx.Fx<ReadonlyArray<A>, E, R>,
   getKey: (a: A) => B,
   render: (value: RefSubject.RefSubject<A>, key: B) => Fx.Fx<RenderEvent, E2, R2 | Scope>,
-): Fx.Fx<RenderEvent, E | E2, R | R2 | Scope> {
+): Fx.Fx<RenderEvent, E | E2 | Cause.IllegalArgumentError, R | R2 | Scope> {
   return Fx.gen(function* () {
     const behavior = yield* RefSubject.CurrentComputedBehavior;
     if (behavior === "multiple") {
@@ -94,13 +96,23 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
       const hydrateContext = Context.getOption(services, HydrateContext);
       // If we're hydrating, attempt to provide the correct HydrateContext to rendering Fx
       if (Option.isSome(hydrateContext) && hydrateContext.value.hydrate) {
+        const localSymbolOrdinals = new Map<symbol, number>();
         return Fx.keyed(values, {
-          getKey,
+          getKey: (value) => {
+            const key = getKey(value);
+            if (typeof key === "symbol" && Symbol.keyFor(key) === undefined) {
+              getLocalSymbolOrdinal(key, localSymbolOrdinals);
+            }
+            return key;
+          },
           onValue: (ref, key) =>
             Fx.provide(
               render(ref, key),
               Layer.succeedContext(
-                HydrateContext.context({ ...hydrateContext.value, manyKey: key.toString() }),
+                HydrateContext.context({
+                  ...hydrateContext.value,
+                  manyKey: encodeManyKey(key, localSymbolOrdinals),
+                }),
               ),
             ),
         }).pipe(wrapInRenderEvent);
@@ -112,10 +124,11 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
     const initial = yield* Fx.first(values);
     if (Option.isNone(initial) || initial.value.length === 0) return Fx.empty;
     const initialValues = initial.value;
-    const lastIndex = initialValues.length - 1;
+    const entries = yield* Effect.sync(() => prepareManyEntries(initialValues, getKey, new Map()));
+    const lastIndex = entries.length - 1;
     return Fx.mergeOrdered(
-      ...initialValues.map((value, i) =>
-        renderValue<A, E, R, B, R2, E2>(value, getKey, render, i === lastIndex),
+      ...entries.map(({ encodedKey, key, value }, i) =>
+        renderValue<A, E, R, B, R2, E2>(value, key, encodedKey, render, i === lastIndex),
       ),
     );
   });
@@ -123,21 +136,80 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
 
 function renderValue<A, E, R, B extends PropertyKey, R2, E2>(
   value: A,
-  getKey: (a: A) => B,
+  key: B,
+  encodedKey: string,
   render: (value: RefSubject.RefSubject<A>, key: B) => Fx.Fx<RenderEvent, E2, R2 | Scope>,
   last: boolean,
 ): Fx.Fx<RenderEvent, E | E2, R | R2 | Scope> {
   return Fx.unwrap(
     Effect.map(RefSubject.make(value), (ref) => {
-      const key = getKey(value);
-
       return render(RefSubject.slice(ref, 0, 1), key).pipe(
         Fx.dropAfter((e) => isHtmlRenderEvent(e) && e.last),
         Fx.map((r) => HtmlRenderEvent(renderToString(r, ""), false)),
-        Fx.append(HtmlRenderEvent(MANY_HOLE(key), last)),
+        Fx.append(HtmlRenderEvent(manyMarkerFromEncodedKey(encodedKey), last)),
       );
     }),
   );
+}
+
+function prepareManyEntries<A, B extends PropertyKey>(
+  values: ReadonlyArray<A>,
+  getKey: (value: A) => B,
+  localSymbolOrdinals: Map<symbol, number>,
+) {
+  return values.map((value) => {
+    const key = getKey(value);
+    const encodedKey = encodeManyKey(key, localSymbolOrdinals);
+    return { encodedKey, key, value } as const;
+  });
+}
+
+function encodeManyKey(key: PropertyKey, localSymbolOrdinals: Map<symbol, number>): string {
+  switch (typeof key) {
+    case "string":
+      return `v1_s.${encodeUtf16Base64Url(key)}`;
+    case "number":
+      return `v1_n.${encodeUtf16Base64Url(normalizeNumber(key))}`;
+    case "symbol": {
+      const globalKey = Symbol.keyFor(key);
+      if (globalKey === undefined) {
+        const ordinal = getLocalSymbolOrdinal(key, localSymbolOrdinals);
+        const description =
+          key.description === undefined ? "u" : `s.${encodeUtf16Base64Url(key.description)}`;
+        return `v1_l.${ordinal}.${description}`;
+      }
+      return `v1_g.${encodeUtf16Base64Url(globalKey)}`;
+    }
+  }
+}
+
+function getLocalSymbolOrdinal(key: symbol, localSymbolOrdinals: Map<symbol, number>): number {
+  const existing = localSymbolOrdinals.get(key);
+  if (existing !== undefined) return existing;
+  const ordinal = localSymbolOrdinals.size;
+  localSymbolOrdinals.set(key, ordinal);
+  return ordinal;
+}
+
+function manyMarkerFromEncodedKey(encodedKey: string): string {
+  return `<!--${MANY_MARKER_PREFIX}${encodedKey}-->`;
+}
+
+function normalizeNumber(value: number): string {
+  if (Number.isNaN(value)) return "NaN";
+  if (value === Infinity) return "Infinity";
+  if (value === -Infinity) return "-Infinity";
+  if (Object.is(value, -0)) return "0";
+  return String(value);
+}
+
+function encodeUtf16Base64Url(value: string): string {
+  let binary = "";
+  for (let index = 0; index < value.length; index++) {
+    const codeUnit = value.charCodeAt(index);
+    binary += String.fromCharCode(codeUnit >>> 8, codeUnit & 0xff);
+  }
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
 
 function getNodesFromRendered(rendered: RenderEvent): Array<globalThis.Node> {
@@ -145,4 +217,4 @@ function getNodesFromRendered(rendered: RenderEvent): Array<globalThis.Node> {
   return Array.isArray(value) ? value : [value];
 }
 
-export const MANY_HOLE = (key: PropertyKey) => `<!--/m_${key.toString()}-->`;
+export const MANY_HOLE = (key: PropertyKey): string => `<!--/m_${key.toString()}-->`;

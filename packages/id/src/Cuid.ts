@@ -13,7 +13,7 @@ const INITIAL_COUNT_MAX = 476782367;
 
 // Schema
 export const Cuid = Schema.String.pipe(
-  Schema.check(Schema.isPattern(/^[a-z][0-9a-z]+$/)),
+  Schema.check(Schema.isPattern(/^[a-z][0-9a-z]{23}$/)),
   Schema.brand("@typed/id/CUID"),
 );
 export type Cuid = Schema.Schema.Type<typeof Cuid>;
@@ -42,7 +42,7 @@ export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState
             initialBytes[3],
         ) % INITIAL_COUNT_MAX;
 
-      // Create fingerprint from environment data
+      // Derive a stable discriminator from caller-provided environment data
       const fingerprint = (yield* hash(envData)).substring(0, BIG_LENGTH);
 
       let counter = initialValue;
@@ -62,7 +62,7 @@ export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState
   static readonly next = Effect.flatten(CuidState);
 
   static readonly Default = Layer.effect(CuidState, CuidState.make("node")).pipe(
-    Layer.provideMerge([DateTimes.Default, RandomValues.Default]),
+    Layer.provide([DateTimes.Default, RandomValues.Default]),
   );
 }
 
@@ -72,21 +72,11 @@ export const cuid: Effect.Effect<Cuid, never, CuidState> = Effect.flatMap(
 );
 
 // Utilities
-const ALPHABET = Array.from({ length: 26 }, (_, i) => String.fromCharCode(i + 97));
+const LETTER_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
+const BODY_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
+const LETTER_DOMAIN = "@typed/id/cuid/letter";
+const BODY_DOMAIN = "@typed/id/cuid/body";
 const encoder = new TextEncoder();
-
-function createEntropy(length: number, random: Uint8Array): string {
-  let entropy = "";
-  let offset = 0;
-
-  while (entropy.length < length) {
-    const value = random[offset];
-    entropy += Math.floor(value % 36).toString(36);
-    offset = (offset + 1) % random.length;
-  }
-
-  return entropy;
-}
 
 function hash(input: string): Effect.Effect<string> {
   return Effect.map(sha512(encoder.encode(input)), (buffer) => {
@@ -100,25 +90,43 @@ function hash(input: string): Effect.Effect<string> {
   });
 }
 
+function sample(
+  domain: string,
+  alphabet: string,
+  length: number,
+  canonicalInput: Uint8Array,
+): Effect.Effect<string> {
+  return Effect.gen(function* () {
+    const limit = Math.floor(256 / alphabet.length) * alphabet.length;
+    let value = "";
+
+    for (let block = 0; value.length < length; block++) {
+      const prefix = encoder.encode(`${domain}\0${block.toString(10)}\0`);
+      const input = new Uint8Array(prefix.length + canonicalInput.length);
+      input.set(prefix);
+      input.set(canonicalInput, prefix.length);
+      const digest = new Uint8Array(yield* sha512(input));
+
+      for (const byte of digest) {
+        if (byte >= limit) continue;
+        value += alphabet[byte % alphabet.length];
+        if (value.length === length) break;
+      }
+    }
+
+    return value;
+  });
+}
+
 function cuidFromSeed({ counter, fingerprint, random, timestamp }: CuidSeed): Effect.Effect<Cuid> {
   return Effect.gen(function* () {
-    // First letter is always a random lowercase letter from the seed
-    const firstLetter = ALPHABET[random[0] % ALPHABET.length];
+    const randomHex = Array.from(random, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const canonicalInput = encoder.encode(
+      [timestamp.toString(36), counter.toString(36), fingerprint, randomHex].join("\0"),
+    );
+    const firstLetter = yield* sample(LETTER_DOMAIN, LETTER_ALPHABET, 1, canonicalInput);
+    const body = yield* sample(BODY_DOMAIN, BODY_ALPHABET, DEFAULT_LENGTH - 1, canonicalInput);
 
-    // Convert components to base36
-    const time = timestamp.toString(36);
-    const count = counter.toString(36);
-
-    // Create entropy from remaining random bytes
-    const salt = createEntropy(4, random.slice(1));
-
-    // Hash all components together
-    const hashInput = `${time}${salt}${count}${fingerprint}`;
-    const hashed = yield* hash(hashInput);
-
-    // Construct the final CUID
-    const id = `${firstLetter}${hashed.substring(0, DEFAULT_LENGTH - 1)}`;
-
-    return Cuid.make(id);
+    return Cuid.make(firstLetter + body);
   });
 }

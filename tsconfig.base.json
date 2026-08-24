@@ -1,7 +1,6 @@
 {
   "$schema": "./node_modules/@effect/tsgo/schema.json",
   "compilerOptions": {
-    "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,

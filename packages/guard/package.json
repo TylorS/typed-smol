@@ -1,27 +1,40 @@
 {
   "name": "@typed/guard",
   "version": "1.0.0-beta.4",
+  "description": "Composable Effect-based guards for validation, parsing, and route matching.",
+  "license": "MIT",
+  "keywords": [
+    "effect",
+    "guard",
+    "parsing",
+    "typescript",
+    "validation"
+  ],
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/guard#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/guard"
+  },
   "files": [
     "dist",
-    "src"
+    "examples"
   ],
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
+    "test": "vitest run --config vitest.config.ts",
+    "test:types": "tsc -p tsconfig.types.json --noEmit"
   },
   "dependencies": {
     "effect": "catalog:"

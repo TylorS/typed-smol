@@ -9,12 +9,12 @@
     "prepare": "effect-tsgo patch --typescript --oxlint"
   },
   "devDependencies": {
+    "@effect/tsgo": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
     "oxlint-tsgolint": "catalog:",
-    "@effect/tsgo": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "packageManager": "pnpm@10.0.0"
 }

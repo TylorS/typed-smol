@@ -1,3 +1,4 @@
+import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -6,7 +7,6 @@ import * as Fiber from "effect/Fiber";
 import { dual, identity } from "effect/Function";
 import * as Option from "effect/Option";
 import { pipeArguments } from "effect/Pipeable";
-import { MaxOpsBeforeYield } from "effect/Scheduler";
 import * as Scope from "effect/Scope";
 import * as Context from "effect/Context";
 import * as SynchronizedRef from "effect/SynchronizedRef";
@@ -15,7 +15,7 @@ import * as RefSubject from "../../RefSubject/RefSubject.js";
 import * as Sink from "../../Sink/Sink.js";
 import type { Fx } from "../Fx.js";
 import type { Add, Moved, Remove, Update } from "../internal/diff.js";
-import { diff, getKeyMap } from "../internal/diff.js";
+import { diff } from "../internal/diff.js";
 import { withScopedFork } from "../internal/scope.js";
 import { FxTypeId } from "../TypeId.js";
 
@@ -58,11 +58,13 @@ export interface KeyedOptions<A, B, C, E2, R2> {
 export const keyed: {
   <A, B extends PropertyKey, C, E2, R2>(
     options: KeyedOptions<A, B, C, E2, R2>,
-  ): <E, R>(fx: Fx<ReadonlyArray<A>, E, R>) => Fx<ReadonlyArray<C>, E | E2, R | R2 | Scope.Scope>;
+  ): <E, R>(
+    fx: Fx<ReadonlyArray<A>, E, R>,
+  ) => Fx<ReadonlyArray<C>, E | E2 | Cause.IllegalArgumentError, R | R2 | Scope.Scope>;
   <A, E, R, B extends PropertyKey, C, E2, R2>(
     fx: Fx<ReadonlyArray<A>, E, R>,
     options: KeyedOptions<A, B, C, E2, R2>,
-  ): Fx<ReadonlyArray<C>, E | E2, R | R2 | Scope.Scope>;
+  ): Fx<ReadonlyArray<C>, E | E2 | Cause.IllegalArgumentError, R | R2 | Scope.Scope>;
 } = dual(2, function keyed<
   A,
   E,
@@ -73,7 +75,7 @@ export const keyed: {
   R2,
 >(fx: Fx<ReadonlyArray<A>, E, R>, options: KeyedOptions<A, B, C, E2, R2>): Fx<
   ReadonlyArray<C>,
-  E | E2,
+  E | E2 | Cause.IllegalArgumentError,
   R | R2 | Scope.Scope
 > {
   return new Keyed(fx, options);
@@ -94,10 +96,14 @@ const VARIANCE: Fx.Variance<any, any, any> = {
 
 class Keyed<A, E, R, B extends PropertyKey, C, E2, R2> implements Fx<
   ReadonlyArray<C>,
-  E | E2,
+  E | E2 | Cause.IllegalArgumentError,
   R | R2 | Scope.Scope
 > {
-  readonly [FxTypeId]: Fx.Variance<ReadonlyArray<C>, E | E2, R | R2 | Scope.Scope> = VARIANCE;
+  readonly [FxTypeId]: Fx.Variance<
+    ReadonlyArray<C>,
+    E | E2 | Cause.IllegalArgumentError,
+    R | R2 | Scope.Scope
+  > = VARIANCE;
   readonly fx: Fx<ReadonlyArray<A>, E, R>;
   readonly options: KeyedOptions<A, B, C, E2, R2>;
 
@@ -106,10 +112,8 @@ class Keyed<A, E, R, B extends PropertyKey, C, E2, R2> implements Fx<
     this.options = options;
   }
 
-  run<R3>(sink: Sink.Sink<ReadonlyArray<C>, E | E2, R3>) {
-    return Effect.withFiber((fiber) => runKeyed(this.fx, this.options, sink, fiber.id)).pipe(
-      Effect.provideService(MaxOpsBeforeYield, Infinity),
-    );
+  run<R3>(sink: Sink.Sink<ReadonlyArray<C>, E | E2 | Cause.IllegalArgumentError, R3>) {
+    return Effect.withFiber((fiber) => runKeyed(this.fx, this.options, sink, fiber.id));
   }
 
   pipe(this: Keyed<A, E, R, B, C, E2, R2>) {
@@ -134,7 +138,7 @@ function emptyKeyedState<A, B extends PropertyKey, C>(): KeyedState<A, B, C> {
 function runKeyed<A, E, R, B extends PropertyKey, C, E2, R2, R3>(
   fx: Fx<ReadonlyArray<A>, E, R>,
   options: KeyedOptions<A, B, C, E2, R2>,
-  sink: Sink.Sink<ReadonlyArray<C>, E | E2, R3>,
+  sink: Sink.Sink<ReadonlyArray<C>, E | E2 | Cause.IllegalArgumentError, R3>,
   id: number,
 ): Effect.Effect<unknown, never, Scope.Scope | R | R2 | R3> {
   return withDebounceFork((debounceFork, parentScope) => {
@@ -150,7 +154,10 @@ function runKeyed<A, E, R, B extends PropertyKey, C, E2, R2, R3>(
         sink.onFailure,
         Effect.fn(function* (values: ReadonlyArray<A>) {
           const previous = state.previousValues;
-          const keyMap = getKeyMap(values, options.getKey);
+          const keyMap = getUniqueKeyMap(values, options.getKey);
+          if (Cause.isIllegalArgumentError(keyMap)) {
+            return yield* sink.onFailure(Cause.fail(keyMap));
+          }
 
           let changed = first;
           first = false;
@@ -181,7 +188,7 @@ function runKeyed<A, E, R, B extends PropertyKey, C, E2, R2, R3>(
             }
           }
 
-          state.previousValues = values;
+          state.previousValues = Array.from(values);
           previousKeyMap = keyMap;
 
           if (changed) {
@@ -193,6 +200,27 @@ function runKeyed<A, E, R, B extends PropertyKey, C, E2, R2, R3>(
       ),
     );
   }, options.debounce || 1);
+}
+
+function getUniqueKeyMap<A>(
+  values: ReadonlyArray<A>,
+  getKey: (value: A) => PropertyKey,
+): Map<PropertyKey, number> | Cause.IllegalArgumentError {
+  const keyMap = new Map<PropertyKey, number>();
+
+  for (let i = 0; i < values.length; ++i) {
+    const key = getKey(values[i]);
+    if (keyMap.has(key)) {
+      return new Cause.IllegalArgumentError(`Duplicate keyed() key ${formatKeyedKey(key)}`);
+    }
+    keyMap.set(key, i);
+  }
+
+  return keyMap;
+}
+
+function formatKeyedKey(key: PropertyKey): string {
+  return typeof key === "symbol" ? key.toString() : JSON.stringify(key);
 }
 
 class KeyedEntry<A, C> {
@@ -247,7 +275,7 @@ function* addValue<A, B extends PropertyKey, C, R2, E2, E, R3, D>(options: {
   id: number;
   parentScope: Scope.Scope;
   keyedOptions: KeyedOptions<A, B, C, E2, R2>;
-  sink: Sink.Sink<ReadonlyArray<C>, E | E2, R2 | R3>;
+  sink: Sink.Sink<ReadonlyArray<C>, E | E2 | Cause.IllegalArgumentError, R2 | R3>;
   scheduleNextEmit: Effect.Effect<D, never, R3>;
 }) {
   const { id, keyedOptions, parentScope, patch, scheduleNextEmit, sink, state, values } = options;

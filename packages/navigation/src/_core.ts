@@ -1,20 +1,27 @@
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
-import type * as Scope from "effect/Scope";
 import type * as Context from "effect/Context";
+import type * as Scope from "effect/Scope";
 import { RefSubject } from "@typed/fx";
 import type {
   BeforeNavigationEvent,
   CancelNavigation,
   Destination,
-  NavigationError,
   NavigationEvent,
   ProposedDestination,
   RedirectError,
   Transition,
 } from "./model.js";
-import type { BeforeNavigationHandler, Navigation, NavigationHandler } from "./Navigation.js";
+import { NavigationError } from "./model.js";
+import type {
+  BeforeNavigationHandler,
+  Navigation,
+  NavigationHandler,
+  NavigationNavigateOptions,
+  NavigationReloadOptions,
+} from "./Navigation.js";
 
 export type NavigationState = {
   readonly entries: ReadonlyArray<Destination>;
@@ -94,18 +101,38 @@ export const makeNavigationCore = Effect.fn(function* (
       }
     });
 
+  const clearTransition = (
+    ref: RefSubject.GetSetDelete<NavigationState>,
+    transition: BeforeNavigationEvent,
+  ) =>
+    Effect.flatMap(ref.get, (current) =>
+      Option.isSome(current.transition) && current.transition.value === transition
+        ? Effect.asVoid(ref.set({ ...current, transition: Option.none() }))
+        : Effect.void,
+    );
+
+  const beginNavigationEvent = (makeEvent: (current: NavigationState) => BeforeNavigationEvent) =>
+    state.updates((ref) =>
+      Effect.gen(function* () {
+        const current = yield* ref.get;
+        const event = makeEvent(current);
+        yield* ref.set({
+          entries: current.entries,
+          index: current.index,
+          transition: Option.some(event),
+        });
+        return event;
+      }),
+    );
+
   const updateState = (
     ref: RefSubject.GetSetDelete<NavigationState>,
     before: BeforeNavigationEvent,
-    current: NavigationState,
     destination: Destination,
   ) =>
     Effect.gen(function* () {
-      const event: NavigationEvent = {
-        type: before.type,
-        info: before.info,
-        destination,
-      };
+      const current = yield* ref.get;
+      if (Option.isNone(current.transition) || current.transition.value !== before) return false;
 
       if (before.type === "push") {
         const index = current.index + 1;
@@ -120,113 +147,162 @@ export const makeNavigationCore = Effect.fn(function* (
         yield* ref.set({ entries, index, transition: Option.none() });
       } else if (before.type === "traverse") {
         const nextIndex = current.index + before.delta;
+        const entries = current.entries.slice(0);
+        entries[nextIndex] = destination;
 
         yield* ref.set({
-          entries: current.entries,
+          entries,
           index: nextIndex,
           transition: Option.none(),
         });
       } else if (before.type === "reload") {
-        yield* ref.set({ ...current, transition: Option.none() });
+        const entries = current.entries
+          .slice(0, current.index)
+          .concat([destination], current.entries.slice(current.index + 1));
+        yield* ref.set({ entries, index: current.index, transition: Option.none() });
       }
 
-      yield* runHandlers(event);
+      return true;
     });
 
-  const runNavigationEvent = Effect.fn(function* (
-    before: BeforeNavigationEvent,
-    ref: RefSubject.GetSetDelete<NavigationState>,
-    depth: number,
-  ) {
-    let current = yield* ref.get;
-    current = yield* ref.set({
-      entries: current.entries,
-      index: current.index,
-      transition: Option.some(before),
-    });
-    const beforeError = yield* runBeforeHandlers(before);
+  const commitStateAndRunHandlers = (before: BeforeNavigationEvent, destination: Destination) => {
+    const event: NavigationEvent = {
+      type: before.type,
+      info: before.info,
+      destination,
+    };
 
-    if (Option.isSome(beforeError)) {
-      return yield* handleError(beforeError.value, ref, depth);
-    }
+    return state
+      .updates((ref) => updateState(ref, before, destination))
+      .pipe(Effect.flatMap((committed) => (committed ? runHandlers(event) : Effect.void)));
+  };
 
-    return yield* commit(before, (destination) => updateState(ref, before, current, destination));
+  const runNavigationEvent = Effect.fn(function* (before: BeforeNavigationEvent, depth: number) {
+    return yield* Effect.gen(function* () {
+      const beforeError = yield* runBeforeHandlers(before);
+
+      if (Option.isSome(beforeError)) {
+        return yield* handleError(beforeError.value, before, depth);
+      }
+
+      return yield* commit(before, (destination) => commitStateAndRunHandlers(before, destination));
+    }).pipe(
+      Effect.onExit((exit) =>
+        Exit.isFailure(exit) ? state.updates((ref) => clearTransition(ref, before)) : Effect.void,
+      ),
+    );
   });
 
   const handleError = (
     error: RedirectError | CancelNavigation,
-    ref: RefSubject.GetSetDelete<NavigationState>,
+    before: BeforeNavigationEvent,
     depth: number,
   ): Effect.Effect<Destination, NavigationError> =>
     Effect.gen(function* () {
       if (depth >= MAX_DEPTH) {
-        return yield* Effect.die(`Redirect loop detected.`);
+        return yield* new NavigationError({
+          error: new Error("Redirect loop detected"),
+        });
       }
 
-      const { entries, index } = yield* ref.get;
-      const from = entries[index];
-
       if (error._tag === "@typed/navigation/CancelNavigation") {
-        yield* ref.set({ entries, index, transition: Option.none() });
-        return from;
+        return yield* state.updates((ref) =>
+          Effect.gen(function* () {
+            const current = yield* ref.get;
+            const destination = current.entries[current.index];
+            if (Option.isSome(current.transition) && current.transition.value === before) {
+              yield* ref.set({ ...current, transition: Option.none() });
+            }
+            return destination;
+          }),
+        );
       } else {
-        return yield* runNavigationEvent(makeRedirectEvent(origin, error, from), ref, depth + 1);
+        const [redirectEvent, destination] = yield* state.updates((ref) =>
+          Effect.gen(function* () {
+            const current = yield* ref.get;
+            const destination = current.entries[current.index];
+            if (Option.isNone(current.transition) || current.transition.value !== before) {
+              return [Option.none<BeforeNavigationEvent>(), destination] as const;
+            }
+
+            const redirectEvent = yield* makeRedirectEvent(origin, error, destination);
+            yield* ref.set({ ...current, transition: Option.some(redirectEvent) });
+            return [Option.some(redirectEvent), destination] as const;
+          }),
+        );
+
+        return Option.isSome(redirectEvent)
+          ? yield* runNavigationEvent(redirectEvent.value, depth + 1)
+          : destination;
       }
     });
 
-  const navigate = (pathOrUrl: string | URL, options?: NavigationNavigateOptions) =>
-    state.updates(
-      Effect.fn(function* (ref) {
-        const state = yield* ref.get;
-        const from = state.entries[state.index];
-        const history = options?.history ?? "auto";
-        const url = getUrl(origin, pathOrUrl);
-        const type =
-          history === "auto"
-            ? from.url.origin === url.origin && from.url.pathname === url.pathname
-              ? "replace"
-              : "push"
-            : history;
-        const event: BeforeNavigationEvent = {
-          type,
-          from,
-          to: {
-            key: from.key,
-            url,
-            state: options?.state,
-            sameDocument: url.origin === origin,
-          },
-          delta: type === "replace" ? 0 : 1,
-          info: options?.info,
-        };
+  const navigate = Effect.fn(function* (
+    pathOrUrl: string | URL,
+    options?: NavigationNavigateOptions,
+  ) {
+    const url = yield* getUrlEffect(origin, pathOrUrl);
+    const event = yield* beginNavigationEvent((current) => {
+      const from = current.entries[current.index];
+      const history = options?.history ?? "auto";
+      const type =
+        history === "auto"
+          ? from.url.origin === url.origin && from.url.pathname === url.pathname
+            ? "replace"
+            : "push"
+          : history;
+      const to: ProposedDestination = {
+        ...(type === "push" ? {} : { key: from.key }),
+        url,
+        state: options?.state,
+        sameDocument: url.origin === origin,
+      };
+      return {
+        type,
+        from,
+        to,
+        delta: type === "replace" ? 0 : 1,
+        info: options?.info,
+      };
+    });
 
-        return yield* runNavigationEvent(event, ref, 0);
-      }),
-    );
+    return yield* runNavigationEvent(event, 0);
+  });
 
-  const traverseTo = (key: Destination["key"], options?: { readonly info?: unknown }) =>
-    state.updates(
-      Effect.fn(function* (ref) {
-        const state = yield* ref.get;
-        const { entries, index } = state;
-        const from = entries[index];
-        const nextIndex = entries.findIndex((e) => e.key === key);
+  const traverseTo = Effect.fn(function* (
+    key: Destination["key"],
+    options?: { readonly info?: unknown },
+  ) {
+    const [event, destination] = yield* state.updates((ref) =>
+      Effect.gen(function* () {
+        const current = yield* ref.get;
+        const { entries, index } = current;
+        const destination = entries[index];
+        const nextIndex = entries.findIndex((entry) => entry.key === key);
 
-        if (nextIndex === -1) return from;
+        if (nextIndex === -1) {
+          return yield* new NavigationError({
+            error: new Error(`Unknown navigation key: ${key}`),
+          });
+        }
+        if (nextIndex === index) {
+          return [Option.none<BeforeNavigationEvent>(), destination] as const;
+        }
 
-        const to = entries[nextIndex];
-        const delta = nextIndex - index;
         const event: BeforeNavigationEvent = {
           type: "traverse",
-          from,
-          to,
-          delta,
+          from: destination,
+          to: entries[nextIndex],
+          delta: nextIndex - index,
           info: options?.info,
         };
-
-        return yield* runNavigationEvent(event, ref, 0);
+        yield* ref.set({ ...current, transition: Option.some(event) });
+        return [Option.some(event), destination] as const;
       }),
     );
+
+    return Option.isSome(event) ? yield* runNavigationEvent(event.value, 0) : destination;
+  });
 
   const back = Effect.fn(function* (options?: { readonly info?: unknown }) {
     const { entries, index } = yield* state;
@@ -242,23 +318,22 @@ export const makeNavigationCore = Effect.fn(function* (
     return yield* traverseTo(key, options);
   });
 
-  const reload = (options?: { readonly info?: unknown }) =>
-    state.updates(
-      Effect.fn(function* (ref) {
-        const { entries, index } = yield* ref.get;
-        const current = entries[index];
+  const reload = Effect.fn(function* (options?: NavigationReloadOptions) {
+    const event = yield* beginNavigationEvent((current) => {
+      const from = current.entries[current.index];
+      const to =
+        options !== undefined && "state" in options ? { ...from, state: options.state } : from;
+      return {
+        type: "reload",
+        from,
+        to,
+        delta: 0,
+        info: options?.info,
+      };
+    });
 
-        const event: BeforeNavigationEvent = {
-          type: "reload",
-          from: current,
-          to: current,
-          delta: 0,
-          info: options?.info,
-        };
-
-        return yield* runNavigationEvent(event, ref, 0);
-      }),
-    );
+    return yield* runNavigationEvent(event, 0);
+  });
 
   const onBeforeNavigation = <R = never, R2 = never>(
     handler: BeforeNavigationHandler<R, R2>,
@@ -298,24 +373,20 @@ export const makeNavigationCore = Effect.fn(function* (
       );
     });
 
-  const updateCurrentEntry = (options: { readonly state: unknown }) =>
-    state.updates((ref) =>
-      Effect.gen(function* () {
-        const { entries, index } = yield* ref.get;
-        const current = entries[index];
-        return yield* runNavigationEvent(
-          {
-            type: "replace",
-            from: current,
-            to: { ...current, state: options.state },
-            delta: 0,
-            info: null,
-          },
-          ref,
-          0,
-        );
-      }),
-    );
+  const updateCurrentEntry = Effect.fn(function* (options: { readonly state: unknown }) {
+    const event = yield* beginNavigationEvent((current) => {
+      const from = current.entries[current.index];
+      return {
+        type: "replace",
+        from,
+        to: { ...from, state: options.state },
+        delta: 0,
+        info: null,
+      };
+    });
+
+    return yield* runNavigationEvent(event, 0);
+  });
 
   return {
     origin,
@@ -336,23 +407,33 @@ export const makeNavigationCore = Effect.fn(function* (
   } satisfies Navigation["Service"];
 });
 
-function makeRedirectEvent(origin: string, redirect: RedirectError, from: Destination) {
-  const url = getUrl(origin, redirect.url);
-  const to: ProposedDestination = {
-    url,
-    state: redirect.options?.state,
-    sameDocument: url.origin === origin,
-  };
-  const event: BeforeNavigationEvent = {
+function makeRedirectEvent(
+  origin: string,
+  redirect: RedirectError,
+  from: Destination,
+): Effect.Effect<BeforeNavigationEvent, NavigationError> {
+  return Effect.map(getUrlEffect(origin, redirect.url), (url) => ({
     type: "replace",
     from,
-    to,
+    to: {
+      key: from.key,
+      url,
+      state: redirect.options?.state,
+      sameDocument: url.origin === origin,
+    },
     delta: 0,
     info: redirect.options?.info,
-  };
-
-  return event;
+  }));
 }
 
 export const getUrl = (origin: string, urlOrPath: string | URL): URL =>
   typeof urlOrPath === "string" ? new URL(urlOrPath, origin) : urlOrPath;
+
+const getUrlEffect = (
+  origin: string,
+  urlOrPath: string | URL,
+): Effect.Effect<URL, NavigationError> =>
+  Effect.try({
+    try: () => getUrl(origin, urlOrPath),
+    catch: (error) => new NavigationError({ error }),
+  });

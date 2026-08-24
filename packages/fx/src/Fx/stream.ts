@@ -1,4 +1,4 @@
-import type * as Effect from "effect/Effect";
+import * as Effect from "effect/Effect";
 import { pipe } from "effect/Function";
 import * as Queue from "effect/Queue";
 import * as Stream from "effect/Stream";
@@ -14,11 +14,14 @@ export const toStream = <A, E, R>(
 ): Stream.Stream<A, E, R> =>
   Stream.callback<A, E, R>(
     (queue) =>
-      fx.run(
-        Sink.make(
-          (cause) => Queue.failCause(queue, cause),
-          (value) => Queue.offer(queue, value),
-        ),
+      Effect.flatMap(
+        fx.run(
+          Sink.make(
+            (cause) => Queue.failCause(queue, cause),
+            (value) => Queue.offer(queue, value),
+          ),
+        ), 
+        () => Queue.end(queue)
       ),
     options,
   );

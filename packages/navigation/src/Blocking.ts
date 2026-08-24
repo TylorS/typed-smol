@@ -13,7 +13,10 @@ import {
   type Destination,
   RedirectError,
 } from "./model.js";
-import { Navigation } from "./Navigation.js";
+import {
+  Navigation,
+  type NavigationNavigateOptions,
+} from "./Navigation.js";
 
 /**
  * @since 1.0.0
@@ -48,10 +51,11 @@ type Blocked = {
 };
 
 const Blocked = (event: BeforeNavigationEvent) =>
-  Effect.map(
-    Deferred.make<void, RedirectError | CancelNavigation>(),
-    (deferred): Blocked => ({ _tag: "Blocked", deferred, event }),
-  );
+  Effect.map(Deferred.make<void, RedirectError | CancelNavigation>(), (deferred): Blocked => ({
+    _tag: "Blocked",
+    deferred,
+    event,
+  }));
 
 /**
  * @since 1.0.0
@@ -84,38 +88,72 @@ export const useBlockNavigation = <R = never>(
 
           const updated = yield* Blocked(event);
 
-          return [Option.some(Deferred.await(updated.deferred)), updated] as const;
+          return [
+            Option.some(
+              Deferred.await(updated.deferred).pipe(
+                Effect.ensuring(resetBlocked(blockState, updated)),
+              ),
+            ),
+            updated,
+          ] as const;
         }),
       ),
     );
 
     const blockNavigation: BlockNavigation = Object.assign(
       RefSubject.filterMap(blockState, (s) => {
-        return s._tag === "Blocked" ? Option.some(blockedToBlocking(navigation, s)) : Option.none();
+        return s._tag === "Blocked"
+          ? Option.some(blockedToBlocking(navigation, blockState, s))
+          : Option.none();
       }),
       {
         isBlocking: RefSubject.map(blockState, (s) => s._tag === "Blocked"),
       },
     );
 
+    yield* Effect.addFinalizer(() =>
+      RefSubject.update(blockState, (state) => {
+        if (state._tag === "Unblocked") return state;
+        Deferred.doneUnsafe(state.deferred, Effect.fail(new CancelNavigation()));
+        return Unblocked;
+      }),
+    );
+
     return blockNavigation;
   });
 
-function blockedToBlocking(navigation: Navigation["Service"], state: Blocked): Blocking {
+function blockedToBlocking(
+  navigation: Navigation["Service"],
+  blockState: RefSubject.RefSubject<InternalBlockState>,
+  state: Blocked,
+): Blocking {
   return {
     ...state.event,
-    cancel: Effect.flatMap(
-      Deferred.failSync(state.deferred, () => new CancelNavigation()),
-      () => navigation.currentEntry,
+    cancel: settleBlocked(blockState, state, Effect.fail(new CancelNavigation())).pipe(
+      Effect.andThen(navigation.currentEntry),
     ),
-    confirm: Effect.flatMap(
-      Deferred.succeed(state.deferred, undefined),
-      () => navigation.currentEntry,
+    confirm: settleBlocked(blockState, state, Effect.void).pipe(
+      Effect.andThen(navigation.currentEntry),
     ),
     redirect: (url, options) =>
-      Effect.flatMap(
-        Deferred.fail(state.deferred, new RedirectError({ url, options })),
-        () => navigation.currentEntry,
+      settleBlocked(blockState, state, Effect.fail(new RedirectError({ url, options }))).pipe(
+        Effect.andThen(navigation.currentEntry),
       ),
   };
 }
+
+const settleBlocked = (
+  blockState: RefSubject.RefSubject<InternalBlockState>,
+  blocked: Blocked,
+  result: Effect.Effect<void, RedirectError | CancelNavigation>,
+) =>
+  RefSubject.update(blockState, (state) => {
+    if (state._tag !== "Blocked" || state.deferred !== blocked.deferred) return state;
+    Deferred.doneUnsafe(blocked.deferred, result);
+    return Unblocked;
+  });
+
+const resetBlocked = (blockState: RefSubject.RefSubject<InternalBlockState>, blocked: Blocked) =>
+  RefSubject.update(blockState, (state) =>
+    state._tag === "Blocked" && state.deferred === blocked.deferred ? Unblocked : state,
+  );

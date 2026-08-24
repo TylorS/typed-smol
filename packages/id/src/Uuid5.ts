@@ -1,3 +1,4 @@
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import { dual } from "effect/Function";
 import * as Schema from "effect/Schema";
@@ -17,29 +18,53 @@ export type Uuid5Namespace = Uint8Array;
 const textEncoder = new TextEncoder();
 
 // Pre-defined namespaces from RFC 4122
-export const Uuid5Namespace = {
-  DNS: new Uint8Array([
-    0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
-  ]),
+const DNS = new Uint8Array([
+  0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
+]);
+const URL = new Uint8Array([
+  0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
+]);
+const OID = new Uint8Array([
+  0x6b, 0xa7, 0xb8, 0x12, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
+]);
+const X500 = new Uint8Array([
+  0x6b, 0xa7, 0xb8, 0x14, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
+]);
 
-  URL: new Uint8Array([
-    0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
-  ]),
-
-  OID: new Uint8Array([
-    0x6b, 0xa7, 0xb8, 0x12, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
-  ]),
-
-  X500: new Uint8Array([
-    0x6b, 0xa7, 0xb8, 0x14, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
-  ]),
-} as const;
+export const Uuid5Namespace: {
+  readonly DNS: Uint8Array<ArrayBuffer>;
+  readonly URL: Uint8Array<ArrayBuffer>;
+  readonly OID: Uint8Array<ArrayBuffer>;
+  readonly X500: Uint8Array<ArrayBuffer>;
+} = Object.freeze({
+  get DNS() {
+    return DNS.slice(0);
+  },
+  get URL() {
+    return URL.slice(0);
+  },
+  get OID() {
+    return OID.slice(0);
+  },
+  get X500() {
+    return X500.slice(0);
+  },
+});
 
 export const uuid5: {
-  (namespace: Uuid5Namespace): (name: string) => Effect.Effect<Uuid5>;
-  (name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5>;
-} = dual(2, function uuid5(name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5> {
+  (namespace: Uuid5Namespace): (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+  (name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
+} = dual(2, function uuid5(name: string, namespace: Uuid5Namespace): Effect.Effect<
+  Uuid5,
+  Cause.IllegalArgumentError
+> {
   return Effect.gen(function* () {
+    if (namespace.length !== 16) {
+      return yield* new Cause.IllegalArgumentError(
+        `UUIDv5 namespace must contain exactly 16 bytes, received ${namespace.length}`,
+      );
+    }
+
     // Convert name to UTF-8 bytes
     const nameBytes = textEncoder.encode(name);
 

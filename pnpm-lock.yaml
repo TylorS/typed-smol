@@ -276,26 +276,39 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
     devDependencies:
+      '@vitest/browser-playwright':
+        specifier: 'catalog:'
+        version: 4.1.11(playwright@1.62.1)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(yaml@2.9.0))(vitest@4.1.11)
       happy-dom:
         specifier: 'catalog:'
         version: 20.11.6
+      playwright:
+        specifier: ^1.62.1
+        version: 1.62.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@26.2.0)(@vitest/browser-playwright@4.1.11)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.6)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(yaml@2.9.0))
 
-  packages/tsconfig: {}
+  packages/tsconfig:
+    dependencies:
+      typescript:
+        specifier: '>=5.7 <8'
+        version: 7.0.2
 
   packages/ui:
     dependencies:
-      '@effect/platform-node':
-        specifier: 'catalog:'
-        version: 4.0.0-rc.111(effect@4.0.0-rc.111)(redis@6.2.1)
       '@typed/fx':
         specifier: workspace:*
         version: link:../fx
+      '@typed/id':
+        specifier: workspace:*
+        version: link:../id
       '@typed/navigation':
         specifier: workspace:*
         version: link:../navigation
@@ -308,13 +321,19 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-rc.111
+    devDependencies:
+      '@effect/platform-node':
+        specifier: 'catalog:'
+        version: 4.0.0-rc.111(effect@4.0.0-rc.111)(redis@6.2.1)
+      '@vitest/browser-playwright':
+        specifier: 'catalog:'
+        version: 4.1.11(playwright@1.62.1)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(yaml@2.9.0))(vitest@4.1.11)
       happy-dom:
         specifier: 'catalog:'
         version: 20.11.6
-    devDependencies:
-      '@typed/id':
-        specifier: workspace:*
-        version: link:../id
+      playwright:
+        specifier: ^1.62.1
+        version: 1.62.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

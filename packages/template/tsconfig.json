@@ -4,8 +4,9 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "lib": ["DOM", "ESNext"]
+    "lib": ["DOM", "ES2024", "ESNext.Disposable"]
   },
   "include": ["src"],
-  "exclude": ["**/*.test.ts"]
+  "exclude": ["**/*.test.ts", "**/*.type-test.ts", "src/__tests__/helpers/**"],
+  "references": [{ "path": "../fx" }]
 }

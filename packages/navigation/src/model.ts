@@ -34,7 +34,7 @@ export type Transition = typeof Transition.Type;
 export const BeforeNavigationEvent = Schema.Struct({
   type: NavigationType,
   from: Destination,
-  delta: Schema.Number,
+  delta: Schema.Int,
   to: ProposedDestination,
   info: Schema.Unknown,
 });

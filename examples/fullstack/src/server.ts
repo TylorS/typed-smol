@@ -4,29 +4,31 @@ import { handleHttpServerError, ssrForHttp } from "@typed/ui";
 import { Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 import * as Http from "node:http";
+import { parseArgs } from "node:util";
 import type { ViteDevServer } from "vite";
 import { routes } from "./app.js";
 import { makeHost } from "./host.js";
 import { Ids } from "@typed/id";
 
 export interface ServerOptions {
-    readonly port: number;
-    readonly vite?: ViteDevServer;
+  readonly port: number;
+  readonly vite?: ViteDevServer;
 }
 
 const HttpRoutes = HttpRouter.use(ssrForHttp(routes)).pipe(
-    Layer.provide(HttpRouter.use(handleHttpServerError)),
-    Layer.provide(HtmlRenderTemplate),
+  Layer.provide(HttpRouter.use(handleHttpServerError)),
+  Layer.provide(HtmlRenderTemplate),
 );
 
 export const runServer = (options: ServerOptions) =>
-    makeHost(HttpRoutes, options.vite).pipe(
-        Layer.provide(Ids.Default),
-        Layer.provide(NodeHttpServer.layer(Http.createServer, options)),
-        Layer.launch,
-        NodeRuntime.runMain,
-    );
+  makeHost(HttpRoutes, options.vite).pipe(
+    Layer.provide(Ids.Default),
+    Layer.provide(NodeHttpServer.layer(Http.createServer, options)),
+    Layer.launch,
+    NodeRuntime.runMain,
+  );
 
 if (import.meta.env.PROD) {
-    runServer({ port: import.meta.env.PORT ? Number(import.meta.env.PORT) : 3000 });
+  const { values } = parseArgs({ options: { port: { type: "string" } } });
+  runServer({ port: values.port === undefined ? 3000 : Number(values.port) });
 }

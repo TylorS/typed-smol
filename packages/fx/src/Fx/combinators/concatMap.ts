@@ -21,7 +21,8 @@ export const concatMap: FlatMapLike = dual(
   <A, E, R, B, E2, R2>(
     self: Fx<A, E, R>,
     f: (a: A) => Fx<B, E2, R2>,
-  ): Fx<B, E | E2, R | R2 | Scope.Scope> => flatMapConcurrently(self, f, 1),
+  ): Fx<B, E | E2, R | R2 | Scope.Scope> =>
+    flatMapConcurrently(self, f, 1) as Fx<B, E | E2, R | R2 | Scope.Scope>,
 );
 
 /**

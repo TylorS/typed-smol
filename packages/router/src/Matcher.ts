@@ -5,7 +5,6 @@ import * as Effect from "effect/Effect";
 import { dual, identity } from "effect/Function";
 import * as Result from "effect/Result";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 import { type Pipeable, pipeArguments } from "effect/Pipeable";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
@@ -16,16 +15,20 @@ import { mapEffect } from "@typed/fx/Fx/combinators/mapEffect";
 import { skipRepeats } from "@typed/fx/Fx/combinators/skipRepeats";
 import { switchMap } from "@typed/fx/Fx/combinators/switchMap";
 import { unwrap } from "@typed/fx/Fx/combinators/unwrap";
-import { fromEffect, never } from "@typed/fx/Fx/constructors/fromEffect";
+import { make as makeFx } from "@typed/fx/Fx";
+import { fromEffect } from "@typed/fx/Fx/constructors/fromEffect";
 import { succeed } from "@typed/fx/Fx/constructors/succeed";
 import type * as Fx from "@typed/fx/Fx/Fx";
 import { fromStream } from "@typed/fx/Fx/stream";
 import { FxTypeId, isFx } from "@typed/fx/Fx/TypeId";
 import { RefSubject } from "@typed/fx/RefSubject";
+import { getGuard } from "@typed/guard";
+import type { AsGuard, Guard as GuardType, GuardInput } from "@typed/guard";
 import { CurrentPath, Navigation } from "@typed/navigation/Navigation";
 import type { MatchAst, RouteAst } from "./AST.js";
 import * as AST from "./AST.js";
 import { CurrentRoute } from "./CurrentRoute.js";
+import * as Path from "./Path.js";
 import { Join, make as makeRoute, type Route } from "./Route.js";
 import {
   makeCatchManager,
@@ -84,32 +87,11 @@ type LayerSuccess<L> = L extends Layer.Layer<infer Provided, any, any> ? Provide
 type LayerError<L> = L extends Layer.Layer<any, infer E, any> ? E : never;
 type LayerServices<L> = L extends Layer.Layer<any, any, infer R> ? R : never;
 
-export type GuardType<I, O, E = never, R = never> = (
-  input: I,
-) => Effect.Effect<Option.Option<O>, E, R>;
-export interface AsGuard<I, O, E = never, R = never> {
-  readonly asGuard: () => GuardType<I, O, E, R>;
-}
-export type GuardInput<I, O, E = never, R = never> = GuardType<I, O, E, R> | AsGuard<I, O, E, R>;
+export type { AsGuard, GuardInput, GuardType };
 
-export type GuardOutput<G> =
-  G extends GuardType<any, infer O, any, any>
-    ? O
-    : G extends AsGuard<any, infer O, any, any>
-      ? O
-      : never;
-export type GuardError<G> =
-  G extends GuardType<any, any, infer E, any>
-    ? E
-    : G extends AsGuard<any, any, infer E, any>
-      ? E
-      : never;
-export type GuardServices<G> =
-  G extends GuardType<any, any, any, infer R>
-    ? R
-    : G extends AsGuard<any, any, any, infer R>
-      ? R
-      : never;
+export type GuardOutput<G> = GuardType.Output<G>;
+export type GuardError<G> = GuardType.Error<G>;
+export type GuardServices<G> = GuardType.Services<G>;
 
 type MatchOptions<Rt extends Route.Any, B, E2, R2, D, LB, LE2, LR2, C> = {
   readonly route: Rt;
@@ -682,7 +664,14 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     return Effect.gen({ self: this }, function* () {
       const current = yield* CurrentRoute;
       const prefixed = this.prefix(current.route);
-      const entries = compile(prefixed.cases);
+      const entries = yield* Effect.try({
+        try: () => compile(prefixed.cases),
+        catch: (error) =>
+          new RouteDecodeError({
+            path: current.route.path,
+            cause: error instanceof Error ? error.message : String(error),
+          }),
+      });
       const executor = yield* makeRouteExecutor<A, E, R>();
       const router = findMyWay.make<ReadonlyArray<CompiledEntry>>({
         ignoreTrailingSlash: true,
@@ -690,14 +679,22 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
       });
       const handlersByPath = new Map<string, Array<CompiledEntry>>();
       for (const entry of entries) {
-        const path = entry.route.path;
-        const existing = handlersByPath.get(path);
-        if (existing !== undefined) {
-          existing.push(entry);
-        } else {
-          const list: Array<CompiledEntry> = [entry];
-          handlersByPath.set(path, list);
-          router.all(path, list);
+        for (const path of getMatcherPaths(entry.route.ast)) {
+          const existing = handlersByPath.get(path);
+          if (existing !== undefined) {
+            existing.push(entry);
+          } else {
+            const list: Array<CompiledEntry> = [entry];
+            handlersByPath.set(path, list);
+            yield* Effect.try({
+              try: () => router.on("GET", path, list),
+              catch: (error) =>
+                new RouteDecodeError({
+                  path,
+                  cause: error instanceof Error ? error.message : String(error),
+                }),
+            });
+          }
         }
       }
 
@@ -708,7 +705,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
             if (result === undefined) return yield* new RouteNotFound({ path });
             return yield* executor.transition({
               path,
-              input: { ...result.params, ...result.searchParams },
+              input: { ...result.searchParams, ...result.params },
               candidates: result.handler,
             });
           }),
@@ -718,7 +715,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
       );
 
       return yield* stream.run(sink);
-    });
+    }).pipe(Effect.catchCause((cause) => sink.onFailure(cause)));
   }
 }
 
@@ -876,15 +873,25 @@ export { catch_ as catch };
 export const catchTag: {
   <
     I extends Fx.Fx.Any | Matcher.Any,
-    const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>,
-    E,
+    const K extends Tags<InputError<I>> | Arr.NonEmptyReadonlyArray<Tags<InputError<I>>>,
     B,
     E2,
     R2,
   >(
     k: K,
-    f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
-  ): (input: I) => Fx.Fx<InputSucces<I> | B, E2, InputServices<I> | R2 | Router | Scope.Scope>;
+    f: (
+      e: ExtractTag<
+        NoInfer<InputError<I>>,
+        K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K
+      >,
+    ) => Fx.Fx<B, E2, R2>,
+  ): (
+    input: I,
+  ) => Fx.Fx<
+    InputSucces<I> | B,
+    E2 | ExcludeTag<InputError<I>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    InputServices<I> | R2 | Router | Scope.Scope
+  >;
 
   <
     I extends Fx.Fx.Any | Matcher.Any,
@@ -915,8 +922,25 @@ export const catchTag: {
     input: I,
     k: K,
     f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
-  ): Fx.Fx<InputSucces<I> | B, E2, InputServices<I> | R2 | Router | Scope.Scope> =>
-    catchCause(input, (causeRef) =>
+  ): Fx.Fx<
+    InputSucces<I> | B,
+    E2 | ExcludeTag<InputError<I>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
+    InputServices<I> | R2 | Router | Scope.Scope
+  > => {
+    type RemainingError = ExcludeTag<
+      InputError<I>,
+      K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K
+    >;
+    const rethrow = (
+      cause: Cause.Cause<InputError<I> | RouteNotFound | RouteDecodeError | RouteGuardError>,
+    ) =>
+      fromEffect(Effect.failCause(cause as Cause.Cause<RemainingError>)) as Fx.Fx<
+        B,
+        E2 | RemainingError,
+        R2
+      >;
+
+    return catchCause(input, (causeRef) =>
       unwrap(
         Effect.gen(function* () {
           const cause = yield* causeRef;
@@ -932,25 +956,55 @@ export const catchTag: {
               >,
             );
           }
-          return fromEffect(Effect.fail(result.success.error as E2));
+          return rethrow(cause);
         }),
       ),
-    ),
+    );
+  },
 );
 
 export const redirectTo =
   (path: string) =>
   <I extends Fx.Fx.Any | Matcher.Any>(
     input: I,
-  ): Fx.Fx<InputSucces<I>, never, Router | Scope.Scope | InputServices<I>> =>
-    catchCause(input, (_) =>
-      Navigation.navigate(path).pipe(
-        Effect.matchCause({
-          onFailure: () => never,
-          onSuccess: () => never,
-        }),
-        unwrap,
-      ),
+  ): Fx.Fx<
+    InputSucces<I>,
+    Exclude<InputError<I>, RouteNotFound>,
+    Router | Scope.Scope | InputServices<I>
+  > =>
+    makeFx<
+      InputSucces<I>,
+      Exclude<InputError<I>, RouteNotFound>,
+      Router | Scope.Scope | InputServices<I>
+    >((sink) =>
+      Effect.gen(function* () {
+        let redirected = false;
+        const runOnce = (target: typeof sink) =>
+          input.run(
+            Sink.make(
+              (cause) =>
+                Effect.gen(function* () {
+                  if (redirected) return yield* target.onFailure(cause as Cause.Cause<any>);
+                  const failure = Cause.findFail(cause);
+                  if (
+                    Result.isFailure(failure) ||
+                    failure.success.error._tag !== "RouteNotFound"
+                  ) {
+                    return yield* target.onFailure(cause as Cause.Cause<any>);
+                  }
+                  redirected = true;
+                  yield* Navigation.navigate(path).pipe(
+                    Effect.catchCause((navCause) =>
+                      target.onFailure(navCause as Cause.Cause<any>),
+                    ),
+                  );
+                  return yield* input.run(target as any);
+                }) as Effect.Effect<unknown, never, any>,
+              (value) => target.onSuccess(value),
+            ),
+          );
+        return yield* runOnce(sink);
+      }),
     );
 
 const hasTag = (u: unknown): u is { readonly _tag: string } =>
@@ -1017,10 +1071,6 @@ export function normalizeDependencyInput<Deps extends AnyDependency | ReadonlyAr
   return mergeLayers(layers) as NormalizeDeps<Deps>;
 }
 
-function getGuard<I, O, E, R>(guard: GuardInput<I, O, E, R>): GuardType<I, O, E, R> {
-  return "asGuard" in guard ? guard.asGuard() : guard;
-}
-
 function defaultGuard<A>(): GuardType<A, A> {
   return Effect.succeedSome;
 }
@@ -1055,14 +1105,17 @@ export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledE
         case "route": {
           const baseRoute = makeRoute(match.route);
           const prefixedRoute = applyPrefixes(baseRoute, context.prefixes);
+          const guard = getGuard(match.guard as GuardInput<any, any, any, any>);
+          const handler = normalizeHandler(match.handler);
+          const decode = makeRouteDecoder(prefixedRoute);
           entries.push({
             route: prefixedRoute,
-            guard: getGuard(match.guard as GuardInput<any, any, any, any>),
-            handler: normalizeHandler(match.handler),
+            guard,
+            handler,
             layers: context.layers,
             layouts: context.layouts,
             catches: context.catches,
-            decode: Schema.decodeUnknownEffect(prefixedRoute.paramsSchema),
+            decode,
           });
           break;
         }
@@ -1101,6 +1154,58 @@ export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledE
 
   visit(cases, { layers: [], layouts: [], catches: [], prefixes: [] });
   return entries;
+}
+
+function getMatcherPaths(ast: RouteAst): ReadonlyArray<findMyWay.PathInput> {
+  let variants: Array<Array<AST.PathAst>> = [[]];
+  for (const part of Path.flattenRouteAst(ast)) {
+    if (part.type === "query-params") continue;
+    if (part.type === "parameter" && part.optional) {
+      const required = AST.parameter(part.name, undefined, part.regex);
+      variants = variants.flatMap((variant) => [[...variant, required], variant]);
+    } else {
+      variants = variants.map((variant) => [...variant, part]);
+    }
+  }
+
+  return [...new Set(variants.map(formatMatcherPath))];
+}
+
+function formatMatcherPath(parts: ReadonlyArray<AST.PathAst>): findMyWay.PathInput {
+  const normalized: Array<AST.PathAst> = [];
+  for (const part of parts) {
+    if (part.type === "slash" && normalized.at(-1)?.type === "slash") continue;
+    normalized.push(part);
+  }
+  if (normalized.at(-1)?.type === "slash") normalized.pop();
+  return Path.join(normalized);
+}
+
+function makeRouteDecoder(route: Route.Any): CompiledEntry["decode"] {
+  const query = Path.getQueryInputParameters(route.ast);
+  const decodeParams = Schema.decodeUnknownEffect(route.paramsSchema);
+  const decodeQuery = Schema.decodeUnknownEffect(Path.getQueryInputSchema(route.ast));
+
+  return (input) => {
+    const normalized =
+      typeof input === "object" && input !== null
+        ? { ...(input as Record<PropertyKey, unknown>) }
+        : {};
+
+    if (query.length === 0) return decodeParams(normalized);
+
+    return decodeQuery(input).pipe(
+      Effect.flatMap((decoded) => {
+        const queryInput = decoded as Record<PropertyKey, unknown>;
+        for (const parameter of query) {
+          if (parameter.outputName !== undefined && parameter.inputName in queryInput) {
+            normalized[parameter.outputName] = queryInput[parameter.inputName];
+          }
+        }
+        return decodeParams(normalized);
+      }),
+    );
+  };
 }
 
 function applyPrefixes(route: Route.Any, prefixes: ReadonlyArray<RouteAst>): Route.Any {

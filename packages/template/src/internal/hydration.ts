@@ -18,13 +18,15 @@ export function findHydrationTemplateByHash(
   hydrateCtx: HydrateContext,
   hash: string,
 ): HydrationTemplate | null {
+  const { where, manyKey } = hydrateCtx;
+
   // If there is not a manyKey, we can just find the template by its hash
-  if (hydrateCtx.manyKey === undefined) {
-    return findHydrationTemplate(getChildNodes(hydrateCtx.where), hash);
+  if (manyKey === undefined) {
+    return findHydrationTemplate(getChildNodes(where), hash);
   }
 
   // If there is a manyKey, we need to find the many node first
-  const many = findHydrationMany(getChildNodes(hydrateCtx.where), hydrateCtx.manyKey);
+  const many = findHydrationMany(getChildNodes(where), manyKey);
 
   if (many === null) return null;
 
@@ -32,9 +34,9 @@ export function findHydrationTemplateByHash(
   return findHydrationTemplate(getChildNodes(many), hash);
 }
 
+
 export function getHydrationRoot(root: HTMLElement): HydrationElement {
-  const childNodes = Array.from(root.childNodes);
-  let hydrationNodes = getHydrationNodes(childNodes);
+  let hydrationNodes = getHydrationNodes(root.childNodes);
 
   // If your whole template is wrapped in a single hole, unwrap it.
   if (hydrationNodes.length === 1 && hydrationNodes[0]._tag === "hole") {
@@ -44,79 +46,89 @@ export function getHydrationRoot(root: HTMLElement): HydrationElement {
   return new HydrationElement(root, hydrationNodes);
 }
 
-function getHydrationNodes(nodes: Array<Node>): Array<HydrationNode> {
+function getHydrationNodes(nodes: ArrayLike<Node>): Array<HydrationNode> {
   const out: Array<HydrationNode> = [];
+  const frames: Array<HydrationFrame> = [{ nodes, index: 0, out, groups: [] }];
 
-  for (let i = 0; i < nodes.length; ++i) {
-    const node = nodes[i];
+  while (frames.length > 0) {
+    const frame = frames[frames.length - 1];
+    if (frame.index >= frame.nodes.length) {
+      const group = frame.groups[frame.groups.length - 1];
+      if (group !== undefined) {
+        if (group._tag === "template") throw new CouldNotFindTemplateEndError(group.hash);
+        throw new CouldNotFindRootElement(group.index);
+      }
+      frames.pop();
+      continue;
+    }
+
+    const node = frame.nodes[frame.index++];
+    const current = getCurrentHydrationNodes(frame);
     if (isComment(node)) {
-      if (node.data.startsWith(TYPED_TEMPLATE_PREFIX)) {
-        const hash = node.data.slice(TYPED_TEMPLATE_PREFIX.length);
-        const endIndex = getTemplateEndIndex(nodes, i, hash);
-        const childNodes = nodes.slice(i + 1, endIndex);
+      const marker = node.data;
+      const group = frame.groups[frame.groups.length - 1];
 
-        out.push(new HydrationTemplate(hash, getHydrationNodes(childNodes)));
-
-        i = endIndex;
-      } else if (node.data.startsWith(MANY_PREFIX)) {
-        const last = out.pop();
-        out.push(new HydrationMany(node.data.slice(MANY_PREFIX.length), node, last ? [last] : []));
-      } else if (node.data.startsWith(HOLE_PREFIX)) {
-        const index = parseInt(node.data.slice(HOLE_PREFIX.length), 10);
-        const endIndex = getHoleEndIndex(nodes, i, index);
-        const endComment = nodes[endIndex] as Comment;
-        out.push(
-          new HydrationHole(
-            index,
-            node,
-            endComment,
-            getHydrationNodes(nodes.slice(i + 1, endIndex)),
-          ),
+      if (group?._tag === "template" && marker === TYPED_TEMPLATE_END_PREFIX + group.hash) {
+        frame.groups.pop();
+        getCurrentHydrationNodes(frame).push(new HydrationTemplate(group.hash, group.childNodes));
+      } else if (group?._tag === "hole" && marker === `/${HOLE_PREFIX}${group.index}`) {
+        frame.groups.pop();
+        getCurrentHydrationNodes(frame).push(
+          new HydrationHole(group.index, group.startComment, node, group.childNodes),
         );
-        i = endIndex;
+      } else if (marker.startsWith(TYPED_TEMPLATE_PREFIX)) {
+        frame.groups.push({
+          _tag: "template",
+          hash: marker.slice(TYPED_TEMPLATE_PREFIX.length),
+          childNodes: [],
+        });
+      } else if (marker.startsWith(MANY_PREFIX)) {
+        const last = current.pop();
+        current.push(new HydrationMany(marker.slice(MANY_PREFIX.length), node, last ? [last] : []));
+      } else if (marker.startsWith(HOLE_PREFIX)) {
+        frame.groups.push({
+          _tag: "hole",
+          index: parseInt(marker.slice(HOLE_PREFIX.length), 10),
+          startComment: node,
+          childNodes: [],
+        });
       } else {
-        out.push(new HydrationLiteral(node));
+        current.push(new HydrationLiteral(node));
       }
     } else if (isElement(node)) {
-      out.push(new HydrationElement(node, getHydrationNodes(Array.from(node.childNodes))));
+      const childNodes: Array<HydrationNode> = [];
+      current.push(new HydrationElement(node, childNodes));
+      frames.push({ nodes: node.childNodes, index: 0, out: childNodes, groups: [] });
     } else {
-      out.push(new HydrationLiteral(node));
+      current.push(new HydrationLiteral(node));
     }
   }
 
   return out;
 }
 
-function getTemplateEndIndex(nodes: Array<Node>, start: number, hash: string): number {
-  const endHash = TYPED_TEMPLATE_END_PREFIX + hash;
-
-  for (let i = start; i < nodes.length; ++i) {
-    const node = nodes[i];
-
-    if (isComment(node) && node.data === endHash) {
-      return i;
+type HydrationGroup =
+  | {
+      readonly _tag: "template";
+      readonly hash: string;
+      readonly childNodes: Array<HydrationNode>;
     }
-  }
+  | {
+      readonly _tag: "hole";
+      readonly index: number;
+      readonly startComment: Comment;
+      readonly childNodes: Array<HydrationNode>;
+    };
 
-  throw new CouldNotFindTemplateEndError(hash);
-}
+type HydrationFrame = {
+  readonly nodes: ArrayLike<Node>;
+  index: number;
+  readonly out: Array<HydrationNode>;
+  readonly groups: Array<HydrationGroup>;
+};
 
-function getHoleEndIndex(nodes: Array<Node>, start: number, index: number): number {
-  const endHash = `/${HOLE_PREFIX}${index}`;
-
-  let templateDepth = 0;
-
-  for (let i = start; i < nodes.length; ++i) {
-    const node = nodes[i];
-
-    if (isComment(node)) {
-      if (templateDepth === 0 && node.data === endHash) return i;
-      else if (node.data.startsWith(TYPED_TEMPLATE_PREFIX)) templateDepth++;
-      else if (node.data.startsWith(TYPED_TEMPLATE_END_PREFIX)) templateDepth--;
-    }
-  }
-
-  throw new CouldNotFindRootElement(index);
+function getCurrentHydrationNodes(frame: HydrationFrame): Array<HydrationNode> {
+  return frame.groups[frame.groups.length - 1]?.childNodes ?? frame.out;
 }
 
 export class HydrationElement implements Inspectable {
@@ -304,13 +316,14 @@ export function findHydrationHole(
   nodes: Array<HydrationNode>,
   index: number,
 ): HydrationHole | null {
-  for (const node of nodes) {
+  const toProcess = nodes.slice(0);
+  while (toProcess.length > 0) {
+    const node = toProcess.shift()!;
     if (node._tag === "hole" && node.index === index) {
       return node;
     } else if (node._tag === "element") {
-      const found = findHydrationHole(node.childNodes, index);
-      if (found !== null) {
-        return found;
+      for (let childIndex = node.childNodes.length - 1; childIndex >= 0; childIndex--) {
+        toProcess.push(node.childNodes[childIndex]);
       }
     }
   }
@@ -333,32 +346,62 @@ export function findHydrationNode(
 }
 
 export function getNodes(node: HydrationNode): Array<Node> {
-  switch (node._tag) {
-    case "element":
-      return [node.parentNode];
-    case "literal":
-      return [node.node];
-    case "hole":
-      return [node.startComment, ...node.childNodes.flatMap(getNodes), node.endComment];
-    case "many":
-      return [...node.childNodes.flatMap(getNodes), node.comment];
-    case "template":
-      return node.childNodes.flatMap(getNodes);
-  }
+  return flattenHydrationNode(node, true);
 }
 
 export function getNodesExcludingStartComment(node: HydrationNode): Array<Node> {
-  switch (node._tag) {
-    case "element":
-      return [node.parentNode];
-    case "literal":
-      return [node.node];
-    case "hole":
-      return [...node.childNodes.flatMap(getNodesExcludingStartComment), node.endComment];
-    case "many":
-      return [...node.childNodes.flatMap(getNodesExcludingStartComment), node.comment];
-    case "template":
-      return node.childNodes.flatMap(getNodesExcludingStartComment);
+  return flattenHydrationNode(node, false);
+}
+
+function flattenHydrationNode(node: HydrationNode, includeHoleStarts: boolean): Array<Node> {
+  const out: Array<Node> = [];
+  const toProcess: Array<FlattenTask> = [{ _tag: "hydration", node }];
+
+  while (toProcess.length > 0) {
+    const task = toProcess.pop()!;
+    if (task._tag === "node") {
+      out.push(task.node);
+      continue;
+    }
+
+    const current = task.node;
+    switch (current._tag) {
+      case "element":
+        out.push(current.parentNode);
+        break;
+      case "literal":
+        out.push(current.node);
+        break;
+      case "hole":
+        toProcess.push({ _tag: "node", node: current.endComment });
+        pushHydrationNodes(toProcess, current.childNodes);
+        if (includeHoleStarts) {
+          toProcess.push({ _tag: "node", node: current.startComment });
+        }
+        break;
+      case "many":
+        toProcess.push({ _tag: "node", node: current.comment });
+        pushHydrationNodes(toProcess, current.childNodes);
+        break;
+      case "template":
+        pushHydrationNodes(toProcess, current.childNodes);
+        break;
+    }
+  }
+
+  return out;
+}
+
+type FlattenTask =
+  | { readonly _tag: "hydration"; readonly node: HydrationNode }
+  | { readonly _tag: "node"; readonly node: Node };
+
+function pushHydrationNodes(
+  toProcess: Array<FlattenTask>,
+  nodes: ReadonlyArray<HydrationNode>,
+): void {
+  for (let index = nodes.length - 1; index >= 0; index--) {
+    toProcess.push({ _tag: "hydration", node: nodes[index] });
   }
 }
 

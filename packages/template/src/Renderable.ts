@@ -2,9 +2,11 @@
 // oxlint-disable typescript/no-duplicate-type-constituents
 
 import type * as Effect from "effect/Effect";
+import type * as Option from "effect/Option";
 import type * as Stream from "effect/Stream";
 import type { Fx } from "@typed/fx";
 import type { HydrationRef } from "@typed/fx/RefSubject";
+import type * as EventHandler from "./EventHandler.js";
 import type { RenderEvent } from "./RenderEvent.js";
 
 /**
@@ -81,22 +83,12 @@ export declare namespace Renderable {
   /**
    * Extracts the required services from a Renderable type.
    */
-  export type Services<T> =
-    | Fx.Services<T>
-    | (T extends Stream.Stream<any, any, any> ? Stream.Services<T> : never)
-    | Effect.Services<T>
-    | (T extends HydrationRef<any, infer R> ? R : never)
-    | (T extends (...args: Array<any>) => infer U ? Services<U> : never);
+  export type Services<T> = RenderableServices<T>;
 
   /**
    * Extracts the error type from a Renderable type.
    */
-  export type Error<T> =
-    | Fx.Error<T>
-    | (T extends Stream.Stream<any, any, any> ? Stream.Error<T> : never)
-    | Effect.Error<T>
-    | (T extends HydrationRef<infer E, any> ? E : never)
-    | (T extends (...args: Array<any>) => infer U ? Error<U> : never);
+  export type Error<T> = RenderableError<T>;
 
   /**
    * Extracts the success type from a Renderable type.
@@ -115,7 +107,7 @@ export declare namespace Renderable {
   export type ServicesFromObject<T> = [
     {
       [K in keyof T]: T[K] extends (...args: Array<any>) => any
-        ? Services<ReturnType<T[K]>>
+        ? FunctionServices<ReturnType<T[K]>>
         : Services<T[K]>;
     }[keyof T],
   ] extends [infer U]
@@ -129,10 +121,84 @@ export declare namespace Renderable {
   export type ErrorFromObject<T> = [
     {
       [K in keyof T]: T[K] extends (...args: Array<any>) => any
-        ? Error<ReturnType<T[K]>>
+        ? FunctionError<ReturnType<T[K]>>
         : Error<T[K]>;
     }[keyof T],
   ] extends [infer U]
     ? U
     : never;
 }
+
+type RenderableServices<T> =
+  IsAny<T> extends true ? any : T extends unknown ? RenderableServicesSingle<T> : never;
+
+type RenderableServicesSingle<T> =
+  | Fx.Services<T>
+  | (T extends Stream.Stream<any, any, any> ? Stream.Services<T> : never)
+  | Effect.Services<T>
+  | (T extends HydrationRef<any, infer R> ? R : never)
+  | EventHandler.Services<T>
+  | NestedServices<T>;
+
+type RenderableError<T> =
+  IsAny<T> extends true ? any : T extends unknown ? RenderableErrorSingle<T> : never;
+
+type RenderableErrorSingle<T> =
+  | Fx.Error<T>
+  | (T extends Stream.Stream<any, any, any> ? Stream.Error<T> : never)
+  | Effect.Error<T>
+  | (T extends HydrationRef<infer E, any> ? E : never)
+  | EventHandler.Error<T>
+  | NestedError<T>;
+
+type NestedServices<T> = T extends
+  | Fx.Fx<any, any, any>
+  | Stream.Stream<any, any, any>
+  | Effect.Effect<any, any, any>
+  | Option.Option<any>
+  | HydrationRef<any, any>
+  | EventHandler.EventHandler<any, any, any>
+  ? never
+  : T extends (...args: Array<any>) => infer U
+    ? FunctionServices<U>
+    : T extends ReadonlyArray<infer U>
+      ? Renderable.Services<U>
+      : T extends object
+        ? Renderable.ServicesFromObject<T>
+        : never;
+
+type NestedError<T> = T extends
+  | Fx.Fx<any, any, any>
+  | Stream.Stream<any, any, any>
+  | Effect.Effect<any, any, any>
+  | Option.Option<any>
+  | HydrationRef<any, any>
+  | EventHandler.EventHandler<any, any, any>
+  ? never
+  : T extends (...args: Array<any>) => infer U
+    ? FunctionError<U>
+    : T extends ReadonlyArray<infer U>
+      ? Renderable.Error<U>
+      : T extends object
+        ? Renderable.ErrorFromObject<T>
+        : never;
+
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
+type FunctionServices<T> = T extends
+  | Fx.Fx<any, any, any>
+  | Stream.Stream<any, any, any>
+  | Effect.Effect<any, any, any>
+  ? Renderable.Services<T>
+  : T extends ReadonlyArray<infer U>
+    ? FunctionServices<U>
+    : never;
+
+type FunctionError<T> = T extends
+  | Fx.Fx<any, any, any>
+  | Stream.Stream<any, any, any>
+  | Effect.Effect<any, any, any>
+  ? Renderable.Error<T>
+  : T extends ReadonlyArray<infer U>
+    ? FunctionError<U>
+    : never;

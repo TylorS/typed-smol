@@ -1,9 +1,17 @@
 {
   "name": "@typed/fx",
   "version": "2.0.0-beta.4",
+  "description": "Reactive streams and state for Typed applications.",
+  "license": "MIT",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/fx#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/fx"
+  },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "type": "module",
   "exports": {
@@ -11,17 +19,66 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./Fx": {
+      "types": "./dist/Fx.d.ts",
+      "import": "./dist/Fx.js"
+    },
+    "./Push": {
+      "types": "./dist/Push.d.ts",
+      "import": "./dist/Push.js"
+    },
+    "./RefSubject": {
+      "types": "./dist/RefSubject.d.ts",
+      "import": "./dist/RefSubject.js"
+    },
+    "./Sink": {
+      "types": "./dist/Sink.d.ts",
+      "import": "./dist/Sink.js"
+    },
+    "./Subject": {
+      "types": "./dist/Subject.d.ts",
+      "import": "./dist/Subject.js"
+    },
+    "./Versioned": {
+      "types": "./dist/Versioned.d.ts",
+      "import": "./dist/Versioned.js"
+    },
+    "./Fx/combinators/*": {
+      "types": "./dist/Fx/combinators/*.d.ts",
+      "import": "./dist/Fx/combinators/*.js"
+    },
+    "./Fx/*": {
+      "types": "./dist/Fx/*.d.ts",
+      "import": "./dist/Fx/*.js"
+    },
+    "./Push/*": {
+      "types": "./dist/Push/*.d.ts",
+      "import": "./dist/Push/*.js"
+    },
+    "./RefSubject/*": {
+      "types": "./dist/RefSubject/*.d.ts",
+      "import": "./dist/RefSubject/*.js"
+    },
+    "./Sink/*": {
+      "types": "./dist/Sink/*.d.ts",
+      "import": "./dist/Sink/*.js"
+    },
+    "./Subject/*": {
+      "types": "./dist/Subject/*.d.ts",
+      "import": "./dist/Subject/*.js"
+    },
+    "./Versioned/*": {
+      "types": "./dist/Versioned/*.d.ts",
+      "import": "./dist/Versioned/*.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
+    "test": "vitest run --config vitest.config.ts",
+    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json"
   },
   "dependencies": {
     "effect": "catalog:"

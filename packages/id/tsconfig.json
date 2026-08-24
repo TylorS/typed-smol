@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
+  "compilerOptions": { "rootDir": "src", "outDir": "dist", "lib": ["ESNext", "WebWorker"] },
   "include": ["src"],
   "exclude": ["**/*.test.ts"]
 }

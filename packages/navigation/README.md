@@ -22,17 +22,44 @@
 - **Model types:** `Destination`, `NavigationEvent`, `BeforeNavigationEvent`, `Transition`, `NavigationError`, `RedirectError`, `CancelNavigation`, etc.; see `model`.
 - **Blocking** — utilities for blocking navigation (e.g. unsaved changes).
 
-## Example
+## In-memory example
 
 ```ts
-import { Navigation } from "@typed/navigation";
+import { Ids } from "@typed/id";
+import { Navigation, initialMemory } from "@typed/navigation";
+import { Effect, Layer, Option } from "effect";
 
-// Inside Effect.gen(function* () { ... }); provide fromWindow (or memory) for browser
-const nav = yield * Navigation;
-const entry = yield * nav.currentEntry;
-yield * nav.navigate("/about", { history: "push" });
-yield * nav.navigate("/about", { history: "replace" });
-// entry is the current Destination before navigating
+const NavigationLive = initialMemory({ url: "https://example.com/" }).pipe(
+  Layer.provide(Ids.Default),
+);
+
+const program = Effect.scoped(
+  Effect.gen(function* () {
+    const navigation = yield* Navigation;
+
+    // Registrations live until this Scope closes.
+    yield* navigation.onBeforeNavigation(() => Effect.succeed(Option.none()));
+    yield* navigation.onNavigation((event) =>
+      Effect.succeed(Option.some(Effect.log(`committed ${event.destination.url.pathname}`))),
+    );
+
+    yield* navigation.navigate("/about", { history: "push" });
+  }),
+);
+
+await Effect.runPromise(program.pipe(Effect.provide(NavigationLive)));
+```
+
+`memory`, `initialMemory`, and `fromWindow` require `Ids`. Provide `Ids.Default` for application code or `Ids.Test()` for deterministic tests. Hook registration requires `Scope.Scope`; `Effect.scoped` gives registrations an explicit lifetime instead of leaking them beyond the program that owns them.
+
+For browser history, use the same ownership pattern with `fromWindow()`:
+
+```ts
+import { Ids } from "@typed/id";
+import { fromWindow } from "@typed/navigation";
+import { Layer } from "effect";
+
+const BrowserNavigation = fromWindow().pipe(Layer.provide(Ids.Default));
 ```
 
 ## API reference
@@ -41,23 +68,23 @@ yield * nav.navigate("/about", { history: "replace" });
 
 Effect service for browser or in-memory history. Access via `yield* Navigation` inside an Effect that has a Navigation layer provided.
 
-| Member                          | Type                                              | Description                                                                                 |
-| ------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `origin`                        | `string`                                          | Current origin (e.g. `"https://example.com"`).                                              |
-| `base`                          | `string`                                          | Base URL (from `<base href>` or `"/"`).                                                     |
-| `currentEntry`                  | `RefSubject.Computed<Destination>`                | Reactive current history entry.                                                             |
-| `entries`                       | `RefSubject.Computed<ReadonlyArray<Destination>>` | Reactive list of all history entries.                                                       |
-| `transition`                    | `RefSubject.Filtered<Transition>`                 | Emits the in-progress transition when navigating.                                           |
-| `canGoBack`                     | `RefSubject.Computed<boolean>`                    | Whether `back()` can be called.                                                             |
-| `canGoForward`                  | `RefSubject.Computed<boolean>`                    | Whether `forward()` can be called.                                                          |
-| `navigate(url, options?)`       | `Effect<Destination, NavigationError>`            | Navigate to `url`; `options.history`: `"push"` \| `"replace"` \| `"auto"`, `state`, `info`. |
-| `back(options?)`                | `Effect<Destination, NavigationError>`            | Go back one entry; `options.info` optional.                                                 |
-| `forward(options?)`             | `Effect<Destination, NavigationError>`            | Go forward one entry; `options.info` optional.                                              |
-| `traverseTo(key, options?)`     | `Effect<Destination, NavigationError>`            | Go to the entry with the given `key`; `options.info` optional.                              |
-| `updateCurrentEntry({ state })` | `Effect<Destination, NavigationError>`            | Update the current entry’s `state` (replace in place).                                      |
-| `reload(options?)`              | `Effect<Destination, NavigationError>`            | Reload current entry; `options.info`, `options.state` optional.                             |
-| `onBeforeNavigation(handler)`   | `Effect<void, never, R \| Scope>`                 | Register a before-navigation handler; can redirect or cancel.                               |
-| `onNavigation(handler)`         | `Effect<void, never, R \| Scope>`                 | Register a handler that runs after navigation commits.                                      |
+| Member                          | Type                                              | Description                                                                                                                                                                             |
+| ------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin`                        | `string`                                          | Current origin (e.g. `"https://example.com"`).                                                                                                                                          |
+| `base`                          | `string`                                          | Route-path prefix from `<base href>` (pathname only, including its trailing slash), or `"/"`.                                                                                           |
+| `currentEntry`                  | `RefSubject.Computed<Destination>`                | Reactive current history entry.                                                                                                                                                         |
+| `entries`                       | `RefSubject.Computed<ReadonlyArray<Destination>>` | Reactive list of all history entries.                                                                                                                                                   |
+| `transition`                    | `RefSubject.Filtered<Transition>`                 | Emits the in-progress transition when navigating.                                                                                                                                       |
+| `canGoBack`                     | `RefSubject.Computed<boolean>`                    | Whether `back()` can be called.                                                                                                                                                         |
+| `canGoForward`                  | `RefSubject.Computed<boolean>`                    | Whether `forward()` can be called.                                                                                                                                                      |
+| `navigate(url, options?)`       | `Effect<Destination, NavigationError>`            | Navigate to `url`; `options.history`: `"push"` \| `"replace"` \| `"auto"`, `state`, `info`. With `"auto"`, equal origin and pathname replaces; query and hash do not affect the choice. |
+| `back(options?)`                | `Effect<Destination, NavigationError>`            | Go back one entry; `options.info` optional.                                                                                                                                             |
+| `forward(options?)`             | `Effect<Destination, NavigationError>`            | Go forward one entry; `options.info` optional.                                                                                                                                          |
+| `traverseTo(key, options?)`     | `Effect<Destination, NavigationError>`            | Go to the entry with the given `key`; `options.info` optional.                                                                                                                          |
+| `updateCurrentEntry({ state })` | `Effect<Destination, NavigationError>`            | Update the current entry’s `state` (replace in place).                                                                                                                                  |
+| `reload(options?)`              | `Effect<Destination, NavigationError>`            | Reload current entry; `options.info`, `options.state` optional.                                                                                                                         |
+| `onBeforeNavigation(handler)`   | `Effect<void, never, R \| R2 \| Scope>`           | Register a before-navigation handler; can redirect or cancel.                                                                                                                           |
+| `onNavigation(handler)`         | `Effect<void, never, R \| R2 \| Scope>`           | Register a handler that runs after navigation commits.                                                                                                                                  |
 
 ### CurrentPath
 
@@ -98,8 +125,10 @@ When a navigation is blocked, the handler receives a `Blocking` value; call `can
 
 ### Handler types
 
-- **BeforeNavigationHandler&lt;R, R2&gt;** — `(event: BeforeNavigationEvent) => Effect<Option<Effect<..., RedirectError | CancelNavigation, R2>>, RedirectError | CancelNavigation, R>`. Return `Option.some(redirectEffect)` to redirect, or fail with `RedirectError`/`CancelNavigation` to redirect or cancel.
-- **NavigationHandler&lt;R, R2&gt;** — `(event: NavigationEvent) => Effect<Option<Effect<..., never, R2>>, never, R>`. Return `Option.some(effect)` to run after commit.
+- **BeforeNavigationHandler&lt;R, R2&gt;** — `(event: BeforeNavigationEvent) => Effect<Option<Effect<unknown, RedirectError | CancelNavigation, R2>>, RedirectError | CancelNavigation, R>`. `R` is required while selecting a response; `R2` is required while running the selected effect. Both stages may redirect or cancel.
+- **NavigationHandler&lt;R, R2&gt;** — `(event: NavigationEvent) => Effect<Option<Effect<unknown, never, R2>>, never, R>`. `R` is required while selecting a post-commit effect; `R2` is required while running it. Neither stage has a typed error channel.
+
+Registering either handler on a `Navigation` service requires `R | R2 | Scope.Scope`. Calling the static `Navigation.onBeforeNavigation` or `Navigation.onNavigation` form additionally requires the `Navigation` service itself.
 
 ### Core utilities
 

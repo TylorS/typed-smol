@@ -1,9 +1,17 @@
 {
   "name": "@typed/router",
   "version": "1.0.0-beta.4",
+  "description": "Typed routing, matchers, and route execution for Typed applications.",
+  "license": "MIT",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/router#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/router"
+  },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "type": "module",
   "exports": {
@@ -11,18 +19,52 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./AST": {
+      "types": "./dist/AST.d.ts",
+      "import": "./dist/AST.js"
+    },
+    "./CurrentRoute": {
+      "types": "./dist/CurrentRoute.d.ts",
+      "import": "./dist/CurrentRoute.js"
+    },
+    "./Matcher": {
+      "types": "./dist/Matcher.d.ts",
+      "import": "./dist/Matcher.js"
+    },
+    "./Parser": {
+      "types": "./dist/Parser.d.ts",
+      "import": "./dist/Parser.js"
+    },
+    "./Path": {
+      "types": "./dist/Path.d.ts",
+      "import": "./dist/Path.js"
+    },
+    "./Route": {
+      "types": "./dist/Route.d.ts",
+      "import": "./dist/Route.js"
+    },
+    "./RouteExecutor": {
+      "types": "./dist/RouteExecutor.d.ts",
+      "import": "./dist/RouteExecutor.js"
+    },
+    "./Router": {
+      "types": "./dist/Router.d.ts",
+      "import": "./dist/Router.js"
+    },
+    "./Uri": {
+      "types": "./dist/Uri.d.ts",
+      "import": "./dist/Uri.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests --config vitest.config.ts",
-    "test:browser": "vitest run --config vitest.browser.config.ts"
+    "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
+    "test": "pnpm run test:node && pnpm run test:browser && pnpm run test:types",
+    "test:node": "vitest run --passWithNoTests --config vitest.config.ts",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:types": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit"
   },
   "dependencies": {
     "@typed/fx": "workspace:*",

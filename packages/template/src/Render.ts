@@ -1,5 +1,6 @@
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import { constVoid, dual, flow, identity } from "effect/Function";
 import * as Layer from "effect/Layer";
 import { getOrUndefined, isNone, isOption, type Some } from "effect/Option";
@@ -7,13 +8,19 @@ import { isFunction, isNullish, isObject } from "effect/Predicate";
 import { map as mapRecord } from "effect/Record";
 import * as Scope from "effect/Scope";
 import * as Context from "effect/Context";
-import { isStream } from "effect/Stream";
+import { isStream, type Stream } from "effect/Stream";
 import { Fx, RefSubject, Sink } from "@typed/fx";
 import { CouldNotFindCommentError, isHydrationError } from "./errors.js";
 import * as EventHandler from "./EventHandler.js";
 import { type EventSource, makeEventSource } from "./EventSource.js";
 import { HydrateContext, makeHydrateContext } from "./HydrateContext.js";
-import { buildTemplateFragment } from "./internal/buildTemplateFragement.js";
+import {
+  buildTemplateFragment,
+  getAttributeDescriptor,
+  getInsertionNamespace,
+  HTML_NAMESPACE,
+  type NamespaceContext,
+} from "./internal/buildTemplateFragement.js";
 import {
   findNodePartEndComment,
   getClassList,
@@ -66,6 +73,10 @@ import { getAllSiblingsBetween, isText, persistent, type Rendered } from "./Wire
  */
 export const CurrentRenderDocument = Context.Reference<Document>("RenderDocument", {
   defaultValue: () => document,
+});
+
+const CurrentInsertionContext = Context.Reference<Element | undefined>("RenderInsertionContext", {
+  defaultValue: () => undefined,
 });
 
 /**
@@ -151,28 +162,17 @@ export const DomRenderTemplate = Object.assign(
     RenderTemplate,
     Effect.gen(function* () {
       const document = yield* CurrentRenderDocument;
-      const templateCache = new WeakMap<TemplateStringsArray, Template.Template>();
-      const getTemplate = (templateStrings: TemplateStringsArray) => {
-        let template = templateCache.get(templateStrings);
-        if (template === undefined) {
-          template = parse(templateStrings);
-          templateCache.set(templateStrings, template);
-        }
-        return template;
-      };
       const entries = new WeakMap<
         TemplateStringsArray,
         {
           template: Template.Template;
-          fragment: DocumentFragment;
+          fragments: Map<NamespaceContext, DocumentFragment>;
         }
       >();
       const getEntry = (templateStrings: TemplateStringsArray) => {
         let entry = entries.get(templateStrings);
         if (entry === undefined) {
-          const template = getTemplate(templateStrings);
-          const fragment = buildTemplateFragment(document, template);
-          entry = { template, fragment };
+          entry = { template: parse(templateStrings), fragments: new Map() };
           entries.set(templateStrings, entry);
         }
         return entry;
@@ -200,7 +200,6 @@ export const DomRenderTemplate = Object.assign(
           return Effect.gen(function* () {
             const entry = getEntry(templateStrings);
             const template = entry.template;
-            const fragment = document.importNode(entry.fragment, true);
             const ctx = yield* makeTemplateContext<Values, RSink>(document, values, sink.onFailure);
 
             return yield* Effect.gen(function* () {
@@ -208,19 +207,21 @@ export const DomRenderTemplate = Object.assign(
 
               let setup: PartSetup;
               let rendered: Rendered | undefined;
+              let fragment: DocumentFragment | undefined;
 
               if (hydration) {
-                setup = setupHydrationParts(template.parts, {
-                  ...ctx,
-                  ...hydration,
-                  makeHydrateContext: (where: HydrationNode): HydrateContext => ({
-                    where,
-                    hydrate: true,
-                  }),
-                });
+                setup = setupHydrationParts(template.parts, ctx, hydration.where);
 
                 rendered = getRendered(hydration.where);
               } else {
+                const insertionContext = yield* CurrentInsertionContext;
+                const namespace = getInsertionNamespace(insertionContext);
+                let cachedFragment = entry.fragments.get(namespace);
+                if (cachedFragment === undefined) {
+                  cachedFragment = buildTemplateFragment(document, template, namespace);
+                  entry.fragments.set(namespace, cachedFragment);
+                }
+                fragment = document.importNode(cachedFragment, true);
                 setup = setupRenderParts(template.parts, fragment, ctx);
               }
 
@@ -242,14 +243,12 @@ export const DomRenderTemplate = Object.assign(
                 }
               }
 
-              if (rendered === undefined) {
-                // If we have more than one child, we need to wrap them in a PersistentDocumentFragment
-                // so they can be diffed within other templates more than once.
-                rendered = persistent(document, template.hash, fragment);
-              }
+              // If we have more than one child, we need to wrap them in a PersistentDocumentFragment
+              // so they can be diffed within other templates more than once.
+              const output = rendered ?? persistent(document, template.hash, fragment!);
 
               // Setup our event listeners for our rendered content.
-              yield* ctx.eventSource.setup(rendered, ctx.scope);
+              yield* ctx.eventSource.setup(output, ctx.scope);
 
               // If we're hydrating, we need to mark this part of the stack as hydrated
               if (hydration !== undefined) {
@@ -257,7 +256,7 @@ export const DomRenderTemplate = Object.assign(
               }
 
               // Emit just once
-              yield* sink.onSuccess(DomRenderEvent(rendered));
+              yield* sink.onSuccess(DomRenderEvent(output));
 
               // Ensure our templates last forever in the DOM environment
               // so event listeners are kept attached to the current Scope.
@@ -270,7 +269,9 @@ export const DomRenderTemplate = Object.assign(
                 // If we are hydrating and we have a hydration error, we need to re-render the template without hydration
                 if (ctx.hydrateContext && ctx.hydrateContext.hydrate && isHydrationError(defect)) {
                   ctx.hydrateContext.hydrate = false;
-                  return render(sink);
+                  return Scope.close(ctx.scope, Exit.die(defect)).pipe(
+                    Effect.andThen(render(sink)),
+                  );
                 }
                 return sink.onFailure(Cause.die(defect));
               }),
@@ -438,20 +439,21 @@ const withCurrentRenderPriority = (
 ) => {
   return Effect.tap(Effect.service(CurrentRenderPriority), (priority) =>
     Effect.sync(() => {
-      const dispose = addDisposable(
-        ctx,
-        ctx.renderQueue.add(
-          key,
-          () => {
-            f();
-            ctx.refCounter.release(index);
-          },
-          () => {
-            dispose();
-          },
-          priority,
-        ),
+      let removeFromContext = constVoid;
+      let completed = false;
+      const scheduled = ctx.renderQueue.add(
+        key,
+        () => {
+          f();
+          ctx.refCounter.release(index);
+        },
+        () => {
+          completed = true;
+          removeFromContext();
+        },
+        priority,
       );
+      if (!completed) removeFromContext = addDisposable(ctx, scheduled);
     }),
   );
 };
@@ -463,20 +465,22 @@ function setupRenderPart<E = never, R = never>(
 ): Effect.Effect<unknown, E, R> | void {
   switch (part._tag) {
     case "node": {
-      return renderValue(
+      const endComment = findNodePartEndComment(node as HTMLElement | SVGElement, part.index);
+      const effect = renderValue<E, R, void>(
         ctx,
         part.index,
-        makeNodeUpdater(
-          ctx.document,
-          findNodePartEndComment(node as HTMLElement | SVGElement, part.index),
-        ),
+        makeNodeUpdater(ctx.document, endComment),
       );
+      return effect === undefined || endComment.parentElement === null
+        ? effect
+        : Effect.provideService(effect, CurrentInsertionContext, endComment.parentElement);
     }
     case "attr": {
       const element = node as HTMLElement | SVGElement;
       const setAttr = makeAttributeValueUpdater(
         element,
-        element.getAttributeNode(part.name) ?? ctx.document.createAttribute(part.name),
+        getTemplateAttributeNode(element, part.name) ??
+          createTemplateAttribute(ctx.document, element, part.name),
       );
       return renderValue(ctx, part.index, (value) => setAttr(renderToString(value, "")));
     }
@@ -506,7 +510,9 @@ function setupRenderPart<E = never, R = never>(
       return setupRef<R>(node as HTMLElement | SVGElement, ctx, part.index);
     case "sparse-attr": {
       const element = node as HTMLElement | SVGElement;
-      const attr = element.getAttributeNode(part.name) ?? ctx.document.createAttribute(part.name);
+      const attr =
+        getTemplateAttributeNode(element, part.name) ??
+        createTemplateAttribute(ctx.document, element, part.name);
       return renderSparseTextContent(
         element,
         part.nodes,
@@ -539,18 +545,14 @@ function setupRenderPart<E = never, R = never>(
   }
 }
 
-type HydrateTemplateContext<R = never> = TemplateContext<R> & {
-  where: HydrationNode;
-  makeHydrateContext: (where: HydrationNode) => HydrateContext;
-};
-
 function setupHydrationParts<E, R>(
   parts: Template.Template["parts"],
-  ctx: HydrateTemplateContext<R>,
+  ctx: TemplateContext<R>,
+  where: HydrationNode,
 ): PartSetup {
   const setup = makePartSetup();
   for (const [part, path] of parts) {
-    const effect = setupHydrationPart<E, R>(part, path, ctx);
+    const effect = setupHydrationPart<E, R>(part, path, ctx, where);
     if (effect !== undefined) {
       addPartEffect(setup, part, effect, ctx);
     }
@@ -562,16 +564,17 @@ function setupHydrationParts<E, R>(
 function setupHydrationPart<E, R>(
   part: Template.PartNode | Template.SparsePartNode,
   path: ReadonlyArray<number>,
-  ctx: HydrateTemplateContext<R>,
+  ctx: TemplateContext<R>,
+  where: HydrationNode,
 ): Effect.Effect<unknown, E, R> | void {
   switch (part._tag) {
     case "node": {
-      const hole = findHydrationHole(getChildNodes(ctx.where), part.index);
+      const hole = findHydrationHole(getChildNodes(where), part.index);
       if (hole === null) throw new CouldNotFindCommentError(part.index);
       return setupHydratedNodePart(part, hole, ctx);
     }
     default:
-      return setupRenderPart(part, findHydratePath(ctx.where, path), ctx);
+      return setupRenderPart(part, findHydratePath(where, path), ctx);
   }
 }
 
@@ -583,12 +586,26 @@ function renderSparsePart<E, R, T = unknown>(
   transformValue: (value: unknown) => T,
 ): Effect.Effect<unknown, E, R> {
   ctx.expected++;
+  let scheduled = false;
   return Fx.tuple(
     ...parts.map((node) => {
       if (node._tag === "text") return Fx.succeed(node.value);
       return Fx.map(liftRenderableToFx<E, R>(ctx.values[node.index]), transformValue);
     }),
-  ).pipe(Fx.observe((values) => withCurrentRenderPriority(f, index, ctx, () => f(values))));
+  ).pipe(
+    Fx.observe((values) =>
+      Effect.tap(
+        withCurrentRenderPriority(f, index, ctx, () => f(values)),
+        () =>
+          Effect.sync(() => {
+            scheduled = true;
+          }),
+      ),
+    ),
+    Effect.onExit(() =>
+      scheduled ? Effect.void : Effect.sync(() => ctx.refCounter.release(index)),
+    ),
+  );
 }
 
 function renderSparseTextContent<E, R>(
@@ -622,9 +639,24 @@ function renderValue<E, R, X>(
     },
     Fx: (fx) => {
       ctx.expected++;
-      return fx.run(
-        Sink.make(ctx.onCause, (value) => withCurrentRenderPriority(f, index, ctx, () => f(value))),
-      );
+      let scheduled = false;
+      return fx
+        .run(
+          Sink.make(ctx.onCause, (value) =>
+            Effect.tap(
+              withCurrentRenderPriority(f, index, ctx, () => f(value)),
+              () =>
+                Effect.sync(() => {
+                  scheduled = true;
+                }),
+            ),
+          ),
+        )
+        .pipe(
+          Effect.onExit(() =>
+            scheduled ? Effect.void : Effect.sync(() => ctx.refCounter.release(index)),
+          ),
+        );
     },
   });
 }
@@ -646,55 +678,206 @@ function matchRenderable<X, A, B, C>(
     return matches.Effect(renderable as any);
   } else if (Array.isArray(renderable)) {
     return matches.Fx(liftRenderableToFx(renderable));
+  } else if (isFunction(renderable)) {
+    return;
   } else {
     return matches.Primitive(renderable);
   }
 }
 
-function setupRenderProperties<E = never, R = never>(
-  properties: Record<string, unknown>,
-  element: HTMLElement | SVGElement,
-  ctx: TemplateContext<R>,
-): Effect.Effect<unknown, E, R> | void {
-  const effects: Array<Effect.Effect<unknown, E, R>> = [];
-  for (const [key, value] of Object.entries(properties)) {
-    const index = ctx.dynamicIndex++;
-    const part = makePropertiesPart(keyToPartType(key), index);
-    const effect = setupRenderPart(part, element, { ...ctx, values: makeArrayLike(index, value) });
-    if (effect !== undefined) {
-      effects.push(effect);
-    }
-  }
-  if (effects.length > 0) {
-    ctx.expected += effects.length;
-    return Effect.all(effects, { concurrency: "unbounded" });
+type SpreadPartDescriptor =
+  | { readonly id: string; readonly kind: "attr" | "boolean" | "event"; readonly name: string }
+  | { readonly id: string; readonly kind: "class" | "data" | "properties" | "ref" };
+
+type SpreadPartInstance = {
+  readonly value: unknown;
+  readonly update: (value: unknown) => Effect.Effect<void>;
+  readonly dispose: Effect.Effect<void>;
+};
+
+const forbiddenSpreadKeys = new Set(["__proto__", "prototype", "constructor"]);
+const forbiddenAttributeNameCharacters = new Set(['"', "'", "/", ">", "=", "<"]);
+
+function getSpreadPartDescriptor(key: string): SpreadPartDescriptor | undefined {
+  if (forbiddenSpreadKeys.has(key)) return;
+  const [kind, name] = keyToPartType(key);
+  switch (kind) {
+    case "property":
+      return;
+    case "attr":
+    case "boolean":
+      return isValidSpreadAttributeName(name) && !/^on/i.test(name)
+        ? { id: `${kind}:${name}`, kind, name }
+        : undefined;
+    case "event":
+      return name.length === 0 ? undefined : { id: `${kind}:${name}`, kind, name };
+    case "class":
+    case "data":
+    case "properties":
+    case "ref":
+      return { id: kind, kind };
   }
 }
 
-type PartType = ReturnType<typeof keyToPartType>;
-
-function makePropertiesPart([partType, partName]: PartType, index: number) {
-  switch (partType) {
-    case "attr":
-      return new Template.AttrPartNode(partName, index);
-    case "boolean":
-      return new Template.BooleanPartNode(partName, index);
-    case "class":
-      return new Template.ClassNamePartNode(index);
-    case "data":
-      return new Template.DataPartNode(index);
-    case "event":
-      return new Template.EventPartNode(partName, index);
-    case "property":
-      return new Template.PropertyPartNode(partName, index);
-    case "properties":
-      return new Template.PropertiesPartNode(index);
-    case "ref":
-      return new Template.RefPartNode(index);
-    default:
-      // oxlint-disable-next-line typescript/restrict-template-expressions
-      throw new Error(`Unknown part type: ${partType}`);
+function isValidSpreadAttributeName(name: string): boolean {
+  if (name.length === 0) return false;
+  for (const character of name) {
+    const codePoint = character.codePointAt(0)!;
+    if (
+      codePoint <= 0x20 ||
+      (codePoint >= 0x7f && codePoint <= 0x9f) ||
+      forbiddenAttributeNameCharacters.has(character)
+    ) {
+      return false;
+    }
   }
+  return true;
+}
+
+function setupRenderProperties<R>(
+  properties: Record<string, unknown>,
+  element: HTMLElement | SVGElement,
+  ctx: TemplateContext<R>,
+  instances: Map<string, SpreadPartInstance>,
+  ancestors: ReadonlySet<object>,
+): Effect.Effect<void> {
+  const desired = new Map<
+    string,
+    { readonly descriptor: SpreadPartDescriptor; readonly value: unknown }
+  >();
+  for (const [key, value] of Object.entries(properties)) {
+    const descriptor = getSpreadPartDescriptor(key);
+    if (descriptor !== undefined) desired.set(descriptor.id, { descriptor, value });
+  }
+
+  return Effect.gen(function* () {
+    for (const [id, instance] of instances) {
+      if (!desired.has(id)) {
+        yield* instance.dispose;
+        instances.delete(id);
+      }
+    }
+
+    for (const [id, { descriptor, value }] of desired) {
+      const instance = instances.get(id);
+      if (instance === undefined) {
+        instances.set(
+          id,
+          yield* makeSpreadPartInstance(descriptor, value, element, ctx, ancestors),
+        );
+      } else if (!Object.is(instance.value, value)) {
+        yield* instance.update(value);
+      }
+    }
+  });
+}
+
+function makeSpreadPartInstance<R>(
+  descriptor: SpreadPartDescriptor,
+  initialValue: unknown,
+  element: HTMLElement | SVGElement,
+  ctx: TemplateContext<R>,
+  ancestors: ReadonlySet<object>,
+): Effect.Effect<SpreadPartInstance> {
+  const index = ctx.dynamicIndex++;
+  let setup: (partContext: TemplateContext<R>) => Effect.Effect<unknown, unknown, unknown> | void;
+  let reset = constVoid;
+
+  switch (descriptor.kind) {
+    case "attr": {
+      const update = makeAttributeValueUpdater(
+        element,
+        getTemplateAttributeNode(element, descriptor.name) ??
+          createTemplateAttribute(ctx.document, element, descriptor.name),
+      );
+      setup = (partContext) =>
+        renderValue(partContext, index, (value) => update(renderToString(value, "")));
+      reset = () => update(undefined);
+      break;
+    }
+    case "boolean": {
+      const update = makeBooleanUpdater(element, descriptor.name);
+      setup = (partContext) => renderValue(partContext, index, (value) => update(!!value));
+      reset = () => update(false);
+      break;
+    }
+    case "class": {
+      const update = makeClassListUpdater(element);
+      setup = (partContext) =>
+        renderValue(partContext, index, (value) => update(getClassList(value)));
+      reset = () => update([]);
+      break;
+    }
+    case "data": {
+      const update = makeDatasetUpdater(element);
+      setup = (partContext) => setupDataset(element, partContext, index, update);
+      reset = () => update(undefined);
+      break;
+    }
+    case "event":
+      setup = (partContext) => setupEventHandler(element, partContext, index, descriptor.name);
+      break;
+    case "properties":
+      setup = (partContext) => setupProperties(element, partContext, index, ancestors);
+      break;
+    case "ref":
+      setup = (partContext) => setupRef(element, partContext, index);
+      break;
+  }
+
+  let value = initialValue;
+  let currentScope: Scope.Closeable | undefined;
+  const update = (next: unknown) =>
+    Effect.gen(function* () {
+      if (currentScope !== undefined) yield* Scope.close(currentScope, Exit.void);
+
+      const scope = yield* Scope.fork(ctx.scope);
+      currentScope = scope;
+      const disposables = new Set<Disposable>();
+      const refCounter = yield* makeRefCounter;
+      yield* Scope.addFinalizer(
+        scope,
+        Effect.sync(() => disposables.forEach(dispose)),
+      );
+      const partContext: TemplateContext<R> = {
+        ...ctx,
+        disposables,
+        refCounter,
+        scope,
+        services: Context.add(ctx.services, Scope.Scope, scope),
+        values: makeArrayLike(index, next),
+        expected: 0,
+      };
+      const effect = setup(partContext);
+      if (Effect.isEffect(effect)) {
+        yield* Effect.forkIn(
+          Effect.provideService(
+            Effect.catchCause(effect, partContext.onCause),
+            Scope.Scope,
+            scope,
+          ) as Effect.Effect<unknown>,
+          scope,
+        );
+        if (partContext.expected > 0 && refCounter.expect(partContext.expected)) {
+          yield* refCounter.wait;
+        } else {
+          yield* Effect.yieldNow;
+        }
+      }
+      value = next;
+    });
+
+  return Effect.as(update(initialValue), {
+    get value() {
+      return value;
+    },
+    update,
+    dispose: Effect.suspend(() =>
+      (currentScope === undefined ? Effect.void : Scope.close(currentScope, Exit.void)).pipe(
+        Effect.andThen(Effect.sync(reset)),
+      ),
+    ),
+  } satisfies SpreadPartInstance);
 }
 
 export type TemplateContext<R = never> = {
@@ -747,7 +930,10 @@ const makeTemplateContext = Effect.fn(function* <
     refCounter,
     scope,
     values,
-    onCause: flow(onCause, Effect.provideContext(servicesWithScope)),
+    onCause: (cause) =>
+      Cause.hasInterruptsOnly(cause)
+        ? Effect.void
+        : Effect.provideContext(onCause(cause), servicesWithScope),
     expected: 0,
     dynamicIndex: values.length,
     hydrateContext: getOrUndefined(hydrateContext),
@@ -765,8 +951,9 @@ function liftRenderableToFx<E = never, R = never>(
   renderable: Renderable<unknown, E, R>,
 ): Fx.Fx<any, E, R> {
   switch (typeof renderable) {
-    case "undefined":
     case "function":
+      return Fx.null;
+    case "undefined":
     case "object": {
       if (isNullish(renderable)) {
         return Fx.null;
@@ -774,10 +961,12 @@ function liftRenderableToFx<E = never, R = never>(
         return Fx.tuple(...renderable.map(liftRenderableToFx<E, R>));
       } else if (isOption(renderable)) {
         return isNone(renderable) ? Fx.null : liftRenderableToFx((renderable as Some<any>).value);
-      } else if (Effect.isEffect(renderable)) {
-        return Fx.unwrap(Effect.map(renderable, liftRenderableToFx<E, R>));
       } else if (Fx.isFx(renderable)) {
         return renderable;
+      } else if (isStream(renderable)) {
+        return Fx.fromStream(renderable as Stream<unknown, E, R>);
+      } else if (Effect.isEffect(renderable)) {
+        return Fx.unwrap(Effect.map(renderable, liftRenderableToFx<E, R>));
       } else {
         return Fx.struct(mapRecord(renderable, liftRenderableToFx));
       }
@@ -818,17 +1007,32 @@ export function attemptHydration(
   }
 }
 
+function getTemplateAttributeNode(element: Element, name: string): Attr | null {
+  const attribute = getAttributeDescriptor(element.namespaceURI, name);
+  return element.getAttributeNodeNS(attribute.namespace, attribute.localName);
+}
+
+function createTemplateAttribute(document: Document, element: Element, name: string): Attr {
+  const attribute = getAttributeDescriptor(element.namespaceURI, name);
+  if (attribute.namespace === null && element.namespaceURI === HTML_NAMESPACE) {
+    return document.createAttribute(attribute.qualifiedName);
+  }
+  return document.createAttributeNS(attribute.namespace, attribute.qualifiedName);
+}
+
 function setupEventHandler(element: Element, ctx: TemplateContext, index: number, name: string) {
   const value = ctx.values[index];
   if (isNullish(value)) return;
-  ctx.eventSource.addEventListener(
-    element,
-    name,
-    EventHandler.fromEffectOrEventHandler(
-      value as
-        | Effect.Effect<unknown, never, never>
-        | EventHandler.EventHandler<Event, never, never>,
-    ).pipe(EventHandler.provide(ctx.services), EventHandler.catchCause(ctx.onCause)),
+  ctx.disposables.add(
+    ctx.eventSource.addEventListener(
+      element,
+      name,
+      EventHandler.fromEffectOrEventHandler(
+        value as
+          | Effect.Effect<unknown, never, never>
+          | EventHandler.EventHandler<Event, never, never>,
+      ).pipe(EventHandler.provide(ctx.services), EventHandler.catchCause(ctx.onCause)),
+    ),
   );
 }
 
@@ -836,51 +1040,86 @@ function setupDataset<E, R>(
   element: HTMLElement | SVGElement,
   ctx: TemplateContext<R>,
   index: number,
+  update = makeDatasetUpdater(element),
 ): Effect.Effect<unknown, E, R> | void {
   const value = ctx.values[index];
   if (isNullish(value)) return;
-  // Special case to convert sync object to data-* attributes
-  if (isObject(value)) {
-    const effects: Array<Effect.Effect<unknown, E, R>> = [];
-    for (const [k, v] of Object.entries(value)) {
-      const index = ctx.dynamicIndex++;
-      const part = makePropertiesPart(["attr", `data-${k}`], index);
-      const effect = setupRenderPart<E, R>(part, element, {
-        ...ctx,
-        values: makeArrayLike(index, v),
-      });
-      if (effect !== undefined) {
-        effects.push(effect);
-      }
-    }
-
-    ctx.expected += effects.length;
-
-    return Effect.all(effects, { concurrency: "unbounded" });
-  }
-  return renderValue(ctx, index, makeDatasetUpdater(element));
+  ctx.expected++;
+  let scheduled = false;
+  return liftRenderableToFx<E, R>(value)
+    .run(
+      Sink.make(ctx.onCause, (data) =>
+        Effect.tap(
+          withCurrentRenderPriority(update, index, ctx, () => update(data)),
+          () =>
+            Effect.sync(() => {
+              scheduled = true;
+            }),
+        ),
+      ),
+    )
+    .pipe(
+      Effect.onExit(() =>
+        scheduled ? Effect.void : Effect.sync(() => ctx.refCounter.release(index)),
+      ),
+    );
 }
 
 function setupProperties<E, R>(
   element: HTMLElement | SVGElement,
   ctx: TemplateContext<R>,
   index: number,
-) {
-  const setupIfObject = (props: unknown) => {
-    if (isObject(props)) {
-      return setupRenderProperties<E, R>(props as Record<string, unknown>, element, ctx);
+  ancestors: ReadonlySet<object> = new Set(),
+): Effect.Effect<never, E, R> {
+  const instances = new Map<string, SpreadPartInstance>();
+  const reconcile = (props: unknown) => {
+    if (!isObject(props) || ancestors.has(props)) {
+      return setupRenderProperties<R>({}, element, ctx, instances, ancestors);
     }
+    const nextAncestors = new Set(ancestors).add(props);
+    return setupRenderProperties<R>(
+      props as Record<string, unknown>,
+      element,
+      ctx,
+      instances,
+      nextAncestors,
+    );
   };
+  const release = () => ctx.refCounter.release(index);
+  const value = ctx.values[index];
+  ctx.expected++;
 
-  return matchRenderable(ctx.values[index], {
-    Primitive: setupIfObject,
-    Effect: Effect.tap(flow(setupIfObject, Effect.succeed)),
-    Fx: flow(
-      Fx.switchMapEffect((props) => setupIfObject(props) || Effect.void),
-      Fx.drain,
-      Effect.provideService(Scope.Scope, ctx.scope),
-    ),
-  });
+  let emitted = false;
+  const onValue = (props: unknown) =>
+    Effect.tap(reconcile(props), () =>
+      Effect.sync(() => {
+        emitted = true;
+        release();
+      }),
+    );
+
+  let setup: Effect.Effect<unknown, E, R>;
+  if (Fx.isFx(value)) {
+    setup = value.run(Sink.make(ctx.onCause, onValue));
+  } else if (isStream(value)) {
+    setup = Fx.fromStream(value as Stream<unknown, E, R>).run(Sink.make(ctx.onCause, onValue));
+  } else if (Effect.isEffect(value)) {
+    setup = Effect.flatMap(value as Effect.Effect<unknown, E, R>, onValue);
+  } else {
+    setup = onValue(value);
+  }
+
+  const cleanup = Effect.suspend(() =>
+    Effect.forEach(instances.values(), (instance) => instance.dispose, {
+      discard: true,
+    }).pipe(Effect.andThen(Effect.sync(() => instances.clear()))),
+  );
+
+  return setup.pipe(
+    Effect.onExit(() => (emitted ? Effect.void : Effect.sync(release))),
+    Effect.andThen(Effect.never),
+    Effect.ensuring(cleanup),
+  );
 }
 
 function setupRef<R>(element: HTMLElement | SVGElement, ctx: TemplateContext<R>, index: number) {
@@ -905,22 +1144,35 @@ function setupPropertSetter(element: Element, name: string) {
 function setupHydratedNodePart<E, R>(
   part: Template.NodePart,
   hole: HydrationHole,
-  ctx: HydrateTemplateContext<R>,
+  ctx: TemplateContext<R>,
 ): Effect.Effect<unknown, E, R> | void {
-  const nestedCtx = ctx.makeHydrateContext(hole);
-  const previousNodes = getAllSiblingsBetween(hole.startComment, hole.endComment);
-  const text = previousNodes.length === 3 && isText(previousNodes[1]) ? previousNodes[1] : null;
+  const nestedCtx: HydrateContext = { where: hole, hydrate: true };
 
   const effect = renderValue<E, R, void>(
     ctx,
     part.index,
-    makeNodeUpdater(
-      ctx.document,
-      hole.endComment,
-      text,
-      text === null ? previousNodes : [hole.startComment, text, hole.endComment],
-    ),
+    makeHydratedNodeUpdater(ctx.document, hole),
   );
   if (effect === undefined) return;
-  return Effect.provideService(effect, HydrateContext, nestedCtx);
+  const hydrated = Effect.provideService(effect, HydrateContext, nestedCtx);
+  return hole.endComment.parentElement === null
+    ? hydrated
+    : Effect.provideService(hydrated, CurrentInsertionContext, hole.endComment.parentElement);
+}
+
+function makeHydratedNodeUpdater(document: Document, hole: HydrationHole) {
+  let isHydrating = true;
+  let update: ((value: unknown) => void) | undefined;
+  return (value: unknown) => {
+    if (isHydrating) {
+      isHydrating = false;
+      return;
+    }
+    if (update === undefined) {
+      const nodes = getAllSiblingsBetween(hole.startComment, hole.endComment);
+      const text = nodes.length === 1 && isText(nodes[0]) ? nodes[0] : null;
+      update = makeNodeUpdater(document, hole.endComment, text, nodes);
+    }
+    update(value);
+  };
 }

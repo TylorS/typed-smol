@@ -1,4 +1,8 @@
 import { createServer } from "vite";
+import { parseArgs } from "node:util";
+
+const { values } = parseArgs({ options: { port: { type: "string" } } });
+const port = values.port === undefined ? 3000 : Number(values.port);
 
 const vite = await createServer({
   root: import.meta.dirname,
@@ -9,7 +13,5 @@ const vite = await createServer({
   },
 });
 const { runServer } = await vite.ssrLoadModule("/src/server.ts");
-const portIndex = process.argv.indexOf("--port");
-const port = portIndex === -1 ? 3000 : Number(process.argv[portIndex + 1]);
 
 runServer({ port, vite });

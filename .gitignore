@@ -33,6 +33,8 @@ pnpm-debug.log*
 # Test / coverage
 coverage/
 .nyc_output/
+**/__screenshots__/
+**/.vitest-attachments/
 
 # Misc
 .cache/

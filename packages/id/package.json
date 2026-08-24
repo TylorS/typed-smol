@@ -1,27 +1,81 @@
 {
   "name": "@typed/id",
   "version": "1.0.0-beta.4",
+  "description": "Branded ID generators and facades for Typed applications.",
+  "license": "MIT",
+  "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/id#readme",
+  "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TylorS/typed-smol.git",
+    "directory": "packages/id"
+  },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./Cuid": {
+      "types": "./dist/Cuid.d.ts",
+      "import": "./dist/Cuid.js"
+    },
+    "./DateTimes": {
+      "types": "./dist/DateTimes.d.ts",
+      "import": "./dist/DateTimes.js"
+    },
+    "./Ids": {
+      "types": "./dist/Ids.d.ts",
+      "import": "./dist/Ids.js"
+    },
+    "./Ksuid": {
+      "types": "./dist/Ksuid.d.ts",
+      "import": "./dist/Ksuid.js"
+    },
+    "./NanoId": {
+      "types": "./dist/NanoId.d.ts",
+      "import": "./dist/NanoId.js"
+    },
+    "./RandomValues": {
+      "types": "./dist/RandomValues.d.ts",
+      "import": "./dist/RandomValues.js"
+    },
+    "./Ulid": {
+      "types": "./dist/Ulid.d.ts",
+      "import": "./dist/Ulid.js"
+    },
+    "./Uuid4": {
+      "types": "./dist/Uuid4.d.ts",
+      "import": "./dist/Uuid4.js"
+    },
+    "./Uuid5": {
+      "types": "./dist/Uuid5.d.ts",
+      "import": "./dist/Uuid5.js"
+    },
+    "./Uuid7": {
+      "types": "./dist/Uuid7.d.ts",
+      "import": "./dist/Uuid7.js"
+    },
+    "./_sha": {
+      "types": "./dist/_sha.d.ts",
+      "import": "./dist/_sha.js"
+    },
+    "./_uuid-stringify": {
+      "types": "./dist/_uuid-stringify.d.ts",
+      "import": "./dist/_uuid-stringify.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "[ -d dist ] || rm -f tsconfig.tsbuildinfo; tsc",
-    "test": "vitest run --passWithNoTests"
+    "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
+    "test": "vitest run",
+    "test:types": "tsc -p tsconfig.type-tests.json"
   },
   "dependencies": {
     "effect": "catalog:"

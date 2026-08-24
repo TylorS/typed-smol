@@ -22,6 +22,7 @@ import { compact as fxCompact } from "../Fx/combinators/compact.js";
 import { continueWith } from "../Fx/combinators/continueWith.js";
 import { filterMapEffect as fxFilterMapEffect } from "../Fx/combinators/filterMapEffect.js";
 import { mapEffect as fxMapEffect } from "../Fx/combinators/mapEffect.js";
+import { mergeAll as fxMergeAll } from "../Fx/combinators/mergeAll.js";
 import { scanEffect as fxScanEffect } from "../Fx/combinators/scan.js";
 import { skipRepeats } from "../Fx/combinators/skipRepeats.js";
 import type { Bounds } from "../Fx/combinators/slice.js";
@@ -595,6 +596,8 @@ class FilteredImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
   }
 }
 
+let nextTransactionOrder = 0;
+
 class RefSubjectCore<A, E, R, R2> {
   readonly initial: Effect.Effect<A, E, R>;
   readonly subject: Subject.HoldSubjectImpl<A, E>;
@@ -602,6 +605,7 @@ class RefSubjectCore<A, E, R, R2> {
   readonly scope: Scope.Closeable;
   readonly deferredRef: DeferredRef.DeferredRef<E, A>;
   readonly semaphore: Semaphore.Semaphore;
+  readonly transactionOrder = nextTransactionOrder++;
   constructor(
     initial: Effect.Effect<A, E, R>,
     subject: Subject.HoldSubjectImpl<A, E>,
@@ -621,16 +625,234 @@ class RefSubjectCore<A, E, R, R2> {
   public _fiber: Fiber.Fiber<A, E> | undefined = undefined;
 }
 
+type RecordCommit<A, E> = (exit: Exit.Exit<A, E>) => void;
+
+type AnyRefSubjectCore = RefSubjectCore<any, any, any, any>;
+
+type TransactionCommit = readonly [
+  core: AnyRefSubjectCore,
+  exit: Exit.Exit<any, any>,
+  version: number,
+];
+
+interface TransactionAccess {
+  readonly cores: ReadonlyArray<AnyRefSubjectCore>;
+  readonly getSetDelete: (
+    recordCommit: (commit: TransactionCommit) => void,
+  ) => GetSetDelete<any, any, any>;
+}
+
+type TransactionAccessEffect = Effect.Effect<Option.Option<TransactionAccess>, never, any>;
+
+function combineTransactionCores(
+  accesses: ReadonlyArray<TransactionAccess>,
+): ReadonlyArray<AnyRefSubjectCore> {
+  return [...new Set(accesses.flatMap((access) => access.cores))].sort(
+    (left, right) => left.transactionOrder - right.transactionOrder,
+  );
+}
+
+function getTupleTransactionAccess(
+  refs: ReadonlyArray<RefSubject.Any>,
+): TransactionAccessEffect | undefined {
+  const accessEffects = refs.map(getTransactionAccess);
+  if (!accessEffects.every((access): access is TransactionAccessEffect => access !== undefined)) {
+    return undefined;
+  }
+
+  return Effect.map(
+    Effect.all(accessEffects, UNBOUNDED),
+    (accessOptions) =>
+      Option.map(Option.all(accessOptions), (accesses) => ({
+        cores: combineTransactionCores(accesses),
+        getSetDelete: (recordCommit: (commit: TransactionCommit) => void) => {
+          const transactions = accesses.map((access) => access.getSetDelete(recordCommit));
+          return {
+            get: Effect.all(
+              transactions.map((transaction) => transaction.get),
+              UNBOUNDED,
+            ),
+            set: (value: ReadonlyArray<any>) =>
+              Effect.all(
+                transactions.map((transaction, index) => transaction.set(value[index])),
+                UNBOUNDED,
+              ),
+            delete: Effect.map(
+              Effect.all(
+                transactions.map((transaction) => transaction.delete),
+                UNBOUNDED,
+              ),
+              Option.all,
+            ),
+          };
+        },
+      })),
+  );
+}
+
+function getStructTransactionAccess(
+  refs: Readonly<Record<string, RefSubject.Any>>,
+): TransactionAccessEffect | undefined {
+  const keys = Object.keys(refs);
+  const accessEffects = keys.map((key) => getTransactionAccess(refs[key]));
+  if (!accessEffects.every((access): access is TransactionAccessEffect => access !== undefined)) {
+    return undefined;
+  }
+
+  return Effect.map(
+    Effect.all(accessEffects, UNBOUNDED),
+    (accessOptions) =>
+      Option.map(Option.all(accessOptions), (accesses) => ({
+        cores: combineTransactionCores(accesses),
+        getSetDelete: (recordCommit: (commit: TransactionCommit) => void) => {
+          const transactions = accesses.map((access) => access.getSetDelete(recordCommit));
+          return {
+            get: Effect.map(
+              Effect.all(
+                transactions.map((transaction) => transaction.get),
+                UNBOUNDED,
+              ),
+              (values) => Object.fromEntries(keys.map((key, index) => [key, values[index]])),
+            ),
+            set: (value: Readonly<Record<string, any>>) =>
+              Effect.all(
+                transactions.map((transaction, index) => transaction.set(value[keys[index]])),
+                UNBOUNDED,
+              ),
+            delete: Effect.map(
+              Effect.all(
+                transactions.map((transaction) => transaction.delete),
+                UNBOUNDED,
+              ),
+              (values) =>
+                Option.all(Object.fromEntries(keys.map((key, index) => [key, values[index]]))),
+            ),
+          };
+        },
+      })),
+  );
+}
+
+function getTransactionAccess(ref: RefSubject.Any): TransactionAccessEffect | undefined {
+  if (ref instanceof RefSubjectImpl) {
+    return Effect.succeed(
+      Option.some({
+        cores: [ref.core],
+        getSetDelete: (recordCommit: (commit: TransactionCommit) => void) =>
+          getSetDelete(ref.core, (exit) =>
+            recordCommit([ref.core, exit, ref.core.deferredRef.version]),
+          ),
+      }),
+    );
+  }
+
+  if (ref instanceof RefSubjectSimpleTransform) return getTransactionAccess(ref.ref);
+
+  if (ref instanceof RefSubjectTransform) {
+    const accessEffect = getTransactionAccess(ref.ref);
+    if (!accessEffect) return undefined;
+
+    return Effect.map(
+      accessEffect,
+      Option.map((access) => ({
+        cores: access.cores,
+        getSetDelete: (recordCommit: (commit: TransactionCommit) => void) => {
+          const transaction = access.getSetDelete(recordCommit);
+          return {
+            get: Effect.map(transaction.get, ref.toB),
+            set: (value: any) => Effect.map(transaction.set(ref.toA(value)), ref.toB),
+            delete: Effect.map(transaction.delete, Option.map(ref.toB)),
+          };
+        },
+      })),
+    );
+  }
+
+  if (ref instanceof RefSubjectTuple) return getTupleTransactionAccess(ref.refs);
+  if (ref instanceof RefSubjectStruct) return getStructTransactionAccess(ref.refs);
+
+  if (typeof ref === "function") {
+    const service = (ref as any).service as Effect.Effect<RefSubject.Any, never, any>;
+    if (Effect.isEffect(service)) {
+      return Effect.flatMap(service, (providedRef) => {
+        const accessEffect = getTransactionAccess(providedRef);
+        return accessEffect ?? Effect.succeed(Option.none());
+      });
+    }
+  }
+
+  return undefined;
+}
+
+function withTransactionLocks<A, E, R>(
+  cores: ReadonlyArray<AnyRefSubjectCore>,
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> {
+  let locked = effect;
+
+  for (let index = cores.length - 1; index >= 0; index--) {
+    locked = cores[index].semaphore.withPermits(1)(locked);
+  }
+
+  return locked;
+}
+
+function runTransaction<A, E, R>(
+  access: TransactionAccess,
+  run: (ref: GetSetDelete<any, any, any>) => Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> {
+  return Effect.uninterruptibleMask((restore) => {
+    const commits: TransactionCommit[] = [];
+    const transaction = restore(
+      withTransactionLocks(
+        access.cores,
+        Effect.suspend(() =>
+          run(
+            access.getSetDelete((commit) => {
+              commits.push(commit);
+            }),
+          ),
+        ),
+      ),
+    );
+
+    return Effect.flatMap(Effect.exit(transaction), (exit) =>
+      Effect.andThen(
+        Effect.forEach(commits, ([core, commit, version]) => sendCurrentEvent(core, commit, version), {
+          discard: true,
+        }),
+        exit,
+      ),
+    );
+  }) as Effect.Effect<A, E, R>;
+}
+
+function sendCurrentEvent(
+  core: AnyRefSubjectCore,
+  commit: Exit.Exit<any, any>,
+  version: number,
+): Effect.Effect<unknown, never, any> {
+  return Effect.suspend(() => {
+    const current = MutableRef.get(core.deferredRef.current);
+    return core.deferredRef.version === version &&
+      Option.isSome(current) &&
+      core.deferredRef.eq(current.value, commit)
+      ? sendEvent(core, commit)
+      : Effect.void;
+  });
+}
+
 export interface RefSubjectOptions<A> {
   readonly eq?: Equivalence<A>;
 }
 
 function getSetDelete<A, E, R, R2>(
   ref: RefSubjectCore<A, E, R, R2>,
+  recordCommit: RecordCommit<A, E>,
 ): GetSetDelete<A, E, Exclude<R, R2>> {
   return {
     get: getOrInitializeCore(ref, false),
-    set: (a) => setCore(ref, a),
+    set: (a) => bufferSuccessCore(ref, a, recordCommit),
     delete: deleteCore(ref),
   };
 }
@@ -645,8 +867,6 @@ class RefSubjectImpl<A, E, R, R2>
   readonly interrupt: Effect.Effect<void, never, Exclude<R, R2>>;
   readonly subscriberCount: Effect.Effect<number, never, Exclude<R, R2>>;
 
-  readonly getSetDelete: GetSetDelete<A, E, Exclude<R, R2>>;
-
   readonly core: RefSubjectCore<A, E, R, R2>;
 
   constructor(core: RefSubjectCore<A, E, R, R2>) {
@@ -656,7 +876,6 @@ class RefSubjectImpl<A, E, R, R2>
     this.version = Effect.sync(() => core.deferredRef.version);
     this.interrupt = Effect.provide(interruptCore(core), core.services);
     this.subscriberCount = Effect.provide(core.subject.subscriberCount, core.services);
-    this.getSetDelete = getSetDelete(core);
 
     this.updates = this.updates.bind(this);
     this.onSuccess = this.onSuccess.bind(this);
@@ -673,15 +892,19 @@ class RefSubjectImpl<A, E, R, R2>
   }
 
   updates<R3, E3, B>(run: (ref: GetSetDelete<A, E, Exclude<R, R2>>) => Effect.Effect<B, E3, R3>) {
-    return this.core.semaphore.withPermits(1)(run(this.getSetDelete));
+    return updateCore(this.core, (recordCommit) => run(getSetDelete(this.core, recordCommit)));
   }
 
   onSuccess(value: A): Effect.Effect<unknown, never, Exclude<R, R2>> {
-    return setCore(this.core, value);
+    return updateCore(this.core, (recordCommit) =>
+      bufferSuccessCore(this.core, value, recordCommit),
+    );
   }
 
   onFailure(cause: Cause.Cause<E>): Effect.Effect<unknown, never, Exclude<R, R2>> {
-    return onFailureCore(this.core, cause);
+    return updateCore(this.core, (recordCommit) =>
+      bufferFailureCore(this.core, cause, recordCommit),
+    );
   }
 
   toEffect(): Effect.Effect<A, E, Exclude<R, R2>> {
@@ -805,8 +1028,10 @@ export function fromFx<A, E, R>(
     yield* Effect.forkIn(
       fx.run(
         Sink.make(
-          (cause) => onFailureCore(core, cause),
-          (value) => setCore(core, value),
+          (cause) =>
+            updateCore(core, (recordCommit) => bufferFailureCore(core, cause, recordCommit)),
+          (value) =>
+            updateCore(core, (recordCommit) => bufferSuccessCore(core, value, recordCommit)),
         ),
       ),
       core.scope,
@@ -826,7 +1051,9 @@ export function fromStream<A, E, R>(
     yield* Effect.forkIn(
       stream.pipe(
         redirectCause(core),
-        Stream.runForEach((value) => setCore(core, value)),
+        Stream.runForEach((value) =>
+          updateCore(core, (recordCommit) => bufferSuccessCore(core, value, recordCommit)),
+        ),
       ),
       core.scope,
       { startImmediately: true },
@@ -897,7 +1124,12 @@ export function fromNullable<A>(
 
 function redirectCause<A, E, R>(core: RefSubjectCore<A, E, R, R | Scope.Scope>) {
   return Stream.catchCause((cause: Cause.Cause<E>) =>
-    Stream.unwrap(Effect.as(onFailureCore(core, cause), Stream.empty)),
+    Stream.unwrap(
+      Effect.as(
+        updateCore(core, (recordCommit) => bufferFailureCore(core, cause, recordCommit)),
+        Stream.empty,
+      ),
+    ),
   );
 }
 
@@ -956,8 +1188,13 @@ function initializeCoreEffect<A, E, R, R2>(
     }),
   );
 
+  const isSourceBacked = core.initial === core.deferredRef;
+
   return Effect.flatMap(
-    Effect.forkIn(lock ? core.semaphore.withPermits(1)(initialize) : initialize, core.scope),
+    Effect.forkIn(
+      lock && !isSourceBacked ? core.semaphore.withPermits(1)(initialize) : initialize,
+      core.scope,
+    ),
     (fiber) => Effect.sync(() => (core._fiber = fiber)),
   );
 }
@@ -974,33 +1211,82 @@ function initializeCoreAndTap<A, E, R, R2>(
   );
 }
 
+function updateCore<A, E, R, R2, B, E2, R3>(
+  core: RefSubjectCore<A, E, R, R2>,
+  run: (recordCommit: RecordCommit<A, E>) => Effect.Effect<B, E2, R3>,
+): Effect.Effect<B, E2, Exclude<R, R2> | R3> {
+  return Effect.uninterruptibleMask((restore) => {
+    const commits: Exit.Exit<A, E>[] = [];
+    const transaction = restore(
+      core.semaphore.withPermits(1)(
+        Effect.suspend(() =>
+          run((commit) => {
+            commits.push(commit);
+          }),
+        ),
+      ),
+    );
+
+    return Effect.flatMap(Effect.exit(transaction), (exit) =>
+      Effect.andThen(
+        Effect.forEach(commits, (commit) => sendEvent(core, commit), { discard: true }),
+        exit,
+      ),
+    );
+  });
+}
+
 function setCore<A, E, R, R2>(
   core: RefSubjectCore<A, E, R, R2>,
   a: A,
-): Effect.Effect<A, never, Exclude<R, R2>> {
+): Effect.Effect<Option.Option<Exit.Exit<A, E>>> {
   return Effect.suspend(() => {
     const exit = Exit.succeed(a);
 
     if (core.deferredRef.done(exit)) {
-      // If the value changed, send an event
-      return Effect.as(sendEvent(core, exit), a);
+      return Effect.succeed(Option.some(exit));
     } else {
-      // Otherwise, just return the current value
-      return Effect.succeed(a);
+      return Effect.succeed(Option.none());
     }
   });
 }
 
-function onFailureCore<A, E, R, R2>(core: RefSubjectCore<A, E, R, R2>, cause: Cause.Cause<E>) {
+function onFailureCore<A, E, R, R2>(
+  core: RefSubjectCore<A, E, R, R2>,
+  cause: Cause.Cause<E>,
+): Effect.Effect<Option.Option<Exit.Exit<A, E>>> {
   const exit = Exit.failCause(cause);
 
   return Effect.suspend(() => {
     if (core.deferredRef.done(exit)) {
-      return sendEvent(core, exit);
+      return Effect.succeed(Option.some(exit));
     } else {
-      return Effect.void;
+      return Effect.succeed(Option.none());
     }
   });
+}
+
+function bufferSuccessCore<A, E, R, R2>(
+  core: RefSubjectCore<A, E, R, R2>,
+  value: A,
+  recordCommit: RecordCommit<A, E>,
+): Effect.Effect<A> {
+  return Effect.map(setCore(core, value), (commit) => {
+    if (Option.isSome(commit)) recordCommit(commit.value);
+    return value;
+  });
+}
+
+function bufferFailureCore<A, E, R, R2>(
+  core: RefSubjectCore<A, E, R, R2>,
+  cause: Cause.Cause<E>,
+  recordCommit: RecordCommit<A, E>,
+): Effect.Effect<void> {
+  return Effect.asVoid(
+    Effect.map(onFailureCore(core, cause), (commit) => {
+      if (Option.isSome(commit)) recordCommit(commit.value);
+    }),
+  );
 }
 
 function interruptCore<A, E, R, R2>(
@@ -1931,8 +2217,8 @@ export const filterMap: {
  * @category combinators
  */
 export const compact: {
-  <A, E, R>(ref: Computed<Option.Option<A>, E, R>): Filtered<A>;
-  <A, E, R>(ref: Filtered<Option.Option<A>, E, R>): Filtered<A>;
+  <A, E, R>(ref: Computed<Option.Option<A>, E, R>): Filtered<A, E, R>;
+  <A, E, R>(ref: Filtered<Option.Option<A>, E, R>): Filtered<A, E, R>;
 
   <R0, E0, A, E, R, E2, R2>(
     versioned: Versioned.Versioned<R0, E0, Option.Option<A>, E, R, Option.Option<A>, E2, R2>,
@@ -2427,6 +2713,28 @@ function makeTupleRef<const Refs extends ReadonlyArray<RefSubject<any, any, any>
 
 const UNBOUNDED = { concurrency: "unbounded" } as const;
 
+const sampleRefSubject = (ref: RefSubject.Any): Effect.Effect<any, any, any> =>
+  // @effect-diagnostics-next-line unnecessaryEffectGen:off
+  Effect.gen(function* () {
+    return yield* ref;
+  });
+
+function makeCompositeVersioned(
+  refs: ReadonlyArray<RefSubject.Any>,
+  current: Effect.Effect<any, any, any>,
+): Versioned.Versioned<any, any, any, any, any, any, any, any> {
+  const version = Effect.map(
+    Effect.all(
+      refs.map((ref) => ref.version),
+      UNBOUNDED,
+    ),
+    (versions) => versions.reduce(sum, 0),
+  );
+  const changes = skipRepeats(fxMapEffect(fxMergeAll(...refs), () => current));
+
+  return Versioned.hold(Versioned.make(version, changes, current));
+}
+
 class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>>>
   extends YieldableFx<
     {
@@ -2476,7 +2784,14 @@ class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>
     super();
 
     this.refs = refs;
-    this.versioned = Versioned.hold(Versioned.tuple(refs)) as any;
+    this.versioned = (
+      refs.length > 0 && getTupleTransactionAccess(refs)
+        ? makeCompositeVersioned(
+            refs,
+            Effect.all(refs.map(sampleRefSubject), UNBOUNDED),
+          )
+        : Versioned.hold(Versioned.tuple(refs))
+    ) as any;
     this.version = this.versioned.version;
     this.interrupt = Effect.all(
       refs.map((r) => r.interrupt),
@@ -2541,8 +2856,19 @@ class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>
         Effect.Services<Refs[number]>
       >,
     ) => Effect.Effect<C, E2, R2>,
-  ) {
-    return run(this.getSetDelete);
+  ): Effect.Effect<C, Effect.Error<Refs[number]> | E2, Effect.Services<Refs[number]> | R2> {
+    const accessEffect = getTransactionAccess(this);
+    return accessEffect
+      ? Effect.flatMap(accessEffect, (transactionAccess) =>
+          Option.isSome(transactionAccess)
+            ? runTransaction<
+                C,
+                Effect.Error<Refs[number]> | E2,
+                Effect.Services<Refs[number]> | R2
+              >(transactionAccess.value, run as any)
+            : Effect.suspend(() => run(this.getSetDelete)),
+        )
+      : Effect.suspend(() => run(this.getSetDelete));
   }
 
   onFailure(
@@ -2630,7 +2956,19 @@ class RefSubjectStruct<const Refs extends Readonly<Record<string, RefSubject.Any
     super();
 
     this.refs = refs;
-    this.versioned = Versioned.hold(Versioned.struct(refs)) as any;
+    const keys = Object.keys(refs);
+    const current = Effect.map(
+      Effect.all(
+        keys.map((key) => sampleRefSubject(refs[key] as RefSubject.Any)),
+        UNBOUNDED,
+      ),
+      (values) => Object.fromEntries(keys.map((key, index) => [key, values[index]])),
+    );
+    this.versioned = (
+      keys.length > 0 && getStructTransactionAccess(refs)
+        ? makeCompositeVersioned(Object.values(refs), current)
+        : Versioned.hold(Versioned.struct(refs))
+    ) as any;
     this.version = this.versioned.version;
     this.interrupt = Effect.all(
       Object.values(refs).map((r) => r.interrupt),
@@ -2685,8 +3023,18 @@ class RefSubjectStruct<const Refs extends Readonly<Record<string, RefSubject.Any
         Services<Refs[keyof Refs]>
       >,
     ) => Effect.Effect<C, E2, R2>,
-  ) {
-    return run(this.getSetDelete);
+  ): Effect.Effect<C, Error<Refs[keyof Refs]> | E2, Services<Refs[keyof Refs]> | R2> {
+    const accessEffect = getTransactionAccess(this);
+    return accessEffect
+      ? Effect.flatMap(accessEffect, (transactionAccess) =>
+          Option.isSome(transactionAccess)
+            ? runTransaction<C, Error<Refs[keyof Refs]> | E2, Services<Refs[keyof Refs]> | R2>(
+                transactionAccess.value,
+                run as any,
+              )
+            : Effect.suspend(() => run(this.getSetDelete)),
+        )
+      : Effect.suspend(() => run(this.getSetDelete));
   }
 
   onFailure(

@@ -3,8 +3,12 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import type * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
-import * as Fx from "../Fx/index.js";
+import type * as Fx from "../Fx/index.js";
+import { continueWith as fxContinueWith } from "../Fx/combinators/continueWith.js";
+import { unwrap as fxUnwrap } from "../Fx/combinators/unwrap.js";
+import { fromEffect as fxFromEffect } from "../Fx/constructors/fromEffect.js";
 import { isFx } from "../Fx/TypeId.js";
+import { fromStream as fxFromStream } from "../Fx/stream.js";
 import {
   CurrentComputedBehavior,
   make,
@@ -134,13 +138,11 @@ function makeHydrationInitializer<A, E, R>(
       );
 
     if (isFx(value)) {
-      const hydratedValueDeferredFx = Fx.fromEffect(Deferred.await(hydrated));
+      const hydratedValueDeferredFx = fxFromEffect(Deferred.await(hydrated));
       return {
-        value: Fx.unwrap(
+        value: fxUnwrap(
           Effect.map(Deferred.await(environment), (environment) =>
-            environment === "server"
-              ? value
-              : Fx.continueWith(hydratedValueDeferredFx, () => value),
+            environment === "server" ? value : fxContinueWith(hydratedValueDeferredFx, () => value),
           ),
         ),
         server,
@@ -171,7 +173,7 @@ function normalizeHydrationInitializer<A, E, R>(
   value: A | Effect.Effect<A, E, R> | Fx.Fx<A, E, R> | Stream.Stream<A, E, R>,
 ): Effect.Effect<A, E, R> | Fx.Fx<A, E, R> {
   if (isFx(value) || Effect.isEffect(value)) return value;
-  if (Stream.isStream(value)) return Fx.fromStream(value);
+  if (Stream.isStream(value)) return fxFromStream(value);
   return Effect.succeed(value);
 }
 

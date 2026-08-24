@@ -17,7 +17,7 @@
 1. **Route** — Define paths (`Route.Parse("/todos/:id")`), optionally with query (`?filter=`). Path and query types come from the route string.
 2. **Matcher** — Add cases via `match(route, handler)`; each case returns an Fx, Effect, Stream, or value. Nest routes with `prefix(route)`.
 3. **run(matcher)** — Compile the matcher and return an Fx that reacts to `CurrentPath` from `Navigation`. When the path changes, the matcher selects the matching case, scopes the previous handler, and yields the new handler's Fx.
-4. **Router layers** — Provide `BrowserRouter`, `ServerRouter`, or `TestRouter` to supply `Navigation` and `CurrentRoute`.
+4. **Router layers** — Provide `BrowserRouter`, `ServerRouter`, or `TestRouter` to supply `Navigation` and a stable `CurrentRoute` mount context.
 
 ## Dependencies
 
@@ -33,7 +33,7 @@
 
 - **Route** — `make(ast)`, `path`, `paramsSchema`, `pathSchema`, `querySchema`; path/query types are derived from the route path string.
 - **Matcher** — cases keyed by route; each case returns an Fx; `prefix(parentRoute)` for nested routes; compile to router entries.
-- **CurrentRoute** — service exposing the current matched route tree.
+- **CurrentRoute** — ambient route context. Router layers provide a stable mount tree; nested layers and request adapters can shadow it with a more specific tree.
 - **Router** — `compile(matcher)`, `makeLayerManager`, `makeCatchManager`, `makeLayoutManager` for building the routing layer.
 - **Join**, **Parse** — helpers for path/query construction and parsing.
 
@@ -56,12 +56,12 @@ const filterState = Router.match(Router.Slash, "all")
 
 ### Router
 
-| Symbol                   | Description                                                                                     |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
-| `Router`                 | Type: `CurrentRoute` or `Navigation`. The routing service union.                                |
-| `BrowserRouter(window?)` | `Layer<Router>`. Provides router using the browser `window` (or global).                        |
-| `ServerRouter(options)`  | `Layer<Router>`. Provides router with `memory()` or `initialMemory()` from `@typed/navigation`. |
-| `TestRouter(options)`    | `Layer<Router>`. Like `ServerRouter` but with `Ids.Test()` for deterministic IDs.               |
+| Symbol                   | Description                                                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `Router`                 | Type: `CurrentRoute` or `Navigation`. The routing service union.                                                |
+| `BrowserRouter(window?)` | `Layer<Router, NavigationError>`. Provides router using the browser `window` (or global).                       |
+| `ServerRouter(options)`  | `Layer<Router, NavigationError>`. Uses navigation memory or initial memory.                                     |
+| `TestRouter(options)`    | `Layer<Router, Cause.IllegalArgumentError \| NavigationError>`. Adds deterministic IDs and their checked input. |
 
 ### Route
 
@@ -78,6 +78,16 @@ const filterState = Router.match(Router.Slash, "all")
 | `Route.Int(name)`                                   | Route for `/:name` decoded as integer.                                                                             |
 | `Route.Join(...routes)`                             | Join route segments into one route (path and params combined).                                                     |
 | `Route.Path<T>`, `Route.Type<T>`, `Route.Params<T>` | Type helpers for a route’s path string, decoded type, and params.                                                  |
+
+Path parameters use `:name`, `:name?`, `:name(regex)`, or `:name(regex)?`. Optional
+parameters may appear before later path segments; matcher compilation registers their present and
+absent forms without changing the route definition. When a terminal path parameter is followed by
+a query declaration, `?name=` starts the query and leaves the path parameter required. Use
+`??name=` after an optional terminal parameter: `"/todos/:id??filter=:filter"`.
+
+Every declared query value is scalar. A URL that repeats a declared key, such as
+`?filter=open&filter=closed`, fails with `RouteDecodeError` instead of silently choosing one value.
+Undeclared query keys are ignored by route decoding.
 
 ### Matcher
 
@@ -121,9 +131,14 @@ const filterState = Router.match(Router.Slash, "all")
 
 ### CurrentRoute
 
-| Symbol                       | Description                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------ |
-| `CurrentRoute`               | Effect Service exposing the current matched route tree.                        |
-| `CurrentRouteTree`           | `{ route: Route<string, any>; parent?: CurrentRouteTree }`.                    |
-| `CurrentRoute.Default`       | Layer that provides `CurrentRoute` from `Navigation.base`.                     |
-| `CurrentRoute.extend(route)` | Layer that provides `CurrentRoute` with a fixed `route` and optional `parent`. |
+| Symbol                       | Description                                                                              |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| `CurrentRoute`               | Ambient, non-reactive route context for the current routing boundary.                    |
+| `CurrentRouteTree`           | `{ route: Route<string, any>; parent?: CurrentRouteTree }`.                              |
+| `CurrentRoute.Default`       | Provides a stable mount tree from `Navigation.base`; navigation does not mutate it.      |
+| `CurrentRoute.extend(route)` | Shadows the ambient context with a fixed nested route whose parent is the prior context. |
+
+`Matcher.run` uses the ambient tree as its route prefix. Read `Navigation.currentEntry` or
+`CurrentPath` for the live location. The `@typed/ui` `ssrForHttp` adapter shadows
+`CurrentRoute` inside each request handler with that request's matched route tree, preserving
+the ambient mount as its parent when one exists.
