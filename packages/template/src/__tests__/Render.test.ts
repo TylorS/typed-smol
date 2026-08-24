@@ -1,18 +1,16 @@
 import { assert, describe, it } from "vitest";
 import type { Scope } from "effect";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Schema } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import type { Renderable, RenderTemplate } from "../index.js";
 import {
   CurrentRenderQueue,
-  DomRenderTemplate,
   EventHandler,
   html,
   render,
   RenderQueue,
 } from "../index.js";
 import type { Rendered } from "../Wire.js";
-import { Window } from "happy-dom";
 import { createHappyDomLayer } from "./helpers/dom-layer.js";
 
 describe("Render", () => {
@@ -177,6 +175,23 @@ describe("Render", () => {
       yield* RefSubject.set(data, { b: "B" });
       yield* Effect.sleep(20);
       assert.deepStrictEqual({ ...dataExample.dataset }, { b: "B" });
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("renders a callable hydrated RefSubject through nested reactive data", () =>
+    Effect.gen(function* () {
+      const count = yield* RefSubject.hydrate(Schema.Number, 1);
+      const example = yield* renderHtmlElement`<div ref=${count} .data=${{
+        count,
+      }}>${count}</div>`;
+      yield* Effect.sleep(20);
+
+      assert.strictEqual(example.textContent, "1");
+      assert.strictEqual(example.dataset.count, "1");
+
+      yield* RefSubject.set(count, 2);
+      yield* Effect.sleep(20);
+      assert.strictEqual(example.textContent, "2");
+      assert.strictEqual(example.dataset.count, "2");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders comments", () =>

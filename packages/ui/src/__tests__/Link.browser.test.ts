@@ -15,6 +15,9 @@ describe("typed/ui/Link in Chromium", () => {
     document.body.replaceChildren();
     globalThis.__typedUiExecutableUrlRan = false;
 
+    const layer = DomRenderTemplate.using(document).pipe(
+      Layer.merge(ServerRouter({ url: location.href })),
+    );
     await Effect.gen(function* () {
       const [root] = yield* render(
         Link({
@@ -31,7 +34,7 @@ describe("typed/ui/Link in Chromium", () => {
 
       assert.strictEqual(globalThis.__typedUiExecutableUrlRan, false);
       assert.strictEqual(location.href.startsWith("about:blank"), false);
-    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
   });
 
   it("runs a benign custom handler and performs exactly one SPA navigation", async () => {

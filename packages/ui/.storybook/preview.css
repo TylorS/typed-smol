@@ -1,0 +1,239 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: light --default, dim --prefersdark;
+}
+
+@layer base {
+  body {
+    @apply bg-base-200 text-base-content;
+  }
+}
+
+@layer components {
+  .typed-story {
+    @apply min-h-screen bg-base-200 bg-[radial-gradient(circle_at_top_left,oklch(var(--p)/0.18),transparent_28rem)] p-4 sm:p-8;
+  }
+
+  .typed-story > * {
+    @apply mx-auto w-full max-w-5xl;
+  }
+
+  .typed-story-content {
+    @apply grid gap-6;
+  }
+
+  .typed-story-content > * {
+    min-inline-size: 0;
+  }
+
+  .typed-story :where(p, li) {
+    @apply leading-6 text-base-content/75;
+  }
+
+  .typed-story :where(p, ul, ol) {
+    @apply m-0;
+  }
+
+  .typed-story :where(ul, ol) {
+    @apply grid gap-2 pl-5;
+  }
+
+  .typed-story :where(section, form, [role="grid"], [role="treegrid"], [role="tree"], [role="listbox"]:not([popover]), [role="listbox"][popover]:popover-open, [role="radiogroup"], [role="toolbar"], [role="menubar"]) {
+    @apply grid gap-4 rounded-box border border-base-300 bg-base-100 p-5 shadow-sm;
+  }
+
+  .typed-story [role="group"]:not([aria-roledescription="slide"]) {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .typed-story :where([role="note"], [role="status"]) {
+    @apply rounded-box border border-base-300 bg-base-200/60 px-4 py-3;
+  }
+
+  .typed-story [role="heading"] {
+    @apply text-3xl font-semibold tracking-tight;
+  }
+
+  .typed-story :where(button:not([role="tab"], [role^="menuitem"]), [role="button"]) {
+    @apply btn btn-primary btn-sm;
+  }
+
+  .typed-story input:not([type="checkbox"], [type="radio"], [type="range"]) {
+    @apply input input-sm;
+  }
+
+  .typed-story input[type="checkbox"] {
+    @apply checkbox checkbox-primary checkbox-sm;
+  }
+
+  .typed-story input[type="radio"] {
+    @apply radio radio-primary radio-sm;
+  }
+
+  .typed-story input[type="range"] {
+    @apply range range-primary range-sm;
+  }
+
+  .typed-story .story-field {
+    @apply grid max-w-lg gap-2;
+  }
+
+  .typed-story .story-field > :where(input, meter) {
+    @apply w-full;
+  }
+
+  .typed-story-content > label:not(:has(input)) + :where(input, meter) {
+    @apply -mt-3;
+  }
+
+  .typed-story-content > label:has(input) {
+    @apply inline-flex items-center gap-3 self-start rounded-box border border-base-300 bg-base-200/50 px-4 py-3;
+  }
+
+  .typed-story form [role="group"] {
+    @apply col-span-full grid gap-5 rounded-box border border-base-300 bg-base-200/40 p-4;
+  }
+
+  .typed-story form {
+    @apply grid-cols-2 items-start;
+  }
+
+  .typed-story form [role="group"] > div {
+    @apply grid gap-2;
+  }
+
+  .typed-story form [role="alert"]:empty {
+    @apply hidden;
+  }
+
+  .typed-story a:not([role]) {
+    @apply link link-primary font-medium;
+  }
+
+  .typed-story meter {
+    @apply h-3 w-full;
+  }
+
+  .typed-story :where(label, summary) {
+    @apply font-medium;
+  }
+
+  .typed-story :where([role="alert"]):not(:empty) {
+    @apply alert alert-success;
+  }
+
+  .typed-story :where([role="menu"]:not([popover]), [role="menu"][popover]:popover-open) {
+    @apply menu rounded-box border border-base-300 bg-base-100 p-2 shadow-xl;
+  }
+
+  .typed-story :where([role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]) {
+    @apply rounded-md px-3 py-2 hover:bg-base-200;
+  }
+
+  .typed-story :where([role="tablist"]) {
+    @apply tabs tabs-box w-fit;
+  }
+
+  .typed-story :where([role="tab"]) {
+    @apply tab;
+  }
+
+  .typed-story :where([role="tab"][aria-selected="true"]) {
+    @apply tab-active;
+  }
+
+  .typed-story :where([role="option"], [role="treeitem"], [role="gridcell"], [role="columnheader"], [role="rowheader"]) {
+    @apply rounded-md px-3 py-2 outline-offset-2 hover:bg-primary/10 focus:bg-primary/15;
+  }
+
+  .typed-story [role="option"][aria-selected="true"] {
+    @apply bg-primary/15 font-medium;
+  }
+
+  .typed-story :where([role="gridcell"], [role="columnheader"], [role="rowheader"])[data-active] {
+    @apply bg-primary/15 font-medium ring-1 ring-primary/30;
+  }
+
+  .typed-story :where([role="listbox"]:not([popover]), [role="listbox"][popover]:popover-open, [role="tree"], [role="grid"], [role="treegrid"]) {
+    @apply gap-1;
+  }
+
+  .typed-story :where([role="grid"], [role="treegrid"]) [role="row"] {
+    @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2;
+  }
+
+  .typed-story :where([role="grid"], [role="treegrid"]) [role="columnheader"] {
+    @apply bg-base-200 font-semibold text-base-content;
+  }
+
+  .typed-story [role="tree"] [role="group"],
+  .typed-story [role="treegrid"] [role="rowgroup"] {
+    @apply ml-4 mt-1;
+  }
+
+  .typed-story [role="radiogroup"] {
+    @apply grid-cols-[auto_1fr] items-center;
+  }
+
+  .typed-story :where([role="toolbar"], [role="menubar"]) {
+    @apply flex flex-wrap items-center;
+  }
+
+  .typed-story [role="tabpanel"] {
+    @apply rounded-box border border-base-300 bg-base-200/40 p-4;
+  }
+
+  .typed-story :where(span, a)[aria-controls],
+  .typed-story :where(span, a)[aria-describedby] {
+    @apply inline-flex self-start rounded-md bg-primary/10 px-3 py-2 font-medium text-primary outline-offset-2 hover:bg-primary/15 focus-visible:outline-2;
+  }
+
+  .typed-story [role="region"][aria-roledescription="carousel"] {
+    @apply flex flex-wrap items-center gap-2 rounded-box border border-base-300 bg-base-200/40 p-4;
+  }
+
+  .typed-story [role="region"][aria-roledescription="carousel"] [role="group"][aria-roledescription="slide"] {
+    @apply basis-full rounded-box bg-base-100 p-6 text-lg shadow-sm;
+  }
+
+  .typed-story :where([popover]) {
+    @apply max-w-sm rounded-box border border-base-300 bg-base-100 p-4 text-base-content shadow-2xl;
+  }
+
+  .typed-story dialog {
+    @apply grid gap-4 rounded-box border border-base-300 bg-base-100 p-6 text-base-content shadow-2xl;
+  }
+
+  .typed-story details {
+    @apply rounded-box border border-base-300 bg-base-100 p-4;
+  }
+
+  .typed-story details > :not(summary) {
+    @apply mt-3;
+  }
+
+  .typed-story .story-split-view {
+    display: grid;
+    grid-template-columns: minmax(0, var(--primary-size, 40fr)) 0.5rem minmax(0, var(--secondary-size, 60fr));
+    align-items: stretch;
+  }
+
+  .typed-story .story-split-view :where(aside, main) {
+    @apply rounded-box border border-base-300 bg-base-200/40 p-5;
+    min-inline-size: 0;
+    overflow: hidden;
+  }
+
+  .typed-story .story-split-view [role="separator"] {
+    @apply w-full rounded-full bg-primary/40;
+  }
+
+  .typed-story [role="separator"][aria-orientation="horizontal"] {
+    @apply h-px w-full bg-base-300;
+  }
+
+  .typed-story output {
+    @apply badge badge-primary badge-outline;
+  }
+}

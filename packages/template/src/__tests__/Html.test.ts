@@ -15,22 +15,49 @@ describe("Html", () => {
     Effect.gen(function* () {
       const count = yield* RefSubject.hydrate(Schema.Number, 7);
       const output = (yield* getHtmlRenderEvents(
-        html`<button ref=${count.hydrateFromElement}>${count}</button>`,
+        html`<button ref=${count}>${count}</button>`,
       )).join("");
 
       expect(output).toContain(
         'data-typed-refsubject="{&quot;version&quot;:1,&quot;values&quot;:[7]}"',
       );
+      expect(output).toContain("<!--n_1-->7<!--/n_1-->");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("omits hydrated RefSubject metadata for static HTML", () =>
     Effect.gen(function* () {
       const count = yield* RefSubject.hydrate(Schema.Number, 7);
+      const page = yield* RefSubject.hydrate(Schema.FiniteFromString, 3, { name: "page" });
       const output = yield* getStaticHtml(
-        html`<button ref=${count.hydrateFromElement}>${count}</button>`,
+        html`<button ref=${RefSubject.hydrateAll(count, page)}>${count}</button>`,
       );
 
       expect(output).not.toContain(RefSubject.HYDRATION_ATTRIBUTE);
+      expect(output).not.toContain("data-page");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("renders grouped unnamed and scalar named hydration metadata", () =>
+    Effect.gen(function* () {
+      const first = yield* RefSubject.hydrate(Schema.Number, 1);
+      const page = yield* RefSubject.hydrate(Schema.FiniteFromString, 3, { name: "page" });
+      const second = yield* RefSubject.hydrate(Schema.Number, 2);
+      const ref = RefSubject.hydrateAll(first, page, second);
+
+      const output = (yield* getHtmlRenderEvents(html`<section ref=${ref}></section>`)).join("");
+
+      expect(output).toContain(
+        'data-typed-refsubject="{&quot;version&quot;:1,&quot;values&quot;:[1,2]}"',
+      );
+      expect(output).toContain('data-page="3"');
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("renders callable hydrated state through nested data and arrays", () =>
+    Effect.gen(function* () {
+      const count = yield* RefSubject.hydrate(Schema.Number, 7);
+      const output = yield* getStaticHtml(html`<div .data=${{ count }}>${[count]}</div>`);
+
+      expect(output).toContain('data-count="7"');
+      expect(output).toContain(">7</div>");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("keeps ordinary ref callbacks out of server HTML", () =>
@@ -276,7 +303,12 @@ describe("Html", () => {
     Effect.gen(function* () {
       expect(
         yield* getStaticHtml(html`<div ...${{ foo: "bar", baz: "qux" }}></div>`),
-      ).toMatchInlineSnapshot(`"<div  foo="bar"  baz="qux"></div>"`);
+      ).toMatchInlineSnapshot(`"<div foo="bar" baz="qux"></div>"`);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("omits the separator for an empty spread", () =>
+    Effect.gen(function* () {
+      expect(yield* getStaticHtml(html`<div ...${{}}></div>`)).toBe("<div></div>");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("interpolates primitive children", () =>
@@ -361,7 +393,7 @@ describe("Html", () => {
           ></div>`,
         ),
       ).toMatchInlineSnapshot(
-        `"<div id="test" class="dynamic" hidden data-value="effect"  aria-label="accessible"></div>"`,
+        `"<div id="test" class="dynamic" hidden data-value="effect" aria-label="accessible"></div>"`,
       );
     }).pipe(Effect.scoped, Effect.runPromise));
 

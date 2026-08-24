@@ -3,7 +3,6 @@ import * as Effect from "effect/Effect";
 import { dual } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
-import * as Scope from "effect/Scope";
 import * as Context from "effect/Context";
 import { hasProperty } from "effect/Predicate";
 import * as Stream from "effect/Stream";
@@ -31,10 +30,10 @@ import {
   type Router,
 } from "@typed/router";
 import { Ids } from "@typed/id";
-import { initialMemory } from "@typed/navigation";
+import { initialMemory, type Navigation } from "@typed/navigation";
 import { renderToHtml, renderToHtmlString, type RenderEvent } from "@typed/template";
 
-type ProvidedForSsr = Scope.Scope | Router;
+type ProvidedForSsr = HttpRouterProvided | Navigation | Router;
 
 type SsrForHttpRequirement<E, R> =
   | Exclude<R, ProvidedForSsr>

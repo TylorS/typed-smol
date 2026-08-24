@@ -3,7 +3,6 @@ import * as Array from "effect/Array";
 import { constVoid } from "effect/Function";
 import * as Order from "effect/Order";
 import { isObject } from "effect/Predicate";
-import { RefSubject } from "@typed/fx";
 import { renderToEscapedString, renderToString } from "./internal/encoding.js";
 import { keyToPartType } from "./internal/keyToPartType.js";
 import { TEMPLATE_END_COMMENT, TEMPLATE_START_COMMENT } from "./internal/meta.js";
@@ -324,25 +323,19 @@ const attributeMap: AttributeMap = {
   properties: (builder, attribute, placement) =>
     builder.part(attribute, (v) => {
       const attributes = renderSpreadAttributes(v);
-      return addAttributeSpace(attributes === "" ? "" : ` ${attributes}`, placement);
+      return addAttributeSpace(attributes, placement);
     }),
 
   ref: (builder, attribute, placement) =>
-    builder.part(attribute, (v) =>
-      addAttributeSpace(
-        `${RefSubject.HYDRATION_ATTRIBUTE}="${renderToEscapedString(v, "")}"`,
-        placement,
-      ),
-    ),
+    builder.part(attribute, (v) => addAttributeSpace(renderHydrationAttributes(v), placement)),
 
   // Event handlers do not have an HTML representation.
   event: constVoid,
 };
 
-function addAttributeSpace(str: string, placement: Placement) {
+function addAttributeSpace(str: string, _placement: Placement) {
   if (str.length === 0) return str;
-  if (placement.isFirst) return " " + str + (placement.isLast ? "" : " ");
-  return str + (placement.isLast ? "" : " ");
+  return " " + str;
 }
 
 const AttributeOrder = Order.mapInput(
@@ -399,6 +392,25 @@ function renderDataAttributes(value: unknown): string {
       const name = `data-${key}`;
       if (!isValidAttributeName(name)) return [];
       return [renderAttribute(name, entry)];
+    })
+    .join(" ");
+}
+
+function renderHydrationAttributes(value: unknown): string {
+  if (!globalThis.Array.isArray(value)) return "";
+
+  return value
+    .flatMap((entry) => {
+      if (!isObject(entry)) return [];
+      const { name, value } = entry as Record<string, unknown>;
+      if (
+        typeof name !== "string" ||
+        typeof value !== "string" ||
+        !isSerializableAttributeName(name)
+      ) {
+        return [];
+      }
+      return [renderAttribute(name, value)];
     })
     .join(" ");
 }

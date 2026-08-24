@@ -37,7 +37,10 @@ class Todos extends Context.Service<Todos>()("TodosService", {
 const FilterState = Router.match(Router.Slash, "all")
   .match(Router.Parse("active"), "active")
   .match(Router.Parse("completed"), "completed")
-  .pipe(Router.redirectTo("/"));
+  .pipe(
+    Router.redirectTo("/"),
+    Fx.catchCause( ()=> Fx.succeed("all" as const))
+  );
 
 const Model = Layer.mergeAll(
   App.TodoList.make(Todos.get),

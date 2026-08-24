@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Effect, Option } from "effect";
-import { Fx } from "@typed/fx";
+import { Fx, RefSubject } from "@typed/fx";
 import {
   html,
   HtmlRenderEvent,
@@ -187,6 +187,26 @@ describe("TS-05 text-only SSR contexts", () => {
 });
 
 describe("TS-03 SSR spread and data key policy", () => {
+  it("filters unsafe names supplied by forged hydration metadata", () =>
+    Effect.gen(function* () {
+      const hydration: RefSubject.HydrationRef = Object.assign(() => Effect.void, {
+        [RefSubject.HydrationRefTypeId]: {
+          members: [],
+          server: Effect.void,
+          toAttributes: Effect.succeed([
+            { name: "data-safe", value: "ok" },
+            { name: 'x" onclick="alert(1)', value: "unsafe" },
+          ]),
+        },
+      });
+
+      const output = yield* getInteractiveHtml(html`<div ref=${hydration}></div>`);
+
+      expect(output).toContain('data-safe="ok"');
+      expect(output).not.toContain("onclick");
+      expect(output).not.toContain("unsafe");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("classifies spread keys and omits event, ref, dangerous, and invalid names", () =>
     Effect.gen(function* () {
       const props = Object.fromEntries([

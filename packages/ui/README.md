@@ -6,6 +6,8 @@
 
 ## Capabilities
 
+- **UI substrate** — `Dom` provides typed native host props, exact Effect/Fx channel preservation, user-first event composition, and hydration-aware ref composition. Stateful components use `RefSubject.hydrate` / `hydrateAll` directly; there is no parallel UI state abstraction.
+- **Button** — A headless native `<button>` host with a safe `type="button"` default, reactive disabled state, typed click handling, caller props, and custom-host support.
 - **Link** — A typed anchor component that intercepts same-origin clicks and navigates via `Navigation.navigate` instead of a full page reload. Keeps routing SPA-style while preserving normal `<a>` semantics (href, target, keyboard, right-click).
 - **SSR** — `ssrForHttp` compiles a router Matcher into HttpRouter GET handlers for buffered server-side rendering. `streamingSsrForHttp` uses the same routing pipeline but streams HTML chunks as they are rendered. `handleHttpServerError` adds global middleware for 404/400/500.
 
@@ -22,10 +24,23 @@ The Node HTTP platform and `happy-dom` are development dependencies used by the 
 
 ## API overview
 
+- **Button** — `Button.Button(options)` renders a native `<button>` and accepts `content`, `type`, `disabled`, `onclick`, standard button props, and an optional custom host.
+- **Dom** — Typed host/ref/event composition shared by the UI components. Its host attributes target Baseline 2026 and include native popover and invoker-command attributes.
+- **APG components** — Stateful controls use callable `RefSubject.hydrate` state on their owning host. `Alert` is a non-modal live region; `Meter`, `Slider`, and `SpinButton` use native HTML controls; `Switch` uses a button host; `WindowSplitter`, `Carousel`, `Tree`, `Grid`, and `TreeGrid` provide their APG keyboard and ARIA contracts without a portal or positioning runtime.
 - **Link** — `Link(options)` renders an `<a href="...">` that intercepts same-origin, same-document clicks and calls `Navigation.navigate` instead of a full page load. Options include `href`, `content`, `replace`, and standard anchor props. Requires **Navigation** and **RenderTemplate** in context (e.g. browser router).
 - **SSR:** `ssrForHttp(router, matcher)` — registers buffered route handlers on an Effect **HttpRouter**; `streamingSsrForHttp(router, matcher)` — same routing with streamed HTML output; `handleHttpServerError(router)` — global middleware for HTTP server errors.
 
 ## API reference
+
+### APG component families
+
+`Alert.Alert({ content })` renders `role="alert"` and never moves focus. Use `Dialog.Content` with `props: { role: "alertdialog" }` when a message must interrupt the user.
+
+`Meter`, `Slider`, and `SpinButton` each take a hydratable `state` made by `makeState({ value })`; slider and spin button synchronize their native range/number input changes into that state. `Switch.makeState({ checked })` drives `Switch.Switch({ state, content })`.
+
+`WindowSplitter.makeState({ value, min, max, step, orientation })` drives a focusable separator with APG arrow keys, Home/End, and Enter collapse/restore. Applications own pane sizing from its state.
+
+`Carousel`, `Tree`, `Grid`, and `TreeGrid` each expose `makeState`, `makeCollection`, and structural parts. Their hydration state holds serializable selection/expansion state; their collections only register mounted DOM elements for navigation. `Tree.Group` and `TreeGrid.Group` define the nested collapsed DOM boundary; `Grid` and `TreeGrid` retain DOM focus on the root with `aria-activedescendant`.
 
 ### `Link`
 
