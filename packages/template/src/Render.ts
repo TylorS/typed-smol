@@ -20,7 +20,7 @@ import {
   getInsertionNamespace,
   HTML_NAMESPACE,
   type NamespaceContext,
-} from "./internal/buildTemplateFragement.js";
+} from "./internal/buildTemplateFragment.js";
 import {
   findNodePartEndComment,
   getClassList,
