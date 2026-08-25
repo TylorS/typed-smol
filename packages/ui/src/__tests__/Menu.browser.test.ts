@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import * as Menu from "../Menu.js";
 
 describe("typed/ui/Menu in browsers", () => {
@@ -45,7 +45,16 @@ describe("typed/ui/Menu in browsers", () => {
 
       (document.querySelector("#edit") as HTMLDivElement).focus();
       document.querySelector("#edit")?.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true }));
-      yield* Effect.sleep(0);
+      const context = yield* Effect.context();
+      yield* Effect.promise(() =>
+        vi.waitFor(
+          () =>
+            Effect.runPromiseWith(context)(state).then((value) =>
+              assert.strictEqual(value.activeId, "remove"),
+            ),
+          { interval: 10, timeout: 500 },
+        ),
+      );
 
       assert.strictEqual((yield* state).activeId, "remove");
       assert.strictEqual(document.activeElement?.id, "remove");

@@ -117,6 +117,14 @@ export type FieldNameFor<Values extends object, Value> = {
   [Key in keyof Values & string]: Values[Key] extends Value ? Key : never;
 }[keyof Values & string];
 
+export type SchemaFieldNameFor<Fields extends FormFields, Value, Encoded> = {
+  [Key in keyof Fields & string]: Fields[Key]["Type"] extends Value
+    ? Fields[Key]["Encoded"] extends Encoded
+      ? Key
+      : never
+    : never;
+}[keyof Fields & string];
+
 export interface InputOptions<
   Values extends object,
   Value,
@@ -198,17 +206,16 @@ type RenderableComponentOptions<Options> = Pick<
 >;
 
 export interface SchemaBoundInputOptions<
-  Values extends object,
+  Fields extends FormFields,
   Value,
 > extends Dom.HostOptions<HTMLInputElement> {
-  readonly name: FieldNameFor<Values, Value>;
+  readonly name: SchemaFieldNameFor<Fields, Value, string>;
 }
 
 export interface SchemaBoundMaskedInputOptions<
-  Values extends object,
-  Parts extends ReadonlyArray<MaskPart>,
-> extends SchemaBoundInputOptions<Values, MaskValue<Parts>> {
-  readonly mask: Schema.Codec<MaskValue<Parts>, string>;
+  Fields extends FormFields,
+> extends Dom.HostOptions<HTMLInputElement> {
+  readonly name: SchemaFieldNameFor<Fields, unknown, string>;
 }
 
 export interface SchemaBoundCheckboxOptions<
@@ -302,23 +309,24 @@ function makeInput<Value>(type: string, codec: Schema.Codec<Value, string>) {
   };
 }
 
-function makeSchemaBoundInput<Values extends object, Value>(
+function makeSchemaBoundInput<Fields extends FormFields, Value>(
+  formCodec: Schema.Struct<Fields>,
   type: string,
-  codec: Schema.Codec<Value, string>,
 ) {
+  type Values = Schema.Struct.Type<Fields>;
   return function <
-    const Options extends SchemaBoundInputOptions<Values, Value>,
+    const Options extends SchemaBoundInputOptions<Fields, Value>,
     const Host extends HostResult = never,
   >(options: Options, host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>) {
     return withCurrentForm<Values>()((state) => {
-      const inputOptions = { ...options, state } as Options & {
-        readonly state: FormState<Values>;
-      };
-      return renderInput<Values, Value, typeof inputOptions, Host>(
+      type RenderOptions = Omit<Options, "name"> & InputOptions<Values, Value>;
+      const inputOptions = { ...options, state } as unknown as RenderOptions;
+      const fieldCodec = formCodec.fields[options.name] as unknown as Schema.Codec<Value, string>;
+      return renderInput<Values, Value, RenderOptions, Host>(
         inputOptions,
         host as never,
         type,
-        codec,
+        fieldCodec,
       );
     });
   };
@@ -1144,20 +1152,16 @@ export type SchemaBoundRootResult<Options, Host> = Fx<
   | RenderTemplate
 >;
 
-export interface SchemaBoundInput<Values extends object, Value> {
+export interface SchemaBoundInput<Fields extends FormFields, Value> {
   <const Options extends object, const Host extends HostResult = never>(
-    options: SchemaBoundInputOptions<Values, Value> & Options,
+    options: SchemaBoundInputOptions<Fields, Value> & Options,
     host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>,
   ): SchemaBoundComponentResult<Omit<Options, "name">, Host>;
 }
 
-export interface SchemaBoundMaskedInput<Values extends object> {
-  <
-    const Parts extends ReadonlyArray<MaskPart>,
-    const Options extends object,
-    const Host extends HostResult = never,
-  >(
-    options: SchemaBoundMaskedInputOptions<Values, Parts> & Options,
+export interface SchemaBoundMaskedInput<Fields extends FormFields> {
+  <const Options extends object, const Host extends HostResult = never>(
+    options: SchemaBoundMaskedInputOptions<Fields> & Options,
     host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>,
   ): SchemaBoundComponentResult<Options, Host>;
 }
@@ -1254,22 +1258,22 @@ export interface SchemaBoundForm<Fields extends FormFields> {
     options?: SchemaBoundStateOptions<Schema.Struct.Type<Fields>>,
   ) => Effect.Effect<FormState<Schema.Struct.Type<Fields>>, Schema.SchemaError, Scope.Scope>;
   readonly Root: SchemaBoundRoot<Schema.Struct.Type<Fields>>;
-  readonly TextInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly SearchInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly EmailInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly UrlInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly TelInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly PasswordInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly HiddenInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly ColorInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly TimeInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly DateTimeLocalInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly MonthInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly WeekInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
-  readonly NumberInput: SchemaBoundInput<Schema.Struct.Type<Fields>, number>;
-  readonly RangeInput: SchemaBoundInput<Schema.Struct.Type<Fields>, number>;
-  readonly DateInput: SchemaBoundInput<Schema.Struct.Type<Fields>, Date>;
-  readonly MaskedInput: SchemaBoundMaskedInput<Schema.Struct.Type<Fields>>;
+  readonly TextInput: SchemaBoundInput<Fields, string>;
+  readonly SearchInput: SchemaBoundInput<Fields, string>;
+  readonly EmailInput: SchemaBoundInput<Fields, string>;
+  readonly UrlInput: SchemaBoundInput<Fields, string>;
+  readonly TelInput: SchemaBoundInput<Fields, string>;
+  readonly PasswordInput: SchemaBoundInput<Fields, string>;
+  readonly HiddenInput: SchemaBoundInput<Fields, string>;
+  readonly ColorInput: SchemaBoundInput<Fields, string>;
+  readonly TimeInput: SchemaBoundInput<Fields, string>;
+  readonly DateTimeLocalInput: SchemaBoundInput<Fields, string>;
+  readonly MonthInput: SchemaBoundInput<Fields, string>;
+  readonly WeekInput: SchemaBoundInput<Fields, string>;
+  readonly NumberInput: SchemaBoundInput<Fields, number>;
+  readonly RangeInput: SchemaBoundInput<Fields, number>;
+  readonly DateInput: SchemaBoundInput<Fields, Date>;
+  readonly MaskedInput: SchemaBoundMaskedInput<Fields>;
   readonly Checkbox: SchemaBoundCheckbox<Schema.Struct.Type<Fields>>;
   readonly Select: SchemaBoundSelect<Schema.Struct.Type<Fields>>;
   readonly Error: SchemaBoundError<Schema.Struct.Type<Fields>>;
@@ -1307,25 +1311,6 @@ export function make<const Fields extends FormFields>(
       host as never,
     );
   };
-
-  const BoundMaskedInput = <
-    const Parts extends ReadonlyArray<MaskPart>,
-    const Options extends SchemaBoundMaskedInputOptions<Values, Parts>,
-    const Host extends HostResult = never,
-  >(
-    options: Options,
-    host?: Dom.HostOverride<
-      Dom.RenderHostProps<Omit<Options, "mask">, InputProps<Values, MaskValue<Parts>>>,
-      "",
-      Host
-    >,
-  ) =>
-    withCurrentForm<Values>()((state) => {
-      const inputOptions = { ...options, state } as Options & {
-        readonly state: FormState<Values>;
-      };
-      return MaskedInput<Values, Parts, typeof inputOptions, Host>(inputOptions, host as never);
-    });
 
   const BoundCheckbox = <
     const Options extends SchemaBoundCheckboxOptions<Values>,
@@ -1433,22 +1418,22 @@ export function make<const Fields extends FormFields>(
     codec,
     state,
     Root,
-    TextInput: makeSchemaBoundInput<Values, string>("text", Schema.String),
-    SearchInput: makeSchemaBoundInput<Values, string>("search", Schema.String),
-    EmailInput: makeSchemaBoundInput<Values, string>("email", Schema.String),
-    UrlInput: makeSchemaBoundInput<Values, string>("url", Schema.String),
-    TelInput: makeSchemaBoundInput<Values, string>("tel", Schema.String),
-    PasswordInput: makeSchemaBoundInput<Values, string>("password", Schema.String),
-    HiddenInput: makeSchemaBoundInput<Values, string>("hidden", Schema.String),
-    ColorInput: makeSchemaBoundInput<Values, string>("color", Schema.String),
-    TimeInput: makeSchemaBoundInput<Values, string>("time", Schema.String),
-    DateTimeLocalInput: makeSchemaBoundInput<Values, string>("datetime-local", Schema.String),
-    MonthInput: makeSchemaBoundInput<Values, string>("month", Schema.String),
-    WeekInput: makeSchemaBoundInput<Values, string>("week", Schema.String),
-    NumberInput: makeSchemaBoundInput<Values, number>("number", Schema.FiniteFromString),
-    RangeInput: makeSchemaBoundInput<Values, number>("range", Schema.FiniteFromString),
-    DateInput: makeSchemaBoundInput<Values, Date>("date", Schema.DateFromString),
-    MaskedInput: BoundMaskedInput,
+    TextInput: makeSchemaBoundInput<Fields, string>(codec, "text"),
+    SearchInput: makeSchemaBoundInput<Fields, string>(codec, "search"),
+    EmailInput: makeSchemaBoundInput<Fields, string>(codec, "email"),
+    UrlInput: makeSchemaBoundInput<Fields, string>(codec, "url"),
+    TelInput: makeSchemaBoundInput<Fields, string>(codec, "tel"),
+    PasswordInput: makeSchemaBoundInput<Fields, string>(codec, "password"),
+    HiddenInput: makeSchemaBoundInput<Fields, string>(codec, "hidden"),
+    ColorInput: makeSchemaBoundInput<Fields, string>(codec, "color"),
+    TimeInput: makeSchemaBoundInput<Fields, string>(codec, "time"),
+    DateTimeLocalInput: makeSchemaBoundInput<Fields, string>(codec, "datetime-local"),
+    MonthInput: makeSchemaBoundInput<Fields, string>(codec, "month"),
+    WeekInput: makeSchemaBoundInput<Fields, string>(codec, "week"),
+    NumberInput: makeSchemaBoundInput<Fields, number>(codec, "number"),
+    RangeInput: makeSchemaBoundInput<Fields, number>(codec, "range"),
+    DateInput: makeSchemaBoundInput<Fields, Date>(codec, "date"),
+    MaskedInput: makeSchemaBoundInput<Fields, unknown>(codec, "text"),
     Checkbox: BoundCheckbox,
     Select: BoundSelect,
     Error: BoundError,

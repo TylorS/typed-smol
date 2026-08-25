@@ -18,7 +18,7 @@ const phone = Form.mask(
 const Example = Form.make(
   Schema.Struct({
     email: Schema.String,
-    quantity: Schema.Finite,
+    quantity: Schema.FiniteFromString,
     birthday: Schema.DateFromString,
     accepted: Schema.Boolean,
     choice: Schema.String,
@@ -33,7 +33,7 @@ const email = Example.EmailInput({ name: "email" });
 Example.TextInput({ name: "choice" });
 Example.NumberInput({ name: "quantity" });
 Example.DateInput({ name: "birthday" });
-Example.MaskedInput({ name: "phone", mask: phone });
+Example.MaskedInput({ name: "phone" });
 Example.Checkbox({ name: "accepted" });
 Example.Select({ name: "choice", content: "Choice" });
 Example.Error({ name: "quantity" });

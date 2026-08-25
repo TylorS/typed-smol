@@ -14,20 +14,20 @@ import {
 
 type EventHandlerProperty = `on${string}`;
 
-type AnchorEventHandlers<E, R> = {
+type AnchorEventHandlers = {
   readonly [K in keyof HTMLAnchorElement as K extends EventHandlerProperty ? K : never]?:
-    | Effect.Effect<unknown, E, R>
-    | EventHandler.EventHandler<Event, E, R>;
+    | Effect.Effect<unknown, any, any>
+    | EventHandler.EventHandler<Event, any, any>;
 };
 
-type AnchorRef<E, R> = {
+type AnchorRef = {
   readonly ref?: (
     element: HTMLAnchorElement,
   ) =>
     | void
-    | Effect.Effect<unknown, E, R>
-    | Stream.Stream<unknown, E, R>
-    | Fx.Fx<unknown, E, R>;
+    | Effect.Effect<unknown, any, any>
+    | Stream.Stream<unknown, any, any>
+    | Fx.Fx<unknown, any, any>;
 };
 
 type IfEquals<X, Y, Output> =
@@ -37,22 +37,29 @@ type WritableKeys<T> = {
   [P in keyof T]-?: IfEquals<{ [Q in P]: T[P] }, { -readonly [Q in P]: T[P] }, P>;
 }[keyof T];
 
-type AnchorProperties<E, R> = {
+type AnchorProperties = {
   readonly [
     K in WritableKeys<HTMLAnchorElement> as K extends EventHandlerProperty | "ref" ? never : K
-  ]?: Renderable<HTMLAnchorElement[K], E, R>;
+  ]?: Renderable<HTMLAnchorElement[K], any, any>;
 };
 
-export interface LinkOptions<E = never, R = never>
-  extends AnchorEventHandlers<E, R>, AnchorRef<E, R>, AnchorProperties<E, R> {
-  readonly href: Renderable<string, E, R>;
+export interface LinkOptions extends AnchorEventHandlers, AnchorRef, AnchorProperties {
+  readonly href: Renderable<string, any, any>;
   readonly content: Renderable<
     string | number | boolean | null | undefined | void | RenderEvent,
-    E,
-    R
+    any,
+    any
   >;
   readonly replace?: boolean; // false
 }
+
+type LinkError<Opts extends object> = Renderable.ErrorFromObject<Opts> | NavigationError;
+
+type LinkServices<Opts extends object> =
+  | Renderable.ServicesFromObject<Opts>
+  | Navigation
+  | Scope
+  | RenderTemplate;
 
 function makeLinkClickHandler(
   replace$: RefSubject.RefSubject<boolean>,
@@ -98,11 +105,18 @@ function makeLinkClickHandler(
  * and navigates via `Navigation.navigate` instead of full page load. Requires
  * `Navigation` and `RenderTemplate` in the Effect context (e.g. `BrowserRouter`).
  */
-export function Link<E = never, R = never>(
-  options: LinkOptions<E, R>,
-): Fx.Fx<RenderEvent, E | NavigationError, R | Navigation | Scope | RenderTemplate> {
+export function Link<const Opts extends object>(
+  options: Opts,
+  ..._: Opts extends LinkOptions ? [] : ["Link options must satisfy LinkOptions"]
+): Fx.Fx<RenderEvent, LinkError<Opts>, LinkServices<Opts>> {
   return Fx.gen(function* () {
-    const { replace = false, onclick, content: children, href, ...rest } = options;
+    const {
+      replace = false,
+      onclick,
+      content: children,
+      href,
+      ...rest
+    } = options as Opts & LinkOptions;
     const replace$ = yield* RefSubject.make(replace);
     const navigationHandler = makeLinkClickHandler(replace$);
     const userHandler = onclick ? EventHandler.fromEffectOrEventHandler(onclick) : undefined;
@@ -125,7 +139,7 @@ export function Link<E = never, R = never>(
   });
 }
 
-function sanitizeLinkHref<E, R, const Href extends Renderable<string, E, R>>(href: Href): Href {
+function sanitizeLinkHref<const Href extends Renderable<string, any, any>>(href: Href): Href {
   if (Fx.isFx(href)) return Fx.map(href, neutralizeExecutableHref) as Href;
   if (Stream.isStream(href)) {
     return Stream.map(href as Stream.Stream<string, any, any>, neutralizeExecutableHref) as Href;

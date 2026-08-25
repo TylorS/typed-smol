@@ -96,13 +96,12 @@ describe("typed/ui/Form in Chromium", () => {
         ") ",
         Form.slot("line", Schema.FiniteFromString, { length: 4 }),
       );
-      const state = yield* Form.makeState(Schema.Struct({ phone }), {
-        values: { phone: { area: 555, line: 1234 } },
-      });
+      const PhoneForm = Form.make(Schema.Struct({ phone }));
+      const state = yield* PhoneForm.state({ phone: { area: 555, line: 1234 } });
       yield* render(
-        html`${Form.Form({
-          state,
-          content: Form.MaskedInput({ state, name: "phone", mask: phone }),
+        html`${PhoneForm.Root({
+          form: state,
+          content: PhoneForm.MaskedInput({ name: "phone" }),
         })}`,
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

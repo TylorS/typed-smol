@@ -66,7 +66,7 @@ const form = Fx.gen(function* () {
         </div>
         <div>
           ${ContactForm.Label({ for: "phone", content: "Phone" })}
-          ${ContactForm.MaskedInput({ name: "phone", mask: phone, props: { id: "phone" } })}
+          ${ContactForm.MaskedInput({ name: "phone", props: { id: "phone" } })}
           ${ContactForm.Error({ name: "phone" })}
         </div>`,
     })}

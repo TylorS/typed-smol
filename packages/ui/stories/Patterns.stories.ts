@@ -12,7 +12,6 @@ import * as MenuComponent from "../src/Menu.js";
 import * as MenubarComponent from "../src/Menubar.js";
 import * as PopoverComponent from "../src/Popover.js";
 import * as SelectComponent from "../src/Select.js";
-import * as TabComponent from "../src/Tab.js";
 import * as TabsComponent from "../src/Tabs.js";
 import * as ToolbarComponent from "../src/Toolbar.js";
 import * as TooltipComponent from "../src/Tooltip.js";
