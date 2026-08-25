@@ -65,8 +65,7 @@ export function Root<const Options extends RootOptions, const Host extends HostR
     rootProps(options),
     options.content,
     (props, content) => {
-      const { props: attributes, ref } = Dom.splitRef(props);
-      return html`<div ...${attributes} ref=${ref}>${content}</div>`;
+      return html`<div ...${props}>${content}</div>`;
     },
   );
 }

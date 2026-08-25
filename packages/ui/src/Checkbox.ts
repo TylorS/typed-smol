@@ -82,8 +82,7 @@ export function Input<const Options extends InputOptions, const Host extends Hos
     internalProps(options),
     "",
     (i) => {
-      const { props, ref } = Dom.splitRef(i);
-      return html`<input ...${props} ref=${ref} />`;
+      return html`<input ...${i} />`;
     },
   );
 }

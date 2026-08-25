@@ -34,10 +34,10 @@ export interface ButtonOptions extends Dom.HostOptions<HTMLElement> {
 }
 
 function buttonInternalProps() {
-  return () => ({} as const);
+  return {}
 }
 
-type ButtonInternalProps = ReturnType<ReturnType<typeof buttonInternalProps>>;
+type ButtonInternalProps = ReturnType<typeof buttonInternalProps>;
 
 export function Button<const Options extends ButtonOptions, const Host extends HostResult = never>(
   options: Options,
@@ -60,7 +60,7 @@ export function Button<const Options extends ButtonOptions, const Host extends H
   >(
     options,
     host,
-    buttonInternalProps(),
+    buttonInternalProps,
     options.content,
     (props, content) => html`<summary ...${props}>${content}</summary>`,
   );
@@ -108,8 +108,7 @@ export function Content<const Options extends ContentOptions, const Host extends
     contentInternalProps(options),
     options.content,
     (props, content) => {
-      const { props: attributes, ref } = Dom.splitRef(props);
-      return html`<details ...${attributes} ref=${ref}>${content}</details>`;
+      return html`<details ...${props}>${content}</details>`;
     },
   );
 }

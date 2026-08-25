@@ -147,8 +147,7 @@ export function WindowSplitter<
     HostResult,
     Host
   >(options, host, internalProps(options), "", (props) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<div ...${attributes} ref=${ref}></div>`;
+    return html`<div ...${props}></div>`;
   });
 }
 

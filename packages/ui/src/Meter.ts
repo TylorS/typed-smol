@@ -67,7 +67,6 @@ export function Meter<const Options extends MeterOptions, const Host extends Hos
     HostResult,
     Host
   >(options, host, internalProps(options), options.content ?? "", (props, content) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<meter ...${attributes} ref=${ref}>${content}</meter>`;
+    return html`<meter ...${props}>${content}</meter>`;
   });
 }

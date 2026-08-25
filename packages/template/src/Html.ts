@@ -227,15 +227,9 @@ function renderPart<E, R>(
   if (node._tag === "event") return Fx.empty;
 
   if (node._tag === "ref") {
-    if (!RefSubject.isHydrationRef(renderable)) return Fx.empty;
-    if (isStatic) {
-      return Fx.make(() => renderable[RefSubject.HydrationRefTypeId].server);
-    }
-    return Fx.unwrap(
-      Effect.map(renderable[RefSubject.HydrationRefTypeId].toAttributes, (attributes) =>
-        Fx.succeed(HtmlRenderEvent(render(attributes), last)),
-      ),
-    );
+    if (RefSubject.isHydrationRef(renderable))
+      return renderHydrationRef(renderable, isStatic, last, render);
+    return Fx.empty;
   }
 
   // Node need to handle all possible value types including arrays
@@ -247,12 +241,7 @@ function renderPart<E, R>(
   if (node._tag === "properties") {
     const setup = (props: unknown) =>
       setupProperties<E, R>(props as Record<string, Renderable<any, E, R>>, isStatic, last, render);
-    if (
-      isObject(renderable) &&
-      !Effect.isEffect(renderable) &&
-      !Fx.isFx(renderable) && !isStream(renderable) &&
-      !isOption(renderable)
-    ) {
+    if (isObject(renderable) && !isEffectLike(renderable)) {
       return setup(renderable);
     }
     return Fx.switchMap(liftRenderableToFx<E, R>(renderable, isStatic), (props) => {
@@ -268,6 +257,10 @@ function renderPart<E, R>(
   });
 }
 
+function isEffectLike(value: object): boolean {
+  return Effect.isEffect(value) || Fx.isFx(value) || isStream(value) || isOption(value);
+}
+
 function setupProperties<E, R>(
   renderable: Record<string, Renderable<any, E, R>>,
   isStatic: boolean,
@@ -281,10 +274,30 @@ function setupProperties<E, R>(
   // Order here doesn't matter ??
   return Fx.mergeAll(
     ...entries.map(([key, renderable], i) => {
+      if (key === "ref" && RefSubject.isHydrationRef(renderable)) {
+        return renderHydrationRef(renderable, isStatic, last && i === lastIndex, (attributes) =>
+          render(Object.fromEntries(attributes.map(({ name, value }) => [name, value]))),
+        );
+      }
       return Fx.filterMap(liftRenderableToFx<E, R>(renderable, isStatic, new Set()), (value) => {
         const s = render({ [key]: value });
         return s ? some(HtmlRenderEvent(s, last && i === lastIndex)) : none();
       });
+    }),
+  );
+}
+
+function renderHydrationRef<E, R>(
+  ref: RefSubject.HydrationRef<E, R>,
+  isStatic: boolean,
+  last: boolean,
+  render: (attributes: ReadonlyArray<RefSubject.HydrationAttribute>) => string,
+): Fx.Fx<HtmlRenderEvent, E, R | Scope> {
+  if (isStatic) return Fx.make(() => ref[RefSubject.HydrationRefTypeId].server);
+  return Fx.unwrap(
+    Effect.map(ref[RefSubject.HydrationRefTypeId].toAttributes, (attributes) => {
+      const html = render(attributes);
+      return html === "" ? Fx.empty : Fx.succeed(HtmlRenderEvent(html, last));
     }),
   );
 }

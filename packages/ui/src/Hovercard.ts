@@ -140,8 +140,7 @@ export function Content<const Options extends ContentOptions, const Host extends
     contentInternalProps(options),
     options.content,
     (i, content) => {
-      const { props, ref } = Dom.splitRef(i);
-      return html`<div ...${props} ref=${ref}>${content}</div>`;
+      return html`<div ...${i}>${content}</div>`;
     },
   );
 }

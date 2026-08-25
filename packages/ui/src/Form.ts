@@ -1,9 +1,10 @@
 import * as Effect from "effect/Effect";
+import * as Context from "effect/Context";
 import * as Schema from "effect/Schema";
 import * as SchemaIssue from "effect/SchemaIssue";
 import * as SchemaTransformation from "effect/SchemaTransformation";
 import type * as SchemaAST from "effect/SchemaAST";
-import { RefSubject } from "@typed/fx";
+import { Fx as FxApi, RefSubject } from "@typed/fx";
 import type * as Scope from "effect/Scope";
 import type { Fx } from "@typed/fx/Fx";
 import {
@@ -40,24 +41,72 @@ export type FormState<Values extends object> = RefSubject.HydratedRefSubject<
   Schema.SchemaError
 > & {
   /** Runtime-only validation codec; it is deliberately absent from hydration state. */
-  readonly codec?: unknown;
+  readonly codec: Schema.Codec<Values, unknown>;
 };
 
-export function StateSchema<Values extends object>() {
-  return Schema.declare<State<Values>>(
-    (value): value is State<Values> => typeof value === "object" && value !== null,
-  );
+export interface FormService<Values extends object> {
+  readonly state: FormState<Values>;
 }
-export function makeState<Values extends object>(
-  initial: InitialState<Values>,
-  codec?: Schema.Codec<Values, unknown>,
-): Effect.Effect<FormState<Values>, Schema.SchemaError, Scope.Scope> {
+
+export const CurrentForm = Context.Service<FormService<any>>("@typed/ui/Form/CurrentForm");
+
+function withCurrentForm<Values extends object>() {
+  return <Result extends Fx.Any>(f: (state: FormState<Values>) => Result) =>
+    FxApi.gen(function* () {
+      const current = yield* CurrentForm;
+      return f(current.state as FormState<Values>);
+    });
+}
+
+const FieldMetaSchema = Schema.Struct({
+  dirty: Schema.Boolean,
+  touched: Schema.Boolean,
+});
+
+export type FormFields = Readonly<Record<string, Schema.Codec<any, any>>>;
+type OptionalFields<Fields extends FormFields, Value extends Schema.Constraint> = {
+  readonly [Key in keyof Fields]: Schema.optionalKey<Value>;
+};
+type InitialStateFor<Fields extends FormFields> = {
+  readonly values: Schema.Struct.Type<Fields>;
+  readonly defaultValues?: Schema.Struct.Type<Fields>;
+  readonly errors?: Schema.Struct.Type<OptionalFields<Fields, typeof Schema.String>>;
+  readonly meta?: Schema.Struct.Type<OptionalFields<Fields, typeof FieldMetaSchema>>;
+  readonly submitting?: boolean;
+};
+
+function optionalFields<Fields extends FormFields, Value extends Schema.Constraint>(
+  fields: Fields,
+  value: Value,
+): OptionalFields<Fields, Value> {
+  return Object.fromEntries(
+    Object.keys(fields).map((key) => [key, Schema.optionalKey(value)]),
+  ) as OptionalFields<Fields, Value>;
+}
+
+function emptyOptionalFields<Fields extends FormFields, Value extends Schema.Constraint>() {
+  return {} as Schema.Struct.Type<OptionalFields<Fields, Value>>;
+}
+
+export function StateSchema<const Fields extends FormFields>(codec: Schema.Struct<Fields>) {
+  return Schema.Struct({
+    values: codec,
+    defaultValues: codec,
+    errors: Schema.Struct(optionalFields(codec.fields, Schema.String)),
+    meta: Schema.Struct(optionalFields(codec.fields, FieldMetaSchema)),
+    submitting: Schema.Boolean,
+  });
+}
+export function makeState<const Fields extends FormFields>(
+  codec: Schema.Struct<Fields>,
+  initial: InitialStateFor<Fields>,
+) {
   return Effect.map(
-    RefSubject.hydrate(StateSchema<Values>(), {
+    RefSubject.hydrate(StateSchema(codec), {
       values: initial.values,
       defaultValues: initial.defaultValues ?? initial.values,
-      errors: initial.errors ?? {},
-      meta: initial.meta ?? {},
+      errors: initial.errors ?? emptyOptionalFields<Fields, typeof Schema.String>(),
+      meta: initial.meta ?? emptyOptionalFields<Fields, typeof FieldMetaSchema>(),
       submitting: initial.submitting ?? false,
     }),
     (state) => Object.assign(state, { codec }),
@@ -86,10 +135,12 @@ function setFieldError<Values extends object, Key extends keyof Values & string,
   key: Key,
   error: string | undefined,
 ): Effect.Effect<State<Values>, E, R> {
-  return RefSubject.update(state, (current) => ({
-    ...current,
-    errors: { ...current.errors, [key]: error },
-  }));
+  return RefSubject.update(state, (current) => {
+    const errors = { ...current.errors };
+    if (error === undefined) delete errors[key];
+    else errors[key] = error;
+    return { ...current, errors };
+  });
 }
 
 function decodeField<Values extends object, Value>(
@@ -141,6 +192,66 @@ type InputProps<Values extends object, Value> = ReturnType<
   ReturnType<typeof inputProps<Values, Value>>
 >;
 
+type RenderableComponentOptions<Options> = Pick<
+  Options,
+  Extract<keyof Options, "props" | "ref" | "content" | Dom.EventHandlerProperty>
+>;
+
+export interface SchemaBoundInputOptions<
+  Values extends object,
+  Value,
+> extends Dom.HostOptions<HTMLInputElement> {
+  readonly name: FieldNameFor<Values, Value>;
+}
+
+export interface SchemaBoundMaskedInputOptions<
+  Values extends object,
+  Parts extends ReadonlyArray<MaskPart>,
+> extends SchemaBoundInputOptions<Values, MaskValue<Parts>> {
+  readonly mask: Schema.Codec<MaskValue<Parts>, string>;
+}
+
+export interface SchemaBoundCheckboxOptions<
+  Values extends object,
+> extends Dom.HostOptions<HTMLInputElement> {
+  readonly name: BooleanFieldName<Values>;
+}
+
+export interface SchemaBoundSelectOptions<
+  Values extends object,
+> extends Dom.HostOptions<HTMLSelectElement> {
+  readonly name: FieldNameFor<Values, string>;
+  readonly content: Renderable.Any;
+}
+
+export interface SchemaBoundErrorOptions<
+  Values extends object,
+> extends Dom.HostOptions<HTMLDivElement> {
+  readonly name: keyof Values & string;
+}
+
+export interface SchemaBoundResetOptions extends Dom.HostOptions<HTMLButtonElement> {
+  readonly content: Renderable.Any;
+}
+
+export interface SchemaBoundPushOptions<
+  Values extends object,
+  Name extends ArrayFieldName<Values>,
+> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly name: Name;
+  readonly value: ArrayFieldValue<Values, Name>;
+  readonly content: Renderable.Any;
+}
+
+export interface SchemaBoundRemoveOptions<
+  Values extends object,
+  Name extends ArrayFieldName<Values>,
+> extends Dom.HostOptions<HTMLButtonElement> {
+  readonly name: Name;
+  readonly index: number;
+  readonly content: Renderable.Any;
+}
+
 function renderInput<
   const Values extends object,
   Value,
@@ -155,8 +266,8 @@ function renderInput<
   defaultCodec: Schema.Codec<Value, string>,
 ): Fx<
   RenderEvent,
-  Renderable.Error<Options | Host>,
-  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+  Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
+  Renderable.Services<RenderableComponentOptions<Options> | Host> | Scope.Scope | RenderTemplate
 > {
   const codec = options.codec ?? defaultCodec;
   return Dom.renderHost<HTMLInputElement>()<
@@ -165,7 +276,17 @@ function renderInput<
     "",
     HostResult,
     Host
-  >(options, host, inputProps(options, type, codec), "", (props) => html`<input ...${props} />`);
+  >(
+    options,
+    host,
+    inputProps(options, type, codec),
+    "",
+    (props) => html`<input ...${props} />`,
+  ) as Fx<
+    RenderEvent,
+    Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
+    Renderable.Services<RenderableComponentOptions<Options> | Host> | Scope.Scope | RenderTemplate
+  >;
 }
 
 function makeInput<Value>(type: string, codec: Schema.Codec<Value, string>) {
@@ -178,6 +299,28 @@ function makeInput<Value>(type: string, codec: Schema.Codec<Value, string>) {
     host?: Dom.HostOverride<Dom.RenderHostProps<Options, InputProps<Values, Value>>, "", Host>,
   ) {
     return renderInput(options, host, type, codec);
+  };
+}
+
+function makeSchemaBoundInput<Values extends object, Value>(
+  type: string,
+  codec: Schema.Codec<Value, string>,
+) {
+  return function <
+    const Options extends SchemaBoundInputOptions<Values, Value>,
+    const Host extends HostResult = never,
+  >(options: Options, host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>) {
+    return withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return renderInput<Values, Value, typeof inputOptions, Host>(
+        inputOptions,
+        host as never,
+        type,
+        codec,
+      );
+    });
   };
 }
 
@@ -223,9 +366,10 @@ export function decodeFormData<Values extends object, Codec extends Schema.Codec
   return Schema.decodeEffect(codec)(formDataToRecord(data));
 }
 
-export function validate<Values extends object>(state: FormState<Values>, data: FormData) {
-  if (!isFormCodec<Values>(state.codec)) return Effect.map(state, (current) => current.values);
-  return decodeFormData(state.codec, data).pipe(
+export function validate<Values extends object>(state: FormState<Values>) {
+  return Effect.flatMap(state, (current) =>
+    Schema.decodeUnknownEffect(Schema.toType(state.codec))(current.values),
+  ).pipe(
     Effect.flatMap((values) =>
       Effect.as(
         RefSubject.update(state, (current) => ({
@@ -245,12 +389,6 @@ export function validate<Values extends object>(state: FormState<Values>, data: 
       })).pipe(Effect.andThen(() => Effect.fail(error))),
     ),
   );
-}
-
-function isFormCodec<Values extends object>(
-  codec: unknown,
-): codec is Schema.Codec<Values, unknown> {
-  return Schema.isSchema(codec);
 }
 
 function formErrors<Values extends object>(
@@ -925,27 +1063,20 @@ function formProps<
   R,
   const Options extends FormOptions<Values, E, R>,
 >(options: Options) {
-  const shouldHandleSubmit =
-    isFormCodec(options.state.codec) || options.onValidSubmit !== undefined;
   return () =>
     ({
       ref: options.state,
-      onsubmit: !shouldHandleSubmit
-        ? undefined
-        : EventHandler.make(
-            (event: SubmitEvent) =>
-              Effect.matchEffect(
-                validate(options.state, new FormData(Dom.currentTarget<HTMLFormElement>(event))),
-                {
-                  onFailure: () => Effect.void,
-                  onSuccess: (values) => {
-                    const result = options.onValidSubmit?.(values, event);
-                    return Effect.isEffect(result) ? result : Effect.void;
-                  },
-                },
-              ),
-            { preventDefault: true },
-          ),
+      onsubmit: EventHandler.make(
+        (event: SubmitEvent) =>
+          Effect.matchEffect(validate(options.state), {
+            onFailure: () => Effect.void,
+            onSuccess: (values) => {
+              const result = options.onValidSubmit?.(values, event);
+              return Effect.isEffect(result) ? result : Effect.void;
+            },
+          }),
+        { preventDefault: true },
+      ),
       onreset: EventHandler.make(() => reset(options.state), { preventDefault: true }),
     }) as const;
 }
@@ -965,19 +1096,368 @@ export function Form<
     Options["content"],
     Host
   >,
-): Fx<
-  RenderEvent,
-  Renderable.Error<Options | Host>,
-  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
-> {
-  return Dom.renderHost<HTMLFormElement>()<
+): SchemaBoundRootResult<Options, Host> {
+  const rendered = Dom.renderHost<HTMLFormElement>()<
     Options,
     FormProps<Values, E, R, Options>,
     Options["content"],
     HostResult,
     Host
-  >(options, host, formProps(options), options.content, (props, content) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<form ...${attributes} ref=${ref}>${content}</form>`;
-  });
+  >(
+    options,
+    host,
+    formProps(options),
+    options.content,
+    (props, content) => html`<form ...${props}>${content}</form>`,
+  ) as SchemaBoundComponentResult<Options, Host>;
+  return FxApi.provideService(rendered, CurrentForm, {
+    state: options.state,
+  }) as SchemaBoundRootResult<Options, Host>;
+}
+
+export interface BoundFormOptions<
+  Values extends object,
+  E = never,
+  R = never,
+> extends Dom.HostOptions<HTMLFormElement> {
+  readonly form: FormState<Values>;
+  readonly content: Renderable.Any;
+  readonly onValidSubmit?: ValidSubmitHandler<Values, E, R>;
+}
+
+type CurrentFormIdentifier = Context.Service.Identifier<typeof CurrentForm>;
+
+export type SchemaBoundComponentResult<Options, Host> = Fx<
+  RenderEvent,
+  Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
+  | Renderable.Services<RenderableComponentOptions<Options> | Host>
+  | CurrentFormIdentifier
+  | Scope.Scope
+  | RenderTemplate
+>;
+
+export type SchemaBoundRootResult<Options, Host> = Fx<
+  RenderEvent,
+  Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
+  | Exclude<Renderable.Services<RenderableComponentOptions<Options> | Host>, CurrentFormIdentifier>
+  | Scope.Scope
+  | RenderTemplate
+>;
+
+export interface SchemaBoundInput<Values extends object, Value> {
+  <const Options extends object, const Host extends HostResult = never>(
+    options: SchemaBoundInputOptions<Values, Value> & Options,
+    host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>,
+  ): SchemaBoundComponentResult<Omit<Options, "name">, Host>;
+}
+
+export interface SchemaBoundMaskedInput<Values extends object> {
+  <
+    const Parts extends ReadonlyArray<MaskPart>,
+    const Options extends object,
+    const Host extends HostResult = never,
+  >(
+    options: SchemaBoundMaskedInputOptions<Values, Parts> & Options,
+    host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>,
+  ): SchemaBoundComponentResult<Options, Host>;
+}
+
+export interface SchemaBoundCheckbox<Values extends object> {
+  <const Options extends object, const Host extends HostResult = never>(
+    options: SchemaBoundCheckboxOptions<Values> & Options,
+    host?: Dom.HostOverride<Dom.RenderHostProps<Options, CheckboxProps<Values>>, "", Host>,
+  ): SchemaBoundComponentResult<Options, Host>;
+}
+
+export interface SchemaBoundSelect<Values extends object> {
+  <const Options extends object, const Host extends HostResult = never>(
+    options: SchemaBoundSelectOptions<Values> & Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, SelectProps<Values>>,
+      (SchemaBoundSelectOptions<Values> & Options)["content"],
+      Host
+    >,
+  ): SchemaBoundComponentResult<Options, Host>;
+}
+
+export interface SchemaBoundError<Values extends object> {
+  <const Options extends object, const Host extends HostResult = never>(
+    options: SchemaBoundErrorOptions<Values> & Options,
+    host?: Dom.HostOverride<Dom.RenderHostProps<Options, ErrorProps<Values>>, Renderable.Any, Host>,
+  ): SchemaBoundComponentResult<Options, Host>;
+}
+
+export interface SchemaBoundReset {
+  <const Options extends object, const Host extends HostResult = never>(
+    options: SchemaBoundResetOptions & Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, ResetProps<object>>,
+      (SchemaBoundResetOptions & Options)["content"],
+      Host
+    >,
+  ): SchemaBoundComponentResult<Options, Host>;
+}
+
+export interface SchemaBoundPush<Values extends object> {
+  <
+    const Name extends ArrayFieldName<Values>,
+    const Options extends object,
+    const Host extends HostResult = never,
+  >(
+    options: SchemaBoundPushOptions<Values, Name> & Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, PushProps<Values, Name>>,
+      (SchemaBoundPushOptions<Values, Name> & Options)["content"],
+      Host
+    >,
+  ): SchemaBoundComponentResult<Options, Host>;
+}
+
+export interface SchemaBoundRemove<Values extends object> {
+  <
+    const Name extends ArrayFieldName<Values>,
+    const Options extends object,
+    const Host extends HostResult = never,
+  >(
+    options: SchemaBoundRemoveOptions<Values, Name> & Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, RemoveProps<Values, Name>>,
+      (SchemaBoundRemoveOptions<Values, Name> & Options)["content"],
+      Host
+    >,
+  ): SchemaBoundComponentResult<Options, Host>;
+}
+
+export interface SchemaBoundRoot<Values extends object> {
+  <
+    E,
+    R,
+    const Options extends BoundFormOptions<Values, E, R>,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<Dom.HostProps<HTMLFormElement>, Options["content"], Host>,
+  ): SchemaBoundRootResult<Options, Host>;
+}
+
+export interface SchemaBoundStateOptions<Values extends object> {
+  readonly defaultValues?: Values;
+  readonly errors?: Partial<Record<keyof Values & string, string>>;
+  readonly meta?: Partial<Record<keyof Values & string, FieldMeta>>;
+  readonly submitting?: boolean;
+}
+
+export interface SchemaBoundForm<Fields extends FormFields> {
+  readonly codec: Schema.Struct<Fields>;
+  readonly state: (
+    values: Schema.Struct.Type<Fields>,
+    options?: SchemaBoundStateOptions<Schema.Struct.Type<Fields>>,
+  ) => Effect.Effect<FormState<Schema.Struct.Type<Fields>>, Schema.SchemaError, Scope.Scope>;
+  readonly Root: SchemaBoundRoot<Schema.Struct.Type<Fields>>;
+  readonly TextInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly SearchInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly EmailInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly UrlInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly TelInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly PasswordInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly HiddenInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly ColorInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly TimeInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly DateTimeLocalInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly MonthInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly WeekInput: SchemaBoundInput<Schema.Struct.Type<Fields>, string>;
+  readonly NumberInput: SchemaBoundInput<Schema.Struct.Type<Fields>, number>;
+  readonly RangeInput: SchemaBoundInput<Schema.Struct.Type<Fields>, number>;
+  readonly DateInput: SchemaBoundInput<Schema.Struct.Type<Fields>, Date>;
+  readonly MaskedInput: SchemaBoundMaskedInput<Schema.Struct.Type<Fields>>;
+  readonly Checkbox: SchemaBoundCheckbox<Schema.Struct.Type<Fields>>;
+  readonly Select: SchemaBoundSelect<Schema.Struct.Type<Fields>>;
+  readonly Error: SchemaBoundError<Schema.Struct.Type<Fields>>;
+  readonly Reset: SchemaBoundReset;
+  readonly Push: SchemaBoundPush<Schema.Struct.Type<Fields>>;
+  readonly Remove: SchemaBoundRemove<Schema.Struct.Type<Fields>>;
+  readonly Label: typeof Label;
+  readonly Description: typeof Description;
+  readonly Submit: typeof Submit;
+  readonly Group: typeof Group;
+}
+
+export function make<const Fields extends FormFields>(
+  codec: Schema.Struct<Fields>,
+): SchemaBoundForm<Fields> {
+  type Values = Schema.Struct.Type<Fields>;
+
+  const state = (values: Values, options: SchemaBoundStateOptions<Values> = {}) =>
+    makeState(codec, { ...options, values } as InitialStateFor<Fields>);
+
+  const Root = <
+    E,
+    R,
+    const Options extends BoundFormOptions<Values, E, R>,
+    const Host extends HostResult = never,
+  >(
+    options: Options & Pick<BoundFormOptions<Values, E, R>, "form" | "content">,
+    host?: Dom.HostOverride<Dom.HostProps<HTMLFormElement>, Options["content"], Host>,
+  ) => {
+    const { form, ...rootOptions } = options;
+    return Form(
+      { ...rootOptions, state: form } as Omit<Options, "form"> & {
+        readonly state: FormState<Values>;
+      },
+      host as never,
+    );
+  };
+
+  const BoundMaskedInput = <
+    const Parts extends ReadonlyArray<MaskPart>,
+    const Options extends SchemaBoundMaskedInputOptions<Values, Parts>,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Omit<Options, "mask">, InputProps<Values, MaskValue<Parts>>>,
+      "",
+      Host
+    >,
+  ) =>
+    withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return MaskedInput<Values, Parts, typeof inputOptions, Host>(inputOptions, host as never);
+    });
+
+  const BoundCheckbox = <
+    const Options extends SchemaBoundCheckboxOptions<Values>,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<Dom.RenderHostProps<Options, CheckboxProps<Values>>, "", Host>,
+  ) =>
+    withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return Checkbox<Values, typeof inputOptions, Host>(inputOptions, host as never);
+    });
+
+  const BoundSelect = <
+    const Options extends SchemaBoundSelectOptions<Values>,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, SelectProps<Values>>,
+      Options["content"],
+      Host
+    >,
+  ) =>
+    withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return Select<Values, typeof inputOptions, Host>(inputOptions, host as never);
+    });
+
+  const BoundError = <
+    const Options extends SchemaBoundErrorOptions<Values>,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<Dom.RenderHostProps<Options, ErrorProps<Values>>, Renderable.Any, Host>,
+  ) =>
+    withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return Error<Values, typeof inputOptions, Host>(inputOptions, host as never);
+    });
+
+  const BoundReset = <
+    const Options extends SchemaBoundResetOptions,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, ResetProps<Values>>,
+      Options["content"],
+      Host
+    >,
+  ) =>
+    withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return Reset<Values, typeof inputOptions, Host>(inputOptions, host as never);
+    });
+
+  const BoundPush = <
+    const Name extends ArrayFieldName<Values>,
+    const Options extends SchemaBoundPushOptions<Values, Name>,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, PushProps<Values, Name>>,
+      Options["content"],
+      Host
+    >,
+  ) =>
+    withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return Push<Values, Name, typeof inputOptions, Host>(inputOptions, host as never);
+    });
+
+  const BoundRemove = <
+    const Name extends ArrayFieldName<Values>,
+    const Options extends SchemaBoundRemoveOptions<Values, Name>,
+    const Host extends HostResult = never,
+  >(
+    options: Options,
+    host?: Dom.HostOverride<
+      Dom.RenderHostProps<Options, RemoveProps<Values, Name>>,
+      Options["content"],
+      Host
+    >,
+  ) =>
+    withCurrentForm<Values>()((state) => {
+      const inputOptions = { ...options, state } as Options & {
+        readonly state: FormState<Values>;
+      };
+      return Remove<Values, Name, typeof inputOptions, Host>(inputOptions, host as never);
+    });
+
+  return {
+    codec,
+    state,
+    Root,
+    TextInput: makeSchemaBoundInput<Values, string>("text", Schema.String),
+    SearchInput: makeSchemaBoundInput<Values, string>("search", Schema.String),
+    EmailInput: makeSchemaBoundInput<Values, string>("email", Schema.String),
+    UrlInput: makeSchemaBoundInput<Values, string>("url", Schema.String),
+    TelInput: makeSchemaBoundInput<Values, string>("tel", Schema.String),
+    PasswordInput: makeSchemaBoundInput<Values, string>("password", Schema.String),
+    HiddenInput: makeSchemaBoundInput<Values, string>("hidden", Schema.String),
+    ColorInput: makeSchemaBoundInput<Values, string>("color", Schema.String),
+    TimeInput: makeSchemaBoundInput<Values, string>("time", Schema.String),
+    DateTimeLocalInput: makeSchemaBoundInput<Values, string>("datetime-local", Schema.String),
+    MonthInput: makeSchemaBoundInput<Values, string>("month", Schema.String),
+    WeekInput: makeSchemaBoundInput<Values, string>("week", Schema.String),
+    NumberInput: makeSchemaBoundInput<Values, number>("number", Schema.FiniteFromString),
+    RangeInput: makeSchemaBoundInput<Values, number>("range", Schema.FiniteFromString),
+    DateInput: makeSchemaBoundInput<Values, Date>("date", Schema.DateFromString),
+    MaskedInput: BoundMaskedInput,
+    Checkbox: BoundCheckbox,
+    Select: BoundSelect,
+    Error: BoundError,
+    Reset: BoundReset,
+    Push: BoundPush,
+    Remove: BoundRemove,
+    Label,
+    Description,
+    Submit,
+    Group,
+  } as unknown as SchemaBoundForm<Fields>;
 }

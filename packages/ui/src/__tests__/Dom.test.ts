@@ -136,15 +136,6 @@ describe("typed/ui/Dom", () => {
 
       assert.deepEqual(calls, ["user", "internal"]);
     }).pipe(Effect.runPromise));
-
-  it("splits ref from the remaining props", () => {
-    const ref = () => undefined;
-    const input = { id: "button", type: "button", ref } as const;
-    const split = Dom.splitRef(input);
-
-    assert.strictEqual(split.ref, ref);
-    assert.deepEqual(split.props, { id: "button", type: "button" });
-  });
 });
 
 function makeWindow() {

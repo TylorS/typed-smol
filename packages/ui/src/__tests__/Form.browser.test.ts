@@ -5,10 +5,39 @@ import { assert, describe, it } from "vitest";
 import * as Form from "../Form.js";
 
 describe("typed/ui/Form in Chromium", () => {
+  it("scopes schema-bound fields to their owning form", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const UserForm = Form.make(Schema.Struct({ email: Schema.String }));
+      const first = yield* UserForm.state({ email: "first@example.com" });
+      const second = yield* UserForm.state({ email: "second@example.com" });
+      yield* render(
+        html`${UserForm.Root({
+          form: first,
+          content: UserForm.EmailInput({ name: "email" }),
+        })}${UserForm.Root({
+          form: second,
+          content: UserForm.EmailInput({ name: "email" }),
+        })}`,
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      const inputs = document.querySelectorAll<HTMLInputElement>('input[name="email"]');
+      inputs[1].value = "updated@example.com";
+      inputs[1].dispatchEvent(new Event("input", { bubbles: true }));
+      yield* Effect.sleep(0);
+
+      assert.strictEqual((yield* first).values.email, "first@example.com");
+      assert.strictEqual((yield* second).values.email, "updated@example.com");
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
   it("decodes native input into its hydrated field state", async () => {
     document.body.replaceChildren();
     await Effect.gen(function* () {
-      const state = yield* Form.makeState({ values: { quantity: 1 } });
+      const state = yield* Form.makeState(Schema.Struct({ quantity: Schema.FiniteFromString }), {
+        values: { quantity: 1 },
+      });
       yield* render(
         html`${Form.Form({
           state,
@@ -26,19 +55,21 @@ describe("typed/ui/Form in Chromium", () => {
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 
-  it("decodes submit FormData through the form codec", async () => {
+  it("submits current decoded state instead of re-parsing DOM FormData", async () => {
     document.body.replaceChildren();
     let submitted = 0;
     await Effect.gen(function* () {
-      const state = yield* Form.makeState(
-        { values: { quantity: 1 } },
-        Schema.Struct({ quantity: Schema.FiniteFromString }),
-      );
+      const state = yield* Form.makeState(Schema.Struct({ quantity: Schema.FiniteFromString }), {
+        values: { quantity: 1 },
+      });
       yield* render(
         html`${Form.Form({
           state,
           content: Form.NumberInput({ state, name: "quantity" }),
-          onValidSubmit: (values) => Effect.sync(() => { submitted = values.quantity; }),
+          onValidSubmit: (values) =>
+            Effect.sync(() => {
+              submitted = values.quantity;
+            }),
         })}`,
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
@@ -51,8 +82,8 @@ describe("typed/ui/Form in Chromium", () => {
       yield* Effect.sleep(0);
 
       assert.strictEqual(event.defaultPrevented, true);
-      assert.strictEqual((yield* state).values.quantity, 7);
-      assert.strictEqual(submitted, 7);
+      assert.strictEqual((yield* state).values.quantity, 1);
+      assert.strictEqual(submitted, 1);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 
@@ -65,7 +96,9 @@ describe("typed/ui/Form in Chromium", () => {
         ") ",
         Form.slot("line", Schema.FiniteFromString, { length: 4 }),
       );
-      const state = yield* Form.makeState({ values: { phone: { area: 555, line: 1234 } } });
+      const state = yield* Form.makeState(Schema.Struct({ phone }), {
+        values: { phone: { area: 555, line: 1234 } },
+      });
       yield* render(
         html`${Form.Form({
           state,
@@ -87,6 +120,12 @@ describe("typed/ui/Form in Chromium", () => {
 
       assert.deepStrictEqual((yield* state).values.phone, { area: 212, line: 8675 });
       assert.notStrictEqual((yield* state).errors.phone, undefined);
+
+      input.value = "(646) 5555";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      yield* Effect.sleep(0);
+
+      assert.strictEqual(Object.hasOwn((yield* state).errors, "phone"), false);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 });

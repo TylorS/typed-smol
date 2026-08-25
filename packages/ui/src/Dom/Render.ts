@@ -43,21 +43,11 @@ export function renderHost<Element extends globalThis.Element>() {
   };
 }
 
-export function splitRef<const Props extends { readonly ref?: unknown }>(
-  props: Props,
-): { readonly props: Omit<Props, "ref">; readonly ref: Props["ref"] | undefined } {
-  const { ref, ...rest } = props;
-  return { props: rest, ref };
-}
-
 export function renderDivHost<
   const Props extends HostProps<HTMLDivElement>,
   const Content extends RenderableInput,
 >(props: Props, content: Content): HostComponent<Props | Content> {
-  const split = splitRef(props);
-  return html`<div ...${split.props} ref=${split.ref}>${content}</div>` as HostComponent<
-    Props | Content
-  >;
+  return html`<div ...${props}>${content}</div>` as HostComponent<Props | Content>;
 }
 
 function componentBoundary(value: HostResult): FxInput<RenderEvent> {

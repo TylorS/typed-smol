@@ -65,7 +65,6 @@ export function SpinButton<
     HostResult,
     Host
   >(options, host, internalProps(options), "", (props) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<input ...${attributes} ref=${ref} />`;
+    return html`<input ...${props} />`;
   });
 }

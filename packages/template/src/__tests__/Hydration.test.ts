@@ -226,6 +226,77 @@ describe("Hydration", () => {
       assert.strictEqual(original.getAttribute(RefSubject.HYDRATION_ATTRIBUTE), null);
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("restores spread hydrated RefSubjects before reactive attributes start", () =>
+    Effect.gen(function* () {
+      const view = (
+        count: RefSubject.HydratedRefSubject<number, any, any, any>,
+        ref: RefSubject.HydrationRef<any, any> = count,
+        marker: string | Effect.Effect<string> = "ready",
+      ) => html`<button data-count=${count} data-marker=${marker} ...${{ ref }}>${count}</button>`;
+      const serverCount = yield* RefSubject.hydrate(Schema.Number, 7);
+      const htmlString = yield* renderToHtmlString(view(serverCount)).pipe(
+        Effect.provide(HtmlRenderTemplate),
+      );
+      assert.include(htmlString, RefSubject.HYDRATION_ATTRIBUTE);
+
+      const [window, layer] = createHappyDomLayer();
+      const body = window.document.body;
+      body.innerHTML = htmlString;
+      const original = body.querySelector("button");
+      assert(original);
+      const observer = new window.MutationObserver(() => {});
+      observer.observe(original, {
+        attributes: true,
+        attributeFilter: ["data-count"],
+        attributeOldValue: true,
+      });
+
+      let initialized = 0;
+      const clientCount = yield* RefSubject.hydrate(
+        Schema.Number,
+        Effect.sync(() => {
+          initialized++;
+          return 0;
+        }),
+      );
+      let hydrationCalls = 0;
+      const setupOrder: Array<"attribute" | "ref"> = [];
+      const countedHydration: RefSubject.HydrationRef<any, any> = Object.assign(
+        (element: RefSubject.HydrationElement) => {
+          hydrationCalls++;
+          setupOrder.push("ref");
+          return clientCount(element);
+        },
+        {
+          [RefSubject.HydrationRefTypeId]: clientCount[RefSubject.HydrationRefTypeId],
+        },
+      );
+      const [current] = yield* render(
+        view(
+          clientCount,
+          countedHydration,
+          Effect.sync(() => {
+            setupOrder.push("attribute");
+            return "ready";
+          }),
+        ),
+        body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectUpTo(1));
+      const records = observer.takeRecords();
+
+      assert.strictEqual(current, original);
+      assert.strictEqual(hydrationCalls, 1);
+      assert.strictEqual(initialized, 0);
+      assert.deepEqual(setupOrder, ["ref", "attribute"]);
+      assert.strictEqual(yield* clientCount, 7);
+      assert.strictEqual(original.getAttribute("data-count"), "7");
+      assert.strictEqual(
+        records.some((record) => record.oldValue === "0"),
+        false,
+      );
+      assert.strictEqual(original.getAttribute(RefSubject.HYDRATION_ATTRIBUTE), null);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("hydrates unnamed and named state from SSR with distinct lifecycles", () =>
     Effect.gen(function* () {
       const view = (

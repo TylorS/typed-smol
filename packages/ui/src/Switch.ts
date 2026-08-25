@@ -67,7 +67,6 @@ export function Switch<const Options extends SwitchOptions, const Host extends H
     HostResult,
     Host
   >(options, host, internalProps(options), options.content, (props, content) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<button ...${attributes} ref=${ref}>${content}</button>`;
+    return html`<button ...${props}>${content}</button>`;
   });
 }

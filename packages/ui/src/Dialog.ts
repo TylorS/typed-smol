@@ -188,8 +188,7 @@ export function Content<const Options extends ContentOptions, const Host extends
     contentInternalProps(options),
     options.content,
     (props, content) => {
-      const { props: attributes, ref } = Dom.splitRef(props);
-      return html`<dialog ...${attributes} ref=${ref}>${content}</dialog>`;
+      return html`<dialog ...${props}>${content}</dialog>`;
     },
   );
 }

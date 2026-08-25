@@ -1,4 +1,3 @@
-import * as Effect from "effect/Effect";
 import { Fx, RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import * as AlertComponent from "../src/Alert.js";
@@ -17,8 +16,7 @@ export default { title: "Foundations" };
 
 export const Alert = story(AlertComponent.Alert({ content: "Your profile has been saved." }));
 
-const collection = Fx.unwrap(
-  Effect.gen(function* () {
+const collection = Fx.gen(function* () {
     const state = yield* CollectionComponent.makeState([
       { id: "alpha", value: "Alpha" },
       { id: "beta", value: "Beta" },
@@ -33,13 +31,11 @@ const collection = Fx.unwrap(
         <li id="gamma">Gamma</li>
       </ul>
     </section>`;
-  }),
-);
+});
 
 export const Collection = story(collection);
 
-const composite = Fx.unwrap(
-  Effect.gen(function* () {
+const composite = Fx.gen(function* () {
     const state = yield* CompositeComponent.makeState({ activeId: "first" });
     const items = yield* CollectionComponent.makeState([
       { id: "first", value: "First" },
@@ -64,8 +60,7 @@ const composite = Fx.unwrap(
         </button>
       </div>
     </section>`;
-  }),
-);
+});
 
 export const Composite = story(composite);
 

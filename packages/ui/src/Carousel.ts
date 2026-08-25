@@ -102,8 +102,7 @@ export function Root<const Options extends RootOptions, const Host extends HostR
     HostResult,
     Host
   >(options, host, rootInternalProps(options), options.content, (props, content) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<div ...${attributes} ref=${ref}>${content}</div>`;
+    return html`<div ...${props}>${content}</div>`;
   });
 }
 
@@ -157,8 +156,7 @@ export function Slide<const Options extends SlideOptions, const Host extends Hos
     HostResult,
     Host
   >(options, host, slideInternalProps(options), options.content, (props, content) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<div ...${attributes} ref=${ref}>${content}</div>`;
+    return html`<div ...${props}>${content}</div>`;
   });
 }
 

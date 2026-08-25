@@ -31,4 +31,4 @@ export type {
 export { chainEvent, currentTarget, toggleState } from "./Events.js";
 export { composeRefs } from "./Refs.js";
 export { mergeProps, type MergedHostProps, type RenderHostProps } from "./Props.js";
-export { renderDivHost, renderHost, splitRef } from "./Render.js";
+export { renderDivHost, renderHost } from "./Render.js";

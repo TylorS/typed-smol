@@ -417,6 +417,11 @@ type PartSetup = {
   readonly remaining: Array<Effect.Effect<unknown, any, any>>;
 };
 
+type PropertiesPartEffect = {
+  readonly effect: Effect.Effect<unknown, any, any>;
+  readonly hydration: Effect.Effect<void, any, any>;
+};
+
 function makePartSetup(): PartSetup {
   return { hydration: [], remaining: [] };
 }
@@ -424,11 +429,22 @@ function makePartSetup(): PartSetup {
 function addPartEffect(
   setup: PartSetup,
   part: Template.PartNode | Template.SparsePartNode,
-  effect: Effect.Effect<unknown, any, any>,
+  effect: Effect.Effect<unknown, any, any> | PropertiesPartEffect,
   ctx: TemplateContext,
 ): void {
+  if (isPropertiesPartEffect(effect)) {
+    setup.hydration.push(effect.hydration);
+    setup.remaining.push(effect.effect);
+    return;
+  }
   const hydration = part._tag === "ref" && RefSubject.isHydrationRef(ctx.values[part.index]);
   (hydration ? setup.hydration : setup.remaining).push(effect);
+}
+
+function isPropertiesPartEffect(
+  effect: Effect.Effect<unknown, any, any> | PropertiesPartEffect,
+): effect is PropertiesPartEffect {
+  return "hydration" in effect;
 }
 
 const withCurrentRenderPriority = (
@@ -462,7 +478,7 @@ function setupRenderPart<E = never, R = never>(
   part: Template.PartNode | Template.SparsePartNode,
   node: Node,
   ctx: TemplateContext<R>,
-): Effect.Effect<unknown, E, R> | void {
+): Effect.Effect<unknown, E, R> | PropertiesPartEffect | void {
   switch (part._tag) {
     case "node": {
       const endComment = findNodePartEndComment(node as HTMLElement | SVGElement, part.index);
@@ -504,8 +520,26 @@ function setupRenderPart<E = never, R = never>(
         part.index,
         setupPropertSetter(node as HTMLElement | SVGElement, part.name),
       );
-    case "properties":
-      return setupProperties<E, R>(node as HTMLElement | SVGElement, ctx, part.index);
+    case "properties": {
+      const element = node as HTMLElement | SVGElement;
+      const refs = getSpreadHydrationRefs(ctx.values[part.index]);
+      const prehydratedRefs = new Set<RefSubject.HydrationRef<any, any>>();
+      const effect = setupProperties<E, R>(element, ctx, part.index, new Set(), prehydratedRefs);
+      if (refs.length === 0) return effect;
+      return {
+        effect,
+        hydration: Effect.forEach(
+          refs,
+          (ref) =>
+            Effect.tap(ref(element), () =>
+              Effect.sync(() => {
+                prehydratedRefs.add(ref);
+              }),
+            ),
+          { discard: true },
+        ),
+      };
+    }
     case "ref":
       return setupRef<R>(node as HTMLElement | SVGElement, ctx, part.index);
     case "sparse-attr": {
@@ -566,7 +600,7 @@ function setupHydrationPart<E, R>(
   path: ReadonlyArray<number>,
   ctx: TemplateContext<R>,
   where: HydrationNode,
-): Effect.Effect<unknown, E, R> | void {
+): Effect.Effect<unknown, E, R> | PropertiesPartEffect | void {
   switch (part._tag) {
     case "node": {
       const hole = findHydrationHole(getChildNodes(where), part.index);
@@ -734,12 +768,31 @@ function isValidSpreadAttributeName(name: string): boolean {
   return true;
 }
 
+function getSpreadHydrationRefs(
+  value: unknown,
+  ancestors: ReadonlySet<object> = new Set(),
+): ReadonlyArray<RefSubject.HydrationRef<any, any>> {
+  if (!isObject(value) || ancestors.has(value)) return [];
+  const nextAncestors = new Set(ancestors).add(value);
+  const refs: Array<RefSubject.HydrationRef<any, any>> = [];
+  for (const [key, entry] of Object.entries(value)) {
+    const descriptor = getSpreadPartDescriptor(key);
+    if (descriptor?.kind === "ref" && RefSubject.isHydrationRef(entry)) {
+      refs.push(entry);
+    } else if (descriptor?.kind === "properties") {
+      refs.push(...getSpreadHydrationRefs(entry, nextAncestors));
+    }
+  }
+  return refs;
+}
+
 function setupRenderProperties<R>(
   properties: Record<string, unknown>,
   element: HTMLElement | SVGElement,
   ctx: TemplateContext<R>,
   instances: Map<string, SpreadPartInstance>,
   ancestors: ReadonlySet<object>,
+  prehydratedRefs: Set<RefSubject.HydrationRef<any, any>>,
 ): Effect.Effect<void> {
   const desired = new Map<
     string,
@@ -763,7 +816,14 @@ function setupRenderProperties<R>(
       if (instance === undefined) {
         instances.set(
           id,
-          yield* makeSpreadPartInstance(descriptor, value, element, ctx, ancestors),
+          yield* makeSpreadPartInstance(
+            descriptor,
+            value,
+            element,
+            ctx,
+            ancestors,
+            prehydratedRefs,
+          ),
         );
       } else if (!Object.is(instance.value, value)) {
         yield* instance.update(value);
@@ -778,6 +838,7 @@ function makeSpreadPartInstance<R>(
   element: HTMLElement | SVGElement,
   ctx: TemplateContext<R>,
   ancestors: ReadonlySet<object>,
+  prehydratedRefs: Set<RefSubject.HydrationRef<any, any>>,
 ): Effect.Effect<SpreadPartInstance> {
   const index = ctx.dynamicIndex++;
   let setup: (partContext: TemplateContext<R>) => Effect.Effect<unknown, unknown, unknown> | void;
@@ -818,7 +879,8 @@ function makeSpreadPartInstance<R>(
       setup = (partContext) => setupEventHandler(element, partContext, index, descriptor.name);
       break;
     case "properties":
-      setup = (partContext) => setupProperties(element, partContext, index, ancestors);
+      setup = (partContext) =>
+        setupProperties(element, partContext, index, ancestors, prehydratedRefs);
       break;
     case "ref":
       setup = (partContext) => setupRef(element, partContext, index);
@@ -848,7 +910,11 @@ function makeSpreadPartInstance<R>(
         values: makeArrayLike(index, next),
         expected: 0,
       };
-      const effect = setup(partContext);
+      const prehydrated =
+        descriptor.kind === "ref" &&
+        RefSubject.isHydrationRef(next) &&
+        prehydratedRefs.delete(next);
+      const effect = prehydrated ? undefined : setup(partContext);
       if (Effect.isEffect(effect)) {
         yield* Effect.forkIn(
           Effect.provideService(
@@ -1070,11 +1136,12 @@ function setupProperties<E, R>(
   ctx: TemplateContext<R>,
   index: number,
   ancestors: ReadonlySet<object> = new Set(),
+  prehydratedRefs: Set<RefSubject.HydrationRef<any, any>> = new Set(),
 ): Effect.Effect<never, E, R> {
   const instances = new Map<string, SpreadPartInstance>();
   const reconcile = (props: unknown) => {
     if (!isObject(props) || ancestors.has(props)) {
-      return setupRenderProperties<R>({}, element, ctx, instances, ancestors);
+      return setupRenderProperties<R>({}, element, ctx, instances, ancestors, prehydratedRefs);
     }
     const nextAncestors = new Set(ancestors).add(props);
     return setupRenderProperties<R>(
@@ -1083,6 +1150,7 @@ function setupProperties<E, R>(
       ctx,
       instances,
       nextAncestors,
+      prehydratedRefs,
     );
   };
   const release = () => ctx.refCounter.release(index);

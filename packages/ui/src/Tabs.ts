@@ -147,8 +147,7 @@ export function List<const Options extends ListOptions, const Host extends HostR
     listInternalProps(options),
     options.content,
     (props, content) => {
-      const { props: attributes, ref } = Dom.splitRef(props);
-      return html`<div ...${attributes} ref=${ref}>${content}</div>`;
+      return html`<div ...${props}>${content}</div>`;
     },
   );
 }

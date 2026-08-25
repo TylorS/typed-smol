@@ -121,7 +121,7 @@ describe("Fx.loopCause / loopCauseEffect / filterMapLoopCause*", () => {
   it("filterMapLoopCause can drop transformed causes", () =>
     Effect.gen(function* () {
       const collected = yield* Fx.fail("drop-me").pipe(
-        filterMapLoopCause(0, (_acc, cause) => [Option.none(), 1] as const),
+        filterMapLoopCause(0, (_acc) => [Option.none(), 1] as const),
         result,
         Fx.collectAll,
       );

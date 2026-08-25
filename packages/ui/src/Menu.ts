@@ -357,8 +357,7 @@ export function Content<
     HostResult,
     Host
   >(options, host, contentProps(options), options.content, (props, content) => {
-    const { props: attributes, ref } = Dom.splitRef(props);
-    return html`<div ...${attributes} ref=${ref}>${content}</div>`;
+    return html`<div ...${props}>${content}</div>`;
   });
 }
 
