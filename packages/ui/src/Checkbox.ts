@@ -46,14 +46,17 @@ export interface InputOptions extends Dom.HostOptions<HTMLInputElement> {
 function internalProps<const Options extends InputOptions>(options: Options) {
   const checked = RefSubject.map(options.state, (state) => state.checked === true);
   const indeterminate = RefSubject.map(options.state, (state) => state.checked === "mixed");
-  const onChange = EventHandler.make((event: Event) =>
-    setChecked(options.state, Dom.currentTarget<HTMLInputElement>(event).checked),
+  const onChange = EventHandler.make(
+    Effect.fn((event: Event) =>
+      setChecked(options.state, Dom.currentTarget<HTMLInputElement>(event).checked),
+    ),
   );
 
   return ({ property }: Dom.InternalPropsHelpers<Options>) => ({
     type: "checkbox",
     "aria-checked": RefSubject.map(options.state, (state) => state.checked),
     "?checked": checked,
+    ".checked": checked,
     "?disabled": property("disabled", false),
     "?required": property("required", false),
     ".indeterminate": indeterminate,
@@ -76,15 +79,9 @@ export function Input<const Options extends InputOptions, const Host extends Hos
     "",
     HostResult,
     Host
-  >(
-    options,
-    host,
-    internalProps(options),
-    "",
-    (i) => {
-      return html`<input ...${i} />`;
-    },
-  );
+  >(options, host, internalProps(options), "", (i) => {
+    return html`<input ...${i} />`;
+  });
 }
 
 export const Checkbox = Input;

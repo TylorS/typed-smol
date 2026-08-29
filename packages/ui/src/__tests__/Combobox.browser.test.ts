@@ -61,6 +61,10 @@ describe("typed/ui/Combobox in browsers", () => {
       assert.strictEqual(enter.defaultPrevented, true);
       assert.strictEqual((yield* state).value, "One");
       assert.strictEqual((yield* state).open, false);
+
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).open, true);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 

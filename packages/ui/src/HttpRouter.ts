@@ -44,49 +44,43 @@ type SsrForHttpEffect<E, R> = Effect.Effect<void, never, SsrForHttpRequirement<E
 type SsrResponse<E, R> = (
   rendered: Fx.Fx<RenderEvent, E, R | ProvidedForSsr>,
   requestServices: Context.Context<R | HttpRouterProvided>,
-) => Effect.Effect<
-  HttpServerResponse.HttpServerResponse,
-  E,
-  HttpRouterProvided
->;
+) => Effect.Effect<HttpServerResponse.HttpServerResponse, E, HttpRouterProvided>;
 
 const htmlResponseHeaders = { "content-type": "text/html; charset=utf-8" } as const;
 
-const bufferedResponse =
-  <E, R>(): SsrResponse<E, R> =>
-  (rendered, requestServices) =>
-    Effect.gen(function* () {
-      const html = yield* renderToHtmlString(rendered).pipe(Effect.provideContext(requestServices));
-      return HttpServerResponse.text(html, { headers: htmlResponseHeaders });
-    }) as Effect.Effect<
-      HttpServerResponse.HttpServerResponse,
-      E,
-      HttpRouterProvided
-    >;
+const bufferedResponse = <E, R>(): SsrResponse<E, R> =>
+  Effect.fn(
+    (rendered, requestServices) =>
+      Effect.gen(function* () {
+        const html = yield* renderToHtmlString(rendered).pipe(
+          Effect.provideContext(requestServices),
+        );
+        return HttpServerResponse.text(html, { headers: htmlResponseHeaders });
+      }) as Effect.Effect<HttpServerResponse.HttpServerResponse, E, HttpRouterProvided>,
+  );
 
-const streamingResponse =
-  <E, R>(): SsrResponse<E, R> =>
-  (rendered, requestServices) =>
-    Effect.gen(function* () {
-      const context = Context.merge(requestServices, yield* Effect.context());
-      return HttpServerResponse.stream(
-        Stream.provideContext(
-          renderToHtml(rendered).pipe(
-            Fx.provideContext(requestServices),
-            Fx.toStream,
-            Stream.encodeText,
-          ),
-          context,
-        ) as Stream.Stream<Uint8Array, E, never>,
-        { headers: htmlResponseHeaders },
-      );
-    }) as Effect.Effect<
-      HttpServerResponse.HttpServerResponse,
-      E,
-      HttpRouterProvided
-    >;
+const streamingResponse = <E, R>(): SsrResponse<E, R> =>
+  Effect.fn(
+    (rendered, requestServices) =>
+      Effect.gen(function* () {
+        const context = Context.merge(requestServices, yield* Effect.context());
+        return HttpServerResponse.stream(
+          Stream.provideContext(
+            renderToHtml(rendered).pipe(
+              Fx.provideContext(requestServices),
+              Fx.toStream,
+              Stream.encodeText,
+            ),
+            context,
+          ) as Stream.Stream<Uint8Array, E, never>,
+          { headers: htmlResponseHeaders },
+        );
+      }) as Effect.Effect<HttpServerResponse.HttpServerResponse, E, HttpRouterProvided>,
+  );
 
-function makeSsrForHttp<E, R>(createResponse: SsrResponse<E, R>): {
+function makeSsrForHttp<E, R>(
+  createResponse: SsrResponse<E, R>,
+): {
   (input: Matcher<RenderEvent, E, R>): (router: HttpRouter) => SsrForHttpEffect<E, R>;
   (router: HttpRouter, input: Matcher<RenderEvent, E, R>): SsrForHttpEffect<E, R>;
 } {

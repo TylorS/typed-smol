@@ -51,7 +51,16 @@ export async function mount<E>(
     ),
   );
 
-  await Effect.runPromise(Deferred.await(mounted));
+  try {
+    const endedBeforeMount = Effect.andThen(
+      Fiber.join(fiber),
+      Effect.die("Story completed before rendering any content"),
+    );
+    await Effect.runPromise(Effect.raceFirst(Deferred.await(mounted), endedBeforeMount));
+  } catch (error) {
+    await dispose();
+    throw error;
+  }
   disposeWhenRemoved(canvas, document, dispose);
   return { canvas, dispose };
 }

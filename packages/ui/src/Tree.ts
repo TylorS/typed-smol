@@ -86,16 +86,33 @@ export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 
 function rootInternalProps<const Options extends RootOptions>(options: Options) {
+  const onfocus =
+    options.collection === undefined
+      ? undefined
+      : Effect.gen(function* () {
+          const current = yield* options.state;
+          if (current.activeId !== null) return;
+          const first = Composite.moveActiveId(
+            visibleItems(yield* options.collection!, current),
+            current,
+            "first",
+          );
+          if (first === null) return;
+          yield* activate(options.state, first);
+          yield* focusItem(options.collection!, first);
+        });
   const onkeydown =
     options.collection === undefined
       ? undefined
-      : EventHandler.make((event: KeyboardEvent) =>
-          onKeyDown(options.state, options.collection!, event),
+      : EventHandler.make(
+          Effect.fn((event: KeyboardEvent) => onKeyDown(options.state, options.collection!, event)),
         );
   return ({ property }: Dom.InternalPropsHelpers<Options>) =>
     ({
       role: "tree",
       "aria-label": property("label", undefined),
+      tabindex: RefSubject.map(options.state, (state) => (state.activeId === null ? 0 : -1)),
+      onfocus,
       onkeydown,
       ref: options.state,
     }) as const;
@@ -159,7 +176,9 @@ function itemInternalProps<const Options extends ItemOptions>(options: Options) 
         : undefined,
       "aria-disabled": options.disabled ?? false,
       tabindex: RefSubject.map(options.state, (state) => (state.activeId === options.id ? 0 : -1)),
-      ref: register,
+      onfocus: activate(options.state, options.id),
+      onclick: options.disabled === true ? Effect.void : activate(options.state, options.id),
+      ref: Dom.composeRefs(register, options.ref),
     }) as const;
 }
 type ItemInternalProps<Options extends ItemOptions> = ReturnType<
@@ -241,6 +260,19 @@ function onKeyDown(
   return Effect.gen(function* () {
     const current = yield* state;
     const items = visibleItems(yield* collection, current);
+    if (event.key === "Enter" || event.key === " ") {
+      const active =
+        current.activeId === null
+          ? undefined
+          : items.find((item) => item.id === current.activeId && item.disabled !== true);
+      const element = active?.element;
+      const click = element === undefined ? undefined : Reflect.get(element, "click");
+      if (typeof click === "function") {
+        event.preventDefault();
+        yield* Effect.sync(() => click.call(element));
+      }
+      return yield* state;
+    }
     const direction = Composite.keyMove(event, { orientation: "vertical" });
     if (direction !== undefined) {
       event.preventDefault();

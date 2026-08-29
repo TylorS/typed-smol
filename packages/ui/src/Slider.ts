@@ -38,11 +38,14 @@ function internalProps<const Options extends SliderOptions>(options: Options) {
     ({
       type: "range",
       value: RefSubject.map(options.state, (state) => state.value),
+      ".value": RefSubject.map(options.state, (state) => String(state.value)),
       min: property("min", undefined),
       max: property("max", undefined),
       step: property("step", undefined),
-      oninput: EventHandler.make((event: Event) =>
-        setValue(options.state, Dom.currentTarget<HTMLInputElement>(event).valueAsNumber),
+      oninput: EventHandler.make(
+        Effect.fn((event: Event) =>
+          setValue(options.state, Dom.currentTarget<HTMLInputElement>(event).valueAsNumber),
+        ),
       ),
       ref: options.state,
     }) as const;

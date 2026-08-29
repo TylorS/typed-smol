@@ -45,7 +45,10 @@ describe("typed/ui/Composite", () => {
       Composite.keyMove({ key: "ArrowRight" }, { orientation: "horizontal", rtl: true }),
       "previous",
     );
-    assert.strictEqual(Composite.keyMove({ key: "ArrowDown" }, { orientation: "vertical" }), "next");
+    assert.strictEqual(
+      Composite.keyMove({ key: "ArrowDown" }, { orientation: "vertical" }),
+      "next",
+    );
     assert.strictEqual(Composite.keyMove({ key: "Home" }, {}), "first");
     assert.strictEqual(Composite.typeaheadKey({ key: "a" }), "a");
     assert.strictEqual(Composite.typeaheadKey({ key: "ArrowDown" }), null);
@@ -79,13 +82,24 @@ describe("typed/ui/Composite", () => {
     ));
 
   it("updates and resets the typeahead buffer", () => {
-    assert.deepEqual(
-      Composite.updateTypeaheadBuffer({ value: "a", updatedAt: 100 }, "b", 400),
-      { value: "ab", updatedAt: 400 },
-    );
-    assert.deepEqual(
-      Composite.updateTypeaheadBuffer({ value: "a", updatedAt: 100 }, "b", 700),
-      { value: "b", updatedAt: 700 },
+    assert.deepEqual(Composite.updateTypeaheadBuffer({ value: "a", updatedAt: 100 }, "b", 400), {
+      value: "ab",
+      updatedAt: 400,
+    });
+    assert.deepEqual(Composite.updateTypeaheadBuffer({ value: "a", updatedAt: 100 }, "b", 700), {
+      value: "b",
+      updatedAt: 700,
+    });
+  });
+
+  it("starts next navigation at the first item when the active id is stale", () => {
+    assert.strictEqual(
+      Composite.moveActiveId(
+        [{ id: "first" }, { id: "second" }],
+        { activeId: "missing", loop: true },
+        "next",
+      ),
+      "first",
     );
   });
 

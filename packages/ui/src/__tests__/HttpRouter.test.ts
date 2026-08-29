@@ -162,8 +162,16 @@ describe("typed/ui/HttpRouter", () => {
   it("falls through guarded alternatives registered for the same path", () => {
     const route = Route.Parse("guarded");
     const matcher = Matcher.empty
-      .match(route, () => Effect.succeedNone, html`<p>first</p>`)
-      .match(route, () => Effect.succeedSome("allowed"), html`<p>second</p>`);
+      .match(
+        route,
+        Effect.fn(() => Effect.succeedNone),
+        html`<p>first</p>`,
+      )
+      .match(
+        route,
+        Effect.fn(() => Effect.succeedSome("allowed")),
+        html`<p>second</p>`,
+      );
     const Live = bufferedSsrLive(matcher);
 
     return Effect.gen(function* () {
@@ -177,7 +185,7 @@ describe("typed/ui/HttpRouter", () => {
   it("maps exhausted guards to Effect's route-not-found response", () => {
     const matcher = Matcher.empty.match(
       Route.Parse("guarded"),
-      () => Effect.succeedNone,
+      Effect.fn(() => Effect.succeedNone),
       html`<p>unreachable</p>`,
     );
     const Live = EffectHttpRouter.use(

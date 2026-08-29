@@ -123,8 +123,10 @@ export type TemplateAttributeProps = {
   readonly [K in `?${string}`]?: BooleanAttributeValue;
 };
 
+type BoundElementProperty = "checked" | "indeterminate" | "selected" | "selectedIndex" | "value";
+
 export type BoundElementProperties<Element extends globalThis.Element> = {
-  readonly [K in keyof Element as K extends string ? `.${K}` : never]?: RenderableInput<
+  readonly [K in Extract<keyof Element, BoundElementProperty> as `.${K}`]?: RenderableInput<
     Element[K] | null | undefined
   >;
 };

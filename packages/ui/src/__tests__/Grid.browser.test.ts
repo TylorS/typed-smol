@@ -5,6 +5,40 @@ import { assert, describe, it } from "vitest";
 import * as Grid from "../Grid.js";
 
 describe("typed/ui/Grid in browsers", () => {
+  it("sets the first cell as active when an uninitialized grid receives focus", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Grid.makeState();
+      const collection = yield* Grid.makeCollection();
+      yield* render(
+        Grid.Root({
+          state,
+          collection,
+          label: "Invoices",
+          content: Grid.Row({
+            content: Grid.Cell({
+              state,
+              collection,
+              id: "a1",
+              rowId: "a",
+              columnIndex: 1,
+              content: "A1",
+            }),
+          }),
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      (document.querySelector('[role="grid"]') as HTMLDivElement).focus();
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).activeId, "a1");
+      assert.strictEqual(
+        document.querySelector('[role="grid"]')?.getAttribute("aria-activedescendant"),
+        "a1",
+      );
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
   it("moves virtual focus through columns and rows", async () => {
     document.body.replaceChildren();
     await Effect.gen(function* () {

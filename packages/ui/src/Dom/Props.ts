@@ -56,11 +56,15 @@ export function mergeProps<const User extends object | undefined, const Internal
   const merged = { ...user, ...internal };
   const internalRecord = internal as unknown as Record<string, unknown>;
   const mergedRecord = merged as unknown as Record<string, unknown>;
+  const activationDisabled =
+    internalRecord["aria-disabled"] === true || internalRecord["?disabled"] === true;
 
   for (const [key, value] of Object.entries(user)) {
     if (isEventKey(key)) {
       mergedRecord[key] = chainEvent(
-        value as EventHandlerInput<Event>,
+        activationDisabled && (key === "onclick" || key === "@click")
+          ? undefined
+          : (value as EventHandlerInput<Event>),
         internalRecord[key] as EventHandlerInput<Event>,
       );
     }

@@ -29,6 +29,7 @@ export interface State<Values extends object = object> {
   readonly submitting: boolean;
 }
 export interface InitialState<Values extends object> {
+  readonly id?: string;
   readonly values: Values;
   readonly defaultValues?: Values;
   readonly errors?: Partial<Record<keyof Values & string, string>>;
@@ -40,9 +41,15 @@ export type FormState<Values extends object> = RefSubject.HydratedRefSubject<
   State<Values>,
   Schema.SchemaError
 > & {
+  /** Runtime identity used to scope field/error relationships. Pass an id for deterministic SSR. */
+  readonly id: string;
   /** Runtime-only validation codec; it is deliberately absent from hydration state. */
   readonly codec: Schema.Codec<Values, unknown>;
+  /** Runtime field codecs used for field-level validation. */
+  readonly fields: Readonly<Record<keyof Values & string, Schema.Codec<any, any>>>;
 };
+
+let nextFormId = 0;
 
 export interface FormService<Values extends object> {
   readonly state: FormState<Values>;
@@ -68,6 +75,7 @@ type OptionalFields<Fields extends FormFields, Value extends Schema.Constraint> 
   readonly [Key in keyof Fields]: Schema.optionalKey<Value>;
 };
 type InitialStateFor<Fields extends FormFields> = {
+  readonly id?: string;
   readonly values: Schema.Struct.Type<Fields>;
   readonly defaultValues?: Schema.Struct.Type<Fields>;
   readonly errors?: Schema.Struct.Type<OptionalFields<Fields, typeof Schema.String>>;
@@ -101,6 +109,7 @@ export function makeState<const Fields extends FormFields>(
   codec: Schema.Struct<Fields>,
   initial: InitialStateFor<Fields>,
 ) {
+  const id = initial.id ?? `typed-form-${++nextFormId}`;
   return Effect.map(
     RefSubject.hydrate(StateSchema(codec), {
       values: initial.values,
@@ -109,7 +118,7 @@ export function makeState<const Fields extends FormFields>(
       meta: initial.meta ?? emptyOptionalFields<Fields, typeof FieldMetaSchema>(),
       submitting: initial.submitting ?? false,
     }),
-    (state) => Object.assign(state, { codec }),
+    (state) => Object.assign(state, { codec, fields: codec.fields, id }),
   );
 }
 
@@ -151,6 +160,13 @@ function setFieldError<Values extends object, Key extends keyof Values & string,
   });
 }
 
+function fieldErrorId<Values extends object>(
+  state: FormState<Values>,
+  name: keyof Values & string,
+): string {
+  return `${state.id}-${encodeURIComponent(name)}-error`;
+}
+
 function decodeField<Values extends object, Value>(
   state: FormState<Values>,
   name: FieldNameFor<Values, Value>,
@@ -160,6 +176,21 @@ function decodeField<Values extends object, Value>(
   return Schema.decodeEffect(codec)(value).pipe(
     Effect.flatMap((decoded) =>
       Effect.andThen(updateDecodedValue(state, name, decoded), () =>
+        setFieldError(state, name, undefined),
+      ),
+    ),
+    Effect.catch((error) => setFieldError(state, name, error.message)),
+  );
+}
+
+function decodeUpdatedField<Values extends object, Key extends keyof Values & string>(
+  state: FormState<Values>,
+  name: Key,
+  encoded: unknown,
+): Effect.Effect<State<Values>, Schema.SchemaError> {
+  return Schema.decodeUnknownEffect(state.fields[name])(encoded).pipe(
+    Effect.flatMap((decoded) =>
+      Effect.andThen(updateDecodedValue(state, name, decoded as Values[Key]), () =>
         setFieldError(state, name, undefined),
       ),
     ),
@@ -177,7 +208,9 @@ function inputProps<Values extends object, Value>(
       type,
       name: options.name,
       "aria-describedby": RefSubject.map(options.state, (state) =>
-        state.errors[options.name] === undefined ? undefined : `${options.name}-error`,
+        state.errors[options.name] === undefined
+          ? undefined
+          : fieldErrorId(options.state, options.name),
       ),
       "aria-invalid": RefSubject.map(options.state, (state) =>
         state.errors[options.name] === undefined ? undefined : true,
@@ -185,12 +218,14 @@ function inputProps<Values extends object, Value>(
       ".value": RefSubject.mapEffect(options.state, (state) =>
         Schema.encodeUnknownEffect(codec)(state.values[options.name]),
       ),
-      oninput: EventHandler.make((event: Event) =>
-        decodeField(
-          options.state,
-          options.name,
-          codec,
-          Dom.currentTarget<HTMLInputElement>(event).value,
+      oninput: EventHandler.make(
+        Effect.fn((event: Event) =>
+          decodeField(
+            options.state,
+            options.name,
+            codec,
+            Dom.currentTarget<HTMLInputElement>(event).value,
+          ),
         ),
       ),
     }) as const;
@@ -384,7 +419,6 @@ export function validate<Values extends object>(state: FormState<Values>) {
           ...current,
           values,
           errors: {},
-          submitting: false,
         })),
         values,
       ),
@@ -393,8 +427,7 @@ export function validate<Values extends object>(state: FormState<Values>) {
       RefSubject.update(state, (current) => ({
         ...current,
         errors: formErrors(current.values, current.errors, error.message),
-        submitting: false,
-      })).pipe(Effect.andThen(() => Effect.fail(error))),
+      })).pipe(Effect.andThen(Effect.fail(error))),
     ),
   );
 }
@@ -584,16 +617,28 @@ export interface CheckboxOptions<Values extends object> extends Dom.HostOptions<
 }
 
 function checkboxProps<Values extends object>(options: CheckboxOptions<Values>) {
+  const checked = RefSubject.map(options.state, (state) => state.values[options.name] === true);
   return () =>
     ({
       type: "checkbox",
       name: options.name,
-      "?checked": RefSubject.map(options.state, (state) => state.values[options.name] === true),
-      onchange: EventHandler.make((event: Event) =>
-        updateDecodedValue(
-          options.state,
-          options.name,
-          Dom.currentTarget<HTMLInputElement>(event).checked,
+      "aria-describedby": RefSubject.map(options.state, (state) =>
+        state.errors[options.name] === undefined
+          ? undefined
+          : fieldErrorId(options.state, options.name),
+      ),
+      "aria-invalid": RefSubject.map(options.state, (state) =>
+        state.errors[options.name] === undefined ? undefined : true,
+      ),
+      "?checked": checked,
+      ".checked": checked,
+      onchange: EventHandler.make(
+        Effect.fn((event: Event) =>
+          decodeUpdatedField(
+            options.state,
+            options.name,
+            Dom.currentTarget<HTMLInputElement>(event).checked,
+          ),
         ),
       ),
     }) as const;
@@ -628,12 +673,22 @@ function selectProps<Values extends object>(options: SelectOptions<Values>) {
   return () =>
     ({
       name: options.name,
+      "aria-describedby": RefSubject.map(options.state, (state) =>
+        state.errors[options.name] === undefined
+          ? undefined
+          : fieldErrorId(options.state, options.name),
+      ),
+      "aria-invalid": RefSubject.map(options.state, (state) =>
+        state.errors[options.name] === undefined ? undefined : true,
+      ),
       ".value": RefSubject.map(options.state, (state) => String(state.values[options.name])),
-      onchange: EventHandler.make((event: Event) =>
-        updateDecodedValue(
-          options.state,
-          options.name,
-          Dom.currentTarget<HTMLSelectElement>(event).value,
+      onchange: EventHandler.make(
+        Effect.fn((event: Event) =>
+          decodeUpdatedField(
+            options.state,
+            options.name,
+            Dom.currentTarget<HTMLSelectElement>(event).value,
+          ),
         ),
       ),
     }) as const;
@@ -744,7 +799,7 @@ export interface ErrorOptions<Values extends object> extends Dom.HostOptions<HTM
 function errorProps<Values extends object>(options: ErrorOptions<Values>) {
   return () =>
     ({
-      id: `${options.name}-error`,
+      id: fieldErrorId(options.state, options.name),
       role: "alert",
     }) as const;
 }
@@ -807,7 +862,9 @@ function resetProps<Values extends object>(options: ResetOptions<Values>) {
   return () =>
     ({
       type: "reset",
-      onclick: EventHandler.make(() => reset(options.state), { preventDefault: true }),
+      onclick: EventHandler.preventDefault(
+        EventHandler.fromEffectOrEventHandler(reset(options.state)),
+      ),
     }) as const;
 }
 type ResetProps<Values extends object> = ReturnType<ReturnType<typeof resetProps<Values>>>;
@@ -884,7 +941,7 @@ function pushProps<Values extends object, Name extends ArrayFieldName<Values>>(
   return () =>
     ({
       type: "button",
-      onclick: EventHandler.make(() => pushValue(options.state, options.name, options.value)),
+      onclick: pushValue(options.state, options.name, options.value),
     }) as const;
 }
 type PushProps<Values extends object, Name extends ArrayFieldName<Values>> = ReturnType<
@@ -933,7 +990,7 @@ function removeProps<Values extends object, Name extends ArrayFieldName<Values>>
   return () =>
     ({
       type: "button",
-      onclick: EventHandler.make(() => removeValue(options.state, options.name, options.index)),
+      onclick: removeValue(options.state, options.name, options.index),
     }) as const;
 }
 type RemoveProps<Values extends object, Name extends ArrayFieldName<Values>> = ReturnType<
@@ -1071,21 +1128,32 @@ function formProps<
   R,
   const Options extends FormOptions<Values, E, R>,
 >(options: Options) {
+  const setSubmitting = Effect.fn((submitting: boolean) =>
+    RefSubject.update(options.state, (current) => ({ ...current, submitting })),
+  );
   return () =>
     ({
       ref: options.state,
       onsubmit: EventHandler.make(
-        (event: SubmitEvent) =>
-          Effect.matchEffect(validate(options.state), {
-            onFailure: () => Effect.void,
-            onSuccess: (values) => {
-              const result = options.onValidSubmit?.(values, event);
-              return Effect.isEffect(result) ? result : Effect.void;
-            },
-          }),
+        Effect.fn((event: SubmitEvent) =>
+          Effect.andThen(
+            setSubmitting(true),
+            Effect.matchEffect(validate(options.state), {
+              onFailure: Effect.fn(() => Effect.void),
+              onSuccess: Effect.fn((values) => {
+                const result = options.onValidSubmit?.(values, event);
+                return Effect.isEffect(result) ? result : Effect.void;
+              }),
+            }),
+          ).pipe(
+            Effect.ensuring(setSubmitting(false).pipe(Effect.catch(Effect.fn(() => Effect.void)))),
+          ),
+        ),
         { preventDefault: true },
       ),
-      onreset: EventHandler.make(() => reset(options.state), { preventDefault: true }),
+      onreset: EventHandler.preventDefault(
+        EventHandler.fromEffectOrEventHandler(reset(options.state)),
+      ),
     }) as const;
 }
 type FormProps<Values extends object, E, R, Options extends FormOptions<Values, E, R>> = ReturnType<
@@ -1245,6 +1313,7 @@ export interface SchemaBoundRoot<Values extends object> {
 }
 
 export interface SchemaBoundStateOptions<Values extends object> {
+  readonly id?: string;
   readonly defaultValues?: Values;
   readonly errors?: Partial<Record<keyof Values & string, string>>;
   readonly meta?: Partial<Record<keyof Values & string, FieldMeta>>;

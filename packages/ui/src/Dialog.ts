@@ -3,7 +3,13 @@ import * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
+import {
+  EventHandler,
+  html,
+  type Renderable,
+  type RenderEvent,
+  type RenderTemplate,
+} from "@typed/template";
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 import * as NativeDialog from "./NativeDialog.js";
@@ -34,9 +40,7 @@ export function setOpen<E, R>(
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
-export function close<E, R>(
-  state: RefSubject.RefSubject<State, E, R>,
-): Effect.Effect<State, E, R> {
+export function close<E, R>(state: RefSubject.RefSubject<State, E, R>): Effect.Effect<State, E, R> {
   return setOpen(state, false);
 }
 
@@ -48,7 +52,12 @@ export function requestClose(
   return Effect.sync(() => {
     const dialog = dialogs.get(state);
     const requestClose = dialog === undefined ? undefined : Reflect.get(dialog, "requestClose");
-    if (typeof requestClose === "function") requestClose.call(dialog, returnValue);
+    if (typeof requestClose === "function") {
+      requestClose.call(dialog, returnValue);
+    } else if (dialog !== undefined) {
+      const accepted = dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
+      if (accepted) dialog.close(returnValue);
+    }
   });
 }
 
@@ -60,23 +69,27 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
 
 function triggerInternalProps<const Options extends TriggerOptions>(options: Options) {
   const open = RefSubject.map(options.state, (state) => state.open);
-  const show = EventHandler.make(() => setOpen(options.state, true));
-  return ({ property }: Dom.InternalPropsHelpers<Options>) => ({
-    type: "button",
-    "aria-haspopup": "dialog",
-    "aria-expanded": open,
-    "aria-controls": property("controls", undefined),
-    commandfor: property("controls", undefined),
-    command: options.controls === undefined ? undefined : "show-modal",
-    onclick: options.controls === undefined ? show : undefined,
-  } as const);
+  const show = setOpen(options.state, true);
+  return ({ property }: Dom.InternalPropsHelpers<Options>) =>
+    ({
+      type: "button",
+      "aria-haspopup": "dialog",
+      "aria-expanded": open,
+      "aria-controls": property("controls", undefined),
+      commandfor: property("controls", undefined),
+      command: options.controls === undefined ? undefined : "show-modal",
+      onclick: options.controls === undefined ? show : undefined,
+    }) as const;
 }
 
 type TriggerInternalProps<Options extends TriggerOptions> = ReturnType<
   ReturnType<typeof triggerInternalProps<Options>>
 >;
 
-export function Trigger<const Options extends TriggerOptions, const Host extends HostResult = never>(
+export function Trigger<
+  const Options extends TriggerOptions,
+  const Host extends HostResult = never,
+>(
   options: Options,
   host?: Dom.HostOverride<
     Dom.RenderHostProps<Options, TriggerInternalProps<Options>>,
@@ -119,10 +132,6 @@ type AccessibleName =
   | {
       readonly label?: never;
       readonly labelledBy: Renderable.Any<string | null | undefined>;
-    }
-  | {
-      readonly label?: undefined;
-      readonly labelledBy?: undefined;
     };
 
 /** Supply either an explicit label or a labelled-by reference, never both. */
@@ -135,10 +144,12 @@ function contentInternalProps<const Options extends ContentOptions>(options: Opt
     "aria-labelledby": property("labelledBy", undefined),
     "aria-describedby": property("describedBy", undefined),
     "aria-label": property("label", undefined),
-    oncancel: EventHandler.make(() => close(options.state)),
-    onclose: EventHandler.make(() => close(options.state)),
-    ontoggle: EventHandler.make((event: Event) =>
-      setOpen(options.state, Dom.currentTarget<HTMLDialogElement>(event).open),
+    oncancel: close(options.state),
+    onclose: close(options.state),
+    ontoggle: EventHandler.make(
+      Effect.fn((event: Event) =>
+        setOpen(options.state, Dom.currentTarget<HTMLDialogElement>(event).open),
+      ),
     ),
     ref: Dom.composeRefs(options.state, Dom.composeRefs(synchronize, dialogRef(options.state))),
   });
@@ -147,24 +158,26 @@ function contentInternalProps<const Options extends ContentOptions>(options: Opt
 function dialogRef(
   state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>,
 ): (dialog: HTMLDialogElement) => Effect.Effect<void, never, Scope.Scope> {
-  return (dialog) =>
-    Effect.gen(function* () {
-      dialogs.set(state, dialog);
-      const scope = yield* Effect.scope;
-      yield* Scope.addFinalizer(
-        scope,
-        Effect.sync(() => {
-          if (dialogs.get(state) === dialog) dialogs.delete(state);
-        }),
-      );
-    });
+  return Effect.fn(function* (dialog) {
+    dialogs.set(state, dialog);
+    const scope = yield* Effect.scope;
+    yield* Scope.addFinalizer(
+      scope,
+      Effect.sync(() => {
+        if (dialogs.get(state) === dialog) dialogs.delete(state);
+      }),
+    );
+  });
 }
 
 type ContentInternalProps<Options extends ContentOptions> = ReturnType<
   ReturnType<typeof contentInternalProps<Options>>
 >;
 
-export function Content<const Options extends ContentOptions, const Host extends HostResult = never>(
+export function Content<
+  const Options extends ContentOptions,
+  const Host extends HostResult = never,
+>(
   options: Options,
   host?: Dom.HostOverride<
     Dom.RenderHostProps<Options, ContentInternalProps<Options>>,
@@ -182,15 +195,9 @@ export function Content<const Options extends ContentOptions, const Host extends
     Options["content"],
     HostResult,
     Host
-  >(
-    options,
-    host,
-    contentInternalProps(options),
-    options.content,
-    (props, content) => {
-      return html`<dialog ...${props}>${content}</dialog>`;
-    },
-  );
+  >(options, host, contentInternalProps(options), options.content, (props, content) => {
+    return html`<dialog ...${props}>${content}</dialog>`;
+  });
 }
 
 export const Dialog = Content;
@@ -201,13 +208,27 @@ export interface CloseOptions extends Dom.HostOptions<HTMLButtonElement> {
   readonly content: Renderable.Any;
 }
 
-function closeInternalProps<const Options extends CloseOptions>(options: Options) {
-  return ({ property }: Dom.InternalPropsHelpers<Options>) => ({
-    type: "button",
-    commandfor: property("controls", undefined),
-    command: options.controls === undefined ? undefined : "request-close",
-    onclick: EventHandler.make(() => close(options.state)),
-  } as const);
+function closeInternalProps<const Options extends CloseOptions>(
+  options: Options,
+  requestCloseLifecycle: boolean,
+) {
+  return ({ property }: Dom.InternalPropsHelpers<Options>) =>
+    ({
+      type: "button",
+      commandfor: property("controls", undefined),
+      command:
+        options.controls === undefined
+          ? undefined
+          : requestCloseLifecycle
+            ? "request-close"
+            : "close",
+      onclick:
+        options.controls !== undefined
+          ? undefined
+          : requestCloseLifecycle
+            ? requestClose(options.state)
+            : close(options.state),
+    }) as const;
 }
 
 type CloseInternalProps<Options extends CloseOptions> = ReturnType<
@@ -235,14 +256,43 @@ export function Close<const Options extends CloseOptions, const Host extends Hos
   >(
     options,
     host,
-    closeInternalProps(options),
+    closeInternalProps(options, false),
     options.content,
     (props, content) => html`<button ...${props}>${content}</button>`,
   );
 }
 
 export const Dismiss = Close;
-export const RequestClose = Close;
+
+export function RequestClose<
+  const Options extends CloseOptions,
+  const Host extends HostResult = never,
+>(
+  options: Options,
+  host?: Dom.HostOverride<
+    Dom.RenderHostProps<Options, CloseInternalProps<Options>>,
+    Options["content"],
+    Host
+  >,
+): Fx<
+  RenderEvent,
+  Renderable.Error<Options | Host>,
+  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+> {
+  return Dom.renderHost<HTMLButtonElement>()<
+    Options,
+    CloseInternalProps<Options>,
+    Options["content"],
+    HostResult,
+    Host
+  >(
+    options,
+    host,
+    closeInternalProps(options, true),
+    options.content,
+    (props, content) => html`<button ...${props}>${content}</button>`,
+  );
+}
 
 export interface HeadingOptions extends Dom.HostOptions<HTMLHeadingElement> {
   readonly content: Renderable.Any;
@@ -251,18 +301,22 @@ export interface HeadingOptions extends Dom.HostOptions<HTMLHeadingElement> {
 }
 
 function headingInternalProps<const Options extends HeadingOptions>() {
-  return ({ property }: Dom.InternalPropsHelpers<Options>) => ({
-    id: property("id", undefined),
-    role: "heading",
-    "aria-level": property("level", 2),
-  } as const);
+  return ({ property }: Dom.InternalPropsHelpers<Options>) =>
+    ({
+      id: property("id", undefined),
+      role: "heading",
+      "aria-level": property("level", 2),
+    }) as const;
 }
 
 type HeadingInternalProps<Options extends HeadingOptions> = ReturnType<
   ReturnType<typeof headingInternalProps<Options>>
 >;
 
-export function Heading<const Options extends HeadingOptions, const Host extends HostResult = never>(
+export function Heading<
+  const Options extends HeadingOptions,
+  const Host extends HostResult = never,
+>(
   options: Options,
   host?: Dom.HostOverride<
     Dom.RenderHostProps<Options, HeadingInternalProps<Options>>,
@@ -295,10 +349,13 @@ export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement
 }
 
 function descriptionInternalProps<const Options extends DescriptionOptions>() {
-  return ({ property }: Dom.InternalPropsHelpers<Options>) => ({ id: property("id", undefined) } as const);
+  return ({ property }: Dom.InternalPropsHelpers<Options>) =>
+    ({ id: property("id", undefined) }) as const;
 }
 
-type DescriptionInternalProps<Options extends DescriptionOptions> = ReturnType<ReturnType<typeof descriptionInternalProps<Options>>>;
+type DescriptionInternalProps<Options extends DescriptionOptions> = ReturnType<
+  ReturnType<typeof descriptionInternalProps<Options>>
+>;
 
 export function Description<
   const Options extends DescriptionOptions,

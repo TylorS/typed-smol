@@ -80,10 +80,10 @@ export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 function rootProps<const Options extends RootOptions>(options: Options) {
   let typeahead: Composite.TypeaheadBuffer = { value: "", updatedAt: 0 };
-  const onfocus = options.collection === undefined
-    ? undefined
-    : EventHandler.make(() =>
-        Effect.gen(function* () {
+  const onfocus =
+    options.collection === undefined
+      ? undefined
+      : Effect.gen(function* () {
           const current = yield* options.state;
           if (current.activeId !== null) return;
           const item = Composite.moveActiveItem(yield* options.collection!, current, "first");
@@ -91,41 +91,44 @@ function rootProps<const Options extends RootOptions>(options: Options) {
           yield* select(options.state, item.id, item.value);
           yield* Composite.focusActive({ state: options.state, collection: options.collection! });
           yield* Composite.scrollActive({ state: options.state, collection: options.collection! });
-        }),
-      );
-  const onkeydown = options.collection === undefined
-    ? undefined
-    : EventHandler.make((event: KeyboardEvent) =>
-        Effect.gen(function* () {
-          const key = Composite.typeaheadKey(event);
-          if (key !== null) {
-            typeahead = Composite.updateTypeaheadBuffer(typeahead, key, Date.now());
-            const id = Composite.typeaheadFrom(
-              yield* options.collection!,
-              typeahead.value,
-              (yield* options.state).activeId,
-            );
-            if (id !== null) {
-              event.preventDefault();
-              const item = (yield* options.collection!).find((item) => item.id === id);
-              if (item?.value !== undefined) yield* select(options.state, item.id, item.value);
-              yield* Composite.focusActive({ state: options.state, collection: options.collection! });
+        });
+  const onkeydown =
+    options.collection === undefined
+      ? undefined
+      : EventHandler.make(
+          Effect.fn(function* (event: KeyboardEvent) {
+            const key = Composite.typeaheadKey(event);
+            if (key !== null) {
+              typeahead = Composite.updateTypeaheadBuffer(typeahead, key, Date.now());
+              const id = Composite.typeaheadFrom(
+                yield* options.collection!,
+                typeahead.value,
+                (yield* options.state).activeId,
+              );
+              if (id !== null) {
+                event.preventDefault();
+                const item = (yield* options.collection!).find((item) => item.id === id);
+                if (item?.value !== undefined) yield* select(options.state, item.id, item.value);
+                yield* Composite.focusActive({
+                  state: options.state,
+                  collection: options.collection!,
+                });
+              }
+              return;
             }
-            return;
-          }
-          const direction = Composite.keyMove(event, { orientation: "vertical" });
-          if (direction !== undefined) {
-            event.preventDefault();
-            yield* move(options.state, options.collection!, direction);
-          }
-        }),
-      );
+            const direction = Composite.keyMove(event, { orientation: "vertical" });
+            if (direction !== undefined) {
+              event.preventDefault();
+              yield* move(options.state, options.collection!, direction);
+            }
+          }),
+        );
   return ({ property }: Dom.InternalPropsHelpers<Options>) =>
     ({
       role: "listbox",
       "aria-label": property("label", undefined),
       "aria-activedescendant": Composite.activeDescendant(options.state),
-      tabindex: 0,
+      tabindex: Composite.rootTabIndex(options.state),
       onfocus,
       onkeydown,
       ref: options.state,
@@ -166,14 +169,15 @@ export interface OptionOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 function optionProps<const Options extends OptionOptions>(options: Options) {
   const selected = RefSubject.map(options.state, (state) => state.value === options.value);
-  const register = options.collection === undefined
-    ? undefined
-    : Collection.ref(options.collection, {
-        id: options.id,
-        value: options.value,
-        textValue: options.textValue ?? options.value,
-        disabled: options.disabled,
-      });
+  const register =
+    options.collection === undefined
+      ? undefined
+      : Collection.ref(options.collection, {
+          id: options.id,
+          value: options.value,
+          textValue: options.textValue ?? options.value,
+          disabled: options.disabled,
+        });
   return () =>
     ({
       id: options.id,
@@ -181,12 +185,10 @@ function optionProps<const Options extends OptionOptions>(options: Options) {
       "aria-selected": selected,
       "aria-disabled": options.disabled ?? false,
       tabindex: Composite.tabIndex(options.state, options.id),
-      onclick: EventHandler.make(() =>
+      onclick:
         options.disabled === true ? Effect.void : select(options.state, options.id, options.value),
-      ),
-      onfocus: EventHandler.make(() =>
+      onfocus:
         options.disabled === true ? Effect.void : select(options.state, options.id, options.value),
-      ),
       ref: Dom.composeRefs(register, options.ref),
     }) as const;
 }

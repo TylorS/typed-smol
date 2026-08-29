@@ -37,8 +37,9 @@ export function composeRefs<
     throw new TypeError("Only one hydration ref can own an element");
   }
 
-  const composed = (element: RefTarget<First> & RefTarget<Second>) =>
-    Effect.andThen(runRef(first, element), runRef(second, element));
+  const composed = Effect.fn((element: RefTarget<First> & RefTarget<Second>) =>
+    Effect.andThen(runRef(first, element), runRef(second, element)),
+  );
   const hydrationOwner = hydrationOwners[0] as RefSubject.HydrationRef<any, any> | undefined;
   const ref =
     hydrationOwner === undefined

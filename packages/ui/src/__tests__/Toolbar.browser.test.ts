@@ -23,6 +23,36 @@ describe("typed/ui/Toolbar in browsers", () => {
       yield* Effect.sleep(0);
       assert.strictEqual((yield* state).activeId, "first");
       assert.strictEqual(document.activeElement?.id, "first");
+      assert.strictEqual(document.querySelectorAll('[tabindex="0"]').length, 1);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("activates a role-only toolbar item with Enter and Space", async () => {
+    document.body.replaceChildren();
+    let activations = 0;
+    await Effect.gen(function* () {
+      const state = yield* Toolbar.makeState({ activeId: "action" });
+      const collection = yield* Toolbar.makeCollection();
+      yield* render(
+        Toolbar.Root({
+          state,
+          collection,
+          content: Toolbar.Item({
+            state,
+            collection,
+            id: "action",
+            content: "Action",
+            onclick: Effect.sync(() => activations++),
+          }),
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+      const item = document.querySelector("#action")!;
+
+      item.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      item.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+      yield* Effect.sleep(0);
+      assert.strictEqual(activations, 2);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 

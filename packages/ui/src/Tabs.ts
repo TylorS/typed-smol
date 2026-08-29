@@ -3,7 +3,13 @@ import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
+import {
+  EventHandler,
+  html,
+  type Renderable,
+  type RenderEvent,
+  type RenderTemplate,
+} from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as Dom from "./Dom.js";
@@ -102,8 +108,8 @@ function listInternalProps<const Options extends ListOptions>(options: Options) 
   const onkeydown =
     options.collection === undefined && options.items === undefined
       ? undefined
-      : EventHandler.make((event: KeyboardEvent) =>
-          Effect.gen(function* () {
+      : EventHandler.make(
+          Effect.fn(function* (event: KeyboardEvent) {
             const direction = Composite.keyMove(event, yield* options.state);
             if (direction !== undefined) {
               event.preventDefault();
@@ -114,19 +120,23 @@ function listInternalProps<const Options extends ListOptions>(options: Options) 
               }
               return;
             }
-            if ((event.key === "Enter" || event.key === " ") && (yield* options.state).activationMode === "manual") {
+            if (
+              (event.key === "Enter" || event.key === " ") &&
+              (yield* options.state).activationMode === "manual"
+            ) {
               event.preventDefault();
               yield* select(options.state, (yield* options.state).activeId);
             }
           }),
         );
-  return ({ property }: Dom.InternalPropsHelpers<Options>) => ({
-    role: "tablist",
-    "aria-label": property("label", undefined),
-    "aria-orientation": orientation,
-    onkeydown,
-    ref: options.state,
-  } as const);
+  return ({ property }: Dom.InternalPropsHelpers<Options>) =>
+    ({
+      role: "tablist",
+      "aria-label": property("label", undefined),
+      "aria-orientation": orientation,
+      onkeydown,
+      ref: options.state,
+    }) as const;
 }
 
 type ListInternalProps<Options extends ListOptions> = ReturnType<
@@ -140,16 +150,20 @@ export function List<const Options extends ListOptions, const Host extends HostR
     Options["content"],
     Host
   >,
-): Fx<RenderEvent, Renderable.Error<Options | Host>, Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate> {
-  return Dom.renderHost<HTMLDivElement>()<Options, ListInternalProps<Options>, Options["content"], HostResult, Host>(
-    options,
-    host,
-    listInternalProps(options),
-    options.content,
-    (props, content) => {
-      return html`<div ...${props}>${content}</div>`;
-    },
-  );
+): Fx<
+  RenderEvent,
+  Renderable.Error<Options | Host>,
+  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+> {
+  return Dom.renderHost<HTMLDivElement>()<
+    Options,
+    ListInternalProps<Options>,
+    Options["content"],
+    HostResult,
+    Host
+  >(options, host, listInternalProps(options), options.content, (props, content) => {
+    return html`<div ...${props}>${content}</div>`;
+  });
 }
 
 export interface TabOptions extends Dom.HostOptions<HTMLButtonElement> {
@@ -163,39 +177,60 @@ export interface TabOptions extends Dom.HostOptions<HTMLButtonElement> {
 
 function tabInternalProps<const Options extends TabOptions>(options: Options) {
   const selected = RefSubject.map(options.state, (state) => state.selectedId === options.id);
-  const register = options.collection === undefined ? undefined : Collection.ref(options.collection, {
-    id: options.id,
-    value: options.id,
-    textValue: options.id,
-    disabled: options.disabled,
-  });
-  return () => ({
-    id: options.id,
-    type: "button",
-    role: "tab",
-    "aria-controls": options.panelId,
-    "aria-selected": selected,
-    "aria-disabled": options.disabled ?? false,
-    tabindex: Composite.tabIndex(options.state, options.id),
-    onclick: EventHandler.make(() => options.disabled === true ? Effect.void : select(options.state, options.id)),
-    onfocus: EventHandler.make(() =>
-      options.disabled === true
-        ? Effect.void
-        : RefSubject.update(options.state, (state) => state.activationMode === "automatic"
-          ? { ...state, activeId: options.id, selectedId: options.id }
-          : { ...state, activeId: options.id }),
-    ),
-    ref: Dom.composeRefs(register, options.ref),
-  } as const);
+  const register =
+    options.collection === undefined
+      ? undefined
+      : Collection.ref(options.collection, {
+          id: options.id,
+          value: options.id,
+          textValue: options.id,
+          disabled: options.disabled,
+        });
+  return () =>
+    ({
+      id: options.id,
+      type: "button",
+      role: "tab",
+      "aria-controls": options.panelId,
+      "aria-selected": selected,
+      "aria-disabled": options.disabled ?? false,
+      tabindex: Composite.tabIndex(options.state, options.id),
+      onclick: options.disabled === true ? Effect.void : select(options.state, options.id),
+      onfocus:
+        options.disabled === true
+          ? Effect.void
+          : RefSubject.update(options.state, (state) =>
+              state.activationMode === "automatic"
+                ? { ...state, activeId: options.id, selectedId: options.id }
+                : { ...state, activeId: options.id },
+            ),
+      ref: Dom.composeRefs(register, options.ref),
+    }) as const;
 }
 
-type TabInternalProps<Options extends TabOptions> = ReturnType<ReturnType<typeof tabInternalProps<Options>>>;
+type TabInternalProps<Options extends TabOptions> = ReturnType<
+  ReturnType<typeof tabInternalProps<Options>>
+>;
 
 export function Tab<const Options extends TabOptions, const Host extends HostResult = never>(
   options: Options,
-  host?: Dom.HostOverride<Dom.RenderHostProps<Options, TabInternalProps<Options>>, Options["content"], Host>,
-): Fx<RenderEvent, Renderable.Error<Options | Host>, Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate> {
-  return Dom.renderHost<HTMLButtonElement>()<Options, TabInternalProps<Options>, Options["content"], HostResult, Host>(
+  host?: Dom.HostOverride<
+    Dom.RenderHostProps<Options, TabInternalProps<Options>>,
+    Options["content"],
+    Host
+  >,
+): Fx<
+  RenderEvent,
+  Renderable.Error<Options | Host>,
+  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+> {
+  return Dom.renderHost<HTMLButtonElement>()<
+    Options,
+    TabInternalProps<Options>,
+    Options["content"],
+    HostResult,
+    Host
+  >(
     options,
     host,
     tabInternalProps(options),
@@ -213,12 +248,14 @@ export interface PanelOptions extends Dom.HostOptions<HTMLDivElement> {
 
 function panelInternalProps<const Options extends PanelOptions>(options: Options) {
   const selected = RefSubject.map(options.state, (state) => state.selectedId === options.tabId);
-  return () => ({
-    id: options.id,
-    role: "tabpanel",
-    "aria-labelledby": options.tabId,
-    "?hidden": RefSubject.map(selected, (value) => !value),
-  } as const);
+  return () =>
+    ({
+      id: options.id,
+      role: "tabpanel",
+      "aria-labelledby": options.tabId,
+      tabindex: 0,
+      "?hidden": RefSubject.map(selected, (value) => !value),
+    }) as const;
 }
 
 type PanelInternalProps<Options extends PanelOptions> = ReturnType<
@@ -227,9 +264,23 @@ type PanelInternalProps<Options extends PanelOptions> = ReturnType<
 
 export function Panel<const Options extends PanelOptions, const Host extends HostResult = never>(
   options: Options,
-  host?: Dom.HostOverride<Dom.RenderHostProps<Options, PanelInternalProps<Options>>, Options["content"], Host>,
-): Fx<RenderEvent, Renderable.Error<Options | Host>, Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate> {
-  return Dom.renderHost<HTMLDivElement>()<Options, PanelInternalProps<Options>, Options["content"], HostResult, Host>(
+  host?: Dom.HostOverride<
+    Dom.RenderHostProps<Options, PanelInternalProps<Options>>,
+    Options["content"],
+    Host
+  >,
+): Fx<
+  RenderEvent,
+  Renderable.Error<Options | Host>,
+  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+> {
+  return Dom.renderHost<HTMLDivElement>()<
+    Options,
+    PanelInternalProps<Options>,
+    Options["content"],
+    HostResult,
+    Host
+  >(
     options,
     host,
     panelInternalProps(options),

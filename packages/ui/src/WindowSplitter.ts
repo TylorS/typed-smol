@@ -86,9 +86,12 @@ export interface WindowSplitterOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 
 function internalProps<const Options extends WindowSplitterOptions>(options: Options) {
-  const onkeydown = EventHandler.make((event: KeyboardEvent) =>
-    Effect.gen(function* () {
+  const onkeydown = EventHandler.make(
+    Effect.fn(function* (event: KeyboardEvent) {
       const current = yield* options.state;
+      if (Dom.currentTarget<HTMLElement>(event).getAttribute("aria-disabled") === "true") {
+        return current;
+      }
       const delta = keyDelta(event.key, current);
       if (delta !== undefined) {
         event.preventDefault();

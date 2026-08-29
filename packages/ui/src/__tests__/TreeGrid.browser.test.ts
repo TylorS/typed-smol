@@ -5,6 +5,38 @@ import { assert, describe, it } from "vitest";
 import * as TreeGrid from "../TreeGrid.js";
 
 describe("typed/ui/TreeGrid in browsers", () => {
+  it("sets the first visible cell as active on initial focus", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* TreeGrid.makeState();
+      const collection = yield* TreeGrid.makeCollection();
+      yield* render(
+        TreeGrid.Root({
+          state,
+          collection,
+          label: "Files",
+          content: TreeGrid.Row({
+            state,
+            rowId: "root",
+            content: TreeGrid.Cell({
+              state,
+              collection,
+              id: "root-name",
+              rowId: "root",
+              columnIndex: 1,
+              content: "Root",
+            }),
+          }),
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      (document.querySelector('[role="treegrid"]') as HTMLDivElement).focus();
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).activeId, "root-name");
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
   it("expands a parent row with Right Arrow", async () => {
     document.body.replaceChildren();
     await Effect.gen(function* () {

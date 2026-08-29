@@ -498,7 +498,9 @@ function setupRenderPart<E = never, R = never>(
         getTemplateAttributeNode(element, part.name) ??
           createTemplateAttribute(ctx.document, element, part.name),
       );
-      return renderValue(ctx, part.index, (value) => setAttr(renderToString(value, "")));
+      return renderValue(ctx, part.index, (value) =>
+        setAttr(isNullish(value) ? undefined : renderToString(value, "")),
+      );
     }
     case "boolean-part": {
       const updater = makeBooleanUpdater(node as HTMLElement | SVGElement, part.name);
@@ -720,7 +722,11 @@ function matchRenderable<X, A, B, C>(
 }
 
 type SpreadPartDescriptor =
-  | { readonly id: string; readonly kind: "attr" | "boolean" | "event"; readonly name: string }
+  | {
+      readonly id: string;
+      readonly kind: "attr" | "boolean" | "event" | "property";
+      readonly name: string;
+    }
   | { readonly id: string; readonly kind: "class" | "data" | "properties" | "ref" };
 
 type SpreadPartInstance = {
@@ -731,13 +737,20 @@ type SpreadPartInstance = {
 
 const forbiddenSpreadKeys = new Set(["__proto__", "prototype", "constructor"]);
 const forbiddenAttributeNameCharacters = new Set(['"', "'", "/", ">", "=", "<"]);
+const safeSpreadPropertyNames = new Set([
+  "checked",
+  "indeterminate",
+  "selected",
+  "selectedIndex",
+  "value",
+]);
 
 function getSpreadPartDescriptor(key: string): SpreadPartDescriptor | undefined {
   if (forbiddenSpreadKeys.has(key)) return;
   const [kind, name] = keyToPartType(key);
   switch (kind) {
     case "property":
-      return;
+      return safeSpreadPropertyNames.has(name) ? { id: `${kind}:${name}`, kind, name } : undefined;
     case "attr":
     case "boolean":
       return isValidSpreadAttributeName(name) && !/^on/i.test(name)
@@ -852,7 +865,9 @@ function makeSpreadPartInstance<R>(
           createTemplateAttribute(ctx.document, element, descriptor.name),
       );
       setup = (partContext) =>
-        renderValue(partContext, index, (value) => update(renderToString(value, "")));
+        renderValue(partContext, index, (value) =>
+          update(isNullish(value) ? undefined : renderToString(value, "")),
+        );
       reset = () => update(undefined);
       break;
     }
@@ -860,6 +875,13 @@ function makeSpreadPartInstance<R>(
       const update = makeBooleanUpdater(element, descriptor.name);
       setup = (partContext) => renderValue(partContext, index, (value) => update(!!value));
       reset = () => update(false);
+      break;
+    }
+    case "property": {
+      const original = Reflect.get(element, descriptor.name);
+      const update = setupPropertSetter(element, descriptor.name);
+      setup = (partContext) => renderValue(partContext, index, update);
+      reset = () => update(original);
       break;
     }
     case "class": {

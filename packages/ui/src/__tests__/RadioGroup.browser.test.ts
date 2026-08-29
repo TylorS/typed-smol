@@ -22,6 +22,11 @@ describe("typed/ui/RadioGroup in Chromium", () => {
 
       assert.strictEqual(large.checked, true);
       assert.strictEqual((yield* state).value, "large");
+
+      yield* RadioGroup.setValue(state, "small", "small");
+      yield* Effect.sleep(20);
+      assert.strictEqual((document.querySelector("#small") as HTMLInputElement).checked, true);
+      assert.strictEqual(large.checked, false);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 });

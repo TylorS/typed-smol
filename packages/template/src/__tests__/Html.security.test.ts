@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Effect, Option } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
-import {
-  html,
-  HtmlRenderEvent,
-  MANY_HOLE,
-  many,
-} from "../index.js";
+import { html, HtmlRenderEvent, MANY_HOLE, many } from "../index.js";
 import { getInteractiveHtml, getStaticHtml } from "./helpers/html-output.js";
 
 const imagePayload =
@@ -235,6 +230,29 @@ describe("TS-03 SSR spread and data key policy", () => {
       expect(output).not.toContain("constructor");
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("does not evaluate effects attached to non-serializable spread keys", () =>
+    Effect.gen(function* () {
+      let executions = 0;
+      const sideEffect = Effect.sync(() => executions++);
+
+      const output = yield* getStaticHtml(
+        html`<button
+          ...${{
+            id: "safe",
+            onclick: sideEffect,
+            "@focus": sideEffect,
+            ".value": sideEffect,
+            constructor: sideEffect,
+          }}
+        >
+          Save
+        </button>`,
+      );
+
+      expect(output).toContain('id="safe"');
+      expect(executions).toBe(0);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("omits invalid and prototype-sensitive data keys without dropping safe data", () =>
     Effect.gen(function* () {
       const data = Object.fromEntries([
@@ -264,9 +282,9 @@ describe("TS-03 SSR spread and data key policy", () => {
 
   it("omits cyclic nested .props without overflowing the stack", () =>
     Effect.gen(function* () {
-    const props: Record<string, unknown> = {};
-    props.id = "safe";
-    props[".props"] = props;
+      const props: Record<string, unknown> = {};
+      props.id = "safe";
+      props[".props"] = props;
 
       const outputs = [
         yield* getStaticHtml(html`<div ...${props}></div>`),

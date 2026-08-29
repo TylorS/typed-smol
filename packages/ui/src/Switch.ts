@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, html, type Renderable } from "@typed/template";
+import { html, type Renderable } from "@typed/template";
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
@@ -44,7 +44,7 @@ function internalProps<const Options extends SwitchOptions>(options: Options) {
       role: "switch",
       "aria-checked": RefSubject.map(options.state, (state) => state.checked),
       "?disabled": property("disabled", false),
-      onclick: EventHandler.make(() => toggle(options.state)),
+      onclick: toggle(options.state),
       ref: options.state,
     }) as const;
 }

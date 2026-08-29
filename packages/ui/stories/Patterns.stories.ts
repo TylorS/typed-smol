@@ -56,18 +56,18 @@ const combobox = Fx.unwrap(
     const collection = yield* ComboboxComponent.makeCollection();
     const values = ["Alpine", "Basil", "Cedar"] as const;
     const hiddenWhenNotMatching = (value: string) =>
-      RefSubject.map(state, (current) =>
-        current.value.length > 0 && !value.toLocaleLowerCase().includes(current.value.toLocaleLowerCase()),
+      RefSubject.map(
+        state,
+        (current) =>
+          current.value.length > 0 &&
+          !value.toLocaleLowerCase().includes(current.value.toLocaleLowerCase()),
       );
-    const results = RefSubject.map(
-      state,
-      (current) => {
-        const count = values.filter((value) =>
-          value.toLocaleLowerCase().includes(current.value.toLocaleLowerCase()),
-        ).length;
-        return `${count} result${count === 1 ? "" : "s"}`;
-      },
-    );
+    const results = RefSubject.map(state, (current) => {
+      const count = values.filter((value) =>
+        value.toLocaleLowerCase().includes(current.value.toLocaleLowerCase()),
+      ).length;
+      return `${count} result${count === 1 ? "" : "s"}`;
+    });
 
     return html`<div class="story-field">
       <label for="search-input">Search herbs</label>
@@ -115,11 +115,12 @@ const dialog = Fx.unwrap(
     const state = yield* DialogComponent.makeState();
 
     return html`${DialogComponent.Trigger({ state, content: "Open dialog" })}
-      ${DialogComponent.Content({
-        state,
-        label: "Confirm deletion",
-        content: html`<p>This action cannot be undone.</p>${DialogComponent.Close({ state, content: "Cancel" })}`,
-      })}`;
+    ${DialogComponent.Content({
+      state,
+      label: "Confirm deletion",
+      content: html`<p>This action cannot be undone.</p>
+        ${DialogComponent.Close({ state, content: "Cancel" })}`,
+    })}`;
   }),
 );
 
@@ -131,7 +132,8 @@ const disclosure = Fx.unwrap(
 
     return DisclosureComponent.Content({
       state,
-      content: html`${DisclosureComponent.Button({ content: "More details" })}<p>Details are synchronized with the native disclosure host.</p>`,
+      content: html`${DisclosureComponent.Button({ content: "More details" })}
+        <p>Details are synchronized with the native disclosure host.</p>`,
     });
   }),
 );
@@ -165,7 +167,7 @@ const hovercard = Fx.unwrap(
     const state = yield* HovercardComponent.makeState({ id: "account-card" });
 
     return html`${HovercardComponent.Anchor({ state, content: "Account", props: { tabindex: 0 } })}
-      ${HovercardComponent.Content({ state, content: "Account details" })}`;
+    ${HovercardComponent.Content({ state, label: "Account details", content: "Account details" })}`;
   }),
 );
 
@@ -193,12 +195,12 @@ const menu = Fx.unwrap(
     const collection = yield* MenuComponent.makeCollection();
 
     return html`${MenuComponent.Trigger({ state, content: "Actions" })}
-      ${MenuComponent.Content({
-        state,
-        collection,
-        label: "Actions",
-        content: html`${MenuComponent.Item({ state, collection, id: "edit", content: "Edit" })}${MenuComponent.CheckboxItem({ state, collection, id: "pin", checked: true, content: "Pin" })}${MenuComponent.Separator({})}${MenuComponent.Item({ state, collection, id: "delete", content: "Delete" })}`,
-      })}`;
+    ${MenuComponent.Content({
+      state,
+      collection,
+      label: "Actions",
+      content: html`${MenuComponent.Item({ state, collection, id: "edit", content: "Edit" })}${MenuComponent.CheckboxItem({ state, collection, id: "pin", checked: true, content: "Pin" })}${MenuComponent.Separator({})}${MenuComponent.Item({ state, collection, id: "delete", content: "Delete" })}`,
+    })}`;
   }),
 );
 
@@ -225,7 +227,7 @@ const popover = Fx.unwrap(
     const state = yield* PopoverComponent.makeState();
 
     return html`${PopoverComponent.Trigger({ state, content: "Open popover" })}
-      ${PopoverComponent.Content({ state, content: "Popover content" })}`;
+    ${PopoverComponent.Content({ state, content: "Popover content" })}`;
   }),
 );
 
@@ -237,11 +239,11 @@ const select = Fx.unwrap(
     const collection = yield* SelectComponent.makeCollection();
 
     return html`${SelectComponent.Trigger({ state, content: "Small" })}
-      ${SelectComponent.Content({
-        state,
-        collection,
-        content: html`${SelectComponent.Option({ state, collection, id: "small", value: "small", content: "Small" })}${SelectComponent.Option({ state, collection, id: "large", value: "large", content: "Large" })}`,
-      })}`;
+    ${SelectComponent.Content({
+      state,
+      collection,
+      content: html`${SelectComponent.Option({ state, collection, id: "small", value: "small", content: "Small" })}${SelectComponent.Option({ state, collection, id: "large", value: "large", content: "Large" })}`,
+    })}`;
   }),
 );
 
@@ -286,7 +288,7 @@ const tooltip = Fx.unwrap(
     const state = yield* TooltipComponent.makeState({ id: "save-tip" });
 
     return html`${TooltipComponent.Anchor({ state, content: "Save", props: { tabindex: 0 } })}
-      ${TooltipComponent.Content({ state, content: "Save your changes" })}`;
+    ${TooltipComponent.Content({ state, content: "Save your changes" })}`;
   }),
 );
 
@@ -362,7 +364,8 @@ const windowSplitter = Fx.unwrap(
     const state = yield* WindowSplitterComponent.makeState({ value: 40, step: 10 });
     const paneSizes = RefSubject.map(
       state,
-      (current) => `--primary-size: ${current.value}fr; --secondary-size: ${100 - current.value}fr;`,
+      (current) =>
+        `--primary-size: ${current.value}fr; --secondary-size: ${100 - current.value}fr;`,
     );
     const valueText = RefSubject.map(
       state,

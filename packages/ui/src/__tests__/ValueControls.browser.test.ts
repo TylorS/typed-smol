@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
+import * as Checkbox from "../Checkbox.js";
 import * as Slider from "../Slider.js";
 import * as SpinButton from "../SpinButton.js";
 import * as Switch from "../Switch.js";
@@ -44,6 +45,32 @@ describe("typed/ui value controls in browsers", () => {
 
       assert.strictEqual((yield* slider).value, 7);
       assert.strictEqual((yield* spinButton).value, 4);
+
+      yield* Slider.setValue(slider, 3);
+      yield* SpinButton.setValue(spinButton, 6);
+      yield* Effect.sleep(20);
+
+      assert.strictEqual((range as HTMLInputElement).value, "3");
+      assert.strictEqual((number as HTMLInputElement).value, "6");
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("synchronizes the checkbox indeterminate property", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Checkbox.makeState({ checked: "mixed" });
+      yield* render(Checkbox.Input({ state }), document.body).pipe(Fx.take(1), Fx.collectAll);
+      const input = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+      assert.strictEqual(input.indeterminate, true);
+      yield* Checkbox.setChecked(state, true);
+      yield* Effect.sleep(20);
+      assert.strictEqual(input.checked, true);
+      assert.strictEqual(input.indeterminate, false);
+      yield* Checkbox.setChecked(state, false);
+      yield* Effect.sleep(20);
+      assert.strictEqual(input.checked, false);
+      assert.strictEqual(input.indeterminate, false);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 });

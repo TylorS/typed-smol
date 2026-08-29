@@ -3,13 +3,7 @@ import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
-import {
-  EventHandler,
-  html,
-  type Renderable,
-  type RenderEvent,
-  type RenderTemplate,
-} from "@typed/template";
+import { html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as Dom from "./Dom.js";
@@ -71,11 +65,35 @@ export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 
 function rootInternalProps<const Options extends RootOptions>(options: Options) {
+  const pause = RefSubject.update(options.state, (current) =>
+    current.paused ? current : { ...current, paused: true },
+  );
+  let resumeOnPointerLeave = false;
+  const pauseForFocus = Effect.andThen(
+    Effect.sync(() => {
+      resumeOnPointerLeave = false;
+    }),
+    pause,
+  );
+  const pauseForPointer = Effect.flatMap(options.state, (current) => {
+    resumeOnPointerLeave = !current.paused;
+    return pause;
+  });
+  const resumeAfterPointer = Effect.suspend(() => {
+    if (!resumeOnPointerLeave) return Effect.void;
+    resumeOnPointerLeave = false;
+    return RefSubject.update(options.state, (current) =>
+      current.paused ? { ...current, paused: false } : current,
+    );
+  });
   return ({ property }: Dom.InternalPropsHelpers<Options>) =>
     ({
       role: "region",
       "aria-roledescription": "carousel",
       "aria-label": property("label", undefined),
+      onfocusin: pauseForFocus,
+      onmouseenter: pauseForPointer,
+      onmouseleave: resumeAfterPointer,
       ref: options.state,
     }) as const;
 }
@@ -168,9 +186,9 @@ export interface ControlOptions extends Dom.HostOptions<HTMLButtonElement> {
 
 function controlInternalProps<const Options extends ControlOptions>(
   options: Options,
-  action: () => Effect.Effect<unknown, Schema.SchemaError>,
+  action: Effect.Effect<unknown, Schema.SchemaError>,
 ) {
-  return () => ({ type: "button", onclick: EventHandler.make(action) }) as const;
+  return () => ({ type: "button", onclick: action }) as const;
 }
 
 function control<const Options extends ControlOptions, const Host extends HostResult>(
@@ -182,7 +200,7 @@ function control<const Options extends ControlOptions, const Host extends HostRe
         Host
       >
     | undefined,
-  action: () => Effect.Effect<unknown, Schema.SchemaError>,
+  action: Effect.Effect<unknown, Schema.SchemaError>,
 ) {
   const internal = controlInternalProps(options, action);
   return Dom.renderHost<HTMLButtonElement>()<
@@ -211,7 +229,9 @@ export function Previous<
     Host
   >,
 ) {
-  return control(options, host, () =>
+  return control(
+    options,
+    host,
     options.collection === undefined
       ? Effect.void
       : move(options.state, options.collection, "previous"),
@@ -226,7 +246,9 @@ export function Next<const Options extends ControlOptions, const Host extends Ho
     Host
   >,
 ) {
-  return control(options, host, () =>
+  return control(
+    options,
+    host,
     options.collection === undefined
       ? Effect.void
       : move(options.state, options.collection, "next"),
@@ -244,5 +266,5 @@ export function RotationControl<
     Host
   >,
 ) {
-  return control(options, host, () => toggleRotation(options.state));
+  return control(options, host, toggleRotation(options.state));
 }

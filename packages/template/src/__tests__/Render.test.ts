@@ -3,13 +3,7 @@ import type { Scope } from "effect";
 import { Effect, Layer, Schema } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import type { Renderable, RenderTemplate } from "../index.js";
-import {
-  CurrentRenderQueue,
-  EventHandler,
-  html,
-  render,
-  RenderQueue,
-} from "../index.js";
+import { CurrentRenderQueue, EventHandler, html, render, RenderQueue } from "../index.js";
 import type { Rendered } from "../Wire.js";
 import { createHappyDomLayer } from "./helpers/dom-layer.js";
 
@@ -326,6 +320,31 @@ describe("Render", () => {
       assert.strictEqual(typeof spreadExample.constructor, "function");
       assert.strictEqual(spreadExample.querySelector("script"), null);
       assert.strictEqual(spreadExample.innerHTML.includes(originalInnerHtml), true);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("binds safe form-control properties from spread records", () =>
+    Effect.gen(function* () {
+      const value = yield* RefSubject.make("initial");
+      const indeterminate = yield* RefSubject.make(true);
+      const invalid = yield* RefSubject.make<boolean | undefined>(true);
+      const rendered = yield* renderHtmlElement`<input
+        type="checkbox"
+        ...${{ ".value": value, ".indeterminate": indeterminate, "aria-invalid": invalid }}
+      />`;
+      const input = rendered as HTMLInputElement;
+
+      assert.strictEqual(input.value, "initial");
+      assert.strictEqual(input.indeterminate, true);
+      assert.strictEqual(input.getAttribute("aria-invalid"), "true");
+
+      yield* RefSubject.set(value, "updated");
+      yield* RefSubject.set(indeterminate, false);
+      yield* RefSubject.set(invalid, undefined);
+      yield* Effect.sleep(20);
+
+      assert.strictEqual(input.value, "updated");
+      assert.strictEqual(input.indeterminate, false);
+      assert.strictEqual(input.hasAttribute("aria-invalid"), false);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("supports effects as event handlers using @event syntax", () =>

@@ -1,5 +1,6 @@
-import { assert, describe, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { Window } from "happy-dom";
+import { Fx } from "@typed/fx";
 import * as Button from "../Button.js";
 import * as Storybook from "../Storybook.js";
 
@@ -15,5 +16,21 @@ describe("typed/ui/Storybook", () => {
     } finally {
       await story.dispose();
     }
+  });
+
+  it("rejects when the story fails before its first render", async () => {
+    const window = new Window() as unknown as globalThis.Window & typeof globalThis;
+
+    await expect(
+      Storybook.mount(Fx.fail(new Error("story failed")), window.document),
+    ).rejects.toThrow("story failed");
+  });
+
+  it("rejects when the story completes before its first render", async () => {
+    const window = new Window() as unknown as globalThis.Window & typeof globalThis;
+
+    await expect(Storybook.mount(Fx.empty, window.document)).rejects.toThrow(
+      "Story completed before rendering any content",
+    );
   });
 });

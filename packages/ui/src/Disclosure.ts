@@ -3,7 +3,13 @@ import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
+import {
+  EventHandler,
+  html,
+  type Renderable,
+  type RenderEvent,
+  type RenderTemplate,
+} from "@typed/template";
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 import * as NativeDetails from "./NativeDetails.js";
@@ -34,7 +40,7 @@ export interface ButtonOptions extends Dom.HostOptions<HTMLElement> {
 }
 
 function buttonInternalProps() {
-  return {}
+  return {};
 }
 
 type ButtonInternalProps = ReturnType<typeof buttonInternalProps>;
@@ -72,19 +78,25 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDetailsElement> {
 }
 
 function contentInternalProps<const Options extends ContentOptions>(options: Options) {
-  return () => ({
-    ontoggle: EventHandler.make((event: Event) =>
-      setOpen(options.state, Dom.currentTarget<HTMLDetailsElement>(event).open),
-    ),
-    ref: Dom.composeRefs(options.state, NativeDetails.ref(options.state)),
-  } as const);
+  return () =>
+    ({
+      ontoggle: EventHandler.make(
+        Effect.fn((event: Event) =>
+          setOpen(options.state, Dom.currentTarget<HTMLDetailsElement>(event).open),
+        ),
+      ),
+      ref: Dom.composeRefs(options.state, NativeDetails.ref(options.state)),
+    }) as const;
 }
 
 type ContentInternalProps<Options extends ContentOptions> = ReturnType<
   ReturnType<typeof contentInternalProps<Options>>
 >;
 
-export function Content<const Options extends ContentOptions, const Host extends HostResult = never>(
+export function Content<
+  const Options extends ContentOptions,
+  const Host extends HostResult = never,
+>(
   options: Options,
   host?: Dom.HostOverride<
     Dom.RenderHostProps<Options, ContentInternalProps<Options>>,
@@ -102,15 +114,9 @@ export function Content<const Options extends ContentOptions, const Host extends
     Options["content"],
     HostResult,
     Host
-  >(
-    options,
-    host,
-    contentInternalProps(options),
-    options.content,
-    (props, content) => {
-      return html`<details ...${props}>${content}</details>`;
-    },
-  );
+  >(options, host, contentInternalProps(options), options.content, (props, content) => {
+    return html`<details ...${props}>${content}</details>`;
+  });
 }
 
 export const Disclosure = Content;

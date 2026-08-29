@@ -1,7 +1,7 @@
 import type * as Scope from "effect/Scope";
 import type * as Fx from "@typed/fx/Fx";
 import { Navigation, type NavigationError } from "@typed/navigation";
-import { EventHandler, type RenderTemplate } from "@typed/template";
+import { EventHandler, type RenderEvent, type RenderTemplate } from "@typed/template";
 import { Link } from "../Link.js";
 
 type Equal<A, B> =
@@ -10,6 +10,8 @@ type Assert<T extends true> = T;
 
 type ClickError = { readonly _tag: "ClickError" };
 type ClickService = { readonly ClickService: unique symbol };
+type HostError = { readonly _tag: "HostError" };
+type HostService = { readonly HostService: unique symbol };
 
 declare const onclick: EventHandler.EventHandler<Event, ClickError, ClickService>;
 declare const classes: Fx.Fx<string, never, ClickService>;
@@ -31,6 +33,14 @@ const staticLink = Link({ href: "/", content: "Home" });
 
 type _StaticLinkServices = Assert<
   Equal<Fx.Services<typeof staticLink>, Navigation | Scope.Scope | RenderTemplate>
+>;
+
+declare const hostResult: Fx.Fx<RenderEvent, HostError, HostService>;
+const hostedLink = Link({ href: "/", content: "Home" }, () => hostResult);
+
+type _HostedLinkErrors = Assert<Equal<Fx.Error<typeof hostedLink>, NavigationError | HostError>>;
+type _HostedLinkServices = Assert<
+  Equal<Fx.Services<typeof hostedLink>, Navigation | Scope.Scope | RenderTemplate | HostService>
 >;
 
 const inferredHandler = EventHandler.make(() => undefined, { preventDefault: true });

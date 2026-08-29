@@ -11,13 +11,67 @@ export function chainEvent<Ev extends Event, E1 = never, R1 = never, E2 = never,
   if (!userHandler) return internalHandler;
   if (!internalHandler) return userHandler;
 
-  return EventHandler.make(
-    (event: Ev) =>
-      Effect.andThen(userHandler.handler(event), () =>
-        event.defaultPrevented ? Effect.void : internalHandler.handler(event),
-      ),
-    userHandler.options,
-  );
+  let userActive = true;
+  let internalActive = true;
+  const passive =
+    userHandler.options?.preventDefault === true ||
+    internalHandler.options?.preventDefault === true ||
+    userHandler.options?.passive === false ||
+    internalHandler.options?.passive === false
+      ? false
+      : (userHandler.options?.passive ?? internalHandler.options?.passive);
+  const options = {
+    capture: userHandler.options?.capture ?? internalHandler.options?.capture,
+    passive,
+  };
+  return EventHandler.make((event: Ev) => {
+    const tracked = trackPreventDefault(event);
+    const userEffect =
+      userActive && userHandler.options?.signal?.aborted !== true
+        ? userHandler.handler(tracked.event)
+        : Effect.void;
+    if (userActive && userHandler.options?.signal?.aborted !== true) {
+      if (userHandler.options?.once === true) userActive = false;
+    }
+    if (
+      tracked.defaultPrevented() ||
+      !internalActive ||
+      internalHandler.options?.signal?.aborted === true
+    ) {
+      return userEffect;
+    }
+
+    if (internalHandler.options?.once === true) internalActive = false;
+    const internalEffect = internalHandler.handler(event);
+    return Effect.andThen(userEffect, () =>
+      tracked.defaultPrevented() ? Effect.void : internalEffect,
+    );
+  }, options);
+}
+
+function trackPreventDefault<Ev extends Event>(
+  event: Ev,
+): {
+  readonly event: Ev;
+  readonly defaultPrevented: () => boolean;
+} {
+  let defaultPrevented = event.defaultPrevented;
+  return {
+    event: new Proxy(event, {
+      get(target, property) {
+        if (property === "defaultPrevented") return defaultPrevented;
+        if (property === "preventDefault") {
+          return () => {
+            defaultPrevented = true;
+            event.preventDefault();
+          };
+        }
+        const value = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    }),
+    defaultPrevented: () => defaultPrevented,
+  };
 }
 
 export function isEventKey(key: string): key is EventHandlerProperty {
@@ -26,7 +80,9 @@ export function isEventKey(key: string): key is EventHandlerProperty {
 
 export function currentTarget<Target extends EventTarget>(event: Event): Target {
   if (event.currentTarget === null) {
-    throw new TypeError("An event handler can only read its current target while handling an event");
+    throw new TypeError(
+      "An event handler can only read its current target while handling an event",
+    );
   }
   return event.currentTarget as Target;
 }

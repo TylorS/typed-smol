@@ -49,7 +49,7 @@ export function ref<Value, Element extends object, E, R>(
   collection: RefSubject.RefSubject<State<Value, Element>, E, R>,
   item: Omit<Item<Value, Element>, "element">,
 ): (element: Element) => Effect.Effect<void, E, R | Scope.Scope> {
-  return (element) => register(collection, { ...item, element });
+  return Effect.fn((element) => register(collection, { ...item, element }));
 }
 
 export function unregister<Value, Element extends object, E, R>(
@@ -99,13 +99,16 @@ function upsert<Value, Element extends object>(
   return index === -1 ? [...items, item] : items.toSpliced(index, 1, item);
 }
 
-function itemEquivalence<Value, Element extends object>(): Equivalence.Equivalence<Item<Value, Element>> {
-  return Equivalence.make((left, right) =>
-    left.id === right.id &&
-    left.element === right.element &&
-    left.disabled === right.disabled &&
-    left.submenu === right.submenu &&
-    left.textValue === right.textValue &&
-    Equal.equals(left.value, right.value),
+function itemEquivalence<Value, Element extends object>(): Equivalence.Equivalence<
+  Item<Value, Element>
+> {
+  return Equivalence.make(
+    (left, right) =>
+      left.id === right.id &&
+      left.element === right.element &&
+      left.disabled === right.disabled &&
+      left.submenu === right.submenu &&
+      left.textValue === right.textValue &&
+      Equal.equals(left.value, right.value),
   );
 }

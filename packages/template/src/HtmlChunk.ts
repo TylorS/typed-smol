@@ -423,7 +423,7 @@ function renderSpreadAttributes(value: unknown, ancestors = new Set<object>()): 
   try {
     return Object.entries(value)
       .flatMap(([key, entry]) => {
-        if (!isSafeDynamicKey(key) || /^on/i.test(key)) return [];
+        if (!isSerializableSpreadKey(key)) return [];
 
         const [kind, name] = keyToPartType(key);
         switch (kind) {
@@ -450,6 +450,25 @@ function renderSpreadAttributes(value: unknown, ancestors = new Set<object>()): 
       .join(" ");
   } finally {
     ancestors.delete(value);
+  }
+}
+
+export function isSerializableSpreadKey(key: string): boolean {
+  if (!isSafeDynamicKey(key) || /^on/i.test(key)) return false;
+
+  const [kind, name] = keyToPartType(key);
+  switch (kind) {
+    case "event":
+    case "property":
+    case "ref":
+      return false;
+    case "boolean":
+    case "attr":
+      return isSerializableAttributeName(name);
+    case "class":
+    case "data":
+    case "properties":
+      return true;
   }
 }
 

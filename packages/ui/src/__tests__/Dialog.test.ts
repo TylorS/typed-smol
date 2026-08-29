@@ -20,7 +20,9 @@ describe("typed/ui/Dialog", () => {
   it("owns hydration on the native dialog host", () =>
     Effect.gen(function* () {
       const state = yield* Dialog.makeState();
-      const markup = yield* renderToHtmlString(Dialog.Content({ state, content: "Body" }));
+      const markup = yield* renderToHtmlString(
+        Dialog.Content({ state, label: "Test dialog", content: "Body" }),
+      );
 
       assert.match(markup, /<dialog/);
       assert.match(markup, /data-typed-refsubject=/);

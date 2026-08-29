@@ -4,13 +4,13 @@ import { DomRenderTemplate, EventHandler, html, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Dialog from "../Dialog.js";
 
-describe("typed/ui/Dialog in Chromium", () => {
+describe("typed/ui/Dialog in browsers", () => {
   it("synchronizes state after an accepted programmatic close request", async () => {
     document.body.replaceChildren();
     await Effect.gen(function* () {
       const state = yield* Dialog.makeState();
       yield* render(
-        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, content: "Body" })}`,
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, label: "Test dialog", content: "Body" })}`,
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -32,13 +32,16 @@ describe("typed/ui/Dialog in Chromium", () => {
       yield* render(
         html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({
           state,
+          label: "Test dialog",
           content: "Body",
           props: {
-            oncancel: EventHandler.make((event) =>
-              Effect.sync(() => {
-                canceled = true;
-                event.preventDefault();
-              }),
+            oncancel: EventHandler.make(
+              Effect.fn((event) =>
+                Effect.sync(() => {
+                  canceled = true;
+                  event.preventDefault();
+                }),
+              ),
             ),
           },
         })}`,
@@ -61,7 +64,7 @@ describe("typed/ui/Dialog in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Dialog.makeState({ open: true });
       yield* render(
-        Dialog.Content({ state, content: "Body" }),
+        Dialog.Content({ state, label: "Test dialog", content: "Body" }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       yield* Effect.sleep(0);
@@ -78,7 +81,7 @@ describe("typed/ui/Dialog in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Dialog.makeState();
       yield* render(
-        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, content: "Body" })}`,
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, label: "Test dialog", content: "Body" })}`,
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -100,7 +103,7 @@ describe("typed/ui/Dialog in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Dialog.makeState();
       yield* render(
-        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, id: "confirm", content: "Body" })}${Dialog.RequestClose({ state, controls: "confirm", content: "Cancel" })}`,
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({ state, id: "confirm", label: "Test dialog", content: "Body" })}${Dialog.RequestClose({ state, controls: "confirm", content: "Cancel" })}`,
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -113,6 +116,40 @@ describe("typed/ui/Dialog in Chromium", () => {
 
       assert.strictEqual(dialog.open, false);
       assert.strictEqual((yield* state).open, false);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("lets RequestClose consumers cancel the native close lifecycle", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Dialog.makeState();
+      let canceled = false;
+      yield* render(
+        html`${Dialog.Trigger({ state, content: "Open" })}${Dialog.Content({
+          state,
+          label: "Test dialog",
+          content: "Body",
+          props: {
+            oncancel: EventHandler.preventDefault(
+              EventHandler.fromEffectOrEventHandler(
+                Effect.sync(() => {
+                  canceled = true;
+                }),
+              ),
+            ),
+          },
+        })}${Dialog.RequestClose({ state, content: "Cancel" })}`,
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+      (document.querySelector("button") as HTMLButtonElement).click();
+      yield* Effect.sleep(0);
+      assert.strictEqual(document.querySelector("dialog")?.open, true);
+
+      (document.querySelectorAll("button")[1] as HTMLButtonElement).click();
+      yield* Effect.sleep(0);
+      assert.strictEqual(canceled, true);
+      assert.strictEqual(document.querySelector("dialog")?.open, true);
+      assert.strictEqual((yield* state).open, true);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 });

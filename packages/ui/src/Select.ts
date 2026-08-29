@@ -97,22 +97,21 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
 
 function triggerProps<const Options extends TriggerOptions>(options: Options) {
   const id = RefSubject.map(options.state, (state) => state.id);
+  const triggerId = RefSubject.map(options.state, (state) => `${state.id}-trigger`);
   const open = RefSubject.map(options.state, (state) => state.open);
   return () =>
     ({
+      id: triggerId,
       type: "button",
       popovertarget: id,
       popovertargetaction: "toggle",
       "aria-haspopup": "listbox",
       "aria-expanded": open,
-      onkeydown: EventHandler.make((event: KeyboardEvent) =>
-        event.key === "ArrowDown"
-          ? Effect.sync(() => {
-              event.preventDefault();
-              Dom.currentTarget<HTMLButtonElement>(event).click();
-            })
-          : Effect.void,
-      ),
+      onkeydown: EventHandler.make((event: KeyboardEvent) => {
+        if (event.key !== "ArrowDown") return;
+        event.preventDefault();
+        Dom.currentTarget<HTMLButtonElement>(event).click();
+      }),
       ref: Dom.composeRefs(options.state, invokerRef(options.state)),
     }) as const;
 }
@@ -175,19 +174,19 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
 
 function contentProps<const Options extends ContentOptions>(options: Options) {
   const id = RefSubject.map(options.state, (state) => state.id);
+  const triggerId = RefSubject.map(options.state, (state) => `${state.id}-trigger`);
   let typeahead: Composite.TypeaheadBuffer = { value: "", updatedAt: 0 };
   let restoreInvokerFocus = false;
-  const restoreFocus = () =>
-    Effect.gen(function* () {
-      if (!restoreInvokerFocus) return;
-      restoreInvokerFocus = false;
-      yield* Composite.focusElement(invokers.get(options.state));
-    });
+  const restoreFocus = Effect.gen(function* () {
+    if (!restoreInvokerFocus) return;
+    restoreInvokerFocus = false;
+    yield* Composite.focusElement(invokers.get(options.state));
+  });
   const onkeydown =
     options.collection === undefined
       ? undefined
-      : EventHandler.make((event: KeyboardEvent) =>
-          Effect.gen(function* () {
+      : EventHandler.make(
+          Effect.fn(function* (event: KeyboardEvent) {
             const direction = Composite.keyMove(event, { orientation: "vertical" });
             if (direction !== undefined) {
               event.preventDefault();
@@ -223,20 +222,21 @@ function contentProps<const Options extends ContentOptions>(options: Options) {
     ({
       id,
       role: "listbox",
+      "aria-labelledby": triggerId,
       popover: "manual",
       "aria-activedescendant": Composite.activeDescendant(options.state),
       onkeydown,
-      ontoggle: EventHandler.make((event: Event) =>
-        Effect.gen(function* () {
+      ontoggle: EventHandler.make(
+        Effect.fn(function* (event: Event) {
           const open = Dom.toggleState(event) === "open";
           const current = yield* options.state;
           if (current.open === open) {
-            if (!open) yield* restoreFocus();
+            if (!open) yield* restoreFocus;
             return current;
           }
           const next = yield* RefSubject.update(options.state, (state) => ({ ...state, open }));
           if (!open) {
-            yield* restoreFocus();
+            yield* restoreFocus;
             return next;
           }
           if (options.collection === undefined) return next;
@@ -312,14 +312,12 @@ function optionProps<const Options extends OptionOptions>(options: Options) {
       "aria-selected": selected,
       "aria-disabled": options.disabled ?? false,
       tabindex: Composite.tabIndex(options.state, options.id),
-      onclick: EventHandler.make(() =>
+      onclick:
         options.disabled === true ? Effect.void : select(options.state, options.id, options.value),
-      ),
-      onfocus: EventHandler.make(() =>
+      onfocus:
         options.disabled === true
           ? Effect.void
           : RefSubject.update(options.state, (state) => ({ ...state, activeId: options.id })),
-      ),
       ref: Dom.composeRefs(register, options.ref),
     }) as const;
 }

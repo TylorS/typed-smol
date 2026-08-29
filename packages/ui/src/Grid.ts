@@ -51,11 +51,19 @@ export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
 }
 
 function rootInternalProps<const Options extends RootOptions>(options: Options) {
+  const onfocus =
+    options.collection === undefined
+      ? undefined
+      : Effect.gen(function* () {
+          if ((yield* options.state).activeId !== null) return;
+          const first = Collection.byDomOrder(yield* options.collection!)[0];
+          if (first !== undefined) yield* activate(options.state, first.id);
+        });
   const onkeydown =
     options.collection === undefined
       ? undefined
-      : EventHandler.make((event: KeyboardEvent) =>
-          onKeyDown(options.state, options.collection!, event),
+      : EventHandler.make(
+          Effect.fn((event: KeyboardEvent) => onKeyDown(options.state, options.collection!, event)),
         );
   return ({ property }: Dom.InternalPropsHelpers<Options>) =>
     ({
@@ -67,6 +75,7 @@ function rootInternalProps<const Options extends RootOptions>(options: Options) 
         (state) => state.activeId ?? undefined,
       ),
       "aria-multiselectable": property("multiselectable", false),
+      onfocus,
       onkeydown,
       ref: options.state,
     }) as const;

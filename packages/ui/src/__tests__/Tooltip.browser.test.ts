@@ -11,7 +11,7 @@ describe("typed/ui/Tooltip in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Tooltip.makeState({ id: "tip" });
       yield* render(
-        html`${Tooltip.Anchor({ state, content: "Help" })}${Tooltip.Content({
+        html`${Tooltip.Anchor({ state, content: "Help", hideDelay: 20 })}${Tooltip.Content({
           state,
           content: "Helpful text",
         })}`,
@@ -25,6 +25,11 @@ describe("typed/ui/Tooltip in Chromium", () => {
       assert.strictEqual(content.matches(":popover-open"), true);
 
       anchor.dispatchEvent(new MouseEvent("mouseleave"));
+      content.dispatchEvent(new MouseEvent("mouseenter"));
+      yield* Effect.sleep(30);
+      assert.strictEqual(content.matches(":popover-open"), true);
+
+      content.dispatchEvent(new MouseEvent("mouseleave"));
       yield* Effect.sleep(0);
       assert.strictEqual(content.matches(":popover-open"), false);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
@@ -36,10 +41,12 @@ describe("typed/ui/Tooltip in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Tooltip.makeState({ id: "tip" });
       yield* render(
-        html`${Tooltip.Anchor({ state, content: "Help", props: { tabindex: 0 } })}${Tooltip.Content({
-          state,
-          content: "Helpful text",
-        })}`,
+        html`${Tooltip.Anchor({ state, content: "Help", props: { tabindex: 0 } })}${Tooltip.Content(
+          {
+            state,
+            content: "Helpful text",
+          },
+        )}`,
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const anchor = document.querySelector("span")!;

@@ -24,6 +24,36 @@ describe("typed/ui/Menubar in browsers", () => {
       yield* Effect.sleep(0);
       assert.strictEqual((yield* state).activeId, "file");
       assert.strictEqual(document.activeElement?.id, "file");
+      assert.strictEqual(document.querySelectorAll('[tabindex="0"]').length, 1);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("activates a role-only menu item with Enter", async () => {
+    document.body.replaceChildren();
+    let activations = 0;
+    await Effect.gen(function* () {
+      const state = yield* Menubar.makeState({ activeId: "file" });
+      const collection = yield* Menubar.makeCollection();
+      yield* render(
+        Menubar.Root({
+          state,
+          collection,
+          content: Menubar.Item({
+            state,
+            collection,
+            id: "file",
+            content: "File",
+            onclick: Effect.sync(() => activations++),
+          }),
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+
+      document
+        .querySelector("#file")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      yield* Effect.sleep(0);
+      assert.strictEqual(activations, 1);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 
@@ -42,7 +72,12 @@ describe("typed/ui/Menubar in browsers", () => {
         })}${Menu.Content({
           state: submenu,
           collection: submenuCollection,
-          content: Menu.Item({ state: submenu, collection: submenuCollection, id: "new", content: "New" }),
+          content: Menu.Item({
+            state: submenu,
+            collection: submenuCollection,
+            id: "new",
+            content: "New",
+          }),
         })}`,
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

@@ -9,14 +9,18 @@ interface State {
 export function ref<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
 ): (element: HTMLDetailsElement) => Effect.Effect<void, E, R | Scope.Scope> {
-  return (element) =>
+  return Effect.fn((element) =>
     Effect.asVoid(
       Effect.forkScoped(
-        Fx.observe(state, (value) =>
-          Effect.sync(() => {
-            if (element.open !== value.open) element.open = value.open;
-          }),
+        Fx.observe(
+          state,
+          Effect.fn((value) =>
+            Effect.sync(() => {
+              if (element.open !== value.open) element.open = value.open;
+            }),
+          ),
         ),
       ),
-    );
+    ),
+  );
 }

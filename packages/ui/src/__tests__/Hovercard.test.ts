@@ -10,6 +10,7 @@ describe("typed/ui/Hovercard", () => {
       const markup = yield* renderToHtmlString(
         html`${Hovercard.Anchor({ state, content: "Account" })}${Hovercard.Content({
           state,
+          label: "Account details",
           content: "Account details",
         })}`,
       );
@@ -17,6 +18,7 @@ describe("typed/ui/Hovercard", () => {
       assert.match(markup, /aria-controls="card"/);
       assert.match(markup, /id="card"/);
       assert.match(markup, /role="dialog"/);
+      assert.match(markup, /aria-label="Account details"/);
       assert.match(markup, /popover="manual"/);
       assert.strictEqual(markup.includes("aria-expanded"), false);
     }).pipe(Effect.provide(HtmlRenderTemplate), Effect.scoped, Effect.runPromise));

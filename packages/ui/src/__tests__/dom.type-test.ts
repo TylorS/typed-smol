@@ -186,6 +186,8 @@ Form.NumberInput({ state: formState, name: "email" });
 Form.TextInput({ state: formState, name: "quantity" });
 
 declare const dialogState: Dialog.ContentOptions["state"];
+// @ts-expect-error dialogs require an accessible name
+Dialog.Content({ state: dialogState, content: "Body" });
 Dialog.Content({ state: dialogState, content: "Body", label: "Delete account" });
 Dialog.Content({ state: dialogState, content: "Body", labelledBy: "delete-title" });
 // @ts-expect-error dialogs have one accessible-name source

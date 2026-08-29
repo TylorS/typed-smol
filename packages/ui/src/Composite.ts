@@ -78,7 +78,12 @@ export function move<Value, CompositeState extends State, E, R, E2, R2, Element 
 ): Effect.Effect<CompositeState, E | E2, R | R2> {
   return Effect.gen(function* () {
     const current = yield* options.state;
-    const activeId = moveActiveId(yield* options.collection, current, direction, options.includeDisabled);
+    const activeId = moveActiveId(
+      yield* options.collection,
+      current,
+      direction,
+      options.includeDisabled,
+    );
     return yield* RefSubject.update(options.state, (state) => ({ ...state, activeId }));
   });
 }
@@ -100,6 +105,14 @@ export function activeDescendant<CompositeState extends State, E, R>(
   );
 }
 
+export function rootTabIndex<CompositeState extends State, E, R>(
+  state: RefSubject.RefSubject<CompositeState, E, R>,
+): RefSubject.Computed<0 | -1, E, R> {
+  return RefSubject.map(state, (current) =>
+    current.virtualFocus || current.activeId === null ? 0 : -1,
+  );
+}
+
 export function keyMove(
   event: Pick<KeyboardEventLike, "key">,
   options: { readonly orientation?: Orientation; readonly rtl?: boolean },
@@ -116,7 +129,15 @@ export function keyMove(
   return undefined;
 }
 
-export function moveByKey<Value, CompositeState extends State, E, R, E2, R2, Element extends object>(
+export function moveByKey<
+  Value,
+  CompositeState extends State,
+  E,
+  R,
+  E2,
+  R2,
+  Element extends object,
+>(
   event: KeyboardEventLike,
   options: MoveOptions<Value, CompositeState, E, R, E2, R2, Element>,
 ): Effect.Effect<boolean, E | E2, R | R2> {
@@ -131,17 +152,34 @@ export function moveByKey<Value, CompositeState extends State, E, R, E2, R2, Ele
 }
 
 /** Moves the active item, then transfers DOM focus when the composite is not virtual-focus. */
-export function moveAndFocus<Value, CompositeState extends State, E, R, E2, R2, Element extends object>(
+export function moveAndFocus<
+  Value,
+  CompositeState extends State,
+  E,
+  R,
+  E2,
+  R2,
+  Element extends object,
+>(
   options: MoveOptions<Value, CompositeState, E, R, E2, R2, Element>,
   direction: Move,
 ): Effect.Effect<CompositeState, E | E2, R | R2> {
-  return Effect.tap(move(options, direction), () =>
-    Effect.andThen(focusActive(options), () => scrollActive(options)),
+  return Effect.tap(
+    move(options, direction),
+    Effect.andThen(focusActive(options), scrollActive(options)),
   );
 }
 
 /** Focuses the active registered item. Virtual-focus composites retain focus on their container. */
-export function focusActive<Value, CompositeState extends State, E, R, E2, R2, Element extends object>(
+export function focusActive<
+  Value,
+  CompositeState extends State,
+  E,
+  R,
+  E2,
+  R2,
+  Element extends object,
+>(
   options: MoveOptions<Value, CompositeState, E, R, E2, R2, Element>,
 ): Effect.Effect<void, E | E2, R | R2> {
   return Effect.gen(function* () {
@@ -161,14 +199,23 @@ export function focusElement(element: object | undefined): Effect.Effect<void> {
 }
 
 /** Scrolls the active registered item into view without changing focus. */
-export function scrollActive<Value, CompositeState extends State, E, R, E2, R2, Element extends object>(
+export function scrollActive<
+  Value,
+  CompositeState extends State,
+  E,
+  R,
+  E2,
+  R2,
+  Element extends object,
+>(
   options: MoveOptions<Value, CompositeState, E, R, E2, R2, Element>,
 ): Effect.Effect<void, E | E2, R | R2> {
   return Effect.gen(function* () {
     const activeId = (yield* options.state).activeId;
     if (activeId === null) return;
     const element = (yield* options.collection).find((item) => item.id === activeId)?.element;
-    const scrollIntoView = element === undefined ? undefined : Reflect.get(element, "scrollIntoView");
+    const scrollIntoView =
+      element === undefined ? undefined : Reflect.get(element, "scrollIntoView");
     if (typeof scrollIntoView === "function") {
       scrollIntoView.call(element, { block: "nearest", inline: "nearest" });
     }
@@ -197,10 +244,9 @@ export function typeaheadFrom<Item extends Collection.Item<unknown, object>>(
 
   const enabled = orderedItems(items, includeDisabled);
   const index = activeId === null ? -1 : enabled.findIndex((item) => item.id === activeId);
-  const ordered = index === -1 ? enabled : [...enabled.slice(index + 1), ...enabled.slice(0, index + 1)];
-  const item = ordered.find((item) =>
-    text(item).toLocaleLowerCase().startsWith(query),
-  );
+  const ordered =
+    index === -1 ? enabled : [...enabled.slice(index + 1), ...enabled.slice(0, index + 1)];
+  const item = ordered.find((item) => text(item).toLocaleLowerCase().startsWith(query));
 
   return item?.id ?? null;
 }
@@ -268,7 +314,8 @@ function activeIndex<Item extends Collection.Item<unknown, object>>(
   if (activeId === null) return direction === "previous" && loop ? items.length - 1 : 0;
 
   const current = items.findIndex((item) => item.id === activeId);
-  const index = current === -1 ? 0 : current;
+  if (current === -1) return direction === "previous" && loop ? items.length - 1 : 0;
+  const index = current;
   const delta = direction === "next" ? 1 : -1;
   const next = index + delta;
 

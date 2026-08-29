@@ -7,9 +7,12 @@ import { ServerRouter } from "@typed/router/Router";
 import {
   DomRenderTemplate,
   EventHandler,
+  html,
   render,
   renderToHtmlString,
   StaticHtmlRenderTemplate,
+  type RenderEvent,
+  type RenderTemplate,
 } from "@typed/template";
 import { Link } from "../Link.js";
 import { Window } from "happy-dom";
@@ -29,6 +32,33 @@ describe("typed/ui/Link", () => {
       assert(anchor.tagName === "A");
       assert(anchor.getAttribute("href") === "/about");
       assert(anchor.textContent === "Go to about");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("supports modern props and host overrides through Dom.renderHost", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const [root] = yield* render(
+        Link(
+          {
+            href: "/hosted",
+            content: "Hosted link",
+            class: "legacy",
+            props: { class: "modern" },
+          },
+          (props, content) =>
+            html`<a ...${props} data-hosted="true">${content}</a>` as Fx.Fx<
+              RenderEvent,
+              never,
+              RenderTemplate
+            >,
+        ),
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll);
+      const anchor = root as HTMLAnchorElement;
+
+      assert.strictEqual(anchor.className, "modern");
+      assert.strictEqual(anchor.dataset.hosted, "true");
+      assert.strictEqual(anchor.textContent, "Hosted link");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("intercepts same-origin click and navigates", () => {
@@ -266,7 +296,10 @@ describe("typed/ui/Link", () => {
     const [window, layer] = createHappyDomLayer();
     return Effect.gen(function* () {
       const [root] = yield* render(
-        Link({ href: Effect.succeed("javascript:globalThis.compromised = true"), content: "Dynamic" }),
+        Link({
+          href: Effect.succeed("javascript:globalThis.compromised = true"),
+          content: "Dynamic",
+        }),
         window.document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 

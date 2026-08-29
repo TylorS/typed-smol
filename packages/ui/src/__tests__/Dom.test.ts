@@ -12,8 +12,8 @@ describe("typed/ui/Dom", () => {
       const window = makeWindow();
       const event = new window.Event("click", { cancelable: true });
       const handler = Dom.chainEvent(
-        EventHandler.make(() => Effect.sync(() => calls.push("user"))),
-        EventHandler.make(() => Effect.sync(() => calls.push("internal"))),
+        EventHandler.make(Effect.fn(() => Effect.sync(() => calls.push("user")))),
+        EventHandler.make(Effect.fn(() => Effect.sync(() => calls.push("internal")))),
       );
 
       assert.isDefined(handler);
@@ -27,14 +27,79 @@ describe("typed/ui/Dom", () => {
       const window = makeWindow();
       const event = new window.Event("click", { cancelable: true });
       const handler = Dom.chainEvent(
-        EventHandler.make(() => Effect.sync(() => calls.push("user")), { preventDefault: true }),
-        EventHandler.make(() => Effect.sync(() => calls.push("internal"))),
+        EventHandler.make(
+          Effect.fn(() => Effect.sync(() => calls.push("user"))),
+          {
+            preventDefault: true,
+          },
+        ),
+        EventHandler.make(Effect.fn(() => Effect.sync(() => calls.push("internal")))),
       );
 
       assert.isDefined(handler);
       yield* handler.handler(event);
       assert.strictEqual(event.defaultPrevented, true);
       assert.deepEqual(calls, ["user"]);
+    }).pipe(Effect.runPromise));
+
+  it("keeps user once options from removing internal behavior", () =>
+    Effect.gen(function* () {
+      const calls: Array<string> = [];
+      const window = makeWindow();
+      const handler = Dom.chainEvent(
+        EventHandler.make(
+          Effect.fn(function* () {
+            yield* Effect.sync(() => calls.push("user"));
+          }),
+          { once: true, passive: true, capture: true },
+        ),
+        EventHandler.make(
+          Effect.fn(function* () {
+            yield* Effect.sync(() => calls.push("internal"));
+          }),
+        ),
+      );
+
+      assert.isDefined(handler);
+      assert.notStrictEqual(handler.options?.once, true);
+      assert.strictEqual(handler.options?.passive, true);
+      assert.strictEqual(handler.options?.capture, true);
+      yield* handler.handler(new window.Event("click", { cancelable: true }));
+      yield* handler.handler(new window.Event("click", { cancelable: true }));
+
+      assert.deepEqual(calls, ["user", "internal", "internal"]);
+    }).pipe(Effect.runPromise));
+
+  it("does not invoke consumer activation for an aria-disabled host", () =>
+    Effect.gen(function* () {
+      const calls: Array<string> = [];
+      const window = makeWindow();
+      const merged = Dom.mergeProps(
+        {
+          onclick: EventHandler.make(
+            Effect.fn(function* () {
+              yield* Effect.sync(() => calls.push("user"));
+            }),
+          ),
+        } satisfies Dom.HostProps<HTMLDivElement>,
+        {
+          role: "menuitem",
+          "aria-disabled": true,
+          onclick: EventHandler.make(
+            Effect.fn(function* () {
+              yield* Effect.sync(() => calls.push("internal"));
+            }),
+          ),
+        } satisfies Dom.HostProps<HTMLDivElement>,
+      );
+
+      const onclick = merged.onclick;
+      assert.isDefined(onclick);
+      if (EventHandler.isEventHandler(onclick)) {
+        yield* onclick.handler(new window.MouseEvent("click", { cancelable: true }));
+      }
+
+      assert.deepEqual(calls, ["internal"]);
     }).pipe(Effect.runPromise));
 
   it("preserves one hydration protocol while invoking both refs once", () =>
@@ -47,10 +112,16 @@ describe("typed/ui/Dom", () => {
         server: Effect.void,
         toAttributes: Effect.succeed([]),
       };
-      const hydration = Object.assign(() => Effect.sync(() => calls.push("hydrate")), {
-        [RefSubject.HydrationRefTypeId]: metadata,
-      });
-      const composed = Dom.composeRefs(hydration, () => Effect.sync(() => calls.push("user")));
+      const hydration = Object.assign(
+        Effect.fn(() => Effect.sync(() => calls.push("hydrate"))),
+        {
+          [RefSubject.HydrationRefTypeId]: metadata,
+        },
+      );
+      const composed = Dom.composeRefs(
+        hydration,
+        Effect.fn(() => Effect.sync(() => calls.push("user"))),
+      );
 
       assert.isDefined(composed);
       assert.strictEqual(RefSubject.isHydrationRef(composed), true);
@@ -62,7 +133,7 @@ describe("typed/ui/Dom", () => {
     }).pipe(Effect.runPromise));
 
   it("rejects multiple hydration owners", () => {
-    const hydration = () => Effect.void;
+    const hydration = Effect.fn(() => Effect.void);
     const first = Object.assign(hydration, {
       [RefSubject.HydrationRefTypeId]: {
         members: [],
@@ -70,13 +141,16 @@ describe("typed/ui/Dom", () => {
         toAttributes: Effect.succeed([]),
       },
     });
-    const second = Object.assign(() => Effect.void, {
-      [RefSubject.HydrationRefTypeId]: {
-        members: [],
-        server: Effect.void,
-        toAttributes: Effect.succeed([]),
+    const second = Object.assign(
+      Effect.fn(() => Effect.void),
+      {
+        [RefSubject.HydrationRefTypeId]: {
+          members: [],
+          server: Effect.void,
+          toAttributes: Effect.succeed([]),
+        },
       },
-    });
+    );
 
     assert.throws(
       () => Dom.composeRefs(first, second),
@@ -91,13 +165,15 @@ describe("typed/ui/Dom", () => {
       const calls: Array<string> = [];
       const user = {
         type: "submit",
-        onclick: EventHandler.make(() => Effect.sync(() => calls.push("user-event"))),
-        ref: () => Effect.sync(() => calls.push("user-ref")),
+        onclick: EventHandler.make(Effect.fn(() => Effect.sync(() => calls.push("user-event")))),
+        ref: Effect.fn(() => Effect.sync(() => calls.push("user-ref"))),
       } satisfies Dom.HostProps<HTMLButtonElement>;
       const internal = {
         type: "button",
-        onclick: EventHandler.make(() => Effect.sync(() => calls.push("internal-event"))),
-        ref: () => Effect.sync(() => calls.push("internal-ref")),
+        onclick: EventHandler.make(
+          Effect.fn(() => Effect.sync(() => calls.push("internal-event"))),
+        ),
+        ref: Effect.fn(() => Effect.sync(() => calls.push("internal-ref"))),
       } satisfies Dom.HostProps<HTMLButtonElement>;
       const merged = Dom.mergeProps(user, internal);
 
@@ -120,10 +196,10 @@ describe("typed/ui/Dom", () => {
       const window = makeWindow();
       const merged = Dom.mergeProps(
         {
-          "@click": EventHandler.make(() => Effect.sync(() => calls.push("user"))),
+          "@click": EventHandler.make(Effect.fn(() => Effect.sync(() => calls.push("user")))),
         } satisfies Dom.HostProps<HTMLButtonElement>,
         {
-          "@click": EventHandler.make(() => Effect.sync(() => calls.push("internal"))),
+          "@click": EventHandler.make(Effect.fn(() => Effect.sync(() => calls.push("internal")))),
         } satisfies Dom.HostProps<HTMLButtonElement>,
       );
 

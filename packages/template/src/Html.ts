@@ -11,6 +11,7 @@ import {
   type HtmlChunk,
   type HtmlPartChunk,
   type HtmlSparsePartChunk,
+  isSerializableSpreadKey,
   templateToHtmlChunks,
 } from "./HtmlChunk.js";
 import { TEXT_START, TYPED_NODE_END, TYPED_NODE_START } from "./internal/meta.js";
@@ -279,6 +280,7 @@ function setupProperties<E, R>(
           render(Object.fromEntries(attributes.map(({ name, value }) => [name, value]))),
         );
       }
+      if (!isSerializableSpreadKey(key)) return Fx.empty;
       return Fx.filterMap(liftRenderableToFx<E, R>(renderable, isStatic, new Set()), (value) => {
         const s = render({ [key]: value });
         return s ? some(HtmlRenderEvent(s, last && i === lastIndex)) : none();

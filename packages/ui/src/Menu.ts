@@ -28,7 +28,7 @@ const invokers = new WeakMap<
 >();
 
 interface SubmenuOwner {
-  readonly onArrowLeft: () => Effect.Effect<void, Schema.SchemaError>;
+  readonly onArrowLeft: Effect.Effect<void, Schema.SchemaError>;
 }
 
 const submenuOwners = new WeakMap<
@@ -89,14 +89,11 @@ function triggerProps<const Options extends TriggerOptions>(options: Options) {
       popovertargetaction: "toggle",
       "aria-haspopup": "menu",
       "aria-expanded": open,
-      onkeydown: EventHandler.make((event: KeyboardEvent) =>
-        event.key === "ArrowDown"
-          ? Effect.sync(() => {
-              event.preventDefault();
-              Dom.currentTarget<HTMLButtonElement>(event).click();
-            })
-          : Effect.void,
-      ),
+      onkeydown: EventHandler.make((event: KeyboardEvent) => {
+        if (event.key !== "ArrowDown") return;
+        event.preventDefault();
+        Dom.currentTarget<HTMLButtonElement>(event).click();
+      }),
       ref: Dom.composeRefs(options.state, invokerRef(options.state)),
     }) as const;
 }
@@ -104,17 +101,16 @@ function triggerProps<const Options extends TriggerOptions>(options: Options) {
 function invokerRef(
   state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>,
 ): (element: globalThis.Element) => Effect.Effect<void, never, Scope.Scope> {
-  return (element) =>
-    Effect.gen(function* () {
-      invokers.set(state, element);
-      const scope = yield* Effect.scope;
-      yield* Scope.addFinalizer(
-        scope,
-        Effect.sync(() => {
-          if (invokers.get(state) === element) invokers.delete(state);
-        }),
-      );
-    });
+  return Effect.fn(function* (element) {
+    invokers.set(state, element);
+    const scope = yield* Effect.scope;
+    yield* Scope.addFinalizer(
+      scope,
+      Effect.sync(() => {
+        if (invokers.get(state) === element) invokers.delete(state);
+      }),
+    );
+  });
 }
 type TriggerProps<Options extends TriggerOptions> = ReturnType<
   ReturnType<typeof triggerProps<Options>>
@@ -176,8 +172,8 @@ function contentProps<const Options extends ContentOptions>(options: Options) {
   const onkeydown =
     options.collection === undefined
       ? undefined
-      : EventHandler.make((event: KeyboardEvent) =>
-          Effect.gen(function* () {
+      : EventHandler.make(
+          Effect.fn(function* (event: KeyboardEvent) {
             const direction = Composite.keyMove(event, { orientation: "vertical" });
             if (direction !== undefined) {
               event.preventDefault();
@@ -214,7 +210,7 @@ function contentProps<const Options extends ContentOptions>(options: Options) {
               } else {
                 yield* setOpen(options.state, false);
                 if (options.parent === undefined && submenuOwners.has(options.state)) {
-                  yield* submenuOwners.get(options.state)?.onArrowLeft() ?? Effect.void;
+                  yield* submenuOwners.get(options.state)?.onArrowLeft ?? Effect.void;
                 } else if (options.parent === undefined)
                   yield* Composite.focusElement(invoker ?? invokers.get(options.state));
                 else {
@@ -268,36 +264,35 @@ function contentProps<const Options extends ContentOptions>(options: Options) {
             yield* Composite.focusActive({ state: options.state, collection: options.collection! });
           }),
         );
-  const restoreFocus = () =>
-    Effect.gen(function* () {
-      if (restoreParentFocus && options.parent !== undefined) {
-        restoreParentFocus = false;
-        yield* RefSubject.update(options.parent.state, (state) => ({
-          ...state,
-          activeId: options.parent!.triggerId,
-        }));
-        yield* Composite.focusActive({
-          state: options.parent.state,
-          collection: options.parent.collection,
-        });
-      }
-      if (restoreOwnerFocus) {
-        restoreOwnerFocus = false;
-        yield* submenuOwners.get(options.state)?.onArrowLeft() ?? Effect.void;
-      }
-      if (restoreInvokerFocus) {
-        restoreInvokerFocus = false;
-        yield* Composite.focusElement(invoker ?? invokers.get(options.state));
-      }
-    });
-  const toggle = EventHandler.make((event: Event) =>
-    Effect.gen(function* () {
+  const restoreFocus = Effect.gen(function* () {
+    if (restoreParentFocus && options.parent !== undefined) {
+      restoreParentFocus = false;
+      yield* RefSubject.update(options.parent.state, (state) => ({
+        ...state,
+        activeId: options.parent!.triggerId,
+      }));
+      yield* Composite.focusActive({
+        state: options.parent.state,
+        collection: options.parent.collection,
+      });
+    }
+    if (restoreOwnerFocus) {
+      restoreOwnerFocus = false;
+      yield* submenuOwners.get(options.state)?.onArrowLeft ?? Effect.void;
+    }
+    if (restoreInvokerFocus) {
+      restoreInvokerFocus = false;
+      yield* Composite.focusElement(invoker ?? invokers.get(options.state));
+    }
+  });
+  const toggle = EventHandler.make(
+    Effect.fn(function* (event: Event) {
       const open = Dom.toggleState(event) === "open";
       const source = Reflect.get(event, "source");
       if (isElement(source)) invoker = source;
       const current = yield* options.state;
       if (current.open === open) {
-        if (!open) yield* restoreFocus();
+        if (!open) yield* restoreFocus;
         return current;
       }
       if (open && options.collection !== undefined) {
@@ -312,7 +307,7 @@ function contentProps<const Options extends ContentOptions>(options: Options) {
         return next;
       }
       const next = yield* setOpen(options.state, open);
-      if (!open) yield* restoreFocus();
+      if (!open) yield* restoreFocus;
       return next;
     }),
   );
@@ -376,18 +371,15 @@ export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
 
 function itemProps<const Options extends ItemOptions>(options: Options) {
   const closesOnActivate = options.role === undefined || options.role === "menuitem";
-  const activate = EventHandler.make(() =>
+  const activate =
     options.disabled === true
       ? Effect.void
       : RefSubject.update(options.state, (state) => ({
           ...state,
           activeId: options.id,
           open: closesOnActivate ? false : state.open,
-        })),
-  );
-  const focus = EventHandler.make(() =>
-    RefSubject.update(options.state, (state) => ({ ...state, activeId: options.id })),
-  );
+        }));
+  const focus = RefSubject.update(options.state, (state) => ({ ...state, activeId: options.id }));
   const register =
     options.collection === undefined
       ? undefined
@@ -442,8 +434,9 @@ export function Item<const Options extends ItemOptions, const Host extends HostR
   );
 }
 
-export interface SubmenuTriggerOptions<ParentState extends Composite.State>
-  extends Dom.HostOptions<HTMLButtonElement> {
+export interface SubmenuTriggerOptions<
+  ParentState extends Composite.State,
+> extends Dom.HostOptions<HTMLButtonElement> {
   readonly state: RefSubject.HydratedRefSubject<ParentState, Schema.SchemaError>;
   readonly submenu: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
@@ -459,10 +452,11 @@ function submenuTriggerProps<
 >(options: Options) {
   const submenuId = RefSubject.map(options.submenu, (state) => state.id);
   const expanded = RefSubject.map(options.submenu, (state) => state.open);
-  const focusEffect = () =>
-    RefSubject.update(options.state, (state) => ({ ...state, activeId: options.id }));
-  const activateEffect = () => (options.disabled === true ? Effect.void : focusEffect());
-  const activate = EventHandler.make(activateEffect);
+  const focusEffect = RefSubject.update(options.state, (state) => ({
+    ...state,
+    activeId: options.id,
+  }));
+  const activateEffect = options.disabled === true ? Effect.void : focusEffect;
   const register =
     options.collection === undefined
       ? undefined
@@ -484,13 +478,12 @@ function submenuTriggerProps<
       "aria-expanded": expanded,
       "aria-disabled": options.disabled ?? false,
       tabindex: Composite.tabIndex(options.state, options.id),
-      onclick: activate,
-      onfocus: EventHandler.make(focusEffect),
-      onmouseenter: EventHandler.make(() =>
+      onclick: activateEffect,
+      onfocus: focusEffect,
+      onmouseenter:
         options.disabled === true
           ? Effect.void
-          : Effect.andThen(activateEffect(), () => setOpen(options.submenu, true)),
-      ),
+          : Effect.andThen(activateEffect, setOpen(options.submenu, true)),
       ref: Dom.composeRefs(
         register,
         Dom.composeRefs(
@@ -507,32 +500,27 @@ function submenuOwnerRef<ParentState extends Composite.State>(
   collection: RefSubject.RefSubject<Collection.State<string>> | undefined,
   triggerId: string,
 ): (element: globalThis.Element) => Effect.Effect<void, never, Scope.Scope> {
-  return () =>
-    Effect.gen(function* () {
-      const owner: SubmenuOwner = {
-        onArrowLeft: () =>
-          Effect.gen(function* () {
-            if (collection === undefined) return;
-            if ((yield* state).orientation === "horizontal") {
-              yield* Composite.moveAndFocus(
-                { state, collection, includeDisabled: true },
-                "previous",
-              );
-            } else {
-              yield* RefSubject.update(state, (value) => ({ ...value, activeId: triggerId }));
-              yield* Composite.focusActive({ state, collection });
-            }
-          }),
-      };
-      submenuOwners.set(submenu, owner);
-      const scope = yield* Effect.scope;
-      yield* Scope.addFinalizer(
-        scope,
-        Effect.sync(() => {
-          if (submenuOwners.get(submenu) === owner) submenuOwners.delete(submenu);
-        }),
-      );
-    });
+  return Effect.fn(function* () {
+    const owner: SubmenuOwner = {
+      onArrowLeft: Effect.gen(function* () {
+        if (collection === undefined) return;
+        if ((yield* state).orientation === "horizontal") {
+          yield* Composite.moveAndFocus({ state, collection, includeDisabled: true }, "previous");
+        } else {
+          yield* RefSubject.update(state, (value) => ({ ...value, activeId: triggerId }));
+          yield* Composite.focusActive({ state, collection });
+        }
+      }),
+    };
+    submenuOwners.set(submenu, owner);
+    const scope = yield* Effect.scope;
+    yield* Scope.addFinalizer(
+      scope,
+      Effect.sync(() => {
+        if (submenuOwners.get(submenu) === owner) submenuOwners.delete(submenu);
+      }),
+    );
+  });
 }
 type SubmenuTriggerProps<
   ParentState extends Composite.State,

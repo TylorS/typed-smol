@@ -3,7 +3,7 @@ import { Effect, Layer } from "effect";
 import { Fx } from "@typed/fx";
 import { CurrentPath } from "@typed/navigation";
 import { ServerRouter } from "@typed/router/Router";
-import { DomRenderTemplate, render } from "@typed/template";
+import { DomRenderTemplate, EventHandler, render } from "@typed/template";
 import { Link } from "../Link.js";
 
 declare global {
@@ -59,6 +59,66 @@ describe("typed/ui/Link in Chromium", () => {
 
       assert.strictEqual(clicks, 1);
       assert.strictEqual(yield* CurrentPath, "/browser-navigation");
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
+  it("lets a lazy user handler veto SPA navigation", async () => {
+    document.body.replaceChildren();
+    const layer = DomRenderTemplate.using(document).pipe(
+      Layer.merge(ServerRouter({ url: location.href })),
+    );
+
+    await Effect.gen(function* () {
+      const initialPath = yield* CurrentPath;
+      const [root] = yield* render(
+        Link({
+          href: "/vetoed-navigation",
+          content: "Stay here",
+          onclick: EventHandler.make(
+            Effect.fn(function* (event: MouseEvent) {
+              yield* Effect.sync(() => event.preventDefault());
+            }),
+          ),
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+
+      (root as HTMLAnchorElement).dispatchEvent(event);
+      yield* Effect.sleep(10);
+
+      assert.strictEqual(event.defaultPrevented, true);
+      assert.strictEqual(yield* CurrentPath, initialPath);
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
+  it("claims native navigation before an asynchronous user veto resolves", async () => {
+    document.body.replaceChildren();
+    const layer = DomRenderTemplate.using(document).pipe(
+      Layer.merge(ServerRouter({ url: location.href })),
+    );
+
+    await Effect.gen(function* () {
+      const initialPath = yield* CurrentPath;
+      const [root] = yield* render(
+        Link({
+          href: "/async-vetoed-navigation",
+          content: "Stay here asynchronously",
+          onclick: EventHandler.make(
+            Effect.fn(function* (event: MouseEvent) {
+              yield* Effect.sleep(10);
+              event.preventDefault();
+            }),
+          ),
+        }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+
+      (root as HTMLAnchorElement).dispatchEvent(event);
+      assert.strictEqual(event.defaultPrevented, true);
+      yield* Effect.sleep(20);
+      assert.strictEqual(yield* CurrentPath, initialPath);
     }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
   });
 

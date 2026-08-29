@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Fx } from "@typed/fx";
+import { Fx, RefSubject } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Carousel from "../Carousel.js";
@@ -24,6 +24,35 @@ describe("typed/ui/Carousel in browsers", () => {
 
       assert.strictEqual((yield* state).activeId, "second");
       assert.strictEqual((document.querySelector("#second") as HTMLDivElement).hidden, false);
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  });
+
+  it("pauses for focus and pauses only while the pointer remains over the carousel", async () => {
+    document.body.replaceChildren();
+    await Effect.gen(function* () {
+      const state = yield* Carousel.makeState({ activeId: "first", paused: false });
+      yield* render(
+        Carousel.Root({ state, label: "Slides", content: "Slide", props: { tabindex: 0 } }),
+        document.body,
+      ).pipe(Fx.take(1), Fx.collectAll);
+      const carousel = document.querySelector('[aria-roledescription="carousel"]') as HTMLElement;
+
+      carousel.focus();
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).paused, true);
+      yield* RefSubject.update(state, (current) => ({ ...current, paused: false }));
+      carousel.dispatchEvent(new MouseEvent("mouseenter"));
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).paused, true);
+      carousel.dispatchEvent(new MouseEvent("mouseleave"));
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).paused, false);
+
+      carousel.dispatchEvent(new MouseEvent("mouseenter"));
+      carousel.dispatchEvent(new FocusEvent("focusin"));
+      carousel.dispatchEvent(new MouseEvent("mouseleave"));
+      yield* Effect.sleep(0);
+      assert.strictEqual((yield* state).paused, true);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 });

@@ -7,14 +7,7 @@ describe("typed/ui/Tabs", () => {
   it("moves active selection through collection items in automatic mode", () =>
     Effect.gen(function* () {
       const state = yield* Tabs.makeState({ selectedId: "first" });
-      const next = yield* Tabs.move(
-        state,
-        [
-          { id: "first" },
-          { id: "second" },
-        ],
-        "next",
-      );
+      const next = yield* Tabs.move(state, [{ id: "first" }, { id: "second" }], "next");
 
       assert.strictEqual(next.activeId, "second");
       assert.strictEqual(next.selectedId, "second");
@@ -36,5 +29,6 @@ describe("typed/ui/Tabs", () => {
       assert.match(markup, /aria-selected="true"/);
       assert.match(markup, /role="tabpanel"/);
       assert.match(markup, /aria-labelledby="first"/);
+      assert.match(markup, /role="tabpanel"[^>]*tabindex="0"/);
     }).pipe(Effect.provide(HtmlRenderTemplate), Effect.scoped, Effect.runPromise));
 });

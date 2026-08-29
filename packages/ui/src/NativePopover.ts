@@ -9,12 +9,16 @@ interface State {
 export function ref<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
 ): (element: HTMLElement) => Effect.Effect<void, E, R | Scope.Scope> {
-  return (element) =>
+  return Effect.fn((element) =>
     Effect.asVoid(
       Effect.forkScoped(
-        Fx.observe(state, (value) => Effect.sync(() => synchronize(element, value.open))),
+        Fx.observe(
+          state,
+          Effect.fn((value) => Effect.sync(() => synchronize(element, value.open))),
+        ),
       ),
-    );
+    ),
+  );
 }
 
 function synchronize(element: HTMLElement, open: boolean): void {

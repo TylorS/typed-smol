@@ -3,7 +3,13 @@ import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
+import {
+  EventHandler,
+  html,
+  type Renderable,
+  type RenderEvent,
+  type RenderTemplate,
+} from "@typed/template";
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 import * as NativePopover from "./NativePopover.js";
@@ -31,6 +37,19 @@ export function setOpen<E, R>(
   return RefSubject.update(state, (current) => ({ ...current, open }));
 }
 
+const scheduleVersions = new WeakMap<object, number>();
+
+const scheduleOpen = Effect.fn(function* <E, R>(
+  state: RefSubject.RefSubject<State, E, R>,
+  open: boolean,
+  delay: number,
+) {
+  const version = (scheduleVersions.get(state) ?? 0) + 1;
+  scheduleVersions.set(state, version);
+  if (delay > 0) yield* Effect.sleep(delay);
+  if (scheduleVersions.get(state) === version) yield* setOpen(state, open);
+});
+
 export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   readonly content: Renderable.Any;
@@ -39,25 +58,21 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
 }
 
 function anchorInternalProps<const Options extends AnchorOptions>(options: Options) {
-  let scheduleVersion = 0;
-  const schedule = (open: boolean, delay: number) =>
-    Effect.gen(function* () {
-      const version = ++scheduleVersion;
-      if (delay > 0) yield* Effect.sleep(delay);
-      if (version === scheduleVersion) yield* setOpen(options.state, open);
-    });
   const id = RefSubject.map(options.state, (state) => state.id);
 
-  return () => ({
-    "aria-describedby": id,
-    onfocus: EventHandler.make(() => schedule(true, options.showDelay ?? 0)),
-    onblur: EventHandler.make(() => schedule(false, options.hideDelay ?? 0)),
-    onkeydown: EventHandler.make((event: KeyboardEvent) =>
-      event.key === "Escape" ? setOpen(options.state, false) : Effect.void,
-    ),
-    onmouseenter: EventHandler.make(() => schedule(true, options.showDelay ?? 0)),
-    onmouseleave: EventHandler.make(() => schedule(false, options.hideDelay ?? 0)),
-  } as const);
+  return () =>
+    ({
+      "aria-describedby": id,
+      onfocus: scheduleOpen(options.state, true, options.showDelay ?? 0),
+      onblur: scheduleOpen(options.state, false, options.hideDelay ?? 0),
+      onkeydown: EventHandler.make(
+        Effect.fn(function* (event: KeyboardEvent) {
+          if (event.key === "Escape") yield* scheduleOpen(options.state, false, 0);
+        }),
+      ),
+      onmouseenter: scheduleOpen(options.state, true, options.showDelay ?? 0),
+      onmouseleave: scheduleOpen(options.state, false, options.hideDelay ?? 0),
+    }) as const;
 }
 
 type AnchorInternalProps<Options extends AnchorOptions> = ReturnType<
@@ -98,25 +113,43 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
 
 function contentInternalProps<const Options extends ContentOptions>(options: Options) {
   const id = RefSubject.map(options.state, (state) => state.id);
-  return () => ({
-    id,
-    role: "tooltip",
-    popover: "manual",
-    onkeydown: EventHandler.make((event: KeyboardEvent) =>
-      event.key === "Escape" ? setOpen(options.state, false) : Effect.void,
-    ),
-    ontoggle: EventHandler.make((event: Event) =>
-      setOpen(options.state, Dom.toggleState(event) === "open"),
-    ),
-    ref: Dom.composeRefs(options.state, NativePopover.ref(options.state)),
-  } as const);
+  return () =>
+    ({
+      id,
+      role: "tooltip",
+      popover: "manual",
+      onmouseenter: scheduleOpen(options.state, true, 0),
+      onmouseleave: EventHandler.make(
+        Effect.fn(function* (event: MouseEvent) {
+          const contentId = (yield* options.state).id;
+          if (
+            event.relatedTarget instanceof Element &&
+            event.relatedTarget.getAttribute("aria-describedby") === contentId
+          )
+            return;
+          yield* scheduleOpen(options.state, false, 0);
+        }),
+      ),
+      onkeydown: EventHandler.make(
+        Effect.fn(function* (event: KeyboardEvent) {
+          if (event.key === "Escape") yield* scheduleOpen(options.state, false, 0);
+        }),
+      ),
+      ontoggle: EventHandler.make(
+        Effect.fn((event: Event) => setOpen(options.state, Dom.toggleState(event) === "open")),
+      ),
+      ref: Dom.composeRefs(options.state, NativePopover.ref(options.state)),
+    }) as const;
 }
 
 type ContentInternalProps<Options extends ContentOptions> = ReturnType<
   ReturnType<typeof contentInternalProps<Options>>
 >;
 
-export function Content<const Options extends ContentOptions, const Host extends HostResult = never>(
+export function Content<
+  const Options extends ContentOptions,
+  const Host extends HostResult = never,
+>(
   options: Options,
   host?: Dom.HostOverride<
     Dom.RenderHostProps<Options, ContentInternalProps<Options>>,
@@ -134,15 +167,9 @@ export function Content<const Options extends ContentOptions, const Host extends
     Options["content"],
     HostResult,
     Host
-  >(
-    options,
-    host,
-    contentInternalProps(options),
-    options.content,
-    (props, content) => {
-      return html`<div ...${props}>${content}</div>`;
-    },
-  );
+  >(options, host, contentInternalProps(options), options.content, (props, content) => {
+    return html`<div ...${props}>${content}</div>`;
+  });
 }
 
 export const Tooltip = Content;

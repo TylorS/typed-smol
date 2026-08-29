@@ -3,7 +3,13 @@ import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
 import type { Fx } from "@typed/fx/Fx";
 import { RefSubject } from "@typed/fx";
-import { EventHandler, html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
+import {
+  EventHandler,
+  html,
+  type Renderable,
+  type RenderEvent,
+  type RenderTemplate,
+} from "@typed/template";
 import * as Collection from "./Collection.js";
 import * as Composite from "./Composite.js";
 import * as Dom from "./Dom.js";
@@ -64,9 +70,10 @@ function openPopover(
 ): Effect.Effect<State, Schema.SchemaError> {
   return Effect.gen(function* () {
     const current = yield* state;
-    const item = collection === undefined
-      ? undefined
-      : visibleItems(yield* collection).find((item) => item.value === current.value);
+    const item =
+      collection === undefined
+        ? undefined
+        : visibleItems(yield* collection).find((item) => item.value === current.value);
     const next = yield* RefSubject.update(state, (value) => ({
       ...value,
       activeId: item?.id ?? value.activeId,
@@ -105,7 +112,8 @@ function selectActive(
 ): Effect.Effect<State, Schema.SchemaError> {
   return Effect.gen(function* () {
     const activeId = (yield* state).activeId;
-    const item = activeId === null ? undefined : (yield* collection).find((item) => item.id === activeId);
+    const item =
+      activeId === null ? undefined : (yield* collection).find((item) => item.id === activeId);
     return item?.value === undefined ? yield* state : yield* select(state, item.id, item.value);
   });
 }
@@ -118,44 +126,59 @@ export interface InputOptions extends Dom.HostOptions<HTMLInputElement> {
 
 function inputProps<const Options extends InputOptions>(options: Options) {
   const id = RefSubject.map(options.state, (state) => state.id);
+  const inputId = RefSubject.map(options.state, (state) => `${state.id}-input`);
   const open = RefSubject.map(options.state, (state) => state.open);
-  const onkeydown = options.collection === undefined ? undefined : EventHandler.make((event: KeyboardEvent) =>
-    Effect.gen(function* () {
-      const direction = event.key === "ArrowDown" ? "next" : event.key === "ArrowUp" ? "previous" : undefined;
-      if (direction !== undefined) {
-        event.preventDefault();
-        yield* move(options.state, options.collection!, direction);
-        yield* Composite.scrollActive({ state: options.state, collection: options.collection! });
-        return;
-      }
-      if (event.key === "Enter") {
-        if ((yield* options.state).activeId === null) return;
-        event.preventDefault();
-        yield* selectActive(options.state, options.collection!);
-        return;
-      }
-      if (event.key === "Escape") {
-        yield* RefSubject.update(options.state, (state) => ({ ...state, open: false }));
-      }
-    }),
-  );
-  return () => ({
-    role: "combobox",
-    "aria-autocomplete": "list",
-    "aria-controls": id,
-    "aria-expanded": open,
-    "aria-activedescendant": Composite.activeDescendant(options.state),
-    placeholder: options.placeholder,
-    ".value": RefSubject.map(options.state, (state) => state.value),
-    oninput: EventHandler.make((event: Event) => setValue(options.state, Dom.currentTarget<HTMLInputElement>(event).value)),
-    onfocus: EventHandler.make(() => openPopover(options.state, options.collection)),
-    onkeydown,
-  }) as const;
+  const onkeydown =
+    options.collection === undefined
+      ? undefined
+      : EventHandler.make(
+          Effect.fn(function* (event: KeyboardEvent) {
+            const direction =
+              event.key === "ArrowDown" ? "next" : event.key === "ArrowUp" ? "previous" : undefined;
+            if (direction !== undefined) {
+              event.preventDefault();
+              if (!(yield* options.state).open) {
+                yield* openPopover(options.state, options.collection!);
+              }
+              yield* move(options.state, options.collection!, direction);
+              yield* Composite.scrollActive({
+                state: options.state,
+                collection: options.collection!,
+              });
+              return;
+            }
+            if (event.key === "Enter") {
+              if ((yield* options.state).activeId === null) return;
+              event.preventDefault();
+              yield* selectActive(options.state, options.collection!);
+              return;
+            }
+            if (event.key === "Escape") {
+              yield* RefSubject.update(options.state, (state) => ({ ...state, open: false }));
+            }
+          }),
+        );
+  return () =>
+    ({
+      id: inputId,
+      role: "combobox",
+      "aria-autocomplete": "list",
+      "aria-controls": id,
+      "aria-expanded": open,
+      "aria-activedescendant": Composite.activeDescendant(options.state),
+      placeholder: options.placeholder,
+      ".value": RefSubject.map(options.state, (state) => state.value),
+      oninput: EventHandler.make(
+        Effect.fn((event: Event) =>
+          setValue(options.state, Dom.currentTarget<HTMLInputElement>(event).value),
+        ),
+      ),
+      onfocus: openPopover(options.state, options.collection),
+      onkeydown,
+    }) as const;
 }
 
-function visibleItems(
-  collection: Collection.State<string>,
-): readonly Collection.Item<string>[] {
+function visibleItems(collection: Collection.State<string>): readonly Collection.Item<string>[] {
   return Collection.byDomOrder(collection).filter(
     (item) => item.element === undefined || item.element.closest("[hidden]") === null,
   );
@@ -165,13 +188,17 @@ type InputProps<Options extends InputOptions> = ReturnType<ReturnType<typeof inp
 export function Input<const Options extends InputOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<Dom.RenderHostProps<Options, InputProps<Options>>, "", Host>,
-): Fx<RenderEvent, Renderable.Error<Options | Host>, Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate> {
+): Fx<
+  RenderEvent,
+  Renderable.Error<Options | Host>,
+  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+> {
   return Dom.renderHost<HTMLInputElement>()<Options, InputProps<Options>, "", HostResult, Host>(
     options,
     host,
     inputProps(options),
     "",
-    (props) => html`<input ...${props}>`,
+    (props) => html`<input ...${props} />`,
   );
 }
 
@@ -183,42 +210,61 @@ export interface PopoverOptions extends Dom.HostOptions<HTMLDivElement> {
 
 function popoverProps<const Options extends PopoverOptions>(options: Options) {
   const id = RefSubject.map(options.state, (state) => state.id);
-  return () => ({
-    id,
-    role: "listbox",
-    popover: "manual",
-    ontoggle: EventHandler.make((event: Event) =>
-      Effect.gen(function* () {
-        const open = Dom.toggleState(event) === "open";
-        const current = yield* options.state;
-        if (current.open === open) return current;
-        const next = yield* RefSubject.update(options.state, (state) => ({ ...state, open }));
-        if (!open || options.collection === undefined) return next;
-        const item = (yield* options.collection).find((item) => item.value === next.value);
-        if (item === undefined) return next;
-        const selected = yield* RefSubject.update(options.state, (state) => ({ ...state, activeId: item.id }));
-        yield* Composite.scrollActive({ state: options.state, collection: options.collection });
-        return selected;
-      }),
-    ),
-    ref: Dom.composeRefs(options.state, NativePopover.ref(options.state)),
-  }) as const;
+  const inputId = RefSubject.map(options.state, (state) => `${state.id}-input`);
+  return () =>
+    ({
+      id,
+      role: "listbox",
+      "aria-labelledby": inputId,
+      popover: "manual",
+      ontoggle: EventHandler.make(
+        Effect.fn(function* (event: Event) {
+          const open = Dom.toggleState(event) === "open";
+          const current = yield* options.state;
+          if (current.open === open) return current;
+          const next = yield* RefSubject.update(options.state, (state) => ({ ...state, open }));
+          if (!open || options.collection === undefined) return next;
+          const item = (yield* options.collection).find((item) => item.value === next.value);
+          if (item === undefined) return next;
+          const selected = yield* RefSubject.update(options.state, (state) => ({
+            ...state,
+            activeId: item.id,
+          }));
+          yield* Composite.scrollActive({ state: options.state, collection: options.collection });
+          return selected;
+        }),
+      ),
+      ref: Dom.composeRefs(options.state, NativePopover.ref(options.state)),
+    }) as const;
 }
-type PopoverProps<Options extends PopoverOptions> = ReturnType<ReturnType<typeof popoverProps<Options>>>;
+type PopoverProps<Options extends PopoverOptions> = ReturnType<
+  ReturnType<typeof popoverProps<Options>>
+>;
 
-export function Popover<const Options extends PopoverOptions, const Host extends HostResult = never>(
+export function Popover<
+  const Options extends PopoverOptions,
+  const Host extends HostResult = never,
+>(
   options: Options,
-  host?: Dom.HostOverride<Dom.RenderHostProps<Options, PopoverProps<Options>>, Options["content"], Host>,
-): Fx<RenderEvent, Renderable.Error<Options | Host>, Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate> {
-  return Dom.renderHost<HTMLDivElement>()<Options, PopoverProps<Options>, Options["content"], HostResult, Host>(
-    options,
-    host,
-    popoverProps(options),
-    options.content,
-    (props, content) => {
-      return html`<div ...${props}>${content}</div>`;
-    },
-  );
+  host?: Dom.HostOverride<
+    Dom.RenderHostProps<Options, PopoverProps<Options>>,
+    Options["content"],
+    Host
+  >,
+): Fx<
+  RenderEvent,
+  Renderable.Error<Options | Host>,
+  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+> {
+  return Dom.renderHost<HTMLDivElement>()<
+    Options,
+    PopoverProps<Options>,
+    Options["content"],
+    HostResult,
+    Host
+  >(options, host, popoverProps(options), options.content, (props, content) => {
+    return html`<div ...${props}>${content}</div>`;
+  });
 }
 
 export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
@@ -233,31 +279,48 @@ export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
 
 function itemProps<const Options extends ItemOptions>(options: Options) {
   const selected = RefSubject.map(options.state, (state) => state.value === options.value);
-  const register = options.collection === undefined ? undefined : Collection.ref(options.collection, {
-    id: options.id,
-    value: options.value,
-    textValue: options.textValue ?? options.value,
-    disabled: options.disabled,
-  });
-  return () => ({
-    id: options.id,
-    role: "option",
-    "aria-selected": selected,
-    "aria-disabled": options.disabled ?? false,
-    tabindex: Composite.tabIndex(options.state, options.id),
-    onclick: EventHandler.make(() =>
-      options.disabled === true ? Effect.void : select(options.state, options.id, options.value),
-    ),
-    ref: Dom.composeRefs(register, options.ref),
-  }) as const;
+  const register =
+    options.collection === undefined
+      ? undefined
+      : Collection.ref(options.collection, {
+          id: options.id,
+          value: options.value,
+          textValue: options.textValue ?? options.value,
+          disabled: options.disabled,
+        });
+  return () =>
+    ({
+      id: options.id,
+      role: "option",
+      "aria-selected": selected,
+      "aria-disabled": options.disabled ?? false,
+      tabindex: Composite.tabIndex(options.state, options.id),
+      onclick:
+        options.disabled === true ? Effect.void : select(options.state, options.id, options.value),
+      ref: Dom.composeRefs(register, options.ref),
+    }) as const;
 }
 type ItemProps<Options extends ItemOptions> = ReturnType<ReturnType<typeof itemProps<Options>>>;
 
 export function Item<const Options extends ItemOptions, const Host extends HostResult = never>(
   options: Options,
-  host?: Dom.HostOverride<Dom.RenderHostProps<Options, ItemProps<Options>>, Options["content"], Host>,
-): Fx<RenderEvent, Renderable.Error<Options | Host>, Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate> {
-  return Dom.renderHost<HTMLDivElement>()<Options, ItemProps<Options>, Options["content"], HostResult, Host>(
+  host?: Dom.HostOverride<
+    Dom.RenderHostProps<Options, ItemProps<Options>>,
+    Options["content"],
+    Host
+  >,
+): Fx<
+  RenderEvent,
+  Renderable.Error<Options | Host>,
+  Renderable.Services<Options | Host> | Scope.Scope | RenderTemplate
+> {
+  return Dom.renderHost<HTMLDivElement>()<
+    Options,
+    ItemProps<Options>,
+    Options["content"],
+    HostResult,
+    Host
+  >(
     options,
     host,
     itemProps(options),

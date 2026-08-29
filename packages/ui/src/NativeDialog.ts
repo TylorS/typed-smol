@@ -14,12 +14,16 @@ export function ref<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
   options: Options = {},
 ): (element: HTMLDialogElement) => Effect.Effect<void, E, R | Scope.Scope> {
-  return (element) =>
+  return Effect.fn((element) =>
     Effect.asVoid(
       Effect.forkScoped(
-        Fx.observe(state, (value) => Effect.sync(() => synchronize(element, value.open, options))),
+        Fx.observe(
+          state,
+          Effect.fn((value) => Effect.sync(() => synchronize(element, value.open, options))),
+        ),
       ),
-    );
+    ),
+  );
 }
 
 function synchronize(element: HTMLDialogElement, open: boolean, options: Options): void {
