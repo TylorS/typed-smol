@@ -452,8 +452,7 @@ describe("RefSubject", () => {
       expect(rightValues).toEqual([2]);
       expect(tupleValues).toEqual([[1, 2]]);
     }).pipe(
-      Effect.provide(TransactionService.make(0)),
-      Effect.provide(TransactionTrigger.make(0)),
+      Effect.provide([TransactionService.make(0), TransactionTrigger.make(0)]),
       Effect.scoped,
       Effect.runPromise,
     ));

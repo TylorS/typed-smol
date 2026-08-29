@@ -24,7 +24,7 @@ export const isCuid: (value: string) => value is Cuid = Schema.is(Cuid);
 export type CuidSeed = {
   readonly timestamp: number;
   readonly counter: number;
-  readonly random: Uint8Array;
+  readonly random: Uint8Array & { readonly length: 32 };
   readonly fingerprint: string;
 };
 
@@ -47,19 +47,24 @@ export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState
 
       let counter = initialValue;
 
-      return Effect.gen(function* () {
-        const timestamp = yield* now;
-        const random = yield* getRandomValues(32);
-        return {
-          timestamp,
-          counter: counter++,
-          random,
-          fingerprint,
-        } satisfies CuidSeed;
-      });
+      return {
+        next: Effect.gen(function* () {
+          const timestamp = yield* now;
+          const random = yield* getRandomValues(32);
+          return {
+            timestamp,
+            counter: counter++,
+            random,
+            fingerprint,
+          } satisfies CuidSeed;
+        }),
+      };
     }),
 }) {
-  static readonly next = Effect.flatten(CuidState);
+  static readonly next = Effect.gen(function* () {
+    const { next } = yield* CuidState;
+    return yield* next;
+  });
 
   static readonly Default = Layer.effect(CuidState, CuidState.make("node")).pipe(
     Layer.provide([DateTimes.Default, RandomValues.Default]),

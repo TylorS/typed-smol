@@ -263,7 +263,10 @@ describe("@typed/guard", () => {
       const adapter: AsGuard<number, number> = {
         asGuard: () => liftPredicate((n: number) => n > 0),
       };
-      const chained = pipe(adapter, liftPredicate((n: number) => n < 10));
+      const chained = pipe(
+        adapter,
+        liftPredicate((n: number) => n < 10),
+      );
       expect(await run(chained(5))).toEqual(Option.some(5));
       expect(await run(chained(20))).toEqual(Option.none());
     });
@@ -595,6 +598,7 @@ describe("@typed/guard", () => {
   });
 
   describe("fromSchemaDecode / fromSchemaEncode", () => {
+    // @effect-diagnostics-next-line schemaNumber:off -- this block characterizes NumberFromString's non-finite behavior
     const NumberFromString = Schema.NumberFromString;
 
     it("fromSchemaDecode passes decoded value as Some", async () => {
@@ -626,7 +630,7 @@ describe("@typed/guard", () => {
   });
 
   describe("decode / encode", () => {
-    const NumberFromString = Schema.NumberFromString;
+    const NumberFromString = Schema.FiniteFromString;
 
     it("decode has equivalent data-first and data-last behavior", async () => {
       const base = liftPredicate((s: string) => s.length > 0);
@@ -707,7 +711,10 @@ describe("@typed/guard", () => {
   describe("struct helpers", () => {
     it("copies own enumerable symbol properties into a plain object", async () => {
       const symbol = Symbol("phase");
-      const base = map(liftPredicate((n: number) => n > 0), (n) => ({ n, [symbol]: n }));
+      const base = map(
+        liftPredicate((n: number) => n > 0),
+        (n) => ({ n, [symbol]: n }),
+      );
       const result = await run(let_(base, "phase", "ready" as const)(3));
 
       expect(result).toEqual(Option.some({ n: 3, [symbol]: 3, phase: "ready" }));
@@ -715,11 +722,14 @@ describe("@typed/guard", () => {
     });
 
     it("does not copy non-enumerable properties", async () => {
-      const base = map(liftPredicate((n: number) => n > 0), (n) => {
-        const output = { n };
-        Object.defineProperty(output, "hidden", { enumerable: false, value: n * 2 });
-        return output;
-      });
+      const base = map(
+        liftPredicate((n: number) => n > 0),
+        (n) => {
+          const output = { n };
+          Object.defineProperty(output, "hidden", { enumerable: false, value: n * 2 });
+          return output;
+        },
+      );
       const result = await run(let_(base, "phase", "ready" as const)(3));
 
       expect(result).toEqual(Option.some({ n: 3, phase: "ready" }));
@@ -727,12 +737,15 @@ describe("@typed/guard", () => {
 
     it("invokes enumerable getters while copying", async () => {
       let getterReads = 0;
-      const base = map(liftPredicate((n: number) => n > 0), (n) => ({
-        get derived() {
-          getterReads += 1;
-          return n * 2;
-        },
-      }));
+      const base = map(
+        liftPredicate((n: number) => n > 0),
+        (n) => ({
+          get derived() {
+            getterReads += 1;
+            return n * 2;
+          },
+        }),
+      );
       const result = await run(let_(base, "phase", "ready" as const)(3));
 
       expect(getterReads).toBe(1);
@@ -743,7 +756,10 @@ describe("@typed/guard", () => {
       class RecordOutput {
         readonly n = 3;
       }
-      const base = map(liftPredicate((n: number) => n > 0), () => new RecordOutput());
+      const base = map(
+        liftPredicate((n: number) => n > 0),
+        () => new RecordOutput(),
+      );
       const result = await run(let_(base, "phase", "ready" as const)(3));
 
       expect(Option.isSome(result)).toBe(true);
@@ -754,10 +770,13 @@ describe("@typed/guard", () => {
     });
 
     it("defects when the output is an array", async () => {
-      const base = map(liftPredicate((n: number) => n > 0), (n) => [n]);
+      const base = map(
+        liftPredicate((n: number) => n > 0),
+        (n) => [n],
+      );
       const g = let_(
+        // @ts-expect-error struct helpers require object-record outputs
         base,
-        // @ts-expect-error struct helpers require object outputs
         "phase",
         "ready",
       );
@@ -770,7 +789,10 @@ describe("@typed/guard", () => {
     });
 
     it("defects when let collides with an existing key at runtime", async () => {
-      const base = map(liftPredicate((n: number) => n > 0), (n) => ({ n }));
+      const base = map(
+        liftPredicate((n: number) => n > 0),
+        (n) => ({ n }),
+      );
       const g = let_(
         base,
         // @ts-expect-error struct helpers reject statically known key collisions
@@ -788,10 +810,13 @@ describe("@typed/guard", () => {
     });
 
     it("defects when addTag collides with an existing _tag at runtime", async () => {
-      const base = map(liftPredicate((n: number) => n > 0), (n) => ({ _tag: "Existing", n }));
+      const base = map(
+        liftPredicate((n: number) => n > 0),
+        (n) => ({ _tag: "Existing", n }),
+      );
       const g = addTag(
-        base,
         // @ts-expect-error struct helpers reject statically known _tag collisions
+        base,
         "Again",
       );
       const exit = await Effect.runPromiseExit(g(3));
@@ -805,8 +830,14 @@ describe("@typed/guard", () => {
     });
 
     it("defects when bind collides with an existing key at runtime", async () => {
-      const withValue = bindTo(liftPredicate((n: number) => n > 0), "value");
-      const always = map(liftPredicate(() => true), () => 7);
+      const withValue = bindTo(
+        liftPredicate((n: number) => n > 0),
+        "value",
+      );
+      const always = map(
+        liftPredicate(() => true),
+        () => 7,
+      );
       const g = bind(
         withValue,
         // @ts-expect-error struct helpers reject statically known key collisions
@@ -826,8 +857,8 @@ describe("@typed/guard", () => {
 
   describe("provide", () => {
     const Foo = Context.Service<{ readonly n: number }>("Test/Foo");
-    const guardNeedsFoo: Guard<number, number, never, Context.Service.Identifier<typeof Foo>> = (i) =>
-      Effect.flatMap(Effect.service(Foo), (foo) => Effect.succeed(Option.some(i + foo.n)));
+    const guardNeedsFoo: Guard<number, number, never, Context.Service.Identifier<typeof Foo>> =
+      Effect.fn((i) => Effect.map(Effect.service(Foo), (foo) => Option.some(i + foo.n)));
 
     it("provides services from a Context, Layer, value, or Effect", async () => {
       expect(await run(provide(guardNeedsFoo, Context.make(Foo, { n: 10 }))(1))).toEqual(
@@ -837,9 +868,9 @@ describe("@typed/guard", () => {
         Option.some(21),
       );
       expect(await run(provideService(guardNeedsFoo, Foo, { n: 30 })(1))).toEqual(Option.some(31));
-      expect(await run(provideServiceEffect(guardNeedsFoo, Foo, Effect.succeed({ n: 40 }))(1))).toEqual(
-        Option.some(41),
-      );
+      expect(
+        await run(provideServiceEffect(guardNeedsFoo, Foo, Effect.succeed({ n: 40 }))(1)),
+      ).toEqual(Option.some(41));
     });
 
     it("supports data-last forms for Context and Layer provision", async () => {

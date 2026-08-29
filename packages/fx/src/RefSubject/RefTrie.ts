@@ -29,7 +29,7 @@ export interface RefTrie<in out V, in out E = never, out R = never> extends RefS
  * @since 1.18.0
  * @category constructors
  */
-export function make<V, E, R>(
+export function make<V, E = never, R = never>(
   initial: Trie.Trie<V> | Effect.Effect<Trie.Trie<V>, E, R> | Fx.Fx<Trie.Trie<V>, E, R>,
 ): Effect.Effect<RefTrie<V, E>, never, R | Scope.Scope> {
   return RefSubject.make(initial, { eq: equals });

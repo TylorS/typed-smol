@@ -17,7 +17,7 @@ const fixedTime = (timestamp: number) =>
 describe("ulid", () => {
   it("encodes the timestamp and random suffix with zero entropy", async () => {
     const id = await Effect.runPromise(
-      Effect.provide(ulid, Layer.mergeAll(zeroRandomValues(), fixedTime(1_700_000_000_123))),
+      Effect.provide(ulid, Layer.mergeAll(zeroRandomValues, fixedTime(1_700_000_000_123))),
     );
 
     expect(id).toBe("01HF7YAT3V0000000000000000");

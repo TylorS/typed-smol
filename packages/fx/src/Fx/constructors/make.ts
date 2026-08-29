@@ -77,14 +77,10 @@ export const callback = <A, E = never, R = never>(
           Effect.fn(function* <RSink = never>(sink: Sink.WithEarlyExit<A, E, RSink>) {
             const services = yield* Effect.context<R | RSink>();
             const runFork = Effect.runForkWith(services);
-            const controller = new AbortController();
-            yield* Scope.addFinalizer(
-              scope,
-              Effect.sync(() => controller.abort()),
-            );
+            const signal = yield* Scope.provide(Effect.abortSignal, scope);
 
             const runEffect = <A, E>(effect: Effect.Effect<A, E, RSink>) =>
-              runFork(effect, { signal: controller.signal });
+              runFork(effect, { signal });
             const emit: Emit<A, E> = {
               succeed: (value) => runEffect(sink.onSuccess(value)),
               failCause: (cause) => runEffect(sink.onFailure(cause)),

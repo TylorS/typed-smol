@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import * as AsyncData from "../index.js";
 
 describe("AsyncData correctness contracts", () => {
-  const schema = AsyncData.AsyncData(Schema.Number, Schema.String);
+  const schema = AsyncData.AsyncData(Schema.Finite, Schema.String);
 
   it.each([
     ["Loading without progress.loaded", { _tag: "Loading", progress: {} }],
@@ -64,7 +64,7 @@ describe("AsyncData correctness contracts", () => {
       ],
     });
 
-    const decoded = Schema.decodeUnknownSync(schema)(encoded);
+    const decoded = Schema.decodeSync(schema)(encoded);
     expect(AsyncData.isFailure(decoded)).toBe(true);
     if (!AsyncData.isFailure(decoded)) return;
     expect(Cause.isCause(decoded.cause)).toBe(true);
@@ -94,7 +94,7 @@ describe("AsyncData correctness contracts", () => {
         cause: [{ _tag: "Fail", error: "previous" }],
       },
     });
-    const decoded = Schema.decodeUnknownSync(schema)(encoded);
+    const decoded = Schema.decodeSync(schema)(encoded);
     expect(AsyncData.isOptimistic(decoded)).toBe(true);
     if (!AsyncData.isOptimistic(decoded)) return;
     expect(AsyncData.isFailure(decoded.previous)).toBe(true);
@@ -103,22 +103,21 @@ describe("AsyncData correctness contracts", () => {
   });
 
   it("rejects a bare error value in the Failure cause field", () => {
-    expect(() =>
-      Schema.decodeUnknownSync(schema)({
-        _tag: "Failure",
-        cause: "offline",
-      }),
-    ).toThrow();
+    const invalid: unknown = {
+      _tag: "Failure",
+      cause: "offline",
+    };
+    expect(() => Schema.decodeUnknownSync(schema)(invalid)).toThrow();
   });
 
   it("decodes canonical Cause arrays when the error schema also accepts reason-shaped values", () => {
-    const overlappingSchema = AsyncData.AsyncData(Schema.Number, Schema.Array(Schema.Unknown));
+    const overlappingSchema = AsyncData.AsyncData(Schema.Finite, Schema.Array(Schema.Unknown));
     const canonical = {
       _tag: "Failure" as const,
       cause: [{ _tag: "Fail" as const, error: ["payload"] }],
     };
 
-    const decoded = Schema.decodeUnknownSync(overlappingSchema)(canonical);
+    const decoded = Schema.decodeSync(overlappingSchema)(canonical);
 
     expect(AsyncData.isFailure(decoded)).toBe(true);
     if (!AsyncData.isFailure(decoded)) return;
@@ -130,13 +129,13 @@ describe("AsyncData correctness contracts", () => {
     "rejects non-finite progress value %s",
     (value) => {
       expect(() =>
-        Schema.decodeUnknownSync(schema)({
+        Schema.decodeSync(schema)({
           _tag: "Loading",
           progress: { loaded: value },
         }),
       ).toThrow();
       expect(() =>
-        Schema.decodeUnknownSync(schema)({
+        Schema.decodeSync(schema)({
           _tag: "Loading",
           progress: { loaded: 1, total: value },
         }),
@@ -146,7 +145,7 @@ describe("AsyncData correctness contracts", () => {
 
   it("continues to accept negative and fractional finite progress", () => {
     expect(
-      Schema.decodeUnknownSync(schema)({
+      Schema.decodeSync(schema)({
         _tag: "Loading",
         progress: { loaded: -0.5, total: 1.25 },
       }),
@@ -173,10 +172,7 @@ describe("AsyncData correctness contracts", () => {
   });
 
   it("isPending observes pending state through optimistic wrappers", () => {
-    const pending = AsyncData.optimistic(
-      AsyncData.success(10, { loaded: 1, total: 2 }),
-      20,
-    );
+    const pending = AsyncData.optimistic(AsyncData.success(10, { loaded: 1, total: 2 }), 20);
 
     expect(AsyncData.isOptimistic(pending)).toBe(true);
     expect(AsyncData.isPending(pending)).toBe(true);
@@ -194,17 +190,17 @@ describe("AsyncData correctness contracts", () => {
     );
   });
 
-  it.each([
+  const previous: AsyncData.AsyncData<number, string> = AsyncData.success(10);
+  const roundTripCases: ReadonlyArray<readonly [string, AsyncData.AsyncData<number, string>]> = [
     ["NoData", AsyncData.NoData],
     ["Loading", AsyncData.loading({ loaded: 1, total: 2 })],
     ["Success", AsyncData.success(42, { loaded: 1, total: 2 })],
-    [
-      "Optimistic",
-      AsyncData.optimistic(AsyncData.success(10), 20),
-    ],
-  ])("round-trips %s through the schema codec", (_, data) => {
+    ["Optimistic", AsyncData.optimistic(previous, 20)],
+  ];
+
+  it.each(roundTripCases)("round-trips %s through the schema codec", (_, data) => {
     const encoded = Schema.encodeSync(schema)(data);
-    const decoded = Schema.decodeUnknownSync(schema)(encoded);
+    const decoded = Schema.decodeSync(schema)(encoded);
     expect(decoded).toEqual(data);
   });
 });

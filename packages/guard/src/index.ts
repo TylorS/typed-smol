@@ -85,6 +85,12 @@ export interface AsGuard<in I, out O, out E = never, out R = never> {
  */
 export type GuardInput<I, O, E = never, R = never> = Guard<I, O, E, R> | AsGuard<I, O, E, R>;
 
+type RecordOutputConstraint<O> = O extends object
+  ? O extends ReadonlyArray<unknown>
+    ? never
+    : unknown
+  : never;
+
 /**
  * Returns a callable Guard unchanged or obtains one from an own callable
  * `asGuard` property. Invalid adapter objects throw `TypeError` immediately.
@@ -134,7 +140,9 @@ const assertObjectRecord = (value: unknown): Record<PropertyKey, unknown> => {
   return value;
 };
 
-const copyEnumerableRecord = (source: Record<PropertyKey, unknown>): Record<PropertyKey, unknown> => {
+const copyEnumerableRecord = (
+  source: Record<PropertyKey, unknown>,
+): Record<PropertyKey, unknown> => {
   const output: Record<PropertyKey, unknown> = {};
   for (const key of Reflect.ownKeys(source)) {
     if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
@@ -254,12 +262,14 @@ export const map: {
  * @since 1.0.0
  */
 export const tap: {
-  <O, B, E2 = never, R2 = never>(
-    f: (o: O) => void | Effect.Effect<B, E2, R2>,
+  <O>(f: (o: O) => void): <I, R, E>(guard: GuardInput<I, O, E, R>) => Guard<I, O, E, R>;
+  <O, B, E2, R2>(
+    f: (o: O) => Effect.Effect<B, E2, R2>,
   ): <I, R, E>(guard: GuardInput<I, O, E, R>) => Guard<I, O, E | E2, R | R2>;
+  <I, O, E, R>(guard: GuardInput<I, O, E, R>, f: (o: O) => void): Guard<I, O, E, R>;
   <I, O, E, R, B, E2, R2>(
     guard: GuardInput<I, O, E, R>,
-    f: (o: O) => void | Effect.Effect<B, E2, R2>,
+    f: (o: O) => Effect.Effect<B, E2, R2>,
   ): Guard<I, O, E | E2, R | R2>;
 } = dual(2, function tap<
   I,
@@ -683,7 +693,7 @@ const let_: {
     value: B,
   ): <G extends GuardInput<any, any, any, any>>(
     guard: G &
-      (NoInfer<Guard.Output<G>> extends object ? unknown : never) &
+      RecordOutputConstraint<NoInfer<Guard.Output<G>>> &
       (K extends NoInfer<
         Guard.Output<G> extends infer O ? (O extends unknown ? keyof O : never) : never
       >
@@ -692,7 +702,7 @@ const let_: {
   ) => Guard<Guard.Input<G>, Guard.Output<G> & { [k in K]: B }, Guard.Error<G>, Guard.Services<G>>;
 
   <G extends GuardInput<any, any, any, any>, K extends PropertyKey, B>(
-    guard: G & (NoInfer<Guard.Output<G>> extends object ? unknown : never),
+    guard: G & RecordOutputConstraint<NoInfer<Guard.Output<G>>>,
     key: Exclude<
       K,
       NoInfer<Guard.Output<G> extends infer O ? (O extends unknown ? keyof O : never) : never>
@@ -707,8 +717,9 @@ const let_: {
   K extends PropertyKey,
   B,
 >(guard: GuardInput<I, O, E, R>, key: K, value: B): Guard<I, O & { [k in K]: B }, E, R> {
-  return map(guard, (a) =>
-    extendEnumerableRecord(assertObjectRecord(a), key, value) as O & { [k in K]: B },
+  return map(
+    guard,
+    (a) => extendEnumerableRecord(assertObjectRecord(a), key, value) as O & { [k in K]: B },
   );
 });
 
@@ -733,7 +744,7 @@ export const addTag: {
     value: B,
   ): <G extends GuardInput<any, any, any, any>>(
     guard: G &
-      (NoInfer<Guard.Output<G>> extends object ? unknown : never) &
+      RecordOutputConstraint<NoInfer<Guard.Output<G>>> &
       ("_tag" extends NoInfer<
         Guard.Output<G> extends infer O ? (O extends unknown ? keyof O : never) : never
       >
@@ -748,7 +759,7 @@ export const addTag: {
 
   <G extends GuardInput<any, any, any, any>, B>(
     guard: G &
-      (NoInfer<Guard.Output<G>> extends object ? unknown : never) &
+      RecordOutputConstraint<NoInfer<Guard.Output<G>>> &
       ("_tag" extends NoInfer<
         Guard.Output<G> extends infer O ? (O extends unknown ? keyof O : never) : never
       >
@@ -768,8 +779,9 @@ export const addTag: {
   R,
   B,
 >(guard: GuardInput<I, O, E, R>, value: B): Guard<I, O & { readonly _tag: B }, E, R> {
-  return map(guard, (a) =>
-    extendEnumerableRecord(assertObjectRecord(a), "_tag", value) as O & { readonly _tag: B },
+  return map(
+    guard,
+    (a) => extendEnumerableRecord(assertObjectRecord(a), "_tag", value) as O & { readonly _tag: B },
   );
 });
 
@@ -808,6 +820,7 @@ export const bind: {
     f: GuardInput<O, B, E2, R2>,
   ): <G extends GuardInput<any, O, any, any>>(
     guard: G &
+      RecordOutputConstraint<NoInfer<Guard.Output<G>>> &
       (K extends NoInfer<
         Guard.Output<G> extends infer A ? (A extends unknown ? keyof A : never) : never
       >
@@ -821,7 +834,7 @@ export const bind: {
   >;
 
   <G extends GuardInput<any, any, any, any>, K extends PropertyKey, B, E2, R2>(
-    guard: G & (NoInfer<Guard.Output<G>> extends object ? unknown : never),
+    guard: G & RecordOutputConstraint<NoInfer<Guard.Output<G>>>,
     key: Exclude<
       K,
       NoInfer<Guard.Output<G> extends infer O ? (O extends unknown ? keyof O : never) : never>

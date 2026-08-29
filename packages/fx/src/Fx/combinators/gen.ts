@@ -17,6 +17,6 @@ export const gen = <Yield extends Effect.Effect<any, any, any>, Return extends F
   f: () => Generator<Yield, Return, any>,
 ): Fx<
   Fx.Success<Return>,
-  Fx.Error<Return> | Effect.Error<Yield>,
-  Fx.Services<Return> | Effect.Services<Yield>
-> => unwrap(Effect.gen(f)) ;
+  Fx.Error<Return> | ([Yield] extends [never] ? never : Effect.Error<Yield>),
+  Fx.Services<Return> | ([Yield] extends [never] ? never : Effect.Services<Yield>)
+> => unwrap(Effect.gen(f));

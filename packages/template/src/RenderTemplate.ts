@@ -99,7 +99,7 @@ export class RenderTemplate extends Context.Service<
  * @since 1.0.0
  * @category constructors
  */
-export function html<const Values extends ReadonlyArray<Renderable.Any> = readonly []>(
+export function html<const Values extends ReadonlyArray<Renderable.Any>>(
   template: TemplateStringsArray,
   ...values: Values
 ): Fx<

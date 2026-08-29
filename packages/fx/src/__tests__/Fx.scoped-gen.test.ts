@@ -18,8 +18,10 @@ describe("Fx.unwrapScoped / genScoped / gen", () => {
 
   it("unwrapScoped propagates effect failures", () =>
     Effect.gen(function* () {
-      const exit = yield* unwrapScoped(Effect.fail("boom" as const))
-        .pipe(Fx.collectAll, Effect.exit);
+      const exit = yield* unwrapScoped(Effect.fail("boom" as const).pipe(Effect.as(Fx.empty))).pipe(
+        Fx.collectAll,
+        Effect.exit,
+      );
       assert(Exit.isFailure(exit));
     }).pipe(Effect.scoped, Effect.runPromise));
 

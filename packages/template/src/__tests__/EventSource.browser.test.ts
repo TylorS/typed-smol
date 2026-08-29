@@ -18,12 +18,22 @@ describe("EventSource in Chromium", () => {
       source.addEventListener(
         first,
         "click",
-        EventHandler.make(() => calls.push("first"), { once: true }),
+        EventHandler.make(
+          () => {
+            calls.push("first");
+          },
+          { once: true },
+        ),
       );
       source.addEventListener(
         second,
         "click",
-        EventHandler.make(() => calls.push("second"), { once: true }),
+        EventHandler.make(
+          () => {
+            calls.push("second");
+          },
+          { once: true },
+        ),
       );
 
       yield* source.setup(root, yield* Scope.Scope);
@@ -70,6 +80,7 @@ describe("EventSource in Chromium", () => {
       root.append(target);
 
       let calls = 0;
+      // @effect-diagnostics-next-line abortControllerInEffect:off -- this test exercises manual DOM signal cancellation before scope closure
       const controller = new AbortController();
       const source = makeEventSource();
       source.addEventListener(

@@ -23,10 +23,11 @@ export const seededRandomValues = (seed: string | number): Layer.Layer<RandomVal
     RandomValues.pipe(Effect.provide(RandomValues.Random), Random.withSeed(seed)),
   );
 
-export const zeroRandomValues = (): Layer.Layer<RandomValues> =>
-  Layer.succeed(
-    RandomValues,
-    RandomValues.of(<const N extends number>(length: N) =>
+export const zeroRandomValues: Layer.Layer<RandomValues> = Layer.succeed(
+  RandomValues,
+  RandomValues.of(
+    Effect.fn(<const N extends number>(length: N) =>
       Effect.succeed(new Uint8Array(length) as Uint8Array & { readonly length: N }),
     ),
-  );
+  ),
+);

@@ -9,9 +9,11 @@ import { createHappyDomLayer } from "./helpers/dom-layer.js";
 
 describe("Render", () => {
   it("renders a simple template", () =>
-    Effect.gen(function* () {
-      yield* renderHtmlElement`<div>Hello, world!</div>`;
-    }).pipe(Effect.scoped, Effect.runPromise));
+    renderHtmlElement`<div>Hello, world!</div>`.pipe(
+      Effect.asVoid,
+      Effect.scoped,
+      Effect.runPromise,
+    ));
 
   it("renders template with static attribute", () =>
     Effect.gen(function* () {
@@ -65,8 +67,9 @@ describe("Render", () => {
       ).pipe(Fx.provide(services), Fx.take(1), Fx.collectAll);
       yield* Effect.yieldNow;
 
-      assert(example.valueOf() instanceof window.HTMLElement);
-      assert.equal(example.valueOf().textContent, "ready");
+      const element = example.valueOf();
+      assert(element instanceof window.HTMLElement);
+      assert.equal(element.textContent, "ready");
       assert.equal(queue.addCalls, 1);
       assert.equal(queue.taskDefect, undefined);
       assert.equal(queue.cleanupCalls, 1);
@@ -81,8 +84,9 @@ describe("Render", () => {
         window.document.body,
       ).pipe(Fx.provide(layer), Fx.take(1), Fx.collectAll, Effect.timeout(100));
 
-      assert(example.valueOf() instanceof window.HTMLElement);
-      assert.equal(example.valueOf().textContent, "beforeafter");
+      const element = example.valueOf();
+      assert(element instanceof window.HTMLElement);
+      assert.equal(element.textContent, "beforeafter");
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders template with a boolean attribute", () =>
@@ -173,7 +177,7 @@ describe("Render", () => {
 
   it("renders a callable hydrated RefSubject through nested reactive data", () =>
     Effect.gen(function* () {
-      const count = yield* RefSubject.hydrate(Schema.Number, 1);
+      const count = yield* RefSubject.hydrate(Schema.Finite, 1);
       const example = yield* renderHtmlElement`<div ref=${count} .data=${{
         count,
       }}>${count}</div>`;
@@ -280,7 +284,9 @@ describe("Render", () => {
         title: "new title",
         "?autofocus": true,
         ".data": { phase: "new" },
-        onclick: EventHandler.make(() => clicks++),
+        onclick: EventHandler.make(() => {
+          clicks++;
+        }),
       });
       yield* Effect.sleep(20);
 

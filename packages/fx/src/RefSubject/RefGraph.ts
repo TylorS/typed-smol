@@ -29,7 +29,7 @@ export interface RefGraph<
  * @since 1.18.0
  * @category constructors
  */
-export function make<N, E, T extends Graph.Kind, Err, R>(
+export function make<N, E, T extends Graph.Kind, Err = never, R = never>(
   initial:
     | Graph.Graph<N, E, T>
     | Effect.Effect<Graph.Graph<N, E, T>, Err, R>
@@ -43,7 +43,7 @@ export function make<N, E, T extends Graph.Kind, Err, R>(
  * @since 1.18.0
  * @category constructors
  */
-export function directed<N, E, Err, R>(): Effect.Effect<
+export function directed<N, E, Err = never, R = never>(): Effect.Effect<
   RefGraph<N, E, "directed", Err>,
   never,
   R | Scope.Scope
@@ -56,7 +56,7 @@ export function directed<N, E, Err, R>(): Effect.Effect<
  * @since 1.18.0
  * @category constructors
  */
-export function undirected<N, E, Err, R>(): Effect.Effect<
+export function undirected<N, E, Err = never, R = never>(): Effect.Effect<
   RefGraph<N, E, "undirected", Err>,
   never,
   R | Scope.Scope

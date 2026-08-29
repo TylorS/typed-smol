@@ -45,9 +45,10 @@ describe("Fx zip combinators", () => {
 
     it("data-last form: pipe(self, Fx.zip(that))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable([1, 2])
-          .pipe(Fx.zip(Fx.fromIterable(["x", "y"])))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable([1, 2]).pipe(
+          Fx.zip(Fx.fromIterable(["x", "y"])),
+          Fx.collectAll,
+        );
         assert.deepStrictEqual(result, [
           [1, "x"],
           [2, "y"],
@@ -74,9 +75,10 @@ describe("Fx zip combinators", () => {
 
     it("data-last form: pipe(self, Fx.zipWith(that, f))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable(["a", "b"])
-          .pipe(Fx.zipWith(Fx.fromIterable([1, 2]), (s, n) => `${s}${n}`))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable(["a", "b"]).pipe(
+          Fx.zipWith(Fx.fromIterable([1, 2]), (s, n) => `${s}${n}`),
+          Fx.collectAll,
+        );
         assert.deepStrictEqual(result, ["a1", "b2"]);
       }).pipe(Effect.scoped, Effect.runPromise));
   });
@@ -97,9 +99,10 @@ describe("Fx zip combinators", () => {
 
     it("data-last form: pipe(self, Fx.zipLatest(that))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable([1, 2])
-          .pipe(Fx.zipLatest(Fx.fromIterable(["a", "b"])))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable([1, 2]).pipe(
+          Fx.zipLatest(Fx.fromIterable(["a", "b"])),
+          Fx.collectAll,
+        );
         assert.ok(result.length >= 2);
         assert.deepStrictEqual(result[result.length - 1], [2, "b"]);
       }).pipe(Effect.scoped, Effect.runPromise));
@@ -118,9 +121,10 @@ describe("Fx zip combinators", () => {
 
     it("data-last form: pipe(self, Fx.zipLatestWith(that, f))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable([1, 2])
-          .pipe(Fx.zipLatestWith(Fx.fromIterable(["a", "b"]), (n, s) => `${n}${s}`))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable([1, 2]).pipe(
+          Fx.zipLatestWith(Fx.fromIterable(["a", "b"]), (n, s) => `${n}${s}`),
+          Fx.collectAll,
+        );
         assert.ok(result.length >= 2);
         // First emission is combined first values; last includes latest from both
         assert.ok(

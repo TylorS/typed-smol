@@ -31,7 +31,7 @@ export interface RefChunk<in out A, in out E = never, out R = never> extends Ref
  * @since 1.18.0
  * @category constructors
  */
-export function make<A, E, R>(
+export function make<A, E = never, R = never>(
   initial: Chunk.Chunk<A> | Effect.Effect<Chunk.Chunk<A>, E, R> | Fx.Fx<Chunk.Chunk<A>, E, R>,
   eq: Equivalence<A> = equals,
 ): Effect.Effect<RefChunk<A, E>, never, R | Scope.Scope> {

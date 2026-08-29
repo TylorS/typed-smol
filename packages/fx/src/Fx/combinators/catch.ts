@@ -251,6 +251,10 @@ type TaggedCase<E> = {
   ) => Fx<unknown, unknown, unknown>;
 };
 
+type CaseSuccess<T> = T extends (error: never) => Fx<infer A, infer _E, infer _R> ? A : never;
+type CaseError<T> = T extends (error: never) => Fx<infer _A, infer E, infer _R> ? E : never;
+type CaseServices<T> = T extends (error: never) => Fx<infer _A, infer _E, infer R> ? R : never;
+
 /**
  * Recovers from typed failures by matching on the `_tag` field with multiple handlers at once.
  *
@@ -265,48 +269,18 @@ export const catchTags: {
   ): <A, R>(
     self: Fx<A, E, R>,
   ) => Fx<
-    | A
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<infer A2, unknown, unknown>
-          ? A2
-          : never;
-      }[keyof Cases],
-    | Exclude<E, { _tag: keyof Cases }>
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, infer E2, unknown>
-          ? E2
-          : never;
-      }[keyof Cases],
-    | R
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, unknown, infer R2>
-          ? R2
-          : never;
-      }[keyof Cases]
+    A | { [K in keyof Cases]: CaseSuccess<Cases[K]> }[keyof Cases],
+    Exclude<E, { _tag: keyof Cases }> | { [K in keyof Cases]: CaseError<Cases[K]> }[keyof Cases],
+    R | { [K in keyof Cases]: CaseServices<Cases[K]> }[keyof Cases]
   >;
 
   <A, E, R, Cases extends TaggedCase<E>>(
     self: Fx<A, E, R>,
     cases: Cases,
   ): Fx<
-    | A
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<infer A2, unknown, unknown>
-          ? A2
-          : never;
-      }[keyof Cases],
-    | Exclude<E, { _tag: keyof Cases }>
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, infer E2, unknown>
-          ? E2
-          : never;
-      }[keyof Cases],
-    | R
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, unknown, infer R2>
-          ? R2
-          : never;
-      }[keyof Cases]
+    A | { [K in keyof Cases]: CaseSuccess<Cases[K]> }[keyof Cases],
+    Exclude<E, { _tag: keyof Cases }> | { [K in keyof Cases]: CaseError<Cases[K]> }[keyof Cases],
+    R | { [K in keyof Cases]: CaseServices<Cases[K]> }[keyof Cases]
   >;
 } = dual(
   2,
@@ -314,44 +288,14 @@ export const catchTags: {
     self: Fx<A, E, R>,
     cases: Cases,
   ): Fx<
-    | A
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<infer A2, unknown, unknown>
-          ? A2
-          : never;
-      }[keyof Cases],
-    | Exclude<E, { _tag: keyof Cases }>
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, infer E2, unknown>
-          ? E2
-          : never;
-      }[keyof Cases],
-    | R
-    | {
-        [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, unknown, infer R2>
-          ? R2
-          : never;
-      }[keyof Cases]
+    A | { [K in keyof Cases]: CaseSuccess<Cases[K]> }[keyof Cases],
+    Exclude<E, { _tag: keyof Cases }> | { [K in keyof Cases]: CaseError<Cases[K]> }[keyof Cases],
+    R | { [K in keyof Cases]: CaseServices<Cases[K]> }[keyof Cases]
   > =>
     make<
-      | A
-      | {
-          [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<infer A2, unknown, unknown>
-            ? A2
-            : never;
-        }[keyof Cases],
-      | Exclude<E, { _tag: keyof Cases }>
-      | {
-          [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, infer E2, unknown>
-            ? E2
-            : never;
-        }[keyof Cases],
-      | R
-      | {
-          [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, unknown, infer R2>
-            ? R2
-            : never;
-        }[keyof Cases]
+      A | { [K in keyof Cases]: CaseSuccess<Cases[K]> }[keyof Cases],
+      Exclude<E, { _tag: keyof Cases }> | { [K in keyof Cases]: CaseError<Cases[K]> }[keyof Cases],
+      R | { [K in keyof Cases]: CaseServices<Cases[K]> }[keyof Cases]
     >(
       (sink) =>
         self.run(
@@ -365,13 +309,7 @@ export const catchTags: {
               return sink.onFailure(
                 cause as Cause.Cause<
                   | Exclude<E, { _tag: keyof Cases }>
-                  | {
-                      [K in keyof Cases]: Cases[K] extends (
-                        e: unknown,
-                      ) => Fx<unknown, infer E2, unknown>
-                        ? E2
-                        : never;
-                    }[keyof Cases]
+                  | { [K in keyof Cases]: CaseError<Cases[K]> }[keyof Cases]
                 >,
               );
             }
@@ -391,13 +329,7 @@ export const catchTags: {
             return sink.onFailure(
               cause as Cause.Cause<
                 | Exclude<E, { _tag: keyof Cases }>
-                | {
-                    [K in keyof Cases]: Cases[K] extends (
-                      e: unknown,
-                    ) => Fx<unknown, infer E2, unknown>
-                      ? E2
-                      : never;
-                  }[keyof Cases]
+                | { [K in keyof Cases]: CaseError<Cases[K]> }[keyof Cases]
               >,
             );
           }, sink.onSuccess),
@@ -405,11 +337,7 @@ export const catchTags: {
           unknown,
           never,
           | R
-          | {
-              [K in keyof Cases]: Cases[K] extends (e: unknown) => Fx<unknown, unknown, infer R2>
-                ? R2
-                : never;
-            }[keyof Cases]
+          | { [K in keyof Cases]: CaseServices<Cases[K]> }[keyof Cases]
           | import("../../Sink/Sink.js").Services<typeof sink>
         >,
     ),

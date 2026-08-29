@@ -25,7 +25,7 @@ describe("RefSubject collection modules", () => {
 
   it("RefRecord supports set and get", () =>
     Effect.gen(function* () {
-      const ref = yield* RefRecord.make({ name: "Ada" });
+      const ref = yield* RefRecord.make({ name: "Ada" as string | number, age: 0 });
       yield* RefRecord.set(ref, "age", 36);
       expect(yield* ref).toEqual({ name: "Ada", age: 36 });
       expect(yield* RefRecord.get(ref, "name")).toBe("Ada");

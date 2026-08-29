@@ -30,7 +30,7 @@ export interface RefRecord<
  * @since 1.18.0
  * @category constructors
  */
-export function make<K extends string, V, E, R>(
+export function make<K extends string, V, E = never, R = never>(
   initial:
     | Record.ReadonlyRecord<K, V>
     | Effect.Effect<Record.ReadonlyRecord<K, V>, E, R>

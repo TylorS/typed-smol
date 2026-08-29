@@ -1,5 +1,17 @@
 import { assert, describe, it } from "vitest";
-import { Cause, Deferred, Effect, Exit, Fiber, Layer, Option, Result, Schema, Scope } from "effect";
+import {
+  Cause,
+  Data,
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+  Option,
+  Result,
+  Schema,
+  Scope,
+} from "effect";
 import { Fx } from "@typed/fx";
 import * as Uuid7 from "@typed/id/Uuid7";
 import { type BlockNavigation, type Blocking, useBlockNavigation } from "../Blocking.js";
@@ -12,8 +24,14 @@ import { BeforeNavigationEvent, RedirectError } from "../model.js";
 
 describe("typed/navigation", () => {
   it("getUrl resolves relative paths against an origin", () => {
-    assert.equal(getUrl("https://example.com", "/path?query=1").href, "https://example.com/path?query=1");
-    assert.equal(getUrl("https://example.com", new URL("https://other.test/abs")).href, "https://other.test/abs");
+    assert.equal(
+      getUrl("https://example.com", "/path?query=1").href,
+      "https://example.com/path?query=1",
+    );
+    assert.equal(
+      getUrl("https://example.com", new URL("https://other.test/abs")).href,
+      "https://other.test/abs",
+    );
   });
 
   it("fromWindow provides origin and a route-path base", () =>
@@ -54,7 +72,9 @@ describe("typed/navigation", () => {
         assert.isTrue(Result.isFailure(browserResult));
         if (Result.isFailure(browserResult)) {
           assert.equal(browserResult.failure._tag, "@typed/navigation/NavigationError");
-          assert.isTrue(Cause.isIllegalArgumentError(browserResult.failure.error));
+          if (browserResult.failure._tag === "@typed/navigation/NavigationError") {
+            assert.isTrue(Cause.isIllegalArgumentError(browserResult.failure.error));
+          }
         }
 
         const memoryResult = yield* Effect.provide(
@@ -66,7 +86,9 @@ describe("typed/navigation", () => {
         assert.isTrue(Result.isFailure(memoryResult));
         if (Result.isFailure(memoryResult)) {
           assert.equal(memoryResult.failure._tag, "@typed/navigation/NavigationError");
-          assert.isTrue(Cause.isIllegalArgumentError(memoryResult.failure.error));
+          if (memoryResult.failure._tag === "@typed/navigation/NavigationError") {
+            assert.isTrue(Cause.isIllegalArgumentError(memoryResult.failure.error));
+          }
         }
       }),
     ));
@@ -1329,33 +1351,40 @@ describe("typed/navigation", () => {
   });
 });
 
-const awaitCurrentPath = (path: string, attempts = 100): Effect.Effect<void, Error, Navigation> =>
+class NavigationTestTimeout extends Data.TaggedError("NavigationTestTimeout")<{
+  readonly message: string;
+}> {}
+
+const awaitCurrentPath = (
+  path: string,
+  attempts = 100,
+): Effect.Effect<void, NavigationTestTimeout, Navigation> =>
   Effect.gen(function* () {
     for (let attempt = 0; attempt < attempts; attempt++) {
       if ((yield* Navigation.currentEntry).url.pathname === path) return;
       yield* Effect.yieldNow;
     }
-    return yield* Effect.fail(new Error(`Navigation did not reconcile ${path}`));
+    return yield* new NavigationTestTimeout({ message: `Navigation did not reconcile ${path}` });
   });
 
 const awaitFiberExit = <A, E>(
   fiber: Fiber.Fiber<A, E>,
   attempts = 100,
-): Effect.Effect<Exit.Exit<A, E>, Error> =>
+): Effect.Effect<Exit.Exit<A, E>, NavigationTestTimeout> =>
   Effect.gen(function* () {
     for (let attempt = 0; attempt < attempts; attempt++) {
       const exit = fiber.pollUnsafe();
       if (exit !== undefined) return exit;
       yield* Effect.yieldNow;
     }
-    return yield* Effect.fail(new Error("Fiber did not complete"));
+    return yield* new NavigationTestTimeout({ message: "Fiber did not complete" });
   });
 
 const awaitBlocking = (
   blocking: BlockNavigation,
   path: string,
   attempts = 100,
-): Effect.Effect<Blocking, Error> =>
+): Effect.Effect<Blocking, NavigationTestTimeout> =>
   Effect.gen(function* () {
     for (let attempt = 0; attempt < attempts; attempt++) {
       if (yield* blocking.isBlocking) {
@@ -1364,7 +1393,7 @@ const awaitBlocking = (
       }
       yield* Effect.yieldNow;
     }
-    return yield* Effect.fail(new Error(`Navigation did not block ${path}`));
+    return yield* new NavigationTestTimeout({ message: `Navigation did not block ${path}` });
   });
 
 type MockWindow = Window & {

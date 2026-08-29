@@ -12,14 +12,14 @@ import * as RefSubject from "../RefSubject.js";
 
 const NumberFromStringExcept13 = Schema.String.pipe(
   Schema.decodeTo(
-    Schema.Number,
+    Schema.Finite,
     SchemaTransformation.transformOrFail({
       decode: (value) => Effect.succeed(Number(value)),
       encode: (value, options) =>
         value === 13
           ? Effect.fail(
-            new SchemaIssue.InvalidValue({ message: "13 cannot be encoded" }, value, options),
-          )
+              new SchemaIssue.InvalidValue({ message: "13 cannot be encoded" }, value, options),
+            )
           : Effect.succeed(String(value)),
     }),
   ),
@@ -28,7 +28,7 @@ const NumberFromStringExcept13 = Schema.String.pipe(
 describe("RefSubject hydration", () => {
   it("keeps make arguments after the leading Schema and honors options.eq", () =>
     Effect.gen(function* () {
-      const ref = yield* RefSubject.hydrate(Schema.Number, Effect.succeed(1), {
+      const ref = yield* RefSubject.hydrate(Schema.Finite, Effect.succeed(1), {
         eq: () => true,
       });
 
@@ -51,7 +51,7 @@ describe("RefSubject hydration", () => {
 
   it("derives equality from the Schema by default", () =>
     Effect.gen(function* () {
-      const Value = Schema.Struct({ count: Schema.Number });
+      const Value = Schema.Struct({ count: Schema.Finite });
       const initial = { count: 1 };
       const ref = yield* RefSubject.hydrate(Value, initial);
       yield* RefSubject.set(ref, initial);
@@ -66,14 +66,18 @@ describe("RefSubject hydration", () => {
     Effect.gen(function* () {
       let initialized = 0;
       const ref = yield* RefSubject.hydrate(
-        Schema.Number,
+        Schema.Finite,
         Effect.sync(() => {
           initialized++;
           return 0;
         }),
       );
       const values: number[] = [];
-      yield* Effect.forkChild(Fx.observe(ref, (value) => { values.push(value); }));
+      yield* Effect.forkChild(
+        Fx.observe(ref, (value) => {
+          values.push(value);
+        }),
+      );
       for (let i = 0; i < 5; i++) yield* Effect.yieldNow;
 
       assert.strictEqual(initialized, 0);
@@ -99,9 +103,14 @@ describe("RefSubject hydration", () => {
           yield* sink.onSuccess(1);
         }),
       );
-      const ref = yield* RefSubject.hydrate(Schema.Number, source);
+      const ref = yield* RefSubject.hydrate(Schema.Finite, source);
       const values: number[] = [];
-      yield* Effect.forkChild(Fx.observe(ref, (value) => { values.push(value); return Effect.void; }));
+      yield* Effect.forkChild(
+        Fx.observe(ref, (value) => {
+          values.push(value);
+          return Effect.void;
+        }),
+      );
       for (let i = 0; i < 5; i++) yield* Effect.yieldNow;
 
       assert.strictEqual(started, 0);
@@ -131,9 +140,14 @@ describe("RefSubject hydration", () => {
           return Stream.fromIterable([0, 1]);
         }),
       );
-      const ref = yield* RefSubject.hydrate(Schema.Number, source);
+      const ref = yield* RefSubject.hydrate(Schema.Finite, source);
       const values: number[] = [];
-      yield* Effect.forkChild(Fx.observe(ref, (value) => { values.push(value); return Effect.void; }));
+      yield* Effect.forkChild(
+        Fx.observe(ref, (value) => {
+          values.push(value);
+          return Effect.void;
+        }),
+      );
       for (let i = 0; i < 5; i++) yield* Effect.yieldNow;
 
       assert.strictEqual(started, 0);
@@ -154,8 +168,8 @@ describe("RefSubject hydration", () => {
 
   it("uses the original Fx and Stream initializers for server serialization", () =>
     Effect.gen(function* () {
-      const fx = yield* RefSubject.hydrate(Schema.Number, Fx.fromIterable([1]));
-      const stream = yield* RefSubject.hydrate(Schema.Number, Stream.fromIterable([2]));
+      const fx = yield* RefSubject.hydrate(Schema.Finite, Fx.fromIterable([1]));
+      const stream = yield* RefSubject.hydrate(Schema.Finite, Stream.fromIterable([2]));
 
       const attributes = yield* RefSubject.hydrateAll(fx, stream)[RefSubject.HydrationRefTypeId]
         .toAttributes;
@@ -170,8 +184,8 @@ describe("RefSubject hydration", () => {
 
   it("uses the original Fx and Stream initializers when DOM metadata is absent", () =>
     Effect.gen(function* () {
-      const fx = yield* RefSubject.hydrate(Schema.Number, Fx.fromIterable([1, 2]));
-      const stream = yield* RefSubject.hydrate(Schema.Number, Stream.fromIterable([3, 4]));
+      const fx = yield* RefSubject.hydrate(Schema.Finite, Fx.fromIterable([1, 2]));
+      const stream = yield* RefSubject.hydrate(Schema.Finite, Stream.fromIterable([3, 4]));
 
       yield* RefSubject.hydrateAll(fx, stream)(makeElement(null));
 
@@ -201,7 +215,7 @@ describe("RefSubject hydration", () => {
 
   it("preserves the make initializer when hydration metadata is absent", () =>
     Effect.gen(function* () {
-      const ref = yield* RefSubject.hydrate(Schema.Number, 3);
+      const ref = yield* RefSubject.hydrate(Schema.Finite, 3);
 
       yield* ref(makeElement(null));
 
@@ -210,7 +224,7 @@ describe("RefSubject hydration", () => {
 
   it("hydrates a composed tuple in argument order", () =>
     Effect.gen(function* () {
-      const serverCount = yield* RefSubject.hydrate(Schema.Number, 2);
+      const serverCount = yield* RefSubject.hydrate(Schema.Finite, 2);
       const serverWhen = yield* RefSubject.hydrate(
         Schema.Date,
         new Date("2026-08-21T12:00:00.000Z"),
@@ -219,7 +233,7 @@ describe("RefSubject hydration", () => {
         RefSubject.HydrationRefTypeId
       ].toAttributes;
 
-      const clientCount = yield* RefSubject.hydrate(Schema.Number, 0);
+      const clientCount = yield* RefSubject.hydrate(Schema.Finite, 0);
       const clientWhen = yield* RefSubject.hydrate(Schema.Date, new Date(0));
       yield* RefSubject.hydrateAll(clientCount, clientWhen)(makeElement(attributes[0].value));
 
@@ -238,9 +252,9 @@ describe("RefSubject hydration", () => {
 
   it("groups unnamed members and preserves named members in argument order", () =>
     Effect.gen(function* () {
-      const first = yield* RefSubject.hydrate(Schema.Number, 1);
+      const first = yield* RefSubject.hydrate(Schema.Finite, 1);
       const page = yield* RefSubject.hydrate(Schema.FiniteFromString, 3, { name: "page" });
-      const second = yield* RefSubject.hydrate(Schema.Number, 2);
+      const second = yield* RefSubject.hydrate(Schema.Finite, 2);
 
       const attributes = yield* RefSubject.hydrateAll(first, page, second)[
         RefSubject.HydrationRefTypeId
@@ -339,8 +353,8 @@ describe("RefSubject hydration", () => {
           running--;
           return value;
         });
-      const first = yield* RefSubject.hydrate(Schema.Number, initial(1));
-      const second = yield* RefSubject.hydrate(Schema.Number, initial(2));
+      const first = yield* RefSubject.hydrate(Schema.Finite, initial(1));
+      const second = yield* RefSubject.hydrate(Schema.Finite, initial(2));
 
       yield* RefSubject.hydrateAll(first, second)[RefSubject.HydrationRefTypeId].toAttributes;
 
@@ -447,12 +461,22 @@ describe("RefSubject hydration", () => {
 
   it("does not partially apply a malformed composed tuple", () =>
     Effect.gen(function* () {
-      const count = yield* RefSubject.hydrate(Schema.Number, 0);
+      const count = yield* RefSubject.hydrate(Schema.Finite, 0);
       const when = yield* RefSubject.hydrate(Schema.Date, new Date(0));
       const seenCounts: number[] = [];
       const seenDates: Date[] = [];
-      yield* Effect.forkChild(Fx.observe(count, (value) => { seenCounts.push(value); return Effect.void; }));
-      yield* Effect.forkChild(Fx.observe(when, (value) => { seenDates.push(value); return Effect.void; }));
+      yield* Effect.forkChild(
+        Fx.observe(count, (value) => {
+          seenCounts.push(value);
+          return Effect.void;
+        }),
+      );
+      yield* Effect.forkChild(
+        Fx.observe(when, (value) => {
+          seenDates.push(value);
+          return Effect.void;
+        }),
+      );
       for (let i = 0; i < 5; i++) yield* Effect.yieldNow;
 
       const element = makeElement('{"version":1,"values":[2,"not-a-date"]}');

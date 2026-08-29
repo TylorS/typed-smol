@@ -2,18 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Scope } from "effect";
 import { Effect, Schema } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
-import {
-  html,
-  HtmlRenderEvent,
-  many,
-} from "../index.js";
+import { html, HtmlRenderEvent, many } from "../index.js";
 import { escape } from "../internal/encoding.js";
 import { getHtmlRenderEvents, getStaticHtml } from "./helpers/html-output.js";
 
 describe("Html", () => {
   it("renders hydrated RefSubject metadata for interactive HTML", () =>
     Effect.gen(function* () {
-      const count = yield* RefSubject.hydrate(Schema.Number, 7);
+      const count = yield* RefSubject.hydrate(Schema.Finite, 7);
       const output = (yield* getHtmlRenderEvents(
         html`<button ref=${count}>${count}</button>`,
       )).join("");
@@ -26,7 +22,7 @@ describe("Html", () => {
 
   it("omits hydrated RefSubject metadata for static HTML", () =>
     Effect.gen(function* () {
-      const count = yield* RefSubject.hydrate(Schema.Number, 7);
+      const count = yield* RefSubject.hydrate(Schema.Finite, 7);
       const page = yield* RefSubject.hydrate(Schema.FiniteFromString, 3, { name: "page" });
       const output = yield* getStaticHtml(
         html`<button ref=${RefSubject.hydrateAll(count, page)}>${count}</button>`,
@@ -38,9 +34,9 @@ describe("Html", () => {
 
   it("renders grouped unnamed and scalar named hydration metadata", () =>
     Effect.gen(function* () {
-      const first = yield* RefSubject.hydrate(Schema.Number, 1);
+      const first = yield* RefSubject.hydrate(Schema.Finite, 1);
       const page = yield* RefSubject.hydrate(Schema.FiniteFromString, 3, { name: "page" });
-      const second = yield* RefSubject.hydrate(Schema.Number, 2);
+      const second = yield* RefSubject.hydrate(Schema.Finite, 2);
       const ref = RefSubject.hydrateAll(first, page, second);
 
       const output = (yield* getHtmlRenderEvents(html`<section ref=${ref}></section>`)).join("");
@@ -53,7 +49,7 @@ describe("Html", () => {
 
   it("renders callable hydrated state through nested data and arrays", () =>
     Effect.gen(function* () {
-      const count = yield* RefSubject.hydrate(Schema.Number, 7);
+      const count = yield* RefSubject.hydrate(Schema.Finite, 7);
       const output = yield* getStaticHtml(html`<div .data=${{ count }}>${[count]}</div>`);
 
       expect(output).toContain('data-count="7"');
@@ -62,9 +58,9 @@ describe("Html", () => {
 
   it("keeps ordinary ref callbacks out of server HTML", () =>
     Effect.gen(function* () {
-      const output = (
-        yield* getHtmlRenderEvents(html`<button ref=${() => {}}>Click</button>`)
-      ).join("");
+      const output = (yield* getHtmlRenderEvents(
+        html`<button ref=${() => {}}>Click</button>`,
+      )).join("");
 
       expect(output).not.toContain(RefSubject.HYDRATION_ATTRIBUTE);
       expect(output).toContain("<button>Click</button>");
@@ -105,13 +101,11 @@ describe("Html", () => {
       const events = Fx.mergeAll(
         Fx.succeed(HtmlRenderEvent("Typ", false)),
         Fx.succeed(HtmlRenderEvent("ed", true)),
-      )
+      );
 
-      expect(
-        yield* getStaticHtml(
-          html`<div>Hello, ${events}!</div>`,
-        ),
-      ).toMatchInlineSnapshot(`"<div>Hello, Typed!</div>"`);
+      expect(yield* getStaticHtml(html`<div>Hello, ${events}!</div>`)).toMatchInlineSnapshot(
+        `"<div>Hello, Typed!</div>"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("renders template with static attribute", () =>

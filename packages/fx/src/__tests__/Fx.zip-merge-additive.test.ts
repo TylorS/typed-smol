@@ -24,9 +24,10 @@ describe("Fx zip/merge additive combinators", () => {
 
     it("data-last form: pipe(self, zipLeft(that))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable([10, 20])
-          .pipe(zipLeft(Fx.fromIterable(["x", "y", "z"])))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable([10, 20]).pipe(
+          zipLeft(Fx.fromIterable(["x", "y", "z"])),
+          Fx.collectAll,
+        );
         assert.deepStrictEqual(result, [10, 20]);
       }).pipe(Effect.scoped, Effect.runPromise));
 
@@ -58,9 +59,10 @@ describe("Fx zip/merge additive combinators", () => {
 
     it("data-last form: pipe(self, zipRight(that))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable([1, 2, 3])
-          .pipe(zipRight(Fx.fromIterable(["a", "b"])))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable([1, 2, 3]).pipe(
+          zipRight(Fx.fromIterable(["a", "b"])),
+          Fx.collectAll,
+        );
         assert.deepStrictEqual(result, ["a", "b"]);
       }).pipe(Effect.scoped, Effect.runPromise));
 
@@ -113,9 +115,10 @@ describe("Fx zip/merge additive combinators", () => {
 
     it("data-last form: pipe(self, mergeLeft(that))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable([1, 2])
-          .pipe(mergeLeft(Fx.fromIterable(["a", "b", "c"])))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable([1, 2]).pipe(
+          mergeLeft(Fx.fromIterable(["a", "b", "c"])),
+          Fx.collectAll,
+        );
         assert.strictEqual(result.length, 2);
         assert.deepStrictEqual(
           [...result].sort((a, b) => a - b),
@@ -161,9 +164,10 @@ describe("Fx zip/merge additive combinators", () => {
 
     it("data-last form: pipe(self, mergeRight(that))", () =>
       Effect.gen(function* () {
-        const result = yield* Fx.fromIterable([1, 2, 3])
-          .pipe(mergeRight(Fx.fromIterable(["x", "y"])))
-          .pipe(Fx.collectAll);
+        const result = yield* Fx.fromIterable([1, 2, 3]).pipe(
+          mergeRight(Fx.fromIterable(["x", "y"])),
+          Fx.collectAll,
+        );
         assert.strictEqual(result.length, 2);
         assert.deepStrictEqual([...result].sort(), ["x", "y"]);
       }).pipe(Effect.scoped, Effect.runPromise));

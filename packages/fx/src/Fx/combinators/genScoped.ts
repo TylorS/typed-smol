@@ -18,6 +18,9 @@ export const genScoped = <Yield extends Effect.Effect<any, any, any>, Return ext
   f: () => Generator<Yield, Return, any>,
 ): Fx<
   Fx.Success<Return>,
-  Fx.Error<Return> | Effect.Error<Yield>,
-  Exclude<Fx.Services<Return> | Effect.Services<Yield>, Scope.Scope>
-> => unwrapScoped(Effect.gen(f)) ;
+  Fx.Error<Return> | ([Yield] extends [never] ? never : Effect.Error<Yield>),
+  Exclude<
+    Fx.Services<Return> | ([Yield] extends [never] ? never : Effect.Services<Yield>),
+    Scope.Scope
+  >
+> => unwrapScoped(Effect.gen(f));

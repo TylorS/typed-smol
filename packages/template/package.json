@@ -84,7 +84,7 @@
     "test": "pnpm run test:node && pnpm run test:browser && pnpm run test:types",
     "test:node": "vitest run --config vitest.config.ts",
     "test:browser": "vitest run --config vitest.browser.config.ts",
-    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json"
+    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json && tsc -p tsconfig.tests.json"
   },
   "dependencies": {
     "@typed/fx": "workspace:*",

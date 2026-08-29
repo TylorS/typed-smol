@@ -29,7 +29,7 @@ export interface RefHashRing<
  * @since 1.18.0
  * @category constructors
  */
-export function make<A extends PrimaryKey.PrimaryKey, E, R>(
+export function make<A extends PrimaryKey.PrimaryKey, E = never, R = never>(
   initial:
     | HashRing.HashRing<A>
     | Effect.Effect<HashRing.HashRing<A>, E, R>
@@ -43,7 +43,7 @@ export function make<A extends PrimaryKey.PrimaryKey, E, R>(
  * @since 1.18.0
  * @category constructors
  */
-export function empty<A extends PrimaryKey.PrimaryKey, E, R>(options?: {
+export function empty<A extends PrimaryKey.PrimaryKey, E = never, R = never>(options?: {
   readonly baseWeight?: number;
 }): Effect.Effect<RefHashRing<A, E>, never, R | Scope.Scope> {
   return RefSubject.make(HashRing.make<A>(options), { eq: equals });

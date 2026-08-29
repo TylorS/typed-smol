@@ -88,6 +88,7 @@ describe("nested foreign templates", () => {
 
       const hydrated = host.querySelector("#nested-circle");
       assert.strictEqual(hydrated, original);
+      assert(hydrated);
       assert.strictEqual(hydrated.namespaceURI, SVG_NAMESPACE);
       hydrated.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       assert.strictEqual(clicks, 1);
@@ -148,7 +149,7 @@ describe("nested foreign templates", () => {
       };
       renderDocument.importNode = function <T extends Node>(node: T, deep?: boolean): T {
         imports++;
-        return importNode.call(this, node, deep);
+        return importNode.call(this, node, deep) as T;
       };
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {

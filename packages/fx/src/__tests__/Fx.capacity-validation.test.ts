@@ -32,6 +32,7 @@ describe("replay capacity validation", () => {
       Fx.collectAll,
       Effect.flip,
       Effect.map((error) => expectIllegalArgumentError(error, message)),
+      Effect.scoped,
       Effect.runPromise,
     ),
   );

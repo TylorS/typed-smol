@@ -55,7 +55,7 @@ export interface RefArray<in out A, in out E = never, out R = never> extends Ref
  * @since 1.18.0
  * @category constructors
  */
-export function make<A, E, R>(
+export function make<A, E = never, R = never>(
   initial: ReadonlyArray<A> | Effect.Effect<ReadonlyArray<A>, E, R> | Fx.Fx<ReadonlyArray<A>, E, R>,
   eq: Equivalence<A> = equals,
 ): Effect.Effect<RefArray<A, E>, never, R | Scope.Scope> {

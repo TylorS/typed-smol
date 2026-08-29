@@ -204,7 +204,7 @@ describe("TS-03 SSR spread and data key policy", () => {
 
   it("classifies spread keys and omits event, ref, dangerous, and invalid names", () =>
     Effect.gen(function* () {
-      const props = Object.fromEntries([
+      const props: Record<string, string | boolean> = Object.fromEntries([
         ["id", "safe"],
         ["onclick", "alert(1)"],
         ["OnMouseOver", "alert(2)"],

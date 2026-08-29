@@ -14,7 +14,7 @@ describe("RefTuple", () => {
 
   it("sets value at index", () =>
     Effect.gen(function* () {
-      const ref = yield* RefTuple.make(Tuple.make(1, "hello", true));
+      const ref = yield* RefTuple.make(Tuple.make(1 as number, "hello" as string, true as boolean));
       yield* RefTuple.setAt(ref, 1, "world");
       const result = yield* ref;
       expect(result[1]).toBe("world");
@@ -24,7 +24,7 @@ describe("RefTuple", () => {
 
   it("updates value at index", () =>
     Effect.gen(function* () {
-      const ref = yield* RefTuple.make(Tuple.make(1, 2, 3));
+      const ref = yield* RefTuple.make(Tuple.make(1 as number, 2 as number, 3 as number));
       yield* RefTuple.updateAt(ref, 1, (n) => n * 2);
       const result = yield* ref;
       expect(result[1]).toBe(4);

@@ -109,7 +109,7 @@ describe("Fx.skipRepeats / skipRepeatsWith", () => {
 describe("Fx.causes", () => {
   it("emits only failure causes and ignores successful values", () =>
     Effect.gen(function* () {
-      const fx = Fx.concat(Fx.succeed(1), Fx.fail("err"), Fx.succeed(2)).pipe(causes);
+      const fx = Fx.succeed(1).pipe(Fx.concat(Fx.fail("err")), Fx.concat(Fx.succeed(2)), causes);
       const collected = yield* Fx.collectAll(fx);
       assert.strictEqual(collected.length, 1);
       const fail = Cause.findFail(collected[0]!);

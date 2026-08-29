@@ -30,7 +30,7 @@ export interface RefHashMap<
  * @since 1.18.0
  * @category constructors
  */
-export function make<K, V, E, R>(
+export function make<K, V, E = never, R = never>(
   initial:
     | HashMap.HashMap<K, V>
     | Effect.Effect<HashMap.HashMap<K, V>, E, R>

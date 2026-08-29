@@ -27,7 +27,7 @@ export interface RefHashSet<
  * @since 1.18.0
  * @category constructors
  */
-export function make<V, E, R>(
+export function make<V, E = never, R = never>(
   initial:
     | HashSet.HashSet<V>
     | Effect.Effect<HashSet.HashSet<V>, E, R>

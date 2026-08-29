@@ -7,7 +7,7 @@ import { zeroRandomValues } from "./helpers.js";
 
 describe("nanoId", () => {
   it("maps zero entropy to the default alphabet and fixed length", async () => {
-    const id = await Effect.runPromise(Effect.provide(nanoId, zeroRandomValues()));
+    const id = await Effect.runPromise(Effect.provide(nanoId, zeroRandomValues));
 
     expect(id).toBe("000000000000000000000");
     expect(id).toHaveLength(21);
@@ -18,8 +18,10 @@ describe("nanoId", () => {
     const bytes = Uint8Array.from({ length: 21 }, (_, index) => index);
     const customLayer = Layer.succeed(
       RandomValues,
-      RandomValues.of(() =>
-        Effect.succeed(bytes as Uint8Array & { readonly length: 21 }),
+      RandomValues.of(
+        Effect.fn(<const N extends number>(length: N) =>
+          Effect.succeed(bytes.slice(0, length) as Uint8Array & { readonly length: N }),
+        ),
       ),
     );
 
@@ -30,11 +32,15 @@ describe("nanoId", () => {
   });
 
   it("maps underscore and hyphen buckets", async () => {
-    const bytes = Uint8Array.from([36, 61, 62, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const bytes = Uint8Array.from([
+      36, 61, 62, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
     const customLayer = Layer.succeed(
       RandomValues,
-      RandomValues.of(() =>
-        Effect.succeed(bytes as Uint8Array & { readonly length: 21 }),
+      RandomValues.of(
+        Effect.fn(<const N extends number>(length: N) =>
+          Effect.succeed(bytes.slice(0, length) as Uint8Array & { readonly length: N }),
+        ),
       ),
     );
 

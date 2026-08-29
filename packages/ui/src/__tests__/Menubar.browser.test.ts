@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import * as Menu from "../Menu.js";
 import * as Menubar from "../Menubar.js";
 
@@ -83,30 +83,66 @@ describe("typed/ui/Menubar in browsers", () => {
       ).pipe(Fx.take(1), Fx.collectAll);
 
       const trigger = document.querySelector("#file") as HTMLButtonElement;
+      const context = yield* Effect.context();
       trigger.focus();
       trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-      yield* Effect.sleep(0);
-
-      assert.strictEqual((yield* submenu).open, true);
-      assert.strictEqual(document.activeElement?.id, "new");
+      yield* Effect.promise(() =>
+        vi.waitFor(
+          () =>
+            Effect.runPromiseWith(context)(submenu).then((value) => {
+              assert.strictEqual(value.open, true);
+              assert.strictEqual(document.activeElement?.id, "new");
+            }),
+          { interval: 10, timeout: 500 },
+        ),
+      );
 
       (document.querySelector("#new") as HTMLDivElement).dispatchEvent(
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       );
-      yield* Effect.sleep(0);
-      assert.strictEqual((yield* submenu).open, false);
-      assert.strictEqual((yield* state).activeId, "file");
-      assert.strictEqual(document.activeElement, trigger);
+      yield* Effect.promise(() =>
+        vi.waitFor(
+          () =>
+            Promise.all([
+              Effect.runPromiseWith(context)(submenu),
+              Effect.runPromiseWith(context)(state),
+            ]).then(([submenuValue, stateValue]) => {
+              assert.strictEqual(submenuValue.open, false);
+              assert.strictEqual(stateValue.activeId, "file");
+              assert.strictEqual(document.activeElement, trigger);
+            }),
+          { interval: 10, timeout: 500 },
+        ),
+      );
 
       trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-      yield* Effect.sleep(0);
+      yield* Effect.promise(() =>
+        vi.waitFor(
+          () =>
+            Effect.runPromiseWith(context)(submenu).then((value) => {
+              assert.strictEqual(value.open, true);
+              assert.strictEqual(document.activeElement?.id, "new");
+            }),
+          { interval: 10, timeout: 500 },
+        ),
+      );
       (document.querySelector("#new") as HTMLDivElement).dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
       );
-      yield* Effect.sleep(0);
-      assert.strictEqual((yield* submenu).open, false);
-      assert.strictEqual((yield* state).activeId, "view");
-      assert.strictEqual(document.activeElement?.id, "view");
+      yield* Effect.promise(() =>
+        vi.waitFor(
+          () =>
+            Promise.all([
+              Effect.runPromiseWith(context)(submenu),
+              Effect.runPromiseWith(context)(state),
+            ]).then(([submenuValue, stateValue]) => {
+              assert.strictEqual(submenuValue.open, false);
+              assert.strictEqual(stateValue.activeId, "view");
+              assert.strictEqual(document.activeElement?.id, "view");
+            }),
+          { interval: 10, timeout: 500 },
+        ),
+      );
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 

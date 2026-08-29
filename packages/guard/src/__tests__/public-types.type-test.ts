@@ -133,6 +133,7 @@ encode(encodedGuard, NumberFromString);
 encode(NumberFromString)(encodedGuard);
 
 declare const primitiveGuard: Guard<unknown, number, UpstreamError, UpstreamService>;
+declare const arrayGuard: Guard<unknown, ReadonlyArray<number>, UpstreamError, UpstreamService>;
 declare const recordGuard: Guard<
   unknown,
   { readonly value: number },
@@ -178,6 +179,12 @@ let_(primitiveGuard, "phase", "ready");
 addTag(primitiveGuard, "Number");
 // @ts-expect-error bind requires an object output
 bind(primitiveGuard, "label", primitiveGuard);
+// @ts-expect-error let requires a record output, not an array
+let_(arrayGuard, "phase", "ready");
+// @ts-expect-error addTag requires a record output, not an array
+addTag(arrayGuard, "Numbers");
+// @ts-expect-error bind requires a record output, not an array
+bind(arrayGuard, "label", primitiveGuard);
 // @ts-expect-error let cannot replace an existing key
 let_(recordGuard, "value", 1);
 // @ts-expect-error curried let cannot replace an existing key

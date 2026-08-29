@@ -15,11 +15,16 @@ import {
 } from "../index.js";
 import { createHappyDomLayer } from "./helpers/dom-layer.js";
 
+type NumericHydratedRef = RefSubject.HydratedRefSubject<number, Schema.SchemaError, never, never>;
+type NumericHydrationRef = RefSubject.HydrationRef<Schema.SchemaError, never>;
+
 describe("Hydration", () => {
   it("hydrates a simple template", () =>
-    Effect.gen(function* () {
-      yield* hydrateHtmlElement`<div>Hello, world!</div>`;
-    }).pipe(Effect.scoped, Effect.runPromise));
+    hydrateHtmlElement`<div>Hello, world!</div>`.pipe(
+      Effect.asVoid,
+      Effect.scoped,
+      Effect.runPromise,
+    ));
 
   it("hydrates template with static attribute", () =>
     Effect.gen(function* () {
@@ -169,11 +174,9 @@ describe("Hydration", () => {
 
   it("restores hydrated RefSubjects before reactive attributes start", () =>
     Effect.gen(function* () {
-      const view = (
-        count: RefSubject.HydratedRefSubject<number, any, any, any>,
-        ref: RefSubject.HydrationRef<any, any> = count,
-      ) => html`<button data-count=${count} ref=${ref}>${count}</button>`;
-      const serverCount = yield* RefSubject.hydrate(Schema.Number, 7);
+      const view = (count: NumericHydratedRef, ref: NumericHydrationRef = count) =>
+        html`<button data-count=${count} ref=${ref}>${count}</button>`;
+      const serverCount = yield* RefSubject.hydrate(Schema.Finite, 7);
       const htmlString = yield* renderToHtmlString(view(serverCount)).pipe(
         Effect.provide(HtmlRenderTemplate),
       );
@@ -191,14 +194,14 @@ describe("Hydration", () => {
 
       let initialized = 0;
       const clientCount = yield* RefSubject.hydrate(
-        Schema.Number,
+        Schema.Finite,
         Effect.sync(() => {
           initialized++;
           return 0;
         }),
       );
       let hydrationCalls = 0;
-      const countedHydration: RefSubject.HydrationRef<any, any> = Object.assign(
+      const countedHydration: NumericHydrationRef = Object.assign(
         (element: RefSubject.HydrationElement) => {
           hydrationCalls++;
           return clientCount(element);
@@ -229,11 +232,11 @@ describe("Hydration", () => {
   it("restores spread hydrated RefSubjects before reactive attributes start", () =>
     Effect.gen(function* () {
       const view = (
-        count: RefSubject.HydratedRefSubject<number, any, any, any>,
-        ref: RefSubject.HydrationRef<any, any> = count,
+        count: NumericHydratedRef,
+        ref: NumericHydrationRef = count,
         marker: string | Effect.Effect<string> = "ready",
       ) => html`<button data-count=${count} data-marker=${marker} ...${{ ref }}>${count}</button>`;
-      const serverCount = yield* RefSubject.hydrate(Schema.Number, 7);
+      const serverCount = yield* RefSubject.hydrate(Schema.Finite, 7);
       const htmlString = yield* renderToHtmlString(view(serverCount)).pipe(
         Effect.provide(HtmlRenderTemplate),
       );
@@ -253,7 +256,7 @@ describe("Hydration", () => {
 
       let initialized = 0;
       const clientCount = yield* RefSubject.hydrate(
-        Schema.Number,
+        Schema.Finite,
         Effect.sync(() => {
           initialized++;
           return 0;
@@ -261,7 +264,7 @@ describe("Hydration", () => {
       );
       let hydrationCalls = 0;
       const setupOrder: Array<"attribute" | "ref"> = [];
-      const countedHydration: RefSubject.HydrationRef<any, any> = Object.assign(
+      const countedHydration: NumericHydrationRef = Object.assign(
         (element: RefSubject.HydrationElement) => {
           hydrationCalls++;
           setupOrder.push("ref");
@@ -300,11 +303,11 @@ describe("Hydration", () => {
   it("hydrates unnamed and named state from SSR with distinct lifecycles", () =>
     Effect.gen(function* () {
       const view = (
-        count: RefSubject.HydratedRefSubject<number, any, any, any>,
-        page: RefSubject.HydratedRefSubject<number, any, any, any>,
-        ref: RefSubject.HydrationRef<any, any> = RefSubject.hydrateAll(count, page),
+        count: NumericHydratedRef,
+        page: NumericHydratedRef,
+        ref: NumericHydrationRef = RefSubject.hydrateAll(count, page),
       ) => html`<section ref=${ref}></section>`;
-      const serverCount = yield* RefSubject.hydrate(Schema.Number, 1);
+      const serverCount = yield* RefSubject.hydrate(Schema.Finite, 1);
       const serverPage = yield* RefSubject.hydrate(Schema.FiniteFromString, 3, {
         name: "page",
       });
@@ -317,13 +320,13 @@ describe("Hydration", () => {
       const original = body.querySelector("section");
       assert(original);
 
-      const clientCount = yield* RefSubject.hydrate(Schema.Number, 0);
+      const clientCount = yield* RefSubject.hydrate(Schema.Finite, 0);
       const clientPage = yield* RefSubject.hydrate(Schema.FiniteFromString, 0, {
         name: "page",
       });
       const hydration = RefSubject.hydrateAll(clientCount, clientPage);
       let hydrationCalls = 0;
-      const countedHydration: RefSubject.HydrationRef<any, any> = Object.assign(
+      const countedHydration: NumericHydrationRef = Object.assign(
         (element: RefSubject.HydrationElement) => {
           hydrationCalls++;
           return hydration(element);
@@ -481,7 +484,9 @@ describe("Hydration", () => {
         html`<p>A</p>`,
         html`<p>B</p>`,
       ]}</div>`;
-      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(`"<!--n_0--><!--t_KwZ/fMOUm3w=--><p>A</p><!--/t_KwZ/fMOUm3w=--><!--t_KwZ/fASZm3w=--><p>B</p><!--/t_KwZ/fASZm3w=--><!--/n_0-->"`);
+      expect(renderEventExample.innerHTML).toMatchInlineSnapshot(
+        `"<!--n_0--><!--t_KwZ/fMOUm3w=--><p>A</p><!--/t_KwZ/fMOUm3w=--><!--t_KwZ/fASZm3w=--><p>B</p><!--/t_KwZ/fASZm3w=--><!--/n_0-->"`,
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("interpolates many comments", ({ expect }) =>

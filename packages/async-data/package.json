@@ -29,7 +29,7 @@
   "scripts": {
     "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc",
     "test": "vitest run --config vitest.config.ts",
-    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json"
+    "test:types": "pnpm run build && tsc -p tsconfig.type-tests.json && tsc -p tsconfig.tests.json"
   },
   "dependencies": {
     "effect": "catalog:"

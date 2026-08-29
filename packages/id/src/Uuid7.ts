@@ -63,29 +63,34 @@ export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7St
       state.seq = seq;
     }
 
-    return Effect.gen(function* () {
-      const timestamp = yield* now;
-      if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > maximumTimestamp) {
-        return yield* new Cause.IllegalArgumentError(
-          `UUIDv7 timestamp must be a safe integer between 0 and ${maximumTimestamp}, received ${timestamp}`,
-        );
-      }
-      if (
-        timestamp <= state.msecs &&
-        state.msecs === maximumTimestamp &&
-        state.seq === 0xffffffff
-      ) {
-        return yield* new Cause.IllegalArgumentError(
-          "UUIDv7 sequence rollover exceeds its 48-bit timestamp field",
-        );
-      }
-      const randomBytes = yield* getRandomValues(16);
-      updateV7State(timestamp, randomBytes);
-      return { timestamp: state.msecs, seq: state.seq, randomBytes };
-    });
+    return {
+      next: Effect.gen(function* () {
+        const timestamp = yield* now;
+        if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > maximumTimestamp) {
+          return yield* new Cause.IllegalArgumentError(
+            `UUIDv7 timestamp must be a safe integer between 0 and ${maximumTimestamp}, received ${timestamp}`,
+          );
+        }
+        if (
+          timestamp <= state.msecs &&
+          state.msecs === maximumTimestamp &&
+          state.seq === 0xffffffff
+        ) {
+          return yield* new Cause.IllegalArgumentError(
+            "UUIDv7 sequence rollover exceeds its 48-bit timestamp field",
+          );
+        }
+        const randomBytes = yield* getRandomValues(16);
+        updateV7State(timestamp, randomBytes);
+        return { timestamp: state.msecs, seq: state.seq, randomBytes };
+      }),
+    };
   }),
 }) {
-  static readonly next = Effect.flatten(Uuid7State);
+  static readonly next = Effect.gen(function* () {
+    const { next } = yield* Uuid7State;
+    return yield* next;
+  });
 
   static readonly Default = Layer.effect(Uuid7State, Uuid7State.make).pipe(
     Layer.provide([DateTimes.Default, RandomValues.Default]),

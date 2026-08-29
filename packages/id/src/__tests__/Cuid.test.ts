@@ -13,7 +13,9 @@ const fixedSeed = (random = Uint8Array.from({ length: 32 }, (_, index) => index)
 });
 
 const generate = (seed: CuidSeed) =>
-  Effect.runPromise(Effect.provideService(cuid, CuidState, CuidState.of(Effect.succeed(seed))));
+  Effect.runPromise(
+    Effect.provideService(cuid, CuidState, CuidState.of({ next: Effect.succeed(seed) })),
+  );
 
 const stateLayer = (seed: string) =>
   Layer.effect(CuidState, CuidState.make("test")).pipe(

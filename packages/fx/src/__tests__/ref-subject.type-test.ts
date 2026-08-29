@@ -1,4 +1,4 @@
-import { RefSubject } from "@typed/fx";
+import { RefArray, RefSubject } from "@typed/fx";
 import { RefResult } from "@typed/fx/RefSubject";
 import type * as Fx from "@typed/fx/Fx";
 import type * as Effect from "effect/Effect";
@@ -22,6 +22,17 @@ declare const mappedResultError: MappedResultError;
 declare const computedOption: RefSubject.Computed<Option.Option<Value>, OperationalError, Service>;
 declare const filteredOption: RefSubject.Filtered<Option.Option<Value>, OperationalError, Service>;
 declare const refResult: RefResult.RefResult<Value, ResultError, OperationalError, Service>;
+
+const array = RefArray.make([1, 2, 3]);
+const emptyStruct = RefSubject.struct({});
+const emptyTuple = RefSubject.tuple([]);
+
+type _ArrayError = Assert<Equal<Effect.Error<typeof array>, never>>;
+type _ArrayServices = Assert<Equal<Effect.Services<typeof array>, Scope.Scope>>;
+type _EmptyStruct = Assert<Equal<typeof emptyStruct, RefSubject.RefSubject<{}, never, never>>>;
+type _EmptyTuple = Assert<
+  Equal<typeof emptyTuple, RefSubject.RefSubject<readonly [], never, never>>
+>;
 
 const compactComputed = RefSubject.compact(computedOption);
 const compactFiltered = RefSubject.compact(filteredOption);

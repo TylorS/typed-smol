@@ -29,7 +29,7 @@ export interface RefIterable<
  * @since 1.18.0
  * @category constructors
  */
-export function make<A, E, R>(
+export function make<A, E = never, R = never>(
   initial: Iterable<A> | Effect.Effect<Iterable<A>, E, R> | Fx.Fx<Iterable<A>, E, R>,
 ): Effect.Effect<RefIterable<A, E>, never, R | Scope.Scope> {
   return RefSubject.make(initial, { eq: equals });

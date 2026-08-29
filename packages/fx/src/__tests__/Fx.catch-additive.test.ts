@@ -95,7 +95,12 @@ describe("Fx.catchCauseIf", () => {
 
   it("does not recover when predicate is false", () =>
     Effect.gen(function* () {
-      const fx = Fx.die("oops").pipe(catchCauseIf(Cause.isEmpty, () => Fx.succeed("no")));
+      const fx = Fx.die("oops").pipe(
+        catchCauseIf(
+          () => false,
+          () => Fx.succeed("no"),
+        ),
+      );
       const exit = yield* Effect.exit(Fx.collectAll(fx));
       assert(Exit.isFailure(exit));
       assert(Cause.hasDies(exit.cause));
@@ -129,10 +134,11 @@ describe("Fx.catchTags", () => {
 
   it("recovers from multiple tagged failures with one call", () =>
     Effect.gen(function* () {
-      const fx = Fx.fail(new ErrorA({ n: 1 })).pipe(
+      const failure: Fx.Fx<never, ErrorA | ErrorB> = Fx.fail(new ErrorA({ n: 1 }));
+      const fx = failure.pipe(
         catchTags({
-          A: (e) => Fx.succeed(`A:${e.n}`),
-          B: (e) => Fx.succeed(`B:${e.msg}`),
+          A: (e: ErrorA) => Fx.succeed(`A:${e.n}`),
+          B: (e: ErrorB) => Fx.succeed(`B:${e.msg}`),
         }),
       );
       const result = yield* Fx.collectAll(fx);
@@ -141,10 +147,11 @@ describe("Fx.catchTags", () => {
 
   it("matches second tag when first fails with B", () =>
     Effect.gen(function* () {
-      const fx = Fx.fail(new ErrorB({ msg: "hello" })).pipe(
+      const failure: Fx.Fx<never, ErrorA | ErrorB> = Fx.fail(new ErrorB({ msg: "hello" }));
+      const fx = failure.pipe(
         catchTags({
-          A: (e) => Fx.succeed(`A:${e.n}`),
-          B: (e) => Fx.succeed(`B:${e.msg}`),
+          A: (e: ErrorA) => Fx.succeed(`A:${e.n}`),
+          B: (e: ErrorB) => Fx.succeed(`B:${e.msg}`),
         }),
       );
       const result = yield* Fx.collectAll(fx);
@@ -157,9 +164,6 @@ describe("Fx.catchTags", () => {
         catchTags({
           A: () => Fx.succeed(1),
           B: () => Fx.succeed(2),
-        } as {
-          A: (e: ErrorA) => Fx<number, never, never>;
-          B: (e: ErrorB) => Fx<number, never, never>;
         }),
       );
       const exit = yield* Effect.exit(Fx.collectAll(fx));

@@ -49,10 +49,11 @@ describe("Fx.result", () => {
 
   it("emits both successes and failures in order", () =>
     Effect.gen(function* () {
-      const fx = Fx.fromIterable([1, 2])
-        .pipe(Fx.continueWith(() => Fx.fail("e")))
-        .pipe(Fx.continueWith(() => Fx.fromIterable([3])))
-        .pipe(result);
+      const fx = Fx.fromIterable([1, 2]).pipe(
+        Fx.continueWith(() => Fx.fail("e")),
+        Fx.continueWith(() => Fx.fromIterable([3])),
+        result,
+      );
       const collected = yield* Fx.collectAll(fx);
       assert.strictEqual(collected.length, 4);
       assert(Result.isSuccess(collected[0]!) && collected[0].success === 1);

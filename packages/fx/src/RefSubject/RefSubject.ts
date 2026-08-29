@@ -2500,17 +2500,19 @@ function getRefKind<
 
 type StructFrom<
   Refs extends Readonly<Record<string, RefSubject.Any | Computed.Any | Filtered.Any>>,
-> = {
-  c: [ComputedStructFrom<Refs>] extends [Computed<infer A, infer E, infer R>]
-    ? Computed<A, E, R>
-    : never;
-  f: [FilteredStructFrom<Refs>] extends [Filtered<infer A, infer E, infer R>]
-    ? Filtered<A, E, R>
-    : never;
-  r: [RefSubjectStructFrom<Refs>] extends [RefSubject<infer A, infer E, infer R>]
-    ? RefSubject<A, E, R>
-    : never;
-}[GetStructKind<Refs>];
+> = [keyof Refs] extends [never]
+  ? RefSubject<{ readonly [K in keyof Refs]: never }, never, never>
+  : {
+      c: [ComputedStructFrom<Refs>] extends [Computed<infer A, infer E, infer R>]
+        ? Computed<A, E, R>
+        : never;
+      f: [FilteredStructFrom<Refs>] extends [Filtered<infer A, infer E, infer R>]
+        ? Filtered<A, E, R>
+        : never;
+      r: [RefSubjectStructFrom<Refs>] extends [RefSubject<infer A, infer E, infer R>]
+        ? RefSubject<A, E, R>
+        : never;
+    }[GetStructKind<Refs>];
 
 type GetStructKind<
   Refs extends Readonly<Record<string, RefSubject.Any | Computed.Any | Filtered.Any>>,
@@ -2581,17 +2583,19 @@ type TupleFrom<
   Refs extends ReadonlyArray<
     RefSubject<any, any, any> | Computed<any, any, any> | Filtered<any, any, any>
   >,
-> = {
-  c: [ComputedTupleFrom<Refs>] extends [Computed<infer A, infer E, infer R>]
-    ? Computed<A, E, R>
-    : never;
-  f: [FilteredTupleFrom<Refs>] extends [Filtered<infer A, infer E, infer R>]
-    ? Filtered<A, E, R>
-    : never;
-  r: [RefSubjectTupleFrom<Refs>] extends [RefSubject<infer A, infer E, infer R>]
-    ? RefSubject<A, E, R>
-    : never;
-}[GetTupleKind<Refs>];
+> = Refs extends readonly []
+  ? RefSubject<readonly [], never, never>
+  : {
+      c: [ComputedTupleFrom<Refs>] extends [Computed<infer A, infer E, infer R>]
+        ? Computed<A, E, R>
+        : never;
+      f: [FilteredTupleFrom<Refs>] extends [Filtered<infer A, infer E, infer R>]
+        ? Filtered<A, E, R>
+        : never;
+      r: [RefSubjectTupleFrom<Refs>] extends [RefSubject<infer A, infer E, infer R>]
+        ? RefSubject<A, E, R>
+        : never;
+    }[GetTupleKind<Refs>];
 
 type GetTupleKind<
   Refs extends ReadonlyArray<Ref>,
