@@ -16,3 +16,4 @@ catalog:
   happy-dom: 20.11.6
   svelte: 5.56.10
   "@sveltejs/vite-plugin-svelte": 7.3.0
+  "@vitest/coverage-v8": 4.1.11

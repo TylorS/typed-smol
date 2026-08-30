@@ -6,8 +6,12 @@
     "noEmit": true,
     "declaration": false,
     "declarationMap": false,
-    "rootDir": "src"
+    "rootDir": "."
   },
-  "include": ["src/**/*.test.ts", "src/**/*.browser.test.ts"],
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.browser.test.ts",
+    "stories/**/__tests__/**/*.test.ts"
+  ],
   "exclude": []
 }

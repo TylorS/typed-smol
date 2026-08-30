@@ -30,6 +30,7 @@ import {
   makeDatasetUpdater,
   makeNodeUpdater,
   makeTextContentUpdater,
+  renderEventToArray,
 } from "./internal/dom.js";
 import { renderToString } from "./internal/encoding.js";
 import type { HydrationHole, HydrationNode, HydrationTemplate } from "./internal/hydration.js";
@@ -45,7 +46,7 @@ import { keyToPartType } from "./internal/keyToPartType.js";
 import { findPath } from "./internal/ParentChildNodes.js";
 import { parse } from "./Parser.js";
 import type { Renderable } from "./Renderable.js";
-import { DomRenderEvent, type RenderEvent } from "./RenderEvent.js";
+import { DomRenderEvent, isRenderEvent, type RenderEvent } from "./RenderEvent.js";
 import * as RQ from "./RenderQueue.js";
 import { RenderTemplate } from "./RenderTemplate.js";
 import * as Template from "./Template.js";
@@ -291,11 +292,18 @@ export const DomRenderTemplate = Object.assign(
  */
 export type ToRendered<T extends RenderEvent | null> = Rendered | (T extends null ? null : never);
 
+type ToRenderedRenderable<T> =
+  T extends Fx.Fx<infer A, any, any>
+    ? A extends RenderEvent | null
+      ? ToRendered<A>
+      : Rendered | null
+    : Rendered | null;
+
 /**
- * Mounts a reactive `Fx` stream of `RenderEvent`s to a specific DOM element.
+ * Mounts any `Renderable` to a specific DOM element.
  *
- * This function takes a stream of render events (usually from a template) and keeps
- * the target DOM element updated. It handles:
+ * This function lifts primitives, arrays, Effects, Streams, and Fx values into a
+ * render stream and keeps the target DOM element updated. It handles:
  * - Mounting the initial content.
  * - Updating the content as new events are emitted.
  * - Hydrating the content if hydration context is provided.
@@ -337,7 +345,7 @@ export type ToRendered<T extends RenderEvent | null> = Rendered | (T extends nul
  * })
  * ```
  *
- * @param fx - The `Fx` stream of content to render.
+ * @param renderable - The content to render.
  * @param where - The target DOM element to render into.
  * @returns An `Fx` that emits the currently rendered DOM nodes.
  * @since 1.0.0
@@ -346,33 +354,38 @@ export type ToRendered<T extends RenderEvent | null> = Rendered | (T extends nul
 export const render: {
   (
     where: HTMLElement,
-  ): <A extends RenderEvent | null, E, R>(fx: Fx.Fx<A, E, R>) => Fx.Fx<ToRendered<A>, E, R>;
-  <A extends RenderEvent | null, E, R>(
-    fx: Fx.Fx<A, E, R>,
+  ): <const T extends Renderable.Any>(
+    renderable: T,
+  ) => Fx.Fx<ToRenderedRenderable<T>, Renderable.Error<T>, Renderable.Services<T>>;
+  <const T extends Renderable.Any>(
+    renderable: T,
     where: HTMLElement,
-  ): Fx.Fx<ToRendered<A>, E, R>;
+  ): Fx.Fx<ToRenderedRenderable<T>, Renderable.Error<T>, Renderable.Services<T>>;
 } = dual(2, function render<
-  T extends RenderEvent | null,
-  R,
-  E,
->(rendered: Fx.Fx<T, E, R>, rootElement: HTMLElement): Fx.Fx<ToRendered<T>, E, R> {
+  const T extends Renderable.Any,
+>(renderable: T, rootElement: HTMLElement): Fx.Fx<
+  ToRenderedRenderable<T>,
+  Renderable.Error<T>,
+  Renderable.Services<T>
+> {
+  const rendered = liftRenderableToFx(renderable);
+
   return Fx.provide(
     Fx.mapEffect(rendered, (what) => attachRoot(rootElement, what)),
     Layer.syncContext(() => makeHydrateContext(rootElement)),
-  );
+  ) as Fx.Fx<ToRenderedRenderable<T>, Renderable.Error<T>, Renderable.Services<T>>;
 });
 
-const renderCache = new WeakMap<HTMLElement, Rendered>();
-function attachRoot<A extends RenderEvent | null>(
-  where: HTMLElement,
-  what: A, // TODO: Should we support HTML RenderEvents here too?,
-): Effect.Effect<ToRendered<A>> {
+const renderCache = new WeakMap<HTMLElement, Rendered | null>();
+function attachRoot(where: HTMLElement, what: unknown): Effect.Effect<Rendered | null> {
   return Effect.sync(() => {
-    const rendered = what?.valueOf() as Rendered;
+    const values = renderEventToArray(where.ownerDocument, what) as ReadonlyArray<Rendered>;
+    const rendered: Rendered | null =
+      values.length === 0 ? null : values.length === 1 ? values[0] : values;
     const previous = renderCache.get(where);
     if (rendered !== previous) {
       if (previous && !rendered) removeChildren(where, previous);
-      renderCache.set(where, rendered || null);
+      renderCache.set(where, rendered);
       if (rendered) replaceChildren(where, rendered);
       return rendered;
     }
@@ -392,8 +405,9 @@ function replaceChildren(where: HTMLElement, wire: Rendered) {
 }
 
 function getNodesFromRendered(rendered: Rendered): Array<globalThis.Node> {
+  if (Array.isArray(rendered)) return rendered.flatMap(getNodesFromRendered);
   const value = rendered.valueOf() as globalThis.Node | Array<globalThis.Node>;
-  return Array.isArray(value) ? value : [value];
+  return Array.isArray(value) ? value.flatMap(getNodesFromRendered) : [value];
 }
 
 function setupRenderParts(
@@ -626,7 +640,7 @@ function renderSparsePart<E, R, T = unknown>(
   return Fx.tuple(
     ...parts.map((node) => {
       if (node._tag === "text") return Fx.succeed(node.value);
-      return Fx.map(liftRenderableToFx<E, R>(ctx.values[node.index]), transformValue);
+      return Fx.map(liftRenderableToFx(ctx.values[node.index]), transformValue);
     }),
   ).pipe(
     Fx.observe((values) =>
@@ -1035,7 +1049,20 @@ const makeTemplateContext = Effect.fn(function* <
   return ctx;
 });
 
-function liftRenderableToFx<E = never, R = never>(
+/**
+ * Converts any Renderable into an Fx while preserving its nested errors and
+ * service requirements.
+ *
+ * @since 1.0.0
+ * @category constructors
+ */
+export function liftRenderableToFx<const T extends Renderable.Any>(
+  renderable: T,
+): Fx.Fx<Renderable.Success<T>, Renderable.Error<T>, Renderable.Services<T>>;
+export function liftRenderableToFx<E = never, R = never>(
+  renderable: Renderable<unknown, E, R>,
+): Fx.Fx<any, E, R>;
+export function liftRenderableToFx<E = never, R = never>(
   renderable: Renderable<unknown, E, R>,
 ): Fx.Fx<any, E, R> {
   switch (typeof renderable) {
@@ -1055,6 +1082,8 @@ function liftRenderableToFx<E = never, R = never>(
         return Fx.fromStream(renderable as Stream<unknown, E, R>);
       } else if (Effect.isEffect(renderable)) {
         return Fx.unwrap(Effect.map(renderable, liftRenderableToFx<E, R>));
+      } else if (isRenderEvent(renderable)) {
+        return Fx.succeed(renderable);
       } else {
         return Fx.struct(mapRecord(renderable, liftRenderableToFx));
       }
@@ -1134,7 +1163,7 @@ function setupDataset<E, R>(
   if (isNullish(value)) return;
   ctx.expected++;
   let scheduled = false;
-  return liftRenderableToFx<E, R>(value)
+  return liftRenderableToFx(value)
     .run(
       Sink.make(ctx.onCause, (data) =>
         Effect.tap(

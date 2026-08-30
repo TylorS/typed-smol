@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Listbox from "../Listbox.js";
 
@@ -14,13 +14,18 @@ describe("typed/ui/Listbox in browsers", () => {
         Listbox.Root({
           state,
           collection,
-          content: html`${Listbox.Option({ state, collection, id: "apple", value: "apple", content: "Apple" })}${Listbox.Option({ state, collection, id: "banana", value: "banana", content: "Banana" })}`,
+          content: [
+            Listbox.Option({ state, collection, id: "apple", value: "apple", content: "Apple" }),
+            Listbox.Option({ state, collection, id: "banana", value: "banana", content: "Banana" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
       (document.querySelector("#apple") as HTMLDivElement).focus();
-      document.querySelector("#apple")?.dispatchEvent(new KeyboardEvent("keydown", { key: "b", bubbles: true }));
+      document
+        .querySelector("#apple")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "b", bubbles: true }));
       yield* Effect.sleep(0);
 
       assert.strictEqual((yield* state).activeId, "banana");
@@ -38,7 +43,10 @@ describe("typed/ui/Listbox in browsers", () => {
         Listbox.Root({
           state,
           collection,
-          content: html`${Listbox.Option({ state, collection, id: "first", value: "first", content: "First" })}${Listbox.Option({ state, collection, id: "second", value: "second", content: "Second" })}`,
+          content: [
+            Listbox.Option({ state, collection, id: "first", value: "first", content: "First" }),
+            Listbox.Option({ state, collection, id: "second", value: "second", content: "Second" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
@@ -58,11 +66,22 @@ describe("typed/ui/Listbox in browsers", () => {
       const state = yield* Listbox.makeState({ value: "first", activeId: "first" });
       const collection = yield* Listbox.makeCollection();
       yield* render(
-        html`${Listbox.Root({
+        Listbox.Root({
           state,
           collection,
-          content: html`${Listbox.Option({ state, collection, id: "first", value: "first", content: "First" })}${Listbox.Option({ state, collection, id: "skip", value: "skip", disabled: true, content: "Skip" })}${Listbox.Option({ state, collection, id: "second", value: "second", content: "Second" })}`,
-        })}`,
+          content: [
+            Listbox.Option({ state, collection, id: "first", value: "first", content: "First" }),
+            Listbox.Option({
+              state,
+              collection,
+              id: "skip",
+              value: "skip",
+              disabled: true,
+              content: "Skip",
+            }),
+            Listbox.Option({ state, collection, id: "second", value: "second", content: "Second" }),
+          ],
+        }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 

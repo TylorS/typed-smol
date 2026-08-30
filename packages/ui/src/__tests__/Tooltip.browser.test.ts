@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Tooltip from "../Tooltip.js";
 
@@ -11,10 +11,13 @@ describe("typed/ui/Tooltip in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Tooltip.makeState({ id: "tip" });
       yield* render(
-        html`${Tooltip.Anchor({ state, content: "Help", hideDelay: 20 })}${Tooltip.Content({
-          state,
-          content: "Helpful text",
-        })}`,
+        [
+          Tooltip.Anchor({ state, content: "Help", hideDelay: 20 }),
+          Tooltip.Content({
+            state,
+            content: "Helpful text",
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const anchor = document.querySelector("span")!;
@@ -41,12 +44,13 @@ describe("typed/ui/Tooltip in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Tooltip.makeState({ id: "tip" });
       yield* render(
-        html`${Tooltip.Anchor({ state, content: "Help", props: { tabindex: 0 } })}${Tooltip.Content(
-          {
+        [
+          Tooltip.Anchor({ state, content: "Help", props: { tabindex: 0 } }),
+          Tooltip.Content({
             state,
             content: "Helpful text",
-          },
-        )}`,
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const anchor = document.querySelector("span")!;

@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Tabs from "../Tabs.js";
 
@@ -14,7 +14,18 @@ describe("typed/ui/Tabs in browsers", () => {
         Tabs.List({
           state,
           collection,
-          content: html`${Tabs.Tab({ state, collection, id: "one", panelId: "one-panel", content: "One" })}${Tabs.Tab({ state, collection, id: "two", panelId: "two-panel", disabled: true, content: "Two" })}${Tabs.Tab({ state, collection, id: "three", panelId: "three-panel", content: "Three" })}`,
+          content: [
+            Tabs.Tab({ state, collection, id: "one", panelId: "one-panel", content: "One" }),
+            Tabs.Tab({
+              state,
+              collection,
+              id: "two",
+              panelId: "two-panel",
+              disabled: true,
+              content: "Two",
+            }),
+            Tabs.Tab({ state, collection, id: "three", panelId: "three-panel", content: "Three" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
@@ -46,7 +57,10 @@ describe("typed/ui/Tabs in browsers", () => {
         Tabs.List({
           state,
           collection,
-          content: html`${Tabs.Tab({ state, collection, id: "one", panelId: "one-panel", content: "One" })}${Tabs.Tab({ state, collection, id: "two", panelId: "two-panel", content: "Two" })}`,
+          content: [
+            Tabs.Tab({ state, collection, id: "one", panelId: "one-panel", content: "One" }),
+            Tabs.Tab({ state, collection, id: "two", panelId: "two-panel", content: "Two" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

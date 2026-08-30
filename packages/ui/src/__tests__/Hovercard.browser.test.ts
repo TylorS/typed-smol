@@ -11,11 +11,14 @@ describe("typed/ui/Hovercard in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Hovercard.makeState({ id: "card" });
       yield* render(
-        html`${Hovercard.Anchor({ state, content: "Account", hideDelay: 20 })}${Hovercard.Content({
-          state,
-          label: "Account details",
-          content: "Account details",
-        })}`,
+        [
+          Hovercard.Anchor({ state, content: "Account", hideDelay: 20 }),
+          Hovercard.Content({
+            state,
+            label: "Account details",
+            content: "Account details",
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const anchor = document.querySelector("span")!;
@@ -43,14 +46,15 @@ describe("typed/ui/Hovercard in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Hovercard.makeState({ id: "card" });
       yield* render(
-        html`${Hovercard.Anchor({ state, content: "Account", props: { tabindex: 0 } })}${Hovercard.Content(
-          {
+        [
+          Hovercard.Anchor({ state, content: "Account", props: { tabindex: 0 } }),
+          Hovercard.Content({
             state,
             label: "Account details",
             content: html`<button>Account details</button>`,
             props: { tabindex: 0 },
-          },
-        )}`,
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const anchor = document.querySelector("span") as HTMLElement;
@@ -70,13 +74,14 @@ describe("typed/ui/Hovercard in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Hovercard.makeState({ id: "card" });
       yield* render(
-        html`${Hovercard.Anchor({ state, content: "Account", props: { tabindex: 0 } })}${Hovercard.Content(
-          {
+        [
+          Hovercard.Anchor({ state, content: "Account", props: { tabindex: 0 } }),
+          Hovercard.Content({
             state,
             label: "Account details",
             content: "Account details",
-          },
-        )}`,
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const anchor = document.querySelector("span")!;

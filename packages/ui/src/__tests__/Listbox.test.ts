@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { RefSubject } from "@typed/fx";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Listbox from "../Listbox.js";
 
@@ -8,7 +8,12 @@ describe("typed/ui/Listbox", () => {
   it("hydrates selection state on the listbox root", () =>
     Effect.gen(function* () {
       const state = yield* Listbox.makeState({ value: "one" });
-      const markup = yield* renderToHtmlString(html`${Listbox.Root({ state, content: Listbox.Option({ state, id: "one", value: "one", content: "One" }) })}`);
+      const markup = yield* renderToHtmlString(
+        Listbox.Root({
+          state,
+          content: Listbox.Option({ state, id: "one", value: "one", content: "One" }),
+        }),
+      );
       assert.match(markup, /role="listbox"/);
       assert.match(markup, /data-typed-refsubject=/);
       assert.match(markup, /role="option"/);

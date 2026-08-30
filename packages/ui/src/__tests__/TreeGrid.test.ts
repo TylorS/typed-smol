@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as TreeGrid from "../TreeGrid.js";
 
@@ -15,7 +15,23 @@ describe("typed/ui/TreeGrid", () => {
             state,
             rowId: "root",
             hasChildren: true,
-            content: html`${TreeGrid.Cell({ state, id: "root-name", rowId: "root", columnIndex: 1, hasChildren: true, content: "Root" })}${TreeGrid.Cell({ state, id: "root-size", rowId: "root", columnIndex: 2, content: "1 KB" })}`,
+            content: [
+              TreeGrid.Cell({
+                state,
+                id: "root-name",
+                rowId: "root",
+                columnIndex: 1,
+                hasChildren: true,
+                content: "Root",
+              }),
+              TreeGrid.Cell({
+                state,
+                id: "root-size",
+                rowId: "root",
+                columnIndex: 2,
+                content: "1 KB",
+              }),
+            ],
           }),
         }),
       );

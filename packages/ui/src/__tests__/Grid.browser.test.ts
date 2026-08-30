@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Grid from "../Grid.js";
 
@@ -49,14 +49,55 @@ describe("typed/ui/Grid in browsers", () => {
           state,
           collection,
           label: "Invoices",
-          content: html`${Grid.Row({ content: html`${Grid.Cell({ state, collection, id: "a1", rowId: "a", columnIndex: 1, content: "A1" })}${Grid.Cell({ state, collection, id: "a2", rowId: "a", columnIndex: 2, content: "A2" })}` })}${Grid.Row({ content: html`${Grid.Cell({ state, collection, id: "b1", rowId: "b", columnIndex: 1, content: "B1" })}${Grid.Cell({ state, collection, id: "b2", rowId: "b", columnIndex: 2, content: "B2" })}` })}`,
+          content: [
+            Grid.Row({
+              content: [
+                Grid.Cell({
+                  state,
+                  collection,
+                  id: "a1",
+                  rowId: "a",
+                  columnIndex: 1,
+                  content: "A1",
+                }),
+                Grid.Cell({
+                  state,
+                  collection,
+                  id: "a2",
+                  rowId: "a",
+                  columnIndex: 2,
+                  content: "A2",
+                }),
+              ],
+            }),
+            Grid.Row({
+              content: [
+                Grid.Cell({
+                  state,
+                  collection,
+                  id: "b1",
+                  rowId: "b",
+                  columnIndex: 1,
+                  content: "B1",
+                }),
+                Grid.Cell({
+                  state,
+                  collection,
+                  id: "b2",
+                  rowId: "b",
+                  columnIndex: 2,
+                  content: "B2",
+                }),
+              ],
+            }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       yield* Effect.sleep(50);
       const grid = document.querySelector('[role="grid"]') as HTMLDivElement;
       assert.deepEqual(
-        [...document.querySelectorAll('[role="gridcell"]')].map((cell) => cell.id),
+        Array.from(document.querySelectorAll('[role="gridcell"]'), (cell) => cell.id),
         ["a1", "a2", "b1", "b2"],
       );
       assert.deepEqual(

@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Tabs from "../Tabs.js";
 
@@ -16,12 +16,13 @@ describe("typed/ui/Tabs", () => {
   it("renders a hydrated tablist with selected tab and panel semantics", () =>
     Effect.gen(function* () {
       const state = yield* Tabs.makeState({ selectedId: "first" });
-      const markup = yield* renderToHtmlString(
-        html`${Tabs.List({
+      const markup = yield* renderToHtmlString([
+        Tabs.List({
           state,
           content: Tabs.Tab({ state, id: "first", panelId: "first-panel", content: "First" }),
-        })}${Tabs.Panel({ state, id: "first-panel", tabId: "first", content: "First panel" })}`,
-      );
+        }),
+        Tabs.Panel({ state, id: "first-panel", tabId: "first", content: "First panel" }),
+      ]);
 
       assert.match(markup, /role="tablist"/);
       assert.match(markup, /data-typed-refsubject=/);

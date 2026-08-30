@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Select from "../Select.js";
 
@@ -11,11 +11,17 @@ describe("typed/ui/Select in browsers", () => {
       const state = yield* Select.makeState({ id: "size", value: "small" });
       const collection = yield* Select.makeCollection();
       yield* render(
-        html`${Select.Trigger({ state, content: "Size" })}${Select.Content({
-          state,
-          collection,
-          content: html`${Select.Option({ state, collection, id: "small", value: "small", content: "Small" })}${Select.Option({ state, collection, id: "large", value: "large", content: "Large" })}`,
-        })}`,
+        [
+          Select.Trigger({ state, content: "Size" }),
+          Select.Content({
+            state,
+            collection,
+            content: [
+              Select.Option({ state, collection, id: "small", value: "small", content: "Small" }),
+              Select.Option({ state, collection, id: "large", value: "large", content: "Large" }),
+            ],
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -32,19 +38,36 @@ describe("typed/ui/Select in browsers", () => {
   it("moves focus with printable-key typeahead", async () => {
     document.body.replaceChildren();
     await Effect.gen(function* () {
-      const state = yield* Select.makeState({ id: "size", value: "small", activeId: "small", open: true });
+      const state = yield* Select.makeState({
+        id: "size",
+        value: "small",
+        activeId: "small",
+        open: true,
+      });
       const collection = yield* Select.makeCollection();
       yield* render(
         Select.Content({
           state,
           collection,
-          content: html`${Select.Option({ state, collection, id: "small", value: "small", content: "Small" })}${Select.Option({ state, collection, id: "large", value: "large", textValue: "Large", content: "Large" })}`,
+          content: [
+            Select.Option({ state, collection, id: "small", value: "small", content: "Small" }),
+            Select.Option({
+              state,
+              collection,
+              id: "large",
+              value: "large",
+              textValue: "Large",
+              content: "Large",
+            }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
       (document.querySelector("#small") as HTMLDivElement).focus();
-      document.querySelector("#small")?.dispatchEvent(new KeyboardEvent("keydown", { key: "l", bubbles: true }));
+      document
+        .querySelector("#small")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "l", bubbles: true }));
       yield* Effect.sleep(0);
 
       assert.strictEqual((yield* state).activeId, "large");
@@ -58,11 +81,17 @@ describe("typed/ui/Select in browsers", () => {
       const state = yield* Select.makeState({ id: "size", value: "small" });
       const collection = yield* Select.makeCollection();
       yield* render(
-        html`${Select.Trigger({ state, content: "Size" })}${Select.Content({
-          state,
-          collection,
-          content: html`${Select.Option({ state, collection, id: "small", value: "small", content: "Small" })}${Select.Option({ state, collection, id: "large", value: "large", content: "Large" })}`,
-        })}`,
+        [
+          Select.Trigger({ state, content: "Size" }),
+          Select.Content({
+            state,
+            collection,
+            content: [
+              Select.Option({ state, collection, id: "small", value: "small", content: "Small" }),
+              Select.Option({ state, collection, id: "large", value: "large", content: "Large" }),
+            ],
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -84,14 +113,22 @@ describe("typed/ui/Select in browsers", () => {
   it("moves focus without committing until Enter", async () => {
     document.body.replaceChildren();
     await Effect.gen(function* () {
-      const state = yield* Select.makeState({ id: "size", value: "small", activeId: "small", open: true });
+      const state = yield* Select.makeState({
+        id: "size",
+        value: "small",
+        activeId: "small",
+        open: true,
+      });
       const collection = yield* Select.makeCollection();
       yield* render(
-        html`${Select.Content({
+        Select.Content({
           state,
           collection,
-          content: html`${Select.Option({ state, collection, id: "small", value: "small", content: "Small" })}${Select.Option({ state, collection, id: "large", value: "large", content: "Large" })}`,
-        })}`,
+          content: [
+            Select.Option({ state, collection, id: "small", value: "small", content: "Small" }),
+            Select.Option({ state, collection, id: "large", value: "large", content: "Large" }),
+          ],
+        }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 

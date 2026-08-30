@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Checkbox from "../Checkbox.js";
 import * as Slider from "../Slider.js";
@@ -32,7 +32,10 @@ describe("typed/ui value controls in browsers", () => {
       const slider = yield* Slider.makeState({ value: 1 });
       const spinButton = yield* SpinButton.makeState({ value: 1 });
       yield* render(
-        html`${Slider.Slider({ state: slider, min: 0, max: 10 })}${SpinButton.SpinButton({ state: spinButton, min: 0, max: 10 })}`,
+        [
+          Slider.Slider({ state: slider, min: 0, max: 10 }),
+          SpinButton.SpinButton({ state: spinButton, min: 0, max: 10 }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 

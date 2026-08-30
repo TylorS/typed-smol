@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as TreeGrid from "../TreeGrid.js";
 
@@ -47,21 +47,62 @@ describe("typed/ui/TreeGrid in browsers", () => {
           state,
           collection,
           label: "Files",
-          content: html`${TreeGrid.Row({
-            state,
-            rowId: "root",
-            hasChildren: true,
-            content: html`${TreeGrid.Cell({ state, collection, id: "root-name", rowId: "root", columnIndex: 1, hasChildren: true, content: "Root" })}${TreeGrid.Cell({ state, collection, id: "root-size", rowId: "root", columnIndex: 2, hasChildren: true, content: "1 KB" })}`,
-          })}${TreeGrid.Group({
-            state,
-            parentId: "root",
-            content: TreeGrid.Row({
+          content: [
+            TreeGrid.Row({
               state,
-              rowId: "child",
-              parentId: "root",
-              content: html`${TreeGrid.Cell({ state, collection, id: "child-name", rowId: "child", parentId: "root", columnIndex: 1, content: "Child" })}${TreeGrid.Cell({ state, collection, id: "child-size", rowId: "child", parentId: "root", columnIndex: 2, content: "2 KB" })}`,
+              rowId: "root",
+              hasChildren: true,
+              content: [
+                TreeGrid.Cell({
+                  state,
+                  collection,
+                  id: "root-name",
+                  rowId: "root",
+                  columnIndex: 1,
+                  hasChildren: true,
+                  content: "Root",
+                }),
+                TreeGrid.Cell({
+                  state,
+                  collection,
+                  id: "root-size",
+                  rowId: "root",
+                  columnIndex: 2,
+                  hasChildren: true,
+                  content: "1 KB",
+                }),
+              ],
             }),
-          })}`,
+            TreeGrid.Group({
+              state,
+              parentId: "root",
+              content: TreeGrid.Row({
+                state,
+                rowId: "child",
+                parentId: "root",
+                content: [
+                  TreeGrid.Cell({
+                    state,
+                    collection,
+                    id: "child-name",
+                    rowId: "child",
+                    parentId: "root",
+                    columnIndex: 1,
+                    content: "Child",
+                  }),
+                  TreeGrid.Cell({
+                    state,
+                    collection,
+                    id: "child-size",
+                    rowId: "child",
+                    parentId: "root",
+                    columnIndex: 2,
+                    content: "2 KB",
+                  }),
+                ],
+              }),
+            }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

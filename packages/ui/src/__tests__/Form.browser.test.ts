@@ -12,13 +12,16 @@ describe("typed/ui/Form in Chromium", () => {
       const first = yield* UserForm.state({ email: "first@example.com" });
       const second = yield* UserForm.state({ email: "second@example.com" });
       yield* render(
-        html`${UserForm.Root({
-          form: first,
-          content: UserForm.EmailInput({ name: "email" }),
-        })}${UserForm.Root({
-          form: second,
-          content: UserForm.EmailInput({ name: "email" }),
-        })}`,
+        [
+          UserForm.Root({
+            form: first,
+            content: UserForm.EmailInput({ name: "email" }),
+          }),
+          UserForm.Root({
+            form: second,
+            content: UserForm.EmailInput({ name: "email" }),
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -49,13 +52,16 @@ describe("typed/ui/Form in Chromium", () => {
         },
       );
       yield* render(
-        html`${UserForm.Root({
-          form: first,
-          content: html`${UserForm.EmailInput({ name: "email" })}${UserForm.Error({ name: "email" })}`,
-        })}${UserForm.Root({
-          form: second,
-          content: html`${UserForm.EmailInput({ name: "email" })}${UserForm.Error({ name: "email" })}`,
-        })}`,
+        [
+          UserForm.Root({
+            form: first,
+            content: [UserForm.EmailInput({ name: "email" }), UserForm.Error({ name: "email" })],
+          }),
+          UserForm.Root({
+            form: second,
+            content: [UserForm.EmailInput({ name: "email" }), UserForm.Error({ name: "email" })],
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const inputs = document.querySelectorAll<HTMLInputElement>('input[name="email"]');
@@ -80,14 +86,17 @@ describe("typed/ui/Form in Chromium", () => {
       yield* render(
         Form.Form({
           state,
-          content: html`${Form.Checkbox({ state, name: "accepted" })}${Form.Error({ state, name: "accepted" })}${Form.Select(
-            {
+          content: [
+            Form.Checkbox({ state, name: "accepted" }),
+            Form.Error({ state, name: "accepted" }),
+            Form.Select({
               state,
               name: "plan",
               content: html`<option value="free">Free</option>
                 <option value="pro">Pro</option>`,
-            },
-          )}${Form.Error({ state, name: "plan" })}`,
+            }),
+            Form.Error({ state, name: "plan" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
@@ -157,10 +166,10 @@ describe("typed/ui/Form in Chromium", () => {
         values: { quantity: 1 },
       });
       yield* render(
-        html`${Form.Form({
+        Form.Form({
           state,
           content: Form.NumberInput({ state, name: "quantity" }),
-        })}`,
+        }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -181,7 +190,7 @@ describe("typed/ui/Form in Chromium", () => {
         values: { quantity: 1 },
       });
       yield* render(
-        html`${Form.Form({
+        Form.Form({
           state,
           content: Form.NumberInput({ state, name: "quantity" }),
           onValidSubmit: Effect.fn((values) =>
@@ -189,7 +198,7 @@ describe("typed/ui/Form in Chromium", () => {
               submitted = values.quantity;
             }),
           ),
-        })}`,
+        }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -218,10 +227,10 @@ describe("typed/ui/Form in Chromium", () => {
       const PhoneForm = Form.make(Schema.Struct({ phone }));
       const state = yield* PhoneForm.state({ phone: { area: 555, line: 1234 } });
       yield* render(
-        html`${PhoneForm.Root({
+        PhoneForm.Root({
           form: state,
           content: PhoneForm.MaskedInput({ name: "phone" }),
-        })}`,
+        }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 

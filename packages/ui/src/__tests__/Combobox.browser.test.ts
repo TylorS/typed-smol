@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Combobox from "../Combobox.js";
 
@@ -11,11 +11,17 @@ describe("typed/ui/Combobox in browsers", () => {
       const state = yield* Combobox.makeState({ id: "search", value: "Two" });
       const collection = yield* Combobox.makeCollection();
       yield* render(
-        html`${Combobox.Input({ state, collection })}${Combobox.Popover({
-          state,
-          collection,
-          content: html`${Combobox.Item({ state, collection, id: "one", value: "One", content: "One" })}${Combobox.Item({ state, collection, id: "two", value: "Two", content: "Two" })}`,
-        })}`,
+        [
+          Combobox.Input({ state, collection }),
+          Combobox.Popover({
+            state,
+            collection,
+            content: [
+              Combobox.Item({ state, collection, id: "one", value: "One", content: "One" }),
+              Combobox.Item({ state, collection, id: "two", value: "Two", content: "Two" }),
+            ],
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -35,10 +41,16 @@ describe("typed/ui/Combobox in browsers", () => {
       const state = yield* Combobox.makeState({ id: "search" });
       const collection = yield* Combobox.makeCollection();
       yield* render(
-        html`${Combobox.Input({ state, collection })}${Combobox.Popover({
-          state,
-          content: html`${Combobox.Item({ state, collection, id: "one", value: "One", content: "One" })}${Combobox.Item({ state, collection, id: "two", value: "Two", content: "Two" })}`,
-        })}`,
+        [
+          Combobox.Input({ state, collection }),
+          Combobox.Popover({
+            state,
+            content: [
+              Combobox.Item({ state, collection, id: "one", value: "One", content: "One" }),
+              Combobox.Item({ state, collection, id: "two", value: "Two", content: "Two" }),
+            ],
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -76,25 +88,31 @@ describe("typed/ui/Combobox in browsers", () => {
       const hiddenWhenNotMatching = (value: string) =>
         RefSubject.map(state, (current) => !value.startsWith(current.value));
       yield* render(
-        html`${Combobox.Input({ state, collection })}${Combobox.Popover({
-          state,
-          collection,
-          content: html`${Combobox.Item({
+        [
+          Combobox.Input({ state, collection }),
+          Combobox.Popover({
             state,
             collection,
-            id: "apple",
-            value: "apple",
-            content: "Apple",
-            props: { "?hidden": hiddenWhenNotMatching("apple") },
-          })}${Combobox.Item({
-            state,
-            collection,
-            id: "banana",
-            value: "banana",
-            content: "Banana",
-            props: { "?hidden": hiddenWhenNotMatching("banana") },
-          })}`,
-        })}`,
+            content: [
+              Combobox.Item({
+                state,
+                collection,
+                id: "apple",
+                value: "apple",
+                content: "Apple",
+                props: { "?hidden": hiddenWhenNotMatching("apple") },
+              }),
+              Combobox.Item({
+                state,
+                collection,
+                id: "banana",
+                value: "banana",
+                content: "Banana",
+                props: { "?hidden": hiddenWhenNotMatching("banana") },
+              }),
+            ],
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 

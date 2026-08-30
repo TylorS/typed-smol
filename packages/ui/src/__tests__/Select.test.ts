@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Select from "../Select.js";
 
@@ -7,9 +7,13 @@ describe("typed/ui/Select", () => {
   it("renders a hydrated native listbox popover", () =>
     Effect.gen(function* () {
       const state = yield* Select.makeState({ id: "size", value: "small" });
-      const markup = yield* renderToHtmlString(
-        html`${Select.Trigger({ state, content: "Small" })}${Select.Content({ state, content: Select.Option({ state, id: "small", value: "small", content: "Small" }) })}`,
-      );
+      const markup = yield* renderToHtmlString([
+        Select.Trigger({ state, content: "Small" }),
+        Select.Content({
+          state,
+          content: Select.Option({ state, id: "small", value: "small", content: "Small" }),
+        }),
+      ]);
       assert.match(markup, /aria-haspopup="listbox"/);
       assert.match(markup, /id="size-trigger"/);
       assert.match(markup, /id="size"/);

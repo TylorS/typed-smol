@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Toolbar from "../Toolbar.js";
 
@@ -14,7 +14,10 @@ describe("typed/ui/Toolbar in browsers", () => {
         Toolbar.Root({
           state,
           collection,
-          content: html`${Toolbar.Item({ state, collection, id: "first", content: "First" })}${Toolbar.Item({ state, collection, id: "second", content: "Second" })}`,
+          content: [
+            Toolbar.Item({ state, collection, id: "first", content: "First" }),
+            Toolbar.Item({ state, collection, id: "second", content: "Second" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
@@ -65,7 +68,11 @@ describe("typed/ui/Toolbar in browsers", () => {
         Toolbar.Root({
           state,
           collection,
-          content: html`${Toolbar.Item({ state, collection, id: "first", content: "First" })}${Toolbar.Item({ state, collection, id: "skip", disabled: true, content: "Skip" })}${Toolbar.Item({ state, collection, id: "last", content: "Last" })}`,
+          content: [
+            Toolbar.Item({ state, collection, id: "first", content: "First" }),
+            Toolbar.Item({ state, collection, id: "skip", disabled: true, content: "Skip" }),
+            Toolbar.Item({ state, collection, id: "last", content: "Last" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

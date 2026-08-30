@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it, vi } from "vitest";
 import * as Menu from "../Menu.js";
 
@@ -11,11 +11,14 @@ describe("typed/ui/Menu in browsers", () => {
       const state = yield* Menu.makeState({ id: "actions" });
       const collection = yield* Menu.makeCollection();
       yield* render(
-        html`${Menu.Trigger({ state, content: "Actions" })}${Menu.Content({
-          state,
-          collection,
-          content: Menu.Item({ state, collection, id: "edit", content: "Edit" }),
-        })}`,
+        [
+          Menu.Trigger({ state, content: "Actions" }),
+          Menu.Content({
+            state,
+            collection,
+            content: Menu.Item({ state, collection, id: "edit", content: "Edit" }),
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -38,13 +41,18 @@ describe("typed/ui/Menu in browsers", () => {
         Menu.Content({
           state,
           collection,
-          content: html`${Menu.Item({ state, collection, id: "edit", content: "Edit" })}${Menu.Item({ state, collection, id: "remove", textValue: "Remove", content: "Remove" })}`,
+          content: [
+            Menu.Item({ state, collection, id: "edit", content: "Edit" }),
+            Menu.Item({ state, collection, id: "remove", textValue: "Remove", content: "Remove" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
       (document.querySelector("#edit") as HTMLDivElement).focus();
-      document.querySelector("#edit")?.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true }));
+      document
+        .querySelector("#edit")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true }));
       const context = yield* Effect.context();
       yield* Effect.promise(() =>
         vi.waitFor(
@@ -97,7 +105,21 @@ describe("typed/ui/Menu in browsers", () => {
         Menu.Content({
           state,
           collection,
-          content: html`${Menu.Item({ state, collection, id: "edit", content: "Edit" })}${Menu.Item({ state, collection, id: "skip", disabled: true, content: "Skip" })}${Menu.Item({ state, collection, id: "delete", content: "Delete", props: { onclick: Effect.sync(() => { activated += 1; }) } })}`,
+          content: [
+            Menu.Item({ state, collection, id: "edit", content: "Edit" }),
+            Menu.Item({ state, collection, id: "skip", disabled: true, content: "Skip" }),
+            Menu.Item({
+              state,
+              collection,
+              id: "delete",
+              content: "Delete",
+              props: {
+                onclick: Effect.sync(() => {
+                  activated += 1;
+                }),
+              },
+            }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
@@ -109,16 +131,22 @@ describe("typed/ui/Menu in browsers", () => {
       assert.strictEqual((yield* state).activeId, "skip");
       assert.strictEqual(document.activeElement?.id, "skip");
 
-      document.querySelector("#skip")?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      document
+        .querySelector("#skip")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       yield* Effect.sleep(0);
       assert.strictEqual(activated, 0);
       assert.strictEqual((yield* state).open, true);
 
-      document.querySelector("#skip")?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      document
+        .querySelector("#skip")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
       yield* Effect.sleep(0);
       assert.strictEqual((yield* state).activeId, "delete");
 
-      document.querySelector("#delete")?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      document
+        .querySelector("#delete")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       yield* Effect.sleep(0);
       assert.strictEqual(activated, 1);
       assert.strictEqual((yield* state).open, false);
@@ -131,11 +159,17 @@ describe("typed/ui/Menu in browsers", () => {
       const state = yield* Menu.makeState({ id: "actions" });
       const collection = yield* Menu.makeCollection();
       yield* render(
-        html`${Menu.Trigger({ state, content: "Actions" })}${Menu.Content({
-          state,
-          collection,
-          content: html`${Menu.Item({ state, collection, id: "skip", disabled: true, content: "Skip" })}${Menu.Item({ state, collection, id: "edit", content: "Edit" })}`,
-        })}`,
+        [
+          Menu.Trigger({ state, content: "Actions" }),
+          Menu.Content({
+            state,
+            collection,
+            content: [
+              Menu.Item({ state, collection, id: "skip", disabled: true, content: "Skip" }),
+              Menu.Item({ state, collection, id: "edit", content: "Edit" }),
+            ],
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -163,16 +197,30 @@ describe("typed/ui/Menu in browsers", () => {
       const submenu = yield* Menu.makeState({ id: "more-menu", activeId: "archive" });
       const submenuCollection = yield* Menu.makeCollection();
       yield* render(
-        html`${Menu.Content({
-          state,
-          collection,
-          content: Menu.SubmenuTrigger({ state, submenu, collection, id: "more", content: "More" }),
-        })}${Menu.Content({
-          state: submenu,
-          collection: submenuCollection,
-          parent: { state, collection, triggerId: "more" },
-          content: Menu.Item({ state: submenu, collection: submenuCollection, id: "archive", content: "Archive" }),
-        })}`,
+        [
+          Menu.Content({
+            state,
+            collection,
+            content: Menu.SubmenuTrigger({
+              state,
+              submenu,
+              collection,
+              id: "more",
+              content: "More",
+            }),
+          }),
+          Menu.Content({
+            state: submenu,
+            collection: submenuCollection,
+            parent: { state, collection, triggerId: "more" },
+            content: Menu.Item({
+              state: submenu,
+              collection: submenuCollection,
+              id: "archive",
+              content: "Archive",
+            }),
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       yield* Menu.setOpen(state, true);
@@ -184,7 +232,10 @@ describe("typed/ui/Menu in browsers", () => {
       yield* Effect.sleep(0);
 
       assert.strictEqual((yield* submenu).open, true);
-      assert.strictEqual((document.querySelector("#more-menu") as HTMLDivElement).matches(":popover-open"), true);
+      assert.strictEqual(
+        (document.querySelector("#more-menu") as HTMLDivElement).matches(":popover-open"),
+        true,
+      );
 
       const archive = document.querySelector("#archive") as HTMLDivElement;
       archive.focus();
@@ -192,7 +243,10 @@ describe("typed/ui/Menu in browsers", () => {
       yield* Effect.sleep(20);
       assert.strictEqual((yield* submenu).open, false);
       assert.strictEqual((yield* state).open, true);
-      assert.strictEqual((document.querySelector("#actions") as HTMLDivElement).matches(":popover-open"), true);
+      assert.strictEqual(
+        (document.querySelector("#actions") as HTMLDivElement).matches(":popover-open"),
+        true,
+      );
       assert.strictEqual((yield* state).activeId, "more");
       assert.strictEqual(document.activeElement?.id, "more");
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);

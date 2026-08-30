@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { html, renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
+import { renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Focusable from "../Focusable.js";
 import * as Group from "../Group.js";
@@ -9,11 +9,17 @@ import * as VisuallyHidden from "../VisuallyHidden.js";
 
 describe("typed/ui thin hosts", () => {
   it("renders their native semantic defaults", () =>
-    renderToHtmlString(html`${Focusable.Focusable({ content: "Focus" })}${Heading.Heading({
-      content: "Title",
-    })}${Group.Group({ content: "Fields" })}${Separator.Separator({})}${VisuallyHidden.VisuallyHidden({
-      content: "Only for screen readers",
-    })}`).pipe(
+    renderToHtmlString([
+      Focusable.Focusable({ content: "Focus" }),
+      Heading.Heading({
+        content: "Title",
+      }),
+      Group.Group({ content: "Fields" }),
+      Separator.Separator({}),
+      VisuallyHidden.VisuallyHidden({
+        content: "Only for screen readers",
+      }),
+    ]).pipe(
       Effect.provide(StaticHtmlRenderTemplate),
       Effect.scoped,
       Effect.tap((markup) =>

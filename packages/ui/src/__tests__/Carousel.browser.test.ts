@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Carousel from "../Carousel.js";
 
@@ -14,7 +14,11 @@ describe("typed/ui/Carousel in browsers", () => {
         Carousel.Root({
           state,
           label: "Slides",
-          content: html`${Carousel.Slide({ state, collection, id: "first", label: "1 of 2", content: "First" })}${Carousel.Slide({ state, collection, id: "second", label: "2 of 2", content: "Second" })}${Carousel.Next({ state, collection, content: "Next" })}`,
+          content: [
+            Carousel.Slide({ state, collection, id: "first", label: "1 of 2", content: "First" }),
+            Carousel.Slide({ state, collection, id: "second", label: "2 of 2", content: "Second" }),
+            Carousel.Next({ state, collection, content: "Next" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

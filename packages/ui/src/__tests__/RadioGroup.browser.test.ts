@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as RadioGroup from "../RadioGroup.js";
 
@@ -10,10 +10,13 @@ describe("typed/ui/RadioGroup in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* RadioGroup.makeState({ value: "small" });
       yield* render(
-        html`${RadioGroup.Root({
+        RadioGroup.Root({
           state,
-          content: html`${RadioGroup.Item({ state, id: "small", value: "small", name: "size" })}${RadioGroup.Item({ state, id: "large", value: "large", name: "size" })}`,
-        })}`,
+          content: [
+            RadioGroup.Item({ state, id: "small", value: "small", name: "size" }),
+            RadioGroup.Item({ state, id: "large", value: "large", name: "size" }),
+          ],
+        }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
       const large = document.querySelector("#large") as HTMLInputElement;
@@ -41,7 +44,18 @@ describe("typed/ui/RadioGroup composite navigation", () => {
         RadioGroup.Root({
           state,
           collection,
-          content: html`${RadioGroup.Item({ state, collection, id: "small", value: "small", name: "size" })}${RadioGroup.Item({ state, collection, id: "skip", value: "skip", name: "size", disabled: true })}${RadioGroup.Item({ state, collection, id: "large", value: "large", name: "size" })}`,
+          content: [
+            RadioGroup.Item({ state, collection, id: "small", value: "small", name: "size" }),
+            RadioGroup.Item({
+              state,
+              collection,
+              id: "skip",
+              value: "skip",
+              name: "size",
+              disabled: true,
+            }),
+            RadioGroup.Item({ state, collection, id: "large", value: "large", name: "size" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

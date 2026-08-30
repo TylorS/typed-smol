@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Toolbar from "../Toolbar.js";
 
@@ -8,7 +8,7 @@ describe("typed/ui/Toolbar", () => {
     Effect.gen(function* () {
       const state = yield* Toolbar.makeState({ activeId: "bold" });
       const markup = yield* renderToHtmlString(
-        html`${Toolbar.Root({ state, content: Toolbar.Item({ state, id: "bold", content: "Bold" }) })}`,
+        Toolbar.Root({ state, content: Toolbar.Item({ state, id: "bold", content: "Bold" }) }),
       );
       assert.match(markup, /role="toolbar"/);
       assert.match(markup, /data-typed-refsubject=/);

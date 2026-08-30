@@ -2,11 +2,25 @@ import { describe, expect, it } from "vitest";
 import type { Scope } from "effect";
 import { Effect, Schema } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
-import { html, HtmlRenderEvent, many } from "../index.js";
+import {
+  html,
+  HtmlRenderEvent,
+  many,
+  renderToHtmlString,
+  StaticHtmlRenderTemplate,
+} from "../index.js";
 import { escape } from "../internal/encoding.js";
 import { getHtmlRenderEvents, getStaticHtml } from "./helpers/html-output.js";
 
 describe("Html", () => {
+  it("renders an array of RenderEvents without a hole-only template", () =>
+    renderToHtmlString([html`<span>First</span>`, html`<span>Last</span>`]).pipe(
+      Effect.provide(StaticHtmlRenderTemplate),
+      Effect.scoped,
+      Effect.map((output) => expect(output).toBe("<span>First</span><span>Last</span>")),
+      Effect.runPromise,
+    ));
+
   it("renders hydrated RefSubject metadata for interactive HTML", () =>
     Effect.gen(function* () {
       const count = yield* RefSubject.hydrate(Schema.Finite, 7);

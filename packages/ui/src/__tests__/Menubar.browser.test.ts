@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it, vi } from "vitest";
 import * as Menu from "../Menu.js";
 import * as Menubar from "../Menubar.js";
@@ -15,7 +15,10 @@ describe("typed/ui/Menubar in browsers", () => {
         Menubar.Root({
           state,
           collection,
-          content: html`${Menubar.Item({ state, collection, id: "file", content: "File" })}${Menubar.Item({ state, collection, id: "edit", content: "Edit" })}`,
+          content: [
+            Menubar.Item({ state, collection, id: "file", content: "File" }),
+            Menubar.Item({ state, collection, id: "edit", content: "Edit" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
@@ -65,20 +68,26 @@ describe("typed/ui/Menubar in browsers", () => {
       const submenu = yield* Menu.makeState({ id: "file-menu" });
       const submenuCollection = yield* Menu.makeCollection();
       yield* render(
-        html`${Menubar.Root({
-          state,
-          collection,
-          content: html`${Menu.SubmenuTrigger({ state, submenu, collection, id: "file", content: "File" })}${Menubar.Item({ state, collection, id: "view", content: "View" })}`,
-        })}${Menu.Content({
-          state: submenu,
-          collection: submenuCollection,
-          content: Menu.Item({
+        [
+          Menubar.Root({
+            state,
+            collection,
+            content: [
+              Menu.SubmenuTrigger({ state, submenu, collection, id: "file", content: "File" }),
+              Menubar.Item({ state, collection, id: "view", content: "View" }),
+            ],
+          }),
+          Menu.Content({
             state: submenu,
             collection: submenuCollection,
-            id: "new",
-            content: "New",
+            content: Menu.Item({
+              state: submenu,
+              collection: submenuCollection,
+              id: "new",
+              content: "New",
+            }),
           }),
-        })}`,
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -155,7 +164,11 @@ describe("typed/ui/Menubar in browsers", () => {
         Menubar.Root({
           state,
           collection,
-          content: html`${Menubar.Item({ state, collection, id: "file", textValue: "File", content: "File" })}${Menubar.Item({ state, collection, id: "edit", disabled: true, content: "Edit" })}${Menubar.Item({ state, collection, id: "view", content: "View" })}`,
+          content: [
+            Menubar.Item({ state, collection, id: "file", textValue: "File", content: "File" }),
+            Menubar.Item({ state, collection, id: "edit", disabled: true, content: "Edit" }),
+            Menubar.Item({ state, collection, id: "view", content: "View" }),
+          ],
         }),
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);

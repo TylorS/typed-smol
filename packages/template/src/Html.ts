@@ -58,15 +58,18 @@ const toHtmlString = (event: RenderEvent | null | undefined): Option<string> => 
  * })
  * ```
  *
- * @param fx - The `Fx` stream of `RenderEvent`s to render.
+ * @param renderable - The RenderEvents to render.
  * @returns An `Fx` stream of HTML strings.
  * @since 1.0.0
  * @category rendering
  */
-export function renderToHtml<E, R>(
-  fx: Fx.Fx<RenderEvent | null | undefined, E, R>,
-): Fx.Fx<string, E, R> {
-  return Fx.filterMap(fx, toHtmlString);
+export function renderToHtml<const T extends Renderable<RenderEvent | null | undefined, any, any>>(
+  renderable: T,
+): Fx.Fx<string, Renderable.Error<T>, Renderable.Services<T>> {
+  return Fx.filterMap(
+    liftRenderableToFx<Renderable.Error<T>, Renderable.Services<T>>(renderable, true),
+    toHtmlString,
+  );
 }
 
 /**
@@ -99,16 +102,15 @@ export function renderToHtml<E, R>(
  * })
  * ```
  *
- * @param fx - The `Fx` stream of `RenderEvent`s to render.
+ * @param renderable - The RenderEvents to render.
  * @returns An `Effect` that resolves to the full HTML string.
  * @since 1.0.0
  * @category rendering
  */
-export function renderToHtmlString<E, R>(
-  fx: Fx.Fx<RenderEvent | null | undefined, E, R>,
-): Effect.Effect<string, E, R> {
-  return fx.pipe(
-    renderToHtml,
+export function renderToHtmlString<
+  const T extends Renderable<RenderEvent | null | undefined, any, any>,
+>(renderable: T): Effect.Effect<string, Renderable.Error<T>, Renderable.Services<T>> {
+  return renderToHtml(renderable).pipe(
     Fx.collectAll,
     Effect.map((events) => events.join("")),
   );

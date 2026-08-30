@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Grid from "../Grid.js";
 
@@ -12,7 +12,10 @@ describe("typed/ui/Grid", () => {
           state,
           label: "Invoices",
           content: Grid.Row({
-            content: html`${Grid.Cell({ state, id: "a1", rowId: "a", columnIndex: 1, content: "Invoice" })}${Grid.Cell({ state, id: "a2", rowId: "a", columnIndex: 2, content: "Amount" })}`,
+            content: [
+              Grid.Cell({ state, id: "a1", rowId: "a", columnIndex: 1, content: "Invoice" }),
+              Grid.Cell({ state, id: "a2", rowId: "a", columnIndex: 2, content: "Amount" }),
+            ],
           }),
         }),
       );

@@ -9,10 +9,11 @@ describe("typed/ui/Disclosure", () => {
     Effect.gen(function* () {
       const state = yield* Disclosure.makeState({ open: true });
       const markup = yield* renderToHtmlString(
-        html`${Disclosure.Content({
+        Disclosure.Content({
           state,
-          content: html`${Disclosure.Button({ content: "More" })}<p>Details</p>`,
-        })}`,
+          content: html`${Disclosure.Button({ content: "More" })}
+            <p>Details</p>`,
+        }),
       );
 
       assert.strictEqual(RefSubject.isHydrationRef(state), true);

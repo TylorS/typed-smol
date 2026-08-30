@@ -1,10 +1,10 @@
 import * as Schema from "effect/Schema";
 import { Fx, RefSubject } from "@typed/fx";
-import { hydrate } from "@typed/fx/RefSubject";
 import { BrowserRouter } from "@typed/router/Router";
-import { EventHandler, html } from "@typed/template";
+import { html } from "@typed/template";
 import * as ButtonComponent from "../src/Button.js";
 import * as CheckboxComponent from "../src/Checkbox.js";
+import { component } from "../src/Component.js";
 import * as FormComponent from "../src/Form.js";
 import { Link as LinkComponent } from "../src/Link.js";
 import * as MeterComponent from "../src/Meter.js";
@@ -16,24 +16,38 @@ import { story } from "./story.js";
 
 export default { title: "Inputs" };
 
-const button = Fx.gen(function* () {
-  const state = yield* hydrate(Schema.FiniteFromString, 0, { name: "button-story" });
-  const saveStatus = RefSubject.map((count: number) =>
-    count === 0 ? "Changes pending" : `Changes saved ${count} time${count === 1 ? "" : "s"}`,
-  )(state);
-  const hydrateState = RefSubject.hydrateAll(state);
+interface ButtonStoryProps {
+  readonly label: string;
+  readonly initialCount: number;
+  readonly disabled: boolean;
+}
 
-  return html`<section aria-label="Save changes" ref=${hydrateState}>
+const button = component(function* ({ label, initialCount, disabled }: ButtonStoryProps) {
+  const state = yield* RefSubject.hydrate(Schema.FiniteFromString, initialCount, {
+    name: "button-story",
+  });
+  const saveStatus = RefSubject.map(state, (count: number) =>
+    count === 0 ? "Changes pending" : `Changes saved ${count} time${count === 1 ? "" : "s"}`,
+  );
+
+  return html`<section aria-label="Save changes" ref=${state}>
     <p>Use the typed event handler to persist the change.</p>
     ${ButtonComponent.Button({
-      content: "Save changes",
-      onclick: EventHandler.make(() => RefSubject.update(state, (count) => count + 1)),
+      content: label,
+      disabled,
+      onclick: RefSubject.increment(state),
     })}
     <output aria-live="polite">${saveStatus}</output>
   </section>`;
 });
 
-export const Button = story(button);
+export const Button = story(
+  button,
+  { label: "Save changes", initialCount: 0, disabled: false },
+  {
+    initialCount: { control: { type: "range", min: 0, max: 5, step: 1 } },
+  },
+);
 
 const checkbox = Fx.gen(function* () {
   const state = yield* CheckboxComponent.makeState({ checked: true });
@@ -57,20 +71,23 @@ const form = Fx.gen(function* () {
 
   return ContactForm.Root({
     form: formState,
-    content: html`${ContactForm.Group({
-      label: "Contact information",
-      content: html`<div>
-          ${ContactForm.Label({ for: "email", content: "Email" })}
-          ${ContactForm.EmailInput({ name: "email", props: { id: "email", required: true } })}
-          ${ContactForm.Error({ name: "email" })}
-        </div>
-        <div>
-          ${ContactForm.Label({ for: "phone", content: "Phone" })}
-          ${ContactForm.MaskedInput({ name: "phone", props: { id: "phone" } })}
-          ${ContactForm.Error({ name: "phone" })}
-        </div>`,
-    })}
-    ${ContactForm.Submit({ content: "Save" })} ${ContactForm.Reset({ content: "Reset" })}`,
+    content: [
+      ContactForm.Group({
+        label: "Contact information",
+        content: html`<div>
+            ${ContactForm.Label({ for: "email", content: "Email" })}
+            ${ContactForm.EmailInput({ name: "email", props: { id: "email", required: true } })}
+            ${ContactForm.Error({ name: "email" })}
+          </div>
+          <div>
+            ${ContactForm.Label({ for: "phone", content: "Phone" })}
+            ${ContactForm.MaskedInput({ name: "phone", props: { id: "phone" } })}
+            ${ContactForm.Error({ name: "phone" })}
+          </div>`,
+      }),
+      ContactForm.Submit({ content: "Save" }),
+      ContactForm.Reset({ content: "Reset" }),
+    ],
   });
 });
 

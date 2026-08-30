@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Carousel from "../Carousel.js";
 
@@ -11,7 +11,10 @@ describe("typed/ui/Carousel", () => {
         Carousel.Root({
           state,
           label: "Featured stories",
-          content: html`${Carousel.Slide({ state, id: "first", label: "1 of 2", content: "First" })}${Carousel.Slide({ state, id: "second", label: "2 of 2", content: "Second" })}`,
+          content: [
+            Carousel.Slide({ state, id: "first", label: "1 of 2", content: "First" }),
+            Carousel.Slide({ state, id: "second", label: "2 of 2", content: "Second" }),
+          ],
         }),
       );
 

@@ -7,7 +7,7 @@ import type * as Stream from "effect/Stream";
 import type { Fx } from "@typed/fx";
 import type { HydrationRef } from "@typed/fx/RefSubject";
 import type * as EventHandler from "./EventHandler.js";
-import type { RenderEvent } from "./RenderEvent.js";
+import { type RenderEvent } from "./RenderEvent.js";
 
 /**
  * Represents any value that can be rendered into a template.
@@ -99,10 +99,27 @@ export declare namespace Renderable {
   /**
    * Extracts the success type from a Renderable type.
    */
-  export type Success<T> =
-    | Fx.Success<T>
-    | (T extends Stream.Stream<any, any, any> ? Stream.Success<T> : never)
-    | Effect.Success<T>;
+  export type Success<T> = [T] extends [never]
+    ? never
+    : T extends Fx.Fx<infer A, any, any>
+      ? A
+      : T extends Stream.Stream<infer A, any, any>
+        ? A
+        : T extends Effect.Effect<infer A, any, any>
+          ? Success<A>
+          : T extends Option.Option<infer A>
+            ? Success<A> | null
+            : T extends ReadonlyArray<any>
+              ? { readonly [K in keyof T]: Success<T[K]> }
+              : T extends null | undefined | void
+                ? null
+                : T extends (...args: Array<any>) => any
+                  ? null
+                  : T extends RenderEvent
+                    ? T
+                    : T extends object
+                      ? { readonly [K in keyof T]: Success<T[K]> }
+                      : T;
 
   // Helpers for arbitrary objects
 

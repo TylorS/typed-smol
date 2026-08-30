@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as RadioGroup from "../RadioGroup.js";
 
@@ -8,10 +8,10 @@ describe("typed/ui/RadioGroup", () => {
     Effect.gen(function* () {
       const state = yield* RadioGroup.makeState({ value: "small" });
       const markup = yield* renderToHtmlString(
-        html`${RadioGroup.Root({
+        RadioGroup.Root({
           state,
           content: RadioGroup.Item({ state, id: "small", value: "small" }),
-        })}`,
+        }),
       );
 
       assert.match(markup, /role="radiogroup"/);

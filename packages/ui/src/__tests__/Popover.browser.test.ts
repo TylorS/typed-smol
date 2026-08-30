@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+import { DomRenderTemplate, render } from "@typed/template";
 import { assert, describe, it } from "vitest";
 import * as Popover from "../Popover.js";
 
@@ -9,10 +9,10 @@ describe("typed/ui/Popover in Chromium", () => {
     document.body.replaceChildren();
     await Effect.gen(function* () {
       const state = yield* Popover.makeState({ open: true });
-      yield* render(
-        Popover.Content({ state, content: "Actions" }),
-        document.body,
-      ).pipe(Fx.take(1), Fx.collectAll);
+      yield* render(Popover.Content({ state, content: "Actions" }), document.body).pipe(
+        Fx.take(1),
+        Fx.collectAll,
+      );
       yield* Effect.sleep(0);
 
       assert.strictEqual(document.querySelector("[popover]")?.matches(":popover-open"), true);
@@ -24,11 +24,14 @@ describe("typed/ui/Popover in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Popover.makeState();
       yield* render(
-        html`${Popover.Trigger({ state, controls: "actions", content: "Open" })}${Popover.Content({
-          state,
-          content: "Actions",
-          props: { id: "actions" },
-        })}`,
+        [
+          Popover.Trigger({ state, controls: "actions", content: "Open" }),
+          Popover.Content({
+            state,
+            content: "Actions",
+            props: { id: "actions" },
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 
@@ -50,10 +53,13 @@ describe("typed/ui/Popover in Chromium", () => {
     await Effect.gen(function* () {
       const state = yield* Popover.makeState();
       yield* render(
-        html`${Popover.Trigger({ state, content: "Open" })}${Popover.Content({
-          state,
-          content: "Actions",
-        })}`,
+        [
+          Popover.Trigger({ state, content: "Open" }),
+          Popover.Content({
+            state,
+            content: "Actions",
+          }),
+        ],
         document.body,
       ).pipe(Fx.take(1), Fx.collectAll);
 

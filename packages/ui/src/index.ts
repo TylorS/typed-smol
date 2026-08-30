@@ -4,6 +4,7 @@ export * as Checkbox from "./Checkbox.js";
 export * as Carousel from "./Carousel.js";
 export * as Collection from "./Collection.js";
 export * as Combobox from "./Combobox.js";
+export * from "./Component.js";
 export * as Composite from "./Composite.js";
 export * as Dialog from "./Dialog.js";
 export * as Disclosure from "./Disclosure.js";

@@ -15,6 +15,21 @@ describe("Render", () => {
       Effect.runPromise,
     ));
 
+  it("renders any renderable directly", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      yield* render(
+        [html`<span>First</span>`, " between ", Effect.succeed(html`<span>Last</span>`)],
+        window.document.body,
+      ).pipe(Fx.provide(layer), Fx.take(1), Fx.drain);
+
+      assert.equal(window.document.body.textContent, "First between Last");
+      assert.deepEqual(
+        Array.from(window.document.body.querySelectorAll("span"), (element) => element.textContent),
+        ["First", "Last"],
+      );
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("renders template with static attribute", () =>
     Effect.gen(function* () {
       const staticExample = yield* renderHtmlElement`<div data-foo="Hello, world!"></div>`;
