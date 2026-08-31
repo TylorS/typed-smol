@@ -1,18 +1,23 @@
+import type * as Cause from "effect/Cause";
 import type { Scope } from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
 import type { RenderEvent } from "./RenderEvent.js";
+import type { RenderTemplate } from "./RenderTemplate.js";
 
 export const ManyTypeId = Symbol.for("@typed/template/Many");
 export type ManyTypeId = typeof ManyTypeId;
 
-export interface Many<A, E, R, B extends PropertyKey, E2, R2> {
+export interface Many<A, E, R> {
   readonly [ManyTypeId]: ManyTypeId;
   readonly values: Fx.Fx<ReadonlyArray<A>, E, R>;
-  readonly getKey: (value: A) => B;
-  readonly render: (value: RefSubject.RefSubject<A>, key: B) => Fx.Fx<RenderEvent, E2, R2 | Scope>;
+  readonly getKey: (value: A) => PropertyKey;
+  readonly render: (
+    value: RefSubject.RefSubject<A>,
+    key: PropertyKey,
+  ) => Fx.Fx<RenderEvent, E, R>;
 }
 
-export function isMany(value: unknown): value is Many<any, any, any, PropertyKey, any, any> {
+export function isMany(value: unknown): value is Many<any, any, any> {
   return typeof value === "object" && value !== null && ManyTypeId in value;
 }
 
@@ -81,8 +86,17 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
   values: Fx.Fx<ReadonlyArray<A>, E, R>,
   getKey: (a: A) => B,
   render: (value: RefSubject.RefSubject<A>, key: B) => Fx.Fx<RenderEvent, E2, R2 | Scope>,
-): Many<A, E, R, B, E2, R2> {
-  return { [ManyTypeId]: ManyTypeId, values, getKey, render };
+): Many<
+  A,
+  E | E2 | Cause.IllegalArgumentError,
+  R | R2 | Scope | RenderTemplate
+> {
+  return {
+    [ManyTypeId]: ManyTypeId,
+    values,
+    getKey,
+    render: (value, key) => render(value, key as B),
+  };
 }
 
 export const MANY_HOLE = (key: PropertyKey): string => `<!--/m_${key.toString()}-->`;

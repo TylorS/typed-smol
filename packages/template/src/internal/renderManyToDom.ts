@@ -28,15 +28,15 @@ type HydratedEntry = {
   readonly nodes: ReadonlyArray<Node>;
 };
 
-export function renderManyToDom<A, E, R, B extends PropertyKey, E2, R2>(
-  many: Many<A, E, R, B, E2, R2>,
+export function renderManyToDom<A, E, R>(
+  many: Many<A, E, R>,
   endComment: Comment,
   index: number,
   ctx: TemplateContext,
   hydrateContext?: HydrateContext,
-): Effect.Effect<unknown, never, R | R2 | Scope.Scope> {
+): Effect.Effect<unknown, never, R | Scope.Scope> {
   ctx.expected++;
-  const entries = new Map<B, ManyEntry<A>>();
+  const entries = new Map<PropertyKey, ManyEntry<A>>();
   const localSymbolOrdinals = new Map<symbol, number>();
   const hydratedEntries = getHydratedEntries(hydrateContext);
   const initialNodes =
@@ -44,7 +44,7 @@ export function renderManyToDom<A, E, R, B extends PropertyKey, E2, R2>(
       ? getAllSiblingsBetween(hydrateContext.where.startComment, hydrateContext.where.endComment)
       : [];
   const updateNodes = makeNodeUpdater(ctx.document, endComment, null, initialNodes);
-  let order: ReadonlyArray<B> = [];
+  let order: ReadonlyArray<PropertyKey> = [];
   let initialized = false;
 
   const renderEntries = () =>
@@ -105,17 +105,17 @@ export function renderManyToDom<A, E, R, B extends PropertyKey, E2, R2>(
     .pipe(Effect.onExit(() => Effect.sync(release)));
 }
 
-function makeEntry<A, E, R, B extends PropertyKey, E2, R2>(
-  many: Many<A, E, R, B, E2, R2>,
+function makeEntry<A, E, R>(
+  many: Many<A, E, R>,
   value: A,
-  key: B,
+  key: PropertyKey,
   encodedKey: string,
   ctx: TemplateContext,
   hydrateContext: HydrateContext | undefined,
   hydratedEntry: HydratedEntry | undefined,
   onUpdate: () => void,
 ): Effect.Effect<
-  { readonly entry: ManyEntry<A>; readonly start: Effect.Effect<void, never, R2> },
+  { readonly entry: ManyEntry<A>; readonly start: Effect.Effect<void, never, R> },
   never,
   Scope.Scope
 > {
@@ -144,7 +144,7 @@ function makeEntry<A, E, R, B extends PropertyKey, E2, R2>(
     const child = many
       .render(ref, key)
       .run(Sink.make(ctx.onCause, update))
-      .pipe(Effect.provideService(Scope.Scope, scope)) as Effect.Effect<unknown, never, R2>;
+      .pipe(Effect.provideService(Scope.Scope, scope)) as Effect.Effect<unknown, never, R>;
     const hydratedChild =
       hydrateContext === undefined
         ? child
@@ -152,7 +152,7 @@ function makeEntry<A, E, R, B extends PropertyKey, E2, R2>(
             ...hydrateContext,
             hydrate: true,
             manyKey: encodedKey,
-          }) as Effect.Effect<unknown, never, R2>);
+          }) as Effect.Effect<unknown, never, R>);
     const runnable =
       ready === undefined
         ? hydratedChild

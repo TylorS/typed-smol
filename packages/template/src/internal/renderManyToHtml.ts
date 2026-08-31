@@ -13,9 +13,9 @@ import {
   validateHydratableManyKeys,
 } from "./manyKey.js";
 
-export function renderManyToHtml<A, E, R, B extends PropertyKey, E2, R2>(
-  many: Many<A, E, R, B, E2, R2>,
-): Fx.Fx<RenderEvent, E | E2 | Cause.IllegalArgumentError, R | R2 | Scope> {
+export function renderManyToHtml<A, E, R>(
+  many: Many<A, E, R>,
+): Fx.Fx<RenderEvent, E | Cause.IllegalArgumentError, R | Scope> {
   return Fx.gen(function* () {
     const initial = yield* Fx.first(many.values);
     if (Option.isNone(initial) || initial.value.length === 0) return Fx.empty;
@@ -23,14 +23,19 @@ export function renderManyToHtml<A, E, R, B extends PropertyKey, E2, R2>(
     if (Cause.isIllegalArgumentError(uniqueKeys)) return Fx.fail(uniqueKeys);
     const invalidKeys = validateHydratableManyKeys(uniqueKeys.keys);
     if (invalidKeys !== undefined) return Fx.fail(invalidKeys);
-    const entries = yield* Effect.sync(() =>
-      prepareManyEntries(initial.value, uniqueKeys.keys, new Map()),
-    );
-    const lastIndex = entries.length - 1;
+    const localSymbolOrdinals = new Map<symbol, number>();
+    const lastIndex = initial.value.length - 1;
     return Fx.mergeOrdered(
-      ...entries.map(({ encodedKey, key, value }, index) =>
-        renderValue(value, key, encodedKey, many.render, index === lastIndex),
-      ),
+      ...initial.value.map((value, index) => {
+        const key = uniqueKeys.keys[index];
+        return renderValue(
+          value,
+          key,
+          encodeManyKey(key, localSymbolOrdinals),
+          many.render,
+          index === lastIndex,
+        );
+      }),
     );
   });
 }
@@ -51,15 +56,4 @@ function renderValue<A, B extends PropertyKey, R2, E2>(
       ),
     ),
   );
-}
-
-function prepareManyEntries<A, B extends PropertyKey>(
-  values: ReadonlyArray<A>,
-  keys: ReadonlyArray<B>,
-  localSymbolOrdinals: Map<symbol, number>,
-) {
-  return values.map((value, index) => {
-    const key = keys[index];
-    return { encodedKey: encodeManyKey(key, localSymbolOrdinals), key, value } as const;
-  });
 }
