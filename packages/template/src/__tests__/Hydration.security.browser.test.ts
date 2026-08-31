@@ -112,9 +112,9 @@ describe("SSR parsing security in Chromium (not hydration identity parity)", () 
       assert.strictEqual((globalThis as Record<string, unknown>).__typedManyExecuted, false);
     }).pipe(Effect.scoped, Effect.runPromise));
 
-  it("hydrates distinct local symbols with equal or absent descriptions", () =>
+  it("hydrates distinct globally registered symbols", () =>
     Effect.gen(function* () {
-      const keys = [Symbol("same"), Symbol("same"), Symbol(), Symbol()];
+      const keys = ["a", "b", "c", "d"].map(Symbol.for);
       const values = keys.map((key, index) => ({ index, key }));
       const view = html`<ul id="local-symbol-host">
         ${many(
@@ -124,7 +124,7 @@ describe("SSR parsing security in Chromium (not hydration identity parity)", () 
         )}
       </ul>`;
       const ssr = yield* renderToHtmlString(view).pipe(Effect.provide(HtmlRenderTemplate));
-      const markers = [...ssr.matchAll(/<!--\/m_v1_l\.([^>]+)-->/g)].map((match) => match[1]);
+      const markers = [...ssr.matchAll(/<!--\/m_v1_g\.([^>]+)-->/g)].map((match) => match[1]);
       assert.strictEqual(markers.length, 4);
       assert.strictEqual(new Set(markers).size, 4);
 

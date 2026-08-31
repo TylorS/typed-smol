@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Effect, Option } from "effect";
+import { Cause, Effect, Option } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import { html, HtmlRenderEvent, MANY_HOLE, many } from "../index.js";
 import { getInteractiveHtml, getStaticHtml } from "./helpers/html-output.js";
@@ -356,49 +356,51 @@ describe("TS-04 many hydration markers", () => {
       expect(new Set(markers).size).toBe(2);
     }).pipe(Effect.scoped, Effect.runPromise));
 
-  it("preserves duplicate-key acceptance", () =>
+  it("rejects duplicate keys before rendering HTML", () =>
     Effect.gen(function* () {
-      const output = yield* getStaticHtml(html`<ul>
+      const view = html`<ul>
         ${many(
           Fx.succeed(["duplicate", "duplicate"]),
           (value) => value,
           () => html`<li>item</li>`,
         )}
-      </ul>`);
-      const markers = [...output.matchAll(/<!--\/m_v1_s\.([^>]+)-->/g)].map((match) => match[1]);
+      </ul>`;
+      const staticError = yield* Effect.flip(getStaticHtml(view));
+      const interactiveError = yield* Effect.flip(getInteractiveHtml(view));
 
-      expect(markers).toHaveLength(2);
-      expect(markers[0]).toBe(markers[1]);
+      expect(Cause.isIllegalArgumentError(staticError)).toBe(true);
+      expect(Cause.isIllegalArgumentError(interactiveError)).toBe(true);
     }).pipe(Effect.scoped, Effect.runPromise));
 
-  it("preserves local-symbol acceptance with a comment-safe marker", () =>
+  it("rejects local symbols because their identity cannot survive hydration", () =>
     Effect.gen(function* () {
-      const output = yield* getStaticHtml(html`<ul>
+      const view = html`<ul>
         ${many(
           Fx.succeed([Symbol("--><img id=local-symbol-xss>")]),
           (value) => value,
           () => html`<li>item</li>`,
         )}
-      </ul>`);
+      </ul>`;
+      const staticError = yield* Effect.flip(getStaticHtml(view));
+      const interactiveError = yield* Effect.flip(getInteractiveHtml(view));
 
-      expect(output).toMatch(/<!--\/m_v1_l\.[A-Za-z0-9_.-]+-->/);
-      expect(output).not.toContain("<img id=local-symbol-xss>");
+      expect(Cause.isIllegalArgumentError(staticError)).toBe(true);
+      expect(Cause.isIllegalArgumentError(interactiveError)).toBe(true);
+      expect(staticError.message).toContain("Local symbol keys cannot be hydrated");
     }).pipe(Effect.scoped, Effect.runPromise));
 
-  it("distinguishes local symbols by identity and reuses an ordinal for the same symbol", () =>
+  it("preserves globally registered symbols with comment-safe markers", () =>
     Effect.gen(function* () {
-      const repeated = Symbol("same");
       const output = yield* getStaticHtml(html`<ul>
         ${many(
-          Fx.succeed([repeated, repeated, Symbol("same"), Symbol(), Symbol()]),
+          Fx.succeed([Symbol.for("same-a"), Symbol.for("same-b")]),
           (value) => value,
           () => html`<li>item</li>`,
         )}
       </ul>`);
-      const markers = [...output.matchAll(/<!--\/m_v1_l\.([^>]+)-->/g)].map((match) => match[1]);
+      const markers = [...output.matchAll(/<!--\/m_v1_g\.([^>]+)-->/g)].map((match) => match[1]);
 
-      expect(markers).toHaveLength(5);
-      expect(markers[0]).toBe(markers[1]);
-      expect(new Set(markers).size).toBe(4);
+      expect(markers).toHaveLength(2);
+      expect(new Set(markers).size).toBe(2);
     }).pipe(Effect.scoped, Effect.runPromise));
 });

@@ -3,6 +3,7 @@ import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
+import * as Option from "effect/Option";
 import { Fx, RefSubject } from "@typed/fx";
 import { assert, describe, expect, it, vi } from "vitest";
 import { DomRenderTemplate, html, many, render } from "../index.js";
@@ -288,7 +289,7 @@ describe("live DOM reconciliation identity", () => {
         assert.strictEqual(reorderedButtons.get(key), originalButtons.get(key));
         assert.strictEqual(reorderedInputs.get(key), originalInputs.get(key));
       }
-      assert.strictEqual(document.activeElement, document.body);
+      assert.strictEqual(document.activeElement, cInput);
       assert.strictEqual(cInput.value, "typed-c");
       assert.strictEqual(cInput.selectionStart, 1);
       assert.strictEqual(cInput.selectionEnd, 5);
@@ -444,6 +445,66 @@ describe("live DOM reconciliation identity", () => {
       for (const key of ["a", "b", "c"] as const) {
         assert.strictEqual(elementsByKey(host, "span[data-key]").get(key), original.get(key));
       }
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("does not publish unchanged item data during a pure keyed reorder", () =>
+    Effect.gen(function* () {
+      const host = makeHost();
+      const items = yield* RefSubject.make<ReadonlyArray<Item>>(initialItems);
+      const emissions = new Map<string, number>();
+      const view = html`${many(
+        items,
+        (item) => item.id,
+        (item, key) =>
+          html`<span data-key=${key}
+            >${RefSubject.map(item, (value) => {
+              emissions.set(key, (emissions.get(key) ?? 0) + 1);
+              return value.label;
+            })}</span
+          >`,
+      )}`;
+
+      yield* mount(view, host);
+      yield* waitFor(() => itemOrder(host, "span[data-key]").join(",") === "a,b,c");
+      expect(Object.fromEntries(emissions)).toEqual({ a: 1, b: 1, c: 1 });
+
+      yield* RefSubject.set(items, reorderedItems);
+      yield* waitFor(() => itemOrder(host, "span[data-key]").join(",") === "c,a,b");
+      expect(Object.fromEntries(emissions)).toEqual({ a: 1, b: 1, c: 1 });
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("renders many at root and recursively wrapped DOM Renderable boundaries", () =>
+    Effect.gen(function* () {
+      const directHost = makeHost();
+      const wrappedHost = makeHost();
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          directHost.remove();
+          wrappedHost.remove();
+        }),
+      );
+      const list = many(
+        Fx.succeed(initialItems),
+        (item) => item.id,
+        (item, key) => html`<span data-key=${key}>${RefSubject.map(item, (_) => _.label)}</span>`,
+      );
+
+      yield* render(list, directHost).pipe(
+        Fx.provide(DomRenderTemplate.using(document)),
+        Fx.observe(() => Effect.void),
+        Effect.forkScoped,
+      );
+      yield* render(Effect.succeed([Option.some(list)]), wrappedHost).pipe(
+        Fx.provide(DomRenderTemplate.using(document)),
+        Fx.observe(() => Effect.void),
+        Effect.forkScoped,
+      );
+
+      yield* waitFor(
+        () =>
+          itemOrder(directHost, "span[data-key]").join(",") === "a,b,c" &&
+          itemOrder(wrappedHost, "span[data-key]").join(",") === "a,b,c",
+      );
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 
