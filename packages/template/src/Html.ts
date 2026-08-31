@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import { isOption, none, type Option, some } from "effect/Option";
+import { isNone, isOption, none, type Option, some } from "effect/Option";
 import { isNullish, isObject } from "effect/Predicate";
 import { map as mapRecord } from "effect/Record";
 import type { Scope } from "effect/Scope";
@@ -15,11 +15,13 @@ import {
   templateToHtmlChunks,
 } from "./HtmlChunk.js";
 import { TEXT_START, TYPED_NODE_END, TYPED_NODE_START } from "./internal/meta.js";
+import { renderManyToHtml } from "./internal/renderManyToHtml.js";
 import { takeOneIfNotRenderEvent } from "./internal/takeOneIfNotRenderEvent.js";
+import { isMany } from "./many.js";
 import { parse } from "./Parser.js";
 import type { Renderable } from "./Renderable.js";
 import { HtmlRenderEvent, isHtmlRenderEvent, type RenderEvent } from "./RenderEvent.js";
-import { RenderTemplate } from "./RenderTemplate.js";
+import { html as renderHtml, RenderTemplate } from "./RenderTemplate.js";
 import { isStream } from "effect/Stream";
 import { fromStream } from "@typed/fx/Fx";
 
@@ -63,7 +65,7 @@ const toHtmlString = (event: RenderEvent | null | undefined): Option<string> => 
  * @since 1.0.0
  * @category rendering
  */
-export function renderToHtml<const T extends Renderable<RenderEvent | null | undefined, any, any>>(
+export function renderToHtml<const T extends Renderable.Any>(
   renderable: T,
 ): Fx.Fx<string, Renderable.Error<T>, Renderable.Services<T>> {
   return Fx.filterMap(
@@ -107,9 +109,9 @@ export function renderToHtml<const T extends Renderable<RenderEvent | null | und
  * @since 1.0.0
  * @category rendering
  */
-export function renderToHtmlString<
-  const T extends Renderable<RenderEvent | null | undefined, any, any>,
->(renderable: T): Effect.Effect<string, Renderable.Error<T>, Renderable.Services<T>> {
+export function renderToHtmlString<const T extends Renderable.Any>(
+  renderable: T,
+): Effect.Effect<string, Renderable.Error<T>, Renderable.Services<T>> {
   return renderToHtml(renderable).pipe(
     Fx.collectAll,
     Effect.map((events) => events.join("")),
@@ -313,7 +315,11 @@ function renderNode<E, R>(
   last: boolean,
   render: HtmlPartChunk["render"],
 ) {
-  let node = liftRenderableToFx<E, R>(renderable, isStatic).pipe(
+  let node = (
+    isMany(renderable)
+      ? renderManyToHtml(renderable)
+      : liftRenderableToFx<E, R>(renderable, isStatic)
+  ).pipe(
     Fx.map((value) => (isHtmlRenderEvent(value) ? value : HtmlRenderEvent(render(value), last))),
   );
   if (!isStatic) {
@@ -369,6 +375,8 @@ function liftRenderableToFx<E, R>(
     case "object": {
       if (isNullish(renderable)) {
         return isStatic ? Fx.empty : Fx.succeed(HtmlRenderEvent(TEXT_START, true));
+      } else if (isMany(renderable)) {
+        return renderHtml`${renderable}` as Fx.Fx<any, E, R>;
       } else if (Array.isArray(renderable)) {
         const ancestors = addPropertyAncestor(renderable, propertyAncestors);
         if (ancestors === null) return Fx.empty;
@@ -376,7 +384,9 @@ function liftRenderableToFx<E, R>(
           ...renderable.map((r) => liftRenderableToFx<E, R>(r, isStatic, ancestors)),
         );
       } else if (isOption(renderable)) {
-        return Fx.succeed(renderable);
+        return isNone(renderable)
+          ? Fx.empty
+          : liftRenderableToFx(renderable.value, isStatic, propertyAncestors);
       } else if (isStream(renderable)) {
         return takeOneIfNotRenderEvent(fromStream(renderable)) as Fx.Fx<any, E, R>;
       } else if (Fx.isFx(renderable)) {

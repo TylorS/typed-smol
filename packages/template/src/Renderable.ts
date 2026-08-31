@@ -2,12 +2,16 @@
 // oxlint-disable typescript/no-duplicate-type-constituents
 
 import type * as Effect from "effect/Effect";
+import type * as Cause from "effect/Cause";
 import type * as Option from "effect/Option";
+import type * as Scope from "effect/Scope";
 import type * as Stream from "effect/Stream";
 import type { Fx } from "@typed/fx";
 import type { HydrationRef } from "@typed/fx/RefSubject";
 import type * as EventHandler from "./EventHandler.js";
+import type { Many } from "./many.js";
 import { type RenderEvent } from "./RenderEvent.js";
+import type { RenderTemplate } from "./RenderTemplate.js";
 
 /**
  * Represents any value that can be rendered into a template.
@@ -56,7 +60,8 @@ export type Renderable<A, E = never, R = never> =
   | Effect.Effect<A, E, R>
   | Stream.Stream<A, E, R>
   | Fx.Fx<A, E, R>
-  | HydrationRef<E, R>;
+  | HydrationRef<E, R>
+  | Many<any, E, R, any, E, R>;
 
 export declare namespace Renderable {
   /**
@@ -101,25 +106,27 @@ export declare namespace Renderable {
    */
   export type Success<T> = [T] extends [never]
     ? never
-    : T extends Fx.Fx<infer A, any, any>
-      ? A
-      : T extends Stream.Stream<infer A, any, any>
+    : T extends Many<any, any, any, any, any, any>
+      ? RenderEvent
+      : T extends Fx.Fx<infer A, any, any>
         ? A
-        : T extends Effect.Effect<infer A, any, any>
-          ? Success<A>
-          : T extends Option.Option<infer A>
-            ? Success<A> | null
-            : T extends ReadonlyArray<any>
-              ? { readonly [K in keyof T]: Success<T[K]> }
-              : T extends null | undefined | void
-                ? null
-                : T extends (...args: Array<any>) => any
+        : T extends Stream.Stream<infer A, any, any>
+          ? A
+          : T extends Effect.Effect<infer A, any, any>
+            ? Success<A>
+            : T extends Option.Option<infer A>
+              ? Success<A> | null
+              : T extends ReadonlyArray<any>
+                ? { readonly [K in keyof T]: Success<T[K]> }
+                : T extends null | undefined | void
                   ? null
-                  : T extends RenderEvent
-                    ? T
-                    : T extends object
-                      ? { readonly [K in keyof T]: Success<T[K]> }
-                      : T;
+                  : T extends (...args: Array<any>) => any
+                    ? null
+                    : T extends RenderEvent
+                      ? T
+                      : T extends object
+                        ? { readonly [K in keyof T]: Success<T[K]> }
+                        : T;
 
   // Helpers for arbitrary objects
 
@@ -161,6 +168,9 @@ type RenderableServicesSingle<T> =
   | Effect.Services<T>
   | (T extends HydrationRef<any, infer R> ? R : never)
   | EventHandler.Services<T>
+  | (T extends Many<any, any, infer R, any, any, infer R2>
+      ? R | R2 | Scope.Scope | RenderTemplate
+      : never)
   | NestedServices<T>;
 
 type RenderableError<T> =
@@ -172,6 +182,9 @@ type RenderableErrorSingle<T> =
   | Effect.Error<T>
   | (T extends HydrationRef<infer E, any> ? E : never)
   | EventHandler.Error<T>
+  | (T extends Many<any, infer E, any, any, infer E2, any>
+      ? E | E2 | Cause.IllegalArgumentError
+      : never)
   | NestedError<T>;
 
 type NestedServices<T> = T extends
@@ -179,6 +192,7 @@ type NestedServices<T> = T extends
   | Option.Option<any>
   | HydrationRef<any, any>
   | EventHandler.EventHandler<any, any, any>
+  | Many<any, any, any, any, any, any>
   | AtomicObject
   ? never
   : T extends (...args: Array<any>) => infer U
@@ -194,6 +208,7 @@ type NestedError<T> = T extends
   | Option.Option<any>
   | HydrationRef<any, any>
   | EventHandler.EventHandler<any, any, any>
+  | Many<any, any, any, any, any, any>
   | AtomicObject
   ? never
   : T extends (...args: Array<any>) => infer U

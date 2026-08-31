@@ -1,6 +1,7 @@
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import type { Scope } from "effect";
 import { Effect, Schema } from "effect";
+import * as Deferred from "effect/Deferred";
 import * as Exit from "effect/Exit";
 import * as ScopeApi from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
@@ -507,6 +508,103 @@ describe("Hydration", () => {
       expect(current.innerHTML).toMatchInlineSnapshot(
         `"<!--n_0--><!--t_KwZ/fKKViAs=--><p><!--n_0-->1<!--/n_0--></p><!--/t_KwZ/fKKViAs=--><!--/m_v1_n.ADE--><!--t_KwZ/fKKViAs=--><p><!--n_0-->2<!--/n_0--></p><!--/t_KwZ/fKKViAs=--><!--/m_v1_n.ADI--><!--t_KwZ/fKKViAs=--><p><!--n_0-->3<!--/n_0--></p><!--/t_KwZ/fKKViAs=--><!--/m_v1_n.ADM--><!--/n_0-->"`,
       );
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("reorders adopted many items by key after hydration", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const items = yield* RefSubject.make([
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+      ]);
+      const view = html`<ul>
+        ${many(
+          items,
+          (item) => item.id,
+          (item, key) => html`<li data-key=${key}>${RefSubject.map(item, (_) => _.label)}</li>`,
+        )}
+      </ul>`;
+      const body = window.document.body;
+      body.innerHTML = yield* renderToHtmlString(view).pipe(Effect.provide(HtmlRenderTemplate));
+      const originalA = body.querySelector<HTMLElement>("[data-key=a]");
+      const originalB = body.querySelector<HTMLElement>("[data-key=b]");
+      assert(originalA && originalB);
+
+      const mounted = yield* Deferred.make<void>();
+      yield* render(view, body).pipe(
+        Fx.provide(layer),
+        Fx.observe(() => Deferred.succeed(mounted, undefined)),
+        Effect.forkScoped,
+      );
+      yield* Deferred.await(mounted);
+      yield* RefSubject.set(items, [
+        { id: "b", label: "B2" },
+        { id: "a", label: "A" },
+      ]);
+      yield* Effect.promise(() =>
+        vi.waitFor(() => assert.strictEqual(body.querySelector("li")?.textContent, "B2")),
+      );
+
+      const current = Array.from(body.querySelectorAll<HTMLElement>("li"));
+      assert.deepStrictEqual(
+        current.map((element) => element.dataset["key"]),
+        ["b", "a"],
+      );
+      assert.strictEqual(current[0], originalB);
+      assert.strictEqual(current[1], originalA);
+      assert.strictEqual(current[0].textContent, "B2");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("reconciles the first client many snapshot against server keys", () =>
+    Effect.gen(function* () {
+      const [window, layer] = createHappyDomLayer();
+      const serverView = html`<ul>
+        ${many(
+          Fx.succeed([
+            { id: "a", label: "A" },
+            { id: "b", label: "B" },
+            { id: "c", label: "C" },
+          ]),
+          (item) => item.id,
+          (item, key) => html`<li data-key=${key}>${RefSubject.map(item, (_) => _.label)}</li>`,
+        )}
+      </ul>`;
+      const body = window.document.body;
+      body.innerHTML = yield* renderToHtmlString(serverView).pipe(
+        Effect.provide(HtmlRenderTemplate),
+      );
+      const originalA = body.querySelector<HTMLElement>("[data-key=a]");
+      const originalB = body.querySelector<HTMLElement>("[data-key=b]");
+      const originalC = body.querySelector<HTMLElement>("[data-key=c]");
+      assert(originalA && originalB && originalC);
+
+      const clientItems = yield* RefSubject.make([
+        { id: "c", label: "C" },
+        { id: "a", label: "A" },
+      ]);
+      const clientView = html`<ul>
+        ${many(
+          clientItems,
+          (item) => item.id,
+          (item, key) => html`<li data-key=${key}>${RefSubject.map(item, (_) => _.label)}</li>`,
+        )}
+      </ul>`;
+      const mounted = yield* Deferred.make<void>();
+      yield* render(clientView, body).pipe(
+        Fx.provide(layer),
+        Fx.observe(() => Deferred.succeed(mounted, undefined)),
+        Effect.forkScoped,
+      );
+      yield* Deferred.await(mounted);
+
+      const current = Array.from(body.querySelectorAll<HTMLElement>("li"));
+      assert.deepStrictEqual(
+        current.map((element) => element.dataset["key"]),
+        ["c", "a"],
+      );
+      assert.strictEqual(current[0], originalC);
+      assert.strictEqual(current[1], originalA);
+      assert.strictEqual(originalB.isConnected, false);
     }).pipe(Effect.scoped, Effect.runPromise));
 });
 

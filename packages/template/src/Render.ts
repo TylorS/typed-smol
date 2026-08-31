@@ -44,11 +44,13 @@ import {
 import { type IndexRefCounter, makeRefCounter } from "./internal/IndexRefCounter.js";
 import { keyToPartType } from "./internal/keyToPartType.js";
 import { findPath } from "./internal/ParentChildNodes.js";
+import { renderManyToDom } from "./internal/renderManyToDom.js";
+import { isMany } from "./many.js";
 import { parse } from "./Parser.js";
 import type { Renderable } from "./Renderable.js";
 import { DomRenderEvent, isRenderEvent, type RenderEvent } from "./RenderEvent.js";
 import * as RQ from "./RenderQueue.js";
-import { RenderTemplate } from "./RenderTemplate.js";
+import { html as renderHtml, RenderTemplate } from "./RenderTemplate.js";
 import * as Template from "./Template.js";
 import { getAllSiblingsBetween, isText, persistent, type Rendered } from "./Wire.js";
 
@@ -496,6 +498,17 @@ function setupRenderPart<E = never, R = never>(
   switch (part._tag) {
     case "node": {
       const endComment = findNodePartEndComment(node as HTMLElement | SVGElement, part.index);
+      const renderable = ctx.values[part.index];
+      if (isMany(renderable)) {
+        const effect = renderManyToDom(renderable, endComment, part.index, ctx) as Effect.Effect<
+          unknown,
+          E,
+          R
+        >;
+        return endComment.parentElement === null
+          ? effect
+          : Effect.provideService(effect, CurrentInsertionContext, endComment.parentElement);
+      }
       const effect = renderValue<E, R, void>(
         ctx,
         part.index,
@@ -1072,6 +1085,8 @@ export function liftRenderableToFx<E = never, R = never>(
     case "object": {
       if (isNullish(renderable)) {
         return Fx.null;
+      } else if (isMany(renderable)) {
+        return renderHtml`${renderable}` as Fx.Fx<any, E, R>;
       } else if (Array.isArray(renderable)) {
         return Fx.tuple(...renderable.map(liftRenderableToFx<E, R>));
       } else if (isOption(renderable)) {
@@ -1266,6 +1281,19 @@ function setupHydratedNodePart<E, R>(
   ctx: TemplateContext<R>,
 ): Effect.Effect<unknown, E, R> | void {
   const nestedCtx: HydrateContext = { where: hole, hydrate: true };
+  const renderable = ctx.values[part.index];
+  if (isMany(renderable)) {
+    const effect = renderManyToDom(
+      renderable,
+      hole.endComment,
+      part.index,
+      ctx,
+      nestedCtx,
+    ) as Effect.Effect<unknown, E, R>;
+    return hole.endComment.parentElement === null
+      ? effect
+      : Effect.provideService(effect, CurrentInsertionContext, hole.endComment.parentElement);
+  }
 
   const effect = renderValue<E, R, void>(
     ctx,
