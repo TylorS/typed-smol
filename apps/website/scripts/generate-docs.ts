@@ -35,7 +35,7 @@ import {
   validateAuthoredExampleQuality,
   validateRecipeExamples,
   type AuthoredExampleDocumentation,
-} from "../src/docs/Recipes.js";
+} from "../src/docs/RecipeValidation.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workspaceRoot = path.resolve(root, "../..");
