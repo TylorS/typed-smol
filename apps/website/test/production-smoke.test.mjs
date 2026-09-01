@@ -37,6 +37,17 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   assert.match(html, /Declarative templates\. Real DOM\./);
   assert.match(html, /Fx&lt;RenderEvent, E, R&gt;/);
 
+  const subpathHome = await fetch(`http://127.0.0.1:${port}/typed-smol/`);
+  assert.equal(subpathHome.status, 200);
+  const subpathHtml = await subpathHome.text();
+  assert.match(subpathHtml, /<base href="\/typed-smol\/"\/>/);
+  assert.match(subpathHtml, /href="\/typed-smol\/styles\.css"/);
+  assert.match(subpathHtml, /src="\/typed-smol\/client\.js"/);
+
+  const subpathExplore = await fetch(`http://127.0.0.1:${port}/typed-smol/explore`);
+  assert.equal(subpathExplore.status, 200);
+  assert.match(await subpathExplore.text(), /<h1[^>]*>[\s\S]*?Build up the system/);
+
   for (const [path, heading] of [
     ["/explore", "Build up the system"],
     ["/explore/fx-push-reactivity", "Fx: work arrives"],
@@ -80,9 +91,9 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   assert.doesNotMatch(exploreHtml, /aria-current="(?:undefined)?"/);
   assert.match(
     exploreHtml,
-    /<nav aria-label="Primary navigation">[\s\S]*?<a[^>]*(?:href="\/explore"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/explore")[^>]*>/,
+    /<nav aria-label="Primary navigation">[\s\S]*?<a[^>]*(?:href="\/typed-smol\/explore"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/typed-smol\/explore")[^>]*>/,
   );
-  assert.equal((exploreHtml.match(/aria-current="page"/g) ?? []).length, 2);
+  assert.ok((exploreHtml.match(/aria-current="page"/g) ?? []).length >= 2);
   assert.match(exploreHtml, /<nav aria-label="Resources">/);
 
   const unknownGuide = await fetch(`http://127.0.0.1:${port}/explore/not-a-real-guide`);

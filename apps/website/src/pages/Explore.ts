@@ -1,5 +1,10 @@
 import { html } from "@typed/template";
-import { ExploreNavigation, exploreSections } from "../components/ExploreNavigation.js";
+import {
+  ExploreMobileNavigation,
+  ExploreNavigation,
+  exploreSections,
+} from "../components/ExploreNavigation.js";
+import { siteHref } from "../SiteHref.js";
 
 export const Explore = html`
   <main id="main-content" class="page explore-page" tabindex="-1">
@@ -11,6 +16,8 @@ export const Explore = html`
         renderable structure, accessible UI behavior, and cooperative ownership of the web platform.
       </p>
     </header>
+
+    ${ExploreMobileNavigation()}
 
     <div class="explore-layout">
       ${ExploreNavigation()}
@@ -31,7 +38,7 @@ export const Explore = html`
                         ${guide.kind ?? "concept"}
                       </span>
                       <div>
-                        <h3><a href="/explore/${guide.slug}">${guide.title}</a></h3>
+                        <h3><a href=${siteHref(`/explore/${guide.slug}`)}>${guide.title}</a></h3>
                         <p>${guide.summary}</p>
                       </div>
                       <span aria-hidden="true">→</span>

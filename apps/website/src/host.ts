@@ -21,6 +21,7 @@ export function makeHost<A, E, R>(routes: Layer.Layer<A, E, R>, existingVite?: V
           routes,
           HttpStaticServer.layer({ root: productionClientRoot, cacheControl: "no-cache" }),
         ),
+        { middleware: withSiteBase },
       );
 }
 
@@ -46,7 +47,11 @@ function viteMiddleware(vite: ViteDevServer) {
       const incoming = NodeHttpServerRequest.toIncomingMessage(request);
       const response = NodeHttpServerRequest.toServerResponse(request);
 
-      return yield* Effect.callback<HttpServerResponse.HttpServerResponse, E, R>((resume) => {
+      return yield* Effect.callback<
+        HttpServerResponse.HttpServerResponse,
+        E,
+        R | HttpServerRequest.HttpServerRequest
+      >((resume) => {
         let settled = false;
         const cleanup = () => response.off("finish", onFinish);
         const onFinish = () => {
@@ -61,10 +66,31 @@ function viteMiddleware(vite: ViteDevServer) {
           if (settled) return;
           settled = true;
           cleanup();
-          resume(error == null ? app : Effect.die(error));
+          resume(error == null ? withSiteBase(app) : Effect.die(error));
         });
 
         return Effect.sync(cleanup);
       });
     });
 }
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/u, "");
+
+const withSiteBase = <E, R>(
+  effect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
+): Effect.Effect<HttpServerResponse.HttpServerResponse, E, R | HttpServerRequest.HttpServerRequest> =>
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const url = stripBasePath(request.url);
+    return yield* (url === request.url
+      ? effect
+      : effect.pipe(
+          Effect.provideService(HttpServerRequest.HttpServerRequest, request.modify({ url })),
+        ));
+  });
+
+const stripBasePath = (url: string): string => {
+  if (basePath === "" || !url.startsWith(basePath)) return url;
+  const next = url.slice(basePath.length);
+  return next.startsWith("/") ? next : `/${next}`;
+};

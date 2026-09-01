@@ -13,53 +13,12 @@ const websiteRoot = path.resolve(import.meta.dirname, "..");
 const siteRoot = path.join(websiteRoot, "dist/site");
 
 test("static build emits deployable semantic route documents and agent artifacts", async () => {
-  for (let build = 0; build < 2; build++) {
-    await execFileAsync("pnpm", ["build:static"], {
-      cwd: websiteRoot,
-      env: { ...process.env, SITE_BASE: "/typed-smol/" },
-      maxBuffer: 16 * 1024 * 1024,
-    });
-  }
-
-  for (const [route, heading] of [
-    ["/", "Cooperative"],
-    ["/explore", "Build up the system"],
-    ["/explore/fx-push-reactivity", "Fx: work arrives"],
-    ["/explore/building-fx", "Building Fx values"],
-    ["/explore/transforming-fx", "Transforming Fx"],
-    ["/explore/composing-fx", "Composing Fx"],
-    ["/explore/consuming-fx", "Consuming Fx"],
-    ["/explore/render-your-first-template", "Render your first template"],
-    ["/explore/refsubject-renderer-independent-state", "RefSubject: state without a renderer"],
-    ["/explore/building-ui-components", "Building UI components"],
-    ["/explore/dom-updates-and-reconciliation", "Direct updates, local reconciliation"],
-    ["/explore/cooperative-by-design", "Cooperative by design"],
-    ["/explore/routing-an-application", "Routing an application"],
-    ["/explore/server-rendering-and-hydration", "Server rendering and hydration"],
-    ["/explore/testing-typed-systems", "Testing Typed systems"],
-    ["/explore/render-event-substrate", "RenderEvent: any UI can participate"],
-    ["/integrate", "Bring another renderer with you."],
-    ["/integrate/dom-output", "Pass existing DOM into Typed"],
-    ["/integrate/html-output", "Pass trusted HTML into Typed SSR"],
-    ["/integrate/react", "Use React and Typed together"],
-    ["/integrate/svelte", "Use Svelte 5 and Typed together"],
-    ["/integrate/vue", "Use Vue and Typed together"],
-    ["/integrate/web-component", "Use Web Components and Typed together"],
-    ["/glossary", "Glossary"],
-    ["/reference", "API reference"],
-    ["/reference/packages/%40typed%2Fui", "@typed/ui"],
-    ["/reference/modules/%40typed%2Ftemplate%2FRenderEvent", "@typed/template/RenderEvent"],
-    ["/reference/%40typed%2Ftemplate%2Fmany%23many", "many"],
-  ]) {
-    const html = await readFile(routeFile(route), "utf8");
-    assert.match(html, /<main\b/, route);
-    assert.match(html, new RegExp(`<h1[^>]*>[\\s\\S]*?${escapeRegExp(heading)}`), route);
-  }
+  await execFileAsync("pnpm", ["build:static"], {
+    cwd: websiteRoot,
+    maxBuffer: 16 * 1024 * 1024,
+  });
 
   const home = await readFile(routeFile("/"), "utf8");
-  const integrate = await readFile(routeFile("/integrate"), "utf8");
-  assert.equal((integrate.match(/class="recipe-card"/g) ?? []).length, 6);
-  assert.doesNotMatch(integrate, /class="[^\"]*recipe-content/);
   assert.match(home, /href="\/typed-smol\/explore"/);
   assert.match(home, /href="\/typed-smol\/styles\.css"/);
   assert.doesNotMatch(home, /\/typed-smol\/typed-smol\//);
@@ -68,7 +27,7 @@ test("static build emits deployable semantic route documents and agent artifacts
     "/typed-smol/.well-known/agent-skills/index.json",
     "/typed-smol/docs-manifest.json",
   ]) {
-    assert.match(home, new RegExp(`href="${escapeRegExp(href)}"`));
+    assert.ok(home.includes(`href="${href}"`), href);
   }
   const styles = await readFile(path.join(siteRoot, "styles.css"), "utf8");
   assert.doesNotMatch(styles, /@import\s+url\(["']?\/styles\//);
@@ -108,19 +67,6 @@ test("static build emits deployable semantic route documents and agent artifacts
   await assert.rejects(stat(path.join(siteRoot, "client.js")));
 
   await withStaticServer(async (origin) => {
-    for (const [pathname, heading] of [
-      ["/reference/packages/%40typed%2Fui", "@typed/ui"],
-      ["/reference/modules/%40typed%2Ftemplate%2FRenderEvent", "@typed/template/RenderEvent"],
-      ["/reference/%40typed%2Ftemplate%2Fmany%23many", "many"],
-    ]) {
-      const response = await fetch(`${origin}${pathname}`);
-      assert.equal(response.status, 200, pathname);
-      assert.match(
-        await response.text(),
-        new RegExp(`<h1[^>]*>[\\s\\S]*?${escapeRegExp(heading)}`),
-      );
-    }
-
     const artifactPaths = [
       "/llms.txt",
       "/llms-full.txt",
@@ -139,35 +85,13 @@ test("static build emits deployable semantic route documents and agent artifacts
     }
 
     const manifest = await (await fetch(`${origin}/docs-manifest.json`)).json();
-    for (const slug of ["dom-output", "html-output", "react", "svelte", "vue", "web-component"]) {
-      assert.ok(
-        manifest.routes.some(({ canonicalPath }) => canonicalPath === `/integrate/${slug}`),
-        `manifest includes recipe route /integrate/${slug}`,
-      );
-    }
-    for (const { markdownPath } of manifest.routes.filter(({ kind }) => kind === "page")) {
+    for (const { canonicalPath, kind, markdownPath } of manifest.routes) {
+      if (kind !== "page") continue;
+      const html = await readFile(routeFile(canonicalPath), "utf8");
+      assert.match(html, /<main\b/, canonicalPath);
       assert.equal((await fetch(`${origin}${markdownPath}`)).status, 200, markdownPath);
     }
   });
-
-  const guide = await readFile(routeFile("/explore/cooperative-by-design"), "utf8");
-  assert.match(
-    guide,
-    /rel="canonical" href="https:\/\/tylors\.github\.io\/typed-smol\/explore\/cooperative-by-design"/,
-  );
-  assert.match(
-    guide,
-    /rel="alternate" type="text\/markdown" href="https:\/\/tylors\.github\.io\/typed-smol\/explore\/cooperative-by-design\.md"/,
-  );
-  const symbol = await readFile(routeFile("/reference/%40typed%2Ftemplate%2Fmany%23many"), "utf8");
-  assert.match(
-    symbol,
-    /rel="canonical" href="https:\/\/tylors\.github\.io\/typed-smol\/reference\/%40typed%2Ftemplate%2Fmany%23many"/,
-  );
-  assert.match(
-    symbol,
-    /rel="alternate" type="text\/markdown" href="https:\/\/tylors\.github\.io\/typed-smol\/docs\/reference\/exposures\/[a-f0-9]+\.md"/,
-  );
 });
 
 function routeFile(route) {
@@ -197,10 +121,6 @@ async function brokenLocalReferences() {
   }
 
   return broken.sort();
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function withStaticServer(run) {

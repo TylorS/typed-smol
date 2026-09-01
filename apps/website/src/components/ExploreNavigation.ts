@@ -1,6 +1,7 @@
 import { html } from "@typed/template";
 import { guides } from "../docs/Content.js";
 import type { GuideDocumentation } from "../docs/Model.js";
+import { siteHref } from "../SiteHref.js";
 
 export interface ExploreSection {
   readonly name: string;
@@ -38,29 +39,46 @@ const paginationLink = (link: CurriculumLink, direction: "previous" | "next") =>
 const guideLink = (guide: GuideDocumentation, activeSlug?: string) => {
   const content = html`<span>${guide.title}</span><small>${guide.kind ?? "concept"}</small>`;
   return guide.slug === activeSlug
-    ? html`<a href="/explore/${guide.slug}" aria-current="page">${content}</a>`
-    : html`<a href="/explore/${guide.slug}">${content}</a>`;
+    ? html`<a href=${siteHref(`/explore/${guide.slug}`)} aria-current="page">${content}</a>`
+    : html`<a href=${siteHref(`/explore/${guide.slug}`)}>${content}</a>`;
 };
+
+const navigationSections = (idPrefix: string, activeSlug?: string) => html`
+  ${exploreSections.map(
+    (section) => html`
+      <section aria-labelledby="${idPrefix}-${section.name.toLowerCase().replaceAll(" ", "-")}">
+        <h2 id="${idPrefix}-${section.name.toLowerCase().replaceAll(" ", "-")}">
+          ${section.name}
+        </h2>
+        ${section.guides.map((guide) => guideLink(guide, activeSlug))}
+      </section>
+    `,
+  )}
+  <section aria-labelledby="${idPrefix}-next">
+    <h2 id="${idPrefix}-next">Go further</h2>
+    <a href=${siteHref("/integrate")}><span>Integration recipes</span><small>recipes</small></a>
+    <a href=${siteHref("/reference")}><span>Complete API</span><small>reference</small></a>
+  </section>
+`;
 
 export const ExploreNavigation = (activeSlug?: string) => html`
   <nav class="explore-navigation" aria-label="Explore documentation">
-    <a class="explore-navigation__home" href="/explore">Explore</a>
-    ${exploreSections.map(
-      (section) => html`
-        <section aria-labelledby="explore-nav-${section.name.toLowerCase().replaceAll(" ", "-")}">
-          <h2 id="explore-nav-${section.name.toLowerCase().replaceAll(" ", "-")}">
-            ${section.name}
-          </h2>
-          ${section.guides.map((guide) => guideLink(guide, activeSlug))}
-        </section>
-      `,
-    )}
-    <section aria-labelledby="explore-nav-next">
-      <h2 id="explore-nav-next">Go further</h2>
-      <a href="/integrate"><span>Integration recipes</span><small>recipes</small></a>
-      <a href="/reference"><span>Complete API</span><small>reference</small></a>
-    </section>
+    <a class="explore-navigation__home" href=${siteHref("/explore")}>Explore</a>
+    ${navigationSections("explore-nav", activeSlug)}
   </nav>
+`;
+
+export const ExploreMobileNavigation = (activeSlug?: string) => html`
+  <details class="explore-mobile-navigation">
+    <summary>
+      <span>Browse Explore</span>
+      <span aria-hidden="true">+</span>
+    </summary>
+    <nav aria-label="Explore documentation">
+      <a class="explore-navigation__home" href=${siteHref("/explore")}>Explore overview</a>
+      ${navigationSections("explore-mobile-nav", activeSlug)}
+    </nav>
+  </details>
 `;
 
 export const ExplorePagination = (activeSlug: string) => {
@@ -69,16 +87,16 @@ export const ExplorePagination = (activeSlug: string) => {
 
   const previous: CurriculumLink =
     index === 0
-      ? { href: "/explore", title: "Explore" }
+      ? { href: siteHref("/explore"), title: "Explore" }
       : {
-          href: `/explore/${orderedGuides[index - 1]!.slug}`,
+          href: siteHref(`/explore/${orderedGuides[index - 1]!.slug}`),
           title: orderedGuides[index - 1]!.title,
         };
   const next: CurriculumLink =
     index === orderedGuides.length - 1
-      ? { href: "/integrate", title: "Integration recipes" }
+      ? { href: siteHref("/integrate"), title: "Integration recipes" }
       : {
-          href: `/explore/${orderedGuides[index + 1]!.slug}`,
+          href: siteHref(`/explore/${orderedGuides[index + 1]!.slug}`),
           title: orderedGuides[index + 1]!.title,
         };
 

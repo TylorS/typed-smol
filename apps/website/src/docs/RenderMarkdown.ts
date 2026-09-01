@@ -3,6 +3,7 @@ import { renderFxMarble } from "./FxMarble.js";
 import { highlightCode, normalizeLanguage } from "./SyntaxHighlight.js";
 import { HtmlRenderEvent } from "@typed/template";
 import { Marked, Renderer } from "marked";
+import { siteHref } from "../SiteHref.js";
 
 export interface MarkdownRenderOptions {
   /** Exact, unambiguous Typed symbol names to their generated declaration ids. */
@@ -56,7 +57,7 @@ const inlineCodeLink = (
     ownValue(defaultTypedSymbolIds, value);
   return typedId === undefined
     ? undefined
-    : `<code class="inline-code-link"><a href="/reference/${encodeURIComponent(typedId)}">${htmlText(value)}</a></code>`;
+    : `<code class="inline-code-link"><a href="${htmlAttribute(siteHref(`/reference/${encodeURIComponent(typedId)}`))}">${htmlText(value)}</a></code>`;
 };
 
 const baseHeadingId = (value: string): string =>

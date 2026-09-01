@@ -1,6 +1,7 @@
 import { html } from "@typed/template";
 import { extractTypeScriptFences, recipes, type RecipeDocumentation } from "../docs/Recipes.js";
 import { headingId, renderGuideMarkdown } from "../docs/RenderMarkdown.js";
+import { siteHref } from "../SiteHref.js";
 
 export type RecipeMeta = {
   readonly audience: string;
@@ -28,10 +29,10 @@ export const recipeCard = (recipe: RecipeDocumentation, index: number) => html`
       <span class="recipe-card__context">${metaFor(recipe).audience}</span>
     </div>
     <h3 id="${recipe.slug}-card-title">
-      <a href="/integrate/${recipe.slug}">${recipe.title}</a>
+      <a href=${siteHref(`/integrate/${recipe.slug}`)}>${recipe.title}</a>
     </h3>
     <p>${recipe.summary}</p>
-    <a class="recipe-card__link" href="/integrate/${recipe.slug}"
+    <a class="recipe-card__link" href=${siteHref(`/integrate/${recipe.slug}`)}
       >Read recipe <span aria-hidden="true">→</span></a
     >
   </article>
@@ -42,16 +43,16 @@ export const RecipePage = (slug: string) => {
   if (recipe === undefined) {
     return html`
       <main id="main-content" class="page recipe-page recipe-page--missing" tabindex="-1">
-        <a class="back" href="/integrate">← Integration directory</a>
+        <a class="back" href=${siteHref("/integrate")}>← Integration directory</a>
         <h1>Recipe not found</h1>
-        <p><a href="/integrate">Return to the integration recipes.</a></p>
+        <p><a href=${siteHref("/integrate")}>Return to the integration recipes.</a></p>
       </main>
     `;
   }
 
   return html`
     <main id="main-content" class="page recipe-page" tabindex="-1">
-      <a class="back" href="/integrate">← Integration directory</a>
+      <a class="back" href=${siteHref("/integrate")}>← Integration directory</a>
       <header class="recipe-page-intro">
         <span class="index">INTEGRATE / ${metaFor(recipe).audience}</span>
         <h1>${recipe.title}</h1>
@@ -71,7 +72,7 @@ export const RecipePage = (slug: string) => {
       </div>
 
       <nav class="recipe-page-next" aria-label="More integration recipes">
-        <a href="/integrate">All integration recipes →</a>
+        <a href=${siteHref("/integrate")}>All integration recipes →</a>
       </nav>
     </main>
   `;

@@ -1,6 +1,7 @@
 import { html } from "@typed/template";
 import { recipes } from "../docs/Recipes.js";
 import { recipeCard } from "./RecipePage.js";
+import { siteHref } from "../SiteHref.js";
 
 export const Integrate = html`
   <main id="main-content" class="page integrate-page" tabindex="-1">
@@ -17,15 +18,15 @@ export const Integrate = html`
     <section class="integration-paths" aria-labelledby="integration-paths-title">
       <h2 id="integration-paths-title">Choose what you already have.</h2>
       <div class="integration-paths__grid">
-        <a href="/integrate/dom-output">
+        <a href=${siteHref("/integrate/dom-output")}>
           <strong>DOM already exists</strong>
           <span>Pass exact nodes to Typed without cloning or reparsing them.</span>
         </a>
-        <a href="/integrate/html-output">
+        <a href=${siteHref("/integrate/html-output")}>
           <strong>HTML already exists</strong>
           <span>Carry trusted serializer output into Typed SSR.</span>
         </a>
-        <a href="/integrate/react">
+        <a href=${siteHref("/integrate/react")}>
           <strong>A framework owns the component</strong>
           <span>Use React, Svelte, Vue, or a Web Component in either direction.</span>
         </a>

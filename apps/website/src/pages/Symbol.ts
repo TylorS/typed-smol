@@ -3,6 +3,7 @@ import type { SymbolDocumentation } from "../docs/Model.js";
 import { referenceSlug } from "../docs/Reference.js";
 import { headingId, renderGuideMarkdown } from "../docs/RenderMarkdown.js";
 import { highlightCode } from "../docs/SyntaxHighlight.js";
+import { siteHref } from "../SiteHref.js";
 
 const renderExample = (language: string, code: string) => {
   const normalized = code.trim();
@@ -16,9 +17,9 @@ const renderSignature = (signature: string) =>
   HtmlRenderEvent(highlightCode("ts", signature), true);
 
 const moduleHref = (symbol: SymbolDocumentation) =>
-  `/reference/modules/${encodeURIComponent(
+  siteHref(`/reference/modules/${encodeURIComponent(
     symbol.moduleName === "." ? symbol.packageName : `${symbol.packageName}/${symbol.moduleName}`,
-  )}`;
+  )}`);
 
 const moduleLabel = (symbol: SymbolDocumentation) =>
   symbol.moduleName === "." ? "entry point" : symbol.moduleName;
@@ -26,9 +27,9 @@ const moduleLabel = (symbol: SymbolDocumentation) =>
 const Breadcrumb = (symbol: SymbolDocumentation) => html`
   <nav class="reference-breadcrumb" aria-label="Breadcrumb">
     <ol>
-      <li><a href="/reference">Reference</a></li>
+      <li><a href=${siteHref("/reference")}>Reference</a></li>
       <li>
-        <a href="/reference/packages/${encodeURIComponent(symbol.packageName)}"
+        <a href=${siteHref(`/reference/packages/${encodeURIComponent(symbol.packageName)}`)}
           >${symbol.packageName}</a
         >
       </li>
@@ -97,7 +98,7 @@ export const SymbolPage = (symbol: SymbolDocumentation) => {
                 <div class="symbol-relations" aria-label="Related glossary terms">
                   <span>Related</span>
                   ${glossaryRelations.map(
-                    ({ target }) => html`<a href="/glossary#${target}">${target}</a>`,
+                    ({ target }) => html`<a href=${siteHref(`/glossary#${target}`)}>${target}</a>`,
                   )}
                 </div>
               `
@@ -183,7 +184,7 @@ export const SymbolPage = (symbol: SymbolDocumentation) => {
               <div>
                 <dt>Machine-readable</dt>
                 <dd>
-                  <a href="/docs/reference/exposures/${referenceSlug(symbol.id)}.json"
+                  <a href=${siteHref(`/docs/reference/exposures/${referenceSlug(symbol.id)}.json`)}
                     >Open JSON record</a
                   >
                 </dd>

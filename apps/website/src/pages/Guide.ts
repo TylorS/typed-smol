@@ -1,8 +1,13 @@
 import { html } from "@typed/template";
-import { ExploreNavigation, ExplorePagination } from "../components/ExploreNavigation.js";
+import {
+  ExploreMobileNavigation,
+  ExploreNavigation,
+  ExplorePagination,
+} from "../components/ExploreNavigation.js";
 import type { GuideDocumentation } from "../docs/Model.js";
 import { headingId, renderGuideMarkdown } from "../docs/RenderMarkdown.js";
 import { UiAccessibilityCatalog } from "../docs/UiAccessibility.js";
+import { siteHref } from "../SiteHref.js";
 
 export const Guide = (guide: GuideDocumentation) => html`
   <main
@@ -14,13 +19,15 @@ export const Guide = (guide: GuideDocumentation) => html`
     }
     tabindex="-1"
   >
-    <a class="back" href="/explore">← Explore</a>
+    <a class="back" href=${siteHref("/explore")}>← Explore</a>
 
     <header class="guide-intro">
       <span class="index">${guide.kind ?? "guide"} / ${guide.slug}</span>
       <h1>${guide.title}</h1>
       <p>${guide.summary}</p>
     </header>
+
+    ${ExploreMobileNavigation(guide.slug)}
 
     <div class="guide-layout">
       ${ExploreNavigation(guide.slug)}

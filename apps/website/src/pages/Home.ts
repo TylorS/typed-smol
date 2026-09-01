@@ -1,6 +1,7 @@
 import { html } from "@typed/template";
 import { TermLink } from "../components/TermLink.js";
 import { fxCombinatorCount } from "../generated/catalog.js";
+import { siteHref } from "../SiteHref.js";
 
 export const Home = html`
   <main id="main-content" class="home" tabindex="-1">
@@ -17,8 +18,8 @@ export const Home = html`
           applications, design systems, and frameworks without surrendering the platform.
         </p>
         <div class="actions">
-          <a class="button" href="/explore">Explore the architecture →</a>
-          <a href="/integrate">Integration recipes</a>
+          <a class="button" href=${siteHref("/explore")}>Explore the architecture →</a>
+          <a href=${siteHref("/integrate")}>Integration recipes</a>
         </div>
       </div>
 
@@ -55,7 +56,7 @@ export const Home = html`
             expected failures, provide services, and interrupt the entire process through Effect.
             Zero, one, or many results use the same vocabulary.
           </p>
-          <a class="chapter-link" href="/explore/fx-push-reactivity"
+          <a class="chapter-link" href=${siteHref("/explore/fx-push-reactivity")}
             >Learn Fx from sources to consumers →</a
           >
         </div>
@@ -67,7 +68,7 @@ export const Home = html`
           every day.
           <a
             class="chapter-note__more"
-            href="/reference/modules/%40typed%2Ffx%2FFx#category-combinators"
+            href=${siteHref("/reference/modules/%40typed%2Ffx%2FFx#category-combinators")}
           >
             And so much more: ${fxCombinatorCount} public combinators and counting →
           </a>
@@ -88,7 +89,7 @@ export const Home = html`
             touching the DOM. When it is time to render, any UI can consume the same state without
             owning it.
           </p>
-          <a class="chapter-link" href="/explore/refsubject-renderer-independent-state">
+          <a class="chapter-link" href=${siteHref("/explore/refsubject-renderer-independent-state")}>
             Explore renderer-independent state →
           </a>
         </div>
@@ -114,7 +115,7 @@ export const Home = html`
             surrounding tree. Structural changes stay local, using optimized, identity-aware diffs
             that reuse existing nodes whenever possible.
           </p>
-          <a class="chapter-link" href="/explore/dom-updates-and-reconciliation">
+          <a class="chapter-link" href=${siteHref("/explore/dom-updates-and-reconciliation")}>
             Explore Template →
           </a>
         </div>
@@ -139,7 +140,7 @@ export const Home = html`
             relationships are modeled together, while application state and visual design remain
             yours.
           </p>
-          <a class="chapter-link" href="/explore/building-ui-components"
+          <a class="chapter-link" href=${siteHref("/explore/building-ui-components")}
             >Explore accessible UI components →</a
           >
         </div>
@@ -163,7 +164,7 @@ export const Home = html`
             third-party widgets, and other renderers keep their nodes and ownership. Typed updates
             only the fields and ranges it creates.
           </p>
-          <a class="chapter-link" href="/integrate">Build an integration →</a>
+          <a class="chapter-link" href=${siteHref("/integrate")}>Build an integration →</a>
         </div>
         <p class="chapter-note">
           <strong>Output moves both ways</strong>
@@ -188,7 +189,7 @@ export const Home = html`
             Effect's <code>HttpRouter</code>—then carries each handler's output, errors, and services
             through ${TermLink("fx", "Fx")}.
           </p>
-          <a class="chapter-link" href="/explore/router-navigation-live-selection">
+          <a class="chapter-link" href=${siteHref("/explore/router-navigation-live-selection")}>
             Explore truly type-safe routing →
           </a>
         </div>
@@ -208,7 +209,7 @@ export const Home = html`
         <h2 id="start-title">Follow the path that matches your work.</h2>
       </div>
       <div class="start-paths">
-        <a class="start-path" href="/explore">
+        <a class="start-path" href=${siteHref("/explore")}>
           <span class="start-path__audience">Application authors</span>
           <h3>Explore</h3>
           <p>
@@ -217,7 +218,7 @@ export const Home = html`
           </p>
           <span class="start-path__action">Build with Typed →</span>
         </a>
-        <a class="start-path" href="/integrate">
+        <a class="start-path" href=${siteHref("/integrate")}>
           <span class="start-path__audience">Framework and library authors</span>
           <h3>Integrate</h3>
           <p>
@@ -226,7 +227,7 @@ export const Home = html`
           </p>
           <span class="start-path__action">Extend the ecosystem →</span>
         </a>
-        <a class="start-path" href="/reference">
+        <a class="start-path" href=${siteHref("/reference")}>
           <span class="start-path__audience">Implementers and agents</span>
           <h3>Reference</h3>
           <p>

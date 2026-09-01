@@ -1,13 +1,14 @@
 import { html } from "@typed/template";
 import { packageCatalog, referenceCounts } from "../docs/Content.js";
 import type { ReferenceModule, ReferencePackage } from "../docs/Model.js";
+import { siteHref } from "../SiteHref.js";
 
 const exposureLabel = (count: number) => `${count} ${count === 1 ? "export" : "exports"}`;
 const exportNameOf = (id: string) => id.slice(id.indexOf("#") + 1);
 const packageHref = (pkg: (typeof packageCatalog)[number]) =>
   pkg.moduleCount === 1
-    ? `/reference/modules/${encodeURIComponent(pkg.packageName)}`
-    : `/reference/packages/${encodeURIComponent(pkg.packageName)}`;
+    ? siteHref(`/reference/modules/${encodeURIComponent(pkg.packageName)}`)
+    : siteHref(`/reference/packages/${encodeURIComponent(pkg.packageName)}`);
 const categoryId = (category: string) =>
   `category-${category.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, "-")}`;
 
@@ -104,7 +105,7 @@ export const Reference = html`
 
 export const PackagePage = (pkg: ReferencePackage) => html`
   <main id="main-content" class="page package-page reference-page" tabindex="-1">
-    ${ReferenceBreadcrumb([{ href: "/reference", label: "Reference" }, { label: pkg.packageName }])}
+    ${ReferenceBreadcrumb([{ href: siteHref("/reference"), label: "Reference" }, { label: pkg.packageName }])}
 
     <header class="page-intro reference-package-intro">
       <span class="index">PACKAGE</span>
@@ -143,8 +144,8 @@ export const PackagePage = (pkg: ReferencePackage) => html`
                   <a
                     href=${
                       module.exposureIds.length === 1
-                        ? `/reference/${encodeURIComponent(module.exposureIds[0]!)}`
-                        : `/reference/modules/${encodeURIComponent(module.consumerSpecifier)}`
+                        ? siteHref(`/reference/${encodeURIComponent(module.exposureIds[0]!)}`)
+                        : siteHref(`/reference/modules/${encodeURIComponent(module.consumerSpecifier)}`)
                     }
                   >
                     <code>${module.consumerSpecifier}</code>
@@ -162,9 +163,9 @@ export const PackagePage = (pkg: ReferencePackage) => html`
 export const ModulePage = (module: ReferenceModule) => html`
   <main id="main-content" class="page module-page reference-page" tabindex="-1">
     ${ReferenceBreadcrumb([
-      { href: "/reference", label: "Reference" },
+      { href: siteHref("/reference"), label: "Reference" },
       {
-        href: `/reference/packages/${encodeURIComponent(module.packageName)}`,
+        href: siteHref(`/reference/packages/${encodeURIComponent(module.packageName)}`),
         label: module.packageName,
       },
       { label: module.consumerSpecifier },
@@ -179,7 +180,7 @@ export const ModulePage = (module: ReferenceModule) => html`
       <div>
         <dt>Package</dt>
         <dd>
-          <a href="/reference/packages/${encodeURIComponent(module.packageName)}"
+          <a href=${siteHref(`/reference/packages/${encodeURIComponent(module.packageName)}`)}
             >${module.packageName}</a
           >
         </dd>
@@ -221,7 +222,7 @@ export const ModulePage = (module: ReferenceModule) => html`
                 ${category.exposureIds.map(
                   (id) => html`
                     <li>
-                      <a class="reference-symbol-row" href="/reference/${encodeURIComponent(id)}">
+                      <a class="reference-symbol-row" href=${siteHref(`/reference/${encodeURIComponent(id)}`)}>
                         <code>${exportNameOf(id)}</code>
                         <span>${module.consumerSpecifier}</span>
                       </a>

@@ -14,7 +14,7 @@ const websiteRoot = path.resolve(import.meta.dirname, "../..");
 const clientRoot = path.join(websiteRoot, "dist/client");
 const serverEntry = path.join(websiteRoot, "dist/server/server.js");
 const siteRoot = path.join(websiteRoot, "dist/site");
-const siteBase = normalizeBase(process.env.SITE_BASE ?? "/");
+const siteBase = normalizeBase(process.env.SITE_BASE ?? "/typed-smol/");
 
 const routeByPath = new Map(artifactManifest.routes.map((route) => [route.canonicalPath, route]));
 const routes = [...new Set(artifactManifest.routes.map(({ canonicalPath }) => canonicalPath))];

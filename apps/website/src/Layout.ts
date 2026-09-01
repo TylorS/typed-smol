@@ -4,14 +4,14 @@ import { Effect } from "effect";
 import clientUrl from "./client.js?url";
 import { pageTitle } from "./PageTitle.js";
 import { canonicalSiteOrigin } from "./Site.js";
+import { siteHref } from "./SiteHref.js";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/u, "");
-const siteHref = (path: string): string => `${basePath}${path}`;
 const clientScriptUrl = import.meta.env.DEV ? clientUrl : siteHref("/client.js");
 const title = Effect.map(CurrentPath, (path) => pageTitle(path, basePath));
 const primaryLink = (currentPath: string, path: string, label: string) => {
   const href = siteHref(path);
-  const current = currentPath === href || currentPath.startsWith(`${href}/`);
+  const current = currentPath === path || currentPath.startsWith(`${path}/`);
   return current
     ? html`<a href=${href} aria-current="page">${label}</a>`
     : html`<a href=${href}>${label}</a>`;
@@ -32,6 +32,7 @@ export const Layout = ({ content }: { readonly content: unknown }) => html`
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <meta name="theme-color" content="#030806" />
+      <base href=${siteHref("/")} />
       <meta
         name="description"
         content="Typed is cooperative, Effect-native infrastructure for applications, design systems, and frameworks."

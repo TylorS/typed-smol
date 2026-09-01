@@ -225,8 +225,17 @@
   display: grid;
   gap: var(--space-5);
   align-self: start;
+  box-sizing: border-box;
+  max-block-size: calc(100dvh - 3rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding-inline-end: var(--space-4);
   border-inline-end: 1px solid var(--line-soft);
+  scrollbar-gutter: stable;
+}
+
+.explore-mobile-navigation {
+  display: none;
 }
 
 .explore-navigation__home {
@@ -855,23 +864,85 @@
   }
 
   .explore-navigation {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: var(--space-4);
+    display: none;
+  }
+
+  .explore-mobile-navigation {
+    display: block;
+    margin-block: 0 var(--space-6);
     border: 1px solid var(--line-soft);
+    background: var(--surface-soft);
   }
 
-  .explore-layout > .explore-curriculum {
-    grid-row: 1;
+  .explore-mobile-navigation summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    color: var(--text);
+    cursor: pointer;
+    font: 700 0.78rem var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
-  .explore-layout > .explore-navigation {
-    grid-row: 2;
+  .explore-mobile-navigation summary::-webkit-details-marker {
+    display: none;
   }
 
-  .explore-navigation__home {
-    grid-column: 1 / -1;
+  .explore-mobile-navigation[open] summary > span:last-child {
+    transform: rotate(45deg);
+  }
+
+  .explore-mobile-navigation nav {
+    display: grid;
+    gap: var(--space-5);
+    max-block-size: min(65dvh, 34rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 var(--space-4) var(--space-4);
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .explore-mobile-navigation section {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .explore-mobile-navigation h2 {
+    margin: 0 0 0.35rem;
+    color: var(--muted);
+    font: 700 0.7rem var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .explore-mobile-navigation section a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    align-items: baseline;
+    padding: 0.5rem 0.55rem;
+    border-inline-start: 2px solid transparent;
+    color: var(--text-soft);
+    font-size: 0.9rem;
+    line-height: 1.3;
+    text-decoration: none;
+  }
+
+  .explore-mobile-navigation section a:hover,
+  .explore-mobile-navigation section a:focus-visible,
+  .explore-mobile-navigation section a[aria-current="page"] {
+    border-inline-start-color: var(--accent);
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .explore-mobile-navigation small {
+    color: var(--muted);
+    font: 0.68rem var(--mono);
+    text-transform: uppercase;
   }
 
   .guide-layout > .explore-navigation,
@@ -912,10 +983,6 @@
 @media (max-width: 520px) {
   .home-hero h1 {
     font-size: clamp(3.3rem, 18vw, 5rem);
-  }
-
-  .explore-navigation {
-    grid-template-columns: 1fr;
   }
 
   .guide-pagination {
