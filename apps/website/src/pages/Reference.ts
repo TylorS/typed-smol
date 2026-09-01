@@ -1,10 +1,6 @@
 import { html } from "@typed/template";
-import { packageCatalog } from "../docs/Content.js";
+import { packageCatalog, referenceCounts } from "../docs/Content.js";
 import type { ReferenceModule, ReferencePackage } from "../docs/Model.js";
-
-const packageCount = packageCatalog.length;
-const moduleCount = packageCatalog.reduce((total, pkg) => total + pkg.moduleCount, 0);
-const exposureCount = packageCatalog.reduce((total, pkg) => total + pkg.exposureCount, 0);
 
 const exposureLabel = (count: number) => `${count} ${count === 1 ? "export" : "exports"}`;
 const exportNameOf = (id: string) => id.slice(id.indexOf("#") + 1);
@@ -51,15 +47,15 @@ export const Reference = html`
       <dl class="reference-overview__totals">
         <div>
           <dt>Packages</dt>
-          <dd>${packageCount}</dd>
+          <dd>${referenceCounts.packageCount}</dd>
         </div>
         <div>
           <dt>Modules</dt>
-          <dd>${moduleCount}</dd>
+          <dd>${referenceCounts.moduleCount}</dd>
         </div>
         <div>
-          <dt>Public exports</dt>
-          <dd>${exposureCount}</dd>
+          <dt>Unique exports</dt>
+          <dd>${referenceCounts.uniqueExportCount}</dd>
         </div>
       </dl>
     </section>
@@ -93,8 +89,8 @@ export const Reference = html`
                     <dd>${pkg.moduleCount}</dd>
                   </div>
                   <div>
-                    <dt>Exports</dt>
-                    <dd>${pkg.exposureCount}</dd>
+                    <dt>Unique exports</dt>
+                    <dd>${pkg.uniqueExportCount}</dd>
                   </div>
                 </dl>
               </article>
@@ -125,8 +121,8 @@ export const PackagePage = (pkg: ReferencePackage) => html`
         <dd>${pkg.moduleSpecifiers.length}</dd>
       </div>
       <div>
-        <dt>Public exports</dt>
-        <dd>${pkg.exposureIds.length}</dd>
+        <dt>Unique exports</dt>
+        <dd>${pkg.uniqueExportCount}</dd>
       </div>
     </dl>
 
@@ -189,8 +185,8 @@ export const ModulePage = (module: ReferenceModule) => html`
         </dd>
       </div>
       <div>
-        <dt>Exports</dt>
-        <dd>${module.exposureIds.length}</dd>
+        <dt>Unique exports</dt>
+        <dd>${module.uniqueExportCount}</dd>
       </div>
       <div>
         <dt>Declarations</dt>

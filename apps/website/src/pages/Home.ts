@@ -188,7 +188,7 @@ export const Home = html`
             Effect's <code>HttpRouter</code>—then carries each handler's output, errors, and services
             through ${TermLink("fx", "Fx")}.
           </p>
-          <a class="chapter-link" href="/explore/routing-an-application">
+          <a class="chapter-link" href="/explore/router-navigation-live-selection">
             Explore truly type-safe routing →
           </a>
         </div>

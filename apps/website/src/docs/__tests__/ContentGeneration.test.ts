@@ -91,6 +91,8 @@ describe("Markdown content generation", () => {
         "fx-push-reactivity",
         "building-fx",
         "fx-dynamic-producers",
+        "sink-writing-effects",
+        "subject-event-publications",
         "transforming-fx",
         "fx-stateful-transforms",
         "fx-higher-order-and-concurrency",
@@ -103,8 +105,8 @@ describe("Markdown content generation", () => {
       ],
       State: [
         "refsubject-renderer-independent-state",
+        "refsubject-template-hydration",
         "refsubject-sources-equality-and-lifetime",
-        "subject-event-publications",
         "composing-refsubject-state",
         "derived-conditional-and-accumulated-state",
         "specialized-refsubject-state",
@@ -147,7 +149,7 @@ describe("Markdown content generation", () => {
       Applications: [
         "route-typed-url-inputs",
         "router-navigation-live-selection",
-        "routing-an-application",
+        "navigation-as-an-effect-service",
         "server-rendering-and-hydration",
         "testing-typed-systems",
       ],

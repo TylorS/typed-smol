@@ -9,7 +9,7 @@ import { extractTypeScriptFences } from "../Recipes.js";
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guidePath = path.join(websiteRoot, "content/guides/subject-event-publications.md");
 
-describe("Subject state guide", () => {
+describe("Subject Fx guide", () => {
   it("teaches the public event-publication boundary and its ownership policies", () => {
     const guide = parseGuideDocumentation(
       "subject-event-publications.md",
@@ -18,9 +18,9 @@ describe("Subject state guide", () => {
 
     expect(guide).toMatchObject({
       slug: "subject-event-publications",
-      section: "State",
+      section: "Fx",
       kind: "guide",
-      order: 2.075,
+      order: 1.17,
     });
     for (const term of [
       "Subject.make",

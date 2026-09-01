@@ -1,15 +1,20 @@
 ---
 title: Subject: publish events to many consumers
 summary: Connect independently owned producers and consumers through one scoped, typed publication boundary.
-section: State
+section: Fx
 kind: guide
-order: 2.075
+order: 1.17
 ---
 
 `Subject<A, E, R>` is a multicast publication boundary: it is an `Fx` that consumers subscribe to
 and a `Sink` that producers publish into. Reach for it when the next value is an event—an incoming
 message, a command, a connection transition, or an application notification—not a current value
 that somebody must be able to read now.
+
+Think of `Subject` as the point where a Sink gains an Fx side. Producers use the Sink operations
+`onSuccess` and `onFailure`; consumers use the Fx side through `Fx.observe`, `take`, `merge`, and
+the rest of the Fx vocabulary. A plain [Sink](/explore/sink-writing-effects) stops at the write
+boundary. A Subject additionally distributes each publication to its active observers.
 
 That distinction is the useful line between `Subject` and `RefSubject`. A `RefSubject` retains one
 current success or failure, so `yield* ref` samples current state and a new observer sees that
@@ -184,23 +189,19 @@ that is synchronization, unlike a fixed sleep. Test replay, failure delivery, or
 at this boundary; test a `RefSubject` transition separately when the claim is about current state.
 
 ```ts
-import { Effect, Fiber } from "effect";
-import { expect, it } from "vitest";
-import { Fx } from "@typed/fx";
-import * as Subject from "@typed/fx/Subject";
+import { Effect, Fiber } from "effect"
+import { expect, it } from "@effect/vitest"
+import { Fx } from "@typed/fx"
+import * as Subject from "@typed/fx/Subject"
 
-it("publishes to the active subscriber", () =>
-  Effect.scoped(
-    Effect.gen(function* () {
-      const events = yield* Subject.make<number>();
-      const received = yield* Fx.collectAllFork(Fx.take(events, 2));
+it.effect("publishes to the active subscriber", Effect.fn("publishesToActiveSubscriber")(function* () {
+  const events = yield* Subject.make<number>()
+  const received = yield* Fx.collectAllFork(Fx.take(events, 2))
 
-      yield* Effect.yieldNow;
-      expect(yield* events.subscriberCount).toBe(1);
-      yield* events.onSuccess(1);
-      yield* events.onSuccess(2);
-      expect(yield* Fiber.join(received)).toEqual([1, 2]);
-    }),
-  ).pipe(Effect.runPromise),
-);
+  yield* Effect.yieldNow
+  expect(yield* events.subscriberCount).toBe(1)
+  yield* events.onSuccess(1)
+  yield* events.onSuccess(2)
+  expect(yield* Fiber.join(received)).toEqual([1, 2])
+}))
 ```

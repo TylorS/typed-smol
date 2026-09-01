@@ -1,22 +1,59 @@
 ---
-title: Shared state contracts
-summary: Provide renderer-independent state through Effect Context without making a global mutable singleton.
+title: Shared reactive contracts
+summary: Use Effect Context to share exactly the reactive capability another subsystem needs.
 section: State
 kind: guide
 order: 2.35
 ---
 
-Use `RefSubject.Service` when independently constructed code needs one shared state contract: routes,
-commands, a worker adapter, a reusable UI component, or an application model. Do not use it merely
-to avoid passing a local value through one function. Local state is easier to understand when its
-owner is already obvious.
+Effect Context is useful when independently constructed code needs the same reactive capability:
+routes, commands, a worker adapter, a reusable UI component, or an application model. It is not a
+reason to turn every local value into a global. First choose the smallest contract the consumer
+actually needs.
+
+| Contract | It exposes | Use it for |
+| --- | --- | --- |
+| `Fx.Service` | an Fx producer | a replaceable feed, clock, transport, or domain stream |
+| `Sink.Service` | a write boundary | logs, telemetry, persistence, or outbound commands |
+| `Subject.Service` | both Fx and Sink | multicasting named events without a current value |
+| `RefSubject.Service` | current Effect read, Fx, and writes | shared state with named transitions |
+
+This is dependency injection, not a singleton pattern. The class declares a requirement; a `Layer`
+installs one implementation at an application, request, or test boundary. Consumers retain their
+typed `E` and `R` channels, while tests replace the concrete implementation without patching a
+module-global object.
 
 Effect Context is an explicit dependency map. A `Layer` is the recipe that builds and provides one
-or more dependencies for a running program. In the examples, the Layer owns construction of the
-state; consumers only ask for the `CounterState` contract. See Effect's
+or more dependencies for a running program. See Effect's
 [services guide](https://www.effect.website/docs/v4/requirements-management/services/) and
 [Layer guide](https://www.effect.website/docs/v4/requirements-management/layers/) for the general
-model. A Scope still owns resource cleanup for live sources used to initialize the ref.
+model. A Scope still owns resource cleanup for live sources and subscriptions installed by a Layer.
+
+## Name the capability, then install an implementation
+
+Each service facade is directly usable as the same Fx, Sink, Subject, or RefSubject capability it
+describes. The Layer constructor is where the application chooses the implementation.
+
+```ts
+import { Effect } from "effect"
+import { Fx, RefSubject, Sink, Subject } from "@typed/fx"
+
+class Ticks extends Fx.Service<Ticks, number>()("app/Ticks") {}
+class Audit extends Sink.Service<Audit, string>()("app/Audit") {}
+class Notifications extends Subject.Service<Notifications, string>()("app/Notifications") {}
+class SessionState extends RefSubject.Service<SessionState, { readonly signedIn: boolean }>()(
+  "app/SessionState",
+) {}
+
+const TicksLive = Ticks.make(Fx.fromIterable([1, 2, 3]))
+const AuditLive = Audit.make(Effect.logError, Effect.log)
+const NotificationsLive = Notifications.make(1)
+const SessionStateLive = SessionState.make({ signedIn: false })
+```
+
+`Ticks` can only be consumed. `Audit` can only receive values. `Notifications` adds observation to
+publication, but has no current value. `SessionState` adds a current read and serialized writes.
+That capability difference is visible to TypeScript before any implementation is provided.
 
 ## Define the state contract once
 

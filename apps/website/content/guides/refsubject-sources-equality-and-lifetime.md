@@ -1,6 +1,6 @@
 ---
-title: State sources, equality, and lifetime
-summary: Turn values and Effect producers into current state without hiding when updates start, repeat, or stop.
+title: RefSubject inputs, equality, and lifetime
+summary: Use one constructor for values, Effects, Streams, and Fx while knowing when each source starts and stops.
 section: State
 kind: guide
 order: 2.05
@@ -11,14 +11,40 @@ for the latest value and observers can follow later distinct changes. It is not 
 subscription. In particular, it matters both when the constructor Effect is run and when the input
 producer is run.
 
-Calling `RefSubject.make`, `fromEffect`, `fromFx`, or `fromStream` only creates an
+Calling `RefSubject.make` only creates an
 [Effect](https://www.effect.website/docs/v4/getting-started/the-effect-type/) description. Executing
 that Effect—usually `yield*`-ing it in an application-owned Scope—allocates the ref and its private
 child Scope. What happens next depends on the input shape.
 
+`make` is the application-facing constructor for every input form: a regular value, an Effect, a
+Stream, or an Fx. The overload resolves the input without asking application code to select a
+different constructor name. The sections below distinguish their behavior.
+
+## A regular value is current immediately
+
+`RefSubject.make(value)` installs that value as the first committed state when its construction
+Effect runs. There is no initializer to wait for and no source worker to retain. Use this form for
+ordinary local or shared state whose later changes come from named `set`, `update`, or transactional
+transitions.
+
+```ts
+import { Effect } from "effect"
+import { RefSubject } from "@typed/fx"
+
+const makeDraftState = Effect.fn("makeDraftState")(function* () {
+  const draft = yield* RefSubject.make({ title: "Untitled", body: "" })
+
+  yield* RefSubject.update(draft, (current) => ({ ...current, title: "Typed" }))
+  return yield* draft
+})
+```
+
+The construction Effect still belongs to its real owner because every RefSubject can later have
+observers. It does not, however, start a hidden producer merely because the initial value is plain.
+
 ## An Effect is the lazy initial value
 
-`fromEffect` constructs the ref without running its input Effect. The first current read, or the
+`RefSubject.make(effect)` constructs the ref without running its input Effect. The first current read, or the
 first execution of an Fx observation of the ref, starts one initializer in the ref's private Scope.
 Every concurrent reader waits for that same initializer. When it succeeds, the result becomes the
 current value; the input Effect is not run again merely because another reader or observer arrives.
@@ -32,7 +58,7 @@ import { RefSubject } from "@typed/fx";
 let starts = 0;
 
 const makeProfileState = Effect.gen(function* () {
-  const profile = yield* RefSubject.fromEffect(
+  const profile = yield* RefSubject.make(
     Effect.sync(() => {
       starts += 1;
       return { name: "Ada" };
@@ -52,8 +78,8 @@ or from a different live source; they do not cause a completed Effect to repeat.
 
 ## Fx and Stream begin when the ref is constructed
 
-`fromFx` and `fromStream` also remain lazy until their constructor Effect is executed. Unlike
-`fromEffect`, executing that constructor immediately forks one consumption of the source into the
+`RefSubject.make(fx)` and `RefSubject.make(stream)` also remain lazy until their constructor Effect
+is executed. Unlike an Effect input, executing that constructor immediately forks one consumption of the source into the
 ref's private Scope. It does not wait for a read or observer. The first current read waits until the
 source publishes either a success or an expected failure; it does **not** wait for a finite source to
 finish. Each later success replaces the current value and is offered to observers.
@@ -63,8 +89,8 @@ import { Effect, Stream } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 
 const makeConnectionState = Effect.gen(function* () {
-  const presence = yield* RefSubject.fromFx(Fx.fromIterable(["connecting", "online"]));
-  const events = yield* RefSubject.fromStream(Stream.fromIterable(["opened", "ready"]));
+  const presence = yield* RefSubject.make(Fx.fromIterable(["connecting", "online"]));
+  const events = yield* RefSubject.make(Stream.fromIterable(["opened", "ready"]));
 
   // Both inputs already have one owner-run. This read waits only for `presence`'s first value.
   const currentPresence = yield* presence;
@@ -79,6 +105,43 @@ the ref retains its most recent success or failure. It does not restart when a c
 new consumer arrives. Construct a new ref for a fresh input run. If source execution instead must
 start with the first consumer, stop with the last, and restart for the next consumer session, keep
 it as `Fx` and use `Subject.share`; that is a demand-sharing policy, not a RefSubject policy.
+
+## Delete resets the current slot, not every source
+
+`RefSubject.delete(ref)` returns the prior current value as an `Option` and resets the ref to its
+initialization state. What initializes it next depends on the input passed to `make`.
+
+| `make` input | After `delete` |
+| --- | --- |
+| Regular value | The next read restores that original value. |
+| Effect | The next read starts the initial Effect again, unless an initializer is already running. |
+| Fx or Stream | The existing source is neither interrupted nor restarted; its next event fills the empty slot. |
+
+Deleting an Fx or Stream ref after its source has ended does not create a fresh source run. A later
+read waits for an explicit `set` or another source event that can no longer arrive. Construct a new
+ref when a completed source needs a new execution. `delete` also does not interrupt an in-flight
+Effect initializer; use `interrupt` only when the real owner is ending.
+
+```ts
+import { Effect, Option } from "effect"
+import { RefSubject } from "@typed/fx"
+
+let starts = 0
+const loadProfile = Effect.sync(() => ({ id: ++starts }))
+
+const reloadProfile = Effect.fn("reloadProfile")(function* () {
+  const profile = yield* RefSubject.make(loadProfile)
+  const first = yield* profile
+  const previous = yield* RefSubject.delete(profile)
+  const reloaded = yield* profile
+
+  return { first, previous: Option.getOrUndefined(previous), reloaded }
+})
+```
+
+Here `first.id` is `1` and `reloaded.id` is `2`: an Effect input is run once per initialization, not
+once per read. For a plain-value ref, the same sequence restores the original value without running
+user code.
 
 ## Failures stay visible; services are captured at construction
 
@@ -110,7 +173,7 @@ const source = Effect.flatMap(Profiles, ({ load }) => load);
 
 const makeProfileState = Effect.gen(function* () {
   // Constructing requires `Profiles` and Scope; `profile` retains only `ProfileMissing` as E.
-  const profile = yield* RefSubject.fromEffect(source);
+  const profile = yield* RefSubject.make(source);
 
   return yield* profile.pipe(
     Effect.catchTag("ProfileMissing", () => Effect.succeed({ name: "Guest" })),

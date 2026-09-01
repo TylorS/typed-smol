@@ -32,7 +32,7 @@ export const pageMarkdown: Readonly<Record<string, string>> = {
   "/reference": `# Reference\n\n${packageCatalog
     .map(
       (pkg) =>
-        `- [${pkg.packageName}](${origin}/reference/packages/${encodeURIComponent(pkg.packageName)}): ${pkg.exposureCount} public exposures`,
+        `- [${pkg.packageName}](${origin}/reference/packages/${encodeURIComponent(pkg.packageName)}): ${pkg.uniqueExportCount} unique exports`,
     )
     .join("\n")}\n`,
   "/glossary": `# Glossary\n\n${documentationModel.glossary

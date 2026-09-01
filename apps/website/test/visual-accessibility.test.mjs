@@ -28,13 +28,38 @@ test("the production shell serves the local Typed mark as its accessible brand",
   const html = await home.text();
   assert.match(
     html,
-    /<a class="brand"[^>]*aria-label="Typed home"[^>]*>[\s\S]*?<img[^>]*class="brand__logo"[^>]*alt=""/,
+    /<a class="brand"[^>]*aria-label="Typed home"[^>]*>[\s\S]*?<span[^>]*class="typewriter"[^>]*aria-hidden="true"/,
   );
 
   const logo = await fetch(`http://127.0.0.1:${port}/typed.svg`);
-  assert.equal(logo.status, 200);
-  assert.match(logo.headers.get("content-type") ?? "", /^image\/svg\+xml\b/);
-  assert.match(await logo.text(), /@media\(prefers-reduced-motion: reduce\)[\s\S]*animation: none/);
+  assert.equal(logo.status, 404);
+
+  const font = await fetch(`http://127.0.0.1:${port}/fonts/jetbrains-mono-latin.woff2`);
+  assert.equal(font.status, 200);
+
+  const css = await readFile(new URL("../public/styles/layout.css", import.meta.url), "utf8");
+  assert.match(
+    css,
+    /\.brand\s*\{[\s\S]*?inline-size:\s*7\.25rem;[\s\S]*?block-size:\s*3\.1rem;/,
+    "the animated wordmark must retain its original fixed footprint",
+  );
+  assert.match(
+    css,
+    /animation:\s*typing 7\.5s steps\(100, end\) infinite,\s*blink-caret 0\.5s step-end infinite/,
+  );
+  for (const [range, content] of [
+    ["5%,\\s*86%", "T"],
+    ["10%,\\s*83%", "Ty"],
+    ["15%,\\s*80%", "Typ"],
+    ["20%,\\s*78%", "Type"],
+    ["25%,\\s*75%", "Typed"],
+  ]) {
+    assert.match(css, new RegExp(`${range}\\s*\\{\\s*content: "${content}"`));
+  }
+  assert.match(
+    css,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.typewriter::after[\s\S]*?content: "Typed";[\s\S]*?animation: none/,
+  );
 });
 
 test("semantic dark and light tokens meet WCAG AA contrast", async () => {

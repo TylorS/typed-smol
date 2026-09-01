@@ -78,7 +78,7 @@ const generatedModule = (imports: string, values: Readonly<Record<string, unknow
 
 const packageMarkdown = (inventory: ReferenceInventory, packageName: string): string => {
   const pkg = inventory.packages.find((candidate) => candidate.packageName === packageName)!;
-  return `# ${packageName}\n\nVersion ${pkg.packageVersion}. ${pkg.exposureIds.length} public exposures across ${pkg.moduleSpecifiers.length} modules.\n\n${pkg.moduleSpecifiers
+  return `# ${packageName}\n\nVersion ${pkg.packageVersion}. ${pkg.uniqueExportCount} unique exports across ${pkg.moduleSpecifiers.length} modules.\n\n${pkg.moduleSpecifiers
     .map((specifier) => `- [${specifier}](/reference/modules/${encodeURIComponent(specifier)})`)
     .join("\n")}\n`;
 };
@@ -87,7 +87,7 @@ const moduleMarkdown = (inventory: ReferenceInventory, consumerSpecifier: string
   const module = inventory.modules.find(
     (candidate) => candidate.consumerSpecifier === consumerSpecifier,
   )!;
-  return `# ${consumerSpecifier}\n\n${module.exposureIds.length} public exposures.\n\n${module.categories
+  return `# ${consumerSpecifier}\n\n${module.uniqueExportCount} unique exports.\n\n${module.categories
     .map(
       (category) =>
         `## ${category.name}\n\n${category.exposureIds
@@ -262,7 +262,7 @@ const program = Effect.gen(function* () {
     counts: {
       packages: inventory.packages.length,
       modules: inventory.modules.length,
-      exposures: inventory.exposures.length,
+      uniqueExports: inventory.uniqueExportCount,
       declarations: inventory.declarations.length,
       resources: inventory.resources.length,
     },
@@ -320,11 +320,15 @@ const program = Effect.gen(function* () {
           packageName: pkg.packageName,
           packageVersion: pkg.packageVersion,
           moduleCount: pkg.moduleSpecifiers.length,
-          exposureCount: pkg.exposureIds.length,
+          uniqueExportCount: pkg.uniqueExportCount,
         })),
         null,
         2,
-      )} as const;\n`,
+      )} as const;\n\nexport const referenceCounts = ${JSON.stringify({
+        packageCount: inventory.packages.length,
+        moduleCount: inventory.modules.length,
+        uniqueExportCount: inventory.uniqueExportCount,
+      })} as const;\n`,
     );
     for (const guide of guides) {
       nodeFs.writeFileSync(path.join(docsStage, "guides", `${guide.slug}.md`), `${guide.body}\n`);
@@ -385,11 +389,11 @@ const program = Effect.gen(function* () {
     );
     nodeFs.writeFileSync(
       path.join(referenceStage, "llms.txt"),
-      `# Typed API reference\n\n${inventory.packages.map((pkg) => `- ${pkg.packageName}: ${pkg.exposureIds.length} exposures`).join("\n")}\n`,
+      `# Typed API reference\n\n${inventory.packages.map((pkg) => `- ${pkg.packageName}: ${pkg.uniqueExportCount} unique exports`).join("\n")}\n`,
     );
     nodeFs.writeFileSync(
       path.join(referenceStage, "llms-full.txt"),
-      `${guides.map(({ title, summary, body }) => `# ${title}\n\n${summary}\n\n${body}`).join("\n\n---\n\n")}\n\n# API modules\n\n${inventory.modules.map(({ consumerSpecifier, exposureIds }) => `- ${consumerSpecifier}: ${exposureIds.length}`).join("\n")}\n`,
+      `${guides.map(({ title, summary, body }) => `# ${title}\n\n${summary}\n\n${body}`).join("\n\n---\n\n")}\n\n# API modules\n\n${inventory.modules.map(({ consumerSpecifier, uniqueExportCount }) => `- ${consumerSpecifier}: ${uniqueExportCount} unique exports`).join("\n")}\n`,
     );
     nodeFs.writeFileSync(
       path.join(schemasStage, "documentation-v1.json"),

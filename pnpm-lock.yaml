@@ -86,6 +86,9 @@ importers:
       '@typed/fx':
         specifier: workspace:*
         version: link:../../packages/fx
+      '@typed/guard':
+        specifier: workspace:*
+        version: link:../../packages/guard
       '@typed/id':
         specifier: workspace:*
         version: link:../../packages/id
@@ -111,6 +114,9 @@ importers:
         specifier: 4.5.4
         version: 4.5.4
     devDependencies:
+      '@effect/vitest':
+        specifier: 4.0.0-rc.111
+        version: 4.0.0-rc.111(effect@4.0.0-rc.111)(vitest@4.1.11)
       '@typed/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -547,6 +553,12 @@ packages:
   '@effect/tsgo@0.36.5':
     resolution: {integrity: sha512-BHxVjeRK1/XlqYHWXkbT4W9JpOrT3sNA2wrfwQPBTojD5OSyxI2TUIltobYhWudyfuCrn770qP6uOpDjdrmghA==}
     hasBin: true
+
+  '@effect/vitest@4.0.0-rc.111':
+    resolution: {integrity: sha512-YDaEVT+grREBVMzykRNFtJwGxy02achzT0WXZYwMJA4ukzuB9krkgQ5roc3N6zhC3NQq/j4IyM32/Pcov7AhHw==}
+    peerDependencies:
+      effect: ^4.0.0-rc.111
+      vitest: '>=4.1.0 <5.0.0'
 
   '@emnapi/core@1.11.0':
     resolution: {integrity: sha512-l9Oo58x0HOP5znGzVhYW9U3e5wVuA4LAZU2AGezTmkhO1CgQRFDhDg4nneHsu/t3WniXg9QrG2nIXL/ZS8ln8Q==}
@@ -3104,6 +3116,11 @@ snapshots:
       '@effect/tsgo-linux-x64': 0.36.5
       '@effect/tsgo-win32-arm64': 0.36.5
       '@effect/tsgo-win32-x64': 0.36.5
+
+  '@effect/vitest@4.0.0-rc.111(effect@4.0.0-rc.111)(vitest@4.1.11)':
+    dependencies:
+      effect: 4.0.0-rc.111
+      vitest: 4.1.11(@types/node@26.2.0)(@vitest/browser-playwright@4.1.11)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.6)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
   '@emnapi/core@1.11.0':
     dependencies:

@@ -17,6 +17,7 @@ describe("package reference", () => {
       packageVersion: "2.0.0-beta.4",
       moduleSpecifiers: ["@typed/fx/Fx", "@typed/fx/RefSubject"],
       exposureIds: ["@typed/fx/Fx#sync", "@typed/fx/RefSubject#make"],
+      uniqueExportCount: 2,
       moduleGroups: [
         {
           id: "@typed/fx/Fx",
@@ -42,6 +43,8 @@ describe("package reference", () => {
     });
 
     expect(output).toContain("Import surfaces");
+    expect(output).toMatch(/<dt>Unique exports<\/dt><dd>[\s\S]*?2[\s\S]*?<\/dd>/u);
+    expect(output).not.toContain("Public exposures");
     expect(output).toContain('class="reference-module-row"');
     expect(output).toContain(
       `/reference/${encodeURIComponent("@typed/fx/Fx#sync")}`,

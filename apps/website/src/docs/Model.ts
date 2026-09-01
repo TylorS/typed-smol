@@ -292,6 +292,7 @@ export const ReferenceModuleSchema = Schema.Struct({
   mediaType: Schema.Literals(["application/json", "text/typescript"]),
   categories: Schema.Array(ReferenceCategorySchema),
   exposureIds: Schema.Array(Schema.String),
+  uniqueExportCount: Schema.Number,
 });
 export type ReferenceModule = typeof ReferenceModuleSchema.Type;
 
@@ -314,6 +315,7 @@ export const ReferencePackageSchema = Schema.Struct({
   moduleSpecifiers: Schema.Array(Schema.String),
   moduleGroups: Schema.Array(ReferenceModuleGroupSchema),
   exposureIds: Schema.Array(Schema.String),
+  uniqueExportCount: Schema.Number,
 });
 export type ReferencePackage = typeof ReferencePackageSchema.Type;
 
@@ -327,6 +329,7 @@ export const ReferenceRouteSchema = Schema.Struct({
 export type ReferenceRoute = typeof ReferenceRouteSchema.Type;
 
 export const ReferenceInventorySchema = Schema.Struct({
+  uniqueExportCount: Schema.Number,
   packages: Schema.Array(ReferencePackageSchema),
   modules: Schema.Array(ReferenceModuleSchema),
   declarations: Schema.Array(DeclarationRecordSchema),

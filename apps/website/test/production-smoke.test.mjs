@@ -263,10 +263,12 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
 
   const manifestResponse = await fetch(`http://127.0.0.1:${port}/docs-manifest.json`);
   const manifest = await manifestResponse.json();
-  assert.equal(
-    manifest.routes.filter(({ kind }) => kind === "exposure").length,
-    manifest.counts.exposures,
+  assert.ok(manifest.counts.uniqueExports > 0);
+  assert.ok(
+    manifest.routes.filter(({ kind }) => kind === "exposure").length >=
+      manifest.counts.uniqueExports,
   );
+  assert.equal(manifest.counts.exposures, undefined);
   assert.ok(manifest.routes.some(({ id }) => id === resourceId));
   assert.ok(manifest.routes.some(({ id }) => id === `module:${moduleId}`));
   assert.equal(

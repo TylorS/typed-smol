@@ -1,9 +1,4 @@
 /* Reference: stable, scanable information architecture. */
-.reference-page,
-.reference-overview {
-  width: min(100%, var(--measure-wide));
-}
-
 .reference-page {
   overflow-x: clip;
 }

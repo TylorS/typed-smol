@@ -51,7 +51,7 @@ different `RenderTemplate` layer without changing the template or its `Fx` type.
 ## Parse once, retain part paths
 
 [`parse`](/reference/%40typed%2Ftemplate%2FParser%23parse) turns the literal strings into a public
-[`Template`](/reference/%40typed%2Ftemplate%2FTemplate) AST. The parser records the authored element
+[`Template`](/reference/modules/%40typed%2Ftemplate%2FTemplate) AST. The parser records the authored element
 tree and turns each interpolation into a typed part: text, node, attribute, boolean, property,
 class, data, event, ref, spread, or a sparse text/attribute value.
 

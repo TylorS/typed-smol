@@ -38,7 +38,7 @@ export const Layout = ({ content }: { readonly content: unknown }) => html`
       />
       <link rel="canonical" href="${canonicalSiteOrigin}/" />
       <link rel="alternate" type="text/markdown" href="${canonicalSiteOrigin}/index.md" />
-      <link rel="icon" type="image/svg+xml" href=${siteHref("/typed.svg")} />
+      <link rel="icon" type="image/png" href=${siteHref("/favicon.png")} />
       <link rel="stylesheet" href=${siteHref("/styles.css")} />
       <title>${title}</title>
     </head>
@@ -46,7 +46,7 @@ export const Layout = ({ content }: { readonly content: unknown }) => html`
       <a class="skip" href="#main-content">Skip to content</a>
       <header class="site-header">
         <a class="brand" href=${siteHref("/")} aria-label="Typed home">
-          <img class="brand__logo" src=${siteHref("/typed.svg")} width="150" height="64" alt="" />
+          <span class="typewriter" aria-hidden="true"></span>
         </a>
         <nav aria-label="Primary navigation">${primaryNavigation}</nav>
         <div class="header-utilities">
@@ -101,7 +101,7 @@ export const Layout = ({ content }: { readonly content: unknown }) => html`
 
       <footer>
         <a class="brand" href=${siteHref("/")} aria-label="Typed home">
-          <img class="brand__logo" src=${siteHref("/typed.svg")} width="150" height="64" alt="" />
+          <span class="typewriter" aria-hidden="true"></span>
         </a>
         <p>Cooperative infrastructure for the web, built on Effect.</p>
         <nav aria-label="Resources">

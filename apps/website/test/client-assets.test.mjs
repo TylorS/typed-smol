@@ -20,10 +20,13 @@ test("a client build leaves every production shell asset ready to serve", async 
     "styles.css",
     "styles/tokens.css",
     "styles/fx-marble.css",
-    "typed.svg",
+    "fonts/jetbrains-mono-latin.woff2",
+    "favicon.png",
   ]) {
     await stat(path.join(clientRoot, pathname));
   }
+
+  await assert.rejects(stat(path.join(clientRoot, "typed.svg")));
 
   const styles = await readFile(path.join(clientRoot, "styles.css"), "utf8");
   assert.match(styles, /styles\/tokens\.css/);

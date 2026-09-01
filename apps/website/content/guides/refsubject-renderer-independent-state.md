@@ -13,9 +13,14 @@ The inverse is also useful: state does not have to be global or permanent. When 
 only as long as a component, create its `RefSubject` in that component's Scope. The component owns
 the lifetime; the state logic remains independent enough to exercise without rendering it.
 
-`RefSubject<A, E, R>` has a current value, typed expected errors, and typed service requirements.
-Yield it in an Effect to read its current `A`; use it as an `Fx` to observe committed changes; write
-through its serialized update boundary. One contract covers state code, tests, and rendering.
+`RefSubject<A, E, R>` is both an `Effect<A, E, R>` for a current read and an `Fx<A, E, R>` for
+changes over time. Yield it to read the value that has already committed; pass the same value to Fx
+combinators when later commits matter. Write through its serialized update boundary. One contract
+covers state code, tests, and rendering.
+
+Creating a ref requires the Scope owned by the application or component that keeps it alive. Reading,
+updating, and deriving an existing ref do not need a fresh Scope. Do not wrap a short state
+transition in `Effect.scoped` merely to construct and immediately close its owner.
 
 ## Model the transition where the state lives
 
@@ -24,28 +29,34 @@ Here, selection is complete and testable without a template. `RefSubject.map` cr
 of writable state.
 
 ```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
+import { Effect } from "effect"
+import { RefSubject } from "@typed/fx"
 
 const select = <E, R>(selectedIds: RefSubject.RefSubject<ReadonlySet<string>, E, R>, id: string) =>
-  RefSubject.update(selectedIds, (current) => new Set([...current, id]));
+  RefSubject.update(selectedIds, (current) => new Set([...current, id]))
 
-const program = Effect.scoped(
-  Effect.gen(function* () {
-    const selectedIds = yield* RefSubject.make<ReadonlySet<string>>(new Set());
-    const selectedCount = RefSubject.map(selectedIds, (ids) => ids.size);
+const makeSelectionModel = Effect.fn("makeSelectionModel")(function* () {
+  const selectedIds = yield* RefSubject.make<ReadonlySet<string>>(new Set())
+  const selectedCount = RefSubject.map(selectedIds, (ids) => ids.size)
 
-    yield* select(selectedIds, "invoice-42");
-    yield* select(selectedIds, "invoice-42");
+  return {
+    selectedIds,
+    selectedCount,
+    select: (id: string) => select(selectedIds, id),
+  }
+})
 
-    return {
-      ids: [...(yield* selectedIds)],
-      count: yield* selectedCount,
-    };
-  }),
-);
+const inspectSelection = Effect.fn("inspectSelection")(function* () {
+  const selection = yield* makeSelectionModel()
 
-await Effect.runPromise(program); // { ids: ["invoice-42"], count: 1 }
+  yield* selection.select("invoice-42")
+  yield* selection.select("invoice-42")
+
+  return {
+    ids: [...(yield* selection.selectedIds)],
+    count: yield* selection.selectedCount,
+  }
+})
 ```
 
 `set` replaces a value. `update` reads the committed value, derives the next one, and commits it.
@@ -56,28 +67,30 @@ to invoke them.
 
 ## Read now; observe changes when needed
 
-The same ref is an Effect for its current value and an `Fx` for later commits. Observing is explicit:
-it starts when the observing Effect runs and belongs to the Scope that runs it.
+The two capabilities are independently useful. The Effect view makes imperative decisions from the
+current value. The Fx view builds a long-lived reaction to updates. Neither operation turns state
+into UI.
 
 ```ts
-import { Effect } from "effect";
-import { Fx, RefSubject } from "@typed/fx";
+import { Effect, Scope } from "effect"
+import { Fx, RefSubject } from "@typed/fx"
 
-const program = Effect.scoped(
-  Effect.gen(function* () {
-    const count = yield* RefSubject.make(0);
+const currentCount = (count: RefSubject.RefSubject<number>): Effect.Effect<number> => count
 
-    yield* Effect.forkScoped(
-      Fx.observe(count, (value) => Effect.log(`count is ${value}`)),
-    );
+const countChanges = (count: RefSubject.RefSubject<number>): Fx.Fx<string, never, Scope.Scope> =>
+  Fx.map(count, (value) => `count is ${value}`)
 
-    yield* RefSubject.update(count, (value) => value + 1);
-    return yield* count;
-  }),
-);
+const changeCount = (count: RefSubject.RefSubject<number>) =>
+  RefSubject.update(count, (value) => value + 1)
 
-await Effect.runPromise(program); // 1
+const decideFromCount = Effect.fn("decideFromCount")(function* (count: RefSubject.RefSubject<number>) {
+  return (yield* currentCount(count)) === 0 ? "empty" : "non-empty"
+})
 ```
+
+`countChanges` is only a description of what to emit. A consumer such as `Fx.observe` decides when
+to run it and owns that subscription's Scope. `currentCount` and `changeCount` work against the same
+ref without starting an observer or adding another lifecycle.
 
 `Computed` always has a value derived from its source. A `Filtered` view represents derived state
 that may currently be absent. Both stay read-only, so writes remain visible at the source's named

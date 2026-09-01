@@ -17,16 +17,25 @@ const guides = [
     terms: ["RefSubject<A, E, R>", "RefSubject.make", "RefSubject.update", "Computed", "Filtered"],
   },
   {
+    file: "refsubject-template-hydration.md",
+    section: "State",
+    kind: "guide",
+    order: 2.04,
+    terms: ["RefSubject.hydrate", "hydrateAll", "HydrationRef", "html", "Schema"],
+  },
+  {
     file: "refsubject-sources-equality-and-lifetime.md",
     section: "State",
     kind: "guide",
     order: 2.05,
     terms: [
-      "fromEffect",
-      "fromFx",
-      "fromStream",
+      "RefSubject.make",
+      "Effect",
+      "Stream",
+      "Fx",
       "RefSubjectOptions",
       "subscriberCount",
+      "RefSubject.delete",
       "interrupt",
     ],
   },
@@ -49,7 +58,15 @@ const guides = [
     section: "State",
     kind: "guide",
     order: 2.35,
-    terms: ["RefSubject.Service", "computedFromService", "filteredFromService", "Layer"],
+    terms: [
+      "Fx.Service",
+      "Sink.Service",
+      "Subject.Service",
+      "RefSubject.Service",
+      "computedFromService",
+      "filteredFromService",
+      "Layer",
+    ],
   },
 ] as const;
 
@@ -70,6 +87,19 @@ describe("RefSubject state curriculum", () => {
       expect(extractTypeScriptFences(guide.body).length).toBeGreaterThanOrEqual(2);
       for (const term of expected.terms) expect(guide.body).toContain(term);
     }
+  });
+
+  it("introduces RefSubject as both a current Effect read and an Fx of committed changes", () => {
+    const guide = parseGuideDocumentation(
+      "refsubject-renderer-independent-state.md",
+      fs.readFileSync(
+        path.join(websiteRoot, "content/guides", "refsubject-renderer-independent-state.md"),
+        "utf8",
+      ),
+    );
+
+    expect(guide.body).toContain("both an `Effect<A, E, R>` for a current read and an `Fx<A, E, R>`");
+    expect(extractTypeScriptFences(guide.body).join("\n")).not.toContain("Effect.scoped");
   });
 
   it("keeps every state curriculum example independently compilable", () => {

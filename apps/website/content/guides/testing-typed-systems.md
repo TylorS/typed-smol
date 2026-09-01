@@ -11,29 +11,30 @@ not need markup; a DOM test should assert native behavior and identity; a route 
 depend on the browser's history. This keeps failures local for application developers and protects
 the public contracts that library authors maintain.
 
+Use [`@effect/vitest`](https://www.npmjs.com/package/@effect/vitest) as the harness. Its
+`it.effect` runs an Effect test with the Scope it owns, so examples can acquire a `RefSubject`, run
+an Fx, or mount a renderer without manually calling `Effect.runPromise` or wrapping the test in
+`Effect.scoped`. `layer` shares an application layer across a related group of tests.
+
 ## 1. Prove finite and live `Fx` behavior
 
 For a finite producer, collect values and assert the result. `Fx.collectAll` starts the source when
 the test runs, preserves order, and completes when the source completes:
 
 ```ts
-import { Effect } from "effect";
-import { expect, it } from "vitest";
-import * as Fx from "@typed/fx/Fx";
+import { Effect } from "effect"
+import { expect, it } from "@effect/vitest"
+import * as Fx from "@typed/fx/Fx"
 
-it("maps and filters a finite producer", () =>
-  Effect.scoped(
-    Effect.gen(function* () {
-      const values = yield* Fx.collectAll(
-        Fx.fromIterable([1, 2, 3, 4]).pipe(
-          Fx.filter((n) => n % 2 === 0),
-          Fx.map((n) => n * 2),
-        ),
-      );
-      expect(values).toEqual([4, 8]);
-    }),
-  ).pipe(Effect.runPromise),
-);
+it.effect("maps and filters a finite producer", Effect.fn("mapsAndFilters")(function* () {
+    const values = yield* Fx.collectAll(
+      Fx.fromIterable([1, 2, 3, 4]).pipe(
+        Fx.filter((n) => n % 2 === 0),
+        Fx.map((n) => n * 2),
+      ),
+    )
+    expect(values).toEqual([4, 8])
+  }))
 ```
 
 Use `Fx.collectUpTo` or `Fx.take` for an open source; collecting an infinite source never finishes.
@@ -41,27 +42,23 @@ For a callback source, test the owner as well as delivery. A returned cleanup is
 subscription Scope, so interruption must release it:
 
 ```ts
-import { Effect, Fiber } from "effect";
-import { expect, it } from "vitest";
-import * as Fx from "@typed/fx/Fx";
+import { Effect, Fiber } from "effect"
+import { expect, it } from "@effect/vitest"
+import * as Fx from "@typed/fx/Fx"
 
-it("cleans up a live callback source", () =>
-  Effect.scoped(
-    Effect.gen(function* () {
-      let active = 0;
-      const source = Fx.callback<number>(() => {
-        active++;
-        return Effect.sync(() => active--);
-      });
+it.effect("cleans up a live callback source", Effect.fn("cleansUpCallback")(function* () {
+    let active = 0
+    const source = Fx.callback<number>(() => {
+      active++
+      return Effect.sync(() => active--)
+    })
 
-      const fiber = yield* Fx.collectAllFork(source);
-      yield* Effect.yieldNow;
-      expect(active).toBe(1);
-      yield* Fiber.interrupt(fiber);
-      expect(active).toBe(0);
-    }),
-  ).pipe(Effect.runPromise),
-);
+    const fiber = yield* Fx.collectAllFork(source)
+    yield* Effect.yieldNow
+    expect(active).toBe(1)
+    yield* Fiber.interrupt(fiber)
+    expect(active).toBe(0)
+  }))
 ```
 
 The same shape catches leaked timers, sockets, observers, and subscriptions. Use `Effect.exit` when
@@ -73,24 +70,20 @@ the claim is a typed failure, rather than asserting on an untyped rejected Promi
 directly; reserve browser tests for interaction, focus, ARIA, and other platform behavior:
 
 ```ts
-import { Effect } from "effect";
-import { expect, it } from "vitest";
-import { RefSubject } from "@typed/fx";
+import { Effect } from "effect"
+import { expect, it } from "@effect/vitest"
+import { RefSubject } from "@typed/fx"
 
-it("preserves a state invariant", () =>
-  Effect.scoped(
-    Effect.gen(function* () {
-      const selected = yield* RefSubject.make<ReadonlySet<string>>(new Set<string>());
-      const count = RefSubject.map(selected, (ids) => ids.size);
+it.effect("preserves a state invariant", Effect.fn("preservesStateInvariant")(function* () {
+    const selected = yield* RefSubject.make<ReadonlySet<string>>(new Set<string>())
+    const count = RefSubject.map(selected, (ids) => ids.size)
 
-      yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]));
-      yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]));
+    yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]))
+    yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]))
 
-      expect([...(yield* selected)]).toEqual(["invoice-42"]);
-      expect(yield* count).toBe(1);
-    }),
-  ).pipe(Effect.runPromise),
-);
+    expect([...(yield* selected)]).toEqual(["invoice-42"])
+    expect(yield* count).toBe(1)
+  }))
 ```
 
 This proves the domain invariant without a renderer or event simulation. If the assertion is about
@@ -104,39 +97,37 @@ part markers. For keyed collections, keep an element reference, reorder the sour
 the same element remains:
 
 ```ts
-import { Effect } from "effect";
-import { expect, it } from "vitest";
-import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, isHtmlElement, many, render } from "@typed/template";
+import { Effect } from "effect"
+import { expect, it } from "@effect/vitest"
+import { Fx, RefSubject } from "@typed/fx"
+import { DomRenderTemplate, html, isHtmlElement, many, render } from "@typed/template"
 
 const keepsKeyedIdentity = Effect.fn("keepsKeyedIdentity")(function* () {
   const initial = [
     { id: "a", label: "A" },
     { id: "b", label: "B" },
-  ] as const;
-  const items = yield* RefSubject.make<ReadonlyArray<(typeof initial)[number]>>(initial);
+  ] as const
+  const items = yield* RefSubject.make<ReadonlyArray<(typeof initial)[number]>>(initial)
   const view = html`<ul>${many(
     items,
     (item) => item.id,
     (item) => html`<li>${RefSubject.map(item, (value) => value.label)}</li>`,
-  )}</ul>`;
+  )}</ul>`
   const [rendered] = yield* render(view, document.body).pipe(
     Fx.provide(DomRenderTemplate.using(document)),
     Fx.take(1),
     Fx.collectUpTo(1),
-  );
-  if (rendered === undefined || !isHtmlElement(rendered)) throw new Error("render failed");
-  const original = rendered.querySelectorAll("li")[1];
+  )
+  if (rendered === undefined || !isHtmlElement(rendered)) throw new Error("render failed")
+  const original = rendered.querySelectorAll("li")[1]
 
-  yield* RefSubject.set(items, [initial[1], initial[0]]);
-  yield* Effect.sleep(20);
-  expect(rendered.querySelectorAll("li")[0]?.textContent).toBe("B");
-  expect(rendered.querySelectorAll("li")[1]).toBe(original);
-});
+  yield* RefSubject.set(items, [initial[1], initial[0]])
+  yield* Effect.yieldNow
+  expect(rendered.querySelectorAll("li")[0]?.textContent).toBe("B")
+  expect(rendered.querySelectorAll("li")[1]).toBe(original)
+})
 
-it("keeps keyed DOM identity across a reorder", () =>
-  keepsKeyedIdentity().pipe(Effect.scoped, Effect.runPromise),
-);
+it.effect("keeps keyed DOM identity across a reorder", keepsKeyedIdentity)
 ```
 
 Assert `textContent`, attributes, native properties, events, and identity. The repository's browser
@@ -152,17 +143,16 @@ proving that one click worked.
 routes without global history:
 
 ```ts
-import { Effect } from "effect";
-import { expect, it } from "vitest";
-import { Fx } from "@typed/fx";
-import { Navigation } from "@typed/navigation";
-import * as Matcher from "@typed/router/Matcher";
-import * as Route from "@typed/router/Route";
-import { TestRouter } from "@typed/router/Router";
+import { Effect } from "effect"
+import { expect, layer } from "@effect/vitest"
+import { Fx } from "@typed/fx"
+import { Navigation } from "@typed/navigation"
+import * as Matcher from "@typed/router/Matcher"
+import * as Route from "@typed/router/Route"
+import { TestRouter } from "@typed/router/Router"
 
-it("matches a route and navigates in memory", () =>
-  Effect.provide(
-    Effect.gen(function* () {
+layer(TestRouter({ url: "http://localhost/users/1" }))("memory routing", (it) => {
+  it.effect("matches a route and navigates in memory", Effect.fn("matchesMemoryRoute")(function* () {
       const route = Route.Join(Route.Parse("users"), Route.Param("id"));
       const matcher = Matcher.empty.match(route, (params) => Fx.map(params, ({ id }) => `user:${id}`));
 
@@ -170,10 +160,8 @@ it("matches a route and navigates in memory", () =>
       yield* Navigation.navigate("http://localhost/users/2");
       const currentEntry = yield* Navigation.currentEntry;
       expect(currentEntry.url.pathname).toBe("/users/2");
-    }),
-    TestRouter({ url: "http://localhost/users/1" }),
-  ).pipe(Effect.scoped, Effect.runPromise),
-);
+    }))
+})
 ```
 
 Use a `Latch` or `Deferred` when observing matcher output across multiple navigations; a sleep is
@@ -182,23 +170,19 @@ not a synchronization contract. Keep browser-history tests small and separate fr
 SSR and hydration are separate claims. The server test checks serialized state:
 
 ```ts
-import { Effect, Schema } from "effect";
-import { expect, it } from "vitest";
-import { RefSubject } from "@typed/fx";
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
+import { Effect, Schema } from "effect"
+import { expect, it } from "@effect/vitest"
+import { RefSubject } from "@typed/fx"
+import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template"
 
-it("serializes state for hydration", () =>
-  Effect.scoped(
-    Effect.gen(function* () {
-      const count = yield* RefSubject.hydrate(Schema.Finite, 7);
-      const output = yield* renderToHtmlString(html`<button ref=${count}>${count}</button>`).pipe(
-        Effect.provide(HtmlRenderTemplate),
-      );
-      expect(output).toContain("data-typed-refsubject=");
-      expect(output).toContain("<!--n_1-->7<!--/n_1-->");
-    }),
-  ).pipe(Effect.runPromise),
-);
+it.effect("serializes state for hydration", Effect.fn("serializesHydrationState")(function* () {
+    const count = yield* RefSubject.hydrate(Schema.Finite, 7)
+    const output = yield* renderToHtmlString(html`<button ref=${count}>${count}</button>`).pipe(
+      Effect.provide(HtmlRenderTemplate),
+    )
+    expect(output).toContain("data-typed-refsubject=")
+    expect(output).toContain("<!--n_1-->7<!--/n_1-->")
+  }))
 ```
 
 The browser half places that string in a test document, renders the same template with

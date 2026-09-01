@@ -15,28 +15,23 @@ An `Fx<A, E, R>` says what values can arrive (`A`), which expected errors can ha
 which services are required to run it (`R`). Creating one is lazy. A runner such as `Fx.observe` or
 `Fx.collectAll` starts the work.
 
-## Learn Fx as an operator vocabulary
+## Find the behavior your feature needs
 
-Learn Fx in the order its decisions arise: construct a source, transform it, carry local state,
-flatten or combine work, select a window, model time, handle failure, share resources, then run it.
+| If you need to… | Start here |
+| --- | --- |
+| Turn a DOM event, WebSocket, worker, Effect, or Stream into an Fx | [Building Fx values](/explore/building-fx) |
+| Trim a search query, discard blanks, and ignore repeated values | [`map`, `filter`, and stateful transforms](/explore/transforming-fx) |
+| Cancel the previous autocomplete request when the query changes | [`switchMap`](/explore/fx-higher-order-and-concurrency) |
+| Send every autosave in order without cancelling an older write | [`concatMap`](/explore/fx-higher-order-and-concurrency) |
+| Ignore double-submits while checkout is already running | [`exhaustMap`](/explore/fx-higher-order-and-concurrency) |
+| Recompute when the route, signed-in user, or cached record changes | [Composing Fx](/explore/composing-fx) |
+| Stop after the first match, ten results, or a logout event | [Selection and cardinality](/explore/fx-selection-and-cardinality) |
+| Debounce search, throttle pointer movement, or test a timeout without waiting | [Time and rate](/explore/fx-time-and-rate) |
+| Retry a dropped connection or recover one typed failure with cached data | [Errors and recovery](/explore/fx-errors-and-recovery) |
+| Share one WebSocket and close it after the last subscriber leaves | [Services and lifetime](/explore/fx-services-and-lifetime) |
+| Await one answer, collect a finite run, or handle every update | [Consuming Fx](/explore/consuming-fx) |
 
-Fx adds Effect's channels and lifetime model at the exact point each operator needs them:
-
-| Chapter | Decision | Effect-specific behavior |
-| --- | --- | --- |
-| [Building Fx values](/explore/building-fx) | What produces values? | Effects, Streams, typed failures, services, and cleanup cross the source boundary intact. |
-| [Transforming Fx](/explore/transforming-fx) | What does each value mean? | Effectful callbacks add their errors and requirements instead of hiding them. |
-| [Stateful transforms](/explore/fx-stateful-transforms) | What history belongs to one run? | Accumulators and buffers are recreated for every subscription. |
-| [Flattening work](/explore/fx-higher-order-and-concurrency) | What happens when one value starts more work? | Fibers, Scope, interruption, ordering, and concurrency become explicit policy. |
-| [Composing Fx](/explore/composing-fx) | How do independent producers relate? | Their value, error, and service channels compose together. |
-| [Selection and cardinality](/explore/fx-selection-and-cardinality) | Which values and boundaries remain? | Effectful predicates retain typed failure and service requirements. |
-| [Time and rate](/explore/fx-time-and-rate) | When may a value arrive? | Schedule, Clock, TestClock, and interruption replace unmanaged timers. |
-| [Errors and recovery](/explore/fx-errors-and-recovery) | Which ending can be recovered? | Typed errors remain distinct from defects and interruption in `Cause`. |
-| [Services and lifetime](/explore/fx-services-and-lifetime) | Who owns a live subscription? | Layers provide requirements; Scope and Fiber define shutdown. |
-| [Consuming Fx](/explore/consuming-fx) | What does the application need from the producer? | Runners return Effects or Fibers instead of starting hidden global work. |
-
-These chapters curate the decisions people make repeatedly. The [API reference](/reference/modules/%40typed%2Ffx)
-remains the exhaustive surface.
+The [API reference](/reference/modules/%40typed%2Ffx) lists the complete public surface.
 
 ## Start with a source and a small transformation
 

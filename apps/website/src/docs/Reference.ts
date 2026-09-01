@@ -12,6 +12,19 @@ import { editorialSymbolRelations } from "./Selection.js";
 const compareText = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
+type ExportIdentity =
+  | { readonly recordKind: "declaration"; readonly id: string; readonly declarationKey: string }
+  | { readonly recordKind: "resource"; readonly id: string };
+
+export const countUniqueExports = (exposures: ReadonlyArray<ExportIdentity>): number =>
+  new Set(
+    exposures.map((exposure) =>
+      exposure.recordKind === "declaration"
+        ? `declaration:${exposure.declarationKey}`
+        : `resource:${exposure.id}`,
+    ),
+  ).size;
+
 export const referenceSlug = (value: string): string =>
   [...new TextEncoder().encode(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 
@@ -59,10 +72,14 @@ export const buildReferenceInventory = (
         }))
         .sort((left, right) => compareText(left.name, right.name)),
       exposureIds: exposures.map(({ id }) => id).sort(compareText),
+      uniqueExportCount: countUniqueExports(exposures),
     };
   });
   const packages = publishedPackages.map((published) => {
     const packageModules = modules.filter(({ packageName }) => packageName === published.name);
+    const packageExposures = extraction.exposures.filter(
+      ({ packageName }) => packageName === published.name,
+    );
     const groupedModules = Map.groupBy(packageModules, ({ consumerSpecifier }) =>
       moduleGroupSpecifier(published.name, consumerSpecifier),
     );
@@ -86,6 +103,7 @@ export const buildReferenceInventory = (
         ];
       }),
       exposureIds: packageModules.flatMap(({ exposureIds }) => exposureIds).sort(compareText),
+      uniqueExportCount: countUniqueExports(packageExposures),
     };
   });
   const routes: ReadonlyArray<ReferenceRoute> = [
@@ -109,6 +127,7 @@ export const buildReferenceInventory = (
   ].sort((left, right) => compareText(left.canonicalPath, right.canonicalPath));
 
   return {
+    uniqueExportCount: countUniqueExports(extraction.exposures),
     packages,
     modules,
     declarations: extraction.declarations,

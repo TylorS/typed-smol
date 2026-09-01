@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { markdownPathForPath } from "../../agent/Artifacts.js";
+import { markdownPathForPath, pageMarkdown } from "../../agent/Artifacts.js";
 import { prefersMarkdown } from "../../agent/ContentNegotiation.js";
 import { replaceDirectoriesTransactionally } from "../AtomicDirectories.js";
 import { renderSymbolMarkdown, validateMarkdownFences } from "../RenderMarkdown.js";
@@ -62,6 +62,11 @@ describe("generated artifact infrastructure", () => {
     expect(markdownPathForPath("/reference")).toBe("/reference.md");
     expect(markdownPathForPath("/api/docs/search")).toBeUndefined();
     expect(markdownPathForPath("/definitely-missing")).toBeUndefined();
+  });
+
+  it("reports declaration-deduplicated exports in the reference Markdown", () => {
+    expect(pageMarkdown["/reference"]).toContain("unique exports");
+    expect(pageMarkdown["/reference"]).not.toContain("public exposures");
   });
 
   it("normalizes authored Markdown examples without creating nested fences", () => {

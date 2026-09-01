@@ -25,6 +25,7 @@
     "@effect/platform-node": "catalog:",
     "@modelcontextprotocol/sdk": "catalog:",
     "@typed/fx": "workspace:*",
+    "@typed/guard": "workspace:*",
     "@typed/id": "workspace:*",
     "@typed/navigation": "workspace:*",
     "@typed/router": "workspace:*",
@@ -35,6 +36,7 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
+    "@effect/vitest": "4.0.0-rc.111",
     "@typed/tsconfig": "workspace:*",
     "@types/node": "^26.2.0",
     "@types/react": "19.2.18",
