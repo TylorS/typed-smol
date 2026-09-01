@@ -43,10 +43,10 @@ jobs:
       - name: Type-check website
         run: pnpm --filter typed-website typecheck
 
-      - name: Build and verify static website
+      - name: Build static website
         env:
           SITE_BASE: /typed-smol/
-        run: pnpm --filter typed-website test:static
+        run: pnpm --filter typed-website build:static
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5

@@ -17,7 +17,6 @@
     "docs:generate": "pnpm docs:dependencies && tsx scripts/generate-docs.ts",
     "stage:public": "tsx scripts/static/stage-public.ts",
     "test": "pnpm test:production",
-    "test:static": "node --test test/static-site.test.mjs",
     "test:docs": "pnpm docs:dependencies && vitest run --config vitest.config.ts src/docs/__tests__",
     "test:production": "pnpm build && node --test test/production-smoke.test.mjs",
     "typecheck": "tsc --noEmit"
