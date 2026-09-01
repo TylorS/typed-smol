@@ -15,9 +15,35 @@ const toFinalizer =
   };
 
 /**
- * Adds an `Effect.onExit`-style finalizer to an `Fx`.
+ * Observes the Fx's final success or failure with an Effect finalizer.
  *
- * The finalizer is run when the `Fx` terminates (success, failure, or interruption).
+ * @remarks
+ * ## Why
+ *
+ * Teardown and audit work sometimes depends on how the complete subscription
+ * ended. An `Exit` preserves that distinction without materializing it as a
+ * stream value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The finalizer runs once after successful completion, a reported source cause,
+ * or interruption of the running fiber. The success Exit carries `void`
+ * because an Fx may emit many values and has no single terminal success value.
+ * A finalizer failure after normal completion is reported in the returned error
+ * channel. After a source failure or interruption it is suppressed so the
+ * already-observed termination remains authoritative. Finalizer services live
+ * for the subscription only.
+ *
+ * @example
+ * ```ts
+ * import { Effect, Exit } from "effect"
+ * import { onExit } from "@typed/fx/Fx"
+ * import { succeed } from "@typed/fx/Fx"
+ *
+ * const audited = onExit(succeed("ready"), (exit) =>
+ *   Effect.log(Exit.isSuccess(exit) ? "complete" : "failed")
+ * )
+ * ```
  *
  * @since 1.0.0
  * @category combinators

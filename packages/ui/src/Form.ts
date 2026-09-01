@@ -17,26 +17,105 @@ import {
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
+/**
+ * Interaction metadata tracked for one form field.
+ *
+ * @remarks
+ * ## Why
+ * Dirty and touched state belong to renderer-independent form state so they can
+ * be tested without mounting UI and consumed by any host.
+ *
+ * ## Ownership and lifetime
+ * Stored inside `FormState`; updates are owned by that RefSubject's Scope and
+ * survive replacement of individual rendered controls.
+ *
+ * @since 1.0.0
+ * @category models
+ */
 export interface FieldMeta {
+  /** Stored mutation flag for the field; update operations decide when it becomes true. */
   readonly dirty: boolean;
+  /** Whether user or programmatic field mutation has occurred. */
   readonly touched: boolean;
 }
+
+/**
+ * Serializable renderer-independent state of a form.
+ *
+ * @remarks
+ * ## Why
+ * Values, defaults, validation messages, interaction metadata, and submission
+ * state can be inspected and tested without rendering a component.
+ *
+ * ## Ownership and lifetime
+ * A `FormState` RefSubject owns this value. Renderers subscribe to it; they do
+ * not contain or become the source of truth.
+ *
+ * @since 1.0.0
+ * @category models
+ */
 export interface State<Values extends object = object> {
+  /** Current decoded field values. */
   readonly values: Values;
+  /** Exact baseline reference used by reset and retained independently from current values. */
   readonly defaultValues: Values;
+  /** Current validation messages keyed by field name. */
   readonly errors: Partial<Record<keyof Values & string, string>>;
+  /** Dirty/touched metadata keyed by field name. */
   readonly meta: Partial<Record<keyof Values & string, FieldMeta>>;
+  /** Whether a valid-submit Effect is currently running. */
   readonly submitting: boolean;
 }
+
+/**
+ * Input used to construct a hydrated form state.
+ *
+ * @remarks
+ * ## Why
+ * Defaults make the common case concise while allowing SSR callers to provide
+ * deterministic identity and server-known validation state.
+ *
+ * ## Ownership and lifetime
+ * `values` and an explicit `defaultValues` are retained by reference, including
+ * their nested objects. When `defaultValues` is omitted, both state fields
+ * initially reference the exact `values` object. Subsequent helpers replace the
+ * top-level `values` record but do not deep-clone nested values.
+ *
+ * @since 1.0.0
+ * @category models
+ */
 export interface InitialState<Values extends object> {
+  /** Stable relationship/hydration id; provide it for deterministic SSR. */
   readonly id?: string;
+  /** Initial decoded values. */
   readonly values: Values;
+  /** Exact reset-baseline reference; defaults to the same object as `values`. */
   readonly defaultValues?: Values;
+  /** Optional initial validation messages. */
   readonly errors?: Partial<Record<keyof Values & string, string>>;
+  /** Optional initial field metadata. */
   readonly meta?: Partial<Record<keyof Values & string, FieldMeta>>;
+  /** Optional initial submission state. */
   readonly submitting?: boolean;
 }
 
+/**
+ * Hydrated RefSubject carrying form state plus runtime schema metadata.
+ *
+ * @remarks
+ * ## Why
+ * State is serializable across SSR while codecs and field validators stay as
+ * runtime capabilities. This keeps validation type-safe without trying to
+ * serialize executable schemas.
+ *
+ * ## Ownership and lifetime
+ * The surrounding Effect Scope owns the hydrated RefSubject and its subscribers.
+ * On the server, serializable state is emitted for hydration; on the client it
+ * must be restored before mounted controls begin producing updates.
+ *
+ * @since 1.0.0
+ * @category models
+ */
 export type FormState<Values extends object> = RefSubject.HydratedRefSubject<
   State<Values>,
   Schema.SchemaError
@@ -51,10 +130,40 @@ export type FormState<Values extends object> = RefSubject.HydratedRefSubject<
 
 let nextFormId = 0;
 
+/**
+ * Context service exposed to schema-bound descendant controls.
+ *
+ * @remarks
+ * ## Why
+ * A bound form can share its state through Effect context without a component tree.
+ *
+ * ## Ownership and lifetime
+ * The root form provides the service only for its rendered Fx lifetime; it does
+ * not own the underlying state beyond that state's Scope.
+ *
+ * @since 1.0.0
+ * @category services
+ */
 export interface FormService<Values extends object> {
+  /** Form state visible to bound descendants. */
   readonly state: FormState<Values>;
 }
 
+/**
+ * Effect context service used by schema-bound form controls.
+ *
+ * @remarks
+ * ## Why
+ * Bound controls avoid threading `state` through every call while their
+ * service requirement remains visible in the Fx type.
+ *
+ * ## Ownership and lifetime
+ * `Form` provides the service for its child render lifetime; use outside that
+ * boundary fails with the ordinary Effect missing-service defect.
+ *
+ * @since 1.0.0
+ * @category services
+ */
 export const CurrentForm = Context.Service<FormService<any>>("@typed/ui/Form/CurrentForm");
 
 function withCurrentForm<Values extends object>() {
@@ -70,6 +179,19 @@ const FieldMetaSchema = Schema.Struct({
   touched: Schema.Boolean,
 });
 
+/**
+ * Schema field map accepted by the schema-bound form factory.
+ *
+ * @remarks
+ * ## Why
+ * A Struct's individual codecs drive field-name inference and field-level decoding.
+ *
+ * ## Ownership and lifetime
+ * Codecs are runtime values retained by the created form API; they are not hydrated.
+ *
+ * @since 1.0.0
+ * @category models
+ */
 export type FormFields = Readonly<Record<string, Schema.Codec<any, any>>>;
 type OptionalFields<Fields extends FormFields, Value extends Schema.Constraint> = {
   readonly [Key in keyof Fields]: Schema.optionalKey<Value>;
@@ -96,6 +218,28 @@ function emptyOptionalFields<Fields extends FormFields, Value extends Schema.Con
   return {} as Schema.Struct.Type<OptionalFields<Fields, Value>>;
 }
 
+/**
+ * Builds the serializable schema for a form's hydrated state.
+ *
+ * @remarks
+ * ## Why
+ * The hydration payload needs validation independent from runtime-only field codecs.
+ *
+ * ## Ownership and lifetime
+ * Pure schema construction; the returned Schema acquires no Scope or subscription.
+ *
+ * @example
+ * ```ts
+ * import { StateSchema } from "@typed/ui/Form"
+ * import { Schema } from "effect"
+ *
+ * const codec = Schema.Struct({ email: Schema.String })
+ * const stateCodec = StateSchema(codec)
+ * ```
+ *
+ * @since 1.0.0
+ * @category schemas
+ */
 export function StateSchema<const Fields extends FormFields>(codec: Schema.Struct<Fields>) {
   return Schema.Struct({
     values: codec,
@@ -105,6 +249,34 @@ export function StateSchema<const Fields extends FormFields>(codec: Schema.Struc
     submitting: Schema.Boolean,
   });
 }
+/**
+ * Creates a Scope-owned hydrated form RefSubject from a Struct codec.
+ *
+ * @remarks
+ * ## Why
+ * One constructor establishes values, defaults, validation state, field codecs,
+ * and hydration identity consistently.
+ *
+ * ## Ownership and lifetime
+ * Requires `Scope.Scope`. Provide an explicit `id` during SSR; the counter-based
+ * fallback is process/order dependent. Only state data hydrates—`codec` and
+ * `fields` are reattached from the live Struct on each runtime.
+ *
+ * @example
+ * ```ts
+ * import { makeState } from "@typed/ui/Form"
+ * import { Effect, Schema } from "effect"
+ *
+ * const codec = Schema.Struct({ email: Schema.String })
+ * const program = Effect.gen(function* () {
+ *   const state = yield* makeState(codec, { id: "signup", values: { email: "" } })
+ *   return state
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category constructors
+ */
 export function makeState<const Fields extends FormFields>(
   codec: Schema.Struct<Fields>,
   initial: InitialStateFor<Fields>,
@@ -122,10 +294,36 @@ export function makeState<const Fields extends FormFields>(
   );
 }
 
+/**
+ * Field names whose decoded value is assignable to `Value`.
+ *
+ * @remarks
+ * ## Why
+ * Control options reject incompatible fields at compile time.
+ *
+ * ## Ownership and lifetime
+ * Type-only and resource-free.
+ *
+ * @since 1.0.0
+ * @category type-level
+ */
 export type FieldNameFor<Values extends object, Value> = {
   [Key in keyof Values & string]: Values[Key] extends Value ? Key : never;
 }[keyof Values & string];
 
+/**
+ * Struct field names matching both decoded and encoded control value types.
+ *
+ * @remarks
+ * ## Why
+ * Schema-bound controls require an encoded form compatible with the native element.
+ *
+ * ## Ownership and lifetime
+ * Type-only and resource-free.
+ *
+ * @since 1.0.0
+ * @category type-level
+ */
 export type SchemaFieldNameFor<Fields extends FormFields, Value, Encoded> = {
   [Key in keyof Fields & string]: Fields[Key]["Type"] extends Value
     ? Fields[Key]["Encoded"] extends Encoded
@@ -134,17 +332,65 @@ export type SchemaFieldNameFor<Fields extends FormFields, Value, Encoded> = {
     : never;
 }[keyof Fields & string];
 
+/**
+ * Options shared by state-explicit native input components.
+ *
+ * @remarks
+ * ## Why
+ * Controls bind a typed field directly to renderer-independent state while
+ * leaving every ordinary input prop and native event available.
+ *
+ * ## Ownership and lifetime
+ * The rendered control subscribes within its Scope. `state` remains independently
+ * owned and may outlive that control; custom codecs are retained for that host.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface InputOptions<
   Values extends object,
   Value,
 > extends Dom.HostOptions<HTMLInputElement> {
+  /** Renderer-independent form state to read and update. */
   readonly state: FormState<Values>;
+  /** Type-compatible field name. */
   readonly name: FieldNameFor<Values, Value>;
+  /** Optional string codec overriding the input type's default codec. */
   readonly codec?: Schema.Codec<Value, string>;
 }
 
+/**
+ * String-valued native input options.
+ * @remarks
+ * ## Why
+ * Names are restricted to fields a text-like control can represent without an incompatible cast.
+ * ## Ownership and lifetime
+ * The control Scope owns DOM work; the referenced state and optional codec are borrowed.
+ * @since 1.0.0
+ * @category component-options
+ */
 export type TextInputOptions<Values extends object> = InputOptions<Values, string>;
+/**
+ * Finite-number native input options.
+ * @remarks
+ * ## Why
+ * Names are restricted to numeric fields compatible with number/range decoding.
+ * ## Ownership and lifetime
+ * The control Scope owns DOM work; the referenced state and optional codec are borrowed.
+ * @since 1.0.0
+ * @category component-options
+ */
 export type NumberInputOptions<Values extends object> = InputOptions<Values, number>;
+/**
+ * Date-valued native input options.
+ * @remarks
+ * ## Why
+ * Names are restricted to Date fields compatible with native date-string decoding.
+ * ## Ownership and lifetime
+ * The control Scope owns DOM work; the referenced state and optional codec are borrowed.
+ * @since 1.0.0
+ * @category component-options
+ */
 export type DateInputOptions<Values extends object> = InputOptions<Values, Date>;
 
 function setFieldError<Values extends object, Key extends keyof Values & string, E, R>(
@@ -240,57 +486,174 @@ type RenderableComponentOptions<Options> = Pick<
   Extract<keyof Options, "props" | "ref" | "content" | Dom.EventHandlerProperty>
 >;
 
+/**
+ * Options for a schema-bound native input.
+ *
+ * @remarks
+ * ## Why
+ * The factory's Struct infers compatible field names, so callers need not pass state or a codec.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; the control's Scope owns its DOM subscription.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundInputOptions<
   Fields extends FormFields,
   Value,
 > extends Dom.HostOptions<HTMLInputElement> {
+  /** Struct field whose decoded type matches `Value` and whose encoded type is string. */
   readonly name: SchemaFieldNameFor<Fields, Value, string>;
 }
 
+/**
+ * Options for a schema-bound masked text input.
+ *
+ * @remarks
+ * ## Why
+ * Any field with a string encoding can use the Struct field codec as its mask codec.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; the control Scope owns DOM work.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundMaskedInputOptions<
   Fields extends FormFields,
 > extends Dom.HostOptions<HTMLInputElement> {
+  /** Struct field whose codec accepts the input's string representation. */
   readonly name: SchemaFieldNameFor<Fields, unknown, string>;
 }
 
+/**
+ * Options for a schema-bound boolean checkbox.
+ *
+ * @remarks
+ * ## Why
+ * Field-name inference limits the native checked binding to boolean fields.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; the control Scope owns DOM work.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundCheckboxOptions<
   Values extends object,
 > extends Dom.HostOptions<HTMLInputElement> {
+  /** Boolean field controlled by the checkbox. */
   readonly name: BooleanFieldName<Values>;
 }
 
+/**
+ * Options for a schema-bound native select.
+ *
+ * @remarks
+ * ## Why
+ * Native option markup remains caller-authored while selection binds to a string field.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; rendered content is owned by the control Scope.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundSelectOptions<
   Values extends object,
 > extends Dom.HostOptions<HTMLSelectElement> {
+  /** String field controlled by the select. */
   readonly name: FieldNameFor<Values, string>;
+  /** Native option/optgroup renderable content. */
   readonly content: Renderable.Any;
 }
 
+/**
+ * Options for a schema-bound field-error region.
+ *
+ * @remarks
+ * ## Why
+ * Error text and ARIA relationships derive from the same form identity and field name.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; the error host Scope owns its subscription.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundErrorOptions<
   Values extends object,
 > extends Dom.HostOptions<HTMLDivElement> {
+  /** Field whose current validation message is rendered. */
   readonly name: keyof Values & string;
 }
 
+/**
+ * Options for a schema-bound reset button.
+ *
+ * @remarks
+ * ## Why
+ * The button can use native semantics without receiving state explicitly.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; button content is Scope-owned renderable work.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundResetOptions extends Dom.HostOptions<HTMLButtonElement> {
+  /** Reset button label/content. */
   readonly content: Renderable.Any;
 }
 
+/**
+ * Options for a schema-bound array append button.
+ *
+ * @remarks
+ * ## Why
+ * Array field and element types are inferred from the form schema.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; the click Effect and content share the host Scope.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundPushOptions<
   Values extends object,
   Name extends ArrayFieldName<Values>,
 > extends Dom.HostOptions<HTMLButtonElement> {
+  /** Array-valued field to append to. */
   readonly name: Name;
+  /** Type-compatible item appended on activation. */
   readonly value: ArrayFieldValue<Values, Name>;
+  /** Button label/content. */
   readonly content: Renderable.Any;
 }
 
+/**
+ * Options for a schema-bound array removal button.
+ *
+ * @remarks
+ * ## Why
+ * The field is constrained to arrays and the index remains an explicit local operation.
+ *
+ * ## Ownership and lifetime
+ * State is borrowed from `CurrentForm`; the click Effect and content share the host Scope.
+ *
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SchemaBoundRemoveOptions<
   Values extends object,
   Name extends ArrayFieldName<Values>,
 > extends Dom.HostOptions<HTMLButtonElement> {
+  /** Array-valued field to remove from. */
   readonly name: Name;
+  /** Zero-based item index removed on activation. */
   readonly index: number;
+  /** Button label/content. */
   readonly content: Renderable.Any;
 }
 
@@ -331,7 +694,53 @@ function renderInput<
   >;
 }
 
-function makeInput<Value>(type: string, codec: Schema.Codec<Value, string>) {
+/**
+ * Public component contract shared by state-explicit native input factories.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Text-like, numeric, range, and date controls differ in their default codec while preserving one
+ * field-inference, host-override, error, and service contract. Naming that contract keeps emitted
+ * declarations readable without hiding any generic channel behind a private compiler alias.
+ *
+ * ## Ownership and lifetime
+ *
+ * Calling an input component starts no work. The returned Fx requires the Scope and RenderTemplate
+ * that own DOM rendering; the supplied FormState remains independently owned and may outlive it.
+ *
+ * @example
+ * ```ts
+ * import { InputComponent, makeState, TextInput } from "@typed/ui/Form"
+ * import { html } from "@typed/template"
+ * import { Effect, Schema } from "effect"
+ *
+ * const Text: InputComponent<string> = TextInput
+ * const rendered = Effect.gen(function* () {
+ *   const state = yield* makeState(Schema.Struct({ name: Schema.String }), {
+ *     values: { name: "" }
+ *   })
+ *   return Text({ state, name: "name" }, (props) => html`<input ...${props} />`)
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category models
+ */
+export type InputComponent<Value> = <
+  const Values extends object,
+  const Options extends InputOptions<Values, Value>,
+  const Host extends HostResult = never,
+>(
+  options: Options & Pick<InputOptions<Values, Value>, "state" | "name">,
+  host?: Dom.HostOverride<Dom.RenderHostProps<Options, InputProps<Values, Value>>, "", Host>,
+) => Fx<
+  RenderEvent,
+  Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
+  Renderable.Services<RenderableComponentOptions<Options> | Host> | Scope.Scope | RenderTemplate
+>;
+
+function makeInput<Value>(type: string, codec: Schema.Codec<Value, string>): InputComponent<Value> {
   return function <
     const Values extends object,
     const Options extends InputOptions<Values, Value>,
@@ -367,26 +776,232 @@ function makeSchemaBoundInput<Fields extends FormFields, Value>(
   };
 }
 
+/**
+ * Binds a native `input[type=text]` to a string field.
+ *
+ * @remarks
+ * ## Why
+ * The control uses the browser's real input event and a Schema codec while
+ * keeping state independently testable.
+ *
+ * ## Ownership and lifetime
+ * The control Scope owns DOM listeners/subscriptions; the supplied `FormState`
+ * may outlive the rendered input. A custom host must apply all merged props.
+ *
+ * @example
+ * ```ts
+ * import { TextInput, makeState } from "@typed/ui/Form"
+ * import { Effect, Schema } from "effect"
+ *
+ * const codec = Schema.Struct({ name: Schema.String })
+ * const input = Effect.gen(function* () {
+ *   const state = yield* makeState(codec, { values: { name: "" } })
+ *   return TextInput({ state, name: "name" })
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category components
+ */
 export const TextInput = makeInput("text", Schema.String);
+/**
+ * Binds a native search input to a string field.
+ * @remarks
+ * ## Why
+ * Preserves the platform's search-input semantics while sharing Typed validation.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const SearchInput = makeInput("search", Schema.String);
+/**
+ * Binds a native email input to a string field.
+ * @remarks
+ * ## Why
+ * Keeps browser email affordances and constraints available alongside Schema validation.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const EmailInput = makeInput("email", Schema.String);
+/**
+ * Binds a native URL input to a string field.
+ * @remarks
+ * ## Why
+ * Keeps browser URL affordances while the schema remains the decoded state contract.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const UrlInput = makeInput("url", Schema.String);
+/**
+ * Binds a native telephone input to a string field.
+ * @remarks
+ * ## Why
+ * Preserves platform telephone keyboards and autocomplete behavior.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const TelInput = makeInput("tel", Schema.String);
+/**
+ * Binds a native password input to a string field.
+ * @remarks
+ * ## Why
+ * Uses browser password handling instead of recreating sensitive-input behavior.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const PasswordInput = makeInput("password", Schema.String);
+/**
+ * Binds a native hidden input to a string field.
+ * @remarks
+ * ## Why
+ * Allows standards-based form serialization for non-visible values.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const HiddenInput = makeInput("hidden", Schema.String);
+/**
+ * Binds a native color input to a string field.
+ * @remarks
+ * ## Why
+ * Retains the browser's color picker while state receives its string value.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const ColorInput = makeInput("color", Schema.String);
+/**
+ * Binds a native time input to a string field.
+ * @remarks
+ * ## Why
+ * Preserves browser locale and time-entry behavior without inventing a picker.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const TimeInput = makeInput("time", Schema.String);
+/**
+ * Binds a native local date-time input to a string field.
+ * @remarks
+ * ## Why
+ * Keeps the platform's local date-time UI and its standard encoded value.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const DateTimeLocalInput = makeInput("datetime-local", Schema.String);
+/**
+ * Binds a native month input to a string field.
+ * @remarks
+ * ## Why
+ * Preserves the browser month picker and standardized string encoding.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const MonthInput = makeInput("month", Schema.String);
+/**
+ * Binds a native week input to a string field.
+ * @remarks
+ * ## Why
+ * Preserves platform week-entry behavior and standardized string encoding.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const WeekInput = makeInput("week", Schema.String);
+/**
+ * Binds a native number input to a finite number field.
+ * @remarks
+ * ## Why
+ * `FiniteFromString` makes the browser's string value an explicit typed decode.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const NumberInput = makeInput("number", Schema.FiniteFromString);
+/**
+ * Binds a native range input to a finite number field.
+ * @remarks
+ * ## Why
+ * Retains native slider interaction while exposing a decoded numeric value.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const RangeInput = makeInput("range", Schema.FiniteFromString);
+/**
+ * Binds a native date input to a `Date` field.
+ * @remarks
+ * ## Why
+ * `DateFromString` makes the native encoded value's conversion explicit and fallible.
+ * ## Ownership and lifetime
+ * DOM work is control-Scope-owned; form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export const DateInput = makeInput("date", Schema.DateFromString);
 
+/**
+ * Native value emitted by `FormData`.
+ * @remarks
+ * ## Why
+ * Browser serialization produces strings and Files; the union states that boundary exactly.
+ * ## Ownership and lifetime
+ * Files remain browser-owned objects referenced by the converted record.
+ * @since 1.0.0
+ * @category models
+ */
 export type FormDataValue = string | File;
+/**
+ * Object representation of native FormData, preserving repeated names as arrays.
+ * @remarks
+ * ## Why
+ * A plain record is directly consumable by Effect Schema without losing repeats.
+ * ## Ownership and lifetime
+ * Conversion allocates arrays/record entries but retains original File objects.
+ * @since 1.0.0
+ * @category models
+ */
 export type FormDataRecord = Readonly<Record<string, FormDataValue | ReadonlyArray<FormDataValue>>>;
 
-/** Preserves repeated native fields as arrays before passing them to a Schema codec. */
+/**
+ * Converts native FormData to a record and preserves repeated fields as arrays.
+ * @remarks
+ * ## Why
+ * `Object.fromEntries` silently loses repeated names, which breaks checkbox,
+ * multiselect, and multi-file submissions.
+ * ## Ownership and lifetime
+ * The function is synchronous and resource-free; File values are not cloned.
+ * @example
+ * ```ts
+ * import { formDataToRecord } from "@typed/ui/Form"
+ *
+ * const data = new FormData()
+ * data.append("tag", "one")
+ * data.append("tag", "two")
+ * const record = formDataToRecord(data)
+ * ```
+ * @since 1.0.0
+ * @category conversions
+ */
 export function formDataToRecord(data: FormData): FormDataRecord {
   const result: Record<string, FormDataValue | ReadonlyArray<FormDataValue>> = {};
   for (const [name, value] of data.entries()) {
@@ -401,7 +1016,25 @@ export function formDataToRecord(data: FormData): FormDataRecord {
   return result;
 }
 
-/** Decodes browser FormData directly, including repeated fields and File values. */
+/**
+ * Decodes native FormData through an Effect Schema codec.
+ * @remarks
+ * ## Why
+ * Browser serialization, repeated values, Files, and typed validation meet at
+ * one explicit fallible boundary.
+ * ## Ownership and lifetime
+ * The returned Effect is lazy and owns no browser resource; it references File
+ * objects present in the supplied FormData.
+ * @example
+ * ```ts
+ * import { decodeFormData } from "@typed/ui/Form"
+ * import { Schema } from "effect"
+ *
+ * const decode = decodeFormData(Schema.Struct({ name: Schema.String }), new FormData())
+ * ```
+ * @since 1.0.0
+ * @category conversions
+ */
 export function decodeFormData<Values extends object, Codec extends Schema.Codec<Values, unknown>>(
   codec: Codec,
   data: FormData,
@@ -409,6 +1042,17 @@ export function decodeFormData<Values extends object, Codec extends Schema.Codec
   return Schema.decodeEffect(codec)(formDataToRecord(data));
 }
 
+/**
+ * Validates current form values and synchronizes decoded values or field errors.
+ * @remarks
+ * ## Why
+ * Submission needs one whole-form schema check in addition to incremental field decoding.
+ * ## Ownership and lifetime
+ * The returned Effect updates the supplied state when run. On success it clears
+ * errors; on failure it records messages and re-fails with `SchemaError`.
+ * @since 1.0.0
+ * @category validation
+ */
 export function validate<Values extends object>(state: FormState<Values>) {
   return Effect.flatMap(state, (current) =>
     Schema.decodeUnknownEffect(Schema.toType(state.codec))(current.values),
@@ -442,21 +1086,73 @@ function formErrors<Values extends object>(
   return next;
 }
 
+/**
+ * Named decoded segment in a bidirectional text mask.
+ * @remarks
+ * ## Why
+ * Slots make structured display strings type-safe and Schema-driven rather than cursor heuristics.
+ * ## Ownership and lifetime
+ * A slot retains its codec and optional validation constraints; it acquires no Scope.
+ * @since 1.0.0
+ * @category models
+ */
 export interface MaskSlot<Name extends string = string, Value = unknown> {
+  /** Discriminant used to distinguish slots from literal mask parts. */
   readonly _tag: "MaskSlot";
+  /** Property name written into the decoded mask object. */
   readonly name: Name;
+  /** Bidirectional conversion between this slot's string segment and decoded value. */
   readonly codec: Schema.Codec<Value, string>;
+  /** Exact encoded character count, when fixed-width. */
   readonly length?: number;
+  /** Per-character acceptance test applied before Schema decoding. */
   readonly charset?: RegExp | ((character: string) => boolean);
 }
 
+/**
+ * Literal or decoded segment of a mask.
+ * @remarks
+ * ## Why
+ * The tuple order completely specifies parsing and formatting.
+ * ## Ownership and lifetime
+ * Immutable description data with no runtime ownership.
+ * @since 1.0.0
+ * @category models
+ */
 export type MaskPart = string | MaskSlot;
+/**
+ * Decoded object inferred from the named slots in a mask tuple.
+ * @remarks
+ * ## Why
+ * Slot names and codecs become a precise form-field value type.
+ * ## Ownership and lifetime
+ * Type-only and resource-free.
+ * @since 1.0.0
+ * @category type-level
+ */
 export type MaskValue<Parts extends ReadonlyArray<MaskPart>> = {
   readonly [
     Part in Parts[number] as Part extends MaskSlot<infer Name> ? Name : never
   ]: Part extends MaskSlot<string, infer Value> ? Value : never;
 };
 
+/**
+ * Creates a named, Schema-decoded mask slot.
+ * @remarks
+ * ## Why
+ * Length and character constraints are expressed beside the codec that owns conversion.
+ * ## Ownership and lifetime
+ * Pure constructor; the returned descriptor retains the codec but acquires no Scope.
+ * @example
+ * ```ts
+ * import { slot } from "@typed/ui/Form"
+ * import { Schema } from "effect"
+ *
+ * const areaCode = slot("area", Schema.String, { length: 3, charset: /[0-9]/ })
+ * ```
+ * @since 1.0.0
+ * @category constructors
+ */
 export function slot<Name extends string, Value>(
   name: Name,
   codec: Schema.Codec<Value, string>,
@@ -465,6 +1161,25 @@ export function slot<Name extends string, Value>(
   return { _tag: "MaskSlot", name, codec, ...options };
 }
 
+/**
+ * Builds a bidirectional Schema codec from literal text and named slots.
+ * @remarks
+ * ## Why
+ * Display formatting and decoding share one ordered specification and produce
+ * ordinary Schema issues on invalid length, characters, literals, or slot values.
+ * ## Ownership and lifetime
+ * Pure codec construction. Decode/encode Effects are lazy and Scope-free.
+ * @example
+ * ```ts
+ * import { mask, slot } from "@typed/ui/Form"
+ * import { Schema } from "effect"
+ *
+ * const phone = mask("(", slot("area", Schema.String, { length: 3 }), ") ",
+ *   slot("number", Schema.String, { length: 7 }))
+ * ```
+ * @since 1.0.0
+ * @category schemas
+ */
 export function mask<const Parts extends ReadonlyArray<MaskPart>>(
   ...parts: Parts
 ): Schema.Codec<MaskValue<Parts>, string> {
@@ -587,13 +1302,36 @@ function invalidMask(
   return Effect.fail(new SchemaIssue.InvalidValue({ message: "Invalid mask" }, input, options));
 }
 
+/**
+ * Options for an input decoded through a structured mask codec.
+ * @remarks
+ * ## Why
+ * A normal text input can expose a structured typed value without hiding native events or props.
+ * ## Ownership and lifetime
+ * The control Scope owns DOM work; form state and the mask codec remain independently owned.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface MaskedInputOptions<
   Values extends object,
   Parts extends ReadonlyArray<MaskPart>,
 > extends InputOptions<Values, MaskValue<Parts>> {
+  /** Bidirectional mask codec used for display and input decoding. */
   readonly mask: Schema.Codec<MaskValue<Parts>, string>;
 }
 
+/**
+ * Binds a native text input to a structured mask value.
+ * @remarks
+ * ## Why
+ * The supplied Schema codec controls both display encoding and input decoding;
+ * failed edits update field errors rather than corrupting decoded state.
+ * ## Ownership and lifetime
+ * DOM listeners and reactive value binding live in the control Scope. The
+ * supplied state can be tested and retained without mounting this control.
+ * @since 1.0.0
+ * @category components
+ */
 export function MaskedInput<
   const Values extends object,
   const Parts extends ReadonlyArray<MaskPart>,
@@ -606,13 +1344,31 @@ export function MaskedInput<
     "",
     Host
   >,
-) {
+): Fx<
+  RenderEvent,
+  Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Omit<Options, "mask">> | Host>,
+  | Renderable.Services<RenderableComponentOptions<Omit<Options, "mask">> | Host>
+  | Scope.Scope
+  | RenderTemplate
+> {
   const { mask, ...inputOptions } = options;
   return renderInput(inputOptions, host, "text", mask);
 }
 
+/**
+ * Options for a state-explicit native checkbox.
+ * @remarks
+ * ## Why
+ * Boolean field inference and live `checked` binding preserve native checkbox behavior.
+ * ## Ownership and lifetime
+ * The control Scope owns the listener/binding; form state may outlive the element.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface CheckboxOptions<Values extends object> extends Dom.HostOptions<HTMLInputElement> {
+  /** Renderer-independent state read and updated by the checkbox. */
   readonly state: FormState<Values>;
+  /** Boolean field controlled by the checkbox. */
   readonly name: BooleanFieldName<Values>;
 }
 
@@ -646,6 +1402,18 @@ function checkboxProps<Values extends object>(options: CheckboxOptions<Values>) 
 
 type CheckboxProps<Values extends object> = ReturnType<ReturnType<typeof checkboxProps<Values>>>;
 
+/**
+ * Binds a native checkbox to a boolean form field.
+ * @remarks
+ * ## Why
+ * Both the checked attribute and live property follow state, while the browser's
+ * real change event is decoded through the field codec.
+ * ## Ownership and lifetime
+ * The rendered Scope owns the input, listener, and subscriptions. A custom host
+ * must apply merged name, ARIA, checked, and change props.
+ * @since 1.0.0
+ * @category components
+ */
 export function Checkbox<
   const Values extends object,
   const Options extends CheckboxOptions<Values>,
@@ -663,9 +1431,22 @@ export function Checkbox<
   );
 }
 
+/**
+ * Options for a state-explicit native select.
+ * @remarks
+ * ## Why
+ * Callers author ordinary option markup while the selected value binds to typed state.
+ * ## Ownership and lifetime
+ * The control Scope owns content, listener, and binding; form state may outlive it.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SelectOptions<Values extends object> extends Dom.HostOptions<HTMLSelectElement> {
+  /** Renderer-independent state read and updated by the select. */
   readonly state: FormState<Values>;
+  /** String field controlled by the select. */
   readonly name: FieldNameFor<Values, string>;
+  /** Native option/optgroup renderable content. */
   readonly content: Renderable.Any;
 }
 
@@ -696,6 +1477,17 @@ function selectProps<Values extends object>(options: SelectOptions<Values>) {
 
 type SelectProps<Values extends object> = ReturnType<ReturnType<typeof selectProps<Values>>>;
 
+/**
+ * Binds a native select element to a string form field.
+ * @remarks
+ * ## Why
+ * Native keyboard, accessibility, option, and form semantics remain browser-owned.
+ * ## Ownership and lifetime
+ * The rendered Scope owns the select/content subscriptions. A custom host must
+ * preserve supplied name, ARIA, value, and change props.
+ * @since 1.0.0
+ * @category components
+ */
 export function Select<
   const Values extends object,
   const Options extends SelectOptions<Values>,
@@ -726,14 +1518,36 @@ export function Select<
   );
 }
 
+/**
+ * Options for a native form label.
+ * @remarks
+ * ## Why
+ * Explicit `for` linkage keeps accessible naming in browser-standard markup.
+ * ## Ownership and lifetime
+ * The label Scope owns rendered content only; it does not own the referenced control.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface LabelOptions extends Dom.HostOptions<HTMLLabelElement> {
+  /** ID of the native control labeled by this element. */
   readonly for: string;
+  /** Human-readable label content. */
   readonly content: Renderable.Any;
 }
 function labelProps<const Options extends LabelOptions>(options: Options) {
   return () => ({ for: options.for }) as const;
 }
 type LabelProps<Options extends LabelOptions> = ReturnType<ReturnType<typeof labelProps<Options>>>;
+/**
+ * Renders a native label with an explicit control relationship.
+ * @remarks
+ * ## Why
+ * The browser supplies click-to-focus and accessible-name behavior with no synthetic layer.
+ * ## Ownership and lifetime
+ * The Scope owns label output/content; the referenced element remains separately owned.
+ * @since 1.0.0
+ * @category components
+ */
 export function Label<const Options extends LabelOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<
@@ -761,7 +1575,18 @@ export function Label<const Options extends LabelOptions, const Host extends Hos
   );
 }
 
+/**
+ * Options for descriptive form content.
+ * @remarks
+ * ## Why
+ * Provides a host-overrideable descriptive region without inventing text semantics.
+ * ## Ownership and lifetime
+ * The host Scope owns the rendered content.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface DescriptionOptions extends Dom.HostOptions<HTMLDivElement> {
+  /** Descriptive renderable content. */
   readonly content: Renderable.Any;
 }
 
@@ -769,6 +1594,16 @@ function descriptionProps() {
   return () => ({}) as const;
 }
 type DescriptionProps = ReturnType<ReturnType<typeof descriptionProps>>;
+/**
+ * Renders form description content in a neutral native div by default.
+ * @remarks
+ * ## Why
+ * Consumers can connect the resulting element with ordinary ARIA props where needed.
+ * ## Ownership and lifetime
+ * The Scope owns the description host/content and no external control.
+ * @since 1.0.0
+ * @category components
+ */
 export function Description<
   const Options extends DescriptionOptions,
   const Host extends HostResult = never,
@@ -791,8 +1626,20 @@ export function Description<
   );
 }
 
+/**
+ * Options for a field validation alert.
+ * @remarks
+ * ## Why
+ * Error identity derives from form and field IDs so controls can reference it reliably.
+ * ## Ownership and lifetime
+ * The error host subscribes within its Scope; form state remains independently owned.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface ErrorOptions<Values extends object> extends Dom.HostOptions<HTMLDivElement> {
+  /** Renderer-independent state supplying validation errors. */
   readonly state: FormState<Values>;
+  /** Field whose current message is rendered. */
   readonly name: keyof Values & string;
 }
 
@@ -804,6 +1651,17 @@ function errorProps<Values extends object>(options: ErrorOptions<Values>) {
     }) as const;
 }
 type ErrorProps<Values extends object> = ReturnType<ReturnType<typeof errorProps<Values>>>;
+/**
+ * Renders the current field error as a native ARIA alert region.
+ * @remarks
+ * ## Why
+ * The same derived ID is placed on the error and in the control's
+ * `aria-describedby`, keeping validation messaging coherent.
+ * ## Ownership and lifetime
+ * The Scope owns the alert and state subscription; removing it does not remove form state.
+ * @since 1.0.0
+ * @category components
+ */
 export function Error<
   const Values extends object,
   const Options extends ErrorOptions<Values>,
@@ -828,13 +1686,34 @@ export function Error<
   );
 }
 
+/**
+ * Options for a native submit button.
+ * @remarks
+ * ## Why
+ * Uses ordinary form submission semantics while exposing all button props/events.
+ * ## Ownership and lifetime
+ * The button Scope owns rendered content and listeners.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface SubmitOptions extends Dom.HostOptions<HTMLButtonElement> {
+  /** Submit button label/content. */
   readonly content: Renderable.Any;
 }
 function submitProps() {
   return () => ({ type: "submit" }) as const;
 }
 type SubmitProps = ReturnType<ReturnType<typeof submitProps>>;
+/**
+ * Renders a native `type=submit` button.
+ * @remarks
+ * ## Why
+ * Keyboard activation, form association, and accessibility stay browser-standard.
+ * ## Ownership and lifetime
+ * The Scope owns the button/content; the surrounding Form owns submission sequencing.
+ * @since 1.0.0
+ * @category components
+ */
 export function Submit<const Options extends SubmitOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<Dom.RenderHostProps<Options, SubmitProps>, Options["content"], Host>,
@@ -854,8 +1733,20 @@ export function Submit<const Options extends SubmitOptions, const Host extends H
   );
 }
 
+/**
+ * Options for a state-explicit reset button.
+ * @remarks
+ * ## Why
+ * Native reset activation can restore renderer-independent Typed state deterministically.
+ * ## Ownership and lifetime
+ * The click Effect runs in the button Scope; state may outlive the button.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface ResetOptions<Values extends object> extends Dom.HostOptions<HTMLButtonElement> {
+  /** Renderer-independent state restored on activation. */
   readonly state: FormState<Values>;
+  /** Reset button label/content. */
   readonly content: Renderable.Any;
 }
 function resetProps<Values extends object>(options: ResetOptions<Values>) {
@@ -868,6 +1759,17 @@ function resetProps<Values extends object>(options: ResetOptions<Values>) {
     }) as const;
 }
 type ResetProps<Values extends object> = ReturnType<ReturnType<typeof resetProps<Values>>>;
+/**
+ * Renders a native reset button that restores Typed form defaults.
+ * @remarks
+ * ## Why
+ * It prevents the browser's independent control mutation and resets the single
+ * RefSubject source of truth, clearing errors, metadata, and submitting state.
+ * ## Ownership and lifetime
+ * The Scope owns the click handler/content. The supplied form state remains independently owned.
+ * @since 1.0.0
+ * @category components
+ */
 export function Reset<
   const Values extends object,
   const Options extends ResetOptions<Values>,
@@ -895,14 +1797,36 @@ export function Reset<
   );
 }
 
+/**
+ * Options for an accessible group of form controls.
+ * @remarks
+ * ## Why
+ * Provides a native host with `role=group` and optional accessible label.
+ * ## Ownership and lifetime
+ * The group Scope owns child renderables but not their independent form state.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
+  /** Controls or other renderable members of the group. */
   readonly content: Renderable.Any;
+  /** Optional accessible name applied through `aria-label`. */
   readonly label?: string;
 }
 function groupProps<const Options extends GroupOptions>(options: Options) {
   return () => ({ role: "group", "aria-label": options.label }) as const;
 }
 type GroupProps<Options extends GroupOptions> = ReturnType<ReturnType<typeof groupProps<Options>>>;
+/**
+ * Renders an ARIA group with an optional accessible name.
+ * @remarks
+ * ## Why
+ * Related controls can expose their relationship without a framework-specific wrapper.
+ * ## Ownership and lifetime
+ * The Scope owns host/content; child controls retain their own DOM/state contracts.
+ * @since 1.0.0
+ * @category components
+ */
 export function Group<const Options extends GroupOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<
@@ -926,13 +1850,27 @@ export function Group<const Options extends GroupOptions, const Host extends Hos
   );
 }
 
+/**
+ * Options for an array-field append button.
+ * @remarks
+ * ## Why
+ * The field name and appended item are derived from the form value type.
+ * ## Ownership and lifetime
+ * The click Effect runs in the button Scope; form state remains independently owned.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface PushOptions<
   Values extends object,
   Name extends ArrayFieldName<Values>,
 > extends Dom.HostOptions<HTMLButtonElement> {
+  /** Renderer-independent state updated on activation. */
   readonly state: FormState<Values>;
+  /** Array-valued field to append to. */
   readonly name: Name;
+  /** Type-compatible item appended to the field. */
   readonly value: ArrayFieldValue<Values, Name>;
+  /** Button label/content. */
   readonly content: Renderable.Any;
 }
 function pushProps<Values extends object, Name extends ArrayFieldName<Values>>(
@@ -947,6 +1885,16 @@ function pushProps<Values extends object, Name extends ArrayFieldName<Values>>(
 type PushProps<Values extends object, Name extends ArrayFieldName<Values>> = ReturnType<
   ReturnType<typeof pushProps<Values, Name>>
 >;
+/**
+ * Renders a button that appends one item to an array field.
+ * @remarks
+ * ## Why
+ * Array mutation is immutable, typed, and marks the field dirty/touched.
+ * ## Ownership and lifetime
+ * The Scope owns the button handler/content; state may outlive the button.
+ * @since 1.0.0
+ * @category components
+ */
 export function Push<
   const Values extends object,
   const Name extends ArrayFieldName<Values>,
@@ -975,13 +1923,27 @@ export function Push<
   );
 }
 
+/**
+ * Options for an array-field removal button.
+ * @remarks
+ * ## Why
+ * The array field is type-checked and the local index is explicit.
+ * ## Ownership and lifetime
+ * The click Effect runs in the button Scope; form state remains independently owned.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface RemoveOptions<
   Values extends object,
   Name extends ArrayFieldName<Values>,
 > extends Dom.HostOptions<HTMLButtonElement> {
+  /** Renderer-independent state updated on activation. */
   readonly state: FormState<Values>;
+  /** Array-valued field to remove from. */
   readonly name: Name;
+  /** Zero-based item index removed from the field. */
   readonly index: number;
+  /** Button label/content. */
   readonly content: Renderable.Any;
 }
 function removeProps<Values extends object, Name extends ArrayFieldName<Values>>(
@@ -996,6 +1958,16 @@ function removeProps<Values extends object, Name extends ArrayFieldName<Values>>
 type RemoveProps<Values extends object, Name extends ArrayFieldName<Values>> = ReturnType<
   ReturnType<typeof removeProps<Values, Name>>
 >;
+/**
+ * Renders a button that removes one array item by index.
+ * @remarks
+ * ## Why
+ * Array mutation is immutable, typed, and marks the field dirty/touched.
+ * ## Ownership and lifetime
+ * The Scope owns the button handler/content; state may outlive the button.
+ * @since 1.0.0
+ * @category components
+ */
 export function Remove<
   const Values extends object,
   const Name extends ArrayFieldName<Values>,
@@ -1023,6 +1995,16 @@ export function Remove<
     (props, content) => html`<button ...${props}>${content}</button>`,
   );
 }
+/**
+ * Sets one decoded field value and updates dirty/touched metadata.
+ * @remarks
+ * ## Why
+ * Programmatic updates use the same renderer-independent state transition as controls.
+ * ## Ownership and lifetime
+ * The returned Effect mutates only the supplied RefSubject when run.
+ * @since 1.0.0
+ * @category state
+ */
 export function setValue<Values extends object, Key extends keyof Values & string, E, R>(
   state: RefSubject.RefSubject<State<Values>, E, R>,
   key: Key,
@@ -1055,6 +2037,17 @@ function updateRecord<Values extends object, Key extends keyof Values & string, 
   Reflect.set(updated, key, value);
   return updated;
 }
+/**
+ * Restores default values and clears errors, interaction metadata, and submission state.
+ * @remarks
+ * ## Why
+ * Resetting the RefSubject, rather than only DOM controls, keeps every renderer
+ * and test observer consistent with the source of truth.
+ * ## Ownership and lifetime
+ * The returned Effect performs one update when run and requires the same services as `state`.
+ * @since 1.0.0
+ * @category state
+ */
 export function reset<Values extends object, E, R>(
   state: RefSubject.RefSubject<State<Values>, E, R>,
 ): Effect.Effect<State<Values>, E, R> {
@@ -1067,13 +2060,53 @@ export function reset<Values extends object, E, R>(
   }));
 }
 
+/**
+ * Names of boolean-valued fields.
+ * @remarks
+ * ## Why
+ * Constrains checkbox bindings to values the control can represent exactly.
+ * ## Ownership and lifetime
+ * Type-only and resource-free.
+ * @since 1.0.0
+ * @category type-level
+ */
 export type BooleanFieldName<Values extends object> = FieldNameFor<Values, boolean>;
+/**
+ * Names of readonly-array-valued fields.
+ * @remarks
+ * ## Why
+ * Constrains append/removal helpers to collection fields.
+ * ## Ownership and lifetime
+ * Type-only and resource-free.
+ * @since 1.0.0
+ * @category type-level
+ */
 export type ArrayFieldName<Values extends object> = {
   [Key in keyof Values & string]: Values[Key] extends ReadonlyArray<unknown> ? Key : never;
 }[keyof Values & string];
+/**
+ * Element type of a selected array field.
+ * @remarks
+ * ## Why
+ * Append values are checked against the exact chosen field.
+ * ## Ownership and lifetime
+ * Type-only and resource-free.
+ * @since 1.0.0
+ * @category type-level
+ */
 export type ArrayFieldValue<Values extends object, Name extends ArrayFieldName<Values>> =
   Values[Name] extends ReadonlyArray<infer Value> ? Value : never;
 
+/**
+ * Appends one item to an array field and marks it dirty and touched.
+ * @remarks
+ * ## Why
+ * The immutable state transition is usable in tests, commands, or any renderer.
+ * ## Ownership and lifetime
+ * The returned Effect performs one RefSubject update when run.
+ * @since 1.0.0
+ * @category state
+ */
 export function pushValue<Values extends object, Name extends ArrayFieldName<Values>, E, R>(
   state: RefSubject.RefSubject<State<Values>, E, R>,
   name: Name,
@@ -1090,6 +2123,16 @@ export function pushValue<Values extends object, Name extends ArrayFieldName<Val
   });
 }
 
+/**
+ * Removes one item by index from an array field and marks it dirty and touched.
+ * @remarks
+ * ## Why
+ * The transition is explicit and renderer-independent; an out-of-range index leaves values unchanged.
+ * ## Ownership and lifetime
+ * The returned Effect performs one RefSubject update when run.
+ * @since 1.0.0
+ * @category state
+ */
 export function removeValue<Values extends object, Name extends ArrayFieldName<Values>, E, R>(
   state: RefSubject.RefSubject<State<Values>, E, R>,
   name: Name,
@@ -1108,18 +2151,43 @@ export function removeValue<Values extends object, Name extends ArrayFieldName<V
   });
 }
 
+/**
+ * Handler invoked only after whole-form Schema validation succeeds.
+ * @remarks
+ * ## Why
+ * Callers receive decoded values and the real native SubmitEvent, and may return an Effect.
+ * ## Ownership and lifetime
+ * A returned Effect runs inside the form submit handler and completes before `submitting` resets.
+ * @since 1.0.0
+ * @category events
+ */
 export type ValidSubmitHandler<Values extends object, E = never, R = never> = (
   values: Values,
   event: SubmitEvent,
 ) => void | Effect.Effect<unknown, E, R>;
 
+/**
+ * Options for the state-explicit form root.
+ * @remarks
+ * ## Why
+ * The form supplies native submit/reset behavior and Effect context while its
+ * data remains in a standalone hydrated RefSubject.
+ * ## Ownership and lifetime
+ * The root Scope owns DOM handlers/content and provides `CurrentForm` to descendants.
+ * It borrows `state`; submission Effects are finalized before `submitting` is cleared.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface FormOptions<
   Values extends object,
   E = never,
   R = never,
 > extends Dom.HostOptions<HTMLFormElement> {
+  /** Hydrated renderer-independent state owned outside the form renderer. */
   readonly state: FormState<Values>;
+  /** Controls and other renderable form content. */
   readonly content: Renderable.Any;
+  /** Callback invoked with decoded values only after successful validation. */
   readonly onValidSubmit?: ValidSubmitHandler<Values, E, R>;
 }
 function formProps<
@@ -1159,6 +2227,36 @@ function formProps<
 type FormProps<Values extends object, E, R, Options extends FormOptions<Values, E, R>> = ReturnType<
   ReturnType<typeof formProps<Values, E, R, Options>>
 >;
+/**
+ * Renders a native form and provides its state to schema-bound descendants.
+ * @remarks
+ * ## Why
+ * Native submission is intercepted once, whole-form Schema validation runs,
+ * then `onValidSubmit` receives decoded values. Reset updates the RefSubject so
+ * all renderers stay coherent.
+ * ## Ownership and lifetime
+ * The root Scope owns its listeners/content and `CurrentForm` service. A valid
+ * submit Effect runs in that lifetime; `submitting` is cleared in finalization
+ * even on failure or interruption. Hydration does not itself attach client UI.
+ * @example
+ * ```ts
+ * import { Form, Submit, TextInput, makeState } from "@typed/ui/Form"
+ * import { Effect, Schema } from "effect"
+ * import { html } from "@typed/template"
+ *
+ * const codec = Schema.Struct({ email: Schema.String })
+ * const view = Effect.gen(function* () {
+ *   const state = yield* makeState(codec, { id: "signup", values: { email: "" } })
+ *   return Form({
+ *     state,
+ *     content: html`${TextInput({ state, name: "email" })}${Submit({ content: "Join" })}`,
+ *     onValidSubmit: (values) => Effect.log(`Submitting ${values.email}`)
+ *   })
+ * })
+ * ```
+ * @since 1.0.0
+ * @category components
+ */
 export function Form<
   const Values extends object,
   E,
@@ -1191,18 +2289,41 @@ export function Form<
   }) as SchemaBoundRootResult<Options, Host>;
 }
 
+/**
+ * Options accepted by a schema-bound form root.
+ * @remarks
+ * ## Why
+ * The factory names the state `form` and supplies its schema/context automatically.
+ * ## Ownership and lifetime
+ * The root Scope borrows `form` and owns content, listeners, and submit Effects.
+ * @since 1.0.0
+ * @category component-options
+ */
 export interface BoundFormOptions<
   Values extends object,
   E = never,
   R = never,
 > extends Dom.HostOptions<HTMLFormElement> {
+  /** State previously created by the bound API's `state` constructor. */
   readonly form: FormState<Values>;
+  /** Schema-bound controls and other renderable form content. */
   readonly content: Renderable.Any;
+  /** Callback invoked with decoded values only after successful validation. */
   readonly onValidSubmit?: ValidSubmitHandler<Values, E, R>;
 }
 
 type CurrentFormIdentifier = Context.Service.Identifier<typeof CurrentForm>;
 
+/**
+ * Fx result of a schema-bound descendant control.
+ * @remarks
+ * ## Why
+ * Its type makes `CurrentForm`, render services, Schema errors, Scope, and custom-host requirements explicit.
+ * ## Ownership and lifetime
+ * The parent form supplies `CurrentForm`; the running Scope owns DOM work.
+ * @since 1.0.0
+ * @category models
+ */
 export type SchemaBoundComponentResult<Options, Host> = Fx<
   RenderEvent,
   Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
@@ -1212,6 +2333,16 @@ export type SchemaBoundComponentResult<Options, Host> = Fx<
   | RenderTemplate
 >;
 
+/**
+ * Fx result of a schema-bound root after it provides `CurrentForm` internally.
+ * @remarks
+ * ## Why
+ * Consumers see only external render/host requirements, not the service supplied by the root itself.
+ * ## Ownership and lifetime
+ * The running Scope owns the service provision, listeners, and rendered range.
+ * @since 1.0.0
+ * @category models
+ */
 export type SchemaBoundRootResult<Options, Host> = Fx<
   RenderEvent,
   Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
@@ -1220,28 +2351,72 @@ export type SchemaBoundRootResult<Options, Host> = Fx<
   | RenderTemplate
 >;
 
+/**
+ * Callable schema-bound input constructor for fields with one decoded value type.
+ * @remarks
+ * ## Why
+ * Struct field names, errors, and services remain inferred without passing state repeatedly.
+ * ## Ownership and lifetime
+ * Each call borrows `CurrentForm` and returns Scope-owned render work.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundInput<Fields extends FormFields, Value> {
+  /** Creates a bound native input and optionally delegates its merged props to a custom host. @since 1.0.0 @category constructors */
   <const Options extends object, const Host extends HostResult = never>(
     options: SchemaBoundInputOptions<Fields, Value> & Options,
     host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>,
   ): SchemaBoundComponentResult<Omit<Options, "name">, Host>;
 }
 
+/**
+ * Callable schema-bound input using its selected field's string codec as a mask.
+ * @remarks
+ * ## Why
+ * Structured string encodings stay declared once in the Struct schema.
+ * ## Ownership and lifetime
+ * Each call borrows `CurrentForm` and returns Scope-owned render work.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundMaskedInput<Fields extends FormFields> {
+  /** Creates a bound text input using the selected field's bidirectional string codec. @since 1.0.0 @category constructors */
   <const Options extends object, const Host extends HostResult = never>(
     options: SchemaBoundMaskedInputOptions<Fields> & Options,
     host?: Dom.HostOverride<Dom.HostProps<HTMLInputElement>, "", Host>,
   ): SchemaBoundComponentResult<Options, Host>;
 }
 
+/**
+ * Callable schema-bound checkbox constructor.
+ * @remarks
+ * ## Why
+ * Only boolean field names are accepted and state comes from `CurrentForm`.
+ * ## Ownership and lifetime
+ * Each call returns Scope-owned DOM work and borrows the current form state.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundCheckbox<Values extends object> {
+  /** Creates a bound native checkbox for a boolean field. @since 1.0.0 @category constructors */
   <const Options extends object, const Host extends HostResult = never>(
     options: SchemaBoundCheckboxOptions<Values> & Options,
     host?: Dom.HostOverride<Dom.RenderHostProps<Options, CheckboxProps<Values>>, "", Host>,
   ): SchemaBoundComponentResult<Options, Host>;
 }
 
+/**
+ * Callable schema-bound native select constructor.
+ * @remarks
+ * ## Why
+ * String field names are inferred while option content remains caller-authored.
+ * ## Ownership and lifetime
+ * Each call returns Scope-owned DOM/content work and borrows current form state.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundSelect<Values extends object> {
+  /** Creates a bound native select and preserves caller-authored option content. @since 1.0.0 @category constructors */
   <const Options extends object, const Host extends HostResult = never>(
     options: SchemaBoundSelectOptions<Values> & Options,
     host?: Dom.HostOverride<
@@ -1252,14 +2427,36 @@ export interface SchemaBoundSelect<Values extends object> {
   ): SchemaBoundComponentResult<Options, Host>;
 }
 
+/**
+ * Callable schema-bound field-error constructor.
+ * @remarks
+ * ## Why
+ * Field error text and relationship IDs derive from the current form automatically.
+ * ## Ownership and lifetime
+ * Each call returns a Scope-owned subscription and borrows current form state.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundError<Values extends object> {
+  /** Creates a bound alert region for one field's current error. @since 1.0.0 @category constructors */
   <const Options extends object, const Host extends HostResult = never>(
     options: SchemaBoundErrorOptions<Values> & Options,
     host?: Dom.HostOverride<Dom.RenderHostProps<Options, ErrorProps<Values>>, Renderable.Any, Host>,
   ): SchemaBoundComponentResult<Options, Host>;
 }
 
+/**
+ * Callable schema-bound reset-button constructor.
+ * @remarks
+ * ## Why
+ * Reset behavior can access the current form without a state argument.
+ * ## Ownership and lifetime
+ * Each call returns Scope-owned DOM work and borrows current form state.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundReset {
+  /** Creates a reset button targeting the form provided by `CurrentForm`. @since 1.0.0 @category constructors */
   <const Options extends object, const Host extends HostResult = never>(
     options: SchemaBoundResetOptions & Options,
     host?: Dom.HostOverride<
@@ -1270,7 +2467,18 @@ export interface SchemaBoundReset {
   ): SchemaBoundComponentResult<Options, Host>;
 }
 
+/**
+ * Callable schema-bound array append-button constructor.
+ * @remarks
+ * ## Why
+ * Field and item types are derived from the form value.
+ * ## Ownership and lifetime
+ * Each call returns Scope-owned DOM work and borrows current form state.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundPush<Values extends object> {
+  /** Creates an append button for a type-compatible array field and item. @since 1.0.0 @category constructors */
   <
     const Name extends ArrayFieldName<Values>,
     const Options extends object,
@@ -1285,7 +2493,18 @@ export interface SchemaBoundPush<Values extends object> {
   ): SchemaBoundComponentResult<Options, Host>;
 }
 
+/**
+ * Callable schema-bound array removal-button constructor.
+ * @remarks
+ * ## Why
+ * Array fields remain type-checked without passing state explicitly.
+ * ## Ownership and lifetime
+ * Each call returns Scope-owned DOM work and borrows current form state.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundRemove<Values extends object> {
+  /** Creates a remove button for an array field and explicit item index. @since 1.0.0 @category constructors */
   <
     const Name extends ArrayFieldName<Values>,
     const Options extends object,
@@ -1300,7 +2519,18 @@ export interface SchemaBoundRemove<Values extends object> {
   ): SchemaBoundComponentResult<Options, Host>;
 }
 
+/**
+ * Callable root constructor supplied by a schema-bound form API.
+ * @remarks
+ * ## Why
+ * It connects one factory-created state to native form behavior and descendant context.
+ * ## Ownership and lifetime
+ * The returned Fx provides `CurrentForm` for its own Scope and borrows the state.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundRoot<Values extends object> {
+  /** Creates the native form root that provides its `form` state to bound descendants. @since 1.0.0 @category constructors */
   <
     E,
     R,
@@ -1312,49 +2542,134 @@ export interface SchemaBoundRoot<Values extends object> {
   ): SchemaBoundRootResult<Options, Host>;
 }
 
+/**
+ * Optional state metadata for `SchemaBoundForm.state`.
+ * @remarks
+ * ## Why
+ * Callers may seed SSR identity, defaults, errors, and interaction/submission state.
+ * ## Ownership and lifetime
+ * Values/defaults and nested references are retained exactly; provide `id` for
+ * deterministic SSR identity.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundStateOptions<Values extends object> {
+  /** Stable hydration and accessibility relationship ID; required for deterministic SSR ordering. */
   readonly id?: string;
+  /** Exact reset-baseline reference, defaulting to the same object passed as initial values. */
   readonly defaultValues?: Values;
+  /** Initial field validation messages. */
   readonly errors?: Partial<Record<keyof Values & string, string>>;
+  /** Initial dirty/touched metadata. */
   readonly meta?: Partial<Record<keyof Values & string, FieldMeta>>;
+  /** Initial in-flight submission flag. */
   readonly submitting?: boolean;
 }
 
+/**
+ * Schema-specialized form API returned by `make`.
+ * @remarks
+ * ## Why
+ * The Struct codec is declared once, then every state, field name, component,
+ * error, and custom-host signature stays aligned with it.
+ * ## Ownership and lifetime
+ * The API retains the codec but acquires no Scope. Each `state` call creates a
+ * Scope-owned hydrated RefSubject; each component call creates lazy Fx output.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SchemaBoundForm<Fields extends FormFields> {
+  /** Struct codec shared by state construction and every bound field. */
   readonly codec: Schema.Struct<Fields>;
+  /** Creates a Scope-owned hydrated state from decoded initial values. */
   readonly state: (
     values: Schema.Struct.Type<Fields>,
     options?: SchemaBoundStateOptions<Schema.Struct.Type<Fields>>,
   ) => Effect.Effect<FormState<Schema.Struct.Type<Fields>>, Schema.SchemaError, Scope.Scope>;
+  /** Native form root that provides the current state to bound descendants. */
   readonly Root: SchemaBoundRoot<Schema.Struct.Type<Fields>>;
+  /** Bound native text input for string-encoded string fields. */
   readonly TextInput: SchemaBoundInput<Fields, string>;
+  /** Bound native search input for string-encoded string fields. */
   readonly SearchInput: SchemaBoundInput<Fields, string>;
+  /** Bound native email input for string-encoded string fields. */
   readonly EmailInput: SchemaBoundInput<Fields, string>;
+  /** Bound native URL input for string-encoded string fields. */
   readonly UrlInput: SchemaBoundInput<Fields, string>;
+  /** Bound native telephone input for string-encoded string fields. */
   readonly TelInput: SchemaBoundInput<Fields, string>;
+  /** Bound native password input for string-encoded string fields. */
   readonly PasswordInput: SchemaBoundInput<Fields, string>;
+  /** Bound native hidden input for string-encoded string fields. */
   readonly HiddenInput: SchemaBoundInput<Fields, string>;
+  /** Bound native color input for string-encoded string fields. */
   readonly ColorInput: SchemaBoundInput<Fields, string>;
+  /** Bound native time input for string-encoded string fields. */
   readonly TimeInput: SchemaBoundInput<Fields, string>;
+  /** Bound native local date-time input for string-encoded string fields. */
   readonly DateTimeLocalInput: SchemaBoundInput<Fields, string>;
+  /** Bound native month input for string-encoded string fields. */
   readonly MonthInput: SchemaBoundInput<Fields, string>;
+  /** Bound native week input for string-encoded string fields. */
   readonly WeekInput: SchemaBoundInput<Fields, string>;
+  /** Bound native number input for finite-number fields encoded as strings. */
   readonly NumberInput: SchemaBoundInput<Fields, number>;
+  /** Bound native range input for finite-number fields encoded as strings. */
   readonly RangeInput: SchemaBoundInput<Fields, number>;
+  /** Bound native date input for Date fields encoded as strings. */
   readonly DateInput: SchemaBoundInput<Fields, Date>;
+  /** Bound text input using the selected field's own string codec. */
   readonly MaskedInput: SchemaBoundMaskedInput<Fields>;
+  /** Bound native checkbox limited to boolean fields. */
   readonly Checkbox: SchemaBoundCheckbox<Schema.Struct.Type<Fields>>;
+  /** Bound native select limited to string fields. */
   readonly Select: SchemaBoundSelect<Schema.Struct.Type<Fields>>;
+  /** Bound ARIA alert for a field's current validation message. */
   readonly Error: SchemaBoundError<Schema.Struct.Type<Fields>>;
+  /** Bound reset button that restores the current form's defaults. */
   readonly Reset: SchemaBoundReset;
+  /** Bound button that appends to an array field. */
   readonly Push: SchemaBoundPush<Schema.Struct.Type<Fields>>;
+  /** Bound button that removes an item from an array field. */
   readonly Remove: SchemaBoundRemove<Schema.Struct.Type<Fields>>;
+  /** Native label component; callers provide the target control ID. */
   readonly Label: typeof Label;
+  /** Neutral description host for caller-linked explanatory content. */
   readonly Description: typeof Description;
+  /** Native submit button. */
   readonly Submit: typeof Submit;
+  /** Accessible group host for related controls. */
   readonly Group: typeof Group;
 }
 
+/**
+ * Creates a schema-bound form component family from one Struct codec.
+ * @remarks
+ * ## Why
+ * Defining the schema once removes repeated state/codec arguments and makes
+ * incompatible field/component combinations compile-time errors.
+ * ## Ownership and lifetime
+ * Factory creation is pure and retains the codec. `state` requires Scope and
+ * returns a hydrated RefSubject. `Root` provides that state through Effect
+ * context only for its render lifetime; controls borrow it.
+ * @example
+ * ```ts
+ * import { make } from "@typed/ui/Form"
+ * import { Effect, Schema } from "effect"
+ * import { html } from "@typed/template"
+ *
+ * const Signup = make(Schema.Struct({ email: Schema.String, accepted: Schema.Boolean }))
+ * const view = Effect.gen(function* () {
+ *   const form = yield* Signup.state({ email: "", accepted: false }, { id: "signup" })
+ *   return Signup.Root({
+ *     form,
+ *     content: html`${Signup.EmailInput({ name: "email" })}${Signup.Checkbox({ name: "accepted" })}`
+ *   })
+ * })
+ * ```
+ * @since 1.0.0
+ * @category constructors
+ */
 export function make<const Fields extends FormFields>(
   codec: Schema.Struct<Fields>,
 ): SchemaBoundForm<Fields> {

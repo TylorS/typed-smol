@@ -41,7 +41,7 @@ export function makeClassListUpdater(element: HTMLElement | SVGElement) {
   // We do double-bookeeping such that we don't assume we know everything about the classList
   // Other DOM-based libraries might have additional classes in the classList, so we need to allow them to exist
   // outside of our control.
-  let classList: ReadonlyArray<string> = Array.from(element.classList);
+  let classList: ReadonlyArray<string> = [];
   return (classNames: ReadonlyArray<string>) => {
     const { added, removed } = diffStrings(classList, classNames);
     if (added.length > 0) {

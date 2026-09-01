@@ -21,6 +21,21 @@ import { tuple } from "./tuple.js";
  *
  * **Errors:** The first failure from either stream fails the zipped stream.
  *
+ * @remarks
+ * ## Why
+ * `zip` preserves one-to-one positional correspondence between two producers. Values wait in
+ * unbounded queues until their counterpart arrives, and pairs emit in each source's order.
+ *
+ * ## Ownership and lifetime
+ * Both child runs and queues belong to the consumer. The first completion, any failure, or
+ * interruption stops both fibers and discards unmatched queued values.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const pairs = Fx.zip(Fx.fromIterable([1, 2]), Fx.fromIterable(["a", "b"]))
+ * ```
+ *
  * @param that - The second Fx stream.
  * @returns An Fx that emits pairs `[A, B]`.
  * @since 1.0.0
@@ -86,6 +101,21 @@ export const zip: {
  * **Completion:** Completes when the **first** of the two streams completes.
  * **Errors:** The first failure from either stream fails the result.
  *
+ * @remarks
+ * ## Why
+ * `zipWith` combines each strict pair immediately, preserving `zip`'s lockstep cardinality and
+ * ordering while avoiding a separate tuple mapping step.
+ *
+ * ## Ownership and lifetime
+ * It inherits `zip`'s two child runs and unbounded unmatched-value queues. The pure combiner adds no
+ * resource, error, or service requirement.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const sums = Fx.zipWith(Fx.fromIterable([1]), Fx.fromIterable([2]), (a, b) => a + b)
+ * ```
+ *
  * @param that - The second Fx stream.
  * @param f - Function to combine the pair `(a, b)` into a single value.
  * @returns An Fx that emits combined values.
@@ -120,6 +150,21 @@ export const zipWith: {
  * **Completion:** Completes when **both** streams have completed.
  * **Errors:** The first failure from either stream fails the result.
  *
+ * @remarks
+ * ## Why
+ * `zipLatest` combines independent sources as state: after both initialize, either update emits one
+ * pair containing both latest values. It does not enforce one-to-one pairing.
+ *
+ * ## Ownership and lifetime
+ * It delegates to `tuple`: both sources run concurrently and retain one latest value each until
+ * both complete or the consumer is interrupted.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const latest = Fx.zipLatest(Fx.succeed(1), Fx.succeed("ready"))
+ * ```
+ *
  * @param that - The second Fx stream.
  * @returns An Fx that emits `[AL, AR]` on every update from either stream.
  * @since 1.0.0
@@ -148,6 +193,21 @@ export const zipLatest: {
  *
  * **Completion:** Completes when **both** streams have completed.
  * **Errors:** The first failure from either stream fails the result.
+ *
+ * @remarks
+ * ## Why
+ * `zipLatestWith` projects latest-value pairs whenever either initialized source updates. The
+ * synchronous callback changes payloads without changing `zipLatest` cardinality.
+ *
+ * ## Ownership and lifetime
+ * Both concurrent sources and their retained latest values are owned by the consumer. The combiner
+ * is pure; failure, services, completion, and interruption come from the inputs.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const label = Fx.zipLatestWith(Fx.succeed(1), Fx.succeed("item"), (n, kind) => `${kind}-${n}`)
+ * ```
  *
  * @param that - The second Fx stream.
  * @param f - Function to combine the latest `(left, right)` into a single value.

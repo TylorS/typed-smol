@@ -1,3 +1,15 @@
+/**
+ * Typed UI: DOM-cooperative components built on Effect, Fx, Router, and Template.
+ *
+ * @remarks
+ * Namespace exports group related component families while direct exports expose
+ * the component constructor, HTTP SSR adapters, and navigation link. The DOM is
+ * the integration boundary: hosts receive real nodes, events, attributes, refs,
+ * and web-standard behavior. Running Effect Scopes own subscriptions and cleanup.
+ *
+ * @since 1.0.0
+ * @category ui
+ */
 export * as Button from "./Button.js";
 export * as Alert from "./Alert.js";
 export * as Checkbox from "./Checkbox.js";

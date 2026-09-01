@@ -97,6 +97,35 @@ function makeDestination(
 
 const navigationId = Ids.uuid7.pipe(Effect.mapError((error) => new NavigationError({ error })));
 
+/**
+ * Provides Navigation by adapting a browser Window's History API and `popstate` events.
+ *
+ * @remarks
+ * ## Why
+ * Browser history remains the platform authority while Typed adds reactive entries, stable keys,
+ * scoped handlers, and typed failures. Existing or foreign history state is reconciled instead of
+ * assuming every entry was created by Typed.
+ *
+ * ## Ownership and lifetime
+ * Layer acquisition reads and normalizes current history, allocates entry identity through `Ids`,
+ * and installs the `popstate` listener. The Layer Scope owns that listener, pending traversals,
+ * reactive state, and handler registrations. Browser calls, malformed URLs, and unknown traversal
+ * state fail as `NavigationError`; interruption runs Effect finalizers but cannot undo a platform
+ * history mutation that already completed.
+ *
+ * @example
+ * ```ts
+ * import { fromWindow } from "@typed/navigation/fromWindow"
+ *
+ * const NavigationLive = fromWindow(window)
+ * ```
+ *
+ * Browser and server providers expose the same Navigation contract; server code should use
+ * `@typed/navigation/memory` and must not evaluate the default `globalThis.window` argument.
+ *
+ * @since 1.0.0
+ * @category layers
+ */
 export const fromWindow = (window: Window = globalThis.window) =>
   Layer.effect(Navigation)(
     Effect.gen(function* () {

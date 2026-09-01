@@ -1,3 +1,22 @@
+/**
+ * Re-exports the complete public Fx combinator vocabulary.
+ *
+ * @remarks
+ * Importing this module performs no work. Each operation remains lazy until its returned `Fx` is
+ * run, and its leaf declaration documents cardinality, ordering, state, failure, services, and
+ * interruption semantics.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { map, take } from "@typed/fx/Fx"
+ *
+ * const firstLabel = Fx.fromIterable([1, 2]).pipe(map(String), take(1))
+ * ```
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
 export * from "./catch.js";
 export * from "./changesWithEffect.js";
 export * from "./causes.js";

@@ -4,17 +4,67 @@ import { html, type Renderable, type RenderEvent, type RenderTemplate } from "@t
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
+/**
+ * Options for assigning explicit ARIA semantics to a generic host.
+ * @remarks
+ * ## Why
+ * This primitive keeps role selection visible when no dedicated component
+ * matches the required semantic.
+ * ## Ownership and lifetime
+ * The model acquires no resources; dynamic values follow the rendered Scope.
+ * @since 1.0.0
+ * @category models
+ */
 export interface RoleOptions extends Dom.HostOptions<HTMLDivElement> {
+  /** Content rendered inside the semantic host.
+   * @remarks
+   * ## Why
+   * Native content remains available to the accessibility tree.
+   * ## Ownership and lifetime
+   * Dynamic content follows the component Scope.
+   * @since 1.0.0
+   * @category content
+   */
   readonly content: Renderable.Any;
+  /** The explicit ARIA role.
+   * @remarks
+   * ## Why
+   * Callers must choose semantics appropriate to their interaction model.
+   * ## Ownership and lifetime
+   * The reflected value retains no resources.
+   * @since 1.0.0
+   * @category accessibility
+   */
   readonly role: Renderable.Any<string | null | undefined>;
 }
 
-function internalProps<const Options extends RoleOptions>({ property }: Dom.InternalPropsHelpers<Options>) {
+function internalProps<const Options extends RoleOptions>({
+  property,
+}: Dom.InternalPropsHelpers<Options>) {
   return { role: property("role", undefined) };
 }
 
 type RoleInternalProps<Options extends RoleOptions> = ReturnType<typeof internalProps<Options>>;
 
+/**
+ * Renders a generic element with caller-selected ARIA semantics.
+ * @remarks
+ * ## Why
+ * It provides cooperative host composition without pretending every ARIA role
+ * has identical keyboard behavior; the caller remains responsible for the
+ * chosen role's complete accessibility contract.
+ * ## Ownership and lifetime
+ * Running the returned Fx owns dynamic attributes and content until its Effect
+ * Scope closes. A custom host must preserve the supplied role.
+ * @example
+ * ```ts
+ * import { Role } from "@typed/ui/Role"
+ *
+ * const status = Role({ role: "status", content: "Ready" })
+ * ```
+ * @since 1.0.0
+ * @category components
+ */
 export function Role<const Options extends RoleOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<

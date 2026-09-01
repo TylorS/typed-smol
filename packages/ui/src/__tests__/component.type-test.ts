@@ -67,6 +67,23 @@ type _ComponentServices = Assert<
 // @ts-expect-error component arguments retain the generator parameter types
 Greeting("Hi", 1);
 
+interface GenericGreetingProps<E, R> {
+  readonly content: Effect.Effect<string, E, R>;
+}
+
+// oxlint-disable-next-line require-yield
+const GenericGreeting = component(function* <E, R>(props: GenericGreetingProps<E, R>) {
+  return props.content;
+});
+
+declare const genericContent: Effect.Effect<string, "generic-error", ContentService>;
+
+const genericGreeting = GenericGreeting({ content: genericContent });
+
+type _GenericComponentSuccess = Assert<Equal<Fx.Success<typeof genericGreeting>, string>>;
+type _GenericComponentErrors = Assert<Equal<Fx.Error<typeof genericGreeting>, "generic-error">>;
+type _GenericComponentServices = Assert<Equal<Fx.Services<typeof genericGreeting>, ContentService>>;
+
 const PipedGreeting = component(
   // oxlint-disable-next-line require-yield
   function* (salutation: "Hello" | "Welcome", _count: number) {

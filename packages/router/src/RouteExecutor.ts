@@ -11,23 +11,120 @@ import { makeFormatterDefault } from "effect/SchemaIssue";
 import * as Semaphore from "effect/Semaphore";
 import * as Scope from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
-import { exit } from "@typed/fx/Fx";
-import { mapEffect } from "@typed/fx/Fx/combinators/mapEffect";
-import { provideContext } from "@typed/fx/Fx/combinators/provide";
-import { skipRepeats } from "@typed/fx/Fx/combinators/skipRepeats";
-import { switchMap } from "@typed/fx/Fx/combinators/switchMap";
-import { succeed } from "@typed/fx/Fx/constructors/succeed";
+import { exit, mapEffect, provideContext, skipRepeats, succeed, switchMap } from "@typed/fx/Fx";
 import type { AnyCatch, AnyLayer, AnyLayout, AnyServiceMap, CompiledEntry } from "./Matcher.js";
 import type { Router } from "./Router.js";
 
+/**
+ * The path, raw input, candidate list, and ambient Layers for one route update.
+ *
+ * @remarks
+ * ## Why
+ * Candidate selection and parameter decoding can be executed independently from path lookup.
+ *
+ * ## Ownership and lifetime
+ * Callers construct this immutable transition value for one `transition` call. The executor reads it
+ * during that call; any selected entry, decoded parameters, Layers, layouts, or catch handlers are then
+ * retained by their dedicated scoped managers rather than by this record itself.
+ *
+ * @since 1.0.0
+ * @category execution
+ */
 export interface RouteTransition {
+  /**
+   * The current pathname and search string being transitioned.
+   *
+   * @remarks
+   * ## Why
+   * Typed errors and candidate selection retain the exact location that produced them.
+   *
+   * ## Ownership and lifetime
+   * The executor reads this string while selecting candidates and reporting failures. It does not retain
+   * the string after the transition completes.
+   *
+   * @since 1.0.0
+   * @category execution
+   */
   readonly path: string;
+  /**
+   * The raw path and query parameter record decoded by each candidate.
+   *
+   * @remarks
+   * ## Why
+   * Each candidate applies its own Effect Schema before a handler observes values.
+   *
+   * ## Ownership and lifetime
+   * Candidate schemas inspect this value during the transition. Only the decoded parameters for the
+   * selected candidate are placed in the active `RefSubject`; the raw input is not retained.
+   *
+   * @since 1.0.0
+   * @category execution
+   */
   readonly input: unknown;
+  /**
+   * The ordered executable candidates selected by path lookup.
+   *
+   * @remarks
+   * ## Why
+   * These candidates already share the matcher path selected by path lookup. Their schemas and guards
+   * fall through in registration order without rerunning path-shape selection.
+   *
+   * ## Ownership and lifetime
+   * The executor borrows this array for the transition. A selected entry identity remains current until
+   * another route replaces it, but the executor does not copy or own the candidate array.
+   *
+   * @since 1.0.0
+   * @category execution
+   */
   readonly candidates: ReadonlyArray<CompiledEntry>;
+  /**
+   * Additional Effect Layers applied to this transition.
+   *
+   * @remarks
+   * ## Why
+   * Ambient route dependencies can participate in the same prepare, commit, rollback, and release protocol.
+   *
+   * ## Ownership and lifetime
+   * The Layer manager compares these values by identity. Selected Layer identities and their child Scopes
+   * remain active until a later transition removes them or the executor's root Scope closes.
+   *
+   * @since 1.0.0
+   * @category execution
+   */
   readonly layers?: ReadonlyArray<AnyLayer>;
 }
 
+/**
+ * Transitions between decoded route candidates while retaining compatible mounted work.
+ *
+ * @remarks
+ * ## Why
+ * Parameter-only updates can reuse a handler; route changes switch scopes deterministically.
+ *
+ * ## Ownership and lifetime
+ * An executor is acquired by `makeRouteExecutor` in a Scope. That Scope owns its current handler and the
+ * Layer, layout, and catch managers reused across calls to `transition`.
+ *
+ * @since 1.0.0
+ * @category execution
+ */
 export interface RouteExecutor<A, E = never, R = never> {
+  /**
+   * Decodes and selects the first accepted candidate for one route transition.
+   *
+   * @remarks
+   * ## Why
+   * Candidate schemas and guards run in their supplied order after path lookup has selected a matcher
+   * shape. Decode failures, guard `None`, and guard failures fall through; selected identity controls
+   * parameter reuse, and route changes switch the owned handler Scope.
+   *
+   * ## Ownership and lifetime
+   * Calls are serialized by the executor's semaphore. Preparing a replacement occurs before commit;
+   * rejection rolls back new Layer Scopes, while commit closes replaced handler and manager Scopes.
+   *
+   * @since 1.0.0
+   * @category execution
+   */
   readonly transition: (
     transition: RouteTransition,
   ) => Effect.Effect<
@@ -37,6 +134,33 @@ export interface RouteExecutor<A, E = never, R = never> {
   >;
 }
 
+/**
+ * Creates a scoped executor for route candidate decoding and selection.
+ *
+ * @remarks
+ * ## Why
+ * One owner coordinates layer rollback, guard order, layout reuse, catch boundaries, and handler finalization.
+ *
+ * ## Ownership and lifetime
+ * The returned Effect must run inside the Scope that will own the executor. Do not let the executor escape
+ * that Scope: closing it interrupts the selected handler and finalizes all Layer, layout, and catch children.
+ *
+ * @example
+ * ```ts
+ * import { makeRouteExecutor } from "@typed/router/RouteExecutor"
+ * import * as Effect from "effect/Effect"
+ *
+ * const useExecutor = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     yield* makeRouteExecutor<string>()
+ *     yield* Effect.log("route executor is owned by this scope")
+ *   })
+ * )
+ * ```
+ *
+ * @since 1.0.0
+ * @category execution
+ */
 export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
   RouteExecutor<A, E, R>,
   never,
@@ -166,6 +290,20 @@ export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
   });
 }
 
+/**
+ * Reports that every decoded candidate's guard failed or returned `None`.
+ *
+ * @remarks
+ * ## Why
+ * Guard rejection stays distinct from path absence and schema decoding failure.
+ *
+ * ## Ownership and lifetime
+ * The executor allocates this immutable error only after every decoded guard candidate rejects. Its
+ * Cause array remains reachable through the error until consumers release it.
+ *
+ * @since 1.0.0
+ * @category execution
+ */
 export class RouteGuardError extends Schema.Error<RouteGuardError>("@typed/router/RouteGuardError")(
   {
     _tag: Schema.tag("RouteGuardError"),
@@ -174,11 +312,39 @@ export class RouteGuardError extends Schema.Error<RouteGuardError>("@typed/route
   },
 ) {}
 
+/**
+ * Reports that path lookup produced no registered candidate.
+ *
+ * @remarks
+ * ## Why
+ * Redirect boundaries can catch absence without masking decode, guard, or handler failures.
+ *
+ * ## Ownership and lifetime
+ * Path lookup creates this immutable error before decoding or acquiring candidate Layers. Catch and
+ * redirect combinators may retain it only for the duration of their recovery Effect.
+ *
+ * @since 1.0.0
+ * @category execution
+ */
 export class RouteNotFound extends Schema.Error<RouteNotFound>("@typed/router/RouteNotFound")({
   _tag: Schema.tag("RouteNotFound"),
   path: Schema.String,
 }) {}
 
+/**
+ * Reports route registration or parameter/query decoding failure.
+ *
+ * @remarks
+ * ## Why
+ * Invalid regex, schema input, and unsupported matcher paths remain typed and retain the affected path.
+ *
+ * ## Ownership and lifetime
+ * Registration or execution allocates this immutable error with the affected path and formatted
+ * cause. It owns no Schema service or route Scope.
+ *
+ * @since 1.0.0
+ * @category execution
+ */
 export class RouteDecodeError extends Schema.Error<RouteDecodeError>(
   "@typed/router/RouteDecodeError",
 )({
@@ -193,7 +359,22 @@ const closeScopes = (scopes: Iterable<Scope.Closeable>, fiberId: number) =>
     discard: true,
   });
 
-/** @internal */
+/**
+ * Creates the internal scoped Layer prepare/commit/rollback manager.
+ *
+ * @remarks
+ * ## Why
+ * Rejected candidates must release acquisition while selected candidates reuse memoized services.
+ *
+ * ## Ownership and lifetime
+ * `prepare` forks child Scopes only for newly requested Layer identities and returns explicit `commit` and
+ * `rollback` Effects. Commit closes removed Layers in reverse order; rollback closes only additions from
+ * the rejected preparation. `rootScope` remains their ultimate owner.
+ *
+ * @since 1.0.0
+ * @category execution
+ * @internal
+ */
 export function makeLayerManager(memoMap: Layer.MemoMap, rootScope: Scope.Scope, fiberId: number) {
   const states = new Map<AnyLayer, { scope: Scope.Closeable; services: AnyServiceMap }>();
   let order: ReadonlyArray<AnyLayer> = [];
@@ -271,7 +452,24 @@ export function makeLayerManager(memoMap: Layer.MemoMap, rootScope: Scope.Scope,
   return { prepare };
 }
 
-/** @internal */
+/**
+ * Creates the internal scoped layout reuse manager.
+ *
+ * @remarks
+ * ## Why
+ * The manager walks the compiled layout list in reverse: it acquires the innermost layout first,
+ * then passes that Fx outward, yielding outer(inner(handler)) nesting. Stable identities update
+ * parameters and content without remounting; removed layouts are finalized.
+ *
+ * ## Ownership and lifetime
+ * Each newly seen layout gets a child Scope forked from `rootScope`; that child owns its params and
+ * content RefSubjects. The manager reuses the child while the same layout identity remains active
+ * and closes it when the layout disappears or `rootScope` is interrupted.
+ *
+ * @since 1.0.0
+ * @category execution
+ * @internal
+ */
 export function makeLayoutManager(rootScope: Scope.Scope, fiberId: number) {
   const states = new Map<
     AnyLayout,
@@ -342,7 +540,21 @@ export function makeLayoutManager(rootScope: Scope.Scope, fiberId: number) {
   return { apply, updateParams };
 }
 
-/** @internal */
+/**
+ * Creates the internal scoped reactive cause-boundary manager.
+ *
+ * @remarks
+ * ## Why
+ * Fallback Fx values replace failed content while retaining complete Effect causes and cleanup.
+ *
+ * ## Ownership and lifetime
+ * Each active catch handler owns a child Scope containing its cause and content RefSubjects. Handler
+ * identity controls reuse; removed boundaries are closed, and `rootScope` closes every remaining child.
+ *
+ * @since 1.0.0
+ * @category execution
+ * @internal
+ */
 export function makeCatchManager(rootScope: Scope.Scope, fiberId: number) {
   const states = new Map<
     AnyCatch,

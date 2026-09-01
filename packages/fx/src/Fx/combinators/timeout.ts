@@ -60,13 +60,34 @@ const runTimed = <A, E, R, B, E2, R2>(
  * The timeout is reset after each emission. An infinite duration is a no-op;
  * a zero duration completes immediately.
  *
+ * @remarks
+ * ## Why
+ *
+ * Silence is meaningful in push systems. This operator turns an idle period
+ * into normal completion without inventing an error type.
+ *
+ * ## Ownership and lifetime
+ *
+ * Subscription starts the source and one scoped timer. Each delivered value
+ * forwards immediately and rearms the timer. If the timer wins, it interrupts
+ * the source and the result completes; the interrupt caused by that timeout is
+ * not forwarded. Source failure before the deadline propagates. Interruption
+ * clears both source fiber and timer. Infinite duration returns the source;
+ * zero duration never starts it.
+ *
+ * @example
+ * ```ts
+ * import { timeout } from "@typed/fx/Fx"
+ * import { periodic } from "@typed/fx/Fx"
+ *
+ * const bounded = timeout(periodic("1 second"), "250 millis")
+ * ```
+ *
  * @since 1.0.0
  * @category combinators
  */
 export const timeout: {
-  (
-    duration: Duration.Input,
-  ): <A, E, R>(self: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;
+  (duration: Duration.Input): <A, E, R>(self: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;
   <A, E, R>(self: Fx<A, E, R>, duration: Duration.Input): Fx<A, E, R | Scope.Scope>;
 } = dual(2, <A, E, R>(self: Fx<A, E, R>, duration: Duration.Input): Fx<A, E, R | Scope.Scope> => {
   const d = Duration.fromInputUnsafe(duration);
@@ -79,6 +100,29 @@ export const timeout: {
  * Switches to `fallback` if the source does not produce a value within
  * `duration` of the previous event. Matches Effect `Stream.timeoutOrElse`
  * and RxJS `timeoutTo`.
+ *
+ * @remarks
+ * ## Why
+ *
+ * A fallback lets an idle producer hand ownership to another push source while
+ * preserving both sources' precise values, failures, and services.
+ *
+ * ## Ownership and lifetime
+ *
+ * The source and resettable timer start first. On timeout the source is
+ * interrupted, then one fallback subscription starts; the two producers never
+ * overlap. A source failure before timeout propagates and does not start the
+ * fallback. Interruption stops the active producer and timer. Infinite duration
+ * returns the source unchanged; zero duration returns the fallback without
+ * starting the source.
+ *
+ * @example
+ * ```ts
+ * import { timeoutTo } from "@typed/fx/Fx"
+ * import { periodic, succeed } from "@typed/fx/Fx"
+ *
+ * const available = timeoutTo(periodic("1 second"), "250 millis", succeed("offline"))
+ * ```
  *
  * @since 1.0.0
  * @category combinators

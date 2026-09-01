@@ -23,14 +23,104 @@ import type {
   NavigationReloadOptions,
 } from "./Navigation.js";
 
+/**
+ * Stores the backend-neutral history list, active index, and optional pending transition.
+ *
+ * @remarks
+ * ## Why
+ * Provider adapters can share one tested transition state machine while retaining control over the
+ * actual browser, native, or in-memory commit operation.
+ *
+ * ## Ownership and lifetime
+ * This immutable snapshot acquires no resources. The RefSubject passed to
+ * {@link makeNavigationCore} owns successive snapshots for its provider Scope.
+ *
+ * @since 1.0.0
+ * @category advanced
+ */
 export type NavigationState = {
+  /**
+   * Committed entries in traversal order.
+   *
+   * @remarks
+   * ## Why
+   * The active entry, traversal bounds, and keyed lookup all derive from one ordered snapshot.
+   *
+   * ## Ownership and lifetime
+   * The snapshot retains this array by reference. Provider code replaces the snapshot rather than
+   * mutating the array while a transition is running.
+   *
+   * @since 1.0.0
+   * @category advanced
+   */
   readonly entries: ReadonlyArray<Destination>;
+  /**
+   * Zero-based active entry index.
+   *
+   * @remarks
+   * ## Why
+   * Back, forward, and current-entry reads share the same cursor into `entries`.
+   *
+   * ## Ownership and lifetime
+   * The index belongs to this immutable snapshot and changes only when the provider publishes a
+   * replacement snapshot. Callers must keep it within the `entries` bounds.
+   *
+   * @since 1.0.0
+   * @category advanced
+   */
   readonly index: number;
+  /**
+   * Pending transition, cleared on commit, cancellation, redirect failure, or interruption.
+   *
+   * @remarks
+   * ## Why
+   * Consumers can distinguish proposed work from the destination at the committed `index`.
+   *
+   * ## Ownership and lifetime
+   * The provider retains `Some(transition)` only while that transition is current. Cleanup compares
+   * identity before clearing it so an interrupted older transition cannot erase a newer one.
+   *
+   * @since 1.0.0
+   * @category advanced
+   */
   readonly transition: Option.Option<Transition>;
 };
 
 const MAX_DEPTH = 10;
 
+/**
+ * Builds the Navigation service state machine around a provider-specific commit Effect.
+ *
+ * @remarks
+ * ## Why
+ * Browser and memory providers must agree on ordering: publish the transition, run before handlers
+ * sequentially, follow redirect/cancel control flow, commit, update state, clear the transition,
+ * then run post-commit handlers. Centralizing that protocol prevents backend drift.
+ *
+ * ## Ownership and lifetime
+ * The calling Layer owns the supplied state and returned service. Handler registration captures its
+ * Effect context and unregisters when its Scope closes. Redirects are capped at ten; malformed URLs,
+ * backend failures, and redirect cycles surface as `NavigationError`. Interruption clears a still-
+ * current transition through normal Effect cleanup.
+ *
+ * @example
+ * ```ts
+ * import { makeNavigationCore, type NavigationState } from "@typed/navigation/_core"
+ * import type { RefSubject } from "@typed/fx"
+ * import * as Effect from "effect/Effect"
+ * import type { BeforeNavigationEvent, Destination } from "@typed/navigation/model"
+ *
+ * declare const state: RefSubject.RefSubject<NavigationState>
+ * declare const commit: (
+ *   event: BeforeNavigationEvent,
+ *   runHandlers: (destination: Destination) => Effect.Effect<void>
+ * ) => Effect.Effect<Destination, never>
+ *
+ * const NavigationLive = makeNavigationCore("https://example.com", "/", state, commit)
+ * ```
+ * @since 1.0.0
+ * @category advanced
+ */
 export const makeNavigationCore = Effect.fn(function* (
   origin: string,
   base: string,
@@ -426,6 +516,27 @@ function makeRedirectEvent(
   }));
 }
 
+/**
+ * Resolves a path or URL value against an absolute origin.
+ *
+ * @remarks
+ * ## Why
+ * Provider adapters need one URL-normalization rule before computing `sameDocument` or committing
+ * history.
+ *
+ * ## Ownership and lifetime
+ * This synchronous helper acquires no resources. Native `URL` construction errors are thrown;
+ * provider code uses its internal Effect wrapper when a `NavigationError` channel is required.
+ *
+ * @example
+ * ```ts
+ * import { getUrl } from "@typed/navigation/_core"
+ *
+ * const url = getUrl("https://example.com", "/account")
+ * ```
+ * @since 1.0.0
+ * @category advanced
+ */
 export const getUrl = (origin: string, urlOrPath: string | URL): URL =>
   typeof urlOrPath === "string" ? new URL(urlOrPath, origin) : urlOrPath;
 

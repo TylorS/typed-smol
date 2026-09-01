@@ -15,6 +15,44 @@ import type { FlatMapLike } from "./flatMap.js";
  *
  * When a new element is emitted, the previous inner Fx is cancelled.
  *
+ * @remarks
+ * ## Why
+ *
+ * `switchMap` models work whose result becomes obsolete when a newer source
+ * value arrives, such as suggestions for the current query. Cancellation is the
+ * policy: obsolete work is not allowed to finish in the background.
+ *
+ * ## Switching, ordering, and cardinality
+ *
+ * Every source value calls `f`. Before the new inner starts, the previous inner
+ * is interrupted and its interruption is awaited. Only the latest inner remains
+ * active; values it emitted before replacement remain visible, while later
+ * values from the replaced inner are suppressed. There is no result buffer.
+ *
+ * ## Ownership and lifetime
+ *
+ * Source and current-inner failures are forwarded and their services remain
+ * typed. The returned Fx requires `Scope`, which owns the current inner fiber.
+ * Source completion waits for the latest inner. Replacing or interrupting the
+ * output closes obsolete inner work and runs its scoped finalizers before the
+ * replacement proceeds.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { Effect } from "effect"
+ *
+ * const queries = Fx.mergeAll(
+ *   Fx.at("typed", "0 millis"),
+ *   Fx.at("typed fx", "5 millis")
+ * )
+ * const suggestions = Fx.switchMap(queries, (query) =>
+ *   Fx.ensuring(Fx.at(query, "20 millis"), Effect.log(`${query} closed`))
+ * )
+ * Effect.runPromise(Effect.scoped(Fx.collectAll(suggestions))).then(console.log)
+ * // logs cleanup for "typed" and resolves ["typed fx"]
+ * ```
+ *
  * @param f - A function that maps an element `A` to a new `Fx<B>`.
  * @returns An `Fx` that emits values from the latest inner stream.
  * @since 1.0.0

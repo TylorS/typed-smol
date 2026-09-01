@@ -13,6 +13,24 @@ import {
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
+/**
+ * Native anchor options plus Typed navigation behavior.
+ *
+ * @remarks
+ * ## Why
+ *
+ * `href` and content remain renderable, while `replace` selects history policy.
+ * Ordinary anchor options—including target, download, rel, and user click
+ * handlers—stay available through the DOM host model.
+ *
+ * ## Ownership and lifetime
+ *
+ * Options are inert. Rendering owns subscriptions to renderable values and the
+ * click listener for its Effect Scope; the `Navigation` service owns history.
+ *
+ * @since 1.0.0
+ * @category models
+ */
 export type LinkOptions = Dom.HostOptions<HTMLAnchorElement> &
   Dom.ElementOptions<HTMLAnchorElement> & {
     readonly href: Renderable<string, any, any>;
@@ -106,9 +124,44 @@ function internalProps<const Options extends LinkOptions>(options: Options) {
 }
 
 /**
- * Renders a native anchor and intercepts eligible same-origin clicks for SPA
- * navigation. Modified clicks, downloads, external URLs, and non-self targets
- * retain the browser's native behavior.
+ * Renders a native anchor with safe, eligible same-origin SPA navigation.
+ *
+ * Modified clicks, downloads, external URLs, non-HTTP(S) destinations, and
+ * non-self targets retain browser behavior. Unsafe executable schemes are
+ * rendered as `about:blank` and their clicks are canceled. A user click handler
+ * runs first through DOM host event chaining; `preventDefault()` prevents the
+ * internal navigation decision.
+ *
+ * @remarks
+ * ## Why
+ *
+ * `Link` keeps the anchor as the integration boundary: native opening, copying,
+ * status previews, modifier keys, downloads, and external navigation continue
+ * to work. Only an unmodified primary click to same-origin HTTP(S) is handed to
+ * Typed's Effect-native `Navigation` service.
+ *
+ * ## Ownership and lifetime
+ *
+ * Calling `Link` starts no work. Running the returned Fx subscribes to dynamic
+ * href/content and installs a real, non-passive DOM click listener in its
+ * Effect Scope. Scope finalization removes only those resources. Navigation
+ * failures and required services remain visible in the Fx type. A custom host
+ * must preserve the sanitized href, chained click handler, content, and native
+ * anchor behavior.
+ *
+ * @example
+ * ```ts
+ * import { Link } from "@typed/ui/Link"
+ *
+ * const profile = Link({
+ *   href: "/account/profile",
+ *   content: "Profile",
+ *   replace: false
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category components
  */
 export function Link<const Options extends object>(
   options: Options,

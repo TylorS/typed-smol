@@ -15,6 +15,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefRecord is a RefSubject specialized over a Record.
+ * @remarks
+ * ## Why
+ *
+ * Defines record state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefRecord is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -27,6 +38,17 @@ export interface RefRecord<
 
 /**
  * Creates a new `RefRecord` from a Record, `Effect`, or `Fx`.
+ * @remarks
+ * ## Why
+ *
+ * Creates record state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -45,6 +67,17 @@ export function make<K extends string, V, E = never, R = never>(
 
 /**
  * Set a key-value pair in the Record.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set atomic with respect to competing RefSubject writes instead of splitting the read and
+ * replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set performs one serialized record transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -64,6 +97,17 @@ export const set: {
 
 /**
  * Remove a key from the Record.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove to the committed record value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove performs one serialized record transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -81,6 +125,17 @@ export const remove: {
 
 /**
  * Modify the value at a key if it exists.
+ * @remarks
+ * ## Why
+ *
+ * Keeps modify atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running modify performs one serialized record transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -105,6 +160,17 @@ export const modify: {
 
 /**
  * Replace the value at a key if it exists.
+ * @remarks
+ * ## Why
+ *
+ * Keeps replace atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running replace performs one serialized record transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -129,6 +195,17 @@ export const replace: {
 
 /**
  * Clear all entries from the Record.
+ * @remarks
+ * ## Why
+ *
+ * Applies clear to the committed record value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running clear performs one serialized record transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -139,6 +216,17 @@ export const clear = <K extends string, V, E, R>(
 
 /**
  * Union with another record.
+ * @remarks
+ * ## Why
+ *
+ * Combines bulk record changes in one committed value, giving subscribers one coherent update
+ * rather than a partially applied sequence.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running union performs one serialized record transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -168,6 +256,17 @@ export const union: {
 
 /**
  * Intersection with another record.
+ * @remarks
+ * ## Why
+ *
+ * Intersection with another record. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running intersection performs one serialized record transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -197,6 +296,17 @@ export const intersection: {
 
 /**
  * Difference with another record.
+ * @remarks
+ * ## Why
+ *
+ * Difference with another record. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running difference performs one serialized record transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -219,6 +329,16 @@ export const difference: {
 
 /**
  * Filter entries in place.
+ * @remarks
+ * ## Why
+ *
+ * Applies filter to the committed Record through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed Record and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -241,6 +361,16 @@ export const filter: {
 
 /**
  * Map values in place (endomorphic).
+ * @remarks
+ * ## Why
+ *
+ * Applies map to the committed Record through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed Record and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -267,6 +397,17 @@ export const map: {
 
 /**
  * Get the current size of the Record.
+ * @remarks
+ * ## Why
+ *
+ * Makes size a live projection of the record; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The size view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -276,6 +417,17 @@ export const size = <K extends string, V, E, R>(
 
 /**
  * Check if the Record is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the record; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -285,6 +437,17 @@ export const isEmpty = <K extends string, V, E, R>(
 
 /**
  * Check if the Record is non-empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is non empty a live projection of the record; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is non empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -294,6 +457,17 @@ export const isNonEmpty = <K extends string, V, E, R>(
 
 /**
  * Check if a key exists in the Record.
+ * @remarks
+ * ## Why
+ *
+ * Makes has a live projection of the record; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The has view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -311,6 +485,17 @@ export const has: {
 
 /**
  * Get all keys from the Record.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with keys for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The keys view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -321,6 +506,17 @@ export const keys = <K extends string, V, E, R>(
 
 /**
  * Get all values from the Record.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with values for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -330,6 +526,17 @@ export const values = <K extends string, V, E, R>(
 
 /**
  * Get all entries from the Record.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with entries for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The entries view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -339,6 +546,17 @@ export const entries = <K extends string, V, E, R>(
 
 /**
  * Map values to a different type.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with map values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -362,6 +580,17 @@ export const mapValues: {
 
 /**
  * Map keys to different keys.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with map keys for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map keys view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -387,6 +616,17 @@ export const mapKeys: {
 
 /**
  * Map entries to new key-value pairs.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with map entries for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map entries view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -411,6 +651,17 @@ export const mapEntries: {
 
 /**
  * Filter entries creating a Computed value.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with filter values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -433,6 +684,17 @@ export const filterValues: {
 
 /**
  * Filter and map values.
+ * @remarks
+ * ## Why
+ *
+ * Projects record state with filter map values for both current reads and future pushes, avoiding
+ * a second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter map values view retains no independent state. An Effect read samples the source once;
+ * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -460,6 +722,16 @@ export const filterMapValues: {
 
 /**
  * Partition entries.
+ * @remarks
+ * ## Why
+ *
+ * Partition entries. The operation remains attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The partition view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -490,6 +762,17 @@ export const partition: {
 
 /**
  * Check if any entry satisfies a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes some a live projection of the record; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The some view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -512,6 +795,17 @@ export const some: {
 
 /**
  * Check if all entries satisfy a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes every a live projection of the record; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The every view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -534,6 +828,17 @@ export const every: {
 
 /**
  * Reduce the entries to a single value.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce a live projection of the record; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -563,6 +868,17 @@ export const reduce: {
 
 /**
  * Get the value at a key as a Filtered.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -575,6 +891,17 @@ export const get: {
 
 /**
  * Find the first entry satisfying a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find first as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find first view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -597,6 +924,17 @@ export const findFirst: {
 
 /**
  * Pop a value at a key as a Filtered.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of pop as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The pop view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */

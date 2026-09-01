@@ -1,0 +1,142 @@
+/* Build-time token colors. Code keeps its source layout and scrolls as a unit. */
+.code-block {
+  overflow-x: auto;
+  white-space: pre;
+  scrollbar-color: var(--line) transparent;
+}
+
+.code-block code {
+  color: var(--text);
+}
+
+.code-block .tok-comment {
+  color: #8fa9ad;
+}
+
+.code-block .tok-string {
+  color: #b7e38a;
+}
+
+.code-block .tok-keyword {
+  color: #f0a6d7;
+}
+
+.code-block .tok-type,
+.code-block .tok-tag {
+  color: #84d8ff;
+}
+
+.code-block .tok-number,
+.code-block .tok-constant {
+  color: #f6c76e;
+}
+
+.code-block .tok-boolean {
+  color: #f5a0a0;
+}
+
+.code-block .tok-function,
+.code-block .tok-command {
+  color: #8ee6a9;
+}
+
+.code-block .tok-property,
+.code-block .tok-attribute {
+  color: #e6b5f7;
+}
+
+.code-block .tok-selector {
+  color: var(--accent);
+}
+
+.code-block .tok-template-tag {
+  color: var(--accent);
+  font-weight: 750;
+  text-shadow: 0 0 0.55rem color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.code-block .tok-template-punctuation {
+  color: #67f5d8;
+  font-weight: 700;
+}
+
+.code-block .tok-operator {
+  color: #c0d0d2;
+}
+
+.code-block .tok-punctuation {
+  color: #a2b8bb;
+}
+
+.code-block ::selection {
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  color: var(--text);
+}
+
+code.inline-code-link {
+  padding: 0.08em 0.28em;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 0.2em;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+code.inline-code-link a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+code.inline-code-link a:hover {
+  text-decoration-color: var(--accent);
+}
+
+@media (prefers-color-scheme: light) {
+  .code-block .tok-comment {
+    color: #50696c;
+  }
+
+  .code-block .tok-string {
+    color: #39711f;
+  }
+
+  .code-block .tok-keyword {
+    color: #934675;
+  }
+
+  .code-block .tok-type,
+  .code-block .tok-tag {
+    color: #17658c;
+  }
+
+  .code-block .tok-number,
+  .code-block .tok-constant {
+    color: #855500;
+  }
+
+  .code-block .tok-boolean {
+    color: #8e3030;
+  }
+
+  .code-block .tok-function,
+  .code-block .tok-command {
+    color: #267344;
+  }
+
+  .code-block .tok-property,
+  .code-block .tok-attribute {
+    color: #75438c;
+  }
+
+  .code-block .tok-template-tag,
+  .code-block .tok-template-punctuation {
+    color: #006c5b;
+    text-shadow: none;
+  }
+
+  .code-block .tok-operator {
+    color: #506064;
+  }
+
+  .code-block .tok-punctuation {
+    color: #607477;
+  }
+}

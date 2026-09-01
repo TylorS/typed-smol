@@ -8,10 +8,34 @@ import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
 
 /**
- * Provides context to an Fx from a Layer.
+ * Builds a Layer for each subscription and provides it to the entire Fx run.
  *
- * The context is provided to the entire Fx stream, including any effects run
- * during its execution. The context is scoped to the lifetime of the stream.
+ * @remarks
+ * ## Why
+ *
+ * Fx preserves Effect service requirements in `R`; providing a Layer closes
+ * those requirements while retaining acquisition failures and dependencies in
+ * the resulting type.
+ *
+ * ## Ownership and lifetime
+ *
+ * Each subscription creates a private Scope and builds the Layer inside it
+ * before the source starts. A build failure is sent to the sink and the source
+ * never runs. Otherwise the built Context is available to every source Effect,
+ * and the Scope closes with the source's success, failure, defect, or
+ * interruption. Provided services are removed from `R`; Layer dependencies and
+ * errors are added.
+ *
+ * @example
+ * ```ts
+ * import { Context, Effect, Layer } from "effect"
+ * import { provide } from "@typed/fx/Fx"
+ * import { fromEffect } from "@typed/fx/Fx"
+ *
+ * class Config extends Context.Service<Config, { readonly url: string }>()("Config") {}
+ * const request = fromEffect(Effect.map(Config, ({ url }) => url))
+ * const runnable = provide(request, Layer.succeed(Config, { url: "/api" }))
+ * ```
  *
  * @param layer - The Layer to provide.
  * @returns An `Fx` with the required context provided.
@@ -51,6 +75,37 @@ export const provide: {
     ),
 );
 
+/**
+ * Provides an already-built Effect Context to the entire Fx run.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Callers that already own service instances should not rebuild them through a
+ * resourceful Layer merely to satisfy an Fx's environment.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Context is captured when this combinator is created and reused for each
+ * subscription. Its services are available to all source Effects and removed
+ * from `R`. This function does not acquire or release those service values;
+ * their owner must keep them valid for every subscription that uses the result.
+ * Source completion, failure, and interruption are unchanged.
+ *
+ * @example
+ * ```ts
+ * import { Context, Effect } from "effect"
+ * import { provideContext } from "@typed/fx/Fx"
+ * import { fromEffect } from "@typed/fx/Fx"
+ *
+ * class Config extends Context.Service<Config, { readonly url: string }>()("Config") {}
+ * const context = Context.make(Config, { url: "/api" })
+ * const runnable = provideContext(fromEffect(Effect.map(Config, (x) => x.url)), context)
+ * ```
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
 export const provideContext: {
   <R2>(services: Context.Context<R2>): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, Exclude<R, R2>>;
 
@@ -62,10 +117,34 @@ export const provideContext: {
 );
 
 /**
- * Provides a single service to an Fx.
+ * Provides one existing service value to the entire Fx run.
  *
- * Equivalent to `provideContext(fx, Context.make(tag, service))`. The service
- * is available for the entire Fx stream, scoped to the stream lifetime.
+ * @remarks
+ * ## Why
+ *
+ * This is the precise single-service form of {@link provideContext}, useful for
+ * tests and application edges where the instance is already owned.
+ *
+ * ## Ownership and lifetime
+ *
+ * The service value is captured and reused for every subscription. It is not
+ * acquired or finalized here; its caller owns its lifetime. The matching
+ * service identifier is removed from `R`, while values, errors, ordering, and
+ * interruption remain those of the source.
+ *
+ * @example
+ * ```ts
+ * import { Context, Effect } from "effect"
+ * import { provideService } from "@typed/fx/Fx"
+ * import { fromEffect } from "@typed/fx/Fx"
+ *
+ * class Config extends Context.Service<Config, { readonly url: string }>()("Config") {}
+ * const runnable = provideService(
+ *   fromEffect(Effect.map(Config, (x) => x.url)),
+ *   Config,
+ *   { url: "/api" }
+ * )
+ * ```
  *
  * @param tag - The service tag (identifier).
  * @param service - The service implementation.
@@ -93,10 +172,52 @@ export const provideService: {
 );
 
 /**
- * Provides a single service to an Fx by running an effect that produces the service.
+ * Acquires one service with an Effect before running the Fx.
  *
- * The effect is run when the Fx is run; the resulting service is provided to the
- * entire stream. Equivalent to `provide(fx, Layer.effect(tag, serviceEffect))`.
+ * @remarks
+ * ## Why
+ *
+ * Some service instances require effectful configuration but do not warrant a
+ * separately named Layer. This keeps acquisition failure and dependencies
+ * explicit in the returned Fx type.
+ *
+ * ## Ownership and lifetime
+ *
+ * The service Effect runs once per subscription while {@link provide} builds
+ * its Layer. A failure prevents the source from starting. On success, the
+ * service is available for the whole source run and its identifier is removed
+ * from `R`; acquisition errors and every requirement in `R2` are added. In
+ * particular, an `Effect.acquireRelease` service Effect still leaves
+ * `Scope.Scope` in the returned Fx requirements—the private Layer Scope does
+ * not erase that public requirement. The caller must provide that Scope.
+ *
+ * @example
+ * ```ts
+ * import { Context, Effect } from "effect"
+ * import { provideServiceEffect } from "@typed/fx/Fx"
+ * import { fromEffect } from "@typed/fx/Fx"
+ *
+ * class Config extends Context.Service<Config, { readonly url: string }>()("Config") {}
+ * const request = fromEffect(Effect.map(Config, (x) => x.url))
+ * const runnable = provideServiceEffect(request, Config, Effect.succeed({ url: "/api" }))
+ * ```
+ *
+ * @example Scoped acquisition keeps `Scope` in the returned Fx requirements
+ * ```ts
+ * import { Context, Effect } from "effect"
+ * import { provideServiceEffect } from "@typed/fx/Fx"
+ * import { fromEffect } from "@typed/fx/Fx"
+ * import { collectAll } from "@typed/fx/Fx"
+ *
+ * class Config extends Context.Service<Config, { readonly url: string }>()("Config") {}
+ * const request = fromEffect(Effect.map(Config, (x) => x.url))
+ * const acquired = Effect.acquireRelease(
+ *   Effect.succeed({ url: "/api" }),
+ *   () => Effect.void
+ * )
+ * const scopedFx = provideServiceEffect(request, Config, acquired)
+ * const program = Effect.scoped(collectAll(scopedFx))
+ * ```
  *
  * @param tag - The service tag (identifier).
  * @param serviceEffect - Effect that produces the service (may have its own requirements).

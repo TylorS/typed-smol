@@ -17,10 +17,55 @@ const toFinalizer =
     typeof f === "function" ? f(interruptors) : f;
 
 /**
- * Adds an `Effect.onInterrupt`-style finalizer to an `Fx`.
+ * Runs a finalizer when the Fx reports or externally receives interruption.
  *
- * The finalizer is run only when the stream is interrupted (either via an
- * interrupt cause or by interrupting the running fiber).
+ * @remarks
+ * ## Why
+ *
+ * Cancellation-specific cleanup should not run for success or ordinary typed
+ * failure. The interruptor IDs retain Effect's information about which fibers
+ * requested cancellation.
+ *
+ * ## Ownership and lifetime
+ *
+ * An interrupt-only Cause reported by the source invokes the finalizer before
+ * that Cause is delivered; finalizer failure is combined with it. External
+ * interruption of the running fiber also invokes the finalizer, suppressing its
+ * failure to preserve cancellation. Those paths are tracked separately: if an
+ * external interruption arrives while reported-Cause handling is still active,
+ * the finalizer can run once for each path. Successful and non-interrupt failures
+ * do not invoke it. A finalizer captured while constructing an Fx is shared by
+ * every run of that Fx; create mutable cleanup state lazily inside `gen` or
+ * `genScoped` when each subscription must own a distinct resource.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { onInterrupt } from "@typed/fx/Fx"
+ * import { interrupt } from "@typed/fx/Fx"
+ *
+ * const observed = onInterrupt(
+ *   interrupt(1),
+ *   (ids) => Effect.log(`interrupted by ${ids.size}`)
+ * )
+ * ```
+ *
+ * @example Keep the finalizer idempotent when both interrupt paths are possible
+ * ```ts
+ * import { Effect } from "effect"
+ * import { gen } from "@typed/fx/Fx"
+ * import { onInterrupt } from "@typed/fx/Fx"
+ * import { interrupt } from "@typed/fx/Fx"
+ *
+ * const observed = gen(function* () {
+ *   // `gen` creates this controller separately for every subscription.
+ *   const controller = yield* Effect.sync(() => new AbortController())
+ *   return onInterrupt(
+ *     interrupt(1),
+ *     Effect.sync(() => controller.abort()) // `abort` is idempotent.
+ *   )
+ * })
+ * ```
  *
  * @since 1.0.0
  * @category combinators

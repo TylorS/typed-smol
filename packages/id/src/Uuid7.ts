@@ -7,23 +7,87 @@ import { uuidStringify } from "./_uuid-stringify.js";
 import { DateTimes } from "./DateTimes.js";
 import { RandomValues } from "./RandomValues.js";
 
+/**
+ * Effect Schema and branded string type for RFC UUID version 7 values.
+ * @remarks
+ * ## Why
+ * The schema verifies version and variant at transport boundaries; generated ordering is local to one Uuid7State, not a distributed total order.
+ * ## Ownership and lifetime
+ * This module-level schema value acquires no resources and is shared; no runtime freezing guarantee is implied.
+ * @example
+ * ```ts
+ * import { Uuid7 } from "@typed/id/Uuid7"
+ * import { Schema } from "effect"
+ * const id = Schema.decodeUnknownSync(Uuid7)("01890f2e-7d6c-7cc0-98c4-dc0c0c07398f")
+ * ```
+ * @category Schemas
+ * @since 1.0.0
+ */
 export const Uuid7 = Schema.String.pipe(
   Schema.check(Schema.isUUID(7)),
   Schema.brand("@typed/id/UUID7"),
 );
 export type Uuid7 = typeof Uuid7.Type;
 
+/**
+ * Tests whether a string is an RFC UUID version 7 value.
+ * @remarks
+ * ## Why
+ * Runtime refinement restores trust after serialization has erased the TypeScript brand.
+ * ## Ownership and lifetime
+ * This pure predicate acquires no resources and retains no input.
+ * @example
+ * ```ts
+ * import { isUuid7 } from "@typed/id/Uuid7"
+ * const valid = isUuid7("01890f2e-7d6c-7cc0-98c4-dc0c0c07398f")
+ * ```
+ * @category Refinements
+ * @since 1.0.0
+ */
 export const isUuid7: (value: string) => value is Uuid7 = Schema.is(Uuid7);
 
+/**
+ * The validated time, sequence, and entropy used to format one UUID version 7.
+ * @remarks
+ * ## Why
+ * An explicit seed documents the exact inputs to version and variant bit layout and makes generator state testable.
+ * ## Ownership and lifetime
+ * This data acquires no resources; the producing service owns sequence state and transfers a fresh random byte array.
+ * @example
+ * ```ts
+ * import type { Uuid7Seed } from "@typed/id/Uuid7"
+ * const seed: Uuid7Seed = { timestamp: 0, seq: 0, randomBytes: new Uint8Array(16) as Uuid7Seed["randomBytes"] }
+ * ```
+ * @category Models
+ * @since 1.0.0
+ */
 export type Uuid7Seed = {
+  /** Validated millisecond timestamp encoded into the UUID. @since 1.0.0 */
   readonly timestamp: number;
-  /** Unsigned 32-bit sequence integer in the range [0, 0xffffffff]. */
+  /** Unsigned 32-bit sequence integer in the range [0, 0xffffffff]. @since 1.0.0 */
   readonly seq: number;
+  /** Fresh entropy buffer whose final bytes complete the UUID payload. @since 1.0.0 */
   readonly randomBytes: Uint8Array & { length: 16 };
 };
 
 const maximumTimestamp = 2 ** 48 - 1;
 
+/**
+ * Process-local Effect service that produces monotonic UUID version 7 seeds.
+ * @remarks
+ * ## Why
+ * Clock rollback and 32-bit sequence rollover are handled inside an explicit service, guaranteeing monotonicity only for one shared service instance.
+ * ## Ownership and lifetime
+ * Each Layer instance owns mutable timestamp and sequence state. A new process, worker, deployment, or Layer resets it; exact hydration identity must be serialized.
+ * @example
+ * ```ts
+ * import { uuid7, Uuid7State } from "@typed/id/Uuid7"
+ * import { Effect } from "effect"
+ * const id = Effect.provide(uuid7, Uuid7State.Default)
+ * ```
+ * @category Services
+ * @since 1.0.0
+ */
 export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7State", {
   make: Effect.gen(function* () {
     const { now } = yield* DateTimes;
@@ -87,16 +151,52 @@ export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7St
     };
   }),
 }) {
+  /**
+   * Reads the next validated seed from the current Uuid7State.
+   * @remarks
+   * ## Why
+   * The accessor exposes ordered state through Effect's service channel and reports timestamp exhaustion as `IllegalArgumentError`.
+   * ## Ownership and lifetime
+   * The Effect uses the state owned by its provided Layer and acquires no separate persistent resource.
+   * @category Services
+   * @since 1.0.0
+   */
   static readonly next = Effect.gen(function* () {
     const { next } = yield* Uuid7State;
     return yield* next;
   });
 
+  /**
+   * Provides Uuid7State from system time and Web Crypto entropy.
+   * @remarks
+   * ## Why
+   * The production default is explicit while remaining replaceable by deterministic service layers.
+   * ## Ownership and lifetime
+   * Layer acquisition creates one mutable sequence state owned by the surrounding Layer Scope.
+   * @category Layers
+   * @since 1.0.0
+   */
   static readonly Default = Layer.effect(Uuid7State, Uuid7State.make).pipe(
     Layer.provide([DateTimes.Default, RandomValues.Default]),
   );
 }
 
+/**
+ * Generates one UUID version 7 from the current Uuid7State.
+ * @remarks
+ * ## Why
+ * Effectful generation makes the state boundary explicit and preserves `IllegalArgumentError` for invalid or exhausted timestamp space.
+ * ## Ownership and lifetime
+ * The Effect acquires no persistent resource and uses state owned by the provided Uuid7State Layer.
+ * @example
+ * ```ts
+ * import { uuid7, Uuid7State } from "@typed/id/Uuid7"
+ * import { Effect } from "effect"
+ * const id = Effect.provide(uuid7, Uuid7State.Default)
+ * ```
+ * @category Generators
+ * @since 1.0.0
+ */
 export const uuid7: Effect.Effect<Uuid7, Cause.IllegalArgumentError, Uuid7State> = Effect.map(
   Uuid7State.next,
   uuid7FromSeed,

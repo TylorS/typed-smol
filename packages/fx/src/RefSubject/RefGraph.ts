@@ -13,6 +13,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefGraph is a RefSubject specialized over a Graph.
+ * @remarks
+ * ## Why
+ *
+ * Defines graph state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefGraph is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -26,6 +37,17 @@ export interface RefGraph<
 
 /**
  * Creates a new `RefGraph` from a Graph, `Effect`, or `Fx`.
+ * @remarks
+ * ## Why
+ *
+ * Creates graph state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -40,6 +62,17 @@ export function make<N, E, T extends Graph.Kind, Err = never, R = never>(
 
 /**
  * Creates a new empty directed RefGraph.
+ * @remarks
+ * ## Why
+ *
+ * Creates a new empty directed RefGraph. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running directed performs one serialized graph transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -53,6 +86,17 @@ export function directed<N, E, Err = never, R = never>(): Effect.Effect<
 
 /**
  * Creates a new empty undirected RefGraph.
+ * @remarks
+ * ## Why
+ *
+ * Creates a new empty undirected RefGraph. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running undirected performs one serialized graph transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -70,6 +114,17 @@ export function undirected<N, E, Err = never, R = never>(): Effect.Effect<
 
 /**
  * Add a node to the graph.
+ * @remarks
+ * ## Why
+ *
+ * Add a node to the graph. The operation remains attached to the RefSubject's versioned state
+ * boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running add node performs one serialized graph transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -99,6 +154,17 @@ export const addNode: {
 
 /**
  * Remove a node from the graph.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove node to the committed graph value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove node performs one serialized graph transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -128,6 +194,17 @@ export const removeNode: {
 
 /**
  * Update a node's data.
+ * @remarks
+ * ## Why
+ *
+ * Keeps update node atomic with respect to competing RefSubject writes instead of splitting the
+ * read and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running update node performs one serialized graph transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -159,6 +236,17 @@ export const updateNode: {
 
 /**
  * Add an edge to the graph.
+ * @remarks
+ * ## Why
+ *
+ * Add an edge to the graph. The operation remains attached to the RefSubject's versioned state
+ * boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running add edge performs one serialized graph transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -192,6 +280,17 @@ export const addEdge: {
 
 /**
  * Remove an edge from the graph.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove edge to the committed graph value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove edge performs one serialized graph transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -221,6 +320,17 @@ export const removeEdge: {
 
 /**
  * Update an edge's data.
+ * @remarks
+ * ## Why
+ *
+ * Keeps update edge atomic with respect to competing RefSubject writes instead of splitting the
+ * read and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running update edge performs one serialized graph transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -252,6 +362,16 @@ export const updateEdge: {
 
 /**
  * Map all node data.
+ * @remarks
+ * ## Why
+ *
+ * Applies `mapNodes` through `RefSubject.update` and publishes one coherent graph replacement;
+ * this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -281,6 +401,16 @@ export const mapNodes: {
 
 /**
  * Map all edge data.
+ * @remarks
+ * ## Why
+ *
+ * Applies `mapEdges` through `RefSubject.update` and publishes one coherent graph replacement;
+ * this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -310,6 +440,16 @@ export const mapEdges: {
 
 /**
  * Filter nodes.
+ * @remarks
+ * ## Why
+ *
+ * Applies `filterNodes` through `RefSubject.update` and publishes one coherent graph replacement;
+ * this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -339,6 +479,16 @@ export const filterNodes: {
 
 /**
  * Filter edges.
+ * @remarks
+ * ## Why
+ *
+ * Applies `filterEdges` through `RefSubject.update` and publishes one coherent graph replacement;
+ * this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -368,6 +518,17 @@ export const filterEdges: {
 
 /**
  * Reverse all edge directions.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered graph through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running reverse performs one serialized graph transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -386,6 +547,16 @@ export const reverse = <N, E, T extends Graph.Kind, Err, R>(
 
 /**
  * Get the node count.
+ * @remarks
+ * ## Why
+ *
+ * Get the node count. The operation remains attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The node count view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -395,6 +566,16 @@ export const nodeCount = <N, E, T extends Graph.Kind, Err, R>(
 
 /**
  * Get the edge count.
+ * @remarks
+ * ## Why
+ *
+ * Get the edge count. The operation remains attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The edge count view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -404,6 +585,17 @@ export const edgeCount = <N, E, T extends Graph.Kind, Err, R>(
 
 /**
  * Check if a node exists.
+ * @remarks
+ * ## Why
+ *
+ * Makes has node a live projection of the graph; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The has node view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -429,6 +621,17 @@ export const hasNode: {
 
 /**
  * Check if an edge exists.
+ * @remarks
+ * ## Why
+ *
+ * Makes has edge a live projection of the graph; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The has edge view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -456,6 +659,17 @@ export const hasEdge: {
 
 /**
  * Get neighbors of a node.
+ * @remarks
+ * ## Why
+ *
+ * Get neighbors of a node. The operation remains attached to the RefSubject's versioned state
+ * boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The neighbors view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -481,6 +695,17 @@ export const neighbors: {
 
 /**
  * Get directed neighbors of a node.
+ * @remarks
+ * ## Why
+ *
+ * Get directed neighbors of a node. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The neighbors directed view retains no independent state. An Effect read samples the source
+ * once; Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -507,6 +732,17 @@ export const neighborsDirected: {
 
 /**
  * Check if the graph is acyclic.
+ * @remarks
+ * ## Why
+ *
+ * Check if the graph is acyclic. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is acyclic view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -516,6 +752,17 @@ export const isAcyclic = <N, E, T extends Graph.Kind, Err, R>(
 
 /**
  * Check if the graph is bipartite (undirected only).
+ * @remarks
+ * ## Why
+ *
+ * Check if the graph is bipartite (undirected only). The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is bipartite view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -525,6 +772,17 @@ export const isBipartite = <N, E, Err, R>(
 
 /**
  * Get connected components (undirected only).
+ * @remarks
+ * ## Why
+ *
+ * Get connected components (undirected only). The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The connected components view retains no independent state. An Effect read samples the source
+ * once; Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -535,6 +793,18 @@ export const connectedComponents = <N, E, Err, R>(
 
 /**
  * Get strongly connected components.
+ * @remarks
+ * ## Why
+ *
+ * Get strongly connected components. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The strongly connected components view retains no independent state. An Effect read samples the
+ * source once; Fx observation follows later pushes and its observing Scope owns subscription
+ * cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -549,6 +819,17 @@ export const stronglyConnectedComponents = <N, E, Err, R>(
 
 /**
  * Get a node's data.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get node as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get node view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -574,6 +855,17 @@ export const getNode: {
 
 /**
  * Get an edge's data.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get edge as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get edge view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -599,6 +891,17 @@ export const getEdge: {
 
 /**
  * Find a node matching a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find node as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find node view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -624,6 +927,17 @@ export const findNode: {
 
 /**
  * Find an edge matching a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find edge as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find edge view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */

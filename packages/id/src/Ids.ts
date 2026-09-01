@@ -27,6 +27,23 @@ const testRandomValues = (): Layer.Layer<RandomValues> =>
     RandomValues.pipe(Effect.provide(RandomValues.Random), Random.withSeed("@typed/id/Ids.Test")),
   );
 
+/**
+ * Unified Effect service for every Typed ID generator.
+ * @remarks
+ * ## Why
+ * One facade captures time, entropy, and state services once, so application code composes generators through a single explicit dependency without hiding their behavior.
+ * ## Ownership and lifetime
+ * Each Ids Layer owns its captured services plus lazy CUID and UUIDv7 state. Recreating the Layer resets process-local sequences; serialize server IDs when identity must survive hydration.
+ * @example
+ * ```ts
+ * import { Ids } from "@typed/id/Ids"
+ * import { Effect } from "effect"
+ * const program = Effect.gen(function* () { return yield* Ids.uuid7 }).pipe(Effect.provide(Ids.Default))
+ * ```
+ * See [Effect services](https://effect.website/docs/requirements-management/services/) and [Layers](https://effect.website/docs/requirements-management/layers/).
+ * @category Services
+ * @since 1.0.0
+ */
 export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
   make: Effect.gen(function* () {
     const services = yield* Effect.context<DateTimes | RandomValues | CuidState | Uuid7State>();
@@ -63,39 +80,111 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
     };
   }),
 }) {
+  /**
+   * Generates a CUID using the current Ids service.
+   * @remarks
+   * ## Why
+   * The facade shares the Ids-owned CuidState instead of allocating a new sequence for every call.
+   * ## Ownership and lifetime
+   * This Effect acquires no resources and uses state owned by the provided Ids Layer.
+   * @category Generators
+   * @since 1.0.0
+   */
   static readonly cuid: Effect.Effect<Cuid, never, Ids> = Effect.flatMap(Ids, ({ cuid }) => cuid);
 
+  /**
+   * Generates a KSUID using the current Ids service.
+   * @remarks
+   * ## Why
+   * The facade reuses captured time and entropy while retaining `IllegalArgumentError` for invalid KSUID timestamps.
+   * ## Ownership and lifetime
+   * This Effect acquires no persistent resource and uses services owned by the provided Ids Layer.
+   * @category Generators
+   * @since 1.0.0
+   */
   static readonly ksuid: Effect.Effect<Ksuid, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
     Ids,
     ({ ksuid }) => ksuid,
   );
 
+  /**
+   * Generates a NanoId using the current Ids service.
+   * @remarks
+   * ## Why
+   * The facade makes the selected entropy implementation available through one application dependency.
+   * ## Ownership and lifetime
+   * This Effect acquires no persistent resource and uses entropy owned by the provided Ids Layer.
+   * @category Generators
+   * @since 1.0.0
+   */
   static readonly nanoId: Effect.Effect<NanoId, never, Ids> = Effect.flatMap(
     Ids,
     ({ nanoId }) => nanoId,
   );
 
+  /**
+   * Generates a ULID using the current Ids service.
+   * @remarks
+   * ## Why
+   * The facade reuses captured time and entropy while retaining `IllegalArgumentError` for invalid 48-bit timestamps.
+   * ## Ownership and lifetime
+   * This Effect acquires no persistent resource and uses services owned by the provided Ids Layer.
+   * @category Generators
+   * @since 1.0.0
+   */
   static readonly ulid: Effect.Effect<Ulid, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
     Ids,
     ({ ulid }) => ulid,
   );
 
+  /**
+   * Generates a random UUID version 4 using the current Ids service.
+   * @remarks
+   * ## Why
+   * The facade keeps entropy selection replaceable while preserving UUID version and variant semantics.
+   * ## Ownership and lifetime
+   * This Effect acquires no persistent resource and uses entropy owned by the provided Ids Layer.
+   * @category Generators
+   * @since 1.0.0
+   */
   static readonly uuid4: Effect.Effect<Uuid4, never, Ids> = Effect.flatMap(
     Ids,
     ({ uuid4 }) => uuid4,
   );
 
+  /**
+   * Derives deterministic UUID version 5 values through the current Ids service, with DNS, URL, OID, and X.500 helpers.
+   * @remarks
+   * ## Why
+   * The facade supports data-first and namespace-first calls while keeping namespace choice and `IllegalArgumentError` explicit.
+   * ## Ownership and lifetime
+   * Each Effect acquires no persistent resources and reads the Ids service for one invocation; helper namespaces are stable captured copies.
+   * @example
+   * ```ts
+   * import { Ids } from "@typed/id/Ids"
+   * import { Effect } from "effect"
+   * const program = Ids.uuid5.dns("example.com").pipe(Effect.provide(Ids.Default))
+   * ```
+   * @category Generators
+   * @since 1.0.0
+   */
   static readonly uuid5: {
+    /** Binds a namespace first, then derives UUIDv5 values for names. @since 1.0.0 */
     (
       namespace: Uuid5Namespace,
     ): (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    /** Derives a UUIDv5 from a name and namespace through the current Ids service. @since 1.0.0 */
     (
       name: string,
       namespace: Uuid5Namespace,
     ): Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    /** Derives a UUIDv5 in the standard DNS namespace. @since 1.0.0 */
     readonly dns: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    /** Derives a UUIDv5 in the standard URL namespace. @since 1.0.0 */
     readonly url: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    /** Derives a UUIDv5 in the standard OID namespace. @since 1.0.0 */
     readonly oid: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
+    /** Derives a UUIDv5 in the standard X.500 namespace. @since 1.0.0 */
     readonly x500: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError, Ids>;
   } = Object.assign(
     dual(2, (name: string, namespace: Uuid5Namespace) =>
@@ -108,16 +197,52 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
       x500: (name: string) => Effect.flatMap(Ids, ({ uuid5 }) => uuid5.x500(name)),
     },
   );
+  /**
+   * Generates a UUID version 7 using the current Ids service.
+   * @remarks
+   * ## Why
+   * The facade shares one lazy Uuid7State per Ids Layer, preserving local monotonicity and typed timestamp errors.
+   * ## Ownership and lifetime
+   * This Effect acquires no resources and uses sequence state owned by the provided Ids Layer.
+   * @category Generators
+   * @since 1.0.0
+   */
   static readonly uuid7: Effect.Effect<Uuid7, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
     Ids,
     ({ uuid7 }) => uuid7,
   );
 
+  /**
+   * Provides production Ids, DateTimes, and RandomValues services.
+   * @remarks
+   * ## Why
+   * The standard Layer uses system time and Web Crypto while lazily creating sequence state only when CUID or UUIDv7 is first requested.
+   * ## Ownership and lifetime
+   * The surrounding Layer Scope owns captured services and lazy sequence state; Web Crypto must exist in the runtime.
+   * @category Layers
+   * @since 1.0.0
+   */
   static readonly Default: Layer.Layer<Ids | DateTimes | RandomValues, never, never> = Layer.effect(
     Ids,
     makeLazyIds("node"),
   ).pipe(Layer.provideMerge([DateTimes.Default, RandomValues.Default]));
 
+  /**
+   * Provides deterministic Ids, time, entropy, and TestClock services.
+   * @remarks
+   * ## Why
+   * Reproducible generators make exact sequences testable; the deterministic entropy is for tests and simulations, not security.
+   * ## Ownership and lifetime
+   * Each Layer construction owns an independent clock, random sequence, and lazy CUID/UUIDv7 state for its Scope.
+   * @example
+   * ```ts
+   * import { Ids } from "@typed/id/Ids"
+   * import { Effect } from "effect"
+   * const deterministic = Ids.uuid7.pipe(Effect.provide(Ids.Test({ currentTime: 0 })))
+   * ```
+   * @category Testing
+   * @since 1.0.0
+   */
   static readonly Test = (
     options: TestOptions = {},
   ): Layer.Layer<
@@ -178,7 +303,24 @@ function makeLazyIds(envData: string) {
   });
 }
 
+/**
+ * Configuration for the deterministic Ids test Layer.
+ * @remarks
+ * ## Why
+ * Explicit initial time and CUID environment data let tests reproduce generator sequences without ambient process state.
+ * ## Ownership and lifetime
+ * This plain configuration acquires no resources and is read only by Layer acquisition; TypeScript `readonly` does not freeze it at runtime.
+ * @example
+ * ```ts
+ * import type { TestOptions } from "@typed/id/Ids"
+ * const options: TestOptions = { currentTime: "2026-01-01T00:00:00Z", envData: "test-worker" }
+ * ```
+ * @category Testing
+ * @since 1.0.0
+ */
 export type TestOptions = {
+  /** Base time passed to `DateTimes.Fixed`; invalid dates fail Layer acquisition. @since 1.0.0 */
   readonly currentTime?: number | string | Date;
+  /** CUID caller discriminator used when the test CuidState is created. @since 1.0.0 */
   readonly envData?: string;
 };

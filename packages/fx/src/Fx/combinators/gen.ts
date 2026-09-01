@@ -3,10 +3,34 @@ import type { Fx } from "../Fx.js";
 import { unwrap } from "./unwrap.js";
 
 /**
- * Creates an Fx using a generator function (Effect.gen style).
+ * Builds an Fx by yielding Effects and returning the Fx to run afterward.
  *
- * This allows writing Fx code in a synchronous-looking style, using `yield*` to composition.
- * Note: The generator yields Effects, and the result is an Fx.
+ * @remarks
+ * ## Why
+ *
+ * Setup logic often needs Effect services or failures before it can choose a
+ * push producer. Generator notation keeps that dependency-aware setup linear
+ * while preserving the returned Fx's success, error, and service channels.
+ *
+ * ## Ownership and lifetime
+ *
+ * The generator is lazy: it runs for each subscription. Yielded Effects run
+ * first; only their returned Fx is then subscribed. A setup failure prevents
+ * the Fx from starting, and interruption cancels the active phase. Resources
+ * acquired by yielded Effects must not escape unless managed independently;
+ * use {@link genScoped} when setup and the returned Fx share a Scope.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { gen } from "@typed/fx/Fx"
+ * import { succeed } from "@typed/fx/Fx"
+ *
+ * const greeting = gen(function* () {
+ *   const name = yield* Effect.succeed("Typed")
+ *   return succeed(`Hello, ${name}`)
+ * })
+ * ```
  *
  * @param f - The generator function.
  * @returns An `Fx` representing the result of the generator.

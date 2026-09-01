@@ -1,3 +1,17 @@
+/**
+ * Menu coordinates trigger, manual native popover content, registered items, and nested submenu
+ * state. Keyboard handling covers opening, Escape, directional parent/child traversal, roving
+ * focus, and typeahead without synthetic events.
+ *
+ * @remarks
+ * The module keeps policy, state transitions, and DOM rendering separable so applications can use
+ * the state and pure operations without mounting UI, or supply custom hosts without replacing native
+ * events and browser-owned focus.
+ *
+ * @since 1.0.0
+ * @category modules
+ * @packageDocumentation
+ */
 import * as Effect from "effect/Effect";
 import * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
@@ -16,9 +30,45 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 import * as NativePopover from "./NativePopover.js";
 
+/**
+ * Complete renderer-independent state for Menu.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Applications can inspect, update, and test Menu behavior without mounting or coupling the state
+ * to a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { State } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Inside the linked program,
+ * `const snapshot: State = yield* state` exposes popup identity, open state, and active-item focus.
+ * @since 1.0.0
+ * @category models
+ */
 export interface State extends Omit<Composite.State, "orientation"> {
+  /**
+   * Axis used to interpret Arrow-key movement.
+   * @since 1.0.0
+   * @category models
+   */
   readonly orientation: "vertical";
+  /**
+   * Stable id used for collection identity and ARIA relationships.
+   * @since 1.0.0
+   * @category models
+   */
   readonly id: string;
+  /**
+   * Whether the associated native popover is open.
+   * @since 1.0.0
+   * @category models
+   */
   readonly open: boolean;
 }
 
@@ -36,13 +86,78 @@ const submenuOwners = new WeakMap<
   SubmenuOwner
 >();
 
+/**
+ * Initial Menu values. The caller supplies id; open defaults false, activeId null, loop true, and
+ * orientation vertical.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Making initialization explicit documents hydration-sensitive defaults and lets servers and
+ * clients construct matching state.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { InitialState } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). Construct a closed menu with
+ * `const initial: InitialState = { id: "file-menu", open: false }; const state = yield* Menu.makeState(initial)`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface InitialState {
+  /**
+   * Stable id used for collection identity and ARIA relationships.
+   * @since 1.0.0
+   * @category models
+   */
   readonly id: string;
+  /**
+   * Whether the associated native popover is open.
+   * @since 1.0.0
+   * @category models
+   */
   readonly open?: boolean;
+  /**
+   * Id currently active for keyboard navigation; null means no active item.
+   * @since 1.0.0
+   * @category models
+   */
   readonly activeId?: string | null;
+  /**
+   * Whether movement wraps between the first and last enabled items.
+   * @since 1.0.0
+   * @category models
+   */
   readonly loop?: boolean;
 }
 
+/**
+ * Effect Schema used by makeState to encode, decode, and hydrate Menu state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * A public schema makes hydration and serialized state use the same runtime validation as direct
+ * construction.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * @example
+ * ```ts
+ * import * as Schema from "effect/Schema";
+ * import * as Menu from "@typed/ui/Menu";
+ *
+ * const decodeState = Schema.decodeUnknownEffect(Menu.StateSchema);
+ * ```
+ * @since 1.0.0
+ * @category schemas
+ */
 export const StateSchema = Schema.Struct({
   id: Schema.String,
   open: Schema.Boolean,
@@ -53,6 +168,37 @@ export const StateSchema = Schema.Struct({
   virtualFocus: Schema.Boolean,
 });
 
+/**
+ * Creates hydrated Menu state. The caller supplies id; open defaults false, activeId null, loop
+ * true, and orientation vertical.
+ *
+ * @remarks
+ * ## Why
+ *
+ * State and collection ownership can be composed and tested independently from any renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect creates the RefSubject when run. That state is renderer-independent;
+ * collection registrations belong to the separate Scope that runs register or ref, not to state
+ * creation.
+ *
+ * @example
+ * ```ts
+ * import * as Effect from "effect/Effect";
+ * import * as Menu from "@typed/ui/Menu";
+ *
+ * const program = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     const state = yield* Menu.makeState({ id: "file-menu" });
+ *     const collection = yield* Menu.makeCollection();
+ *     return { state: yield* state, collection: yield* collection };
+ *   }),
+ * );
+ * ```
+ * @since 1.0.0
+ * @category constructors
+ */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, {
     id: initial.id,
@@ -65,8 +211,59 @@ export function makeState(initial: InitialState) {
   });
 }
 
+/**
+ * Creates a scoped Collection for Menu items.
+ *
+ * @remarks
+ * ## Why
+ *
+ * State and collection ownership can be composed and tested independently from any renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
+ * owned by the Scope that runs register, independently of this construction Effect.
+ *
+ * @example
+ * ```ts
+ * import * as Effect from "effect/Effect";
+ * import * as Menu from "@typed/ui/Menu";
+ *
+ * const program = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     const collection = yield* Menu.makeCollection();
+ *     return yield* collection;
+ *   }),
+ * );
+ * ```
+ * @since 1.0.0
+ * @category constructors
+ */
 export const makeCollection = Collection.makeState<string>;
 
+/**
+ * Updates only the menu's explicit open state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The operation exposes Menu's transition directly so callers can compose it in Effect programs
+ * and native event handlers.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect performs the update or DOM side effect only when run, preserves the declared
+ * error and service channels, and retains no resources after completion.
+ *
+ * ## Example
+ *
+ * Import with `import { setOpen } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Inside the linked Effect program invoke
+ * `yield* setOpen(state, true)`, then read state to observe `open: true` without changing focus or
+ * menu identity.
+ * @since 1.0.0
+ * @category combinators
+ */
 export function setOpen<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
   open: boolean,
@@ -74,8 +271,39 @@ export function setOpen<E, R>(
   return RefSubject.update(state, (value) => ({ ...value, open }));
 }
 
+/**
+ * Inputs accepted by Menu.Trigger in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Separator orientation is an accessibility announcement only, so it remains independent from the
+ * orientation used by menu keyboard navigation.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { TriggerOptions } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). A native popover trigger accepts
+ * `const options: TriggerOptions = { state, content: "File" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
+  /**
+   * Renderer-independent RefSubject state consumed by this component or operation.
+   * @since 1.0.0
+   * @category models
+   */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
+  /**
+   * Renderable child content for the component host.
+   * @since 1.0.0
+   * @category models
+   */
   readonly content: Renderable.Any;
 }
 
@@ -116,6 +344,29 @@ type TriggerProps<Options extends TriggerOptions> = ReturnType<
   ReturnType<typeof triggerProps<Options>>
 >;
 
+/**
+ * Renders a native button targeting menu popover content and opens the menu on ArrowDown.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { Trigger } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `Trigger({ state, content: "File" })`; render that Fx before the same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function Trigger<
   const Options extends TriggerOptions,
   const Host extends HostResult = never,
@@ -146,19 +397,123 @@ export function Trigger<
   );
 }
 
+/**
+ * Consumer-facing alias of the canonical Menu component with identical behavior and lifetime.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The alias acquires nothing. Rendering it has exactly the canonical component's Scope and DOM
+ * ownership contract.
+ *
+ * ## Example
+ *
+ * Import with `import { Button } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `Button({ state, content: "File" })`; render that Fx before the same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export const Button = Trigger;
 
+/**
+ * Inputs accepted by Menu.Content in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The model makes popup content, optional collection navigation, and optional parent-menu linkage
+ * explicit while retaining the shared custom-host boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { ContentOptions } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). Enable menu movement with
+ * `const options: ContentOptions = { state, collection, label: "File", content: "Commands" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
+  /**
+   * Renderer-independent RefSubject state consumed by this component or operation.
+   * @since 1.0.0
+   * @category models
+   */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
+  /**
+   * Item registry used for collection-driven keyboard behavior and mounted ordering.
+   * @since 1.0.0
+   * @category models
+   */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
+  /**
+   * Parent-menu state and collection used for nested directional navigation and focus return.
+   * @since 1.0.0
+   * @category models
+   */
   readonly parent?: ParentMenu;
+  /**
+   * Renderable child content for the component host.
+   * @since 1.0.0
+   * @category models
+   */
   readonly content: Renderable.Any;
+  /**
+   * Accessible label rendered through aria-label.
+   * @since 1.0.0
+   * @category models
+   */
   readonly label?: Renderable.Any<string | null | undefined>;
 }
 
+/**
+ * Public Menu.ParentMenu behavioral model.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The public model lets custom composites reuse Menu's deterministic policy without copying an
+ * internal shape.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { ParentMenu } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). Nested menus carry their parent
+ * navigation pair explicitly: `const parent: ParentMenu = { state, collection }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface ParentMenu {
+  /**
+   * Renderer-independent RefSubject state consumed by this component or operation.
+   * @since 1.0.0
+   * @category models
+   */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
+  /**
+   * Item registry used for collection-driven keyboard behavior and mounted ordering.
+   * @since 1.0.0
+   * @category models
+   */
   readonly collection: RefSubject.RefSubject<Collection.State<string>>;
+  /**
+   * Id of the trigger that owns this menu and receives focus when the menu closes.
+   * @since 1.0.0
+   * @category models
+   */
   readonly triggerId: string;
 }
 
@@ -330,6 +685,31 @@ type ContentProps<Options extends ContentOptions> = ReturnType<
   ReturnType<typeof contentProps<Options>>
 >;
 
+/**
+ * Renders manual-popover menu content and coordinates focus, typeahead, Escape, and nested-menu
+ * traversal.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { Content } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `Content({ state, label: "File", content: "Commands" })`; render that Fx before the
+ * same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function Content<
   const Options extends ContentOptions,
   const Host extends HostResult = never,
@@ -356,16 +736,100 @@ export function Content<
   });
 }
 
+/**
+ * Consumer-facing alias of the canonical Menu component with identical behavior and lifetime.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The alias acquires nothing. Rendering it has exactly the canonical component's Scope and DOM
+ * ownership contract.
+ *
+ * ## Example
+ *
+ * Import with `import { Menu } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `Menu({ state, label: "File", content: "Commands" })`; render that Fx before the same
+ * Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export const Menu = Content;
 
+/**
+ * Inputs accepted by Menu.Item in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The model makes item identity, content, optional registration metadata, and state ownership
+ * explicit before the item is rendered.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { ItemOptions } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). A menu command is
+ * `const options: ItemOptions = { state, collection, id: "save", content: "Save" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
+  /**
+   * Renderer-independent RefSubject state consumed by this component or operation.
+   * @since 1.0.0
+   * @category models
+   */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
+  /**
+   * Item registry used for collection-driven keyboard behavior and mounted ordering.
+   * @since 1.0.0
+   * @category models
+   */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
+  /**
+   * Stable id used for collection identity and ARIA relationships.
+   * @since 1.0.0
+   * @category models
+   */
   readonly id: string;
+  /**
+   * Renderable child content for the component host.
+   * @since 1.0.0
+   * @category models
+   */
   readonly content: Renderable.Any;
+  /**
+   * Search text used by typeahead independently of rendered markup.
+   * @since 1.0.0
+   * @category models
+   */
   readonly textValue?: string;
+  /**
+   * Flag used by collection movement and widget handlers to skip activation by default.
+   * @since 1.0.0
+   * @category models
+   */
   readonly disabled?: boolean;
+  /**
+   * ARIA role emitted by the item variant.
+   * @since 1.0.0
+   * @category models
+   */
   readonly role?: "menuitem" | "menuitemcheckbox" | "menuitemradio";
+  /**
+   * Checked state exposed by checkbox and radio menu-item variants.
+   * @since 1.0.0
+   * @category models
+   */
   readonly checked?: Renderable.Any<boolean | null | undefined>;
 }
 
@@ -407,6 +871,31 @@ function itemProps<const Options extends ItemOptions>(options: Options) {
 }
 type ItemProps<Options extends ItemOptions> = ReturnType<ReturnType<typeof itemProps<Options>>>;
 
+/**
+ * Renders and optionally registers a menu item; disabled items remain announced but do not
+ * activate.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { Item } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `Item({ state, id: "save", content: "Save" })`; render that Fx before the same Scope
+ * closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function Item<const Options extends ItemOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<
@@ -434,15 +923,72 @@ export function Item<const Options extends ItemOptions, const Host extends HostR
   );
 }
 
+/**
+ * Inputs accepted by Menu.SubmenuTrigger in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The options type makes required state, content, accessible relationships, and custom-host inputs
+ * visible before rendering.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { SubmenuTriggerOptions } from "@typed/ui/Menu";` Extend the
+ * [Menu.makeState runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). After
+ * `const submenu = yield* Menu.makeState({ id: "share-menu" })`, use
+ * `const options: SubmenuTriggerOptions<State> = { state, submenu, collection, id: "share", content: "Share" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SubmenuTriggerOptions<
   ParentState extends Composite.State,
 > extends Dom.HostOptions<HTMLButtonElement> {
+  /**
+   * Renderer-independent RefSubject state consumed by this component or operation.
+   * @since 1.0.0
+   * @category models
+   */
   readonly state: RefSubject.HydratedRefSubject<ParentState, Schema.SchemaError>;
+  /**
+   * Whether the item participates as a submenu entry.
+   * @since 1.0.0
+   * @category models
+   */
   readonly submenu: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
+  /**
+   * Item registry used for collection-driven keyboard behavior and mounted ordering.
+   * @since 1.0.0
+   * @category models
+   */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
+  /**
+   * Stable id used for collection identity and ARIA relationships.
+   * @since 1.0.0
+   * @category models
+   */
   readonly id: string;
+  /**
+   * Renderable child content for the component host.
+   * @since 1.0.0
+   * @category models
+   */
   readonly content: Renderable.Any;
+  /**
+   * Search text used by typeahead independently of rendered markup.
+   * @since 1.0.0
+   * @category models
+   */
   readonly textValue?: string;
+  /**
+   * Flag used by collection movement and widget handlers to skip activation by default.
+   * @since 1.0.0
+   * @category models
+   */
   readonly disabled?: boolean;
 }
 
@@ -527,6 +1073,32 @@ type SubmenuTriggerProps<
   Options extends SubmenuTriggerOptions<ParentState>,
 > = ReturnType<ReturnType<typeof submenuTriggerProps<ParentState, Options>>>;
 
+/**
+ * Renders a menuitem that targets nested popover content and coordinates parent/child directional
+ * focus.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { SubmenuTrigger } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final
+ * snapshot read after `const submenu = yield* Menu.makeState({ id: "share-menu" })` with
+ * `SubmenuTrigger({ state, submenu, collection, id: "share", content: "Share" })`; render that Fx
+ * before the same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function SubmenuTrigger<
   ParentState extends Composite.State,
   const Options extends SubmenuTriggerOptions<NoInfer<ParentState>>,
@@ -560,13 +1132,64 @@ export function SubmenuTrigger<
   );
 }
 
+/**
+ * Inputs accepted by Menu.CheckboxItem in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The options type makes required state, content, accessible relationships, and custom-host inputs
+ * visible before rendering.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { CheckboxItemOptions } from "@typed/ui/Menu";` Extend the
+ * [Menu.makeState runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). A checked command
+ * is
+ * `const options: CheckboxItemOptions = { state, collection, id: "autosave", checked: true, content: "Autosave" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface CheckboxItemOptions extends Omit<ItemOptions, "role" | "checked"> {
+  /**
+   * Checked state exposed by checkbox and radio menu-item variants.
+   * @since 1.0.0
+   * @category models
+   */
   readonly checked: Renderable.Any<boolean | null | undefined>;
 }
 type CheckboxItemWithRole<Options extends CheckboxItemOptions> = Options & {
   readonly role: "menuitemcheckbox";
 };
 
+/**
+ * Renders Item with menuitemcheckbox semantics and caller-supplied checked state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { CheckboxItem } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `CheckboxItem({ state, id: "autosave", checked: true, content: "Autosave" })`; render
+ * that Fx before the same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function CheckboxItem<
   const Options extends CheckboxItemOptions,
   const Host extends HostResult = never,
@@ -585,13 +1208,63 @@ export function CheckboxItem<
   return Item<CheckboxItemWithRole<Options>, Host>({ ...options, role: "menuitemcheckbox" }, host);
 }
 
+/**
+ * Inputs accepted by Menu.RadioItem in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The options type makes required state, content, accessible relationships, and custom-host inputs
+ * visible before rendering.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { RadioItemOptions } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). A radio command is
+ * `const options: RadioItemOptions = { state, collection, id: "compact", checked: false, content: "Compact" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface RadioItemOptions extends Omit<ItemOptions, "role" | "checked"> {
+  /**
+   * Checked state exposed by checkbox and radio menu-item variants.
+   * @since 1.0.0
+   * @category models
+   */
   readonly checked: Renderable.Any<boolean | null | undefined>;
 }
 type RadioItemWithRole<Options extends RadioItemOptions> = Options & {
   readonly role: "menuitemradio";
 };
 
+/**
+ * Renders Item with menuitemradio semantics and caller-supplied checked state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { RadioItem } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `RadioItem({ state, id: "compact", checked: false, content: "Compact" })`; render that
+ * Fx before the same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function RadioItem<
   const Options extends RadioItemOptions,
   const Host extends HostResult = never,
@@ -610,8 +1283,39 @@ export function RadioItem<
   return Item<RadioItemWithRole<Options>, Host>({ ...options, role: "menuitemradio" }, host);
 }
 
+/**
+ * Inputs accepted by Menu.Group in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The options type makes required state, content, accessible relationships, and custom-host inputs
+ * visible before rendering.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { GroupOptions } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). A labeled command group accepts
+ * `const options: GroupOptions = { label: "View", content: "Choices" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
+  /**
+   * Renderable child content for the component host.
+   * @since 1.0.0
+   * @category models
+   */
   readonly content: Renderable.Any;
+  /**
+   * Accessible label rendered through aria-label.
+   * @since 1.0.0
+   * @category models
+   */
   readonly label?: Renderable.Any<string | null | undefined>;
 }
 
@@ -624,6 +1328,30 @@ function groupProps<const Options extends GroupOptions>(_options: Options) {
 }
 type GroupProps<Options extends GroupOptions> = ReturnType<ReturnType<typeof groupProps<Options>>>;
 
+/**
+ * Renders a labelled ARIA group inside menu content.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * @example
+ * ```ts
+ * import * as Menu from "@typed/ui/Menu";
+ *
+ * const view = Menu.Group({ label: "View", content: "Choices" });
+ * ```
+ * @since 1.0.0
+ * @category components
+ */
 export function Group<const Options extends GroupOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<
@@ -651,9 +1379,59 @@ export function Group<const Options extends GroupOptions, const Host extends Hos
   );
 }
 
+/**
+ * Consumer-facing alias of the canonical Menu component with identical behavior and lifetime.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The alias acquires nothing. Rendering it has exactly the canonical component's Scope and DOM
+ * ownership contract.
+ *
+ * ## Example
+ *
+ * Import with `import { Dismiss } from "@typed/ui/Menu";` Extend the [Menu.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FMenu%23makeState). Replace the linked program's final snapshot
+ * read with `Dismiss({ state, id: "close", content: "Close" })`; render that Fx before the same
+ * Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export const Dismiss = Item;
 
+/**
+ * Inputs accepted by Menu.Separator in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The model adds separator orientation to the shared host options. Orientation is consumed only
+ * by the separator's `aria-orientation` attribute; it does not change menu navigation.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { SeparatorOptions } from "@typed/ui/Menu";` Extend the [Menu.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FMenu%23makeState). Choose only its announced axis:
+ * `const options: SeparatorOptions = { orientation: "vertical" }`; this does not alter Arrow-key
+ * behavior.
+ * @since 1.0.0
+ * @category models
+ */
 export interface SeparatorOptions extends Dom.HostOptions<HTMLHRElement> {
+  /**
+   * Value forwarded only to the separator's aria-orientation attribute.
+   * @since 1.0.0
+   * @category models
+   */
   readonly orientation?: "horizontal" | "vertical";
 }
 
@@ -668,6 +1446,30 @@ type SeparatorProps<Options extends SeparatorOptions> = ReturnType<
   ReturnType<typeof separatorProps<Options>>
 >;
 
+/**
+ * Renders a separator with explicit horizontal or vertical orientation.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * @example
+ * ```ts
+ * import * as Menu from "@typed/ui/Menu";
+ *
+ * const view = Menu.Separator({ orientation: "horizontal" });
+ * ```
+ * @since 1.0.0
+ * @category components
+ */
 export function Separator<
   const Options extends SeparatorOptions,
   const Host extends HostResult = never,

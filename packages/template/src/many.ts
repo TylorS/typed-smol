@@ -11,10 +11,7 @@ export interface Many<A, E, R> {
   readonly [ManyTypeId]: ManyTypeId;
   readonly values: Fx.Fx<ReadonlyArray<A>, E, R>;
   readonly getKey: (value: A) => PropertyKey;
-  readonly render: (
-    value: RefSubject.RefSubject<A>,
-    key: PropertyKey,
-  ) => Fx.Fx<RenderEvent, E, R>;
+  readonly render: (value: RefSubject.RefSubject<A>, key: PropertyKey) => Fx.Fx<RenderEvent, E, R>;
 }
 
 export function isMany(value: unknown): value is Many<any, any, any> {
@@ -24,26 +21,46 @@ export function isMany(value: unknown): value is Many<any, any, any> {
 /**
  * Efficiently renders a reactive list of items by using keys to minimize DOM operations and maintain component state.
  *
- * `many` optimizes list rendering by:
- * 1. **Keyed Diffing**: Uniquely identifies items using `getKey`. Components are only mounted when a new key appears and unmounted when a key disappears.
- * 2. **Granular Updates**: Instead of re-rendering the component when an item changes, `many` passes a `RefSubject<A>` to the `render` function.
- *    The component remains mounted, and the `RefSubject` emits the updated value, allowing the component to update only the changed parts of the DOM.
+ * `many` returns a renderer descriptor rather than an `Fx`. The active renderer
+ * consumes its source directly and can therefore retain keyed entries without
+ * flattening each child back through a generic collection stream.
  *
- * This pattern is essential for performance when rendering lists where items may be reordered, added, removed, or modified in place.
+ * @remarks
+ * ## Why
  *
- * `many` returns a renderer descriptor rather than an `Fx`. The DOM renderer consumes
- * source changes directly, updates only changed item refs, and moves the minimum keyed
- * ranges needed to establish the new order. The HTML renderer consumes the same
- * descriptor to emit hydration markers for those keys.
+ * Keys turn collection identity into a local rendering contract. The DOM
+ * renderer keeps one entry map for the dynamic range: a new key starts one
+ * child, a removed key closes one child Scope, a retained changed value updates
+ * that child's `RefSubject`, and a pure reorder does not publish unchanged item
+ * data. The same descriptor lets the HTML renderer serialize the first array in
+ * source order and emit compatible hydration markers.
+ *
+ * ## Ownership and lifetime
+ *
+ * Each DOM key owns a forked child Scope. Removing the key closes that Scope;
+ * interruption closes every remaining child. Both DOM and HTML rendering reject
+ * duplicate keys with `Cause.IllegalArgumentError`. Hydratable output also
+ * rejects local symbols because their identity cannot survive serialization;
+ * use strings, numbers, or `Symbol.for()` keys across the server boundary.
+ *
+ * ## Cost model and moves
+ *
+ * Every source array requires O(n) key validation and ordering work; `many` does
+ * not pretend an arbitrary list change is O(1). Within that pass, retained-key
+ * lookup is O(1) on average, unchanged values skip `RefSubject.set`, and only
+ * added or removed keys allocate or close child Scopes. DOM reconciliation is
+ * confined to this range and uses equal-edge, append/remove, and reverse-swap
+ * fast paths before an O(n) map fallback. An already-connected node is moved
+ * with `ParentNode.moveBefore` when supported, preserving browser-managed state;
+ * `insertBefore` is the compatibility fallback. HTML setup is O(n) for the
+ * initial array and performs no live DOM reconciliation.
  *
  * @example
  * ```ts
- * import { Effect } from "effect"
+ * import { Effect, Layer } from "effect"
+ * import { Fx, RefSubject } from "@typed/fx"
  * import { html, many } from "@typed/template"
  * import { DomRenderTemplate, render } from "@typed/template/Render"
- * import { Fx } from "@typed/fx"
- * import { Layer } from "effect"
- * import * as RefSubject from "@typed/fx/RefSubject"
  *
  * interface Todo {
  *   readonly id: string
@@ -71,7 +88,7 @@ export function isMany(value: unknown): value is Many<any, any, any> {
  *
  *   const template = html`<ul>${todoList}</ul>`
  *
- *   yield* render(template, document.body).pipe(
+ *   return yield* render(template, document.body).pipe(
  *     Fx.drainLayer,
  *     Layer.provide(DomRenderTemplate),
  *     Layer.launch
@@ -86,11 +103,7 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
   values: Fx.Fx<ReadonlyArray<A>, E, R>,
   getKey: (a: A) => B,
   render: (value: RefSubject.RefSubject<A>, key: B) => Fx.Fx<RenderEvent, E2, R2 | Scope>,
-): Many<
-  A,
-  E | E2 | Cause.IllegalArgumentError,
-  R | R2 | Scope | RenderTemplate
-> {
+): Many<A, E | E2 | Cause.IllegalArgumentError, R | R2 | Scope | RenderTemplate> {
   return {
     [ManyTypeId]: ManyTypeId,
     values,
@@ -99,4 +112,28 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
   };
 }
 
+/**
+ * Produces the legacy closing marker for an already encoded keyed-list hole.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The helper remains published for renderer and hydration compatibility. New
+ * SSR output uses the versioned, escaped marker encoding implemented by `many`;
+ * application code should not parse or synthesize hydration markers itself.
+ *
+ * ## Ownership and lifetime
+ *
+ * This pure formatter owns no DOM node, list item, or Scope.
+ *
+ * @example
+ * ```ts
+ * import { MANY_HOLE } from "@typed/template/many"
+ *
+ * const marker = MANY_HOLE("item-1")
+ * ```
+ *
+ * @since 1.0.0
+ * @category advanced
+ */
 export const MANY_HOLE = (key: PropertyKey): string => `<!--/m_${key.toString()}-->`;

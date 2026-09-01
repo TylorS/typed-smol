@@ -40,13 +40,109 @@ import * as Subject from "../Subject/Subject.js";
 import * as Versioned from "../Versioned/Versioned.js";
 import { hasProperty } from "effect/Predicate";
 
+/**
+ * Runtime symbol identifying writable RefSubject values.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Provides stable runtime identity for RefSubject values without relying on classes or a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration performs no acquisition and retains no resources. Implementations preserve
+ * source errors, services, and lifetime.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export const RefSubjectTypeId = Symbol.for("@typed/fx/RefSubject");
+/**
+ * Describes the ref subject type id type.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Provides stable runtime identity for RefSubject values without relying on classes or a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefSubjectTypeId is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category type-level
+ */
 export type RefSubjectTypeId = typeof RefSubjectTypeId;
 
+/**
+ * Runtime symbol identifying read-only Computed values.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Provides stable runtime identity for Computed values without relying on classes or a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration performs no acquisition and retains no resources. Implementations preserve
+ * source errors, services, and lifetime.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export const ComputedTypeId = Symbol.for("@typed/fx/Computed");
+/**
+ * Describes the computed type id type.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Provides stable runtime identity for Computed values without relying on classes or a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * ComputedTypeId is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category type-level
+ */
 export type ComputedTypeId = typeof ComputedTypeId;
 
+/**
+ * Runtime symbol identifying conditionally available Filtered values.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Provides stable runtime identity for Filtered values without relying on classes or a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration performs no acquisition and retains no resources. Implementations preserve
+ * source errors, services, and lifetime.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export const FilteredTypeId = Symbol.for("@typed/fx/Filtered");
+/**
+ * Describes the filtered type id type.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Provides stable runtime identity for Filtered values without relying on classes or a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * FilteredTypeId is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category type-level
+ */
 export type FilteredTypeId = typeof FilteredTypeId;
 
 /**
@@ -54,10 +150,21 @@ export type FilteredTypeId = typeof FilteredTypeId;
  * It is an `Fx` that emits the current value and subsequent updates.
  * It is also an `Effect` that samples the current value.
  *
+ * @remarks
+ * ## Why
+ *
+ * Represents derived state as both an Effectful current read and an Fx of subsequent versions,
+ * without granting write access.
+ *
+ * ## Ownership and lifetime
+ *
+ * Computed is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefSubject from "@typed/fx/RefSubject"
+ * import { RefSubject } from "@typed/fx"
  * import { Fx } from "@typed/fx"
  *
  * // Create a RefSubject and derive a Computed from it
@@ -93,10 +200,60 @@ export interface Computed<out A, out E = never, out R = never> extends Versioned
   E,
   R
 > {
+  /**
+   * Carries the runtime marker recognized by `isComputed`.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Marks the value as Computed for runtime guards and composition without granting writable
+   * RefSubject operations.
+   *
+   * ## Ownership and lifetime
+   *
+   * This declaration performs no acquisition and retains no resources. Implementations preserve
+   * source errors, services, and lifetime.
+   *
+   * @since 1.18.0
+   * @category combinators
+   */
   readonly [ComputedTypeId]: ComputedTypeId;
 }
 
+/**
+ * Type utilities for read-only Computed state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Represents derived state as both an Effectful current read and an Fx of subsequent versions,
+ * without granting write access.
+ *
+ * ## Ownership and lifetime
+ *
+ * A namespace declaration performs no read or acquisition. The Computed values described by its
+ * members retain their own errors, services, and Scope-owned observation lifetimes.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export declare namespace Computed {
+  /**
+   * Describes the any type.
+   *
+   * @remarks
+   * ## Why
+   *
+   * The result remains a lazy view rather than a duplicated mutable value.
+   *
+   * ## Ownership and lifetime
+   *
+   * Any is a contract and performs no acquisition. Implementations retain the errors, services,
+   * interruption, and Scope requirements expressed by its members.
+   *
+   * @since 1.18.0
+   * @category type-level
+   */
   export type Any =
     | Computed<any, any, any>
     | Computed<never, any, any>
@@ -108,10 +265,21 @@ export declare namespace Computed {
  * A `Filtered` is a `Computed` that may not always have a value.
  * It is essentially a `Computed<Option<A>>` with helper methods.
  *
+ * @remarks
+ * ## Why
+ *
+ * Represents a derived value that may be absent now and become available on a later push,
+ * preserving absence in the state contract.
+ *
+ * ## Ownership and lifetime
+ *
+ * Filtered is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
  * @example
  * ```ts
  * import { Effect, Option } from "effect"
- * import * as RefSubject from "@typed/fx/RefSubject"
+ * import { RefSubject } from "@typed/fx"
  *
  * // Create a RefSubject and filter it
  * const program = Effect.gen(function* () {
@@ -147,6 +315,23 @@ export interface Filtered<out A, out E = never, out R = never> extends Versioned
   E | Cause.NoSuchElementError,
   R
 > {
+  /**
+   * Carries the runtime marker distinguishing conditional Filtered state from Computed state.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Marks the value as Filtered for runtime guards and composition without changing its data or
+   * error channels.
+   *
+   * ## Ownership and lifetime
+   *
+   * This declaration performs no acquisition and retains no resources. Implementations preserve
+   * source errors, services, and lifetime.
+   *
+   * @since 1.18.0
+   * @category combinators
+   */
   readonly [FilteredTypeId]: FilteredTypeId;
 
   /**
@@ -169,11 +354,58 @@ export interface Filtered<out A, out E = never, out R = never> extends Versioned
    *   console.log(Option.isNone(option)) // true (no number > 5)
    * })
    * ```
+   * @category combinators
+   * @since 1.18.0
+   * @remarks
+   * ## Why
+   *
+   * Converts the Filtered back to a Computed of Option. The result remains a lazy view rather than a
+   * duplicated mutable value.
+   *
+   * ## Ownership and lifetime
+   *
+   * The as computed view retains no independent state. Effectful reads sample the source once;
+   * Fx observation follows later pushes and the observing Scope finalizes it.
+   *
    */
   asComputed(): Computed<Option.Option<A>, E, R>;
 }
 
+/**
+ * Type utilities for conditionally available Filtered state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Represents a derived value that may be absent now and become available on a later push,
+ * preserving absence in the state contract.
+ *
+ * ## Ownership and lifetime
+ *
+ * A namespace declaration performs no read or acquisition. Individual Filtered values fail
+ * current reads with `NoSuchElementError` while absent; their observing Scope owns Fx cleanup.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export declare namespace Filtered {
+  /**
+   * Describes the any type.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Gives generic utilities one structural supertype for Filtered values without erasing the
+   * concrete channels of values passed through those utilities.
+   *
+   * ## Ownership and lifetime
+   *
+   * Any is a contract and performs no acquisition. Implementations retain the errors, services,
+   * interruption, and Scope requirements expressed by its members.
+   *
+   * @since 1.18.0
+   * @category type-level
+   */
   export type Any =
     | Filtered<any, any, any>
     | Filtered<never, any, any>
@@ -183,12 +415,72 @@ export declare namespace Filtered {
 
 /**
  * Interface for basic RefSubject operations: get, set, delete.
+ * @remarks
+ * ## Why
+ *
+ * Interface for basic RefSubject operations: get, set, delete.
+ *
+ * ## Ownership and lifetime
+ *
+ * GetSetDelete is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.0.0
  * @category models
  */
 export interface GetSetDelete<A, E = never, R = never> {
+  /**
+   * Reads the value visible to the current transaction.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Reads the value visible inside the current transaction without publishing a change.
+   *
+   * ## Ownership and lifetime
+   *
+   * Running `get` performs no mutation or acquisition. It can fail with `E` and requires `R`; when
+   * used by `updates`, it observes that transaction's buffered value.
+   *
+   * @since 1.18.0
+   * @category combinators
+   */
   readonly get: Effect.Effect<A, E, R>;
+  /**
+   * Replaces the value inside the current transaction.
+   *
+   * @remarks
+   * ## Why
+   *
+   * The transition is serialized at the RefSubject rather than coordinated by callers or UI
+   * components.
+   *
+   * ## Ownership and lifetime
+   *
+   * Running set performs one serialized subject transition and returns the committed value. It
+   * acquires no resource and preserves source failures and services.
+   *
+   * @since 1.18.0
+   * @category combinators
+   */
   readonly set: (a: A) => Effect.Effect<A, E, R>;
+  /**
+   * Removes and returns the value visible to the current transaction.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Removes the value from the current transaction and returns the previous value as `Some`, or
+   * `None` when no value was present.
+   *
+   * ## Ownership and lifetime
+   *
+   * Running delete performs one serialized subject transition and returns the committed value.
+   * It acquires no resource and preserves source failures and services.
+   *
+   * @since 1.18.0
+   * @category combinators
+   */
   readonly delete: Effect.Effect<Option.Option<A>, E, R>;
 }
 
@@ -196,14 +488,24 @@ export interface GetSetDelete<A, E = never, R = never> {
  * A `RefSubject` is a mutable reference that can be observed as an Fx.
  * It combines the capabilities of a `Ref` (get/set/update) with a `Subject` (subscribe).
  *
+ * @remarks
+ * ## Why
+ *
+ * Unifies synchronized mutable state, Effectful current reads, and Fx pushes so the same state can
+ * be tested and consumed without a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefSubject is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefSubject from "@typed/fx/RefSubject"
- * import { Fx } from "@typed/fx"
+ * import { Fx, RefSubject } from "@typed/fx"
  *
  * // Create a RefSubject with an initial value
- * const program = Effect.gen(function* () {
+ * const program = Effect.scoped(Effect.gen(function* () {
  *   const count = yield* RefSubject.make(0)
  *
  *   // Get the current value
@@ -216,15 +518,15 @@ export interface GetSetDelete<A, E = never, R = never> {
  *   console.log(updated) // 5
  *
  *   // Use as an Fx to observe changes
- *   yield* Fx.observe(
+ *   yield* Effect.forkScoped(Fx.observe(
  *     count,
  *     (value) => Effect.sync(() => console.log("Count changed:", value))
- *   )
+ *   ))
  *
  *   // Increment
  *   yield* RefSubject.increment(count)
  *   // Output: "Count changed: 6"
- * })
+ * }))
  * ```
  *
  * @since 1.0.0
@@ -232,6 +534,23 @@ export interface GetSetDelete<A, E = never, R = never> {
  */
 export interface RefSubject<A, E = never, R = never>
   extends Computed<A, E, R>, Subject.Subject<A, E, R> {
+  /**
+   * Carries the runtime marker recognized by `isRefSubject`.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Marks the value as a writable RefSubject for runtime guards while retaining its Computed and
+   * Subject capabilities.
+   *
+   * ## Ownership and lifetime
+   *
+   * This declaration performs no acquisition and retains no resources. Implementations preserve
+   * source errors, services, and lifetime.
+   *
+   * @since 1.18.0
+   * @category combinators
+   */
   readonly [RefSubjectTypeId]: RefSubjectTypeId;
 
   /**
@@ -259,6 +578,20 @@ export interface RefSubject<A, E = never, R = never>
    *   )
    * })
    * ```
+   * @category combinators
+   * @since 1.18.0
+   * @remarks
+   * ## Why
+   *
+   * Runs an effect that can modify the RefSubject transactionally. All operations within the
+   * transaction are atomic and serialized. The transition is serialized at the RefSubject rather
+   * than coordinated by callers or UI components.
+   *
+   * ## Ownership and lifetime
+   *
+   * Running updates performs one serialized subject transition and returns the committed value.
+   * It acquires no resource and preserves source failures and services.
+   *
    */
   readonly updates: <B, E2, R2>(
     f: (ref: GetSetDelete<A, E, R>) => Effect.Effect<B, E2, R2>,
@@ -279,36 +612,221 @@ export interface RefSubject<A, E = never, R = never>
    *   yield* ref.interrupt
    * })
    * ```
+   * @category combinators
+   * @since 1.18.0
+   * @remarks
+   * ## Why
+   *
+   * Interrupts the RefSubject, stopping all subscriptions and cleaning up resources.
+   *
+   * ## Ownership and lifetime
+   *
+   * Running this Effect returns `void`: it resets pending initialization, closes the RefSubject's
+   * private Scope, interrupts its initializer fiber, and interrupts its Subject. It cannot fail;
+   * `R` supplies services captured by the RefSubject's internal lifetime.
+   *
    */
   readonly interrupt: Effect.Effect<void, never, R>;
 }
 
+/**
+ * Type utilities and service contracts for RefSubject values.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Unifies synchronized mutable state, Effectful current reads, and Fx pushes so the same state can
+ * be tested and consumed without a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * The namespace itself cannot run, read, or commit state. It groups structural helper types and
+ * the Context-backed service facade; concrete RefSubject values own their own Scope and serialized
+ * update boundary.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export declare namespace RefSubject {
+  /**
+   * Describes the any type.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Gives generic utilities one structural supertype for writable RefSubject values while leaving
+   * concrete value, error, and service channels available to conditional types.
+   *
+   * ## Ownership and lifetime
+   *
+   * Any is a contract and performs no acquisition. Implementations retain the errors, services,
+   * interruption, and Scope requirements expressed by its members.
+   *
+   * @since 1.18.0
+   * @category type-level
+   */
   export type Any =
     | RefSubject<any, any, any>
     | RefSubject<any, any>
     | RefSubject<any, never, any>
     | RefSubject<any>;
 
+  /**
+   * Defines the service state contract.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Describes the class-like facade returned by `RefSubject.Service`: it is a Context tag whose
+   * static members also implement current reads, Fx observation, and serialized writes.
+   *
+   * ## Ownership and lifetime
+   *
+   * The contract itself acquires nothing. A matching Layer owns the underlying RefSubject; using
+   * the facade requires `Self`, exposes the underlying `E` on reads and pushes, and forwards Scope
+   * ownership to that installed subject.
+   *
+   * @since 1.18.0
+   * @category models
+   */
   export interface Service<Self, Id extends string, A, E> extends RefSubject<A, E, Self> {
+    /**
+     * Exposes id on the ref subject contract.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Preserves the literal Context identifier used to construct and diagnose the service tag.
+     *
+     * ## Ownership and lifetime
+     *
+     * This declaration performs no acquisition and retains no resources. Implementations preserve
+     * source errors, services, and lifetime.
+     *
+     * @since 1.18.0
+     * @category combinators
+     */
     readonly id: Id;
 
+    /**
+     * Exposes service on the ref subject contract.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Exposes the exact Effect Context tag used by `layer`, `make`, and every static operation on
+     * the facade, so custom Layers can install an existing RefSubject without another wrapper.
+     *
+     * ## Ownership and lifetime
+     *
+     * The tag is pure metadata and owns no state. The Layer that provides it owns the installed
+     * RefSubject and its scoped initializer; operations retrieving it require `Self`.
+     *
+     * @since 1.18.0
+     * @category combinators
+     */
     readonly service: Context.Service<Self, RefSubject<A, E>>;
 
+    /**
+     * Exposes make on the ref subject contract.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Accepts values, Effects, Streams, and Fx through one renderer-independent state constructor
+     * while retaining their typed failures and services.
+     *
+     * ## Ownership and lifetime
+     *
+     * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+     * and cleanup; source failures and services stay on reads and pushes.
+     *
+     * @since 1.18.0
+     * @category constructors
+     */
     readonly make: <R = never>(
       value: A | Effect.Effect<A, E, R> | Fx<A, E, R>,
       options?: RefSubjectOptions<A> & { readonly skip?: number; readonly take?: number },
     ) => Layer.Layer<Self, never, Exclude<R, Scope.Scope>>;
 
+    /**
+     * Exposes layer on the ref subject contract.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Converts a scoped Effect that produces a RefSubject into the exact Layer required by the
+     * facade, preserving construction failures and non-Scope requirements.
+     *
+     * ## Ownership and lifetime
+     *
+     * Layer acquisition runs `make` once per Layer instance. Its Scope owns the installed subject;
+     * `E2` is a Layer-construction failure, while the subject's `E` remains on later state access.
+     *
+     * @since 1.18.0
+     * @category combinators
+     */
     readonly layer: <E2, R2>(
       make: Effect.Effect<RefSubject<A, E>, E2, R2 | Scope.Scope>,
     ) => Layer.Layer<Self, E2, Exclude<R2, Scope.Scope>>;
   }
 
+  /**
+   * Defines the class state contract.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Adds the construct signature used by class-extension syntax to the RefSubject service facade.
+   *
+   * ## Ownership and lifetime
+   *
+   * Class is a contract and performs no acquisition. Implementations retain the errors,
+   * services, interruption, and Scope requirements expressed by its members.
+   *
+   * @since 1.18.0
+   * @category models
+   */
   export interface Class<Self, Id extends string, A, E> extends RefSubject.Service<Self, Id, A, E> {
+    /**
+     * Construct signature used by the generated RefSubject service class.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Makes `class State extends RefSubject.Service(...)(id) {}` type-check while returning the
+     * static facade rather than allocating a second state object.
+     *
+     * ## Ownership and lifetime
+     *
+     * Constructing the generated class returns its static service facade; it does not allocate or
+     * acquire a RefSubject. The matching Layer owns the installed state and its Scope.
+     *
+     * @since 1.18.0
+     * @category type-level
+     */
     new (): RefSubject.Service<Self, Id, A, E>;
   }
 }
+/**
+ * Selects whether a computed Fx observes only its current value or also follows later pushes.
+ *
+ * @remarks
+ * ## Why
+ *
+ * `"multiple"` (the default) emits the current value and then follows distinct source pushes.
+ * `"one"` emits only the current value. Hydration temporarily uses `"one"` when it must resolve a
+ * single server value without leaving a live observation running.
+ *
+ * ## Ownership and lifetime
+ *
+ * This is an Effect Context reference with a default value, not mutable global state. Supplying a
+ * value changes computed observation only in the provided Effect context; the observing Scope
+ * still owns any subscription created by `"multiple"`.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export const CurrentComputedBehavior = Context.Reference("@typed/fx/CurrentComputedBehavior", {
   defaultValue: (): "one" | "multiple" => "multiple",
 });
@@ -372,6 +890,24 @@ class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
   }
 }
 
+/**
+ * Builds a read-only Computed projection from a Versioned source.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Applies the same Effectful projection to current reads and pushed versions, preserving all three
+ * Versioned channels without granting writes to the source.
+ *
+ * ## Ownership and lifetime
+ *
+ * Current reads directly sample and transform the input. The pushed channel uses `Subject.hold`:
+ * concurrent observers share one active upstream session and its latest retained projection; the
+ * last observer ends the session and clears that held value. The observing Scope owns cleanup.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export function makeComputed<R0, E0, A, E, R, E2, R2, C, E3, R3>(
   input: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
   f: (a: A) => Effect.Effect<C, E3, R3>,
@@ -385,6 +921,25 @@ export function makeComputed<R0, E0, A, E, R, E2, R2, C, E3, R3>(
  * Fx subscriptions follow `Fx.scan` semantics (emit `initial`, then fold each source value).
  * Effect sampling accumulates across source versions via a private state ref (do not mix heavy
  * subscribe + sample on the same scan if you need a single shared accumulator).
+ *
+ * @remarks
+ * ## Why
+ *
+ * Stateful scan over a `RefSubject` / `Computed`, producing a `Computed` of the accumulated state.
+ * Fx subscriptions follow `Fx.scan` semantics (emit `initial`, then fold each source value).
+ * Effect sampling accumulates across source versions via a private state ref (do not mix heavy
+ * subscribe + sample on the same scan if you need a single shared accumulator). The result remains
+ * a lazy view rather than a duplicated mutable value.
+ *
+ * ## Ownership and lifetime
+ *
+ * Calling `scan` allocates one private `MutableRef` for the returned Computed's Effect-read
+ * accumulator. Every Effect read of that same Computed shares it and advances it after a
+ * successful fold; separate `scan` calls do not share state. The pushed channel runs
+ * `Fx.scanEffect` from `initial` inside `Subject.hold`: concurrent observers share the active scan
+ * and its latest retained result, while the last observer ends that session and clears the held
+ * value. The observing Scope owns subscription cleanup. The private read accumulator has no
+ * finalizer and is collected with the returned Computed.
  *
  * @since 1.0.0
  * @category combinators
@@ -425,6 +980,22 @@ export const scan: {
 
 /**
  * Effectful stateful scan over a `RefSubject` / `Computed`, producing a `Computed` of the accumulated state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Effectful stateful scan over a `RefSubject` / `Computed`, producing a `Computed` of the
+ * accumulated state. The result remains a lazy view rather than a duplicated mutable value.
+ *
+ * ## Ownership and lifetime
+ *
+ * Calling `scanEffect` allocates one private `MutableRef` for the returned Computed's Effect-read
+ * accumulator. Every Effect read of that same Computed shares it; the accumulator advances only
+ * after `f` succeeds, so a typed failure leaves the previous state intact. The pushed channel runs
+ * `Fx.scanEffect` from `initial` inside `Subject.hold`: concurrent observers share the active scan
+ * and latest retained result, and each fold requires `R3`. The last observer ends that session and
+ * clears the held value. The observing Scope owns cleanup; the private read accumulator has no
+ * finalizer and is collected with the returned Computed.
  *
  * @since 1.0.0
  * @category combinators
@@ -538,6 +1109,23 @@ class ComputedScanImpl<R0, E0, A, E, R, E2, R2, S, E3, R3>
   }
 }
 
+/**
+ * Builds a Filtered view from the three channels of a Versioned source.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Applies `f` to current reads and later pushes while preserving absence as Filtered semantics:
+ * Effect reads fail with `NoSuchElementError`, whereas the Fx channel simply omits absent values.
+ *
+ * ## Ownership and lifetime
+ *
+ * The make filtered view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export function makeFiltered<R0, E0, A, E, R, E2, R2, C, E3, R3>(
   input: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
   f: (a: A) => Effect.Effect<Option.Option<C>, E3, R3>,
@@ -859,7 +1447,40 @@ function sendCurrentEvent(
   });
 }
 
+/**
+ * Defines the ref subject options state contract.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Configures equality for committed RefSubject values.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefSubjectOptions is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category models
+ */
 export interface RefSubjectOptions<A> {
+  /**
+   * Optional equivalence used to suppress unchanged commits.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Suppresses publication and version changes when a candidate value is equivalent to the
+   * currently committed value.
+   *
+   * ## Ownership and lifetime
+   *
+   * This declaration performs no acquisition and retains no resources. Implementations preserve
+   * source errors, services, and lifetime.
+   *
+   * @since 1.18.0
+   * @category combinators
+   */
   readonly eq?: Equivalence<A>;
 }
 
@@ -933,6 +1554,31 @@ class RefSubjectImpl<A, E, R, R2>
 /**
  * Creates a new `RefSubject` from a value, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * `RefSubject` keeps current state and pushed changes independent of any UI
+ * renderer. Domain transitions can therefore be constructed, composed, and
+ * tested with Effect alone; rendering is one optional consumer of the state.
+ * Plain values, Effect programs, pull-based Effect `Stream`s, and push-based
+ * `Fx` sources all enter through the same state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Creation requires an Effect `Scope`. That scope owns source acquisition,
+ * subscriptions, and finalization. The returned `RefSubject` exposes the
+ * source error type when read or observed, while construction itself cannot
+ * fail. Closing the scope interrupts a live source and releases its resources.
+ *
+ * ## Initialization
+ *
+ * Calling `make` is lazy because it returns an Effect: nothing is allocated and no source runs
+ * until that creation Effect is executed. After creation, a plain value is immediately available.
+ * An Effect input runs once on the first current read or observation. Fx and Stream inputs instead
+ * start one shared source run when the creation Effect executes; reads wait for their first value
+ * or failure and later emissions replace the retained current state. Equality and buffering
+ * behavior can be customized with `RefSubjectOptions`.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -986,6 +1632,19 @@ export function make<A, E = never, R = never>(
 /**
  * Creates a `RefSubject` from an `Effect`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Makes effect acquisition explicit while normalizing it into current RefSubject state and
+ * subsequent pushed versions.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope and the source's services, which it captures for the private
+ * initializer Scope. The source Effect itself stays deferred until the first current read or
+ * observation and runs at most once. Source failures remain visible on reads and observations;
+ * closing the creation Scope interrupts an initializer that is still running.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1013,6 +1672,17 @@ export function fromEffect<A, E, R>(
 
 /**
  * Creates a `RefSubject` from an `Fx`, tracking the latest emitted value.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Makes fx acquisition explicit while normalizing it into current RefSubject state and subsequent
+ * pushed versions.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
  *
  * @example
  * ```ts
@@ -1059,6 +1729,26 @@ export function fromFx<A, E, R>(
   });
 }
 
+/**
+ * Creates a RefSubject that tracks the latest value emitted by an Effect Stream.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Bridges a pull-based Stream into renderer-independent state: each emitted value enters the
+ * RefSubject's serialized commit path, while a stream failure becomes the ref's current and pushed
+ * failure.
+ *
+ * ## Ownership and lifetime
+ *
+ * Construction forks stream consumption immediately into the RefSubject's private Scope and cannot
+ * fail. `R` is required while constructing that fiber; closing the outer Scope interrupts it.
+ * Before the first value or failure, a current read waits for initialization. Later reads and pushes
+ * expose `E`.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export function fromStream<A, E, R>(
   stream: Stream.Stream<A, E, R>,
   options?: RefSubjectOptions<A>,
@@ -1082,6 +1772,18 @@ export function fromStream<A, E, R>(
 
 /**
  * Creates a `RefSubject` from an `Option` value.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Stores the Option itself in writable state. `None` is an ordinary current value and does not add
+ * `NoSuchElementError`; callers opt into absence semantics with `compact`, or a fallback with
+ * `getOrElse`.
+ *
+ * ## Ownership and lifetime
+ *
+ * Construction requires Scope because it delegates to `make`, but the supplied Option needs no
+ * services and cannot fail. The returned RefSubject owns and publishes subsequent Option writes.
  *
  * @example
  * ```ts
@@ -1133,6 +1835,24 @@ function optionFromNullable<A>(value: A | null | undefined): Option.Option<NonNu
     : Option.some(value as NonNullable<A>);
 }
 
+/**
+ * Creates Option-valued RefSubject state from a nullable input.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Converts `null` and `undefined` to `Option.none` and every other value to `Option.some`, then
+ * stores that Option in a writable RefSubject. It does not create Filtered state or add
+ * `NoSuchElementError`.
+ *
+ * ## Ownership and lifetime
+ *
+ * Construction requires Scope because it delegates to `make`; it needs no services and cannot
+ * fail. The returned RefSubject owns and publishes subsequent Option writes.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export function fromNullable<A>(
   value: A | null | undefined,
   options?: RefSubjectOptions<Option.Option<NonNullable<A>>>,
@@ -1362,6 +2082,17 @@ function sendEvent<A, E, R, R2>(
 /**
  * Sets the value of a `RefSubject`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Sets the value of a `RefSubject`. The transition is serialized at the RefSubject rather than
+ * coordinated by callers or UI components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set performs one serialized subject transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1394,6 +2125,17 @@ export const set: {
 
 /**
  * Resets a `RefSubject` to its initial value, returning the previous value if it existed.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Resets a `RefSubject` to its initial value, returning the previous value if it existed. The
+ * transition is serialized at the RefSubject rather than coordinated by callers or UI components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running reset performs one serialized subject transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
  *
  * @example
  * ```ts
@@ -1457,6 +2199,17 @@ export {
 /**
  * Updates a `RefSubject` using an `Effect`ful function.
  *
+ * @remarks
+ * ## Why
+ *
+ * Updates a `RefSubject` using an `Effect`ful function. The transition is serialized at the
+ * RefSubject rather than coordinated by callers or UI components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running update effect performs one serialized subject transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1499,6 +2252,26 @@ export const updateEffect: {
 /**
  * Updates a `RefSubject` using a pure function.
  *
+ * @remarks
+ * ## Why
+ *
+ * `update` expresses a state transition where the state lives, without moving
+ * transition logic into a component or renderer. The same function can run in
+ * application code, tests, workers, event handlers, or a Typed template.
+ *
+ * ## Ownership and lifetime
+ *
+ * The update runs inside the RefSubject's existing synchronized update
+ * boundary: it reads the committed value, derives the next value, commits it,
+ * and publishes that change. It acquires no independent resource and retains
+ * the subject's existing error and service channels.
+ *
+ * ## Concurrency and failure
+ *
+ * Concurrent updates are serialized by the subject core so each function sees
+ * a committed value. A pure updater adds no error channel; failures already
+ * associated with reading or writing the RefSubject remain explicit in `E`.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1531,6 +2304,18 @@ export const update: {
 
 /**
  * Modifies a `RefSubject` using an `Effect`ful function that returns both a result and a new value.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Modifies a `RefSubject` using an `Effect`ful function that returns both a result and a new
+ * value. The transition is serialized at the RefSubject rather than coordinated by callers or UI
+ * components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running modify effect performs one serialized subject transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @example
  * ```ts
@@ -1580,6 +2365,17 @@ export const modifyEffect: {
 /**
  * Modifies a `RefSubject` using a pure function that returns both a result and a new value.
  *
+ * @remarks
+ * ## Why
+ *
+ * Modifies a `RefSubject` using a pure function that returns both a result and a new value. The
+ * transition is serialized at the RefSubject rather than coordinated by callers or UI components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running modify performs one serialized subject transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1617,6 +2413,16 @@ export const modify: {
 /**
  * Checks if a value is a `RefSubject`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Checks if a value is a `RefSubject`.
+ *
+ * ## Ownership and lifetime
+ *
+ * The derived ref owns no independent state or subscription. It follows the source lifetime and
+ * routes writes through the source's synchronized update boundary.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1642,12 +2448,40 @@ export function isRefSubject(value: any): value is RefSubject<any, any, any> {
 
 const isRefSubjectDataFirst = (args: IArguments) => isRefSubject(args[0]);
 
+/**
+ * Tests whether a value carries the public Computed TypeId.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Uses the TypeId contract rather than a concrete implementation class, so custom Computed values
+ * and service facades participate in the same runtime guard.
+ *
+ * ## Ownership and lifetime
+ *
+ * This synchronous predicate performs no Effect, subscription, or acquisition.
+ *
+ * @since 1.18.0
+ * @category guards
+ */
 export function isComputed(value: any): value is Computed<any, any, any> {
   return hasProperty(value, ComputedTypeId) && value[ComputedTypeId] === ComputedTypeId;
 }
 
 /**
  * Runs an effect that can modify a `RefSubject` transactionally, with optional interrupt handling.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Runs an effect that can modify a `RefSubject` transactionally, with optional interrupt handling.
+ * The transition is serialized at the RefSubject rather than coordinated by callers or UI
+ * components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running run updates performs one serialized subject transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @example
  * ```ts
@@ -1726,6 +2560,17 @@ export const runUpdates: {
 /**
  * Increments a numeric `RefSubject` by 1.
  *
+ * @remarks
+ * ## Why
+ *
+ * Increments a numeric `RefSubject` by 1. The transition is serialized at the RefSubject rather
+ * than coordinated by callers or UI components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running increment performs one serialized subject transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1753,6 +2598,17 @@ export function increment<E, R>(ref: RefSubject<number, E, R>): Effect.Effect<nu
 
 /**
  * Decrements a numeric `RefSubject` by 1.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Decrements a numeric `RefSubject` by 1. The transition is serialized at the RefSubject rather
+ * than coordinated by callers or UI components.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running decrement performs one serialized subject transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @example
  * ```ts
@@ -1785,6 +2641,26 @@ const Variance: Fx.Variance<any, any, any> = {
   _R: identity,
 };
 
+/**
+ * Creates a Context-backed RefSubject service facade and Layer constructors.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The returned class is simultaneously a service tag, a current-value Effect, an Fx source, and a
+ * writable RefSubject facade. This lets consumers read, observe, and update renderer-independent
+ * state without manually retrieving the underlying service from Context.
+ *
+ * ## Ownership and lifetime
+ *
+ * Calling `Service` is pure. `layer` installs an existing scoped RefSubject; `make` constructs one
+ * and installs it in a Layer. The Layer Scope owns the subject and its initializer subscription.
+ * Reads and pushes expose the declared `E` channel; construction requirements remain on the Layer,
+ * while consumers require only the generated `Self` service.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): RefSubject.Class<Self, Id, A, E> => {
     const service = Context.Service<Self, RefSubject<A, E>>(id);
@@ -1873,6 +2749,19 @@ function getDefaultBounds(options?: Partial<Bounds>): Bounds | undefined {
  * Extract all values from an object using a Proxy.
  * Allows accessing nested properties of a `Computed` or `Filtered` object/array as individual computed values.
  *
+ * @remarks
+ * ## Why
+ *
+ * Lazily creates one property projection per accessed key and memoizes that projection on the
+ * JavaScript Proxy. A Computed or RefSubject source produces Computed properties; only a Filtered
+ * source produces Filtered properties and preserves conditional absence.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Proxy caches derived view objects, not property values. Computed property reads expose only
+ * the source's `E`; Filtered property reads can additionally fail with `NoSuchElementError` while
+ * their source is absent. Each observed property follows the source and uses the observing Scope.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -1923,6 +2812,22 @@ export const proxy: {
   });
 };
 
+/**
+ * Describes the services type.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Extracts the service requirement channel from a RefSubject, Computed, or Filtered value.
+ *
+ * ## Ownership and lifetime
+ *
+ * Services is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category type-level
+ */
 export type Services<T> =
   T extends RefSubject<infer _A, infer _E, infer R>
     ? R
@@ -1932,6 +2837,22 @@ export type Services<T> =
         ? R
         : never;
 
+/**
+ * Describes the error type.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Extracts the declared state error channel from a RefSubject, Computed, or Filtered value.
+ *
+ * ## Ownership and lifetime
+ *
+ * Error is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category type-level
+ */
 export type Error<T> =
   T extends RefSubject<infer _A, infer E, infer _R>
     ? E
@@ -1941,6 +2862,22 @@ export type Error<T> =
         ? E
         : never;
 
+/**
+ * Describes the success type.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Extracts the current/read value type from a RefSubject, Computed, or Filtered value.
+ *
+ * ## Ownership and lifetime
+ *
+ * Success is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category type-level
+ */
 export type Success<T> =
   T extends RefSubject<infer A, infer _E, infer _R>
     ? A
@@ -1950,11 +2887,41 @@ export type Success<T> =
         ? A
         : never;
 
+/**
+ * Describes the identifier type.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Extracts the Context service identifier type represented by a RefSubject service facade.
+ *
+ * ## Ownership and lifetime
+ *
+ * Identifier is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
+ * @since 1.18.0
+ * @category type-level
+ */
 export type Identifier<T> =
   T extends RefSubject.Service<infer R, infer _Id, infer _A, infer _E> ? R : never;
 
 /**
  * Transforms a `RefSubject`, `Computed`, or `Filtered` using an `Effect`ful function.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Applies one Effectful derivation to current reads and pushed versions. RefSubject and Computed
+ * inputs return Computed and add only `E2`; a Filtered input returns Filtered and preserves its
+ * conditional absence in addition to `E2`.
+ *
+ * ## Ownership and lifetime
+ *
+ * No callback runs until the result is read or observed. Computed results cannot become absent and
+ * do not add `NoSuchElementError`; only the Filtered overload can fail a current read for absence.
+ * Callback services and failures remain `R2` and `E2`, and the observing Scope owns subscription
+ * cleanup.
  *
  * @example
  * ```ts
@@ -2029,6 +2996,25 @@ export const mapEffect: {
 /**
  * Transforms a `RefSubject`, `Computed`, or `Filtered` using a pure function.
  *
+ * @remarks
+ * ## Why
+ *
+ * `map` creates derived state instead of copying source state into a component.
+ * Reads and pushed updates remain connected to the original `Versioned` value,
+ * so a projection can be tested without rendering and consumed by any renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned `Computed` or `Filtered` view does not take ownership of the
+ * source. It follows the source lifetime and preserves its error and service
+ * channels. The pure mapping function adds neither resources nor failures.
+ *
+ * ## Re-computation
+ *
+ * The mapping function runs for the current value and subsequent committed
+ * source versions. Updates still occur on the writable source; the derived view
+ * is read-only unless a more specific bidirectional combinator is used.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -2090,6 +3076,18 @@ export const map: {
 
 /**
  * Filters and transforms a `RefSubject`, `Computed`, or `Filtered` using an `Effect`ful function that returns an `Option`.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Filters and transforms a `RefSubject`, `Computed`, or `Filtered` using an `Effect`ful function
+ * that returns an `Option`. Current reads and pushed versions use the same derivation, preventing
+ * snapshot and subscription behavior from diverging.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter map effect view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @example
  * ```ts
@@ -2154,6 +3152,18 @@ export const filterMapEffect: {
 /**
  * Filters and transforms a `RefSubject`, `Computed`, or `Filtered` using a pure function that returns an `Option`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Filters and transforms a `RefSubject`, `Computed`, or `Filtered` using a pure function that
+ * returns an `Option`. Current reads and pushed versions use the same derivation, preventing
+ * snapshot and subscription behavior from diverging.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter map view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @example
  * ```ts
  * import { Effect, Option } from "effect"
@@ -2215,6 +3225,18 @@ export const filterMap: {
 /**
  * Converts a `Computed` or `Filtered` of `Option<A>` into a `Filtered<A>`, filtering out `None` values.
  *
+ * @remarks
+ * ## Why
+ *
+ * Converts a `Computed` or `Filtered` of `Option<A>` into a `Filtered<A>`, filtering out `None`
+ * values. Current reads and pushed versions use the same derivation, preventing snapshot and
+ * subscription behavior from diverging.
+ *
+ * ## Ownership and lifetime
+ *
+ * The compact view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @example
  * ```ts
  * import { Effect, Option } from "effect"
@@ -2258,6 +3280,20 @@ export const compact: {
 /**
  * Returns a `Computed` that yields the value inside the `Option`, or the fallback when `None`.
  * Works with `Computed<Option<A>>` (e.g. from `fromOption` / `fromNullable`) and with `Filtered<A>`.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Returns a `Computed` that yields the value inside the `Option`, or the fallback when `None`.
+ * Works with `Computed<Option<A>>` (e.g. from `fromOption` / `fromNullable`) and with
+ * `Filtered<A>`. Current reads and pushed versions use the same derivation, preventing snapshot
+ * and subscription behavior from diverging.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Computed never fails for absence: `None` or an absent Filtered value invokes
+ * `fallback`. It preserves only the input's declared `E` and `R`; the pure fallback adds no failure,
+ * service, subscription, or retained value.
  *
  * @example
  * ```ts
@@ -2351,6 +3387,25 @@ class RefSubjectSimpleTransform<A, E, R, R2, R3>
   }
 }
 
+/**
+ * Limits which pushed versions a RefSubject view observes without changing its state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Applies `skip` and `take` only to the Fx observation channel. Current reads still sample the
+ * underlying RefSubject directly, and writes still use its original serialized update boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Creating the view starts nothing and retains no value. Each observation uses its Scope and ends
+ * after `take` selected pushes; ending that observation does not interrupt or delete the source.
+ * Version, interruption, subscriber count, reads, failures, services, and writes delegate to the
+ * source RefSubject.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export const slice: {
   (skip: number, take: number): <A, E, R>(ref: RefSubject<A, E, R>) => RefSubject<A, E, R>;
   <A, E, R>(ref: RefSubject<A, E, R>, skip: number, take: number): RefSubject<A, E, R>;
@@ -2423,6 +3478,17 @@ class RefSubjectTransform<A, B, E, R>
 
 /**
  * Transforms a `RefSubject` invariantly using bidirectional mapping functions.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Creates a bidirectional lens over state: reads map outward and writes map back to the original
+ * RefSubject without allocating a second store.
+ *
+ * ## Ownership and lifetime
+ *
+ * The derived ref owns no independent state or subscription. It follows the source lifetime and
+ * routes writes through the source's synchronized update boundary.
  *
  * @example
  * ```ts
@@ -2643,6 +3709,17 @@ type RefSubjectTupleFrom<
 /**
  * Combines multiple `RefSubject`, `Computed`, or `Filtered` instances into a single struct.
  *
+ * @remarks
+ * ## Why
+ *
+ * Combines several refs into one state value while preserving whether the result is writable,
+ * computed, or filtered from its inputs.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration performs no acquisition and retains no resources. Implementations preserve
+ * source errors, services, and lifetime.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
@@ -2690,6 +3767,17 @@ export function struct<
 }
 /**
  * Combines multiple `RefSubject`, `Computed`, or `Filtered` instances into a single tuple.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Combines several refs into one state value while preserving whether the result is writable,
+ * computed, or filtered from its inputs.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration performs no acquisition and retains no resources. Implementations preserve
+ * source errors, services, and lifetime.
  *
  * @example
  * ```ts
@@ -3087,6 +4175,24 @@ function makeStructFiltered<
   return new FilteredImpl(Versioned.struct(refs) as any, Effect.succeedSome) as any;
 }
 
+/**
+ * Lifts an Effect-provided Computed into a Computed facade.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Defers service lookup until each version read, current read, interruption, or Fx observation, so
+ * callers can compose a Context-provided Computed without manually flat-mapping the service Effect.
+ *
+ * ## Ownership and lifetime
+ *
+ * The facade caches neither the resolved Computed nor its value. Each operation runs the supplied
+ * Effect, then delegates to the resolved Computed. Service requirements combine as `R | R2`, source
+ * failures remain `E`, and the observing Scope owns the delegated subscription.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export function computedFromService<R, A, E, R2>(
   effect: Effect.Effect<Computed<A, E, R2>, never, R>,
 ): Computed<A, E, R | R2> {
@@ -3121,6 +4227,23 @@ class ComputedFromService<R, A, E, R2>
   }
 }
 
+/**
+ * Defers retrieval of a Filtered value from Effect Context while preserving Filtered behavior.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Lets a service-provided Filtered participate directly in Effect reads and Fx observation without
+ * manually flat-mapping the service tag at every use.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filtered from service view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export function filteredFromService<R, A, E, R2>(
   effect: Effect.Effect<Filtered<A, E, R2>, never, R>,
 ): Filtered<A, E, R | R2> {

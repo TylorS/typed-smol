@@ -23,9 +23,41 @@ const matchesTag = <E, K extends string>(
 };
 
 /**
- * Recovers from a typed failure of an Fx by switching to a fallback Fx.
+ * Recovers from the first typed failure of an Fx by running a fallback Fx.
  *
- * Mirrors `Effect.catch` / `Effect.catchAll` (catches `Cause.Fail` only).
+ * @remarks
+ * ## Why
+ *
+ * Typed failures are part of an Fx's public error channel, so callers often
+ * need to replace a failed producer based on its first typed failure. This is
+ * the push-stream counterpart of Effect's typed recovery.
+ *
+ * ## Ownership and lifetime
+ *
+ * The source runs until it reports a Cause containing a `Fail`. The first typed
+ * failure starts exactly one fallback and the entire original Cause is replaced,
+ * including any defects or interrupts composed beside that Fail. A Cause with
+ * no Fail passes through unchanged. Source values already delivered remain
+ * delivered. The fallback's services become requirements of the returned Fx,
+ * and external interruption stops whichever run is active.
+ *
+ * @example
+ * ```ts
+ * import { catch as recover } from "@typed/fx/Fx"
+ * import { fail, succeed } from "@typed/fx/Fx"
+ *
+ * const resilient = recover(fail("offline"), (error) => succeed(error.length))
+ * ```
+ *
+ * @example Recovering a Fail discards its complete composite Cause
+ * ```ts
+ * import { Cause } from "effect"
+ * import { catch as recover } from "@typed/fx/Fx"
+ * import { failCause, succeed } from "@typed/fx/Fx"
+ *
+ * const composite = Cause.combine(Cause.fail("offline"), Cause.die("socket defect"))
+ * const recovered = recover(failCause(composite), () => succeed("cached"))
+ * ```
  *
  * @since 1.0.0
  * @category combinators
@@ -53,7 +85,27 @@ export const catch_: {
 export { catch_ as catch };
 
 /**
- * An alias for {@link catch}.
+ * Uses the Effect-style `catchAll` name for {@link catch}.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The alias lets Effect users apply the same typed-failure recovery vocabulary
+ * to Fx without introducing different runtime behavior.
+ *
+ * ## Ownership and lifetime
+ *
+ * It has exactly the source/fallback switching, failure, service, and
+ * interruption semantics of {@link catch}; it allocates no wrapper resource
+ * beyond that combinator.
+ *
+ * @example
+ * ```ts
+ * import { catchAll } from "@typed/fx/Fx"
+ * import { fail, succeed } from "@typed/fx/Fx"
+ *
+ * const recovered = catchAll(fail("missing"), () => succeed("default"))
+ * ```
  *
  * @since 1.0.0
  * @category combinators
@@ -61,10 +113,34 @@ export { catch_ as catch };
 export const catchAll = catch_;
 
 /**
- * Recovers from *any* failure cause of an Fx (including defects and interrupts)
- * by switching to a fallback Fx.
+ * Recovers from any failure cause by running a fallback Fx.
  *
- * Mirrors `Effect.catchCause`.
+ * @remarks
+ * ## Why
+ *
+ * A full `Cause` retains typed failures, defects, interruption, and composed
+ * causes. Handling that structure explicitly is necessary at boundaries that
+ * must translate every termination mode rather than only expected errors.
+ *
+ * ## Ownership and lifetime
+ *
+ * The handler runs once after the source reports a cause and its returned Fx
+ * continues in the same subscription. It receives the cause unchanged. Values
+ * emitted before failure are not replayed, and the fallback's errors and
+ * services replace the recovered source error and join its requirements.
+ * Because interruption is catchable here, use this only when intentionally
+ * translating interruption rather than for ordinary typed recovery.
+ *
+ * @example
+ * ```ts
+ * import { Cause } from "effect"
+ * import { catchCause } from "@typed/fx/Fx"
+ * import { failCause, succeed } from "@typed/fx/Fx"
+ *
+ * const reported = catchCause(failCause(Cause.die("boom")), (cause) =>
+ *   succeed(Cause.pretty(cause))
+ * )
+ * ```
  *
  * @since 1.0.0
  * @category combinators
@@ -90,9 +166,32 @@ export const catchCause: {
 );
 
 /**
- * Recovers from a typed failure by matching on the `_tag` field of the error.
+ * Recovers selected tagged typed failures by running a fallback Fx.
  *
- * Mirrors `Effect.catchTag`.
+ * @remarks
+ * ## Why
+ *
+ * Tagged error unions are idiomatic Effect APIs. Selecting one or more tags
+ * narrows the handler input and removes only those variants from the returned
+ * error channel, preserving the rest for later composition.
+ *
+ * ## Ownership and lifetime
+ *
+ * The source owns the subscription until its Cause contains a Fail whose tag
+ * matches. That first matching Fail starts one handler Fx and replaces the
+ * entire original Cause, including any defects or interrupts composed with it.
+ * A Cause with no Fail, or a first Fail with another tag, passes through intact.
+ * The fallback is lazy and contributes its errors and services to the result.
+ *
+ * @example
+ * ```ts
+ * import { catchTag } from "@typed/fx/Fx"
+ * import { fail, succeed } from "@typed/fx/Fx"
+ *
+ * type Missing = { readonly _tag: "Missing"; readonly id: string }
+ * const source = fail<Missing>({ _tag: "Missing", id: "42" })
+ * const recovered = catchTag(source, "Missing", ({ id }) => succeed(`missing:${id}`))
+ * ```
  *
  * @since 1.0.0
  * @category combinators
@@ -165,10 +264,30 @@ export const catchTag: {
 );
 
 /**
- * Recovers from a typed failure when a predicate holds, by switching to a fallback Fx.
- * Only applies to `Cause.Fail`; defects and interrupts are not caught.
+ * Recovers a typed failure only when a predicate accepts it.
  *
- * Mirrors `Effect.catchIf`.
+ * @remarks
+ * ## Why
+ *
+ * Some typed errors are distinguished by values rather than tags. Predicate
+ * recovery handles that subset while retaining `E` in the result because a
+ * rejected error can still escape.
+ *
+ * ## Ownership and lifetime
+ *
+ * The predicate is evaluated on the first Fail found anywhere in the source
+ * Cause. A match starts one lazy fallback and replaces that entire Cause,
+ * including any defects or interrupts composed with the Fail. A rejection, or
+ * a Cause containing no Fail, forwards the original Cause unchanged. The
+ * fallback contributes its errors and services and shares the subscription.
+ *
+ * @example
+ * ```ts
+ * import { catchIf } from "@typed/fx/Fx"
+ * import { fail, succeed } from "@typed/fx/Fx"
+ *
+ * const recovered = catchIf(fail(404), (status) => status === 404, () => succeed("missing"))
+ * ```
  *
  * @since 1.0.0
  * @category combinators
@@ -209,10 +328,33 @@ export const catchIf: {
 );
 
 /**
- * Recovers from a failure cause when a predicate on the cause holds,
- * by switching to a fallback Fx.
+ * Recovers a failure cause only when a predicate accepts the complete cause.
  *
- * Mirrors `Effect.catchCauseIf`.
+ * @remarks
+ * ## Why
+ *
+ * Cause-level predicates can distinguish defects, interruption, sequential or
+ * parallel cause structure that a typed-error predicate cannot observe.
+ *
+ * ## Ownership and lifetime
+ *
+ * The predicate receives the source cause unchanged. A match starts one lazy
+ * fallback in the same subscription; otherwise the original cause propagates.
+ * The fallback's requirements and errors are added, prior source values stay
+ * delivered, and interrupting the returned Fx interrupts its active run.
+ *
+ * @example
+ * ```ts
+ * import { Cause } from "effect"
+ * import { catchCauseIf } from "@typed/fx/Fx"
+ * import { failCause, succeed } from "@typed/fx/Fx"
+ *
+ * const recovered = catchCauseIf(
+ *   failCause(Cause.die("bad decoder")),
+ *   Cause.hasDies,
+ *   () => succeed("reported")
+ * )
+ * ```
  *
  * @since 1.0.0
  * @category combinators
@@ -256,9 +398,37 @@ type CaseError<T> = T extends (error: never) => Fx<infer _A, infer E, infer _R> 
 type CaseServices<T> = T extends (error: never) => Fx<infer _A, infer _E, infer R> ? R : never;
 
 /**
- * Recovers from typed failures by matching on the `_tag` field with multiple handlers at once.
+ * Recovers several tagged typed-error variants with one handler table.
  *
- * Mirrors `Effect.catchTags`.
+ * @remarks
+ * ## Why
+ *
+ * A handler table keeps multi-variant recovery exhaustive and preserves the
+ * precise success, error, and service unions produced by each selected case.
+ * Unlisted variants remain visible in the returned error channel.
+ *
+ * ## Ownership and lifetime
+ *
+ * The first Fail found anywhere in the source Cause is inspected. A listed tag
+ * starts exactly one handler Fx and replaces the entire original Cause,
+ * including any defects or interrupts composed with that Fail. An untagged or
+ * unlisted first Fail, or a Cause with no Fail, propagates intact. Handlers are
+ * lazy and contribute their individual errors and service requirements.
+ *
+ * @example
+ * ```ts
+ * import { catchTags } from "@typed/fx/Fx"
+ * import { fail, succeed } from "@typed/fx/Fx"
+ *
+ * type Failure =
+ *   | { readonly _tag: "Missing"; readonly id: string }
+ *   | { readonly _tag: "Forbidden" }
+ * const source = fail<Failure>({ _tag: "Missing", id: "42" })
+ * const recovered = catchTags(source, {
+ *   Missing: ({ id }) => succeed(`missing:${id}`),
+ *   Forbidden: () => succeed("forbidden")
+ * })
+ * ```
  *
  * @since 1.0.0
  * @category combinators

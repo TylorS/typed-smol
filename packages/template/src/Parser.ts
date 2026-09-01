@@ -22,15 +22,37 @@ let parser: Parser | undefined;
  * Render targets cache their compiled DOM fragments or HTML chunks independently by template-literal
  * identity.
  *
+ * @remarks
+ * ## Why
+ *
+ * One renderer-neutral AST gives DOM rendering, SSR, and hydration the same
+ * interpolation paths and template hash. Template syntax remains ordinary HTML
+ * with explicit prefixes for properties, events, booleans, data, spreads, and
+ * refs.
+ *
+ * ## Ownership and lifetime
+ *
+ * The parser reuses internal scratch storage synchronously but returns a fresh,
+ * caller-owned immutable model on every call. Render layers decide whether and
+ * how long to cache compiled results by template-literal identity.
+ *
+ * ## Errors and trust
+ *
+ * Malformed author templates throw parser errors during compilation. Parsing
+ * does not sanitize markup; dynamic values are escaped later by the HTML
+ * renderer according to the recorded part context.
+ *
  * @example
  * ```ts
  * import { parse } from "@typed/template/Parser"
- * import * as Template from "@typed/template/Template"
  *
- * // Parse a template
- * const template = parse`<div id=${"my-id"} class="container">
- *   <p>Hello, ${"world"}!</p>
- * </div>`
+ * // Each array boundary records one interpolation point. Runtime values are
+ * // supplied later by a renderer, not passed to parse.
+ * const template = parse([
+ *   "<div id=\"",
+ *   "\" class=\"container\"><p>Hello, ",
+ *   "!</p></div>"
+ * ])
  *
  * // Access parsed structure
  * console.log(template.nodes) // Array of parsed nodes

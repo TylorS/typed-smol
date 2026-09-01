@@ -18,6 +18,17 @@ import { Result } from "effect";
 
 /**
  * A RefArray is a RefSubject that is specialized over an array of values.
+ * @remarks
+ * ## Why
+ *
+ * Defines array state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefArray is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -30,10 +41,21 @@ export interface RefArray<in out A, in out E = never, out R = never> extends Ref
 /**
  * Creates a new `RefArray` from an array, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates array state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefArray from "@typed/fx/RefSubject/RefArray"
+ * import * as RefArray from "@typed/fx/RefArray"
  *
  * // From a plain array
  * const program1 = Effect.gen(function* () {
@@ -64,6 +86,17 @@ export function make<A, E = never, R = never>(
 
 /**
  * Prepend a value to the current state of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Expresses prepend as one ordered array transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running prepend performs one serialized array transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -76,6 +109,17 @@ export const prepend: {
 
 /**
  * Prepend an iterable of values to the current state of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Expresses prepend all as one ordered array transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running prepend all performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -88,6 +132,17 @@ export const prependAll: {
 
 /**
  * Append a value to the current state of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Expresses append as one ordered array transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running append performs one serialized array transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -100,6 +155,17 @@ export const append: {
 
 /**
  * Append an iterable of values to the current state of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Expresses append all as one ordered array transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running append all performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -112,6 +178,17 @@ export const appendAll: {
 
 /**
  * Drop the first `n` values from a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Applies drop to the committed array value and publishes only the result, preserving its element
+ * order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running drop performs one serialized array transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -124,6 +201,17 @@ export const drop: {
 
 /**
  * Drop the last `n` values from a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Applies drop right to the committed array value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running drop right performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -136,6 +224,17 @@ export const dropRight: {
 
 /**
  * Drop values from a RefArray while a predicate is true.
+ * @remarks
+ * ## Why
+ *
+ * Applies drop while to the committed array value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running drop while performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -157,6 +256,17 @@ export const dropWhile: {
 
 /**
  * Filter the values of a RefArray using a predicate creating a Computed value.
+ * @remarks
+ * ## Why
+ *
+ * Projects array state with filter values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -174,6 +284,17 @@ export const filterValues: {
 
 /**
  * Get a value contained a particular index of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get index as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get index view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -186,6 +307,17 @@ export const getIndex: {
 
 /**
  * Group the values of a RefArray by a key.
+ * @remarks
+ * ## Why
+ *
+ * Projects array state with group by for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The group by view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -203,6 +335,17 @@ export const groupBy: {
 
 /**
  * Insert a value at a particular index of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Expresses insert at as one ordered array transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running insert at performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -217,6 +360,17 @@ export const insertAt: {
 
 /**
  * Check to see if a RefArray is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the array; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -225,6 +379,17 @@ export const isEmpty = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed<bo
 
 /**
  * Check to see if a RefArray is non-empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is non empty a live projection of the array; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is non empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -233,6 +398,17 @@ export const isNonEmpty = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed
 
 /**
  * Get the current length of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Makes length a live projection of the array; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The length view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -241,6 +417,23 @@ export const length = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed<num
 
 /**
  * Map (Endomorphic) the values of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * The implementation applies the endomorphic map through `RefSubject.update`, replacing the
+ * writable RefArray in one serialized transition. The published Computed return type does not
+ * describe that runtime behavior.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed array and retains the ref's E and R channels.
+ * ## Known API defect
+ *
+ * The public overloads currently declare `Computed<ReadonlyArray<A>, E, R>`, but the implementation
+ * returns the update Effect from `RefSubject.update`. This documentation reports the shipped mismatch;
+ * changing that signature or runtime behavior requires a separate compatibility decision.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -258,6 +451,17 @@ export const map: {
 
 /**
  * Map the values with their indexes of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Projects array state with map values for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -275,6 +479,17 @@ export const mapValues: {
 
 /**
  * Modify the value at a particular index of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Keeps modify at atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running modify at performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -296,6 +511,17 @@ export const modifyAt: {
 
 /**
  * Partition the values of a RefArray using a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Partition the values of a RefArray using a predicate. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The partition view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -317,6 +543,17 @@ export const partition: {
 
 /**
  * Reduce the values of a RefArray to a single value.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce a live projection of the array; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -341,6 +578,17 @@ export const reduce: {
 
 /**
  * Reduce the values of a RefArray to a single value in reverse order.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce right a live projection of the array; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce right view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -365,6 +613,17 @@ export const reduceRight: {
 
 /**
  * Replace a value at a particular index of a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Keeps replace at atomic with respect to competing RefSubject writes instead of splitting the
+ * read and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running replace at performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -379,6 +638,17 @@ export const replaceAt: {
 
 /**
  * Rotate the values of a RefArray by `n` places. Helpful for things like carousels.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered array through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running rotate performs one serialized array transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -391,6 +661,17 @@ export const rotate: {
 
 /**
  * Sort the values of a RefArray using a provided Order.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered array through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running sort by performs one serialized array transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -408,6 +689,17 @@ export const sortBy: {
 
 /**
  * Take the first `n` values from a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Applies take to the committed array value and publishes only the result, preserving its element
+ * order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take performs one serialized array transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -420,6 +712,17 @@ export const take: {
 
 /**
  * Take the last `n` values from a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Applies take right to the committed array value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take right performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -432,6 +735,17 @@ export const takeRight: {
 
 /**
  * Take values from a RefArray while a predicate is true.
+ * @remarks
+ * ## Why
+ *
+ * Applies take while to the committed array value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take while performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -453,6 +767,17 @@ export const takeWhile: {
 
 /**
  * Remove any duplicate values from a RefArray.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered array through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running dedupe with performs one serialized array transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -464,10 +789,21 @@ export const dedupeWith =
 /**
  * Gets the last element of a `RefArray` as a `Filtered`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of last as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The last view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefArray from "@typed/fx/RefSubject/RefArray"
+ * import * as RefArray from "@typed/fx/RefArray"
  *
  * const program = Effect.gen(function* () {
  *   const items = yield* RefArray.make([1, 2, 3, 4, 5])
@@ -491,10 +827,21 @@ export const last = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Filtered<A, E,
 /**
  * Gets the first element of a `RefArray` as a `Filtered`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of head as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The head view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefArray from "@typed/fx/RefSubject/RefArray"
+ * import * as RefArray from "@typed/fx/RefArray"
  *
  * const program = Effect.gen(function* () {
  *   const items = yield* RefArray.make([1, 2, 3, 4, 5])

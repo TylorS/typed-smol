@@ -11,6 +11,43 @@ import type { FlatMapLike } from "./flatMap.js";
 /**
  * Maps each element of an Fx to a new Fx, ignoring new elements until the current inner Fx completes.
  *
+ * @remarks
+ * ## Why
+ *
+ * `exhaustMap` is an admission policy for work that must never overlap and does
+ * not need a backlog, such as ignoring repeated submit events while one submit
+ * is running.
+ *
+ * ## Admission, ordering, and cardinality
+ *
+ * The first source value observed while idle admits one inner Fx. For values
+ * arriving while it runs, `f` is still evaluated to construct an inner, but that
+ * inner is not run and no value is queued. Every admitted inner may emit any
+ * number of values in its own order.
+ *
+ * ## Ownership and lifetime
+ *
+ * Source and admitted-inner failures are forwarded and their services remain
+ * typed. A `FiberHandle` in the required `Scope` owns the active inner. Source
+ * completion waits for that inner; interruption closes the handle and the
+ * inner's child Scope, running its finalizers.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { Effect } from "effect"
+ *
+ * const submits = Fx.mergeAll(
+ *   Fx.at("first", "0 millis"),
+ *   Fx.at("ignored while busy", "5 millis"),
+ *   Fx.at("later", "30 millis")
+ * )
+ * const accepted = Fx.exhaustMap(submits, (command) => Fx.at(command, "20 millis"))
+ *
+ * Effect.runPromise(Effect.scoped(Fx.collectAll(accepted))).then(console.log)
+ * // ["first", "later"]
+ * ```
+ *
  * @param f - A function that maps an element `A` to a new `Fx<B>`.
  * @returns An `Fx` that emits values from the active inner stream.
  * @since 1.0.0

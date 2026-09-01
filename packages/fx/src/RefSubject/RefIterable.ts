@@ -15,6 +15,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefIterable is a RefSubject specialized over an Iterable of values.
+ * @remarks
+ * ## Why
+ *
+ * Defines iterable state with the same current-read, pushed-update, and synchronized-write
+ * contract as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefIterable is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -26,6 +37,17 @@ export interface RefIterable<
 
 /**
  * Creates a new `RefIterable` from an Iterable, `Effect`, or `Fx`.
+ * @remarks
+ * ## Why
+ *
+ * Creates iterable state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -41,6 +63,17 @@ export function make<A, E = never, R = never>(
 
 /**
  * Prepend a value to the current state of a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Expresses prepend as one ordered iterable transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running prepend performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -53,6 +86,17 @@ export const prepend: {
 
 /**
  * Prepend an iterable of values to the current state of a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Expresses prepend all as one ordered iterable transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running prepend all performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -65,6 +109,17 @@ export const prependAll: {
 
 /**
  * Append a value to the current state of a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Expresses append as one ordered iterable transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running append performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -77,6 +132,17 @@ export const append: {
 
 /**
  * Append an iterable of values to the current state of a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Expresses append all as one ordered iterable transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running append all performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -89,6 +155,17 @@ export const appendAll: {
 
 /**
  * Drop the first `n` values from a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Applies drop to the committed iterable value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running drop performs one serialized iterable transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -101,6 +178,17 @@ export const drop: {
 
 /**
  * Take the first `n` values from a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Applies take to the committed iterable value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take performs one serialized iterable transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -113,6 +201,17 @@ export const take: {
 
 /**
  * Take values from a RefIterable while a predicate is true.
+ * @remarks
+ * ## Why
+ *
+ * Applies take while to the committed iterable value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take while performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -130,6 +229,16 @@ export const takeWhile: {
 
 /**
  * Filter the values of a RefIterable (mutating).
+ * @remarks
+ * ## Why
+ *
+ * Applies filter to the committed Iterable through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -147,6 +256,16 @@ export const filter: {
 
 /**
  * Map (Endomorphic) the values of a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Applies map to the committed Iterable through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -164,6 +283,17 @@ export const map: {
 
 /**
  * Remove adjacent duplicate values from a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered iterable through its Effect collection operation while retaining
+ * RefSubject equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running dedupe adjacent performs one serialized iterable transition and resolves with its
+ * committed value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -173,6 +303,17 @@ export const dedupeAdjacent = <A, E, R>(
 
 /**
  * Intersperse a separator between elements.
+ * @remarks
+ * ## Why
+ *
+ * Intersperse a separator between elements. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running intersperse performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -185,6 +326,17 @@ export const intersperse: {
 
 /**
  * Repeat the iterable n times.
+ * @remarks
+ * ## Why
+ *
+ * Repeat the iterable n times. The operation remains attached to the RefSubject's versioned state
+ * boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running repeat performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -197,6 +349,17 @@ export const repeat: {
 
 /**
  * FlatMap (endomorphic).
+ * @remarks
+ * ## Why
+ *
+ * FlatMap (endomorphic). The operation remains attached to the RefSubject's versioned state
+ * boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running flat map performs one serialized iterable transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -218,6 +381,16 @@ export const flatMap: {
 
 /**
  * Filter and map values in place.
+ * @remarks
+ * ## Why
+ *
+ * Applies `filterMap` to the committed Iterable through `RefSubject.update` and publishes one
+ * coherent replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -247,6 +420,16 @@ export const filterMap: {
 
 /**
  * Extract Some values from Option iterable.
+ * @remarks
+ * ## Why
+ *
+ * Applies `getSomes` to the committed Iterable through `RefSubject.update` and publishes one
+ * coherent replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -261,6 +444,17 @@ export const getSomes = <A, E, R>(
 
 /**
  * Check if a RefIterable is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the iterable; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -269,6 +463,17 @@ export const isEmpty = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed
 
 /**
  * Get the current size of a RefIterable.
+ * @remarks
+ * ## Why
+ *
+ * Makes size a live projection of the iterable; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The size view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -277,6 +482,17 @@ export const size = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<nu
 
 /**
  * Map the values of a RefIterable to a different type.
+ * @remarks
+ * ## Why
+ *
+ * Projects iterable state with map values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -299,6 +515,17 @@ export const mapValues: {
 
 /**
  * Filter the values of a RefIterable creating a Computed value.
+ * @remarks
+ * ## Why
+ *
+ * Projects iterable state with filter values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -320,6 +547,17 @@ export const filterValues: {
 
 /**
  * Group the values of a RefIterable by a key.
+ * @remarks
+ * ## Why
+ *
+ * Projects iterable state with group by for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The group by view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -337,6 +575,17 @@ export const groupBy: {
 
 /**
  * Reduce the values of a RefIterable to a single value.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce a live projection of the iterable; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -361,6 +610,17 @@ export const reduce: {
 
 /**
  * Check if any value satisfies a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes some a live projection of the iterable; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The some view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -378,6 +638,17 @@ export const some: {
 
 /**
  * Check if a RefIterable contains a value.
+ * @remarks
+ * ## Why
+ *
+ * Makes contains a live projection of the iterable; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The contains view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -390,6 +661,17 @@ export const contains: {
 
 /**
  * Count elements satisfying a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes count by a live projection of the iterable; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The count by view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -407,6 +689,17 @@ export const countBy: {
 
 /**
  * Convert to array.
+ * @remarks
+ * ## Why
+ *
+ * Projects iterable state with to array for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The to array view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -419,6 +712,17 @@ export const toArray = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed
 
 /**
  * Get the first element of a RefIterable as a Filtered.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of head as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The head view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -427,6 +731,17 @@ export const head = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Filtered<A,
 
 /**
  * Find the first value satisfying a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find first as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find first view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -441,6 +756,17 @@ export const findFirst: {
 
 /**
  * Find the last value satisfying a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find last as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find last view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */

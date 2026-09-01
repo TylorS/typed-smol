@@ -123,6 +123,46 @@ function getMatcherPath(path: string): `/${string}` {
  *
  * Path captures take precedence over same-named query parameters. Rendering
  * completes before the response is created; this adapter does not stream.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Typed route matchers already describe decoding, guards, parent prefixes, and
+ * render output. `ssrForHttp` installs that same model in Effect's HttpRouter
+ * and buffers one complete HTML document for runtimes that require a known body.
+ *
+ * ## Ownership and lifetime
+ *
+ * Registration adds GET routes to the supplied Effect HttpRouter. Each request
+ * creates request-local memory navigation and current-route services; the
+ * request Effect owns rendering and all finalizers. Buffered rendering must
+ * complete before the response is returned. Rendering HTML does not mount or
+ * hydrate a browser client.
+ *
+ * ## Routing behavior
+ *
+ * Matcher cases sharing a path are tried in their compiled order. Path params
+ * overwrite same-named query params. Decode/guard failures continue candidate
+ * selection; a matched renderer failure stays in the typed request error channel.
+ *
+ * @example
+ * ```ts
+ * import { ssrForHttp } from "@typed/ui/HttpRouter"
+ * import { Effect } from "effect"
+ * import * as HttpRouter from "effect/unstable/http/HttpRouter"
+ * import { Parse, match } from "@typed/router"
+ * import { html } from "@typed/template"
+ *
+ * const pages = match(Parse("/"), html`<h1>Home</h1>`)
+ * const routes = Effect.gen(function* () {
+ *   const router = yield* HttpRouter.make
+ *   yield* ssrForHttp(router, pages)
+ *   return router
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category http
  */
 export const ssrForHttp: {
   <E, R>(input: Matcher<RenderEvent, E, R>): (router: HttpRouter) => SsrForHttpEffect<E, R>;
@@ -134,6 +174,38 @@ export const ssrForHttp: {
  *
  * Path captures take precedence over same-named query parameters. HTML chunks
  * are emitted as they are rendered via `renderToHtml` and `HttpServerResponse.stream`.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Streaming lets the server send ordered renderer-owned HTML chunks before the
+ * whole page completes while preserving the same Typed matcher and Effect HTTP model.
+ *
+ * ## Ownership and lifetime
+ *
+ * Registration adds GET routes to the supplied router. Each request owns its
+ * navigation/router services and stream Scope. Client cancellation interrupts
+ * rendering and runs finalizers. The stream carries typed renderer failures;
+ * producing HTML alone does not attach client hydration behavior.
+ *
+ * @example
+ * ```ts
+ * import { streamingSsrForHttp } from "@typed/ui/HttpRouter"
+ * import { Effect } from "effect"
+ * import * as HttpRouter from "effect/unstable/http/HttpRouter"
+ * import { Parse, match } from "@typed/router"
+ * import { html } from "@typed/template"
+ *
+ * const pages = match(Parse("/"), html`<h1>Streamed home</h1>`)
+ * const routes = Effect.gen(function* () {
+ *   const router = yield* HttpRouter.make
+ *   yield* streamingSsrForHttp(router, pages)
+ *   return router
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category http
  */
 export const streamingSsrForHttp: {
   <E, R>(input: Matcher<RenderEvent, E, R>): (router: HttpRouter) => SsrForHttpEffect<E, R>;
@@ -143,6 +215,34 @@ export const streamingSsrForHttp: {
 /**
  * Converts Effect HTTP server errors into empty 400, 404, or 500 responses.
  * Other failures remain in the global error channel.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Effect's structured server failures have a safe transport status, whereas
+ * application/domain errors must remain visible for deliberate handling.
+ *
+ * ## Ownership and lifetime
+ *
+ * The middleware is installed on the supplied router and runs in each request
+ * lifetime. It allocates no long-lived resource and does not log, swallow, or
+ * reclassify non-HttpServerError failures.
+ *
+ * @example
+ * ```ts
+ * import { handleHttpServerError } from "@typed/ui/HttpRouter"
+ * import { Effect } from "effect"
+ * import * as HttpRouter from "effect/unstable/http/HttpRouter"
+ *
+ * const router = Effect.gen(function* () {
+ *   const router = yield* HttpRouter.make
+ *   yield* handleHttpServerError(router)
+ *   return router
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category http
  */
 export function handleHttpServerError(router: HttpRouter) {
   return router.addGlobalMiddleware(

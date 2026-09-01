@@ -16,6 +16,22 @@ type HydrationProtocol<Ref> =
     ? RefSubject.HydrationRef<E, R>
     : unknown;
 
+/**
+ * Ref callback produced by combining two compatible element refs.
+ *
+ * @remarks
+ * ## Why
+ * User and component refs can observe the exact same DOM element without one
+ * overwriting the other, while their error/service channels remain visible.
+ *
+ * ## Ownership and lifetime
+ * The callback sequences both refs inside the element's rendering Scope. At
+ * most one input may carry `HydrationRef` ownership; that protocol is retained
+ * on the composed callback.
+ *
+ * @since 1.0.0
+ * @category refs
+ */
 export type ComposedRef<First, Second> = ((
   element: RefTarget<First> & RefTarget<Second>,
 ) => Effect.Effect<
@@ -26,6 +42,35 @@ export type ComposedRef<First, Second> = ((
   HydrationProtocol<First> &
   HydrationProtocol<Second>;
 
+/**
+ * Composes two element refs in order.
+ *
+ * @remarks
+ * ## Why
+ * A component's internal ref and a caller's ref both need the real mounted
+ * node. Each return value may be void, Effect, Stream, or Fx, and composition
+ * normalizes those forms without hiding failures or services.
+ *
+ * ## Ownership and lifetime
+ * The first ref runs before the second. Streams and Fx values are drained in
+ * the caller's Scope and interrupted on unmount. The function throws
+ * synchronously when both refs claim hydration ownership because applying two
+ * serialized states to one element is ambiguous.
+ *
+ * @example
+ * ```ts
+ * import { composeRefs } from "@typed/ui/Dom/Refs"
+ * import { Effect } from "effect"
+ *
+ * const ref = composeRefs(
+ *   (element: HTMLButtonElement) => Effect.sync(() => element.focus()),
+ *   (element: HTMLButtonElement) => console.log(element)
+ * )
+ * ```
+ *
+ * @since 1.0.0
+ * @category refs
+ */
 export function composeRefs<
   const First extends RefInput | null | undefined,
   const Second extends RefInput | null | undefined = undefined,

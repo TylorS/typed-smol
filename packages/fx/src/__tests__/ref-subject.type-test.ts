@@ -1,5 +1,5 @@
 import { RefArray, RefSubject } from "@typed/fx";
-import { RefResult } from "@typed/fx/RefSubject";
+import * as RefResult from "@typed/fx/RefResult";
 import type * as Fx from "@typed/fx/Fx";
 import type * as Effect from "effect/Effect";
 import type * as Option from "effect/Option";

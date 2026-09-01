@@ -9,11 +9,47 @@ import { extendScope } from "../internal/scope.js";
 import type { FlatMapLike } from "./flatMap.js";
 
 /**
- * Maps each element of an Fx to a new Fx, but only runs one inner Fx at a time.
- * If a new element arrives while an inner Fx is running, the new element is buffered (overwriting any previously buffered value).
- * When the current inner Fx completes, the latest buffered Fx is run.
+ * Maps each element to an inner Fx, running one now and retaining only the latest waiting value.
  *
- * This is useful for scenarios where you want to ignore intermediate values but ensure the latest value is eventually processed.
+ * @remarks
+ * ## Why
+ *
+ * `exhaustLatestMap` fits work that cannot overlap but must eventually reflect
+ * the newest request. Unlike {@link exhaustMap}, it remembers one pending value;
+ * unlike {@link concatMap}, it does not let a backlog grow.
+ *
+ * ## Admission, buffering, and cardinality
+ *
+ * The first value while idle starts immediately. While that inner runs, each new
+ * value replaces the single pending inner Effect; replaced values never run.
+ * When the active inner completes, the latest pending inner starts. An admitted
+ * inner may emit any number of values, in that inner's order.
+ *
+ * ## Ownership and lifetime
+ *
+ * Source and admitted-inner failures are forwarded and both environments remain
+ * typed. The required `Scope` owns every active inner fiber. Source completion
+ * waits until the active and final pending inner finish; interruption closes the
+ * Scope and runs inner finalizers. The one-slot pending buffer retains work, not
+ * emitted output.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { Effect } from "effect"
+ *
+ * const refreshes = Fx.mergeAll(
+ *   Fx.at("v1", "0 millis"),
+ *   Fx.at("v2", "5 millis"),
+ *   Fx.at("v3", "10 millis")
+ * )
+ * const latestEventually = Fx.exhaustLatestMap(refreshes, (version) =>
+ *   Fx.at(`indexed:${version}`, "20 millis")
+ * )
+ *
+ * Effect.runPromise(Effect.scoped(Fx.collectAll(latestEventually))).then(console.log)
+ * // ["indexed:v1", "indexed:v3"]
+ * ```
  *
  * @param f - A function that maps an element `A` to a new `Fx<B>`.
  * @returns An `Fx` that emits values from the inner streams.

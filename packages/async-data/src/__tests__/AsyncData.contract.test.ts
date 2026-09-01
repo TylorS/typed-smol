@@ -178,6 +178,24 @@ describe("AsyncData correctness contracts", () => {
     expect(AsyncData.isPending(pending)).toBe(true);
   });
 
+  it("preserves the known isPending type/runtime discrepancy for optimistic wrappers", () => {
+    const pending: AsyncData.AsyncData<number, never> = AsyncData.optimistic(
+      AsyncData.loading(),
+      20,
+    );
+
+    expect(AsyncData.isPending(pending)).toBe(true);
+    expect(pending._tag).toBe("Optimistic");
+
+    if (AsyncData.isPending(pending)) {
+      // The public predicate currently narrows this branch to Loading | Refreshing,
+      // even though the runtime value above remains Optimistic. This assignment
+      // deliberately records that compatibility contract without endorsing it.
+      const declaredNarrowing: AsyncData.Loading | AsyncData.Refreshing<number, never> = pending;
+      expect((declaredNarrowing as AsyncData.AsyncData<number, never>)._tag).toBe("Optimistic");
+    }
+  });
+
   it("isPending rejects cyclic optimistic histories", () => {
     const cyclic: { _tag: "Optimistic"; value: number; previous?: unknown } = {
       _tag: "Optimistic",

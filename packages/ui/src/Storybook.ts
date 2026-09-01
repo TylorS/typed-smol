@@ -11,8 +11,27 @@ import {
   type RenderTemplate,
 } from "@typed/template";
 
+/**
+ * Live Storybook mount and its explicit asynchronous disposer.
+ *
+ * @remarks
+ * ## Why
+ * Stories need access to the actual canvas for assertions and deterministic
+ * teardown of a long-lived reactive render.
+ *
+ * ## Ownership and lifetime
+ * The mount owns its private Scope and render fiber. `dispose` interrupts the
+ * fiber and closes the Scope exactly once; callers own appending/removing the
+ * returned canvas. If the canvas is connected, disposal does not disconnect the
+ * removal observer; removing the canvas is the observer's cleanup boundary.
+ *
+ * @since 1.0.0
+ * @category testing
+ */
 export interface MountedStory {
+  /** Detached div containing the story's real rendered DOM. */
   readonly canvas: HTMLDivElement;
+  /** Idempotently closes rendering; remove a connected canvas to release its observer. */
   readonly dispose: () => Promise<void>;
 }
 
@@ -22,6 +41,47 @@ export interface MountedStory {
  * The mount stays alive after its first render so reactive attributes and event
  * handlers remain attached. It is released explicitly or when Storybook
  * removes the canvas from its document.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Waiting only for the first `RenderEvent` and then ending the fiber would
+ * detach reactive attributes and event handlers. This helper keeps the Typed
+ * renderer alive while still giving tests an explicit disposal boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * `mount` creates an unsafe Scope dedicated to this story, starts the render
+ * fiber, and resolves only after the first event. `dispose` interrupts and
+ * closes it idempotently. After the canvas has once been connected, a
+ * document-scoped MutationObserver disposes it when removed and then disconnects.
+ * Calling `dispose` while the canvas is still connected does **not** disconnect
+ * that observer: it continues retaining the document, canvas, and disposal
+ * closure until the canvas is removed. Tests or hosts that keep a disposed
+ * canvas connected must remove it themselves to release that observer. If
+ * rendering fails before the first event, Scope cleanup runs before rejection
+ * and no removal observer is installed.
+ *
+ * ## Platform requirements
+ *
+ * This is a browser/testing API. The provided Document supplies element and
+ * MutationObserver implementations. The canvas is returned detached so
+ * Storybook or a test controls where it enters the DOM.
+ *
+ * @example
+ * ```ts
+ * import { mount } from "@typed/ui/Storybook"
+ * import { html } from "@typed/template"
+ *
+ * const story = await mount(html`<button type="button">Save</button>`)
+ * document.body.append(story.canvas)
+ * // Run interactions and assertions against story.canvas.
+ * await story.dispose()
+ * story.canvas.remove() // disconnects the removal observer
+ * ```
+ *
+ * @since 1.0.0
+ * @category testing
  */
 export async function mount<E>(
   content: Fx.Fx<RenderEvent, E, Scope.Scope | RenderTemplate>,

@@ -7,6 +7,22 @@ import type { Fx } from "../Fx.js";
 /**
  * Performs an effect for each element of the Fx, without changing the elements.
  *
+ * @remarks
+ * ## Why
+ * `tap` sequences an observation or side effect before forwarding each original value. It emits
+ * exactly once per successful callback, in source order; callback failure prevents that value.
+ *
+ * ## Ownership and lifetime
+ * Returned Effects run in the consumer path and are interrupted with it; a `void` callback is
+ * treated as `Effect.void`. Callback failures and services remain visible in the result type.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { Fx } from "@typed/fx"
+ * const logged = Fx.fromIterable([1, 2]).pipe(Fx.tap((n) => Effect.log(n)))
+ * ```
+ *
  * @param f - An effectful function to apply to each element.
  * @returns An `Fx` that emits the original elements.
  * @since 1.0.0

@@ -8,6 +8,26 @@ import type { Fx } from "../Fx.js";
 /**
  * Maps and filters elements of an Fx using an effectful function.
  *
+ * @remarks
+ * ## Why
+ * `filterMapEffect` combines an Effectful decision and transformation without introducing nested
+ * streams. `Some` emits once and `None` emits nothing. Producer callbacks are not serialized, so
+ * overlapping Effects can complete and emit in a different order than their inputs.
+ *
+ * ## Ownership and lifetime
+ * Each callback Effect follows its invoking producer delivery. Its failure Cause is sent to the
+ * Sink, services remain exposed as `R2`, and no semaphore, queue, or resource is added.
+ *
+ * @example
+ * ```ts
+ * import { Effect, Option } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const accepted = Fx.fromIterable([1, 2]).pipe(
+ *   Fx.filterMapEffect((n) => Effect.succeed(n > 1 ? Option.some(n * 10) : Option.none()))
+ * )
+ * ```
+ *
  * @param f - An effectful function that returns an `Option` for each element.
  * @returns An `Fx` that emits values for which `f` returns `Some`.
  * @since 1.0.0

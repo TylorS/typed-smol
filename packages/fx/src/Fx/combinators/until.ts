@@ -8,6 +8,21 @@ import { take } from "./take.js";
 /**
  * Forwards `events` until `signal` emits, then interrupts `events`.
  *
+ * @remarks
+ * ## Why
+ * `until` gives an event source an external stop boundary. Event values retain their order until
+ * the first signal; the signal itself is not emitted and the event run then completes by interruption.
+ *
+ * ## Ownership and lifetime
+ * Both sources start behind one gate in a private Scope. Event completion cancels the signal;
+ * signaling cancels events; failures are forwarded unless they are the expected cancellation.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const bounded = Fx.until(Fx.fromIterable([1, 2, 3]), Fx.succeed("stop"))
+ * ```
+ *
  * @since 1.0.0
  * @category combinators
  */

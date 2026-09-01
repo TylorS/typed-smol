@@ -13,6 +13,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefHashSet is a RefSubject specialized over a HashSet.
+ * @remarks
+ * ## Why
+ *
+ * Defines hash set state with the same current-read, pushed-update, and synchronized-write
+ * contract as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefHashSet is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -24,6 +35,17 @@ export interface RefHashSet<
 
 /**
  * Creates a new `RefHashSet` from a HashSet, `Effect`, or `Fx`.
+ * @remarks
+ * ## Why
+ *
+ * Creates hash set state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -42,6 +64,17 @@ export function make<V, E = never, R = never>(
 
 /**
  * Add a value to the RefHashSet.
+ * @remarks
+ * ## Why
+ *
+ * Add a value to the RefHashSet. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running add performs one serialized hash set transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -54,6 +87,17 @@ export const add: {
 
 /**
  * Remove a value from the RefHashSet.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove to the committed hash set value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove performs one serialized hash set transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -66,6 +110,17 @@ export const remove: {
 
 /**
  * Clear all values from the RefHashSet.
+ * @remarks
+ * ## Why
+ *
+ * Applies clear to the committed hash set value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running clear performs one serialized hash set transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -74,6 +129,17 @@ export const clear = <V, E, R>(ref: RefHashSet<V, E, R>): Effect.Effect<HashSet.
 
 /**
  * Compute the union with another HashSet.
+ * @remarks
+ * ## Why
+ *
+ * Combines bulk hash set changes in one committed value, giving subscribers one coherent update
+ * rather than a partially applied sequence.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running union performs one serialized hash set transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -91,6 +157,17 @@ export const union: {
 
 /**
  * Compute the intersection with another HashSet.
+ * @remarks
+ * ## Why
+ *
+ * Compute the intersection with another HashSet. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running intersection performs one serialized hash set transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -108,6 +185,17 @@ export const intersection: {
 
 /**
  * Compute the difference with another HashSet.
+ * @remarks
+ * ## Why
+ *
+ * Compute the difference with another HashSet. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running difference performs one serialized hash set transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -125,6 +213,16 @@ export const difference: {
 
 /**
  * Filter values in place.
+ * @remarks
+ * ## Why
+ *
+ * Applies filter to the committed HashSet through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed HashSet and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -142,6 +240,16 @@ export const filter: {
 
 /**
  * Map values in place (endomorphic).
+ * @remarks
+ * ## Why
+ *
+ * Applies map to the committed HashSet through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed HashSet and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -160,6 +268,17 @@ export const map: {
 
 /**
  * Get the current size of the RefHashSet.
+ * @remarks
+ * ## Why
+ *
+ * Makes size a live projection of the hash set; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The size view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -168,6 +287,17 @@ export const size = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<num
 
 /**
  * Check if the RefHashSet is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the hash set; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -176,6 +306,17 @@ export const isEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<
 
 /**
  * Check if the RefHashSet is non-empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is non empty a live projection of the hash set; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is non empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -184,6 +325,17 @@ export const isNonEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Comput
 
 /**
  * Check if a value exists in the RefHashSet.
+ * @remarks
+ * ## Why
+ *
+ * Makes has a live projection of the hash set; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The has view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -196,6 +348,17 @@ export const has: {
 
 /**
  * Check if any value satisfies a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes some a live projection of the hash set; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The some view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -213,6 +376,17 @@ export const some: {
 
 /**
  * Check if all values satisfy a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes every a live projection of the hash set; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The every view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -230,6 +404,17 @@ export const every: {
 
 /**
  * Check if this set is a subset of another.
+ * @remarks
+ * ## Why
+ *
+ * Check if this set is a subset of another. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is subset view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -244,6 +429,17 @@ export const isSubset: {
 
 /**
  * Map values to a different type.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash set state with map values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -261,6 +457,17 @@ export const mapValues: {
 
 /**
  * Filter values creating a Computed value.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash set state with filter values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -282,6 +489,17 @@ export const filterValues: {
 
 /**
  * Reduce the values to a single value.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce a live projection of the hash set; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -301,6 +519,17 @@ export const reduce: {
 
 /**
  * Get all values as an array.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash set state with values for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

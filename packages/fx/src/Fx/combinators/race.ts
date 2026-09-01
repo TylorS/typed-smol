@@ -17,7 +17,40 @@ import type { Fx } from "../Fx.js";
  * win unless every side ends without emitting. After a winner is chosen, that
  * stream's later failures are propagated.
  *
- * Matches Effect `Stream.race`.
+ * @remarks
+ * ## Why
+ *
+ * `race` selects a live producer by its first useful value rather than by setup,
+ * completion, or a fast failure. This is suitable for redundant sources where a
+ * producer that ends silently should not prevent another from becoming useful.
+ *
+ * ## Selection, ordering, and cardinality
+ *
+ * Both inputs start concurrently. The first emitted value atomically selects its
+ * producer; that value and all later values from the winner are forwarded in
+ * order. The loser emits nothing after selection and is interrupted. There is no
+ * buffering or replay.
+ *
+ * ## Ownership and lifetime
+ *
+ * Before a winner, a non-interruption failure is remembered but does not win; it
+ * is reported only if both inputs end without a value. After selection, winner
+ * failures are forwarded. Both environments remain required. The observing
+ * fiber owns both child fibers and interruption cancels the race and finalizers.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { Effect } from "effect"
+ *
+ * const response = Fx.race(
+ *   Fx.ensuring(Fx.at("slow", "50 millis"), Effect.log("slow closed")),
+ *   Fx.ensuring(Fx.at("fast", "5 millis"), Effect.log("fast closed"))
+ * )
+ * Effect.runPromise(Fx.collectAll(response)).then(console.log)
+ * // "slow closed" proves loser cleanup; the winning finalizer also runs
+ * // resolves ["fast"]
+ * ```
  *
  * @since 1.0.0
  * @category combinators
@@ -38,6 +71,39 @@ export const race: {
 
 /**
  * Races many streams: the first to emit wins and the rest are interrupted.
+ *
+ * @remarks
+ * ## Why
+ *
+ * `raceAll` extends {@link race} to a runtime-sized set while preserving the
+ * first-value selection rule.
+ *
+ * ## Selection, ordering, and cardinality
+ *
+ * All inputs start concurrently. The first emitted value selects one input and
+ * only that input's values are forwarded afterward. Zero inputs produce the
+ * empty Fx; one input is returned unchanged. No result buffer is retained.
+ *
+ * ## Ownership and lifetime
+ *
+ * Before selection, the first non-interruption failure is retained and reported
+ * only if every input ends without emitting. After selection, winner failures
+ * are forwarded. All environments are required. Losers are interrupted and the
+ * observing fiber owns cleanup for every child.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { Effect } from "effect"
+ *
+ * const response = Fx.raceAll(
+ *   Fx.at("cache", "30 millis"),
+ *   Fx.at("primary", "5 millis"),
+ *   Fx.at("replica", "20 millis")
+ * )
+ * Effect.runPromise(Fx.collectAll(response)).then(console.log)
+ * // ["primary"]
+ * ```
  *
  * @since 1.0.0
  * @category combinators

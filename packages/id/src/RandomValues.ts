@@ -32,19 +32,72 @@ const fromRandom = (random: (typeof Random.Random)["Service"]): RandomValues["Se
       ),
   );
 
+/**
+ * Effect service that produces fresh byte arrays of an exact requested length.
+ * @remarks
+ * ## Why
+ * Entropy is an explicit dependency so secure production generation and reproducible tests use the same typed generator APIs.
+ * `RandomValues.Default` requires `globalThis.crypto.getRandomValues`; an unavailable implementation or thrown platform error is an Effect defect because the service's typed error channel is `never`.
+ * ## Ownership and lifetime
+ * A Layer owns the entropy source; every call allocates and transfers ownership of a fresh mutable byte array to the caller.
+ * @example
+ * ```ts
+ * import { RandomValues } from "@typed/id/RandomValues"
+ * import { Effect } from "effect"
+ * const bytes = Effect.provide(RandomValues.call(16), RandomValues.Default)
+ * ```
+ * @category Services
+ * @since 1.0.0
+ */
 export class RandomValues extends Context.Service<RandomValues>()("@typed/id/RandomValues", {
   make: Effect.succeed(
     <const N extends number>(length: N): Effect.Effect<Uint8Array & { readonly length: N }> =>
       Effect.sync(() => allocate(length, fillFromWebCrypto)),
   ),
 }) {
+  /**
+   * Requests a fresh byte array from the current RandomValues service.
+   * @remarks
+   * ## Why
+   * The static call preserves literal length in the type while keeping the entropy source in Effect's service channel.
+   * ## Ownership and lifetime
+   * Each invocation allocates a new buffer owned by the caller and acquires no persistent resource.
+   * @example
+   * ```ts
+   * import { RandomValues } from "@typed/id/RandomValues"
+   * import { Effect } from "effect"
+   * const bytes = RandomValues.call(32).pipe(Effect.provide(RandomValues.Default))
+   * ```
+   * @category Services
+   * @since 1.0.0
+   */
   static override readonly call = <const N extends number>(
     length: N,
   ): Effect.Effect<Uint8Array & { readonly length: N }, never, RandomValues> =>
     RandomValues.pipe(Effect.flatMap((randomValues) => randomValues(length)));
 
+  /**
+   * Provides cryptographic bytes from `globalThis.crypto.getRandomValues`.
+   * @remarks
+   * ## Why
+   * Production IDs need platform entropy. Missing `globalThis.crypto.getRandomValues` and platform exceptions are Effect defects, not typed errors, rather than silently weakening randomness.
+   * ## Ownership and lifetime
+   * The Layer owns no mutable generator state; each request returns a fresh buffer. The runtime must provide Web Crypto or the request defects.
+   * @category Layers
+   * @since 1.0.0
+   */
   static readonly Default = Layer.effect(RandomValues, RandomValues.make);
 
+  /**
+   * Provides reproducible bytes from Effect Random.
+   * @remarks
+   * ## Why
+   * Deterministic tests and simulations need replaceable entropy; this Layer is not cryptographically secure.
+   * ## Ownership and lifetime
+   * The provided Effect Random service owns sequence state for the Layer lifetime; each request returns a fresh buffer.
+   * @category Layers
+   * @since 1.0.0
+   */
   static readonly Random = Layer.effect(
     RandomValues,
     Effect.gen(function* () {

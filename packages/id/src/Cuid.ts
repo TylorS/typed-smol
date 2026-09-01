@@ -11,23 +11,89 @@ const DEFAULT_LENGTH = 24;
 const BIG_LENGTH = 32;
 const INITIAL_COUNT_MAX = 476782367;
 
-// Schema
+/**
+ * Effect Schema and branded string type for 24-character CUID values.
+ * @remarks
+ * ## Why
+ * The schema validates transport or persisted strings before restoring the compile-time brand; generating a new client ID is not hydration identity.
+ * ## Ownership and lifetime
+ * This module-level schema value acquires no resources and is shared; no runtime freezing guarantee is implied.
+ * @example
+ * ```ts
+ * import { Cuid } from "@typed/id/Cuid"
+ * const id = Cuid.make("a00000000000000000000000")
+ * ```
+ * See [Effect Schema](https://effect.website/docs/schema/introduction/).
+ * @category Schemas
+ * @since 1.0.0
+ */
 export const Cuid = Schema.String.pipe(
   Schema.check(Schema.isPattern(/^[a-z][0-9a-z]{23}$/)),
   Schema.brand("@typed/id/CUID"),
 );
 export type Cuid = Schema.Schema.Type<typeof Cuid>;
 
+/**
+ * Tests whether a string is a valid branded CUID.
+ * @remarks
+ * ## Why
+ * Runtime refinement restores trust after JSON, structured clone, or other transport has erased the TypeScript brand.
+ * ## Ownership and lifetime
+ * This pure predicate acquires no resources and retains no input.
+ * @example
+ * ```ts
+ * import { isCuid } from "@typed/id/Cuid"
+ * isCuid("a00000000000000000000000")
+ * ```
+ * @category Refinements
+ * @since 1.0.0
+ */
 export const isCuid: (value: string) => value is Cuid = Schema.is(Cuid);
 
 // Types
+/**
+ * The complete deterministic input used to derive one CUID.
+ * @remarks
+ * ## Why
+ * Keeping time, sequence, entropy, and caller fingerprint explicit makes generator identity rules testable and reviewable.
+ * ## Ownership and lifetime
+ * This data acquires no resources; callers own the random byte array and state services produce fresh seeds.
+ * @example
+ * ```ts
+ * import type { CuidSeed } from "@typed/id/Cuid"
+ * const seed: CuidSeed = { timestamp: 0, counter: 0, random: new Uint8Array(32) as CuidSeed["random"], fingerprint: "test" }
+ * ```
+ * @category Models
+ * @since 1.0.0
+ */
 export type CuidSeed = {
+  /** Millisecond timestamp sampled for this seed. Inherits the seed's resource-free lifetime. @since 1.0.0 */
   readonly timestamp: number;
+  /** Process-local sequence value for this seed. Inherits the seed's resource-free lifetime. @since 1.0.0 */
   readonly counter: number;
+  /** Fresh 32-byte entropy buffer owned by this seed's consumer. @since 1.0.0 */
   readonly random: Uint8Array & { readonly length: 32 };
+  /** Caller-derived discriminator captured by the CuidState instance. @since 1.0.0 */
   readonly fingerprint: string;
 };
 
+/**
+ * Process-local Effect service that supplies sequential CUID seeds.
+ * @remarks
+ * ## Why
+ * Counter state and caller-provided `envData` live in an explicit service so tests and applications choose the sharing boundary instead of relying on hidden globals.
+ * ## Ownership and lifetime
+ * Each Layer instance owns its mutable counter and captured fingerprint. A new process, worker, or Layer resets that sequence; exact SSR identity must be serialized and reused.
+ * @example
+ * ```ts
+ * import { cuid, CuidState } from "@typed/id/Cuid"
+ * import { Effect } from "effect"
+ * const program = Effect.provide(cuid, CuidState.Default)
+ * ```
+ * See [Effect services](https://effect.website/docs/requirements-management/services/) and [Layers](https://effect.website/docs/requirements-management/layers/).
+ * @category Services
+ * @since 1.0.0
+ */
 export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState", {
   make: (envData: string) =>
     Effect.gen(function* () {
@@ -61,16 +127,52 @@ export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState
       };
     }),
 }) {
+  /**
+   * Reads one seed from the current CuidState service.
+   * @remarks
+   * ## Why
+   * The accessor exposes stateful sequencing through Effect's service channel rather than a module-global counter.
+   * ## Ownership and lifetime
+   * The Effect requires `CuidState`; its Layer owns the counter for the Layer lifetime.
+   * @category Services
+   * @since 1.0.0
+   */
   static readonly next = Effect.gen(function* () {
     const { next } = yield* CuidState;
     return yield* next;
   });
 
+  /**
+   * Provides a default CuidState backed by system time and Web Crypto entropy.
+   * @remarks
+   * ## Why
+   * The explicit Layer gives production code a standard service while keeping test and environment-specific alternatives replaceable.
+   * ## Ownership and lifetime
+   * Layer acquisition creates one counter state; the surrounding Layer Scope owns it. Web Crypto must be available in the runtime.
+   * @category Layers
+   * @since 1.0.0
+   */
   static readonly Default = Layer.effect(CuidState, CuidState.make("node")).pipe(
     Layer.provide([DateTimes.Default, RandomValues.Default]),
   );
 }
 
+/**
+ * Generates one CUID from the current CuidState service.
+ * @remarks
+ * ## Why
+ * Generation is an Effect so sequencing and entropy dependencies remain explicit and replaceable; `envData` is only a caller discriminator, not a machine fingerprint guarantee. Missing Web Crypto or rejected SHA-512 work is a defect because the typed error channel is `never`.
+ * ## Ownership and lifetime
+ * The Effect acquires no resources itself and uses the CuidState owned by its provided Layer.
+ * @example
+ * ```ts
+ * import { cuid, CuidState } from "@typed/id/Cuid"
+ * import { Effect } from "effect"
+ * const id = Effect.provide(cuid, CuidState.Default)
+ * ```
+ * @category Generators
+ * @since 1.0.0
+ */
 export const cuid: Effect.Effect<Cuid, never, CuidState> = Effect.flatMap(
   CuidState.next,
   cuidFromSeed,

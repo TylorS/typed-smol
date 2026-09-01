@@ -43,20 +43,93 @@ import * as Subject from "../Subject/Subject.js";
  * A Versioned value is a value that changes over time, and each change is associated with a version number.
  * It combines the capabilities of an `Fx` (to observe changes) and an `Effect` (to get the current value).
  *
+ * @remarks
+ * ## Why
+ *
+ * Keeps a current-value Effect, pushed Fx updates, and an invalidation version together so
+ * consumers can avoid stale work without hiding errors or services.
+ *
+ * ## Ownership and lifetime
+ *
+ * Versioned is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.0.0
  * @category models
  */
 export interface Versioned<out R1, out E1, out A2, out E2, out R2, out A3, out E3, out R3>
   extends Fx.Fx<A2, E2, R2>, Effect.Effect<A3, E3, R3> {
+  /**
+   * Samples the current invalidation version.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Samples the input's invalidation token independently of reading the current value or observing
+   * pushed updates.
+   *
+   * ## Ownership and lifetime
+   *
+   * version does not own its inputs. Observation and current reads retain upstream lifetime,
+   * typed failures, services, and interruption behavior.
+   *
+   * @since 1.0.0
+   * @category combinators
+   */
   readonly version: Effect.Effect<number, E1, R1>;
+  /**
+   * Interrupts shared in-flight current-value work.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Returns an Effect that interrupts shared in-flight current-value work and completes with
+   * `void`; it does not complete or take ownership of the independently supplied Fx update channel.
+   *
+   * ## Ownership and lifetime
+   *
+   * Nothing happens until the Effect is run. It cannot fail, requires the version channel's `R1`,
+   * and does not start a read or subscription merely by being accessed.
+   *
+   * @since 1.0.0
+   * @category combinators
+   */
   readonly interrupt: Effect.Effect<void, never, R1>;
 }
 
+/**
+ * Type utilities and service contracts for Versioned values.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Groups channel-extraction types with the Context-backed service facade. The namespace is not a
+ * Versioned value and cannot sample a version, read a current value, or observe pushes.
+ *
+ * ## Ownership and lifetime
+ *
+ * The namespace performs no acquisition. Concrete Versioned values and Layers retain their own
+ * errors, services, interruption behavior, and Scope requirements.
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
 export namespace Versioned {
   /**
    * Unifies a Versioned type.
    * @since 1.0.0
    * @category type-level
+   * @remarks
+   * ## Why
+   *
+   * Normalizes the eight Versioned channels after conditional type inference so generic helpers
+   * preserve their exact value, error, and service types.
+   *
+   * ## Ownership and lifetime
+   *
+   * Unify is a contract and performs no acquisition. Implementations retain the errors,
+   * services, interruption, and Scope requirements expressed by its members.
+   *
    */
   export type Unify<T> = T extends
     | Versioned<infer R1, infer E1, infer A2, infer E2, infer R2, infer A3, infer E3, infer R3>
@@ -68,6 +141,17 @@ export namespace Versioned {
    * Extracts the context required to get the version.
    * @since 1.0.0
    * @category type-level
+   * @remarks
+   * ## Why
+   *
+   * Extracts only the services required to sample a Versioned token, which may differ from the push
+   * and current-read environments.
+   *
+   * ## Ownership and lifetime
+   *
+   * VersionContext is a contract and performs no acquisition. Implementations retain the errors,
+   * services, interruption, and Scope requirements expressed by its members.
+   *
    */
   export type VersionContext<T> =
     T extends Versioned<infer R, any, any, any, any, any, any, any> ? R : never;
@@ -76,10 +160,38 @@ export namespace Versioned {
    * Extracts the error type of the version effect.
    * @since 1.0.0
    * @category type-level
+   * @remarks
+   * ## Why
+   *
+   * Extracts only the failure channel of version sampling instead of conflating it with update or
+   * current-read failures.
+   *
+   * ## Ownership and lifetime
+   *
+   * VersionError is a contract and performs no acquisition. Implementations retain the errors,
+   * services, interruption, and Scope requirements expressed by its members.
+   *
    */
   export type VersionError<T> =
     T extends Versioned<any, infer E, any, any, any, any, any, any> ? E : never;
 
+  /**
+   * Defines the service state contract.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Creates an Effect service tag that exposes current reads, pushed updates, and versions through
+   * one Layer-provided state dependency.
+   *
+   * ## Ownership and lifetime
+   *
+   * Service is a contract and performs no acquisition. Implementations retain the errors,
+   * services, interruption, and Scope requirements expressed by its members.
+   *
+   * @since 1.0.0
+   * @category models
+   */
   export interface Service<Self, Id extends string, E1, A2, E2, A3, E3> extends Versioned<
     Self,
     E1,
@@ -90,8 +202,57 @@ export namespace Versioned {
     E3,
     Self
   > {
+    /**
+     * Exposes id on the versioned contract.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Retains the literal service identifier for tooling, diagnostics, and Layer composition.
+     *
+     * ## Ownership and lifetime
+     *
+     * id does not own its inputs. Observation and current reads retain upstream lifetime, typed
+     * failures, services, and interruption behavior.
+     *
+     * @since 1.0.0
+     * @category combinators
+     */
     readonly id: Id;
+    /**
+     * Exposes service on the versioned contract.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Exposes the underlying Effect Context service used by the generated Versioned class.
+     *
+     * ## Ownership and lifetime
+     *
+     * service does not own its inputs. Observation and current reads retain upstream lifetime,
+     * typed failures, services, and interruption behavior.
+     *
+     * @since 1.0.0
+     * @category combinators
+     */
     readonly service: Context.Service<Self, Versioned<never, E1, A2, E2, never, A3, E3, never>>;
+    /**
+     * Exposes make on the versioned contract.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Builds one Versioned value from independently typed version, update, and current-value channels
+     * instead of forcing them into one error or environment type.
+     *
+     * ## Ownership and lifetime
+     *
+     * Construction is lazy with respect to the Fx channel. Current reads share in-flight work until
+     * interrupt is run; each component retains its declared errors and services.
+     *
+     * @since 1.0.0
+     * @category constructors
+     */
     readonly make: <R1 = never, R2 = never, R3 = never>(
       version: Effect.Effect<number, E1, R1>,
       fx: Fx.Fx<A2, E2, R2>,
@@ -99,6 +260,23 @@ export namespace Versioned {
     ) => Layer.Layer<Self, never, Exclude<R1 | R2 | R3, Scope.Scope>>;
   }
 
+  /**
+   * Defines the class state contract.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Describes the constructable service facade returned by Service, including the same static Effect
+   * and Fx operations as its tag.
+   *
+   * ## Ownership and lifetime
+   *
+   * Class is a contract and performs no acquisition. Implementations retain the errors,
+   * services, interruption, and Scope requirements expressed by its members.
+   *
+   * @since 1.0.0
+   * @category models
+   */
   export interface Class<Self, Id extends string, E1, A2, E2, A3, E3> extends Service<
     Self,
     Id,
@@ -108,12 +286,55 @@ export namespace Versioned {
     A3,
     E3
   > {
+    /**
+     * Construct signature used by the generated Versioned service class.
+     *
+     * @remarks
+     * ## Why
+     *
+     * Enables class-extension syntax while returning the generated static service facade rather
+     * than allocating another Versioned value.
+     *
+     * ## Ownership and lifetime
+     *
+     * Construction itself performs no Effect or acquisition. The matching Layer owns the installed
+     * Versioned value and supplies its three channels.
+     *
+     * @since 1.0.0
+     * @category type-level
+     */
     new (): Service<Self, Id, E1, A2, E2, A3, E3>;
   }
 }
 
 /**
  * Creates a Versioned value from its components.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Builds one Versioned value from independently typed version, update, and current-value channels
+ * instead of forcing them into one error or environment type.
+ *
+ * ## Ownership and lifetime
+ *
+ * Construction is lazy with respect to the Fx channel. Current reads share in-flight work until
+ * interrupt is run; each component retains its declared errors and services.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import * as Fx from "@typed/fx/Fx"
+ * import * as Versioned from "@typed/fx/Versioned"
+ *
+ * const status = Versioned.make(
+ *   Effect.succeed(1),
+ *   Fx.succeed("ready"),
+ *   Effect.succeed("ready")
+ * )
+ *
+ * const snapshot = Effect.all({ value: status, version: status.version })
+ * ```
  *
  * @param version - An effect that retrieves the current version number.
  * @param fx - The stream of updates.
@@ -162,6 +383,17 @@ class VersionedImpl<R1, E1, A2, E2, R2, A3, E3, R3>
 
 /**
  * Transforms a Versioned value into another Versioned value.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Transforms the pushed and sampled channels together while retaining one version source, so both
+ * ways of consuming the value stay coherent.
+ *
+ * ## Ownership and lifetime
+ *
+ * transform does not take ownership of its inputs. Its observation and current-read channels
+ * retain upstream lifetime, typed failures, services, and interruption behavior.
  *
  * @param input - The source Versioned value.
  * @param transformFx - A function to transform the update stream.
@@ -265,6 +497,33 @@ function isVersionedTransform(
 
 /**
  * Transform a Versioned's output value as both an Fx and Effect.
+ * @remarks
+ * ## Why
+ *
+ * Applies corresponding pure projections to pushed and sampled values while leaving the version
+ * token unchanged.
+ *
+ * ## Ownership and lifetime
+ *
+ * map does not take ownership of its inputs. Its observation and current-read channels retain
+ * upstream lifetime, typed failures, services, and interruption behavior.
+ *
+ * Pure callbacks preserve push order and cardinality. `onFx` applies to every pushed update;
+ * `onEffect` applies only when the current value is sampled.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import * as Versioned from "@typed/fx/Versioned"
+ *
+ * const length = Versioned.map(Versioned.of("typed"), {
+ *   onFx: (value) => value.length,
+ *   onEffect: (value) => value.length
+ * })
+ *
+ * const currentLength = Effect.runPromise(length)
+ * ```
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -298,6 +557,17 @@ export const map: {
 
 /**
  * Transform a Versioned's output value as both an Fx and Effect using an Effect.
+ * @remarks
+ * ## Why
+ *
+ * Allows pushed and sampled projections to require services or fail, and exposes those additions
+ * in the corresponding output channels.
+ *
+ * ## Ownership and lifetime
+ *
+ * No subscription starts during transformation. Callback effects run when their push or read
+ * channel is consumed and are interrupted with that consumer.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -335,6 +605,17 @@ export const mapEffect: {
 
 /**
  * Filter-maps a Versioned's output as both an Fx and Effect; the Effect value becomes `Option` (Some when the predicate holds, None otherwise).
+ * @remarks
+ * ## Why
+ *
+ * Drops absent pushed values while preserving an Option for the current read, making the two
+ * absence semantics explicit.
+ *
+ * ## Ownership and lifetime
+ *
+ * filterMap does not take ownership of its inputs. Its observation and current-read channels
+ * retain upstream lifetime, typed failures, services, and interruption behavior.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -372,6 +653,17 @@ export const filterMap: {
 
 /**
  * Filter-maps a Versioned's output as both an Fx and Effect using an Effect; the Effect value becomes `Option`.
+ * @remarks
+ * ## Why
+ *
+ * Adds Effectful filtering independently to the push and current-read channels while preserving
+ * their separate error and service types.
+ *
+ * ## Ownership and lifetime
+ *
+ * No subscription starts during transformation. Callback effects run when their push or read
+ * channel is consumed and are interrupted with that consumer.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -409,6 +701,17 @@ export const filterMapEffect: {
 
 /**
  * Combines multiple Versioned values into a single tuple.
+ * @remarks
+ * ## Why
+ *
+ * Combines several Versioned values positionally and uses their versions as one invalidation token
+ * for the assembled tuple.
+ *
+ * ## Ownership and lifetime
+ *
+ * tuple does not take ownership of its inputs. Its observation and current-read channels retain
+ * upstream lifetime, typed failures, services, and interruption behavior.
+ *
  * @since 1.0.0
  * @category combinators
  */
@@ -438,6 +741,17 @@ export function tuple<
 
 /**
  * Combines multiple Versioned values into a single struct.
+ * @remarks
+ * ## Why
+ *
+ * Combines named Versioned values and preserves each field's pushed value, sampled value, errors,
+ * and services in the resulting structure.
+ *
+ * ## Ownership and lifetime
+ *
+ * struct does not take ownership of its inputs. Its observation and current-read channels retain
+ * upstream lifetime, typed failures, services, and interruption behavior.
+ *
  * @since 1.0.0
  * @category combinators
  */
@@ -469,6 +783,17 @@ export function struct<
 
 /**
  * Provides context to a Versioned value.
+ * @remarks
+ * ## Why
+ *
+ * Supplies one Layer to all three Versioned channels so service elimination is consistent for
+ * version reads, pushed updates, and current reads.
+ *
+ * ## Ownership and lifetime
+ *
+ * provide does not take ownership of its inputs. Its observation and current-read channels retain
+ * upstream lifetime, typed failures, services, and interruption behavior.
+ *
  * @since 1.0.0
  * @category combinators
  */
@@ -495,6 +820,17 @@ function mapRecord<K extends string, V, R>(
 
 /**
  * Creates a Versioned value from a constant.
+ * @remarks
+ * ## Why
+ *
+ * Creates constant versioned state for composition and testing without starting a fiber or
+ * requiring a Scope.
+ *
+ * ## Ownership and lifetime
+ *
+ * of does not take ownership of its inputs. Its observation and current-read channels retain
+ * upstream lifetime, typed failures, services, and interruption behavior.
+ *
  * @since 1.0.0
  * @category constructors
  */
@@ -504,6 +840,28 @@ export function of<A>(value: A): Versioned<never, never, A, never, never, A, nev
 
 /**
  * Holds the latest value of a Versioned stream.
+ * @remarks
+ * ## Why
+ *
+ * Retains the latest pushed value for later subscribers while leaving current-value reads
+ * delegated to the original Versioned Effect.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx requires Scope; its shared upstream subscription and retained buffer are
+ * finalized when that Scope closes. Current reads retain input errors and services.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import * as Versioned from "@typed/fx/Versioned"
+ *
+ * const program = Effect.scoped(Effect.gen(function* () {
+ *   const shared = Versioned.hold(Versioned.of({ status: "ready" as const }))
+ *   return yield* shared
+ * }))
+ * ```
+ *
  * @since 1.0.0
  * @category combinators
  */
@@ -515,6 +873,19 @@ export function hold<R0, E0, A, E, R, B, E2, R2>(
 
 /**
  * Multicasts a Versioned stream.
+ * @remarks
+ * ## Why
+ *
+ * Shares one upstream push subscription among concurrent observers while retaining the original
+ * current-read and version effects. Unlike `hold` and `replay`, `multicast` retains zero values: a
+ * late observer receives only pushes that happen after it subscribes.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx requires Scope; that Scope owns and finalizes the shared upstream subscription.
+ * There is no replay buffer or held latest value. Current reads bypass the multicast channel and
+ * retain the input's errors and services.
+ *
  * @since 1.0.0
  * @category combinators
  */
@@ -526,6 +897,17 @@ export function multicast<R0, E0, A, E, R, B, E2, R2>(
 
 /**
  * Replays the last `bufferSize` values of a Versioned stream.
+ * @remarks
+ * ## Why
+ *
+ * Shares an upstream push subscription and replays a bounded number of updates to late observers
+ * without changing current-value reads.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx requires Scope; its shared upstream subscription and retained buffer are
+ * finalized when that Scope closes. Current reads retain input errors and services.
+ *
  * @since 1.0.0
  * @category combinators
  */
@@ -542,6 +924,40 @@ const VARIANCE = {
   _R: identity,
 };
 
+/**
+ * Creates a Context-backed Versioned service facade and Layer constructor.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Creates an Effect service tag that exposes current reads, pushed updates, and versions through
+ * one Layer-provided state dependency.
+ *
+ * ## Ownership and lifetime
+ *
+ * Calling Service is pure. The generated make Layer captures required environments and owns the
+ * provided state for the Layer Scope.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import * as Fx from "@typed/fx/Fx"
+ * import * as Versioned from "@typed/fx/Versioned"
+ *
+ * class Status extends Versioned.Service<Status, never, string, never, string>()(
+ *   "example/Status"
+ * ) {}
+ *
+ * const StatusLive = Status.make(
+ *   Effect.succeed(1),
+ *   Fx.succeed("ready"),
+ *   Effect.succeed("ready")
+ * )
+ * ```
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
 export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3 = never>() {
   return <const Id extends string>(id: Id): Versioned.Class<Self, Id, E1, A2, E2, A3, E3> => {
     const service = Context.Service<Self, Versioned<never, E1, A2, E2, never, A3, E3, never>>(id);

@@ -14,6 +14,26 @@ import type { Fx } from "../Fx.js";
  * `Equivalence<A>`, you supply `(prev, next) => Effect<boolean>` where `true`
  * means "equal" (skip) and `false` means "changed" (emit).
  *
+ * @remarks
+ * ## Why
+ * `changesWithEffect` supports service-backed or failing equivalence checks. The first value always
+ * emits; every later value is compared with the last emitted value and emits only when the effect
+ * returns `false`, preserving source order.
+ *
+ * ## Ownership and lifetime
+ * One previous value and a semaphore are scoped to each run. Comparison effects are serialized,
+ * interrupted with the run, and add their failures and services to the resulting Fx.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const changes = Fx.fromIterable([1, 1, 2]).pipe(
+ *   Fx.changesWithEffect((previous, next) => Effect.succeed(previous === next)),
+ * )
+ * ```
+ *
  * @param f - Effectful function: `(prev, next) => Effect<boolean>`. Return `true` to skip (treat as duplicate), `false` to emit.
  * @returns An `Fx` with consecutive "equal" elements removed.
  * @since 1.0.0

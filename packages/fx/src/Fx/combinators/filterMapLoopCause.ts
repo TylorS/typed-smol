@@ -9,6 +9,26 @@ import type { Fx } from "../Fx.js";
  * Loops over the failure causes of an Fx with an accumulator, potentially transforming or filtering them.
  * This allows for complex error handling logic that maintains state across failures.
  *
+ * @remarks
+ * ## Why
+ * `filterMapLoopCause` transforms, suppresses, or reclassifies successive failure causes with
+ * explicit state. Successful values pass through; each observed cause advances the accumulator and
+ * `None` suppresses forwarding that cause.
+ *
+ * ## Ownership and lifetime
+ * Failure state is isolated to one run and discarded afterward. The pure callback acquires no
+ * resources; defects and interrupts are visible inside the full `Cause` supplied to it.
+ *
+ * @example
+ * ```ts
+ * import { Cause, Option } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const firstFailureOnly = Fx.fail("offline").pipe(
+ *   Fx.filterMapLoopCause(false, (seen, cause) => [seen ? Option.none() : Option.some(Cause.map(cause, String)), true]),
+ * )
+ * ```
+ *
  * @param seed - The initial state.
  * @param f - The loop function for causes.
  * @returns An `Fx` with transformed errors.

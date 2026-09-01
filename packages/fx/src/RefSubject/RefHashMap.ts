@@ -15,6 +15,17 @@ import { Result } from "effect";
 
 /**
  * A RefHashMap is a RefSubject specialized over a HashMap.
+ * @remarks
+ * ## Why
+ *
+ * Defines hash map state with the same current-read, pushed-update, and synchronized-write
+ * contract as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefHashMap is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -27,6 +38,17 @@ export interface RefHashMap<
 
 /**
  * Creates a new `RefHashMap` from a HashMap, `Effect`, or `Fx`.
+ * @remarks
+ * ## Why
+ *
+ * Creates hash map state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -45,6 +67,17 @@ export function make<K, V, E = never, R = never>(
 
 /**
  * Set a key-value pair in the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set atomic with respect to competing RefSubject writes instead of splitting the read and
+ * replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set performs one serialized hash map transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -64,6 +97,17 @@ export const set: {
 
 /**
  * Remove a key from the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove to the committed hash map value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove performs one serialized hash map transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -76,6 +120,17 @@ export const remove: {
 
 /**
  * Modify the value at a key if it exists.
+ * @remarks
+ * ## Why
+ *
+ * Keeps modify atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running modify performs one serialized hash map transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -95,6 +150,17 @@ export const modify: {
 
 /**
  * Modify the value at a key using an Option-based update function.
+ * @remarks
+ * ## Why
+ *
+ * Keeps modify at atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running modify at performs one serialized hash map transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -119,6 +185,17 @@ export const modifyAt: {
 
 /**
  * Set multiple key-value pairs in the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set many atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set many performs one serialized hash map transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -141,6 +218,17 @@ export const setMany: {
 
 /**
  * Remove multiple keys from the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove many to the committed hash map value and publishes only the result, preserving
+ * its element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove many performs one serialized hash map transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -158,6 +246,17 @@ export const removeMany: {
 
 /**
  * Clear all entries from the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Applies clear to the committed hash map value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running clear performs one serialized hash map transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -167,6 +266,17 @@ export const clear = <K, V, E, R>(
 
 /**
  * Merge another HashMap into this one.
+ * @remarks
+ * ## Why
+ *
+ * Combines bulk hash map changes in one committed value, giving subscribers one coherent update
+ * rather than a partially applied sequence.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running union performs one serialized hash map transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -184,6 +294,16 @@ export const union: {
 
 /**
  * Filter entries in place.
+ * @remarks
+ * ## Why
+ *
+ * Applies filter to the committed HashMap through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed HashMap and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -206,6 +326,16 @@ export const filter: {
 
 /**
  * Map values in place (endomorphic).
+ * @remarks
+ * ## Why
+ *
+ * Applies map to the committed HashMap through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed HashMap and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -227,6 +357,17 @@ export const map: {
 
 /**
  * Get the current size of the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Makes size a live projection of the hash map; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The size view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -235,6 +376,17 @@ export const size = <K, V, E, R>(ref: RefHashMap<K, V, E, R>): RefSubject.Comput
 
 /**
  * Check if the RefHashMap is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the hash map; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -244,6 +396,17 @@ export const isEmpty = <K, V, E, R>(
 
 /**
  * Check if the RefHashMap is non-empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is non empty a live projection of the hash map; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is non empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -253,6 +416,17 @@ export const isNonEmpty = <K, V, E, R>(
 
 /**
  * Get all keys from the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash map state with keys for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The keys view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -262,6 +436,17 @@ export const keys = <K, V, E, R>(
 
 /**
  * Get all values from the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash map state with values for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -271,6 +456,17 @@ export const values = <K, V, E, R>(
 
 /**
  * Get all entries from the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash map state with entries for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The entries view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -280,6 +476,17 @@ export const entries = <K, V, E, R>(
 
 /**
  * Check if a key exists in the RefHashMap.
+ * @remarks
+ * ## Why
+ *
+ * Makes has a live projection of the hash map; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The has view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -292,6 +499,17 @@ export const has: {
 
 /**
  * Map values to a different type.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash map state with map values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -315,6 +533,17 @@ export const mapValues: {
 
 /**
  * Filter entries creating a Computed value.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash map state with filter values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -337,6 +566,17 @@ export const filterValues: {
 
 /**
  * Filter and map values.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash map state with filter map values for both current reads and future pushes,
+ * avoiding a second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter map values view retains no independent state. An Effect read samples the source once;
+ * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -368,6 +608,17 @@ export const filterMapValues: {
 
 /**
  * Reduce the entries to a single value.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce a live projection of the hash map; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -393,6 +644,17 @@ export const reduce: {
 
 /**
  * Check if any entry satisfies a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes some a live projection of the hash map; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The some view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -415,6 +677,17 @@ export const some: {
 
 /**
  * Check if all entries satisfy a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes every a live projection of the hash map; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The every view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -441,6 +714,17 @@ export const every: {
 
 /**
  * Get the value at a key as a Filtered.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -453,6 +737,17 @@ export const get: {
 
 /**
  * Find the first entry satisfying a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find first as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find first view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */

@@ -185,6 +185,19 @@ type PathAtomParser = Parser.OrElse<
 
 type SkipSlashesParser = Parser.Optional<Parser.Many1<Parser.Char<"/">>>;
 
+/**
+ * The type-level parser for one route path atom after optional slashes.
+ *
+ * @remarks
+ * ## Why
+ * Compile-time path parsing reuses the same atom grammar as complete routes.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `PathParser` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type PathParser = Parser.Map<Parser.Zip<SkipSlashesParser, PathAtomParser>, Second>;
 
 type SlashAst = { readonly type: "slash" };
@@ -235,6 +248,19 @@ type GetAsts<R> = [R] extends [never]
     ? Asts
     : never;
 
+/**
+ * Parses a route string literal into its ordered Path AST tuple.
+ *
+ * @remarks
+ * ## Why
+ * Route constructors retain literal parameter names, query declarations, and optionality in their types.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `ParseAsts` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type ParseAsts<Input extends string> = GetAsts<ParseAstsResult<Input>>;
 
 type ParamsOfAst<T> = T extends {
@@ -310,6 +336,19 @@ type GetQueryParams<T extends ReadonlyArray<PathAst>, Acc = {}> = T extends read
 
 type ToReadonlyRecord<T> = [T] extends [infer T2] ? { readonly [K in keyof T2]: T2[K] } : never;
 
+/**
+ * Extracts decoded path-parameter fields from a route string.
+ *
+ * @remarks
+ * ## Why
+ * Handlers can distinguish path values from query values without manual record projection.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `PathParams` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type PathParams<P extends string> =
   ParseAsts<P> extends infer Asts
     ? [Asts] extends [never]
@@ -319,6 +358,19 @@ export type PathParams<P extends string> =
         : never
     : never;
 
+/**
+ * Extracts decoded query-parameter fields from a route string.
+ *
+ * @remarks
+ * ## Why
+ * Declared query shapes remain visible independently of path parameters.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `QueryParams` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type QueryParams<P extends string> =
   ParseAsts<P> extends infer Asts
     ? [Asts] extends [never]
@@ -328,6 +380,19 @@ export type QueryParams<P extends string> =
         : never
     : never;
 
+/**
+ * Combines decoded path and query parameter fields for a route string.
+ *
+ * @remarks
+ * ## Why
+ * Matcher handlers receive one exact parameter object derived from the route grammar.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `Params` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type Params<P extends string> =
   ParseAsts<P> extends infer Asts
     ? [Asts] extends [never]
@@ -337,8 +402,41 @@ export type Params<P extends string> =
         : never
     : never;
 
+/**
+ * A runtime AST list paired with the unconsumed route suffix.
+ *
+ * @remarks
+ * ## Why
+ * Advanced parsers can compose route parsing without requiring full input consumption.
+ *
+ * ## Ownership and lifetime
+ * `RuntimeParseResult` describes the fresh AST array and remaining string returned by runtime parsing; the alias owns neither value.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type RuntimeParseResult = readonly [asts: ReadonlyArray<PathAst>, rest: string];
 
+/**
+ * Parses route atoms and returns both AST nodes and unconsumed input.
+ *
+ * @remarks
+ * ## Why
+ * The runtime grammar can be embedded while preserving where parsing stopped.
+ *
+ * ## Ownership and lifetime
+ * `parseWithRest` parses immediately and returns fresh AST array state; it retains neither the input string nor parser cursor.
+ *
+ * @example
+ * ```ts
+ * import { parseWithRest } from "@typed/router/Path"
+ *
+ * const [ast, rest] = parseWithRest("/users/:id?tab=:tab? trailing")
+ * ```
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function parseWithRest(input: string): RuntimeParseResult {
   let index = 0;
   const asts: Array<PathAst> = [];
@@ -367,6 +465,19 @@ export function parseWithRest(input: string): RuntimeParseResult {
   return [asts, input.slice(index)];
 }
 
+/**
+ * Parses a complete route string into Path AST nodes.
+ *
+ * @remarks
+ * ## Why
+ * Runtime construction stays aligned with `ParseAsts`; unsupported trailing syntax is rejected.
+ *
+ * ## Ownership and lifetime
+ * `parse` parses immediately and returns fresh AST array state; it retains neither the input string nor parser cursor.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function parse<const P extends string>(input: P): ParseAsts<P> {
   const [asts, rest] = parseWithRest(input);
   for (let i = 0; i < rest.length; i++) {
@@ -378,6 +489,19 @@ export function parse<const P extends string>(input: P): ParseAsts<P> {
   return asts as ParseAsts<P>;
 }
 
+/**
+ * Formats a tuple of Path AST nodes as its normalized route string literal type.
+ *
+ * @remarks
+ * ## Why
+ * Compile-time Route paths use the same slash, parameter, wildcard, and query formatting rules as the runtime `join` function.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `Join` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type Join<Parts extends ReadonlyArray<PathAst>> = `/${StringJoin<
   {
     [K in keyof Parts]: FormatAst<Parts[K]>;
@@ -419,6 +543,19 @@ type FormatQueryParamsAst<
 
 type FormatQueryParamAst<T extends PathAst.QueryParam> = `${T["name"]}=${FormatAst<T["value"]>}`;
 
+/**
+ * Formats ordered Path AST nodes as a normalized route string.
+ *
+ * @remarks
+ * ## Why
+ * Route values derive their public path from the same AST used for schemas and matching.
+ *
+ * ## Ownership and lifetime
+ * `join` formats immediately into a new string and retains neither the AST array nor its nodes.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function join<const Parts extends ReadonlyArray<PathAst>>(asts: Parts): Join<Parts> {
   return `/${asts.map(formatAst).join("")}` as Join<Parts>;
 }
@@ -625,13 +762,93 @@ function startsWithQueryParam(input: string, index: number): boolean {
   return index > start && input[index] === "=";
 }
 
+/**
+ * A required decoded field name paired with its Effect Schema.
+ *
+ * @remarks
+ * ## Why
+ * Schema construction can collect route fields without losing the decoded validator.
+ *
+ * ## Ownership and lifetime
+ * `SchemaField` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type SchemaField = readonly [string, Schema.Top];
+/**
+ * An optional schema record key paired with its Effect Schema.
+ *
+ * @remarks
+ * ## Why
+ * Optional route parameters preserve Effect Schema's optional-key semantics.
+ *
+ * ## Ownership and lifetime
+ * `OptionalSchemaField` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type OptionalSchemaField = readonly [Schema.Record.Key, Schema.Top];
+/**
+ * The required, optional, and per-query schema fields derived from Path AST nodes.
+ *
+ * @remarks
+ * ## Why
+ * Path and query schemas can be projected separately from one analysis pass.
+ *
+ * ## Ownership and lifetime
+ * `SchemaFields` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type SchemaFields = {
+  /**
+   * Required output keys and their Codecs.
+   *
+   * @remarks
+   * ## Why
+   * Required and optional fields are passed separately to Effect Schema record construction.
+   *
+   * ## Ownership and lifetime
+   * The containing analysis result owns this readonly array; Schema values are shared references and
+   * acquire services only when decoding or encoding runs.
+   *
+   * @since 1.0.0
+   * @category path
+   */
   readonly requiredFields: ReadonlyArray<SchemaField>;
+  /**
+   * Optional output keys and their Codecs.
+   *
+   * @remarks
+   * ## Why
+   * Optional route segments and query values must remain optional in the derived record Schema.
+   *
+   * ## Ownership and lifetime
+   * The containing analysis result owns this readonly array; Schema values are shared references and
+   * acquire services only when decoding or encoding runs.
+   *
+   * @since 1.0.0
+   * @category path
+   */
   readonly optionalFields: ReadonlyArray<OptionalSchemaField>;
 };
 
+/**
+ * Builds an Effect Schema record from required and optional route fields.
+ *
+ * @remarks
+ * ## Why
+ * All route-derived records apply the same required/optional construction rules.
+ *
+ * ## Ownership and lifetime
+ * `schemaFromFields` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function schemaFromFields({ requiredFields, optionalFields }: SchemaFields): Schema.Top {
   const required = Schema.Struct(Object.fromEntries(requiredFields));
   return optionalFields.length === 0
@@ -648,6 +865,19 @@ function schemaForParameter(param: PathAst.Parameter): Schema.Top {
     : Schema.String;
 }
 
+/**
+ * Builds the decoder for one declared query value AST.
+ *
+ * @remarks
+ * ## Why
+ * Literal constraints, optional parameters, and repeated values get explicit decode behavior.
+ *
+ * ## Ownership and lifetime
+ * `schemaForQueryValue` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function schemaForQueryValue(
   ast: PathAst.Literal | PathAst.Parameter | PathAst.Wildcard,
 ): Schema.Top {
@@ -661,6 +891,19 @@ export function schemaForQueryValue(
   }
 }
 
+/**
+ * Collects route schema fields from ordered Path AST nodes.
+ *
+ * @remarks
+ * ## Why
+ * Schema derivation remains inspectable before record construction.
+ *
+ * ## Ownership and lifetime
+ * `getSchemaFields` walks the supplied ASTs immediately and returns fresh required/optional field arrays containing the discovered Schema references.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function getSchemaFields<const Parts extends ReadonlyArray<PathAst>>(parts: Parts) {
   const requiredFields: Array<[string, Schema.Top]> = [];
   const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];
@@ -718,6 +961,19 @@ export function getSchemaFields<const Parts extends ReadonlyArray<PathAst>>(part
   };
 }
 
+/**
+ * Builds combined, path-only, and query-only schemas from Path AST nodes.
+ *
+ * @remarks
+ * ## Why
+ * Consumers can decode the exact projection they need without reparsing the route.
+ *
+ * ## Ownership and lifetime
+ * `getSchemas` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function getSchemas<const Parts extends ReadonlyArray<PathAst>>(parts: Parts) {
   const { optionalFields, queryParams, requiredFields } = getSchemaFields(parts);
   const pathSchema = schemaFromFields({ requiredFields, optionalFields });
@@ -737,6 +993,19 @@ export function getSchemas<const Parts extends ReadonlyArray<PathAst>>(parts: Pa
   } as const;
 }
 
+/**
+ * Flattens joined and transformed Route AST nodes to their path atoms.
+ *
+ * @remarks
+ * ## Why
+ * Formatting and input analysis can ignore schema wrappers while preserving route order.
+ *
+ * ## Ownership and lifetime
+ * `flattenRouteAst` traverses the supplied AST immediately and returns a fresh array; child AST and Schema values in that array remain shared references.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function flattenRouteAst(ast: RouteAst): ReadonlyArray<PathAst> {
   switch (ast.type) {
     case "path":
@@ -757,6 +1026,19 @@ export function flattenRouteAst(ast: RouteAst): ReadonlyArray<PathAst> {
   }
 }
 
+/**
+ * Returns the decoded field names contributed by one Path AST node.
+ *
+ * @remarks
+ * ## Why
+ * Joined schema transformations can project child inputs and detect collisions.
+ *
+ * ## Ownership and lifetime
+ * `getDecodedParamNames` traverses the supplied AST immediately and returns a fresh array; child AST and Schema values in that array remain shared references.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function getDecodedParamNames(ast: PathAst): ReadonlyArray<string> {
   switch (ast.type) {
     case "parameter":
@@ -771,6 +1053,19 @@ export function getDecodedParamNames(ast: PathAst): ReadonlyArray<string> {
   }
 }
 
+/**
+ * Throws when a Route AST decodes the same parameter name more than once.
+ *
+ * @remarks
+ * ## Why
+ * Ambiguous merged records fail at route construction rather than silently overwriting values.
+ *
+ * ## Ownership and lifetime
+ * `assertUniqueDecodedRouteParamNames` performs one synchronous traversal, retains nothing, and throws before a Route is constructed when decoded names collide.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function assertUniqueDecodedRouteParamNames(ast: RouteAst): void {
   const names = new Set<string>();
   for (const part of flattenRouteAst(ast)) {
@@ -783,12 +1078,79 @@ export function assertUniqueDecodedRouteParamNames(ast: RouteAst): void {
   }
 }
 
+/**
+ * Describes one query key expected by matcher input decoding.
+ *
+ * @remarks
+ * ## Why
+ * Matcher registration can distinguish scalar, optional, literal, and repeated query policies.
+ *
+ * ## Ownership and lifetime
+ * `QueryInputParameter` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export type QueryInputParameter = {
+  /**
+   * URLSearchParams key read from matcher input.
+   *
+   * @remarks
+   * ## Why
+   * The external query key can differ from the decoded output field name.
+   *
+   * ## Ownership and lifetime
+   * This immutable string is retained in the returned analysis record and reused for each match.
+   *
+   * @since 1.0.0
+   * @category path
+   */
   readonly inputName: string;
+  /**
+   * Decoded record key, absent when the AST represents a literal constraint.
+   *
+   * @remarks
+   * ## Why
+   * Literal query declarations participate in matching without adding handler parameters.
+   *
+   * ## Ownership and lifetime
+   * This optional immutable string is retained with the analysis record and creates no decoded value
+   * until a candidate is evaluated.
+   *
+   * @since 1.0.0
+   * @category path
+   */
   readonly outputName?: string;
+  /**
+   * Value grammar used to normalize the raw query input.
+   *
+   * @remarks
+   * ## Why
+   * Literal, scalar, optional, and repeated-value policies derive from the same Path AST.
+   *
+   * ## Ownership and lifetime
+   * The analysis record retains this child AST by reference; request-specific strings are not stored
+   * on the AST.
+   *
+   * @since 1.0.0
+   * @category path
+   */
   readonly ast: PathAst.Literal | PathAst.Parameter | PathAst.Wildcard;
 };
 
+/**
+ * Collects matcher-facing query parameter declarations from a Route AST.
+ *
+ * @remarks
+ * ## Why
+ * Runtime input normalization follows the same declarations used by schema decoding.
+ *
+ * ## Ownership and lifetime
+ * `getQueryInputParameters` traverses the supplied AST immediately and returns a fresh array; child AST and Schema values in that array remain shared references.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function getQueryInputParameters(ast: RouteAst): ReadonlyArray<QueryInputParameter> {
   const output: Array<QueryInputParameter> = [];
   const visitPath = (path: PathAst): void => {
@@ -821,6 +1183,19 @@ export function getQueryInputParameters(ast: RouteAst): ReadonlyArray<QueryInput
   return output;
 }
 
+/**
+ * Builds the Effect Schema used to normalize matcher query input.
+ *
+ * @remarks
+ * ## Why
+ * Repeated scalar values and literal constraints fail before handler selection.
+ *
+ * ## Ownership and lifetime
+ * `getQueryInputSchema` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
+ *
+ * @since 1.0.0
+ * @category path
+ */
 export function getQueryInputSchema(ast: RouteAst): Schema.Top {
   const requiredFields: Array<[string, Schema.Top]> = [];
   const optionalFields: Array<[Schema.Record.Key, Schema.Top]> = [];

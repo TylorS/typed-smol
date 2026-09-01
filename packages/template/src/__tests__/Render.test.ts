@@ -6,6 +6,7 @@ import type { Renderable, RenderTemplate } from "../index.js";
 import { CurrentRenderQueue, EventHandler, html, render, RenderQueue } from "../index.js";
 import type { Rendered } from "../Wire.js";
 import { createHappyDomLayer } from "./helpers/dom-layer.js";
+import { makeClassListUpdater } from "../internal/dom.js";
 
 describe("Render", () => {
   it("renders a simple template", () =>
@@ -161,6 +162,20 @@ describe("Render", () => {
       assert(classNameExample.classList.contains("baz"));
     }).pipe(Effect.scoped, Effect.runPromise));
 
+  it("updates only the class names contributed by its dynamic part", () => {
+    const [window] = createHappyDomLayer();
+    const element = window.document.createElement("div");
+    element.classList.add("external");
+    const update = makeClassListUpdater(element);
+
+    update(["owned"]);
+    assert.deepEqual(Array.from(element.classList), ["external", "owned"]);
+
+    element.classList.add("also-external");
+    update(["next"]);
+    assert.deepEqual(Array.from(element.classList), ["external", "also-external", "next"]);
+  });
+
   it("renders template with data attributes", () =>
     Effect.gen(function* () {
       const dataExample = yield* renderHtmlElement`<div .data=${{
@@ -279,7 +294,7 @@ describe("Render", () => {
         Effect.acquireRelease(
           Effect.sync(() => refs++),
           () => Effect.sync(() => refs--),
-        ).pipe(Effect.andThen(Effect.never));
+        );
       const props = yield* RefSubject.make<Record<string, unknown>>({
         id: "old",
         title: "old title",

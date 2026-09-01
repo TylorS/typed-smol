@@ -6,6 +6,13 @@ node_modules/
 
 # Build output
 dist/
+/apps/website/.generated/
+
+# Website generated documentation artifacts. Authored public assets (styles,
+# robots.txt, and agent skills) remain tracked.
+/apps/website/public/docs/
+/apps/website/public/schemas/
+/apps/website/src/generated/
 *.tsbuildinfo
 
 # IDE / editor

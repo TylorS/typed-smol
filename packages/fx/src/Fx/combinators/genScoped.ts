@@ -4,10 +4,37 @@ import { unwrapScoped } from "./unwrapScoped.js";
 import { Scope } from "effect";
 
 /**
- * Creates an Fx using a generator function (Effect.gen style).
+ * Builds an Fx with a subscription-owned Scope shared by setup and streaming.
  *
- * This allows writing Fx code in a synchronous-looking style, using `yield*` to composition.
- * Note: The generator yields Effects, and the result is an Fx.
+ * @remarks
+ * ## Why
+ *
+ * Resourceful setup must remain alive while the returned producer runs and be
+ * released when that subscription ends. `genScoped` supplies that exact
+ * acquisition-to-stream lifetime while removing `Scope` from the public
+ * service requirement.
+ *
+ * ## Ownership and lifetime
+ *
+ * Every subscription creates one child Scope, runs the generator inside it,
+ * then runs the returned Fx in the same Scope. Normal completion, failure,
+ * defect, or interruption closes the Scope and its finalizers. Setup failures
+ * prevent streaming; all non-Scope errors and services remain in the result.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { genScoped } from "@typed/fx/Fx"
+ * import { succeed } from "@typed/fx/Fx"
+ *
+ * const resourceful = genScoped(function* () {
+ *   const handle = yield* Effect.acquireRelease(
+ *     Effect.succeed({ open: true }),
+ *     () => Effect.void
+ *   )
+ *   return succeed(handle.open)
+ * })
+ * ```
  *
  * @param f - The generator function.
  * @returns An `Fx` representing the result of the generator.

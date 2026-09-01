@@ -7,7 +7,7 @@ import * as Fiber from "effect/Fiber";
 import * as Option from "effect/Option";
 import * as Scheduler from "effect/Scheduler";
 import * as Fx from "../Fx/index.js";
-import { RefSubject } from "../RefSubject.js";
+import * as RefSubject from "../RefSubject.js";
 import * as Sink from "../Sink.js";
 import * as Subject from "../Subject.js";
 
@@ -90,6 +90,88 @@ describe("Subject", () => {
       expect(outcome).toBe("done");
       expect(left).toEqual([1, 2]);
       expect(right).toEqual([1, 2]);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("returns from a reentrant push before the queued publication is delivered", () =>
+    Effect.gen(function* () {
+      const subject = Subject.unsafeMake<number>();
+      const order: string[] = [];
+
+      yield* Effect.forkScoped(
+        subject.run(
+          Sink.make(
+            () => Effect.void,
+            (value) =>
+              Effect.gen(function* () {
+                order.push(`left:${value}:start`);
+                if (value === 1) {
+                  yield* subject.onSuccess(2);
+                  order.push("left:1:after-reentrant-return");
+                }
+              }),
+          ),
+        ),
+      );
+      yield* Effect.forkScoped(
+        subject.run(
+          Sink.make(
+            () => Effect.void,
+            (value) => Effect.sync(() => order.push(`right:${value}`)),
+          ),
+        ),
+      );
+      yield* awaitSubscriberCount(subject, 2);
+
+      yield* subject.onSuccess(1);
+
+      expect(order).toEqual([
+        "left:1:start",
+        "left:1:after-reentrant-return",
+        "right:1",
+        "left:2:start",
+        "right:2",
+      ]);
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it("can deliver a held value twice when a subscriber joins while it is queued", () =>
+    Effect.gen(function* () {
+      const subject = Subject.unsafeMake<number>(1);
+      const firstDeliveryStarted = yield* Deferred.make<void>();
+      const releaseFirstDelivery = yield* Deferred.make<void>();
+      const secondPublicationStarted = yield* Deferred.make<void>();
+
+      yield* Effect.forkScoped(
+        subject.run(
+          Sink.make(
+            () => Effect.void,
+            (value) =>
+              value === 1
+                ? Deferred.succeed(firstDeliveryStarted, undefined).pipe(
+                    Effect.andThen(Deferred.await(releaseFirstDelivery)),
+                  )
+                : Effect.void,
+          ),
+        ),
+      );
+      yield* awaitSubscriberCount(subject, 1);
+
+      const firstPublication = yield* Effect.forkScoped(subject.onSuccess(1));
+      yield* Deferred.await(firstDeliveryStarted);
+      const secondPublication = yield* Effect.forkScoped(
+        Deferred.succeed(secondPublicationStarted, undefined).pipe(
+          Effect.andThen(subject.onSuccess(2)),
+        ),
+      );
+      yield* Deferred.await(secondPublicationStarted);
+      yield* Effect.yieldNow;
+
+      const lateSubscriber = yield* Effect.forkScoped(Fx.collectUpTo(subject, 2));
+      yield* awaitSubscriberCount(subject, 2);
+      yield* Deferred.succeed(releaseFirstDelivery, undefined);
+
+      expect(yield* Fiber.join(lateSubscriber)).toEqual([2, 2]);
+      yield* Fiber.join(firstPublication);
+      yield* Fiber.join(secondPublication);
     }).pipe(Effect.scoped, Effect.runPromise));
 
   it("snapshots subscribers once per publication", () =>

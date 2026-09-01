@@ -14,6 +14,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefOption is a RefSubject specialized over an Option value.
+ * @remarks
+ * ## Why
+ *
+ * Defines option state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefOption is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -26,10 +37,21 @@ export interface RefOption<in out A, in out E = never, out R = never> extends Re
 /**
  * Creates a new `RefOption` from an Option, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates option state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect, Option } from "effect"
- * import * as RefOption from "effect/typed/fx/RefSubject/RefOption"
+ * import * as RefOption from "@typed/fx/RefOption"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefOption.make(Option.some(42))
@@ -50,6 +72,17 @@ export function make<A, E = never, R = never>(
 
 /**
  * Set the current state of a RefOption to Some(value).
+ * @remarks
+ * ## Why
+ *
+ * Keeps set some atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set some performs one serialized option transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -62,6 +95,17 @@ export const setSome: {
 
 /**
  * Set the current state of a RefOption to None.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set none atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set none performs one serialized option transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -74,6 +118,17 @@ export const setNone = <A, E, R>(ref: RefOption<A, E, R>): Effect.Effect<Option.
 
 /**
  * Map the value inside the Option of a RefOption.
+ * @remarks
+ * ## Why
+ *
+ * Projects option state with map for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -91,6 +146,17 @@ export const map: {
 
 /**
  * FlatMap the value inside the Option of a RefOption.
+ * @remarks
+ * ## Why
+ *
+ * Projects the optional value with `Option.flatMap` for both a current read and later source
+ * pushes; it never changes the RefOption itself.
+ *
+ * ## Ownership and lifetime
+ *
+ * The flat map view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -108,6 +174,17 @@ export const flatMap: {
 
 /**
  * Filter the value inside the Option of a RefOption.
+ * @remarks
+ * ## Why
+ *
+ * Projects option state with filter for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -125,6 +202,17 @@ export const filter: {
 
 /**
  * Get the value from the Option or use a fallback value.
+ * @remarks
+ * ## Why
+ *
+ * Resolves `None` with the supplied fallback for both current reads and later pushes. The result is
+ * Computed, never absent, and does not add `NoSuchElementError`.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get or else view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -137,6 +225,17 @@ export const getOrElse: {
 
 /**
  * Check if the current state of a RefOption is Some.
+ * @remarks
+ * ## Why
+ *
+ * Exposes whether the current Option is Some as Computed state, keeping the boolean synchronized
+ * with every later source version.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is some view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -145,6 +244,17 @@ export const isSome = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<bo
 
 /**
  * Check if the current state of a RefOption is None.
+ * @remarks
+ * ## Why
+ *
+ * Exposes whether the current Option is None as Computed state, without caching a second boolean
+ * beside the source Option.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is none view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -153,6 +263,17 @@ export const isNone = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<bo
 
 /**
  * Check if the current state of a RefOption contains a value.
+ * @remarks
+ * ## Why
+ *
+ * Makes contains a live projection of the option; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The contains view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -165,6 +286,17 @@ export const contains: {
 
 /**
  * Check if the value inside the Option satisfies a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes exists a live projection of the option; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The exists view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -186,6 +318,17 @@ export const exists: {
 
 /**
  * Get the value from the Option as a Filtered (fails if None).
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get value as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get value view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */

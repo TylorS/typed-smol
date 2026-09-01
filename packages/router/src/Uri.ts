@@ -1,7 +1,24 @@
 import type { Arg0, Call1W, Identity, Pipe, TypeLambda, TypeLambda1 } from "hkt-core";
 
 /**
+ * Parses a URI string literal into component literal types, optionally against a base URI.
+ *
+ * @remarks
+ * ## Why
+ * Route type utilities can reason about origin and path components without widening to string.
+ *
+ * ## Ownership and lifetime
+ * `ParseUri` evaluates the URI parser only for string-literal inputs; its component result is erased from emitted JavaScript.
+ *
+ * @example
+ * ```ts
+ * import type { ParseUri } from "@typed/router/Uri"
+ *
+ * type Account = ParseUri<"/account?tab=profile", "https://example.com/">
+ * ```
+ *
  * @since 1.0.0
+ * @category type-level
  */
 export type ParseUri<Input extends string, BaseUri extends string = never> =
   Pipe<
@@ -22,7 +39,17 @@ export type ParseUri<Input extends string, BaseUri extends string = never> =
     : never;
 
 /**
+ * A type-level URI component record.
+ *
+ * @remarks
+ * ## Why
+ * Parsing and formatting share one explicit protocol, authentication, host, path, query, and hash shape.
+ *
+ * ## Ownership and lifetime
+ * `Uri` is a compile-time component record. Supplying its type arguments creates no runtime URL object or retained input.
+ *
  * @since 1.0.0
+ * @category type-level
  */
 export interface Uri<
   Protocol extends string = string,
@@ -34,13 +61,117 @@ export interface Uri<
   Query extends string = "",
   Hash extends string = "",
 > {
+  /**
+   * The URI scheme component.
+   *
+   * @remarks
+   * ## Why
+   * Formatting normalizes its colon and double-slash delimiters.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.protocol` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly protocol: Protocol;
+  /**
+   * The URI authentication username component.
+   *
+   * @remarks
+   * ## Why
+   * Authentication formatting remains separate from host and path.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.username` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly username: Username;
+  /**
+   * The URI authentication password component.
+   *
+   * @remarks
+   * ## Why
+   * Authentication formatting can preserve an explicitly empty or literal password.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.password` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly password: Password;
+  /**
+   * The URI host-name component.
+   *
+   * @remarks
+   * ## Why
+   * Base-URI application can inherit host identity independently of path/query/hash.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.hostname` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly hostname: Hostname;
+  /**
+   * The numeric port component or an absent empty string.
+   *
+   * @remarks
+   * ## Why
+   * Formatting adds a colon only when a port exists.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.port` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly port: Port;
+  /**
+   * The URI pathname component.
+   *
+   * @remarks
+   * ## Why
+   * Relative input can replace the base path without changing inherited origin components.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.pathname` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly pathname: Pathname;
+  /**
+   * The URI query component without its leading question mark.
+   *
+   * @remarks
+   * ## Why
+   * Formatting controls delimiters while preserving the literal query payload.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.query` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly query: Query;
+  /**
+   * The URI fragment component without its leading hash.
+   *
+   * @remarks
+   * ## Why
+   * Formatting controls delimiters while preserving the literal fragment payload.
+   *
+   * ## Ownership and lifetime
+   * The `Uri.hash` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   readonly hash: Hash;
 }
 
@@ -48,11 +179,34 @@ export interface Uri<
  * @since 1.0.0
  */
 export declare namespace Uri {
+  /**
+   * A Uri whose component literal types are intentionally widened.
+   *
+   * @remarks
+   * ## Why
+   * Generic URI utilities can constrain shape without claiming a specific parsed literal.
+   *
+   * ## Ownership and lifetime
+   * The `Any` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   export type Any = Uri<string, string, string, string, number | "", string, string, string>;
 }
 
 /**
+ * Formats a type-level Uri record as a string literal, optionally after applying a base URI.
+ *
+ * @remarks
+ * ## Why
+ * Type-level URI transformations can return the exact normalized string shape.
+ *
+ * ## Ownership and lifetime
+ * `FormatUri` assembles only a string-literal type from the supplied `Uri`; it produces no runtime string.
+ *
  * @since 1.0.0
+ * @category type-level
  */
 export type FormatUri<Uri extends Uri.Any, BaseUri extends string = never> = Call1W<
   FormatUrlLambda,

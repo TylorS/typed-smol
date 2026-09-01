@@ -12,6 +12,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefDuration is a RefSubject specialized over a Duration value.
+ * @remarks
+ * ## Why
+ *
+ * Defines duration state with the same current-read, pushed-update, and synchronized-write
+ * contract as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefDuration is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -24,10 +35,21 @@ export interface RefDuration<in out E = never, out R = never> extends RefSubject
 /**
  * Creates a new `RefDuration` from a Duration, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates duration state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect, Duration } from "effect"
- * import * as RefDuration from "effect/typed/fx/RefSubject/RefDuration"
+ * import * as RefDuration from "@typed/fx/RefDuration"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefDuration.make(Duration.seconds(5))
@@ -54,6 +76,17 @@ export function make<E = never, R = never>(
 
 /**
  * Add a Duration to the current state of a RefDuration.
+ * @remarks
+ * ## Why
+ *
+ * Add a Duration to the current state of a RefDuration. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The add view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -71,6 +104,17 @@ export const add: {
 
 /**
  * Subtract a Duration from the current state of a RefDuration.
+ * @remarks
+ * ## Why
+ *
+ * Subtract a Duration from the current state of a RefDuration. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The subtract view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -88,6 +132,17 @@ export const subtract: {
 
 /**
  * Multiply the current state of a RefDuration by a number.
+ * @remarks
+ * ## Why
+ *
+ * Multiply the current state of a RefDuration by a number. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The multiply view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -100,6 +155,17 @@ export const multiply: {
 
 /**
  * Divide the current state of a RefDuration by a number.
+ * @remarks
+ * ## Why
+ *
+ * Divide the current state of a RefDuration by a number. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The divide view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -117,6 +183,17 @@ export const divide: {
 
 /**
  * Check if the current state of a RefDuration is zero.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefDuration is zero. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is zero view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -125,6 +202,17 @@ export const isZero = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<boolea
 
 /**
  * Check if the current state of a RefDuration is less than a Duration.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefDuration is less than a Duration. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is less than view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -137,6 +225,17 @@ export const isLessThan: {
 
 /**
  * Check if the current state of a RefDuration is greater than a Duration.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefDuration is greater than a Duration. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is greater than view retains no independent state. An Effect read samples the source once;
+ * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -149,6 +248,17 @@ export const isGreaterThan: {
 
 /**
  * Get the milliseconds value of the current state of a RefDuration.
+ * @remarks
+ * ## Why
+ *
+ * Get the milliseconds value of the current state of a RefDuration. The operation remains attached
+ * to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The millis view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -157,6 +267,17 @@ export const millis = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number
 
 /**
  * Get the seconds value of the current state of a RefDuration.
+ * @remarks
+ * ## Why
+ *
+ * Get the seconds value of the current state of a RefDuration. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The seconds view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -165,6 +286,17 @@ export const seconds = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<numbe
 
 /**
  * Get the minutes value of the current state of a RefDuration.
+ * @remarks
+ * ## Why
+ *
+ * Get the minutes value of the current state of a RefDuration. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The minutes view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -173,6 +305,17 @@ export const minutes = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<numbe
 
 /**
  * Get the hours value of the current state of a RefDuration.
+ * @remarks
+ * ## Why
+ *
+ * Get the hours value of the current state of a RefDuration. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The hours view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -181,6 +324,17 @@ export const hours = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number,
 
 /**
  * Get the days value of the current state of a RefDuration.
+ * @remarks
+ * ## Why
+ *
+ * Get the days value of the current state of a RefDuration. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The days view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

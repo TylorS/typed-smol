@@ -21,21 +21,94 @@ import { FxTypeId } from "../TypeId.js";
 
 /**
  * Configuration options for the `keyed` combinator.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The options put identity, per-identity work, and output coalescing beside one
+ * another so callers can choose collection behavior without exposing the keyed
+ * implementation's maps, child Scopes, or diff patches.
+ *
+ * ## Ownership and lifetime
+ *
+ * The options object acquires nothing. {@link keyed} invokes `onValue` once per
+ * admitted key. Its run fiber belongs to the outer parent Scope; the per-key
+ * child Scope is supplied to that Fx for resources it explicitly registers.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ *
+ * interface Row { readonly id: string; readonly value: number }
+ *
+ * const options: Fx.KeyedOptions<Row, string, number, never, never> = {
+ *   getKey: (row) => row.id,
+ *   onValue: (row) => Fx.map(row, ({ value }) => value)
+ * }
+ * ```
+ *
  * @since 1.0.0
  * @category models
  */
 export interface KeyedOptions<A, B, C, E2, R2> {
   /**
-   * Function to extract a unique key from an element.
+   * Extracts the stable identity of an element.
+   *
+   * @remarks
+   * ## Why
+   *
+   * A key lets value updates and moves reuse one existing child rather than
+   * interpreting array position as identity.
+   *
+   * ## Ownership and lifetime
+   *
+   * The function is called synchronously while processing a source array. It
+   * acquires no resource; keys are retained only while their entries are live.
+   *
+   * @since 1.0.0
+   * @category models
    */
   readonly getKey: (a: A) => B;
   /**
-   * Function to transform a value into an Fx, receiving a RefSubject of the value.
-   * This allows the transformation to react to updates of the same item (same key).
+   * Creates the Fx for one key from its live value RefSubject and stable key.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Passing a `RefSubject` separates identity from the current value: later
+   * values with the same key update the existing child instead of recreating it.
+   *
+   * ## Ownership and lifetime
+   *
+   * `keyed` calls this once when a key is added and forks its run fiber in the
+   * outer parent Scope. It provides a per-key child `Scope` to the run, so
+   * resources registered through that service close when the key is removed.
+   * Closing the child Scope does not by itself interrupt an arbitrary returned
+   * Fx run fiber; resourceful work must honor the supplied Scope. Failures and
+   * services remain on the returned `keyed` Fx.
+   *
+   * @since 1.0.0
+   * @category models
    */
   readonly onValue: (ref: RefSubject.RefSubject<A>, key: B) => Fx<C, E2, R2 | Scope.Scope>;
   /**
-   * Optional debounce duration for emission.
+   * Delays and coalesces array emissions after keyed state changes.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Several child updates can describe one logical collection change. Debounce
+   * replaces the pending array emission so consumers receive the latest coherent
+   * ready prefix rather than every intermediate scheduling step.
+   *
+   * ## Ownership and lifetime
+   *
+   * The delay fiber belongs to the outer keyed `Scope`. A later change interrupts
+   * and replaces it; outer completion waits for the final scheduled emission and
+   * interruption discards it. Omission uses a one-millisecond delay.
+   *
+   * @since 1.0.0
+   * @category models
    */
   readonly debounce?: Duration.Input;
 }
@@ -47,7 +120,47 @@ export interface KeyedOptions<A, B, C, E2, R2> {
  * When the input list changes:
  * - New keys cause `onValue` to be called.
  * - Existing keys have their `RefSubject` updated with the new value.
- * - Removed keys have their corresponding Fx and scope cleaned up.
+ * - Removed keys close the supplied child Scope and clean resources registered
+ *   through it; the `onValue` run fiber remains owned by the outer parent Scope.
+ *
+ * @remarks
+ * ## Why
+ *
+ * A stable key separates identity from position. Consumers can move or update
+ * the exact result already associated with a value instead of recreating every
+ * result when a collection changes. This is the state-preserving substrate used
+ * by keyed template rendering, but the combinator itself is renderer-agnostic.
+ *
+ * ## Ownership and lifetime
+ *
+ * Each key receives its own `RefSubject` and child `Scope`. Reusing a key updates
+ * that subject in place. Removing a key closes the child Scope and therefore the
+ * resources registered through its supplied Scope service. The `onValue` run
+ * fiber itself is forked in the outer parent Scope, so child-Scope closure does
+ * not guarantee interruption of an arbitrary Fx that ignores Scope. Interrupting
+ * the outer run closes the parent and remaining children. Source and `onValue`
+ * failures, services, and Scope requirements remain visible in the return type.
+ *
+ * ## Ordering and failures
+ *
+ * Each source array produces a unique-key diff. Added keys start one child Fx;
+ * reused keys update their existing RefSubject, including moves; removed keys
+ * have their child Scope closed. A child may emit repeatedly, replacing only
+ * that key's latest output. Arrays follow current source order and contain the
+ * contiguous ready prefix: a later key is withheld until every earlier key has
+ * emitted at least once. Debounce coalesces scheduled arrays, not child Fx
+ * values. Duplicate keys fail with `Cause.IllegalArgumentError` rather than
+ * sharing a child lifetime.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ *
+ * const rows = Fx.keyed(Fx.succeed([{ id: "a", value: 1 }]), {
+ *   getKey: (row) => row.id,
+ *   onValue: (row) => Fx.map(row, ({ value }) => value)
+ * })
+ * ```
  *
  * @param fx - An `Fx` emitting an array of values.
  * @param options - Configuration options.

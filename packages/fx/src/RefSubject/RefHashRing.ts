@@ -15,6 +15,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefHashRing is a RefSubject specialized over a HashRing.
+ * @remarks
+ * ## Why
+ *
+ * Defines hash ring state with the same current-read, pushed-update, and synchronized-write
+ * contract as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefHashRing is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -26,6 +37,17 @@ export interface RefHashRing<
 
 /**
  * Creates a new `RefHashRing` from a HashRing, `Effect`, or `Fx`.
+ * @remarks
+ * ## Why
+ *
+ * Creates hash ring state with equality suited to that Effect data type, so unchanged values do
+ * not produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -40,6 +62,17 @@ export function make<A extends PrimaryKey.PrimaryKey, E = never, R = never>(
 
 /**
  * Creates a new empty RefHashRing.
+ * @remarks
+ * ## Why
+ *
+ * Creates a new empty RefHashRing. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running empty performs one serialized hash ring transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -63,6 +96,17 @@ function copyRing<A extends PrimaryKey.PrimaryKey>(
 
 /**
  * Add a node to the HashRing.
+ * @remarks
+ * ## Why
+ *
+ * Add a node to the HashRing. The operation remains attached to the RefSubject's versioned state
+ * boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running add performs one serialized hash ring transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -89,6 +133,17 @@ export const add: {
 
 /**
  * Add multiple nodes to the HashRing.
+ * @remarks
+ * ## Why
+ *
+ * Add multiple nodes to the HashRing. The operation remains attached to the RefSubject's versioned
+ * state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running add many performs one serialized hash ring transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -115,6 +170,17 @@ export const addMany: {
 
 /**
  * Remove a node from the HashRing.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove to the committed hash ring value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove performs one serialized hash ring transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -140,6 +206,17 @@ export const remove: {
 
 /**
  * Check if a node exists in the HashRing.
+ * @remarks
+ * ## Why
+ *
+ * Makes has a live projection of the hash ring; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The has view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -161,6 +238,17 @@ export const has: {
 
 /**
  * Get the number of nodes in the HashRing.
+ * @remarks
+ * ## Why
+ *
+ * Makes size a live projection of the hash ring; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The size view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -170,6 +258,17 @@ export const size = <A extends PrimaryKey.PrimaryKey, E, R>(
 
 /**
  * Check if the HashRing is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the hash ring; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -180,6 +279,17 @@ export const isEmpty = <A extends PrimaryKey.PrimaryKey, E, R>(
 /**
  * Get the node which should handle a given input string as a Computed.
  * Returns undefined if the ring is empty.
+ * @remarks
+ * ## Why
+ *
+ * Projects the selected node for current reads and later pushes. An empty ring is represented by
+ * `undefined` inside the Computed value; it does not become Filtered or add `NoSuchElementError`.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get node view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -203,6 +313,18 @@ export const getNode: {
 
 /**
  * Get shard distribution across nodes.
+ * @remarks
+ * ## Why
+ *
+ * Projects the shard distribution for current reads and later pushes. An empty ring is represented
+ * by `undefined` inside the Computed value; it does not become Filtered or add
+ * `NoSuchElementError`.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get shards view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -226,6 +348,17 @@ export const getShards: {
 
 /**
  * Get all nodes as an array.
+ * @remarks
+ * ## Why
+ *
+ * Projects hash ring state with values for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -240,6 +373,17 @@ export const values = <A extends PrimaryKey.PrimaryKey, E, R>(
 /**
  * Get the node which should handle a given input string as a Filtered.
  * Fails if the ring is empty.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */

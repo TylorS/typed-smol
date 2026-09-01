@@ -7,10 +7,42 @@ import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
 
 /**
- * Merges multiple Fx streams concurrently but emits values in the order of the input streams.
+ * Runs multiple Fx streams concurrently while draining their values in argument order.
  *
- * This ensures that values from the first Fx are emitted before values from the second Fx, and so on.
- * Values from later streams are buffered until earlier streams complete or emit their values (depending on semantics, but usually this means strictly ordered emission).
+ * @remarks
+ * ## Why
+ *
+ * `mergeOrdered` overlaps production latency while preserving the same output
+ * grouping as sequential concatenation. It is useful only when that ordering is
+ * worth retaining later results in memory.
+ *
+ * ## Concurrency, ordering, and buffering
+ *
+ * Every input starts immediately. Input zero forwards as it produces. Values
+ * from each later input are buffered until every earlier input ends, then drained
+ * in that input's emission order before the next buffer is released. Buffering
+ * is unbounded: a fast or infinite later input can retain arbitrary values while
+ * an earlier input remains open.
+ *
+ * ## Ownership and lifetime
+ *
+ * Non-interruption failures are forwarded. Interrupt-only causes mark that input
+ * ended so they cannot deadlock later buffers. All input services remain typed.
+ * The observing fiber owns all runs and buffers; completion waits for all inputs,
+ * while interruption discards buffers and interrupts remaining resource scopes.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { Effect } from "effect"
+ *
+ * const ordered = Fx.mergeOrdered(
+ *   Fx.at("slow first", "20 millis"),
+ *   Fx.at("fast second", "1 millis")
+ * )
+ * Effect.runPromise(Fx.collectAll(ordered)).then(console.log)
+ * // ["slow first", "fast second"]: the second value waits in its buffer
+ * ```
  *
  * @param fx - The Fx streams to merge.
  * @returns An `Fx` that emits values in order.

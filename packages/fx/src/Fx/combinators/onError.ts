@@ -6,10 +6,40 @@ import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
 
 /**
- * Adds an `Effect.onError`-style finalizer to an `Fx`.
+ * Runs cleanup after the source reports a failure cause.
  *
- * The cleanup is run only if the stream fails (including defects / interrupts
- * carried in the `Cause`).
+ * @remarks
+ * ## Why
+ *
+ * Failure-only observation belongs at the stream boundary when cleanup needs
+ * the complete Cause rather than merely the typed error.
+ *
+ * ## Ownership and lifetime
+ *
+ * The original cause is delivered downstream first. Cleanup runs only if that
+ * downstream `onFailure` Effect succeeds; if the sink itself fails or interrupts,
+ * `flatMap` never reaches cleanup. Typed cleanup failure is impossible by
+ * signature, but `Effect.ignore` does not suppress defects or interruption:
+ * either can fail or interrupt the run after the source Cause was handled. Its
+ * services are required for the subscription, and it does not run after success.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { onError } from "@typed/fx/Fx"
+ * import { fail } from "@typed/fx/Fx"
+ *
+ * const logged = onError(fail("offline"), (cause) => Effect.logError(cause))
+ * ```
+ *
+ * @example A cleanup defect is not a typed failure
+ * ```ts
+ * import { Effect } from "effect"
+ * import { onError } from "@typed/fx/Fx"
+ * import { fail } from "@typed/fx/Fx"
+ *
+ * const defectiveCleanup = onError(fail("offline"), () => Effect.die("logger defect"))
+ * ```
  *
  * @since 1.0.0
  * @category combinators

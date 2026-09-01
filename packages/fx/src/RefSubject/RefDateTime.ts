@@ -13,6 +13,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefDateTime is a RefSubject specialized over a DateTime value.
+ * @remarks
+ * ## Why
+ *
+ * Defines date time state with the same current-read, pushed-update, and synchronized-write
+ * contract as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefDateTime is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -25,10 +36,21 @@ export interface RefDateTime<in out E = never, out R = never> extends RefSubject
 /**
  * Creates a new `RefDateTime` from a DateTime, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates date time state with equality suited to that Effect data type, so unchanged values do
+ * not produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect, DateTime } from "effect"
- * import * as RefDateTime from "effect/typed/fx/RefSubject/RefDateTime"
+ * import * as RefDateTime from "@typed/fx/RefDateTime"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefDateTime.make(DateTime.nowUnsafe())
@@ -55,6 +77,17 @@ export function make<E = never, R = never>(
 
 /**
  * Add a Duration to the current state of a RefDateTime.
+ * @remarks
+ * ## Why
+ *
+ * Add a Duration to the current state of a RefDateTime. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The add view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -105,6 +138,17 @@ export const add: {
 
 /**
  * Add a Duration to the current state of a RefDateTime.
+ * @remarks
+ * ## Why
+ *
+ * Add a Duration to the current state of a RefDateTime. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The add duration view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -122,6 +166,17 @@ export const addDuration: {
 
 /**
  * Subtract a Duration from the current state of a RefDateTime.
+ * @remarks
+ * ## Why
+ *
+ * Subtract a Duration from the current state of a RefDateTime. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The subtract view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -172,6 +227,17 @@ export const subtract: {
 
 /**
  * Subtract a Duration from the current state of a RefDateTime.
+ * @remarks
+ * ## Why
+ *
+ * Subtract a Duration from the current state of a RefDateTime. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The subtract duration view retains no independent state. An Effect read samples the source once;
+ * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -189,6 +255,17 @@ export const subtractDuration: {
 
 /**
  * Get the epoch milliseconds of the current state of a RefDateTime.
+ * @remarks
+ * ## Why
+ *
+ * Get the epoch milliseconds of the current state of a RefDateTime. The operation remains attached
+ * to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The epoch millis view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -197,6 +274,17 @@ export const epochMillis = <E, R>(ref: RefDateTime<E, R>): RefSubject.Computed<n
 
 /**
  * Format the current state of a RefDateTime.
+ * @remarks
+ * ## Why
+ *
+ * Format the current state of a RefDateTime. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The format view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -226,6 +314,17 @@ export const format: {
 
 /**
  * Check if the current state of a RefDateTime is before another DateTime.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefDateTime is before another DateTime. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is before view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -238,6 +337,17 @@ export const isBefore: {
 
 /**
  * Check if the current state of a RefDateTime is after another DateTime.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefDateTime is after another DateTime. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is after view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -250,6 +360,17 @@ export const isAfter: {
 
 /**
  * Check if the current state of a RefDateTime equals another DateTime.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefDateTime equals another DateTime. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is equal view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

@@ -15,6 +15,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefTuple is a RefSubject specialized over a tuple value.
+ * @remarks
+ * ## Why
+ *
+ * Defines tuple state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefTuple is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -27,10 +38,21 @@ export interface RefTuple<
 /**
  * Creates a new `RefTuple` from a tuple, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates tuple state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect, Tuple } from "effect"
- * import * as RefTuple from "effect/typed/fx/RefSubject/RefTuple"
+ * import * as RefTuple from "@typed/fx/RefTuple"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefTuple.make(Tuple.make(1, "hello", true))
@@ -51,6 +73,17 @@ export function make<T extends ReadonlyArray<unknown>, E = never, R = never>(
 
 /**
  * Set the value at a specific index in the current state of a RefTuple.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set at atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set at performs one serialized tuple transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -79,6 +112,17 @@ export const setAt: {
 
 /**
  * Update the value at a specific index in the current state of a RefTuple using a function.
+ * @remarks
+ * ## Why
+ *
+ * Keeps update at atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running update at performs one serialized tuple transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -107,6 +151,17 @@ export const updateAt: {
 
 /**
  * Append an element to the end of the current state of a RefTuple.
+ * @remarks
+ * ## Why
+ *
+ * Expresses append element as one ordered tuple transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * The append element view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -131,6 +186,17 @@ export const appendElement: {
 
 /**
  * Prepend an element to the beginning of the current state of a RefTuple.
+ * @remarks
+ * ## Why
+ *
+ * Expresses prepend element as one ordered tuple transition; readers never observe the
+ * intermediate collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * The prepend element view retains no independent state. An Effect read samples the source once;
+ * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -160,6 +226,23 @@ export const prependElement: {
  */
 type Indices<T extends ReadonlyArray<unknown>> = Exclude<Partial<T>["length"], T["length"]>;
 
+/**
+ * Projects one statically valid tuple index as Computed state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The index is constrained to the tuple's known indices, so every current value has that element.
+ * The result is Computed, cannot become absent, and does not add `NoSuchElementError`.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
+ * @since 1.18.0
+ * @category combinators
+ */
 export const get: {
   <T extends ReadonlyArray<unknown>, I extends Indices<T> & keyof T>(
     index: I,
@@ -179,6 +262,17 @@ export const get: {
 
 /**
  * Get the length of the current state of a RefTuple.
+ * @remarks
+ * ## Why
+ *
+ * Makes length a live projection of the tuple; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The length view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -188,6 +282,17 @@ export const length = <T extends ReadonlyArray<unknown>, E, R>(
 
 /**
  * Pick elements at specific indices from the current state of a RefTuple.
+ * @remarks
+ * ## Why
+ *
+ * Projects tuple state with pick for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The pick view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -210,6 +315,17 @@ export const pick: {
 
 /**
  * Omit elements at specific indices from the current state of a RefTuple.
+ * @remarks
+ * ## Why
+ *
+ * Projects tuple state with omit for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The omit view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

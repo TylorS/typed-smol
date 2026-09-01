@@ -15,6 +15,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefStruct is a RefSubject specialized over a struct value.
+ * @remarks
+ * ## Why
+ *
+ * Defines struct state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefStruct is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -27,10 +38,21 @@ export interface RefStruct<
 /**
  * Creates a new `RefStruct` from a struct, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates struct state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefStruct from "effect/typed/fx/RefSubject/RefStruct"
+ * import * as RefStruct from "@typed/fx/RefStruct"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefStruct.make({ name: "John", age: 30 })
@@ -51,6 +73,17 @@ export function make<S extends object, E = never, R = never>(
 
 /**
  * Set a property value in the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set atomic with respect to competing RefSubject writes instead of splitting the read and
+ * replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set performs one serialized struct transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -78,6 +111,17 @@ export const set: {
 
 /**
  * Update a property value in the current state of a RefStruct using a function.
+ * @remarks
+ * ## Why
+ *
+ * Keeps update atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running update performs one serialized struct transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -102,6 +146,17 @@ export const update: {
 
 /**
  * Merge another struct into the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Combines bulk struct changes in one committed value, giving subscribers one coherent update
+ * rather than a partially applied sequence.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running merge performs one serialized struct transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -128,6 +183,17 @@ export const merge: {
 
 /**
  * Pick properties from the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Projects struct state with pick for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The pick view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -150,6 +216,17 @@ export const pick: {
 
 /**
  * Omit properties from the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Projects struct state with omit for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The omit view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -172,6 +249,29 @@ export const omit: {
 
 /**
  * Get a property value from the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Projects a known property as Computed state, so current reads and future pushes stay linked to
+ * the struct without copying that field into a second store.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import * as RefStruct from "@typed/fx/RefStruct"
+ *
+ * const program = Effect.scoped(Effect.gen(function* () {
+ *   const account = yield* RefStruct.make({ name: "Ada", active: true })
+ *   const name = RefStruct.get(account, "name")
+ *   return yield* name
+ * }))
+ * ```
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -194,6 +294,17 @@ export const get: {
 
 /**
  * Get the keys of the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Projects struct state with keys for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The keys view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -203,6 +314,17 @@ export const keys = <S extends object, E, R>(
 
 /**
  * Get the values of the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Projects struct state with values for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -213,6 +335,17 @@ export const values = <S extends object, E, R>(
 
 /**
  * Get the entries of the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Projects struct state with entries for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The entries view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -223,6 +356,17 @@ export const entries = <S extends object, E, R>(
 
 /**
  * Check if the current state of a RefStruct has a property.
+ * @remarks
+ * ## Why
+ *
+ * Makes has a live projection of the struct; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The has view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -245,6 +389,17 @@ export const has: {
 
 /**
  * Get the size (number of properties) of the current state of a RefStruct.
+ * @remarks
+ * ## Why
+ *
+ * Makes size a live projection of the struct; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The size view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

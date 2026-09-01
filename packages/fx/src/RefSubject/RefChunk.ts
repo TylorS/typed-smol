@@ -17,6 +17,17 @@ import { Result } from "effect";
 
 /**
  * A RefChunk is a RefSubject specialized over a Chunk of values.
+ * @remarks
+ * ## Why
+ *
+ * Defines chunk state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefChunk is a contract and performs no acquisition. Implementations retain the errors, services,
+ * interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -28,6 +39,17 @@ export interface RefChunk<in out A, in out E = never, out R = never> extends Ref
 
 /**
  * Creates a new `RefChunk` from a Chunk, `Effect`, or `Fx`.
+ * @remarks
+ * ## Why
+ *
+ * Creates chunk state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @since 1.18.0
  * @category constructors
  */
@@ -40,6 +62,17 @@ export function make<A, E = never, R = never>(
 
 /**
  * Prepend a value to the current state of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Expresses prepend as one ordered chunk transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running prepend performs one serialized chunk transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -52,6 +85,17 @@ export const prepend: {
 
 /**
  * Prepend an iterable of values to the current state of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Expresses prepend all as one ordered chunk transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running prepend all performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -64,6 +108,17 @@ export const prependAll: {
 
 /**
  * Append a value to the current state of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Expresses append as one ordered chunk transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running append performs one serialized chunk transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -76,6 +131,17 @@ export const append: {
 
 /**
  * Append an iterable of values to the current state of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Expresses append all as one ordered chunk transition; readers never observe the intermediate
+ * collection used to build the result.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running append all performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -88,6 +154,17 @@ export const appendAll: {
 
 /**
  * Drop the first `n` values from a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Applies drop to the committed chunk value and publishes only the result, preserving its element
+ * order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running drop performs one serialized chunk transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -100,6 +177,17 @@ export const drop: {
 
 /**
  * Drop the last `n` values from a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Applies drop right to the committed chunk value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running drop right performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -112,6 +200,17 @@ export const dropRight: {
 
 /**
  * Drop values from a RefChunk while a predicate is true.
+ * @remarks
+ * ## Why
+ *
+ * Applies drop while to the committed chunk value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running drop while performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -129,6 +228,17 @@ export const dropWhile: {
 
 /**
  * Take the first `n` values from a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Applies take to the committed chunk value and publishes only the result, preserving its element
+ * order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take performs one serialized chunk transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -141,6 +251,17 @@ export const take: {
 
 /**
  * Take the last `n` values from a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Applies take right to the committed chunk value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take right performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -153,6 +274,17 @@ export const takeRight: {
 
 /**
  * Take values from a RefChunk while a predicate is true.
+ * @remarks
+ * ## Why
+ *
+ * Applies take while to the committed chunk value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running take while performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -170,6 +302,17 @@ export const takeWhile: {
 
 /**
  * Modify the value at a particular index of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Keeps modify at atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running modify at performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -191,6 +334,17 @@ export const modifyAt: {
 
 /**
  * Replace a value at a particular index of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Keeps replace at atomic with respect to competing RefSubject writes instead of splitting the
+ * read and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running replace at performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -205,6 +359,17 @@ export const replaceAt: {
 
 /**
  * Remove a value at a particular index of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Applies remove to the committed chunk value and publishes only the result, preserving its
+ * element order and equality rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running remove performs one serialized chunk transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -217,6 +382,16 @@ export const remove: {
 
 /**
  * Filter the values of a RefChunk (mutating).
+ * @remarks
+ * ## Why
+ *
+ * Applies filter to the committed chunk through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed chunk and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -234,6 +409,16 @@ export const filter: {
 
 /**
  * Map (Endomorphic) the values of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Applies map to the committed chunk through `RefSubject.update` and publishes one coherent
+ * replacement; this is a mutation, not a read-only Computed projection.
+ *
+ * ## Ownership and lifetime
+ *
+ * The Effect starts when run, participates in the source ref's serialized update boundary, and
+ * acquires no resource. It returns the committed chunk and retains the ref's E and R channels.
  * @since 1.18.0
  * @category combinators
  */
@@ -251,6 +436,17 @@ export const map: {
 
 /**
  * Remove duplicate values from a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered chunk through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running dedupe performs one serialized chunk transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -259,6 +455,17 @@ export const dedupe = <A, E, R>(ref: RefChunk<A, E, R>): Effect.Effect<Chunk.Chu
 
 /**
  * Remove adjacent duplicate values from a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered chunk through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running dedupe adjacent performs one serialized chunk transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -268,6 +475,17 @@ export const dedupeAdjacent = <A, E, R>(
 
 /**
  * Reverse the values of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered chunk through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running reverse performs one serialized chunk transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -276,6 +494,17 @@ export const reverse = <A, E, R>(ref: RefChunk<A, E, R>): Effect.Effect<Chunk.Ch
 
 /**
  * Sort the values of a RefChunk using a provided Order.
+ * @remarks
+ * ## Why
+ *
+ * Derives the reordered chunk through its Effect collection operation while retaining RefSubject
+ * equality and version tracking.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running sort performs one serialized chunk transition and resolves with its committed value. It
+ * acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -292,6 +521,17 @@ export const sort: {
 
 /**
  * Check if a RefChunk is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the chunk; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -300,6 +540,17 @@ export const isEmpty = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed<bo
 
 /**
  * Check if a RefChunk is non-empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is non empty a live projection of the chunk; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is non empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -308,6 +559,17 @@ export const isNonEmpty = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed
 
 /**
  * Get the current size of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Makes size a live projection of the chunk; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The size view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -316,6 +578,17 @@ export const size = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed<numbe
 
 /**
  * Map the values of a RefChunk to a different type.
+ * @remarks
+ * ## Why
+ *
+ * Projects chunk state with map values for both current reads and future pushes, avoiding a second
+ * mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The map values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -333,6 +606,17 @@ export const mapValues: {
 
 /**
  * Filter the values of a RefChunk creating a Computed value.
+ * @remarks
+ * ## Why
+ *
+ * Projects chunk state with filter values for both current reads and future pushes, avoiding a
+ * second mutable cache of the derived value.
+ *
+ * ## Ownership and lifetime
+ *
+ * The filter values view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -350,6 +634,17 @@ export const filterValues: {
 
 /**
  * Partition the values of a RefChunk using a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Partition the values of a RefChunk using a predicate. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The partition view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -367,6 +662,17 @@ export const partition: {
 
 /**
  * Reduce the values of a RefChunk to a single value.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce a live projection of the chunk; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -391,6 +697,17 @@ export const reduce: {
 
 /**
  * Reduce the values of a RefChunk in reverse order.
+ * @remarks
+ * ## Why
+ *
+ * Makes reduce right a live projection of the chunk; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reduce right view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -415,6 +732,17 @@ export const reduceRight: {
 
 /**
  * Check if any value satisfies a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes some a live projection of the chunk; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The some view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -432,6 +760,17 @@ export const some: {
 
 /**
  * Check if all values satisfy a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Makes every a live projection of the chunk; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The every view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -449,6 +788,17 @@ export const every: {
 
 /**
  * Check if a RefChunk contains a value.
+ * @remarks
+ * ## Why
+ *
+ * Makes contains a live projection of the chunk; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The contains view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -465,6 +815,17 @@ export const contains: {
 
 /**
  * Get a value at a particular index of a RefChunk.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of get index as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The get index view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -477,6 +838,17 @@ export const getIndex: {
 
 /**
  * Get the first element of a RefChunk as a Filtered.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of head as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The head view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -485,6 +857,17 @@ export const head = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Filtered<A, E,
 
 /**
  * Get the last element of a RefChunk as a Filtered.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of last as Filtered state, so absence stays explicit while
+ * later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The last view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -493,6 +876,17 @@ export const last = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Filtered<A, E,
 
 /**
  * Find the first value satisfying a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find first as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find first view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */
@@ -505,6 +899,17 @@ export const findFirst: {
 
 /**
  * Find the last value satisfying a predicate.
+ * @remarks
+ * ## Why
+ *
+ * Models the possibly absent result of find last as Filtered state, so absence stays explicit
+ * while later source versions can make a value available.
+ *
+ * ## Ownership and lifetime
+ *
+ * The find last view retains no independent value. Its Effect read fails with NoSuchElement
+ * while absent; the observing Scope owns and finalizes its Fx subscription.
+ *
  * @since 1.18.0
  * @category filtered
  */

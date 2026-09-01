@@ -7,6 +7,23 @@ import type { Fx } from "../Fx.js";
 /**
  * Loops over the failure causes of an Fx with an accumulator.
  *
+ * @remarks
+ * ## Why
+ * `loopCause` is the stateful counterpart of error mapping over full Effect causes. Successful
+ * values pass unchanged; each cause is synchronously transformed and advances the error state.
+ *
+ * ## Ownership and lifetime
+ * A fresh state begins for each run and is discarded afterward. The callback owns no resources and
+ * sees typed failures, defects, and interruption represented by `Cause`.
+ *
+ * @example
+ * ```ts
+ * import { Cause } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const numbered = Fx.fail("offline").pipe(Fx.loopCause(0, (n, cause) => [Cause.map(cause, (e) => `${n}:${e}`), n + 1]))
+ * ```
+ *
  * @param seed - The initial state.
  * @param f - The loop function for causes.
  * @returns An `Fx` with transformed errors.

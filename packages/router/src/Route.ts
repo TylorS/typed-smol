@@ -9,38 +9,319 @@ import type { Simplify } from "effect/Types";
 import * as AST from "./AST.js";
 import * as Path from "./Path.js";
 
+/**
+ * A pipeable route value containing syntax, normalized path, and Effect Schemas.
+ *
+ * @remarks
+ * ## Why
+ * Matching and parameter decoding share one immutable source of truth.
+ *
+ * ## Ownership and lifetime
+ * A Route value retains its AST and memoized derived values until that Route becomes unreachable; it owns no Scope.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export interface Route<
   P extends string,
   S extends Schema.Codec<any, Path.Params<P>, any, any> = Schema.Codec<Path.Params<P>>,
 > extends Pipeable {
+  /**
+   * The immutable Route AST compiled by Matcher.
+   *
+   * @remarks
+   * ## Why
+   * Advanced composition can inspect structure without reparsing the formatted path.
+   *
+   * ## Ownership and lifetime
+   * The Route retains its `ast` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   readonly ast: AST.RouteAst;
+  /**
+   * The normalized route string derived from this Route's AST.
+   *
+   * @remarks
+   * ## Why
+   * Matcher registration and links use one memoized formatting result.
+   *
+   * ## Ownership and lifetime
+   * The Route retains its `path` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   readonly path: P;
 
+  /**
+   * The Effect Schema for the route's combined decoded parameters.
+   *
+   * @remarks
+   * ## Why
+   * Matcher handlers receive the schema's Type and service/error behavior exactly.
+   *
+   * ## Ownership and lifetime
+   * The Route retains its `paramsSchema` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   readonly paramsSchema: S;
+  /**
+   * The Effect Schema for decoded path parameters only.
+   *
+   * @remarks
+   * ## Why
+   * Handlers and tools can validate path values independently of query input.
+   *
+   * ## Ownership and lifetime
+   * The Route retains its `pathSchema` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   readonly pathSchema: Schema.Codec<Path.PathParams<P>>;
+  /**
+   * The Effect Schema for decoded query parameters only.
+   *
+   * @remarks
+   * ## Why
+   * Query parsing policy remains available separately from path decoding.
+   *
+   * ## Ownership and lifetime
+   * The Route retains its `querySchema` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   readonly querySchema: Schema.Codec<Path.QueryParams<P>>;
 }
 
 export declare namespace Route {
+  /**
+   * A Route with intentionally widened path and schema parameters.
+   *
+   * @remarks
+   * ## Why
+   * Heterogeneous route collections can store values while constructor overloads retain precise types.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `Any` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type Any = Route<any, any>;
 
+  /**
+   * Extracts the literal path string type from a Route.
+   *
+   * @remarks
+   * ## Why
+   * Higher-level builders can preserve route spelling through generic composition.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `Path` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type Path<T> = T extends Route<infer P, any> ? P : never;
+  /**
+   * Extracts the combined parameter Codec from a Route.
+   *
+   * @remarks
+   * ## Why
+   * Schema errors and service requirements remain available to generic route utilities.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `Schema` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type Schema<T> = T extends Route<any, infer S> ? S : never;
+  /**
+   * Extracts the decoded parameter type from a Route.
+   *
+   * @remarks
+   * ## Why
+   * Handlers receive the route schema's exact successful value.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `Type` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type Type<T> = T extends Route<any, infer S> ? S["Type"] : never;
+  /**
+   * Combines decoded path and query parameter fields for a route string.
+   *
+   * @remarks
+   * ## Why
+   * Matcher handlers receive one exact parameter object derived from the route grammar.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `Params` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type Params<T> = T extends Route<infer P, infer _S> ? Path.Params<P> : never;
+  /**
+   * Extracts services required to decode a Route's parameters.
+   *
+   * @remarks
+   * ## Why
+   * Matcher requirements include schema dependencies rather than hiding them at runtime.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `DecodingServices` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type DecodingServices<T> = T extends Route<any, infer S> ? S["DecodingServices"] : never;
+  /**
+   * Extracts services required to encode a Route's parameters.
+   *
+   * @remarks
+   * ## Why
+   * Link builders can preserve schema encoding requirements in their Effect environment.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `EncodingServices` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type EncodingServices<T> = T extends Route<any, infer S> ? S["EncodingServices"] : never;
 
+  /**
+   * Extracts the decoded path-only parameter record from a Route.
+   *
+   * @remarks
+   * ## Why
+   * Generic handlers can separate path data from query data.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `PathType` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type PathType<T extends Any> = T["pathSchema"]["Type"];
+  /**
+   * Extracts the decoded query-only parameter record from a Route.
+   *
+   * @remarks
+   * ## Why
+   * Generic handlers can reason about declared query data independently.
+   *
+   * ## Ownership and lifetime
+   * TypeScript computes `QueryType` from its Route input; the alias is erased and owns no runtime value.
+   *
+   * @since 1.0.0
+   * @category routes
+   */
   export type QueryType<T extends Any> = T["querySchema"]["Type"];
 }
 
+/**
+ * A Route with intentionally widened path and schema parameters.
+ *
+ * @remarks
+ * ## Why
+ * Heterogeneous route collections can store values while constructor overloads retain precise types.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `Any` from its Route input; the alias is erased and owns no runtime value.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export type Any = Route.Any;
+/**
+ * Combines decoded path and query parameter fields for a route string.
+ *
+ * @remarks
+ * ## Why
+ * Matcher handlers receive one exact parameter object derived from the route grammar.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `Params` from its Route input; the alias is erased and owns no runtime value.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export type Params<T> = Route.Params<T>;
+/**
+ * Extracts the decoded parameter type from a Route.
+ *
+ * @remarks
+ * ## Why
+ * Handlers receive the route schema's exact successful value.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `Type` from its Route input; the alias is erased and owns no runtime value.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export type Type<T> = Route.Type<T>;
+/**
+ * Extracts the decoded path-only parameter record from a Route.
+ *
+ * @remarks
+ * ## Why
+ * Generic handlers can separate path data from query data.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `PathType` from its Route input; the alias is erased and owns no runtime value.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export type PathType<T extends Any> = Route.PathType<T>;
+/**
+ * Extracts the decoded query-only parameter record from a Route.
+ *
+ * @remarks
+ * ## Why
+ * Generic handlers can reason about declared query data independently.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `QueryType` from its Route input; the alias is erased and owns no runtime value.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export type QueryType<T extends Any> = Route.QueryType<T>;
 
+/**
+ * Constructs a Route from a Route AST and lazily memoizes its path and schemas.
+ *
+ * @remarks
+ * ## Why
+ * Advanced builders can preserve the same invariants as built-in route constructors.
+ *
+ * ## Ownership and lifetime
+ * `make` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @example
+ * ```ts
+ * import { make } from "@typed/router/Route"
+ * import { literal, path } from "@typed/router/AST"
+ *
+ * const Account = make<"/account">(path(literal("account")))
+ * ```
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export function make<
   const P extends string,
   S extends Schema.Codec<any, Path.Params<P>, any, any> = Schema.Codec<Path.Params<P>>,
@@ -190,6 +471,29 @@ function projectRecord(input: unknown, names: ReadonlySet<string>): Record<Prope
   return output;
 }
 
+/**
+ * Parses a route-pattern string into a typed Route.
+ *
+ * @remarks
+ * ## Why
+ * It is the primary constructor for literals, named parameters, optional parameters, regular-
+ * expression parameters, wildcards, and query declarations. The special `??` boundary separates a
+ * terminal optional path parameter from query syntax.
+ *
+ * ## Ownership and lifetime
+ * `Parse` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @example
+ * ```ts
+ * import { Parse, type Route } from "@typed/router/Route"
+ *
+ * const User = Parse("/users/:id?tab=:tab?")
+ * // Route.Type<typeof User> is { readonly id: string; readonly tab?: string }
+ * ```
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export const Parse = <const P extends string>(path: P): Route<Path.Join<Path.ParseAsts<P>>> => {
   const asts = Path.parse(path) as ReadonlyArray<AST.PathAst>;
   if (asts.length === 0) return Slash as unknown as Route<Path.Join<Path.ParseAsts<P>>>;
@@ -199,13 +503,65 @@ export const Parse = <const P extends string>(path: P): Route<Path.Join<Path.Par
   >;
 };
 
+/**
+ * The root slash Route.
+ *
+ * @remarks
+ * ## Why
+ * Root matching remains an explicit route value rather than an empty sentinel.
+ *
+ * ## Ownership and lifetime
+ * `Slash` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export const Slash = make<"/">(AST.path(AST.literal("")));
 
+/**
+ * A Route that captures an unconstrained remainder.
+ *
+ * @remarks
+ * ## Why
+ * Catch-all matching is explicit and can be ordered after constrained routes.
+ *
+ * ## Ownership and lifetime
+ * `Wildcard` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export const Wildcard = make<"*">(AST.path(AST.wildcard()));
 
+/**
+ * Constructs a named string path-parameter Route.
+ *
+ * @remarks
+ * ## Why
+ * Literal parameter names flow into the handler's inferred record type.
+ *
+ * ## Ownership and lifetime
+ * `Param` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export const Param = <const P extends string>(paramName: P): Route<`/:${P}`> =>
   make<`/:${P}`>(AST.path(AST.parameter(paramName)));
 
+/**
+ * Constructs a named path parameter decoded by an Effect Schema Codec.
+ *
+ * @remarks
+ * ## Why
+ * Routes can expose domain values while retaining encoded string matching and schema services.
+ *
+ * ## Ownership and lifetime
+ * `ParamWithSchema` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export const ParamWithSchema = <
   const P extends string,
   S extends Schema.Codec<any, string, any, any> = Schema.Codec<string>,
@@ -227,16 +583,55 @@ export const ParamWithSchema = <
   );
 };
 
+/**
+ * Constructs a finite-number path parameter decoded from a string.
+ *
+ * @remarks
+ * ## Why
+ * Numeric conversion failures stay in route decoding instead of reaching the handler as bad data.
+ *
+ * ## Ownership and lifetime
+ * `Number` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export const Number = <const P extends string>(
   paramName: P,
 ): Route<`/:${P}`, Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>> =>
   ParamWithSchema(paramName, Schema.FiniteFromString);
 
+/**
+ * Constructs an integer path parameter decoded from a string.
+ *
+ * @remarks
+ * ## Why
+ * Integer validation is part of candidate decoding and can fall through to another candidate.
+ *
+ * ## Ownership and lifetime
+ * `Int` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export const Int = <const P extends string>(
   paramName: P,
 ): Route<`/:${P}`, Schema.Codec<{ readonly [K in P]: number }, Path.Params<`/:${P}`>>> =>
   ParamWithSchema(paramName, Schema.FiniteFromString.pipe(Schema.check(Schema.isInt())));
 
+/**
+ * A Route AST node containing ordered child routes.
+ *
+ * @remarks
+ * ## Why
+ * Composition retains child schema boundaries and parameter ownership.
+ *
+ * ## Ownership and lifetime
+ * TypeScript computes `Join` from its Route input; the alias is erased and owns no runtime value.
+ *
+ * @since 1.0.0
+ * @category routes
+ */
 export type Join<Routes extends ReadonlyArray<Route<any, any>>> = [
   Route<
     RouteJoinPath<Routes>,

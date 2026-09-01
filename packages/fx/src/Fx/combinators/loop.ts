@@ -7,6 +7,22 @@ import type { Fx } from "../Fx.js";
  * Loops over an Fx with an accumulator, producing a new value for each element
  * and updating the accumulator.
  *
+ * @remarks
+ * ## Why
+ * `loop` is the primitive for a synchronous state machine over pushed values. Every input emits
+ * exactly one output and installs exactly one next state, preserving source order.
+ *
+ * ## Ownership and lifetime
+ * A fresh accumulator starts from `seed` for each run and is discarded when that run ends. The
+ * pure callback adds no failures, services, fibers, or resources.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ *
+ * const indexed = Fx.fromIterable(["a", "b"]).pipe(Fx.loop(0, (index, value) => [[index, value] as const, index + 1]))
+ * ```
+ *
  * @param seed - The initial value of the accumulator.
  * @param f - A function that takes the accumulator and an element, returning a tuple of the emitted value and the new accumulator.
  * @returns An `Fx` that emits the transformed values.

@@ -8,6 +8,26 @@ import type { Fx } from "../Fx.js";
 /**
  * Effectfully loops over an Fx with an accumulator, producing an optional new value.
  *
+ * @remarks
+ * ## Why
+ * `filterMapLoopEffect` makes the state transition Effectful while retaining zero-or-one output per
+ * input. It adds no serialization: overlapping producer callbacks can read the same seed, complete
+ * out of order, and overwrite one another's next state.
+ *
+ * ## Ownership and lifetime
+ * One mutable seed belongs to each run. Callback Causes are delivered to the Sink, services remain
+ * required, and interruption follows each delivery; callers need a serialized producer for atomic state.
+ *
+ * @example
+ * ```ts
+ * import { Effect, Option } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const counted = Fx.fromIterable(["a", "b"]).pipe(
+ *   Fx.filterMapLoopEffect(0, (count, value) => Effect.succeed([Option.some(`${count}:${value}`), count + 1])),
+ * )
+ * ```
+ *
  * @param seed - The initial state.
  * @param f - The effectful loop function.
  * @returns An `Fx` emitting the transformed values.

@@ -14,6 +14,30 @@ import type { Fx } from "../Fx.js";
  * `Schedule.recurs(n)` runs the stream `n + 1` times (the original plus `n`
  * repeats), matching Effect `Stream.repeat`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Repetition is a subscription-level decision: after one producer completes,
+ * a Schedule decides whether and when a fresh run should begin. Keeping that
+ * decision in Effect's Schedule preserves typed timing services and failures.
+ *
+ * ## Ownership and lifetime
+ *
+ * Runs are strictly sequential. Every source value is forwarded before the
+ * Schedule is stepped with `void`; a successful step sleeps as configured and
+ * starts a new source run. A source failure stops immediately and is never
+ * repeated. Schedule failure is forwarded; Schedule completion ends normally.
+ * Interruption cancels the active source or schedule sleep. No runs overlap.
+ *
+ * @example
+ * ```ts
+ * import { Schedule } from "effect"
+ * import { repeat } from "@typed/fx/Fx"
+ * import { succeed } from "@typed/fx/Fx"
+ *
+ * const threeTicks = repeat(succeed("tick"), Schedule.recurs(2))
+ * ```
+ *
  * @since 1.0.0
  * @category combinators
  */

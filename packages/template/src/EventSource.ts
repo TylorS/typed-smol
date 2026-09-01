@@ -14,14 +14,33 @@ type Handler<Ev extends Event> = EventHandler<Ev>;
  * It abstracts the process of adding and removing event listeners, ensuring that they are
  * properly cleaned up when the scope is closed or the element is removed.
  *
+ * @remarks
+ * ## Why
+ *
+ * `EventSource` delegates browser events across the concrete nodes represented
+ * by a rendered value. A matching callback receives a non-pooled `Proxy` that
+ * forwards properties, binds methods to the native event, and overrides
+ * `currentTarget` with the registered delegated target. Handlers may be
+ * registered before or after a mount.
+ *
+ * ## Ownership and lifetime
+ *
+ * `setup` binds one rendered range to an explicit Effect `Scope`. That Scope
+ * removes native listeners and interrupts every handler fiber it started.
+ * Disposing the value returned by `addEventListener` removes only that entry.
+ * No document-global registry or parallel propagation model is created, but the
+ * callback event is not object-identical to the browser event because of that
+ * `currentTarget` Proxy.
+ *
+ * @see https://effect.website/docs/resource-management/scope/
+ *
  * @example
  * ```ts
- * import { Effect } from "effect"
+ * import { Effect, Scope } from "effect"
  * import { makeEventSource } from "@typed/template/EventSource"
  * import * as EventHandler from "@typed/template/EventHandler"
- * import { Scope } from "effect"
  *
- * const program = Effect.gen(function* () {
+ * const program = Effect.scoped(Effect.gen(function* () {
  *   const eventSource = makeEventSource()
  *   const button = document.createElement("button")
  *
@@ -33,11 +52,11 @@ type Handler<Ev extends Event> = EventHandler<Ev>;
  *   const disposable = eventSource.addEventListener(button, "click", handler)
  *
  *   // Setup listeners for rendered content
- *   yield* eventSource.setup(button, yield* Scope.make())
+ *   yield* eventSource.setup(button, yield* Scope.Scope)
  *
  *   // Cleanup
  *   disposable[Symbol.dispose]()
- * })
+ * }))
  * ```
  *
  * @since 1.0.0
@@ -45,7 +64,21 @@ type Handler<Ev extends Event> = EventHandler<Ev>;
  */
 export interface EventSource {
   /**
-   * Adds an event listener to a target.
+   * Registers a delegated native event handler for one concrete target.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Registration can happen before a rendered range is attached, keeping
+   * template compilation separate from mounting.
+   *
+   * ## Ownership and lifetime
+   *
+   * The returned Disposable removes this entry from every active mount; each
+   * mount Scope independently owns its native attachments.
+   *
+   * @since 1.0.0
+   * @category methods
    */
   readonly addEventListener: <Ev extends Event>(
     element: EventTarget,
@@ -55,6 +88,20 @@ export interface EventSource {
 
   /**
    * Sets up event listeners for a rendered template within a scope.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Delegation attaches to the concrete elements represented by DOM output. The
+   * proxy preserves the browser event's `target`, properties, and bound methods
+   * while reporting the registered element as `currentTarget`.
+   *
+   * ## Ownership and lifetime
+   *
+   * The supplied Scope removes listeners and interrupts handler fibers.
+   *
+   * @since 1.0.0
+   * @category methods
    */
   readonly setup: (rendered: Rendered, scope: Scope.Scope) => Effect.Effect<void>;
 }
@@ -82,13 +129,25 @@ const dispose = (d: Disposable): void => d[Symbol.dispose]();
  * The created `EventSource` can efficiently manage multiple event listeners,
  * grouping them by event type and handling setup/teardown lifecycles.
  *
+ * @remarks
+ * ## Why
+ *
+ * The source is a small renderer-local registry that supports delegated
+ * listeners without requiring a component runtime.
+ *
+ * ## Ownership and lifetime
+ *
+ * Construction allocates only the in-memory registry. Each `setup` call ties
+ * attached native listeners and forked handler Effects to the supplied Scope;
+ * returned per-handler disposables remain independently usable.
+ *
  * @example
  * ```ts
- * import { Effect } from "effect"
+ * import { Effect, Scope } from "effect"
  * import { makeEventSource } from "@typed/template/EventSource"
  * import * as EventHandler from "@typed/template/EventHandler"
  *
- * const program = Effect.gen(function* () {
+ * const program = Effect.scoped(Effect.gen(function* () {
  *   const eventSource = makeEventSource()
  *   const element = document.createElement("div")
  *
@@ -97,8 +156,8 @@ const dispose = (d: Disposable): void => d[Symbol.dispose]();
  *   eventSource.addEventListener(element, "mouseover", EventHandler.make(() => console.log("hovered")))
  *
  *   // Setup all listeners
- *   yield* eventSource.setup(element, yield* Scope.make())
- * })
+ *   yield* eventSource.setup(element, yield* Scope.Scope)
+ * }))
  * ```
  *
  * @since 1.0.0

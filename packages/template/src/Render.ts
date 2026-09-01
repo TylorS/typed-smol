@@ -61,6 +61,17 @@ import { getAllSiblingsBetween, isText, persistent, type Rendered } from "./Wire
  * Defaults to the global `document` object. This can be overridden for testing
  * or environments where the global document is not available or desired.
  *
+ * @remarks
+ * ## Why
+ *
+ * DOM creation is an explicit Effect service so tests, iframes, and alternate
+ * documents can use the same renderer without patching `globalThis.document`.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reference borrows the provided `Document`; it does not own or close the
+ * browsing context. The surrounding Layer controls how long the override lives.
+ *
  * @example
  * ```ts
  * import { CurrentRenderDocument } from "@typed/template/Render"
@@ -88,6 +99,18 @@ const CurrentInsertionContext = Context.Reference<Element | undefined>("RenderIn
  * It ensures that DOM updates are batched and executed efficiently, often coordinating
  * with browser painting cycles (e.g., via `requestAnimationFrame`).
  *
+ * @remarks
+ * ## Why
+ *
+ * Scheduling policy is separate from template semantics. Scalar parts retain
+ * direct DOM targets while the queue decides when their already-local updates
+ * execute.
+ *
+ * ## Ownership and lifetime
+ *
+ * The default queue is created lazily for the current Effect context. Queue
+ * callbacks are disposable and render Scopes cancel pending work on cleanup.
+ *
  * @example
  * ```ts
  * import { CurrentRenderQueue } from "@typed/template/Render"
@@ -111,6 +134,16 @@ export const CurrentRenderQueue = Context.Reference<RQ.RenderQueue>("RenderQueue
  *
  * The default value is `RenderPriority.Raf(10)`, which typically schedules updates
  * to occur before the next repaint.
+ *
+ * @remarks
+ * ## Why
+ *
+ * A numeric priority lets one queue order synchronous, animation-frame, timer,
+ * and idle work without embedding scheduler policy in each directive.
+ *
+ * ## Ownership and lifetime
+ *
+ * The service is immutable scheduling metadata and owns no callback.
  *
  * @example
  * ```ts
@@ -139,6 +172,37 @@ export const CurrentRenderPriority = Context.Reference<number>("CurrentRenderPri
  * - Setting up event listeners.
  * - Managing fine-grained updates to DOM nodes via `Fx` streams.
  *
+ * @remarks
+ * ## Why
+ *
+ * The Layer is the DOM implementation of the same `RenderTemplate` service used
+ * by SSR. It compiles a literal once, clones namespace-correct fragments, and
+ * connects each captured part directly to its producer—there is no virtual DOM
+ * or component-specific event state. Delegated handlers receive EventSource's
+ * documented native-event Proxy so `currentTarget` can identify their target.
+ *
+ * ## Ownership and lifetime
+ *
+ * Template and fragment caches live with the Layer service. Each emitted DOM
+ * range has a child Scope owning subscriptions, delegated native listeners,
+ * queued callbacks, and ref finalizers. Only nodes and attributes represented by
+ * that range are changed; external classes and unowned siblings remain intact.
+ *
+ * ## Cost model and moves
+ *
+ * Captured scalar text, attribute, property, boolean, comment, and ref parts
+ * update their retained target in O(1) with respect to the surrounding tree.
+ * Structural changes diff only the local dynamic range. Moving an already
+ * connected node prefers `ParentNode.moveBefore` and falls back to
+ * `insertBefore`, preserving DOM identity and browser state.
+ *
+ * ## Web standards
+ *
+ * HTML, SVG, MathML, and foreign-content namespace boundaries are compiled with
+ * native DOM APIs. Dialog, popover, anchor positioning, custom elements, and
+ * browser event behavior remains available through EventSource's forwarding
+ * Proxy because the renderer does not replace the platform event model.
+ *
  * @example
  * ```ts
  * import { Effect, Layer } from "effect"
@@ -149,7 +213,7 @@ export const CurrentRenderPriority = Context.Reference<number>("CurrentRenderPri
  * const program = Effect.gen(function* () {
  *   const template = html`<div>Hello, world!</div>`
  *
- *   yield* render(template, document.body).pipe(
+ *   return yield* render(template, document.body).pipe(
  *     Fx.drainLayer,
  *     Layer.provide(DomRenderTemplate),
  *     Layer.launch
@@ -290,7 +354,28 @@ export const DomRenderTemplate = Object.assign(
 );
 
 /**
- * A helper type to determine the rendered output type.
+ * Computes the DOM value represented by a nullable `RenderEvent`.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Root rendering preserves `null` in the public result when a source can render
+ * nothing, while non-null events expose their actual `Rendered` nodes.
+ *
+ * ## Ownership and lifetime
+ *
+ * This type-level projection does not own the nodes it describes.
+ *
+ * @example
+ * ```ts
+ * import type { ToRendered } from "@typed/template/Render"
+ * import type { DomRenderEvent } from "@typed/template/RenderEvent"
+ *
+ * type Output = ToRendered<DomRenderEvent>
+ * ```
+ *
+ * @since 1.0.0
+ * @category type-level
  */
 export type ToRendered<T extends RenderEvent | null> = Rendered | (T extends null ? null : never);
 
@@ -310,13 +395,35 @@ type ToRenderedRenderable<T> =
  * - Updating the content as new events are emitted.
  * - Hydrating the content if hydration context is provided.
  *
+ * @remarks
+ * ## Why
+ *
+ * `render` makes the root ownership boundary explicit. It connects any
+ * `Renderable` to one concrete element while preserving the Renderable's typed
+ * failures and Effect service requirements. The source can be a primitive,
+ * template, Effect, Stream, Fx, or existing RenderEvent.
+ *
+ * ## Ownership and lifetime
+ *
+ * Calling `render` returns an Fx and starts no work. The Scope that runs that Fx
+ * owns dynamic subscriptions and cleanup. The renderer tracks only the rendered
+ * value associated with `where`; it does not claim the document, overwrite
+ * unrelated class names, or remove nodes outside its dynamic ownership.
+ *
+ * ## DOM updates and hydration
+ *
+ * Scalar template parts retain direct targets and update without traversing a
+ * virtual tree. Structural output reconciles only its bounded range. Existing
+ * server-rendered nodes can be hydrated through `HydrateContext` instead of
+ * replaced, preserving their identity and native browser state.
+ *
  * @example
  * ```ts
  * import { Effect, Layer } from "effect"
  * import { html } from "@typed/template"
  * import { DomRenderTemplate, render } from "@typed/template/Render"
  * import { Fx } from "@typed/fx"
- * import * as RefSubject from "@typed/fx/RefSubject"
+ * import { RefSubject } from "@typed/fx/RefSubject"
  *
  * const program = Effect.gen(function* () {
  *   const count = yield* RefSubject.make(0)
@@ -327,7 +434,7 @@ type ToRenderedRenderable<T> =
  *   </div>`
  *
  *   // Render to document.body
- *   yield* render(template, document.body).pipe(
+ *   return yield* render(template, document.body).pipe(
  *     Fx.drainLayer,
  *     Layer.provide(DomRenderTemplate),
  *     Layer.launch
@@ -995,6 +1102,33 @@ function makeSpreadPartInstance<R>(
   } satisfies SpreadPartInstance);
 }
 
+/**
+ * Advanced per-template DOM rendering state used by renderer extensions.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The context gathers explicit Effect services, a forked child Scope, delegated
+ * native events, queue policy, ref coordination, and optional hydration state
+ * without relying on a hidden component tree.
+ *
+ * ## Ownership and lifetime
+ *
+ * The child `scope` owns dynamic parts, handler fibers, queued callbacks, and
+ * disposables. The context borrows its `Document`, input values, and parent
+ * services and must not outlive that child Scope.
+ *
+ * @example
+ * ```ts
+ * import type { TemplateContext } from "@typed/template/Render"
+ *
+ * declare const context: TemplateContext
+ * context.renderQueue
+ * ```
+ *
+ * @since 1.0.0
+ * @category advanced
+ */
 export type TemplateContext<R = never> = {
   readonly document: Document;
   readonly renderQueue: RQ.RenderQueue;
@@ -1066,6 +1200,30 @@ const makeTemplateContext = Effect.fn(function* <
  * Converts any Renderable into an Fx while preserving its nested errors and
  * service requirements.
  *
+ * @remarks
+ * ## Why
+ *
+ * Effect, Stream, Fx, Option, arrays, object structures, primitives, and
+ * existing RenderEvents all enter rendering through one push-based substrate.
+ * This is the compositional bridge that keeps Effect v4 foundational rather
+ * than replacing it with a component-specific runtime.
+ *
+ * ## Ownership and lifetime
+ *
+ * Lifting is lazy. The Scope running the returned Fx owns upstream acquisition,
+ * interruption, and finalizers; existing DOM/HTML events retain their producer's
+ * ownership contract.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { liftRenderableToFx } from "@typed/template/Render"
+ *
+ * const output = liftRenderableToFx(Effect.succeed("ready"))
+ * ```
+ *
+ * @see https://effect.website/docs/stream/introduction/
+ *
  * @since 1.0.0
  * @category constructors
  */
@@ -1124,6 +1282,33 @@ function makeArrayLike<A>(index: number, value: A): ArrayLike<A> {
   };
 }
 
+/**
+ * Locates a compatible SSR template range for an advanced render context.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Hydration is a precise marker-and-hash match, not a promise to reconcile any
+ * arbitrary existing HTML. A missing compatible range disables hydration for
+ * the context and lets normal DOM construction proceed.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned range and context are borrowed from the active render Scope.
+ * This function does not acquire nodes, attach events, or sanitize markup.
+ *
+ * @example
+ * ```ts
+ * import { attemptHydration } from "@typed/template/Render"
+ * import type { TemplateContext } from "@typed/template/Render"
+ *
+ * declare const context: TemplateContext
+ * const match = attemptHydration(context, "template-hash")
+ * ```
+ *
+ * @since 1.0.0
+ * @category advanced
+ */
 export function attemptHydration(
   ctx: TemplateContext,
   hash: string,

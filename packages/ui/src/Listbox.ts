@@ -1,3 +1,17 @@
+/**
+ * Listbox separates active and selected values, registers options in a Collection, and combines
+ * vertical keyboard movement with buffered typeahead. It supports roving focus by default and uses
+ * real focus, keydown, and click events.
+ *
+ * @remarks
+ * The module keeps policy, state transitions, and DOM rendering separable so applications can use
+ * the state and pure operations without mounting UI, or supply custom hosts without replacing native
+ * events and browser-owned focus.
+ *
+ * @since 1.0.0
+ * @category modules
+ * @packageDocumentation
+ */
 import * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
@@ -15,15 +29,107 @@ import * as Composite from "./Composite.js";
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
+/**
+ * Complete renderer-independent state for Listbox.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Applications can inspect, update, and test Listbox behavior without mounting or coupling the
+ * state to a renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { State } from "@typed/ui/Listbox";` Extend the [Listbox.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FListbox%23makeState). Inside the linked program,
+ * `const snapshot: State = yield* state` exposes selection and active-option focus separately.
+ * @since 1.0.0
+ * @category models
+ */
 export interface State extends Omit<Composite.State, "orientation"> {
+  /**
+   * Axis used to interpret Arrow-key movement.
+   * @since 1.0.0
+   * @category models
+   */
   readonly orientation: "vertical";
+  /**
+   * Current semantic value selected or edited by the widget.
+   * @since 1.0.0
+   * @category models
+   */
   readonly value: string | null;
 }
+/**
+ * Initial Listbox values. value and activeId default to null, loop defaults to true, and roving
+ * focus is used.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Making initialization explicit documents hydration-sensitive defaults and lets servers and
+ * clients construct matching state.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { InitialState } from "@typed/ui/Listbox";` Extend the
+ * [Listbox.makeState runnable setup](/reference/%40typed%2Fui%2FListbox%23makeState). Construct an
+ * empty selection with
+ * `const initial: InitialState = { value: null, activeId: null }; const state = yield* Listbox.makeState(initial)`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface InitialState {
+  /**
+   * Current semantic value selected or edited by the widget.
+   * @since 1.0.0
+   * @category models
+   */
   readonly value?: string | null;
+  /**
+   * Id currently active for keyboard navigation; null means no active item.
+   * @since 1.0.0
+   * @category models
+   */
   readonly activeId?: string | null;
+  /**
+   * Whether movement wraps between the first and last enabled items.
+   * @since 1.0.0
+   * @category models
+   */
   readonly loop?: boolean;
 }
+/**
+ * Effect Schema used by makeState to encode, decode, and hydrate Listbox state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * A public schema makes hydration and serialized state use the same runtime validation as direct
+ * construction.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * @example
+ * ```ts
+ * import * as Schema from "effect/Schema";
+ * import * as Listbox from "@typed/ui/Listbox";
+ *
+ * const decodeState = Schema.decodeUnknownEffect(Listbox.StateSchema);
+ * ```
+ * @since 1.0.0
+ * @category schemas
+ */
 export const StateSchema = Schema.Struct({
   value: Schema.NullOr(Schema.String),
   activeId: Schema.NullOr(Schema.String),
@@ -32,6 +138,37 @@ export const StateSchema = Schema.Struct({
   rtl: Schema.Boolean,
   virtualFocus: Schema.Boolean,
 });
+/**
+ * Creates hydrated Listbox state. value and activeId default to null, loop defaults to true, and
+ * roving focus is used.
+ *
+ * @remarks
+ * ## Why
+ *
+ * State and collection ownership can be composed and tested independently from any renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect creates the RefSubject when run. That state is renderer-independent;
+ * collection registrations belong to the separate Scope that runs register or ref, not to state
+ * creation.
+ *
+ * @example
+ * ```ts
+ * import * as Effect from "effect/Effect";
+ * import * as Listbox from "@typed/ui/Listbox";
+ *
+ * const program = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     const state = yield* Listbox.makeState({});
+ *     const collection = yield* Listbox.makeCollection();
+ *     return { state: yield* state, collection: yield* collection };
+ *   }),
+ * );
+ * ```
+ * @since 1.0.0
+ * @category constructors
+ */
 export function makeState(initial: InitialState = {}) {
   return RefSubject.hydrate(StateSchema, {
     value: initial.value ?? null,
@@ -42,7 +179,58 @@ export function makeState(initial: InitialState = {}) {
     virtualFocus: false,
   });
 }
+/**
+ * Creates a scoped Collection for Listbox items.
+ *
+ * @remarks
+ * ## Why
+ *
+ * State and collection ownership can be composed and tested independently from any renderer.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
+ * owned by the Scope that runs register, independently of this construction Effect.
+ *
+ * @example
+ * ```ts
+ * import * as Effect from "effect/Effect";
+ * import * as Listbox from "@typed/ui/Listbox";
+ *
+ * const program = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     const collection = yield* Listbox.makeCollection();
+ *     return yield* collection;
+ *   }),
+ * );
+ * ```
+ * @since 1.0.0
+ * @category constructors
+ */
 export const makeCollection = Collection.makeState<string>;
+/**
+ * Sets both activeId and selected value in one update.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The operation exposes Listbox's transition directly so callers can compose it in Effect programs
+ * and native event handlers.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect performs the update or DOM side effect only when run, preserves the declared
+ * error and service channels, and retains no resources after completion.
+ *
+ * ## Example
+ *
+ * Import with `import { select } from "@typed/ui/Listbox";` Extend the [Listbox.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FListbox%23makeState). Inside the linked Effect program invoke
+ * `yield* select(state, "nyc", "New York")`, then read state to observe selection and active focus
+ * update together.
+ * @since 1.0.0
+ * @category combinators
+ */
 export function select<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
   id: string,
@@ -51,6 +239,30 @@ export function select<E, R>(
   return RefSubject.update(state, (current) => ({ ...current, activeId: id, value }));
 }
 
+/**
+ * Moves through the registered options, synchronizes value when the target has one, then focuses
+ * and scrolls the active option.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The operation exposes Listbox's transition directly so callers can compose it in Effect programs
+ * and native event handlers.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect performs the update or DOM side effect only when run, preserves the declared
+ * error and service channels, and retains no resources after completion.
+ *
+ * ## Example
+ *
+ * Import with `import { move } from "@typed/ui/Listbox";` Extend the [Listbox.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FListbox%23makeState). Inside the linked Effect program invoke
+ * `yield* move(state, collection, "next")`, then read the state snapshot to observe the transition
+ * described above.
+ * @since 1.0.0
+ * @category combinators
+ */
 export function move(
   state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>,
   collection: RefSubject.RefSubject<Collection.State<string>>,
@@ -72,10 +284,51 @@ export function move(
   });
 }
 
+/**
+ * Inputs accepted by Listbox.Root in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The options type makes required state, content, accessible relationships, and custom-host inputs
+ * visible before rendering.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { RootOptions } from "@typed/ui/Listbox";` Extend the [Listbox.makeState
+ * runnable setup](/reference/%40typed%2Fui%2FListbox%23makeState). Enable collection-driven focus
+ * with `const options: RootOptions = { state, collection, label: "City", content: "Options" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
+  /**
+   * Renderer-independent RefSubject state consumed by this component or operation.
+   * @since 1.0.0
+   * @category models
+   */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
+  /**
+   * Item registry used for collection-driven keyboard behavior and mounted ordering.
+   * @since 1.0.0
+   * @category models
+   */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
+  /**
+   * Renderable child content for the component host.
+   * @since 1.0.0
+   * @category models
+   */
   readonly content: Renderable.Any;
+  /**
+   * Accessible label rendered through aria-label.
+   * @since 1.0.0
+   * @category models
+   */
   readonly label?: Renderable.Any<string | null | undefined>;
 }
 function rootProps<const Options extends RootOptions>(options: Options) {
@@ -135,6 +388,31 @@ function rootProps<const Options extends RootOptions>(options: Options) {
     }) as const;
 }
 type RootProps<Options extends RootOptions> = ReturnType<ReturnType<typeof rootProps<Options>>>;
+/**
+ * Renders the listbox root, initializes selection on focus, and handles vertical movement and
+ * typeahead in DOM order.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { Root } from "@typed/ui/Listbox";` Extend the [Listbox.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FListbox%23makeState). Replace the linked program's final
+ * snapshot read with `Root({ state, label: "City", content: "Options" })`; render that Fx before
+ * the same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function Root<const Options extends RootOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<
@@ -158,13 +436,70 @@ export function Root<const Options extends RootOptions, const Host extends HostR
   });
 }
 
+/**
+ * Inputs accepted by Listbox.Option in addition to the shared DOM host options.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The options type makes required state, content, accessible relationships, and custom-host inputs
+ * visible before rendering.
+ *
+ * ## Ownership and lifetime
+ *
+ * This declaration is data or schema metadata and acquires no resources.
+ *
+ * ## Example
+ *
+ * Import with `import type { OptionOptions } from "@typed/ui/Listbox";` Extend the
+ * [Listbox.makeState runnable setup](/reference/%40typed%2Fui%2FListbox%23makeState). A selectable
+ * option is
+ * `const options: OptionOptions = { state, collection, id: "nyc", value: "New York", content: "New York" }`.
+ * @since 1.0.0
+ * @category models
+ */
 export interface OptionOptions extends Dom.HostOptions<HTMLDivElement> {
+  /**
+   * Renderer-independent RefSubject state consumed by this component or operation.
+   * @since 1.0.0
+   * @category models
+   */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
+  /**
+   * Item registry used for collection-driven keyboard behavior and mounted ordering.
+   * @since 1.0.0
+   * @category models
+   */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
+  /**
+   * Stable id used for collection identity and ARIA relationships.
+   * @since 1.0.0
+   * @category models
+   */
   readonly id: string;
+  /**
+   * Current semantic value selected or edited by the widget.
+   * @since 1.0.0
+   * @category models
+   */
   readonly value: string;
+  /**
+   * Renderable child content for the component host.
+   * @since 1.0.0
+   * @category models
+   */
   readonly content: Renderable.Any;
+  /**
+   * Search text used by typeahead independently of rendered markup.
+   * @since 1.0.0
+   * @category models
+   */
   readonly textValue?: string;
+  /**
+   * Flag used by collection movement and widget handlers to skip activation by default.
+   * @since 1.0.0
+   * @category models
+   */
   readonly disabled?: boolean;
 }
 function optionProps<const Options extends OptionOptions>(options: Options) {
@@ -195,6 +530,30 @@ function optionProps<const Options extends OptionOptions>(options: Options) {
 type OptionProps<Options extends OptionOptions> = ReturnType<
   ReturnType<typeof optionProps<Options>>
 >;
+/**
+ * Renders and optionally registers an option; focus or click selects it unless disabled.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The component applies the family behavior while leaving callers free to supply a custom host
+ * through the shared DOM boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
+ * collection registrations only when rendered. The rendering Scope removes those resources;
+ * unrelated nodes and attributes remain caller-owned.
+ *
+ * ## Example
+ *
+ * Import with `import { Option } from "@typed/ui/Listbox";` Extend the [Listbox.makeState runnable
+ * setup](/reference/%40typed%2Fui%2FListbox%23makeState). Replace the linked program's final
+ * snapshot read with `Option({ state, id: "nyc", value: "New York", content: "New York" })`; render
+ * that Fx before the same Scope closes.
+ * @since 1.0.0
+ * @category components
+ */
 export function Option<const Options extends OptionOptions, const Host extends HostResult = never>(
   options: Options,
   host?: Dom.HostOverride<

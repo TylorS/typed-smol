@@ -7,6 +7,22 @@ import { switchMap } from "./switchMap.js";
 /**
  * Conditionally runs one of two Fx streams based on the boolean value emitted by the condition stream.
  *
+ * @remarks
+ * ## Why
+ * `if` turns boolean pushes into a switchable branch. Each condition value selects one branch,
+ * interrupts the previous branch, and forwards only values from the currently selected Fx.
+ *
+ * ## Ownership and lifetime
+ * The required Scope owns the active branch. Replacement interrupts and awaits the previous branch;
+ * consumer interruption closes the active work. Failures are delivered to the Sink and only become
+ * terminal when the chosen Sink policy interrupts observation.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const status = Fx.if(Fx.fromIterable([true, false]), { onTrue: Fx.succeed("on"), onFalse: Fx.succeed("off") })
+ * ```
+ *
  * @param condition - An `Fx` emitting booleans.
  * @param matchers - An object containing `onTrue` and `onFalse` Fx streams.
  * @returns An `Fx` that switches between `onTrue` and `onFalse` based on the condition.
@@ -35,9 +51,8 @@ const if_: {
       onFalse: Fx<C, E3, R3>;
     },
   ): Fx<B | C, E | E2 | E3, R | R2 | R3 | Scope> => {
-    return switchMap(
-      condition,
-      (pass): Fx<B | C, E2 | E3, R2 | R3> => (pass ? matchers.onTrue : matchers.onFalse),
+    return switchMap(condition, (pass): Fx<B | C, E2 | E3, R2 | R3> =>
+      pass ? matchers.onTrue : matchers.onFalse,
     );
   },
 );
@@ -46,6 +61,25 @@ export { if_ as if };
 
 /**
  * Conditionally emits one of two values based on the boolean value emitted by the condition stream.
+ *
+ * @remarks
+ * ## Why
+ * `when` is the value-only form of `if`, implemented with `switchMap`. Each condition push selects a
+ * constant inner Fx, but a newer condition can interrupt that inner before it emits; output
+ * cardinality can therefore be lower than the number of condition values.
+ *
+ * ## Ownership and lifetime
+ * It delegates branch switching to `if`; its constant branches acquire no resources. The Scope owns
+ * scheduled branch fibers, replacement awaits their interruption, and source completion waits for
+ * the latest selected branch.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const program = Fx.collectAll(
+ *   Fx.when(Fx.fromIterable([true, false]), { onTrue: "yes", onFalse: "no" })
+ * ) // the later `false` may replace `true` before "yes" is emitted
+ * ```
  *
  * @param condition - An `Fx` emitting booleans.
  * @param matchers - An object containing `onTrue` and `onFalse` values.

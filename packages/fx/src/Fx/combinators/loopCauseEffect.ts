@@ -8,6 +8,24 @@ import type { Fx } from "../Fx.js";
 /**
  * Effectfully loops over the failure causes of an Fx with an accumulator.
  *
+ * @remarks
+ * ## Why
+ * `loopCauseEffect` allows cause transformation to consult services or perform Effects while
+ * retaining state between failures. It does not serialize concurrent failure deliveries, so
+ * overlapping callbacks can read the same seed and commit in completion order.
+ *
+ * ## Ownership and lifetime
+ * One mutable seed belongs to each run. Required services remain in the result; callback failure is
+ * delivered to the Sink, and interruption follows each producer delivery without adding a lock.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const observed = Fx.fail("offline").pipe(Fx.loopCauseEffect(0, (n, cause) => Effect.succeed([cause, n + 1])))
+ * ```
+ *
  * @param seed - The initial state.
  * @param f - The effectful loop function for causes.
  * @returns An `Fx` with transformed errors.

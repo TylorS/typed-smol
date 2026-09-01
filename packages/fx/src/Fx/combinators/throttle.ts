@@ -14,6 +14,28 @@ import { extendScope } from "../internal/scope.js";
  * Options for {@link throttle}. A duration-only call is leading-edge
  * (`{ leading: true, trailing: false }`).
  *
+ * @remarks
+ * ## Why
+ *
+ * Leading and trailing edges answer different interaction needs, so the
+ * window policy is explicit rather than hidden behind separate operators.
+ *
+ * ## Ownership and lifetime
+ *
+ * This immutable value owns no resource. `throttle` reads it when constructing
+ * the Fx; the resulting subscription owns the timer and pending value.
+ *
+ * @example
+ * ```ts
+ * import type { ThrottleOptions } from "@typed/fx/Fx"
+ *
+ * const options: ThrottleOptions = {
+ *   duration: "250 millis",
+ *   leading: true,
+ *   trailing: true
+ * }
+ * ```
+ *
  * @since 1.0.0
  * @category models
  */
@@ -92,37 +114,63 @@ const throttleWindow = <A, E, R>(
   );
 
 /**
- * Emits at most one leading value per `duration` window.
+ * Limits emissions to configured leading and trailing edges of fixed windows.
  *
- * Pass `{ duration, leading, trailing }` for RxJS-style trailing / both-edge
- * throttle. Defaults are `{ leading: true, trailing: false }`.
+ * Pass `{ duration, leading, trailing }` for trailing or both-edge behavior.
+ * A duration alone defaults to `{ leading: true, trailing: false }`.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Throttling bounds push frequency while allowing immediate feedback, a final
+ * settled value, or both, without moving timing state outside the Fx graph.
+ *
+ * ## Ownership and lifetime
+ *
+ * The first value opens a window. Leading mode emits it immediately. Values
+ * arriving while open replace one pending latest value; trailing mode emits
+ * that value when the timer closes, except that both-edge mode does not repeat
+ * the first value unless another arrived. Windows never overlap. Source errors
+ * propagate, source completion waits for the active window, and interruption
+ * stops the scoped timer and discards pending state.
+ *
+ * @example
+ * ```ts
+ * import { throttle } from "@typed/fx/Fx"
+ * import { fromIterable } from "@typed/fx/Fx"
+ *
+ * const bounded = throttle(fromIterable([1, 2, 3]), {
+ *   duration: "250 millis",
+ *   leading: true,
+ *   trailing: true
+ * })
+ * ```
  *
  * @since 1.0.0
  * @category combinators
  */
 export const throttle: {
-  (
-    duration: Duration.Input,
-  ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;
-  (
-    options: ThrottleOptions,
-  ): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;
+  (duration: Duration.Input): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;
+  (options: ThrottleOptions): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;
   <A, E, R>(fx: Fx<A, E, R>, duration: Duration.Input): Fx<A, E, R | Scope.Scope>;
   <A, E, R>(fx: Fx<A, E, R>, options: ThrottleOptions): Fx<A, E, R | Scope.Scope>;
-} = dual((args) => isFx(args[0]), <A, E, R>(
-  fx: Fx<A, E, R>,
-  durationOrOptions: Duration.Input | ThrottleOptions,
-): Fx<A, E, R | Scope.Scope> => {
-  const { duration, leading, trailing } = resolve(durationOrOptions);
-  if (leading && !trailing) {
-    return exhaustMap(fx, (a) =>
-      make(
-        Effect.fn(function* (sink) {
-          yield* sink.onSuccess(a);
-          yield* Effect.sleep(duration);
-        }),
-      ),
-    );
-  }
-  return throttleWindow(fx, duration, leading, trailing);
-});
+} = dual(
+  (args) => isFx(args[0]),
+  <A, E, R>(
+    fx: Fx<A, E, R>,
+    durationOrOptions: Duration.Input | ThrottleOptions,
+  ): Fx<A, E, R | Scope.Scope> => {
+    const { duration, leading, trailing } = resolve(durationOrOptions);
+    if (leading && !trailing) {
+      return exhaustMap(fx, (a) =>
+        make(
+          Effect.fn(function* (sink) {
+            yield* sink.onSuccess(a);
+            yield* Effect.sleep(duration);
+          }),
+        ),
+      );
+    }
+    return throttleWindow(fx, duration, leading, trailing);
+  },
+);

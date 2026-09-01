@@ -38,15 +38,32 @@ const toHtmlString = (event: RenderEvent | null | undefined): Option<string> => 
  * This function transforms the output of a template rendering process (which produces `RenderEvent`s)
  * into a stream of strings suitable for HTML output (e.g., for Server-Side Rendering).
  *
+ * @remarks
+ * ## Why
+ *
+ * This keeps SSR push-based: each ordered renderer-owned HTML event becomes an
+ * output chunk as it arrives. Unlike DOM rendering, dynamic inputs use the
+ * HTML layer's single-value computed behavior and do not remain live.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Fx owns no response by itself. Its running Effect Scope owns
+ * subscriptions and interruption; the caller owns the HTTP response or other
+ * sink consuming the strings. Typed errors and required services are preserved.
+ *
+ * ## Trust boundary
+ *
+ * Ordinary dynamic template data is contextually escaped. Branded
+ * `HtmlRenderEvent` values are trusted renderer output, not a raw-HTML API.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
  * import { html } from "@typed/template"
  * import { renderToHtml, HtmlRenderTemplate } from "@typed/template/Html"
  * import { Fx } from "@typed/fx"
- * import { Layer } from "effect"
  *
- * const program = Effect.gen(function* () {
+ * const program = Effect.scoped(Effect.gen(function* () {
  *   const template = html`<div>Hello, ${"world"}!</div>`
  *
  *   // Render to HTML string stream
@@ -57,7 +74,7 @@ const toHtmlString = (event: RenderEvent | null | undefined): Option<string> => 
  *   // Collect all HTML chunks
  *   const chunks = yield* Fx.collectAll(htmlStream)
  *   console.log(chunks.join("")) // "<div>Hello, world!</div>"
- * })
+ * }))
  * ```
  *
  * @param renderable - The RenderEvents to render.
@@ -80,15 +97,29 @@ export function renderToHtml<const T extends Renderable.Any>(
  * This is a convenience function that collects all events from `renderToHtml` and joins them
  * into a single string. It is an Effect that resolves when the stream completes.
  *
+ * @remarks
+ * ## Why
+ *
+ * This is the finite-response convenience over `renderToHtml`: it preserves
+ * ordered chunks but buffers them when the caller needs one complete body.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned Effect runs and finalizes the source Fx. The resulting string is
+ * caller-owned; errors and required services remain in the Effect type.
+ *
+ * ## Cost model
+ *
+ * Collection requires memory proportional to the complete rendered response.
+ * Prefer `renderToHtml` when the transport can stream chunks.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
  * import { html } from "@typed/template"
  * import { renderToHtmlString, HtmlRenderTemplate } from "@typed/template/Html"
- * import { Fx } from "@typed/fx"
- * import { Layer } from "effect"
  *
- * const program = Effect.gen(function* () {
+ * const program = Effect.scoped(Effect.gen(function* () {
  *   const template = html`<div>
  *     <h1>Hello</h1>
  *     <p>World</p>
@@ -96,12 +127,12 @@ export function renderToHtml<const T extends Renderable.Any>(
  *
  *   // Render to single HTML string
  *   const htmlString = yield* renderToHtmlString(template).pipe(
- *     Fx.provide(HtmlRenderTemplate)
+ *     Effect.provide(HtmlRenderTemplate)
  *   )
  *
  *   console.log(htmlString)
  *   // "<div><h1>Hello</h1><p>World</p></div>"
- * })
+ * }))
  * ```
  *
  * @param renderable - The RenderEvents to render.
@@ -123,6 +154,28 @@ export function renderToHtmlString<const T extends Renderable.Any>(
  *
  * If `true`, the HTML renderer will optimize for static output, potentially skipping
  * dynamic placeholder generation or other interactive features not needed for static HTML.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Static and hydratable SSR share one renderer while making marker generation
+ * an explicit service choice.
+ *
+ * ## Ownership and lifetime
+ *
+ * The reference has a default of `false` and owns no resource. A provided value
+ * is scoped by the surrounding Effect context.
+ *
+ * @example
+ * ```ts
+ * import { StaticRendering } from "@typed/template/Html"
+ * import { Effect } from "effect"
+ *
+ * const isStatic = Effect.runSync(StaticRendering)
+ * ```
+ *
+ * @since 1.0.0
+ * @category services
  */
 export const StaticRendering = Context.Reference<boolean>("@typed/template/Html/StaticRendering", {
   defaultValue: () => false,
@@ -137,24 +190,41 @@ type HtmlEntry = ReadonlyArray<HtmlChunk>;
  * rather than DOM nodes. It sets the `RefSubject.CurrentComputedBehavior` to `"one"`, indicating
  * a single-pass render approach typical for HTML generation.
  *
+ * @remarks
+ * ## Why
+ *
+ * The Layer supplies the same `RenderTemplate` service consumed by `html`, so
+ * templates are renderer-independent while SSR remains an ordered Fx of chunks.
+ * Parsed templates and compiled chunks are cached by template-literal identity.
+ *
+ * ## Ownership and lifetime
+ *
+ * The provided service and its caches live for the Layer Scope. Each rendered
+ * Fx owns its dynamic subscriptions until completion or interruption. The layer
+ * intentionally selects the first value from live sources for finite SSR.
+ *
+ * ## Trust boundary
+ *
+ * Literal segments are author markup. Dynamic text and attributes are escaped;
+ * event, ref, property, prototype-sensitive, and unsafe spread keys are not
+ * serialized as HTML.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
  * import { html } from "@typed/template"
  * import { renderToHtmlString, HtmlRenderTemplate } from "@typed/template/Html"
- * import { Fx } from "@typed/fx"
- * import { Layer } from "effect"
  *
- * const program = Effect.gen(function* () {
+ * const program = Effect.scoped(Effect.gen(function* () {
  *   const template = html`<div>Hello, ${"world"}!</div>`
  *
  *   const htmlString = yield* renderToHtmlString(template).pipe(
- *     Fx.provide(HtmlRenderTemplate)
+ *     Effect.provide(HtmlRenderTemplate)
  *   )
  *
  *   // Use for SSR
  *   return htmlString
- * })
+ * }))
  * ```
  *
  * @since 1.0.0
@@ -198,6 +268,34 @@ export const HtmlRenderTemplate = Layer.effect(
  *
  * This layer provides the `RenderTemplate` service for HTML generation but also
  * sets `StaticRendering` to `true`, enabling optimizations for static content.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Static output omits hydration markers when no client adoption contract is
+ * needed, while retaining the same escaping and ordering rules.
+ *
+ * ## Ownership and lifetime
+ *
+ * Like `HtmlRenderTemplate`, service caches are Layer-scoped and each render is
+ * finalized by the Scope running its Fx.
+ *
+ * @example
+ * ```ts
+ * import { StaticHtmlRenderTemplate } from "@typed/template/Html"
+ * import { html } from "@typed/template"
+ * import { renderToHtmlString } from "@typed/template/Html"
+ * import { Effect } from "effect"
+ *
+ * const output = Effect.runPromise(Effect.scoped(
+ *   renderToHtmlString(html`<p>ready</p>`).pipe(
+ *     Effect.provide(StaticHtmlRenderTemplate)
+ *   )
+ * ))
+ * ```
+ *
+ * @since 1.0.0
+ * @category layers
  */
 export const StaticHtmlRenderTemplate = HtmlRenderTemplate.pipe(
   Layer.provideMerge(Layer.succeed(StaticRendering, true)),

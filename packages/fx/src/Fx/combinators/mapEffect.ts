@@ -8,6 +8,30 @@ import type { Fx } from "../Fx.js";
 /**
  * Transforms the elements of an Fx using a provided Effectful function.
  *
+ * @remarks
+ * ## Why
+ * `mapEffect` performs one Effectful transformation for every input and emits once for each
+ * successful callback. It does not serialize sink invocations: ordering and concurrency are owned
+ * by the producer, so overlapping callbacks may complete and emit out of input order.
+ *
+ * ## Ownership and lifetime
+ * Each callback Effect belongs to the producer delivery that invoked it. Failure is routed to the
+ * Sink, services remain required, and interruption is local to that delivery. The combinator adds
+ * no queue, semaphore, result retention, or independent fiber.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const concurrent = Fx.make<number>((sink) =>
+ *   Effect.all([sink.onSuccess(1), sink.onSuccess(2)], { concurrency: "unbounded", discard: true })
+ * )
+ * const program = Fx.collectAll(
+ *   concurrent.pipe(Fx.mapEffect((n) => Effect.sleep(n === 1 ? "10 millis" : "0 millis").pipe(Effect.as(n))))
+ * ) // producer concurrency permits [2, 1]
+ * ```
+ *
  * @param f - A function that transforms values of type `A` to an Effect of `B`.
  * @returns An `Fx` that emits values of type `B`.
  * @since 1.0.0

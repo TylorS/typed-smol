@@ -13,18 +13,67 @@ const TOTAL_BYTES = TIMESTAMP_BYTES + PAYLOAD_BYTES;
 const STRING_LENGTH = 27;
 
 // Schema
+/**
+ * Effect Schema and branded string type for 27-character KSUID values.
+ * @remarks
+ * ## Why
+ * The schema validates transported values before restoring the compile-time brand; lexical time ordering is not a global generation-order guarantee.
+ * ## Ownership and lifetime
+ * This module-level schema value acquires no resources and is shared; no runtime freezing guarantee is implied.
+ * @example
+ * ```ts
+ * import { Ksuid } from "@typed/id/Ksuid"
+ * import { Schema } from "effect"
+ * const id = Schema.decodeUnknownSync(Ksuid)("0ujtsYcgvSTl8PAuAdqWYSMnLOv")
+ * ```
+ * @category Schemas
+ * @since 1.0.0
+ */
 export const Ksuid = Schema.String.pipe(
   Schema.check(Schema.isPattern(/^[0-9A-Za-z]{27}$/)),
   Schema.brand("@typed/id/KSUID"),
 );
 export type Ksuid = typeof Ksuid.Type;
 
+/**
+ * Tests whether a string has the KSUID encoding shape.
+ * @remarks
+ * ## Why
+ * Runtime refinement restores trust after serialization has erased the TypeScript brand.
+ * ## Ownership and lifetime
+ * This pure predicate acquires no resources and retains no input.
+ * @example
+ * ```ts
+ * import { isKsuid } from "@typed/id/Ksuid"
+ * isKsuid("0ujtsYcgvSTl8PAuAdqWYSMnLOv")
+ * ```
+ * @category Refinements
+ * @since 1.0.0
+ */
 export const isKsuid: (value: string) => value is Ksuid = Schema.is(Ksuid);
 
 // Types
 type KsuidSeed = Uint8Array & { length: 16 };
 
 // Public API
+/**
+ * Generates a KSUID from the current time and 16 random bytes.
+ * @remarks
+ * ## Why
+ * Time and entropy remain explicit Effect services; timestamps outside KSUID's 32-bit seconds field fail with `IllegalArgumentError`.
+ * ## Ownership and lifetime
+ * The Effect acquires no persistent resources and uses DateTimes and RandomValues only for the invocation.
+ * @example
+ * ```ts
+ * import { ksuid } from "@typed/id/Ksuid"
+ * import { DateTimes } from "@typed/id/DateTimes"
+ * import { RandomValues } from "@typed/id/RandomValues"
+ * import { Effect, Layer } from "effect"
+ * const id = Effect.provide(ksuid, Layer.merge(DateTimes.Default, RandomValues.Default))
+ * ```
+ * @category Generators
+ * @since 1.0.0
+ */
 export const ksuid: Effect.Effect<Ksuid, Cause.IllegalArgumentError, DateTimes | RandomValues> =
   Effect.gen(function* () {
     const timestamp = yield* DateTimes.now;

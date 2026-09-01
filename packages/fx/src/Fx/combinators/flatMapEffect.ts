@@ -6,7 +6,19 @@ import type { Fx } from "../Fx.js";
 import { flatMap } from "./flatMap.js";
 
 /**
- * Type definition for flatMapEffect functions to support variable arguments.
+ * Describes a dual flattening operator whose callback returns an Effect.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The shared type gives Effect-producing merge, concat, switch, and exhaust
+ * operators the same data-first and data-last surface while retaining callback
+ * errors and services in the returned Fx.
+ *
+ * ## Ownership and lifetime
+ *
+ * The type acquires no resources. Implementations adapt each Effect to a
+ * one-value Fx whose execution is owned by the returned Fx's required `Scope`.
  * @since 1.0.0
  * @category types
  */
@@ -26,7 +38,37 @@ export type FlatMapEffectLike<Args extends ReadonlyArray<any> = []> = {
 /**
  * Maps each element of an Fx to an Effect, and merges the results.
  *
- * The effects are run concurrently.
+ * @remarks
+ * ## Why
+ *
+ * This is the Effect-producing form of {@link flatMap}. It admits independent
+ * Effects directly without callers manually applying `Fx.fromEffect`.
+ *
+ * ## Concurrency, ordering, and cardinality
+ *
+ * Every source value starts one Effect with unbounded concurrency. Each
+ * successful Effect emits exactly one value. Results appear in completion order,
+ * not source order, and no output buffer restores ordering.
+ *
+ * ## Ownership and lifetime
+ *
+ * Source and callback failures remain typed and callback services are unioned
+ * with source services. The required `Scope` owns all running Effects; source
+ * completion waits for them, and interruption runs every Effect finalizer.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * import { Effect } from "effect"
+ *
+ * const loaded = Fx.flatMapEffect(Fx.fromIterable([
+ *   { id: "slow", wait: "20 millis" as const },
+ *   { id: "fast", wait: "1 millis" as const }
+ * ]), ({ id, wait }) => Effect.as(Effect.sleep(wait), id))
+ *
+ * Effect.runPromise(Effect.scoped(Fx.collectAll(loaded))).then(console.log)
+ * // ["fast", "slow"]
+ * ```
  *
  * @param f - A function that maps an element `A` to an `Effect<B>`.
  * @returns An `Fx` that emits the results of the effects.

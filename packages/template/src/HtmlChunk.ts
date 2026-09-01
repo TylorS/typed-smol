@@ -13,13 +13,24 @@ import { TEMPLATE_END_COMMENT, TEMPLATE_START_COMMENT } from "./internal/meta.js
  * Chunks allow the renderer to stream static parts of the HTML immediately
  * while waiting for dynamic parts to be resolved.
  *
+ * @remarks
+ * ## Why
+ *
+ * Chunks separate immediately writable author markup from dynamic work, which
+ * lets the HTML renderer preserve template order while remaining push-based.
+ *
+ * ## Ownership and lifetime
+ *
+ * Chunks are immutable rendering descriptions. The Fx that evaluates them owns
+ * subscriptions; the response sink owns emitted strings.
+ *
  * @example
  * ```ts
  * import type { HtmlChunk } from "@typed/template/HtmlChunk"
  * import { templateToHtmlChunks } from "@typed/template/HtmlChunk"
  * import { parse } from "@typed/template/Parser"
  *
- * const template = parse`<div>Hello ${"world"}</div>`
+ * const template = parse(["<div>Hello ", "</div>"])
  * const chunks = templateToHtmlChunks(template)
  *
  * // chunks will contain:
@@ -36,25 +47,126 @@ export type HtmlChunk = HtmlTextChunk | HtmlPartChunk | HtmlSparsePartChunk;
 /**
  * A static text chunk.
  *
+ * @remarks
+ * ## Why
+ *
+ * Contiguous static markup can be written without waiting for an interpolation.
+ *
+ * ## Ownership and lifetime
+ *
+ * The record retains one renderer-authored string and owns no resource.
+ *
+ * @example
+ * ```ts
+ * import type { HtmlTextChunk } from "@typed/template/HtmlChunk"
+ *
+ * const chunk: HtmlTextChunk = { _tag: "text", text: "<p>ready</p>" }
+ * ```
+ *
  * @since 1.0.0
  * @category models
  */
 export interface HtmlTextChunk {
+  /**
+   * Identifies an immediately writable static-text chunk.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Exhaustive dispatch avoids inspecting arbitrary object shapes.
+   *
+   * ## Ownership and lifetime
+   *
+   * The literal is immutable metadata.
+   *
+   * @since 1.0.0
+   * @category discriminants
+   */
   readonly _tag: "text";
+  /**
+   * Renderer-authored HTML text ready for the output sink.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Static markup can stream without awaiting dynamic inputs.
+   *
+   * ## Ownership and lifetime
+   *
+   * The chunk owns the string; the response sink owns emitted bytes.
+   *
+   * @since 1.0.0
+   * @category data
+   */
   readonly text: string;
 }
 
 /**
  * A chunk representing a dynamic part (interpolation).
  *
+ * @remarks
+ * ## Why
+ *
+ * The parsed part and its context-aware serializer stay together, avoiding a
+ * generic raw-HTML interpolation path.
+ *
+ * ## Ownership and lifetime
+ *
+ * The record borrows the parsed node and pure serializer; evaluation belongs to
+ * the HTML-rendering Fx.
+ *
+ * @example
+ * ```ts
+ * import { templateToHtmlChunks, type HtmlPartChunk } from "@typed/template/HtmlChunk"
+ * import { parse } from "@typed/template/Parser"
+ *
+ * const chunk = templateToHtmlChunks(parse(["<p>", "</p>"]))[1] as HtmlPartChunk
+ * ```
+ *
  * @since 1.0.0
  * @category models
  */
 export interface HtmlPartChunk {
+  /** Identifies a single dynamic part chunk.
+   *
+   * @remarks
+   * ## Why
+   * Enables exhaustive renderer dispatch.
+   *
+   * ## Ownership and lifetime
+   * Immutable metadata owned by the chunk.
+   *
+   * @since 1.0.0
+   * @category discriminants
+   */
   readonly _tag: "part";
+  /** The parsed dynamic part whose index selects the input value.
+   *
+   * @remarks
+   * ## Why
+   * Preserves the exact HTML context for serialization.
+   *
+   * ## Ownership and lifetime
+   * The chunk borrows the immutable AST node.
+   *
+   * @since 1.0.0
+   * @category data
+   */
   readonly node: Template.PartNode;
   /**
    * Function to render the value of this part into a string.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Each part keeps its context-specific escaping function.
+   *
+   * ## Ownership and lifetime
+   *
+   * The pure function retains no application value between calls.
+   *
+   * @since 1.0.0
+   * @category rendering
    */
   readonly render: (value: unknown) => string;
 }
@@ -62,25 +174,113 @@ export interface HtmlPartChunk {
 /**
  * A chunk representing a sparse part (mixed static/dynamic text).
  *
+ * @remarks
+ * ## Why
+ *
+ * Sparse values preserve surrounding literal text while serializing each
+ * interpolation according to its HTML context.
+ *
+ * ## Ownership and lifetime
+ *
+ * The record owns no subscription; the consuming renderer evaluates it.
+ *
+ * @example
+ * ```ts
+ * import { templateToHtmlChunks, type HtmlSparsePartChunk } from "@typed/template/HtmlChunk"
+ * import { parse } from "@typed/template/Parser"
+ *
+ * const chunk = templateToHtmlChunks(parse(["<p title=\"before ", " after\"></p>"]))[1] as HtmlSparsePartChunk
+ * ```
+ *
  * @since 1.0.0
  * @category models
  */
 export interface HtmlSparsePartChunk {
+  /** Identifies a sparse dynamic chunk.
+   *
+   * @remarks
+   * ## Why
+   * Enables exhaustive renderer dispatch.
+   *
+   * ## Ownership and lifetime
+   * Immutable metadata owned by the chunk.
+   *
+   * @since 1.0.0
+   * @category discriminants
+   */
   readonly _tag: "sparse-part";
+  /** The parsed sparse part retaining literal/dynamic ordering.
+   *
+   * @remarks
+   * ## Why
+   * Preserves the serialization context across all segments.
+   *
+   * ## Ownership and lifetime
+   * The chunk borrows the immutable AST node.
+   *
+   * @since 1.0.0
+   * @category data
+   */
   readonly node: Template.SparsePartNode;
   /**
    * Function to render the value of this part into a string.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Sparse parts retain one context-aware escaping boundary.
+   *
+   * ## Ownership and lifetime
+   *
+   * The pure function retains no application value between calls.
+   *
+   * @since 1.0.0
+   * @category rendering
    */
   readonly render: (value: unknown) => string;
 }
 
 /**
- * Helper class for constructing a list of `HtmlChunk`s.
- * @internal
+ * Advanced mutable builder used by the published template-to-chunk compiler.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Adjacent static strings are coalesced during compilation so runtime streaming
+ * performs fewer writes. This is published renderer-author infrastructure, not
+ * a raw-HTML application API.
+ *
+ * ## Ownership and lifetime
+ *
+ * One builder exclusively owns its mutable buffer. `build` transfers the
+ * current array and resets the builder for reuse; it acquires no Scope.
+ *
+ * @example
+ * ```ts
+ * import { HtmlChunksBuilder } from "@typed/template/HtmlChunk"
+ *
+ * const chunks = new HtmlChunksBuilder().text("<p>hello</p>").build()
+ * ```
+ *
+ * @since 1.0.0
+ * @category advanced
+ * @stability internal-but-published
  */
 export class HtmlChunksBuilder {
   private chunks: Array<HtmlChunk> = [];
 
+  /** Appends static text and coalesces it with the preceding text chunk.
+   *
+   * @remarks
+   * ## Why
+   * Coalescing reduces output writes before runtime rendering begins.
+   *
+   * ## Ownership and lifetime
+   * Mutates only this builder's private buffer.
+   *
+   * @since 1.0.0
+   * @category methods
+   */
   text(text: string): HtmlChunksBuilder {
     const lastIndex = this.chunks.length - 1;
     const lastChunk = this.chunks[lastIndex];
@@ -92,16 +292,52 @@ export class HtmlChunksBuilder {
     return this;
   }
 
+  /** Appends one dynamic part and its context-specific serializer.
+   *
+   * @remarks
+   * ## Why
+   * Keeps escaping behavior adjacent to the parsed part.
+   *
+   * ## Ownership and lifetime
+   * Retains the node and pure function until `build` transfers the buffer.
+   *
+   * @since 1.0.0
+   * @category methods
+   */
   part(node: Template.PartNode, render: (value: unknown) => string): HtmlChunksBuilder {
     this.chunks.push({ _tag: "part", node, render });
     return this;
   }
 
+  /** Appends one sparse dynamic part and serializer.
+   *
+   * @remarks
+   * ## Why
+   * Preserves literal/dynamic ordering under one escaping context.
+   *
+   * ## Ownership and lifetime
+   * Retains the node and function until `build` transfers the buffer.
+   *
+   * @since 1.0.0
+   * @category methods
+   */
   sparsePart(node: Template.SparsePartNode, render: (value: unknown) => string): HtmlChunksBuilder {
     this.chunks.push({ _tag: "sparse-part", node, render });
     return this;
   }
 
+  /** Transfers the accumulated chunks and resets the builder.
+   *
+   * @remarks
+   * ## Why
+   * Allows one compiler-local builder to create independent chunk arrays.
+   *
+   * ## Ownership and lifetime
+   * The caller receives the prior array; the builder starts a new empty buffer.
+   *
+   * @since 1.0.0
+   * @category methods
+   */
   build(): ReadonlyArray<HtmlChunk> {
     const chunks = this.chunks;
     this.chunks = [];
@@ -115,12 +351,28 @@ export class HtmlChunksBuilder {
  * Converts a parsed `Template` into a sequence of `HtmlChunk`s.
  * This optimization pre-calculates the static HTML strings to minimize work at render time.
  *
+ * @remarks
+ * ## Why
+ *
+ * Compiling the parsed AST once exposes static output immediately and assigns a
+ * context-specific serializer to each dynamic part.
+ *
+ * ## Ownership and lifetime
+ *
+ * The returned chunks retain the parsed nodes but own no reactive input. A
+ * `RenderTemplate` layer may cache them by template-literal identity.
+ *
+ * ## Trust boundary
+ *
+ * Dynamic serializers escape data for node, attribute, comment, and text-only
+ * contexts; renderer-owned HTML transport remains a separate brand.
+ *
  * @example
  * ```ts
  * import { templateToHtmlChunks } from "@typed/template/HtmlChunk"
  * import { parse } from "@typed/template/Parser"
  *
- * const template = parse`<div class="container">Hello ${"world"}</div>`
+ * const template = parse(["<div class=\"container\">Hello ", "</div>"])
  * const chunks = templateToHtmlChunks(template)
  *
  * // chunks is an array of HtmlChunk objects
@@ -141,12 +393,23 @@ export function templateToHtmlChunks({ nodes }: Template.Template) {
  * Wraps the HTML chunks with comments containing the template hash.
  * This is crucial for hydration to identify which template rendered a section of HTML.
  *
+ * @remarks
+ * ## Why
+ *
+ * Versioned boundary comments let the DOM renderer locate the exact SSR range
+ * corresponding to a compiled template without claiming unrelated nodes.
+ *
+ * ## Ownership and lifetime
+ *
+ * This pure transformation returns a new chunk sequence. Marker adoption and
+ * fallback are owned later by the hydration Scope.
+ *
  * @example
  * ```ts
  * import { addTemplateHash, templateToHtmlChunks } from "@typed/template/HtmlChunk"
  * import { parse } from "@typed/template/Parser"
  *
- * const template = parse`<div>Hello</div>`
+ * const template = parse(["<div>Hello</div>"])
  * const chunks = templateToHtmlChunks(template)
  * const chunksWithHash = addTemplateHash(chunks, template)
  *
@@ -453,6 +716,32 @@ function renderSpreadAttributes(value: unknown, ancestors = new Set<object>()): 
   }
 }
 
+/**
+ * Reports whether a dynamic spread key may be serialized into SSR HTML.
+ *
+ * @remarks
+ * ## Why
+ *
+ * DOM properties, event handlers, refs, `on*` attributes, invalid names, and
+ * prototype-sensitive keys are not HTML attributes. Rejecting them here keeps
+ * server output aligned with the web platform and avoids treating object data
+ * as trusted markup.
+ *
+ * ## Ownership and lifetime
+ *
+ * This pure predicate retains neither the key nor any application value.
+ *
+ * @example
+ * ```ts
+ * import { isSerializableSpreadKey } from "@typed/template/HtmlChunk"
+ *
+ * isSerializableSpreadKey("aria-label") // true
+ * isSerializableSpreadKey("onclick") // false
+ * ```
+ *
+ * @since 1.0.0
+ * @category guards
+ */
 export function isSerializableSpreadKey(key: string): boolean {
   if (!isSafeDynamicKey(key) || /^on/i.test(key)) return false;
 

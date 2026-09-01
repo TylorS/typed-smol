@@ -26,6 +26,34 @@ const invalidGroupSize = (): Cause.IllegalArgumentError =>
  *
  * Matches Effect `Stream.grouped`.
  *
+ * @remarks
+ * ## Why
+ * `grouped` exposes fixed-size batching without changing source order. Full groups contain exactly
+ * `n` values. Because failure is delivered to the Sink while `Fx.run` remains infallible, any
+ * partial group is flushed after the source run returns even if a failure was delivered first.
+ *
+ * ## Ownership and lifetime
+ * Each run retains at most `n` values and releases its buffer after the final flush or interruption.
+ * Invalid sizes deliver failure before source acquisition. A terminal observer may interrupt before
+ * the post-failure flush, but a Sink that handles the Cause can receive the partial group afterward.
+ *
+ * @example
+ * ```ts
+ * import { Cause, Effect, Ref } from "effect"
+ * import { Fx, Sink } from "@typed/fx"
+ * const program = Effect.gen(function* () {
+ *   const deliveries = yield* Ref.make<Array<string>>([])
+ *   const source = Fx.make<number, string>((sink) =>
+ *     sink.onSuccess(1).pipe(Effect.andThen(sink.onFailure(Cause.fail("boom"))))
+ *   )
+ *   yield* Fx.grouped(source, 2).run(Sink.make(
+ *     () => Ref.update(deliveries, (xs) => [...xs, "failure"]),
+ *     (group) => Ref.update(deliveries, (xs) => [...xs, `group:${group.join(",")}`])
+ *   ))
+ *   return yield* Ref.get(deliveries) // ["failure", "group:1"]
+ * })
+ * ```
+ *
  * @since 1.0.0
  * @category combinators
  */
@@ -78,6 +106,29 @@ export const grouped: {
  * fail with `Cause.IllegalArgumentError`.
  *
  * Matches Effect `Stream.groupedWithin`.
+ *
+ * @remarks
+ * ## Why
+ * `groupedWithin` bounds a batch by both cardinality and time. The timer starts with the first value,
+ * and whichever boundary wins emits the ordered non-empty group and resets both buffer and timer.
+ * A partial group is also flushed when the source run returns, including after delivered failure.
+ *
+ * ## Ownership and lifetime
+ * Each run retains at most `n` values and at most one timer fiber in the required Scope. A source
+ * failure is Sink delivery, so `flushNow` still runs afterward unless the consumer interrupts the
+ * run. Flushing or interruption cancels the timer; invalid sizes fail before subscription.
+ *
+ * @example
+ * ```ts
+ * import { Cause, Effect } from "effect"
+ * import { Fx, Sink } from "@typed/fx"
+ * const source = Fx.make<number, string>((sink) =>
+ *   sink.onSuccess(1).pipe(Effect.andThen(sink.onFailure(Cause.fail("boom"))))
+ * )
+ * const program = Fx.groupedWithin(source, 2, "1 hour").run(
+ *   Sink.make(Effect.logError, (group) => Effect.log(group))
+ * ) // logs the failure, then flushes [1]
+ * ```
  *
  * @since 1.0.0
  * @category combinators

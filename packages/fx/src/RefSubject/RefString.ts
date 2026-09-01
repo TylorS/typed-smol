@@ -16,6 +16,17 @@ const isRefStringDataFirst = (args: IArguments) => RefSubject.isRefSubject(args[
 
 /**
  * A RefString is a RefSubject specialized over a string value.
+ * @remarks
+ * ## Why
+ *
+ * Defines string state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefString is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -28,10 +39,21 @@ export interface RefString<in out E = never, out R = never> extends RefSubject.R
 /**
  * Creates a new `RefString` from a string, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates string state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefString from "effect/typed/fx/RefSubject/RefString"
+ * import * as RefString from "@typed/fx/RefString"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefString.make("hello")
@@ -56,6 +78,17 @@ export function make<E = never, R = never>(
 
 /**
  * Concatenate a string to the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Concatenate a string to the current state of a RefString. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The concat view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -68,6 +101,17 @@ export const concat: {
 
 /**
  * Convert the current state of a RefString to uppercase.
+ * @remarks
+ * ## Why
+ *
+ * Convert the current state of a RefString to uppercase. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The to upper case view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -76,6 +120,17 @@ export const toUpperCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<str
 
 /**
  * Convert the current state of a RefString to lowercase.
+ * @remarks
+ * ## Why
+ *
+ * Convert the current state of a RefString to lowercase. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The to lower case view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -84,6 +139,17 @@ export const toLowerCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<str
 
 /**
  * Trim whitespace from both ends of the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Trim whitespace from both ends of the current state of a RefString. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The trim view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -92,6 +158,17 @@ export const trim = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E,
 
 /**
  * Trim whitespace from the start of the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Trim whitespace from the start of the current state of a RefString. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The trim start view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -100,6 +177,17 @@ export const trimStart = <E, R>(ref: RefString<E, R>): RefSubject.Computed<strin
 
 /**
  * Trim whitespace from the end of the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Trim whitespace from the end of the current state of a RefString. The operation remains attached
+ * to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The trim end view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -108,6 +196,17 @@ export const trimEnd = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string,
 
 /**
  * Replace the first occurrence of a substring or pattern in the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Keeps replace atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * The replace view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -130,6 +229,17 @@ export const replace: {
 
 /**
  * Replace all occurrences of a substring or pattern in the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Keeps replace all atomic with respect to competing RefSubject writes instead of splitting the
+ * read and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * The replace all view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -152,6 +262,17 @@ export const replaceAll: {
 
 /**
  * Check if the current state of a RefString is empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is empty a live projection of the string; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -160,6 +281,17 @@ export const isEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<boolean
 
 /**
  * Check if the current state of a RefString is non-empty.
+ * @remarks
+ * ## Why
+ *
+ * Makes is non empty a live projection of the string; consumers can sample it now or observe it
+ * without copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is non empty view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -168,6 +300,17 @@ export const isNonEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<bool
 
 /**
  * Get the length of the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Makes length a live projection of the string; consumers can sample it now or observe it without
+ * copying the source state.
+ *
+ * ## Ownership and lifetime
+ *
+ * The length view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -176,6 +319,17 @@ export const length = <E, R>(ref: RefString<E, R>): RefSubject.Computed<number, 
 
 /**
  * Check if the current state of a RefString starts with a substring.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefString starts with a substring. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The starts with view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -198,6 +352,17 @@ export const startsWith: {
 
 /**
  * Check if the current state of a RefString ends with a substring.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefString ends with a substring. The operation remains attached
+ * to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The ends with view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -220,6 +385,17 @@ export const endsWith: {
 
 /**
  * Check if the current state of a RefString includes a substring.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefString includes a substring. The operation remains attached
+ * to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The includes view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -242,6 +418,17 @@ export const includes: {
 
 /**
  * Extract a section of the current state of a RefString.
+ * @remarks
+ * ## Why
+ *
+ * Extract a section of the current state of a RefString. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The slice view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

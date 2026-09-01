@@ -14,6 +14,21 @@ import type { Fx } from "../Fx.js";
  * **Completion:** Completes when the source completes.
  * **Errors:** The first failure from either stream fails the result.
  *
+ * @remarks
+ * ## Why
+ * `sample` separates value production from observation cadence. A sampler tick emits the latest
+ * source value once, or nothing before the source's first value; repeated ticks may repeat a value.
+ *
+ * ## Ownership and lifetime
+ * One latest-value cell and a child sampler fiber belong to each run. Source completion interrupts
+ * the sampler; any failure or consumer interruption stops both and releases the retained value.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const snapshots = Fx.sample(Fx.fromIterable([10, 20]), Fx.fromIterable(["tick"]))
+ * ```
+ *
  * @since 1.0.0
  * @category combinators
  */

@@ -9,6 +9,26 @@ import type { Fx } from "../Fx.js";
 /**
  * Effectfully loops over the failure causes of an Fx with an accumulator.
  *
+ * @remarks
+ * ## Why
+ * `filterMapLoopCauseEffect` supports Effectful, stateful cause policy. Each Cause produces `Some`
+ * to forward or `None` to suppress, but concurrent failure deliveries are not serialized and can
+ * read the same seed or commit next states out of order.
+ *
+ * ## Ownership and lifetime
+ * Cause state and callback Effects belong to the consuming run. Services remain required, callback
+ * failure is sent to the Sink, and interruption follows each delivery; no semaphore is introduced.
+ *
+ * @example
+ * ```ts
+ * import { Effect, Option } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const handled = Fx.fail("offline").pipe(
+ *   Fx.filterMapLoopCauseEffect(0, (count, cause) => Effect.succeed([Option.some(cause), count + 1])),
+ * )
+ * ```
+ *
  * @param seed - The initial state.
  * @param f - The effectful loop function for causes.
  * @returns An `Fx` with transformed errors.

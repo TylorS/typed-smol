@@ -10,6 +10,21 @@ import { map } from "./map.js";
  * The resulting Fx waits for all input streams to emit at least once before emitting the first tuple.
  * Afterwards, it emits a new tuple whenever any input stream emits a new value.
  *
+ * @remarks
+ * ## Why
+ * `tuple` combines independent push sources by latest value while retaining their positional types.
+ * It emits nothing until every source has produced once, then emits a snapshot after any update.
+ *
+ * ## Ownership and lifetime
+ * All inputs run concurrently as children of the consumer and one latest value per input is retained
+ * for that run. Failure/interruption stops the group; normal completion waits for every input.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const point = Fx.tuple(Fx.succeed(10), Fx.succeed(20))
+ * ```
+ *
  * @param fxs - The Fx streams to combine.
  * @returns An `Fx` emitting tuples of values.
  * @since 1.0.0
@@ -59,6 +74,21 @@ export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
 /**
  * Combines a record of Fx streams into a single Fx that emits a record of the latest values.
  * Similar to `tuple`, but for objects.
+ *
+ * @remarks
+ * ## Why
+ * `struct` gives latest-value combination stable field names. It waits for every field once and
+ * then emits a new immutable record when any field source updates.
+ *
+ * ## Ownership and lifetime
+ * It delegates concurrent ownership and retained latest values to `tuple`. Input failures and
+ * services are unioned, and all runs end with the consuming Fx.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ * const user = Fx.struct({ name: Fx.succeed("Ada"), online: Fx.succeed(true) })
+ * ```
  *
  * @param fxs - A record of Fx streams.
  * @returns An `Fx` emitting records of values.

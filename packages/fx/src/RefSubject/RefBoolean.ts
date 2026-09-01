@@ -14,6 +14,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefBoolean is a RefSubject specialized over a boolean value.
+ * @remarks
+ * ## Why
+ *
+ * Defines boolean state with the same current-read, pushed-update, and synchronized-write contract
+ * as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefBoolean is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -26,10 +37,21 @@ export interface RefBoolean<in out E = never, out R = never> extends RefSubject.
 /**
  * Creates a new `RefBoolean` from a boolean, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates boolean state with equality suited to that Effect data type, so unchanged values do not
+ * produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import * as RefBoolean from "effect/typed/fx/RefSubject/RefBoolean"
+ * import * as RefBoolean from "@typed/fx/RefBoolean"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefBoolean.make(true)
@@ -50,6 +72,17 @@ export function make<E = never, R = never>(
 
 /**
  * Toggle the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Keeps toggle atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running toggle performs one serialized boolean transition and resolves with its committed value.
+ * It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -58,6 +91,17 @@ export const toggle = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E, R
 
 /**
  * Set the current state of a RefBoolean to true.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set true atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set true performs one serialized boolean transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -66,6 +110,17 @@ export const setTrue = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E, 
 
 /**
  * Set the current state of a RefBoolean to false.
+ * @remarks
+ * ## Why
+ *
+ * Keeps set false atomic with respect to competing RefSubject writes instead of splitting the read
+ * and replacement into separate effects.
+ *
+ * ## Ownership and lifetime
+ *
+ * Running set false performs one serialized boolean transition and resolves with its committed
+ * value. It acquires no resource; failures and services remain those of the source ref.
+ *
  * @since 1.18.0
  * @category combinators
  */
@@ -78,6 +133,17 @@ export const setFalse = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E,
 
 /**
  * Apply AND operation with a boolean to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply AND operation with a boolean to the current state of a RefBoolean. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The and view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -90,6 +156,17 @@ export const and: {
 
 /**
  * Apply OR operation with a boolean to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply OR operation with a boolean to the current state of a RefBoolean. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The or view retains no independent state. An Effect read samples the source once; Fx observation
+ * follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -102,6 +179,17 @@ export const or: {
 
 /**
  * Apply NOT operation to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply NOT operation to the current state of a RefBoolean. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The not view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -110,6 +198,17 @@ export const not = <E, R>(ref: RefBoolean<E, R>): RefSubject.Computed<boolean, E
 
 /**
  * Apply XOR operation with a boolean to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply XOR operation with a boolean to the current state of a RefBoolean. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The xor view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -122,6 +221,17 @@ export const xor: {
 
 /**
  * Apply NAND operation with a boolean to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply NAND operation with a boolean to the current state of a RefBoolean. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The nand view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -134,6 +244,17 @@ export const nand: {
 
 /**
  * Apply NOR operation with a boolean to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply NOR operation with a boolean to the current state of a RefBoolean. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The nor view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -146,6 +267,17 @@ export const nor: {
 
 /**
  * Apply EQV (XNOR) operation with a boolean to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply EQV (XNOR) operation with a boolean to the current state of a RefBoolean. The operation
+ * remains attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The eqv view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -158,6 +290,17 @@ export const eqv: {
 
 /**
  * Apply implication operation with a boolean to the current state of a RefBoolean.
+ * @remarks
+ * ## Why
+ *
+ * Apply implication operation with a boolean to the current state of a RefBoolean. The operation
+ * remains attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The implies view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -170,6 +313,17 @@ export const implies: {
 
 /**
  * Check if the current state of a RefBoolean is true.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBoolean is true. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is true view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -178,6 +332,17 @@ export const isTrue = <E, R>(ref: RefBoolean<E, R>): RefSubject.Computed<boolean
 
 /**
  * Check if the current state of a RefBoolean is false.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBoolean is false. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is false view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

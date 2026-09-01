@@ -12,6 +12,17 @@ import * as RefSubject from "./RefSubject.js";
 
 /**
  * A RefBigDecimal is a RefSubject specialized over a BigDecimal value.
+ * @remarks
+ * ## Why
+ *
+ * Defines big decimal state with the same current-read, pushed-update, and synchronized-write
+ * contract as RefSubject.
+ *
+ * ## Ownership and lifetime
+ *
+ * RefBigDecimal is a contract and performs no acquisition. Implementations retain the errors,
+ * services, interruption, and Scope requirements expressed by its members.
+ *
  * @since 1.18.0
  * @category models
  */
@@ -24,10 +35,21 @@ export interface RefBigDecimal<in out E = never, out R = never> extends RefSubje
 /**
  * Creates a new `RefBigDecimal` from a BigDecimal, `Effect`, or `Fx`.
  *
+ * @remarks
+ * ## Why
+ *
+ * Creates big decimal state with equality suited to that Effect data type, so unchanged values do
+ * not produce redundant pushed updates.
+ *
+ * ## Ownership and lifetime
+ *
+ * The creation Effect requires Scope. It owns initializer acquisition, live source subscriptions,
+ * and cleanup; source failures and services stay on reads and pushes.
+ *
  * @example
  * ```ts
  * import { Effect, BigDecimal } from "effect"
- * import * as RefBigDecimal from "effect/typed/fx/RefSubject/RefBigDecimal"
+ * import * as RefBigDecimal from "@typed/fx/RefBigDecimal"
  *
  * const program = Effect.gen(function* () {
  *   const value = yield* RefBigDecimal.make(BigDecimal.fromStringUnsafe("123.45"))
@@ -54,6 +76,17 @@ export function make<E = never, R = never>(
 
 /**
  * Add a BigDecimal to the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Add a BigDecimal to the current state of a RefBigDecimal. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The add view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -71,6 +104,17 @@ export const add: {
 
 /**
  * Subtract a BigDecimal from the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Subtract a BigDecimal from the current state of a RefBigDecimal. The operation remains attached
+ * to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The subtract view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -88,6 +132,17 @@ export const subtract: {
 
 /**
  * Multiply the current state of a RefBigDecimal by a BigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Multiply the current state of a RefBigDecimal by a BigDecimal. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The multiply view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -105,6 +160,17 @@ export const multiply: {
 
 /**
  * Divide the current state of a RefBigDecimal by a BigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Divide the current state of a RefBigDecimal by a BigDecimal. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The divide view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -124,6 +190,17 @@ export const divide: {
 
 /**
  * Get the absolute value of the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Get the absolute value of the current state of a RefBigDecimal. The operation remains attached
+ * to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The abs view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -133,6 +210,17 @@ export const abs = <E, R>(
 
 /**
  * Negate the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Negate the current state of a RefBigDecimal. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The negate view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -142,6 +230,17 @@ export const negate = <E, R>(
 
 /**
  * Round the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Round the current state of a RefBigDecimal. The operation remains attached to the RefSubject's
+ * versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The round view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -163,6 +262,17 @@ export const round: {
 
 /**
  * Truncate the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Truncate the current state of a RefBigDecimal. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The truncate view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -180,6 +290,17 @@ export const truncate: {
 
 /**
  * Calculate the ceiling of the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Calculate the ceiling of the current state of a RefBigDecimal. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The ceil view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -197,6 +318,17 @@ export const ceil: {
 
 /**
  * Calculate the floor of the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Calculate the floor of the current state of a RefBigDecimal. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The floor view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -214,6 +346,17 @@ export const floor: {
 
 /**
  * Check if the current state of a RefBigDecimal is zero.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBigDecimal is zero. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is zero view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -222,6 +365,17 @@ export const isZero = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<bool
 
 /**
  * Check if the current state of a RefBigDecimal is negative.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBigDecimal is negative. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is negative view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -230,6 +384,17 @@ export const isNegative = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<
 
 /**
  * Check if the current state of a RefBigDecimal is positive.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBigDecimal is positive. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is positive view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -238,6 +403,17 @@ export const isPositive = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<
 
 /**
  * Check if the current state of a RefBigDecimal is an integer.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBigDecimal is an integer. The operation remains attached to
+ * the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is integer view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -246,6 +422,17 @@ export const isInteger = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<b
 
 /**
  * Get the sign of the current state of a RefBigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Get the sign of the current state of a RefBigDecimal. The operation remains attached to the
+ * RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The sign view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -254,6 +441,17 @@ export const sign = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<number
 
 /**
  * Check if the current state of a RefBigDecimal is less than a BigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBigDecimal is less than a BigDecimal. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is less than view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -268,6 +466,17 @@ export const isLessThan: {
 
 /**
  * Check if the current state of a RefBigDecimal is greater than a BigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBigDecimal is greater than a BigDecimal. The operation
+ * remains attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The is greater than view retains no independent state. An Effect read samples the source once;
+ * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */
@@ -282,6 +491,17 @@ export const isGreaterThan: {
 
 /**
  * Check if the current state of a RefBigDecimal equals a BigDecimal.
+ * @remarks
+ * ## Why
+ *
+ * Check if the current state of a RefBigDecimal equals a BigDecimal. The operation remains
+ * attached to the RefSubject's versioned state boundary.
+ *
+ * ## Ownership and lifetime
+ *
+ * The equals view retains no independent state. An Effect read samples the source once; Fx
+ * observation follows later pushes and its observing Scope owns subscription cleanup.
+ *
  * @since 1.18.0
  * @category computed
  */

@@ -7,6 +7,27 @@ import type { Fx } from "../Fx.js";
 /**
  * Filters elements of an Fx using an effectful predicate function.
  *
+ * @remarks
+ * ## Why
+ * `filterEffect` supports service-backed or failing decisions without flattening a second Fx. Each
+ * input runs one predicate Effect; `true` emits once and `false` emits nothing. The adapter does not
+ * serialize concurrent producer deliveries, so accepted values may arrive out of input order.
+ *
+ * ## Ownership and lifetime
+ * A predicate Effect belongs to the producer callback that invoked it. Its Cause is sent to the
+ * Sink, `R2` stays required, and interruption follows that delivery. No lock or queue is added.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import { Fx } from "@typed/fx"
+ *
+ * const concurrent = Fx.make<number>((sink) =>
+ *   Effect.all([sink.onSuccess(1), sink.onSuccess(2)], { concurrency: "unbounded", discard: true })
+ * )
+ * const positive = concurrent.pipe(Fx.filterEffect((n) => Effect.succeed(n > 0)))
+ * ```
+ *
  * @param f - An effectful predicate function.
  * @returns An `Fx` that emits only the elements for which `f` returns `true`.
  * @since 1.0.0

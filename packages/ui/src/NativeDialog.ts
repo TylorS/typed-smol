@@ -6,10 +6,62 @@ interface State {
   readonly open: boolean;
 }
 
+/** Native dialog synchronization mode.
+ * @remarks
+ * ## Why
+ * The choice maps directly to `showModal()` or `show()` rather than simulating
+ * modality in application code.
+ * ## Ownership and lifetime
+ * Options are inert and retain no resources.
+ * @since 1.0.0
+ * @category models
+ */
 export interface Options {
+  /** Whether opening uses the modal top layer; defaults to true.
+   * @remarks
+   * ## Why
+   * Modal and non-modal dialogs have different focus, inertness, and dismissal
+   * behavior owned by the browser.
+   * ## Ownership and lifetime
+   * The flag is read during synchronization and retains no resources.
+   * @since 1.0.0
+   * @category behavior
+   */
   readonly modal?: boolean;
 }
 
+/**
+ * Creates a scoped ref that drives a real `HTMLDialogElement` from state.
+ *
+ * @remarks
+ * ## Why
+ *
+ * The ref delegates open/close, top-layer placement, focus handling, and modal
+ * inertness to `showModal()`, `show()`, and `close()`. It does not reproduce a
+ * dialog with ordinary divs or synthetic events.
+ *
+ * ## Ownership and lifetime
+ *
+ * Applying the ref forks an observer in the current Effect Scope. Finalization
+ * interrupts that observer but does not close state owned elsewhere or remove
+ * the element. `Dialog.Content` handles native `cancel`, `close`, and `toggle`
+ * events and composes exactly one hydration owner.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ * import * as Dialog from "@typed/ui/Dialog"
+ * import * as NativeDialog from "@typed/ui/NativeDialog"
+ *
+ * const program = Effect.gen(function* () {
+ *   const state = yield* Dialog.makeState()
+ *   return NativeDialog.ref(state, { modal: true })
+ * })
+ * ```
+ *
+ * @since 1.0.0
+ * @category refs
+ */
 export function ref<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
   options: Options = {},

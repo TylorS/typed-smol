@@ -20,12 +20,29 @@ import { type RenderEvent } from "./RenderEvent.js";
  * - Streams (Fx or Stream) that emit Renderables
  * - Objects (typically for setting properties or attributes)
  *
+ * @remarks
+ * ## Why
+ *
+ * `Renderable` is deliberately a union of Effect ecosystem values and ordinary
+ * data rather than a component base class. Effect, Stream, Fx, hydration refs,
+ * arrays, objects, primitives, and `RenderEvent` outputs preserve their own
+ * success, error, and service channels through template inference.
+ *
+ * ## Ownership and lifetime
+ *
+ * A Renderable is a description or borrowed value. Calling `html` does not run
+ * it; the Scope that drains the resulting Fx owns upstream subscriptions,
+ * interruption, and finalizers. Existing DOM nodes retain their identity and
+ * external owner until inserted into a renderer-owned dynamic range.
+ *
+ * @see https://effect.website/docs/stream/introduction/
+ *
  * @example
  * ```ts
  * import { Effect } from "effect"
  * import { html } from "@typed/template"
  * import { Fx } from "@typed/fx"
- * import * as RefSubject from "@typed/fx/RefSubject"
+ * import { RefSubject } from "@typed/fx/RefSubject"
  *
  * // Primitives
  * const primitive = html`<div>${"Hello"}</div>`
@@ -36,8 +53,10 @@ import { type RenderEvent } from "./RenderEvent.js";
  * const effect = html`<div>${Effect.succeed("Async value")}</div>`
  *
  * // Fx streams (reactive)
- * const count = yield* RefSubject.make(0)
- * const reactive = html`<div>Count: ${count}</div>`
+ * const program = Effect.gen(function* () {
+ *   const count = yield* RefSubject.make(0)
+ *   return html`<div>Count: ${count}</div>`
+ * })
  *
  * // Arrays
  * const items = [1, 2, 3]
@@ -63,6 +82,19 @@ export type Renderable<A, E = never, R = never> =
 export declare namespace Renderable {
   /**
    * A type alias for any Renderable value with any error/context.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Generic renderer boundaries need an existential input while specific APIs
+   * still recover channels through `Renderable.Error` and `.Services`.
+   *
+   * ## Ownership and lifetime
+   *
+   * This compile-time union owns no value.
+   *
+   * @since 1.0.0
+   * @category type-level
    */
   export type Any<A = any> =
     | Renderable<A, any, any>
@@ -72,6 +104,19 @@ export declare namespace Renderable {
 
   /**
    * The basic primitive types that can be rendered directly.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Primitive output and already-rendered DOM/HTML events form the terminal
+   * values consumed by renderer implementations.
+   *
+   * ## Ownership and lifetime
+   *
+   * The alias introduces no ownership; `RenderEvent` keeps producer semantics.
+   *
+   * @since 1.0.0
+   * @category type-level
    */
   export type Primitive =
     | string
@@ -83,6 +128,22 @@ export declare namespace Renderable {
     | void
     | RenderEvent;
 
+  /**
+   * The Effect ecosystem producers recognized as reactive Renderables.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Typed adds template semantics to Effect, Stream, and Fx instead of replacing
+   * them with framework-specific state or scheduling.
+   *
+   * ## Ownership and lifetime
+   *
+   * The Scope running the lifted producer owns acquisition and interruption.
+   *
+   * @since 1.0.0
+   * @category type-level
+   */
   export type Effects =
     | Effect.Effect<any, any, any>
     | Fx.Fx<any, any, any>
@@ -90,16 +151,57 @@ export declare namespace Renderable {
 
   /**
    * Extracts the required services from a Renderable type.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Nested producers and event handlers must keep the full Effect `R` channel.
+   *
+   * ## Ownership and lifetime
+   *
+   * This projection acquires no services.
+   *
+   * @since 1.0.0
+   * @category type-level
    */
   export type Services<T> = RenderableServices<T>;
 
   /**
    * Extracts the error type from a Renderable type.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Rendering failures remain typed instead of surfacing through an untyped
+   * component error boundary.
+   *
+   * ## Ownership and lifetime
+   *
+   * This projection has no runtime lifetime.
+   *
+   * @since 1.0.0
+   * @category type-level
    */
   export type Error<T> = RenderableError<T>;
 
   /**
    * Extracts the success type from a Renderable type.
+   */
+  /**
+   * Recursively computes the terminal value emitted by a Renderable.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Effects, Options, arrays, and object structures are lifted without losing
+   * their resulting shape.
+   *
+   * ## Ownership and lifetime
+   *
+   * This projection describes values but owns none of them.
+   *
+   * @since 1.0.0
+   * @category type-level
    */
   export type Success<T> = [T] extends [never]
     ? never
@@ -130,6 +232,19 @@ export declare namespace Renderable {
   /**
    * Traverse all keys in an object and extract the services from each value. If
    * the value is a function, extract the services from the return type of the function.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Spread, data, and property objects may contain nested Effect producers whose
+   * requirements must remain visible in the enclosing template.
+   *
+   * ## Ownership and lifetime
+   *
+   * This compile-time traversal acquires no service.
+   *
+   * @since 1.0.0
+   * @category type-level
    */
   export type ServicesFromObject<T> = [
     {
@@ -144,6 +259,19 @@ export declare namespace Renderable {
   /**
    * Traverse all keys in an object and extract the error from each value. If
    * the value is a function, extract the error from the return type of the function.
+   *
+   * @remarks
+   * ## Why
+   *
+   * Nested object renderables contribute failures to the enclosing template
+   * instead of hiding them behind runtime property access.
+   *
+   * ## Ownership and lifetime
+   *
+   * This compile-time traversal has no runtime lifetime.
+   *
+   * @since 1.0.0
+   * @category type-level
    */
   export type ErrorFromObject<T> = [
     {

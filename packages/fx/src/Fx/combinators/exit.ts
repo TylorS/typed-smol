@@ -4,7 +4,28 @@ import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
 
 /**
- * Materializes the success and failure of an Fx into `Exit` values.
+ * Materializes every success and the terminal failure as infallible `Exit` values.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Turning both channels into data lets downstream Fx composition inspect
+ * complete Effect causes without terminating the pipeline.
+ *
+ * ## Ownership and lifetime
+ *
+ * Each source value becomes `Exit.succeed` in arrival order. A source failure,
+ * including a defect or interrupt, becomes one `Exit.failCause`, after which
+ * the returned Fx completes with error type `never`. It acquires no resource
+ * beyond the single source subscription.
+ *
+ * @example
+ * ```ts
+ * import { exit } from "@typed/fx/Fx"
+ * import { fail } from "@typed/fx/Fx"
+ *
+ * const outcomes = exit(fail("offline"))
+ * ```
  *
  * @param fx - The `Fx` stream.
  * @returns An `Fx` emitting `Exit<A, E>`.

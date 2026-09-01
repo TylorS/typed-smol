@@ -732,6 +732,53 @@ describe("typed/navigation", () => {
         ),
       ));
 
+    it("exposes an undefined current entry when initial retention evicts the active entry", () =>
+      Effect.runPromise(
+        Effect.provide(
+          Effect.gen(function* () {
+            const entries = yield* Navigation.entries;
+            assert.deepEqual(
+              entries.map(({ url }) => url.pathname),
+              ["/2", "/3"],
+            );
+            assert.equal(yield* Navigation.currentEntry, undefined);
+          }),
+          memory({
+            entries: [
+              createDestination("http://localhost/1"),
+              createDestination("http://localhost/2"),
+              createDestination("http://localhost/3"),
+            ],
+            currentIndex: 0,
+            maxEntries: 2,
+          }).pipe(Layer.provideMerge(Ids.Test())),
+        ),
+      ));
+
+    it("retains every entry when maxEntries is zero", () =>
+      Effect.runPromise(
+        Effect.provide(
+          Effect.gen(function* () {
+            yield* Navigation.navigate("http://localhost/3");
+
+            const entries = yield* Navigation.entries;
+            assert.deepEqual(
+              entries.map(({ url }) => url.pathname),
+              ["/1", "/2", "/3"],
+            );
+            assert.equal((yield* Navigation.currentEntry).url.pathname, "/3");
+          }),
+          memory({
+            entries: [
+              createDestination("http://localhost/1"),
+              createDestination("http://localhost/2"),
+            ],
+            currentIndex: 1,
+            maxEntries: 0,
+          }).pipe(Layer.provideMerge(Ids.Test())),
+        ),
+      ));
+
     it("can go back after entries are limited", () =>
       Effect.runPromise(
         Effect.provide(

@@ -11,6 +11,40 @@ import { take } from "./take.js";
 
 type Phase = "waiting" | "active" | "stopped";
 
+/**
+ * Forwards `events` only between a start signal and that signal's first stop event.
+ *
+ * @remarks
+ * ## Why
+ *
+ * Push lifetimes are often controlled by other push lifetimes: a pointer move
+ * matters between pointer-down and pointer-up, for example. `during` models
+ * that gate without converting either side into polling state.
+ *
+ * ## Ownership and lifetime
+ *
+ * `events` and the outer `signals` Fx start concurrently in one child Scope.
+ * Only the first outer value is used; that value must itself be an Fx, whose
+ * first value closes the gate. Event values before the start signal and after
+ * the stop signal are discarded. Completion of `events` completes the result.
+ * A failure from events, signals, or the selected stop Fx terminates everything;
+ * closing or interrupting the returned Fx interrupts all remaining fibers and
+ * closes the private Scope.
+ *
+ * @example
+ * ```ts
+ * import { during } from "@typed/fx/Fx"
+ * import { delay } from "@typed/fx/Fx"
+ * import { periodic, succeed } from "@typed/fx/Fx"
+ *
+ * const pointerMoves = periodic("16 millis")
+ * const pointerDown = succeed(delay(succeed(undefined), "1 second"))
+ * const activeMoves = during(pointerMoves, pointerDown)
+ * ```
+ *
+ * @since 1.0.0
+ * @category combinators
+ */
 export function during<A, E, R, Start extends Fx.Any, E2, R2>(
   events: Fx<A, E, R>,
   signals: Fx<Start, E2, R2>,

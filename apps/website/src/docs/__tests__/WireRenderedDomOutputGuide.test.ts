@@ -1,0 +1,89 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import ts from "typescript-compiler";
+import { describe, expect, it } from "vitest";
+import { parseGuideDocumentation } from "../Frontmatter.js";
+import { extractTypeScriptFences, validateAuthoredExampleQuality } from "../Recipes.js";
+
+const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
+const guideFile = "wire-and-rendered-dom-output.md";
+const guidePath = path.join(websiteRoot, "content/guides", guideFile);
+
+const readGuide = () => {
+  expect(fs.existsSync(guidePath)).toBe(true);
+  return parseGuideDocumentation(guideFile, fs.readFileSync(guidePath, "utf8"));
+};
+
+describe("Wire and Rendered DOM output guide", () => {
+  it("separates the stable application boundary from advanced published renderer helpers", () => {
+    const guide = readGuide();
+
+    expect(guide).toMatchObject({
+      slug: "wire-and-rendered-dom-output",
+      section: "DOM and platform",
+      kind: "deep-dive",
+      order: 5.35,
+    });
+    expect(guide.headings).toEqual(
+      expect.arrayContaining([
+        "Pass a real DOM value",
+        "Make a multi-node range persistent",
+        "Treat boundary comments as renderer extension territory",
+        "Inspect detached output deliberately",
+      ]),
+    );
+    for (const term of [
+      "Node",
+      "DocumentFragment",
+      "Wire",
+      "Rendered",
+      "DomRenderEvent",
+      "persistent",
+      "unique-template-id-or-hash",
+      "fromComments",
+      "internal-but-published",
+      "getElements",
+      "toHtml",
+      "valueOf()",
+      "moveBefore",
+    ]) {
+      expect(guide.body).toContain(term);
+    }
+    expect(extractTypeScriptFences(guide.body)).toHaveLength(4);
+    expect(validateAuthoredExampleQuality([guide])).toEqual([]);
+  });
+
+  it("keeps every public-contract example independently compilable", () => {
+    const guide = readGuide();
+    const staging = fs.mkdtempSync(path.join(websiteRoot, ".wire-rendered-guide-check-"));
+
+    try {
+      const examples = extractTypeScriptFences(guide.body).map((code, index) => {
+        const file = path.join(staging, `example-${index}.ts`);
+        fs.writeFileSync(file, code);
+        return file;
+      });
+      const program = ts.createProgram(examples, {
+        esModuleInterop: true,
+        module: ts.ModuleKind.NodeNext,
+        moduleResolution: ts.ModuleResolutionKind.NodeNext,
+        noEmit: true,
+        skipLibCheck: true,
+        strict: true,
+        target: ts.ScriptTarget.ES2022,
+      });
+      const diagnostics = ts.getPreEmitDiagnostics(program);
+
+      expect(
+        ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+          getCanonicalFileName: (fileName) => fileName,
+          getCurrentDirectory: () => websiteRoot,
+          getNewLine: () => "\n",
+        }),
+      ).toBe("");
+    } finally {
+      fs.rmSync(staging, { recursive: true, force: true });
+    }
+  });
+});

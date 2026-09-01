@@ -10,6 +10,23 @@ import type { Fx } from "../Fx.js";
 /**
  * Drops elements that are equal to the previous element using a custom equivalence function.
  *
+ * @remarks
+ * ## Why
+ * `skipRepeatsWith` defines consecutive equality for values that need domain-specific comparison.
+ * It compares against the last emitted value, emits the first value, and otherwise preserves order.
+ *
+ * ## Ownership and lifetime
+ * The per-run previous-value state is updated atomically and released when observation ends. The
+ * pure equivalence adds no failures or services and acquires no resource.
+ *
+ * @example
+ * ```ts
+ * import { Fx } from "@typed/fx"
+ *
+ * const byId = Fx.skipRepeatsWith<{ id: number }>((a, b) => a.id === b.id)
+ * const changes = Fx.fromIterable([{ id: 1 }, { id: 1 }, { id: 2 }]).pipe(byId)
+ * ```
+ *
  * @param Eq - The equivalence function to use.
  * @returns An `Fx` with consecutive duplicates removed.
  * @since 1.0.0
