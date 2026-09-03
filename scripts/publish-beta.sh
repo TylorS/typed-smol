@@ -16,136 +16,163 @@ TOPO_ORDER=(
   packages/fx
   packages/guard
   packages/id
+  packages/tsconfig
   # Level 1: depend only on level 0
   packages/navigation
   packages/template
   # Level 2
   packages/router
-  packages/tsconfig
   # Level 3
   packages/ui
 )
 
-add_files_field() {
-  node -e "
-    const fs = require('fs');
-    const path = require('path');
-    const pkgPath = path.resolve(process.argv[1], 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    if (!pkg.files) {
-      const files = ['dist', 'src'];
-      pkg.files = files;
-      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
-      console.log('  Added files field:', JSON.stringify(files));
-    }
-  " "$1"
+package_field() {
+  node -p "require('./$1/package.json').$2"
 }
 
-echo -e "${CYAN}=== Typed Beta Publish ===${NC}"
+is_published() {
+  npm view "$1@$2" version --json >/dev/null 2>&1
+}
+
+echo -e "${CYAN}=== Typed beta publish ===${NC}"
 echo ""
 
-echo -e "${YELLOW}Step 1: Verifying npm auth...${NC}"
-NPM_USER=$(npm whoami 2>&1) || { echo -e "${RED}Not logged into npm. Run: npm login${NC}"; exit 1; }
+echo -e "${YELLOW}Step 1: Verifying npm authentication...${NC}"
+NPM_USER=$(npm whoami 2>&1) || {
+  echo -e "${RED}Not logged into npm.${NC}"
+  echo "Run: npm login"
+  exit 1
+}
 echo -e "  Logged in as: ${GREEN}${NPM_USER}${NC}"
 echo ""
 
-echo -e "${YELLOW}Step 2: Bumping prerelease versions...${NC}"
+echo -e "${YELLOW}Step 2: Preparing one retry-safe beta version...${NC}"
+published_count=0
+unpublished_count=0
+beta_number=""
+
 for dir in "${TOPO_ORDER[@]}"; do
-  name=$(node -p "require('./$dir/package.json').name")
-  old_ver=$(node -p "require('./$dir/package.json').version")
-  (cd "$dir" && npm version prerelease --preid=beta --no-git-tag-version > /dev/null 2>&1)
-  new_ver=$(node -p "require('./$dir/package.json').version")
-  printf "  %-45s %s -> %s\n" "$name" "$old_ver" "$new_ver"
+  name=$(package_field "$dir" name)
+  version=$(package_field "$dir" version)
+  current_beta=${version##*-beta.}
+
+  if [[ "$version" != *-beta.* || ! "$current_beta" =~ ^[0-9]+$ ]]; then
+    echo -e "${RED}$name has unsupported release version $version; expected x.y.z-beta.N${NC}"
+    exit 1
+  fi
+  if [[ -n "$beta_number" && "$current_beta" != "$beta_number" ]]; then
+    echo -e "${RED}Package beta numbers are not aligned ($beta_number and $current_beta).${NC}"
+    exit 1
+  fi
+  beta_number="$current_beta"
+
+  if is_published "$name" "$version"; then
+    ((published_count += 1))
+  else
+    ((unpublished_count += 1))
+  fi
 done
+
+if (( published_count == ${#TOPO_ORDER[@]} )); then
+  for dir in "${TOPO_ORDER[@]}"; do
+    name=$(package_field "$dir" name)
+    old_version=$(package_field "$dir" version)
+    (cd "$dir" && npm version prerelease --preid=beta --no-git-tag-version >/dev/null)
+    new_version=$(package_field "$dir" version)
+    printf "  %-45s %s -> %s\n" "$name" "$old_version" "$new_version"
+  done
+elif (( unpublished_count == ${#TOPO_ORDER[@]} )); then
+  echo "  Current package versions are unpublished; keeping beta.${beta_number}."
+else
+  echo -e "  ${YELLOW}Detected a partial previous publish; keeping beta.${beta_number} and resuming.${NC}"
+fi
 echo ""
 
-echo -e "${YELLOW}Step 3: Adding 'files' fields to package.json (keeps tarballs clean)...${NC}"
-for dir in "${TOPO_ORDER[@]}"; do
-  name=$(node -p "require('./$dir/package.json').name")
-  printf "  %-45s" "$name"
-  add_files_field "$dir"
-done
-echo ""
-
-echo -e "${YELLOW}Step 4: Building all packages...${NC}"
+echo -e "${YELLOW}Step 3: Building all packages...${NC}"
 pnpm build
 echo -e "${GREEN}  Build complete.${NC}"
 echo ""
 
-echo -e "${YELLOW}Step 5: Dry-run (checking tarball sizes)...${NC}"
+echo -e "${YELLOW}Step 4: Verifying publish tarballs...${NC}"
 for dir in "${TOPO_ORDER[@]}"; do
-  name=$(node -p "require('./$dir/package.json').name")
-  version=$(node -p "require('./$dir/package.json').version")
-  size=$(cd "$dir" && npm pack --dry-run 2>&1 | grep "unpacked size" | sed 's/.*unpacked size: //' || echo "unknown")
-  printf "  %-45s %s @ %s\n" "$name" "$version" "$size"
+  name=$(package_field "$dir" name)
+  version=$(package_field "$dir" version)
+  output=$(cd "$dir" && pnpm publish --dry-run --tag beta --access public --no-git-checks 2>&1)
+  if ! grep -q "Skip publishing .* (dry run)" <<<"$output"; then
+    echo -e "${RED}Dry run failed for $name@$version${NC}"
+    echo "$output"
+    exit 1
+  fi
+  printf "  %-45s %s\n" "$name" "$version"
 done
 echo ""
 
-echo -e "${YELLOW}Step 6: Publishing (tag=beta)...${NC}"
-
-if [ -z "${NPM_TOKEN:-}" ]; then
-  echo -e "  ${RED}No NPM_TOKEN set.${NC}"
-  echo -e "  ${YELLOW}Set NPM_TOKEN before running this script.${NC}"
-  exit 1
-fi
-
-echo -e "  Using NPM_TOKEN (no OTP needed)"
-echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$ROOT/.npmrc.publish"
-PNPM_CONFIG_USERCONFIG_PATH="$ROOT/.npmrc.publish"
-trap 'rm -f "$PNPM_CONFIG_USERCONFIG_PATH"' EXIT
-echo ""
-
+echo -e "${YELLOW}Step 5: Publishing (tag=beta)...${NC}"
 PUBLISHED=()
-FAILED=()
-
-publish_one() {
-  local dir="$1"
-  (cd "$dir" && PNPM_CONFIG_USERCONFIG="$PNPM_CONFIG_USERCONFIG_PATH" pnpm publish --tag beta --access public --no-git-checks 2>&1)
-}
+SKIPPED=()
+STAGED=()
 
 for dir in "${TOPO_ORDER[@]}"; do
-  name=$(node -p "require('./$dir/package.json').name")
-  version=$(node -p "require('./$dir/package.json').version")
+  name=$(package_field "$dir" name)
+  version=$(package_field "$dir" version)
   printf "  Publishing %-45s ... " "$name@$version"
 
-  while true; do
-    OUTPUT=$(publish_one "$dir") && {
-      echo -e "${GREEN}OK${NC}"
-      PUBLISHED+=("$name@$version")
-      break
-    }
+  if is_published "$name" "$version"; then
+    echo -e "${YELLOW}SKIP (already published)${NC}"
+    SKIPPED+=("$name@$version")
+    continue
+  fi
 
-    if echo "$OUTPUT" | grep -q "403.*previously published\|cannot publish over"; then
-      echo -e "${YELLOW}SKIP (already published)${NC}"
-      break
-    else
-      echo -e "${RED}FAILED${NC}"
-      echo "$OUTPUT" | tail -5 | sed 's/^/    /'
-      FAILED+=("$name@$version")
-      break
+  publish_log=$(mktemp)
+  if (cd "$dir" && pnpm publish --tag beta --access public --no-git-checks 2>"$publish_log"); then
+    rm -f "$publish_log"
+    echo -e "${GREEN}OK${NC}"
+    PUBLISHED+=("$name@$version")
+  elif grep -q "previously staged version" "$publish_log"; then
+    rm -f "$publish_log"
+    echo -e "${YELLOW}STAGED (waiting for registry)${NC}"
+    STAGED+=("$name@$version")
+  else
+    echo -e "${RED}FAILED${NC}"
+    sed 's/^/    /' "$publish_log"
+    rm -f "$publish_log"
+    echo ""
+    echo -e "${YELLOW}Re-run this script after resolving the error; it will resume the same beta safely.${NC}"
+    exit 1
+  fi
+done
+echo ""
+
+echo -e "${YELLOW}Step 6: Verifying registry beta tags...${NC}"
+for attempt in {1..12}; do
+  all_verified=true
+  for dir in "${TOPO_ORDER[@]}"; do
+    name=$(package_field "$dir" name)
+    version=$(package_field "$dir" version)
+    tagged_version=$(npm view "$name" dist-tags.beta --json 2>/dev/null | tr -d '"')
+    if [[ "$tagged_version" != "$version" ]]; then
+      all_verified=false
     fi
   done
+  if [[ "$all_verified" == true ]]; then
+    break
+  fi
+  if (( attempt < 12 )); then
+    echo "  Registry staging is still in progress (${attempt}/12); retrying in 5 seconds..."
+    sleep 5
+  fi
+done
+
+for dir in "${TOPO_ORDER[@]}"; do
+  name=$(package_field "$dir" name)
+  version=$(package_field "$dir" version)
+  tagged_version=$(npm view "$name" dist-tags.beta --json 2>/dev/null | tr -d '"')
+  if [[ "$tagged_version" != "$version" ]]; then
+    echo -e "${RED}$name has beta=$tagged_version; expected $version${NC}"
+    exit 1
+  fi
+  printf "  %-45s %s\n" "$name" "$tagged_version"
 done
 
 echo ""
-echo -e "${CYAN}=== Summary ===${NC}"
-echo ""
-
-if [ ${#PUBLISHED[@]} -gt 0 ]; then
-  echo -e "${GREEN}Published (${#PUBLISHED[@]}):${NC}"
-  for p in "${PUBLISHED[@]}"; do
-    echo "  - $p"
-  done
-fi
-
-if [ ${#FAILED[@]} -gt 0 ]; then
-  echo ""
-  echo -e "${RED}Failed (${#FAILED[@]}):${NC}"
-  for f in "${FAILED[@]}"; do
-    echo "  - $f"
-  done
-  exit 1
-fi
-
-echo ""
-echo -e "${GREEN}All packages published successfully!${NC}"
+echo -e "${GREEN}Published ${#PUBLISHED[@]} package(s); resumed ${#STAGED[@]} staged and ${#SKIPPED[@]} public package(s).${NC}"

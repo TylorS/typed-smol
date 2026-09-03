@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { test } from "node:test";
+
+const workspaceRoot = path.resolve(import.meta.dirname, "../../..");
 
 test("the built server serves semantic HTML, client assets, and intentional 404s", async (t) => {
   const port = await availablePort();
@@ -129,6 +133,34 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   );
   assert.equal(packagePage.status, 200);
   assert.match(await packagePage.text(), /<h1[^>]*>[\s\S]*?@typed\/ui[\s\S]*?<\/h1>/);
+
+  for (const entry of await fs.readdir(path.join(workspaceRoot, "packages"), {
+    withFileTypes: true,
+  })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = path.join(workspaceRoot, "packages", entry.name, "package.json");
+    let manifest;
+    try {
+      manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
+    if (manifest.private === true || typeof manifest.name !== "string") continue;
+
+    const response = await fetch(
+      `http://127.0.0.1:${port}/reference/packages/${encodeURIComponent(manifest.name)}`,
+    );
+    assert.equal(response.status, 200, manifest.name);
+    const html = await response.text();
+    assert.match(
+      html,
+      new RegExp(
+        `<dl class="reference-package-facts"[^>]*>[\\s\\S]*?<dt>Version</dt>[\\s\\S]*?${escapeRegExp(manifest.version)}`,
+      ),
+      `${manifest.name} reference must use packages/${entry.name}/package.json version`,
+    );
+  }
 
   const moduleId = "@typed/template/RenderEvent";
   const modulePage = await fetch(

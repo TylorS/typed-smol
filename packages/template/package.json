@@ -1,6 +1,6 @@
 {
   "name": "@typed/template",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.6",
   "description": "Typed HTML templates, rendering, and hydration for Typed applications.",
   "license": "MIT",
   "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/template#readme",

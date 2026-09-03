@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import * as Checkbox from "../Checkbox.js";
 import * as Slider from "../Slider.js";
 import * as SpinButton from "../SpinButton.js";
@@ -51,10 +51,12 @@ describe("typed/ui value controls in browsers", () => {
 
       yield* Slider.setValue(slider, 3);
       yield* SpinButton.setValue(spinButton, 6);
-      yield* Effect.sleep(20);
-
-      assert.strictEqual((range as HTMLInputElement).value, "3");
-      assert.strictEqual((number as HTMLInputElement).value, "6");
+      yield* Effect.promise(() =>
+        vi.waitFor(() => {
+          assert.strictEqual((range as HTMLInputElement).value, "3");
+          assert.strictEqual((number as HTMLInputElement).value, "6");
+        }),
+      );
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 

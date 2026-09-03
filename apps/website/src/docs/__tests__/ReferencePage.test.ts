@@ -14,7 +14,7 @@ describe("package reference", () => {
   it("renders Fx through the standard import-surface layout", async () => {
     const output = await render({
       packageName: "@typed/fx",
-      packageVersion: "2.0.0-beta.4",
+      packageVersion: "test-version",
       moduleSpecifiers: ["@typed/fx/Fx", "@typed/fx/RefSubject"],
       exposureIds: ["@typed/fx/Fx#sync", "@typed/fx/RefSubject#make"],
       uniqueExportCount: 2,
@@ -46,12 +46,8 @@ describe("package reference", () => {
     expect(output).toMatch(/<dt>Unique exports<\/dt><dd>[\s\S]*?2[\s\S]*?<\/dd>/u);
     expect(output).not.toContain("Public exposures");
     expect(output).toContain('class="reference-module-row"');
-    expect(output).toContain(
-      `/reference/${encodeURIComponent("@typed/fx/Fx#sync")}`,
-    );
-    expect(output).toContain(
-      `/reference/${encodeURIComponent("@typed/fx/RefSubject#make")}`,
-    );
+    expect(output).toContain(`/reference/${encodeURIComponent("@typed/fx/Fx#sync")}`);
+    expect(output).toContain(`/reference/${encodeURIComponent("@typed/fx/RefSubject#make")}`);
     expect(output).not.toContain("Choose an API area");
     expect(output).not.toContain("Browse import paths");
   });

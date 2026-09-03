@@ -184,9 +184,11 @@ export const CurrentRenderPriority = Context.Reference<number>("CurrentRenderPri
  * ## Ownership and lifetime
  *
  * Template and fragment caches live with the Layer service. Each emitted DOM
- * range has a child Scope owning subscriptions, delegated native listeners,
- * queued callbacks, and ref finalizers. Only nodes and attributes represented by
- * that range are changed; external classes and unowned siblings remain intact.
+ * range keeps its mounted subscriptions, delegated native listeners, queued
+ * callbacks, and ref finalizers in the surrounding event Scope. Replaceable
+ * spread parts use child Scopes so replacement still releases their resources.
+ * Only nodes and attributes represented by that range are changed; external
+ * classes and unowned siblings remain intact.
  *
  * ## Cost model and moves
  *
@@ -301,7 +303,7 @@ export const DomRenderTemplate = Object.assign(
               if (setup.remaining.length > 0) {
                 yield* Effect.all(
                   setup.remaining.map(
-                    flow(Effect.catchCause(ctx.onCause), Effect.forkIn(ctx.scope)),
+                    flow(Effect.catchCause(ctx.onCause), Effect.forkIn(ctx.eventScope)),
                   ),
                 );
 
@@ -1049,7 +1051,7 @@ function makeSpreadPartInstance<R>(
     Effect.gen(function* () {
       if (currentScope !== undefined) yield* Scope.close(currentScope, Exit.void);
 
-      const scope = yield* Scope.fork(ctx.scope);
+      const scope = yield* Scope.fork(ctx.eventScope);
       currentScope = scope;
       const disposables = new Set<Disposable>();
       const refCounter = yield* makeRefCounter;
@@ -1061,6 +1063,7 @@ function makeSpreadPartInstance<R>(
         ...ctx,
         disposables,
         disposeEventHandlers: true,
+        eventScope: scope,
         refCounter,
         scope,
         services: Context.add(ctx.services, Scope.Scope, scope),
@@ -1115,9 +1118,10 @@ function makeSpreadPartInstance<R>(
  *
  * ## Ownership and lifetime
  *
- * The child `scope` owns dynamic parts, handler fibers, queued callbacks, and
- * disposables. The context borrows its `Document`, input values, and parent
- * services and must not outlive that child Scope.
+ * The child `scope` owns one-shot render setup. The surrounding `eventScope`
+ * owns mounted dynamic parts, handler fibers, queued callbacks, and ref
+ * finalizers until the rendered range is unmounted. Replaceable parts create
+ * their own child event Scope so replacement disposes only that part.
  *
  * @example
  * ```ts

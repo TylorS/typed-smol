@@ -1,6 +1,6 @@
 {
   "name": "@typed/ui",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.6",
   "description": "Web integration for Typed routing, templates, and Effect HTTP.",
   "license": "MIT",
   "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/ui#readme",

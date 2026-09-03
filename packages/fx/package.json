@@ -1,6 +1,6 @@
 {
   "name": "@typed/fx",
-  "version": "2.0.0-beta.4",
+  "version": "2.0.0-beta.6",
   "description": "Reactive streams and state for Typed applications.",
   "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/fx#readme",
   "bugs": "https://github.com/TylorS/typed-smol/issues",

@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import * as Select from "../Select.js";
 
 describe("typed/ui/Select in browsers", () => {
@@ -97,16 +97,22 @@ describe("typed/ui/Select in browsers", () => {
 
       const trigger = document.querySelector("button") as HTMLButtonElement;
       const small = document.querySelector("#small") as HTMLDivElement;
+      const context = yield* Effect.context();
       trigger.click();
-      yield* Effect.sleep(0);
-
-      assert.strictEqual((yield* state).activeId, "small");
-      assert.strictEqual(document.activeElement, small);
+      yield* Effect.promise(() =>
+        vi.waitFor(async () => {
+          assert.strictEqual((await Effect.runPromiseWith(context)(state)).activeId, "small");
+          assert.strictEqual(document.activeElement, small);
+        }),
+      );
 
       small.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      yield* Effect.sleep(0);
-      assert.strictEqual((yield* state).open, false);
-      assert.strictEqual(document.activeElement, trigger);
+      yield* Effect.promise(() =>
+        vi.waitFor(async () => {
+          assert.strictEqual((await Effect.runPromiseWith(context)(state)).open, false);
+          assert.strictEqual(document.activeElement, trigger);
+        }),
+      );
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 
