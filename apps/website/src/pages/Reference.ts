@@ -2,6 +2,7 @@ import { html } from "@typed/template";
 import { packageCatalog, referenceCounts } from "../docs/Content.js";
 import type { ReferenceModule, ReferencePackage } from "../docs/Model.js";
 import { siteHref } from "../SiteHref.js";
+import { referencePath } from "../docs/Reference.js";
 
 const exposureLabel = (count: number) => `${count} ${count === 1 ? "export" : "exports"}`;
 const exportNameOf = (id: string) => id.slice(id.indexOf("#") + 1);
@@ -145,7 +146,9 @@ export const PackagePage = (pkg: ReferencePackage) => html`
                     href=${
                       module.exposureIds.length === 1
                         ? siteHref(`/reference/${encodeURIComponent(module.exposureIds[0]!)}`)
-                        : siteHref(`/reference/modules/${encodeURIComponent(module.consumerSpecifier)}`)
+                        : siteHref(
+                            `/reference/modules/${encodeURIComponent(module.consumerSpecifier)}`,
+                          )
                     }
                   >
                     <code>${module.consumerSpecifier}</code>
@@ -222,7 +225,7 @@ export const ModulePage = (module: ReferenceModule) => html`
                 ${category.exposureIds.map(
                   (id) => html`
                     <li>
-                      <a class="reference-symbol-row" href=${siteHref(`/reference/${encodeURIComponent(id)}`)}>
+                      <a class="reference-symbol-row" href=${siteHref(referencePath(id))}>
                         <code>${exportNameOf(id)}</code>
                         <span>${module.consumerSpecifier}</span>
                       </a>

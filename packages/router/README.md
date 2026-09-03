@@ -26,8 +26,6 @@
 - `@typed/guard`
 - `@typed/id`
 - `@typed/navigation`
-- `find-my-way-ts`
-- `hkt-core`
 
 ## API overview
 

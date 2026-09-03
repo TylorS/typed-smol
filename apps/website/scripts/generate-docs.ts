@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript-compiler";
 import { canonicalSiteOrigin } from "../src/Site.js";
+import { curriculumSearchEntries } from "../src/tutorial/Content.js";
 import { validateCoverage } from "../src/docs/Coverage.js";
 import { replaceDirectoriesTransactionally } from "../src/docs/AtomicDirectories.js";
 import { extractPublicModules } from "../src/docs/Extract.js";
@@ -25,7 +26,12 @@ import {
   type SymbolDocumentation,
 } from "../src/docs/Model.js";
 import { discoverPublishedPackages, resolvePublicModules } from "../src/docs/Published.js";
-import { buildReferenceInventory, projectSymbols, referenceSlug } from "../src/docs/Reference.js";
+import {
+  buildReferenceInventory,
+  projectSymbols,
+  referencePath,
+  referenceSlug,
+} from "../src/docs/Reference.js";
 import { renderSymbolMarkdown, validateMarkdownFences } from "../src/docs/RenderMarkdown.js";
 import { documentationSchema } from "../src/docs/Schema.js";
 import { buildSearchArtifact, canonicalExposureIds } from "../src/docs/Search.js";
@@ -91,7 +97,7 @@ const moduleMarkdown = (inventory: ReferenceInventory, consumerSpecifier: string
     .map(
       (category) =>
         `## ${category.name}\n\n${category.exposureIds
-          .map((id) => `- [${id.slice(id.indexOf("#") + 1)}](/reference/${encodeURIComponent(id)})`)
+          .map((id) => `- [${id.slice(id.indexOf("#") + 1)}](${referencePath(id)})`)
           .join("\n")}`,
     )
     .join("\n\n")}\n`;
@@ -254,7 +260,11 @@ const program = Effect.gen(function* () {
     symbols,
   };
   Schema.decodeUnknownSync(DocumentationModelSchema)(documentationModel);
-  const searchArtifact = buildSearchArtifact(documentationModel, inventory);
+  const searchArtifact = buildSearchArtifact(
+    documentationModel,
+    inventory,
+    curriculumSearchEntries,
+  );
   const manifest = {
     schemaVersion: 1,
     repositoryRevision: documentationModel.repositoryRevision,

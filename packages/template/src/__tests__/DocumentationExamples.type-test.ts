@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Option, Scope } from "effect";
 import { Fx } from "@typed/fx";
-import { RefSubject } from "@typed/fx/RefSubject";
+import * as RefSubject from "@typed/fx/RefSubject";
 import * as EventHandler from "@typed/template/EventHandler";
 import { makeEventSource } from "@typed/template/EventSource";
 import {

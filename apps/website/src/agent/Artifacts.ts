@@ -7,6 +7,7 @@ import { documentationModel } from "../docs/Content.js";
 import { recipes } from "../docs/Recipes.js";
 import { generatedManifest } from "../generated/manifest.js";
 import { canonicalSiteOrigin } from "../Site.js";
+import { quickStartSections, tutorialSteps } from "../tutorial/Content.js";
 
 export const origin = canonicalSiteOrigin;
 
@@ -15,6 +16,31 @@ export const pageMarkdown: Readonly<Record<string, string>> = {
   "/explore": `# Build up the system\n\nConcepts, guides, and deep dives follow Typed's Fx to Template to UI architecture.\n\n${documentationModel.guides
     .map((guide) => `- [${guide.title}](${origin}/explore/${guide.slug}): ${guide.summary}`)
     .join("\n")}\n`,
+  "/explore/quick-start": `# Build your first Typed application\n\nGrow one Counter from installation and client-only rendering through reactive state, server rendering, and hydration.\n\n${quickStartSections
+    .map(
+      (section) =>
+        `## ${section.title}\n\n${section.summary}\n\n${section.body}\n\n${section.files
+          .map(
+            (sourceFile) =>
+              `### ${sourceFile.name}\n\n\`\`\`${sourceFile.language}\n${sourceFile.source}\n\`\`\``,
+          )
+          .join("\n\n")}`,
+    )
+    .join("\n\n")}\n`,
+  "/explore/tutorial": `# Build TodoMVC one boundary at a time\n\n${tutorialSteps
+    .map((step) => `- [${step.title}](${origin}/explore/tutorial/${step.slug}): ${step.summary}`)
+    .join("\n")}\n`,
+  ...Object.fromEntries(
+    tutorialSteps.map((step) => [
+      `/explore/tutorial/${step.slug}`,
+      `# ${step.title}\n\n${step.summary}\n\n${step.body}\n\n${step.files
+        .map(
+          (sourceFile) =>
+            `## ${sourceFile.name}\n\n\`\`\`${sourceFile.language}\n${sourceFile.source}\n\`\`\``,
+        )
+        .join("\n\n")}\n`,
+    ]),
+  ),
   ...Object.fromEntries(
     documentationModel.guides.map((guide) => [
       `/explore/${guide.slug}`,

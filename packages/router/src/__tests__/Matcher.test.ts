@@ -628,7 +628,7 @@ describe("typed/router/Matcher", () => {
               }),
             ),
           );
-          const handler = (causeRef: RefSubject.RefSubject<Cause.Cause<unknown>>) =>
+          const handler = (causeRef: RefSubject<Cause.Cause<unknown>>) =>
             Fx.unwrap(
               Effect.gen(function* () {
                 const cause = yield* causeRef;

@@ -37,7 +37,6 @@ const artifactPaths = [
 ];
 
 const clientEntryUrl = await copyStaticAssets();
-await rewriteSearchLinks();
 
 const port = await availablePort();
 const server = spawn(process.execPath, [serverEntry, "--port", String(port)], {
@@ -103,28 +102,6 @@ async function rewriteStaticStyles(): Promise<void> {
         const pathname = path.join(siteRoot, file);
         const source = await fs.readFile(pathname, "utf8");
         const rewritten = source.replace(/(url\((?:"|')?)\/(?!\/)/g, `$1${siteBase}`);
-        if (rewritten !== source) await fs.writeFile(pathname, rewritten);
-      }),
-  );
-}
-
-async function rewriteSearchLinks(): Promise<void> {
-  const assetsRoot = path.join(siteRoot, "assets");
-  let files: ReadonlyArray<string>;
-  try {
-    files = await fs.readdir(assetsRoot);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
-    throw error;
-  }
-
-  await Promise.all(
-    files
-      .filter((file) => file.endsWith(".js"))
-      .map(async (file) => {
-        const pathname = path.join(assetsRoot, file);
-        const source = await fs.readFile(pathname, "utf8");
-        const rewritten = source.replace(/(["']?href["']?\s*:\s*["'`])\/(?!\/)/g, `$1${siteBase}`);
         if (rewritten !== source) await fs.writeFile(pathname, rewritten);
       }),
   );

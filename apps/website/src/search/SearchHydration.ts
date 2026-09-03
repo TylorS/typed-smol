@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import type { SearchResult } from "../docs/Search.js";
 import { createSearchSession } from "./SearchSession.js";
 import type { SearchState } from "./SearchSession.js";
+import { siteHref } from "../SiteHref.js";
 
 export interface SearchHydrationOptions {
   readonly document: Document;
@@ -81,7 +82,7 @@ export const searchHydration = ({
           const item = document.createElement("li");
           const link = document.createElement("a");
           const kind = document.createElement("small");
-          link.href = match.href;
+          link.href = siteHref(match.href);
           link.textContent = match.title;
           kind.textContent = match.kind;
           item.append(link, kind);

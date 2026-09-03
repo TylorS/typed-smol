@@ -49,6 +49,10 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   assert.match(await subpathExplore.text(), /<h1[^>]*>[\s\S]*?Build up the system/);
 
   for (const [path, heading] of [
+    ["/explore/quick-start", "Build your first Typed application"],
+    ["/explore/tutorial", "Build TodoMVC one boundary at a time"],
+    ["/explore/tutorial/model-the-domain", "Model the domain"],
+    ["/explore/tutorial/persist-the-list", "Persist the list"],
     ["/explore", "Build up the system"],
     ["/explore/fx-push-reactivity", "Fx: work arrives"],
     ["/explore/building-fx", "Building Fx values"],
@@ -99,8 +103,11 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   const unknownGuide = await fetch(`http://127.0.0.1:${port}/explore/not-a-real-guide`);
   assert.equal(unknownGuide.status, 404);
 
+  const unknownTutorial = await fetch(`http://127.0.0.1:${port}/explore/tutorial/not-a-real-step`);
+  assert.equal(unknownTutorial.status, 404);
+
   const symbolPage = await fetch(
-    `http://127.0.0.1:${port}/reference/${encodeURIComponent("@typed/template/many#many")}`,
+    `http://127.0.0.1:${port}/reference/symbols/${referenceRouteSlug("@typed/template/many#many")}`,
   );
   assert.equal(symbolPage.status, 200);
   const symbolHtml = await symbolPage.text();
@@ -112,7 +119,7 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   assert.match(symbolHtml, /packages\/template\/src\/many\.ts/);
 
   const weightedHtml = await fetch(
-    `http://127.0.0.1:${port}/reference/${encodeURIComponent("@typed/template/many#many")}`,
+    `http://127.0.0.1:${port}/reference/symbols/${referenceRouteSlug("@typed/template/many#many")}`,
     { headers: { accept: "text/markdown;q=0, text/html;q=1" } },
   );
   assert.match(weightedHtml.headers.get("content-type") ?? "", /^text\/html\b/);
@@ -135,7 +142,7 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
 
   const resourceId = "@typed/tsconfig/base#$resource";
   const resourcePage = await fetch(
-    `http://127.0.0.1:${port}/reference/${encodeURIComponent(resourceId)}`,
+    `http://127.0.0.1:${port}/reference/symbols/${referenceRouteSlug(resourceId)}`,
   );
   assert.equal(resourcePage.status, 200);
   assert.match(await resourcePage.text(), /<h1[^>]*>[\s\S]*?\$resource[\s\S]*?<\/h1>/);
@@ -148,7 +155,7 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   assert.match(await moduleMarkdown.text(), /^# @typed\/template\/RenderEvent/m);
 
   const resourceJson = await fetch(
-    `http://127.0.0.1:${port}/docs/reference/exposures/${referenceSlug(resourceId)}.json`,
+    `http://127.0.0.1:${port}/docs/reference/exposures/${referenceArtifactSlug(resourceId)}.json`,
   );
   assert.equal(resourceJson.status, 200);
   const resourcePayload = await resourceJson.json();
@@ -159,7 +166,7 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   const caseDistinctPayloads = await Promise.all(
     caseDistinctIds.map(async (id) => {
       const response = await fetch(
-        `http://127.0.0.1:${port}/docs/reference/exposures/${referenceSlug(id)}.json`,
+        `http://127.0.0.1:${port}/docs/reference/exposures/${referenceArtifactSlug(id)}.json`,
       );
       assert.equal(response.status, 200, id);
       return response.json();
@@ -295,7 +302,7 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
   const sitemap = await fetch(`http://127.0.0.1:${port}/sitemap.xml`);
   assert.match(
     await sitemap.text(),
-    new RegExp(encodeURIComponent(resourceId).replaceAll("%", "%")),
+    new RegExp(`/reference/symbols/${referenceRouteSlug(resourceId)}`),
   );
 
   const client = await fetch(`http://127.0.0.1:${port}/client.js`);
@@ -305,7 +312,7 @@ test("the built server serves semantic HTML, client assets, and intentional 404s
 
   for (const path of [
     "/definitely-missing",
-    `/reference/${encodeURIComponent("@typed/fx#definitelyMissing")}`,
+    `/reference/symbols/${referenceRouteSlug("@typed/fx#definitelyMissing")}`,
     `/reference/modules/${encodeURIComponent("@typed/fx/definitelyMissing")}`,
     `/reference/packages/${encodeURIComponent("@typed/definitely-missing")}`,
   ]) {
@@ -330,7 +337,11 @@ async function availablePort() {
   return port;
 }
 
-function referenceSlug(value) {
+function referenceRouteSlug(value) {
+  return Buffer.from(value, "utf8").toString("base64url");
+}
+
+function referenceArtifactSlug(value) {
   return Buffer.from(value, "utf8").toString("hex");
 }
 

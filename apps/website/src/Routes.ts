@@ -3,7 +3,7 @@ import * as Router from "@typed/router";
 import { Effect } from "effect";
 import { Layout } from "./Layout.js";
 import { guides } from "./docs/Content.js";
-import { loadExposure, loadModule, loadPackage } from "./docs/LoadReference.js";
+import { loadExposureBySlug, loadModule, loadPackage } from "./docs/LoadReference.js";
 import { Explore } from "./pages/Explore.js";
 import { Glossary } from "./pages/Glossary.js";
 import { Guide } from "./pages/Guide.js";
@@ -12,18 +12,29 @@ import { Integrate } from "./pages/Integrate.js";
 import { RecipePage } from "./pages/RecipePage.js";
 import { ModulePage, PackagePage, Reference } from "./pages/Reference.js";
 import { SymbolPage } from "./pages/Symbol.js";
+import { QuickStart, TutorialIndex, TutorialStepPage } from "./pages/Curriculum.js";
+import { tutorialStepBySlug } from "./tutorial/Content.js";
 
-const symbolRoute = Router.Parse("/reference/:id");
+const symbolRoute = Router.Parse("/reference/symbols/:slug");
 const packageRoute = Router.Parse("/reference/packages/:id");
 const moduleRoute = Router.Parse("/reference/modules/:id");
 const guideRoute = Router.Parse("/explore/:slug");
+const tutorialRoute = Router.Parse("/explore/tutorial/:slug");
 
 const loadGuide = ({ slug }: { readonly slug: string }) => {
   const guide = guides.find((candidate) => candidate.slug === slug);
   return guide === undefined ? Effect.succeedNone : Effect.succeedSome(guide);
 };
 
+const loadTutorialStep = ({ slug }: { readonly slug: string }) => {
+  const step = tutorialStepBySlug.get(slug);
+  return step === undefined ? Effect.succeedNone : Effect.succeedSome(step);
+};
+
 export const appRoutes = Router.match(Router.Slash, Home)
+  .match(Router.Parse("/explore/quick-start"), QuickStart)
+  .match(Router.Parse("/explore/tutorial"), TutorialIndex)
+  .match(tutorialRoute, loadTutorialStep, Fx.switchMap(TutorialStepPage))
   .match(Router.Parse("/explore"), Explore)
   .match(guideRoute, loadGuide, Fx.switchMap(Guide))
   .match(Router.Parse("/integrate"), Integrate)
@@ -46,7 +57,7 @@ export const appRoutes = Router.match(Router.Slash, Home)
   )
   .match(
     symbolRoute,
-    ({ id }) => Effect.option(loadExposure(decodeURIComponent(id))),
+    ({ slug }) => Effect.option(loadExposureBySlug(slug)),
     Fx.switchMap(({ symbol }) => SymbolPage(symbol)),
   )
   .match(Router.Parse("/glossary"), Glossary);

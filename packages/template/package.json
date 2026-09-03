@@ -11,7 +11,8 @@
     "directory": "packages/template"
   },
   "files": [
-    "dist"
+    "dist",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "type": "module",
   "exports": {
@@ -88,8 +89,7 @@
   },
   "dependencies": {
     "@typed/fx": "workspace:*",
-    "effect": "catalog:",
-    "html5parser": "3.0.0"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@vitest/browser-playwright": "catalog:",

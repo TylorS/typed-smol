@@ -28,6 +28,30 @@ export const countUniqueExports = (exposures: ReadonlyArray<ExportIdentity>): nu
 export const referenceSlug = (value: string): string =>
   [...new TextEncoder().encode(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 
+export const referenceRouteSlug = (value: string): string => {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/gu, "");
+};
+
+export const referenceIdFromRouteSlug = (slug: string): string | undefined => {
+  if (!/^[A-Za-z0-9_-]+$/u.test(slug)) return undefined;
+  try {
+    const padded = `${slug.replace(/-/gu, "+").replace(/_/gu, "/")}${"=".repeat(
+      (4 - (slug.length % 4)) % 4,
+    )}`;
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const value = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return referenceRouteSlug(value) === slug ? value : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const referencePath = (id: string): string => `/reference/symbols/${referenceRouteSlug(id)}`;
+
 const route = (kind: ReferenceRoute["kind"], id: string, canonicalPath: string): ReferenceRoute => {
   const collection = kind === "exposure" ? "exposures" : `${kind}s`;
   const direct = `/docs/reference/${collection}/${referenceSlug(id)}`;
@@ -121,10 +145,8 @@ export const buildReferenceInventory = (
         `/reference/modules/${encodeURIComponent(consumerSpecifier)}`,
       ),
     ),
-    ...extraction.exposures.map(({ id }) =>
-      route("exposure", id, `/reference/${encodeURIComponent(id)}`),
-    ),
-  ].sort((left, right) => compareText(left.canonicalPath, right.canonicalPath));
+    ...extraction.exposures.map(({ id }) => route("exposure", id, referencePath(id))),
+  ];
 
   return {
     uniqueExportCount: countUniqueExports(extraction.exposures),

@@ -1,4 +1,4 @@
-import type { Arg0, Pipe, TypeLambda, TypeLambda1 } from "hkt-core";
+import type { Apply, InputOf, Pipe, TypeFunction } from "./TypeFunction.js";
 
 /**
  * A parsed value paired with the unconsumed string suffix.
@@ -36,17 +36,14 @@ export type Result<Value, Rest extends string> = readonly [value: Value, rest: R
  * @since 1.0.0
  * @category type-level
  */
-export interface Parser<Output = unknown> extends TypeLambda<
-  [input: string],
-  Result<Output, string>
-> {}
+export interface Parser<Output = unknown> extends TypeFunction<string, Result<Output, string>> {}
 
 /**
  * Applies a type-level Parser to a string literal input.
  *
  * @remarks
  * ## Why
- * Consumers can expose parser results without depending directly on hkt-core's Pipe spelling.
+ * Consumers can expose parser results without depending on the internal type-function spelling.
  *
  * ## Ownership and lifetime
  * TypeScript instantiates `Parse` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
@@ -54,7 +51,7 @@ export interface Parser<Output = unknown> extends TypeLambda<
  * @since 1.0.0
  * @category type-level
  */
-export type Parse<P extends Parser<unknown>, Input extends string> = Pipe<Input, P>;
+export type Parse<P extends Parser<unknown>, Input extends string> = Apply<P, Input>;
 
 type IsStringLiteral<T extends string> = string extends T ? false : true;
 
@@ -93,7 +90,7 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export type Run<P extends Any, Input extends string> = Pipe<Input, P>;
+  export type Run<P extends Any, Input extends string> = Apply<P, Input>;
 
   /**
    * Succeeds with a constant value without consuming input.
@@ -108,13 +105,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface Succeed<A> extends TypeLambda<[input: string], Result<A, string>> {
+  export interface Succeed<A> extends TypeFunction<string, Result<A, string>> {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Succeed.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -122,7 +119,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string ? readonly [A, Input] : never;
+    readonly return: InputOf<this> extends infer Input extends string ? readonly [A, Input] : never;
   }
 
   /**
@@ -138,13 +135,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface Fail extends TypeLambda<[input: string], never> {
+  export interface Fail extends TypeFunction<string, never> {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Fail.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -168,13 +165,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface Char<C extends string> extends TypeLambda<[input: string], Result<C, string>> {
+  export interface Char<C extends string> extends TypeFunction<string, Result<C, string>> {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Char.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -182,7 +179,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends `${C}${infer Rest}` ? readonly [C, Rest] : never;
+    readonly return: InputOf<this> extends `${C}${infer Rest}` ? readonly [C, Rest] : never;
   }
 
   /**
@@ -199,13 +196,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface String<S extends string> extends TypeLambda<[input: string], Result<S, string>> {
+  export interface String<S extends string> extends TypeFunction<string, Result<S, string>> {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `String.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -213,7 +210,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends `${S}${infer Rest}` ? readonly [S, Rest] : never;
+    readonly return: InputOf<this> extends `${S}${infer Rest}` ? readonly [S, Rest] : never;
   }
 
   /**
@@ -404,8 +401,8 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface TakeWhile<Allowed extends string> extends TypeLambda<
-    [input: string],
+  export interface TakeWhile<Allowed extends string> extends TypeFunction<
+    string,
     Result<string, string>
   > {
     /**
@@ -413,7 +410,7 @@ export declare namespace Parser {
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `TakeWhile.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -421,7 +418,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
+    readonly return: InputOf<this> extends infer Input extends string
       ? TakeWhileInternal<Input, Allowed>
       : never;
   }
@@ -439,8 +436,8 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface TakeWhile1<Allowed extends string> extends TypeLambda<
-    [input: string],
+  export interface TakeWhile1<Allowed extends string> extends TypeFunction<
+    string,
     Result<string, string>
   > {
     /**
@@ -448,7 +445,7 @@ export declare namespace Parser {
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `TakeWhile1.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -456,7 +453,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
+    readonly return: InputOf<this> extends infer Input extends string
       ? TakeWhile1Internal<Input, Allowed>
       : never;
   }
@@ -474,13 +471,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface Map<P extends Any, F extends TypeLambda1> extends Parser<unknown> {
+  export interface Map<P extends Any, F extends TypeFunction> extends Parser<unknown> {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Map.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -488,8 +485,8 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
-      ? Pipe<Input, P> extends infer R
+    readonly return: InputOf<this> extends infer Input extends string
+      ? Apply<P, Input> extends infer R
         ? [R] extends [never]
           ? never
           : R extends readonly [infer Value, infer Rest extends string]
@@ -512,13 +509,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface FlatMap<P extends Any, F extends TypeLambda1> extends Parser<unknown> {
+  export interface FlatMap<P extends Any, F extends TypeFunction> extends Parser<unknown> {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `FlatMap.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -526,8 +523,8 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
-      ? Pipe<Input, P> extends infer R
+    readonly return: InputOf<this> extends infer Input extends string
+      ? Apply<P, Input> extends infer R
         ? [R] extends [never]
           ? never
           : R extends readonly [infer Value, infer Rest extends string]
@@ -562,7 +559,7 @@ export declare namespace Parser {
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Zip.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -570,8 +567,8 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
-      ? Pipe<Input, P> extends infer R1
+    readonly return: InputOf<this> extends infer Input extends string
+      ? Apply<P, Input> extends infer R1
         ? [R1] extends [never]
           ? never
           : R1 extends readonly [infer Value1, infer Rest1 extends string]
@@ -606,7 +603,7 @@ export declare namespace Parser {
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `OrElse.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -614,8 +611,8 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
-      ? Pipe<Input, P> extends infer R
+    readonly return: InputOf<this> extends infer Input extends string
+      ? Apply<P, Input> extends infer R
         ? [R] extends [never]
           ? Pipe<Input, Q>
           : R extends readonly [infer Value, infer Rest extends string]
@@ -645,7 +642,7 @@ export declare namespace Parser {
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Optional.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -653,8 +650,8 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
-      ? Pipe<Input, P> extends infer R
+    readonly return: InputOf<this> extends infer Input extends string
+      ? Apply<P, Input> extends infer R
         ? [R] extends [never]
           ? readonly [undefined, Input]
           : R extends readonly [infer Value, infer Rest extends string]
@@ -683,7 +680,7 @@ export declare namespace Parser {
     Input extends string,
     Acc extends ReadonlyArray<unknown> = readonly [],
   > =
-    Pipe<Input, P> extends infer R
+    Apply<P, Input> extends infer R
       ? [R] extends [never]
         ? readonly [Acc, Input]
         : R extends readonly [infer Value, infer Rest extends string]
@@ -708,7 +705,7 @@ export declare namespace Parser {
    * @category type-level
    */
   type Many1Internal<P extends Any, Input extends string> =
-    Pipe<Input, P> extends infer R
+    Apply<P, Input> extends infer R
       ? [R] extends [never]
         ? never
         : R extends readonly [infer Value, infer Rest extends string]
@@ -737,7 +734,7 @@ export declare namespace Parser {
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Many.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -745,7 +742,9 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string ? ManyInternal<P, Input> : never;
+    readonly return: InputOf<this> extends infer Input extends string
+      ? ManyInternal<P, Input>
+      : never;
   }
 
   /**
@@ -767,7 +766,7 @@ export declare namespace Parser {
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Many1.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -775,7 +774,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer Input extends string
+    readonly return: InputOf<this> extends infer Input extends string
       ? Many1Internal<P, Input>
       : never;
   }
@@ -793,13 +792,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface MapTo<F extends TypeLambda1> extends TypeLambda1 {
+  export interface MapTo<F extends TypeFunction> extends TypeFunction {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `MapTo.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -807,7 +806,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer P extends Any ? Map<P, F> : never;
+    readonly return: InputOf<this> extends infer P extends Any ? Map<P, F> : never;
   }
 
   /**
@@ -823,13 +822,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface FlatMapTo<F extends TypeLambda1> extends TypeLambda1 {
+  export interface FlatMapTo<F extends TypeFunction> extends TypeFunction {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `FlatMapTo.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -837,7 +836,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer P extends Any ? FlatMap<P, F> : never;
+    readonly return: InputOf<this> extends infer P extends Any ? FlatMap<P, F> : never;
   }
 
   /**
@@ -853,13 +852,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface ZipWith<Q extends Any> extends TypeLambda1 {
+  export interface ZipWith<Q extends Any> extends TypeFunction {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `ZipWith.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -867,7 +866,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer P extends Any ? Zip<P, Q> : never;
+    readonly return: InputOf<this> extends infer P extends Any ? Zip<P, Q> : never;
   }
 
   /**
@@ -883,13 +882,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface OrElseWith<Q extends Any> extends TypeLambda1 {
+  export interface OrElseWith<Q extends Any> extends TypeFunction {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `OrElseWith.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -897,7 +896,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer P extends Any ? OrElse<P, Q> : never;
+    readonly return: InputOf<this> extends infer P extends Any ? OrElse<P, Q> : never;
   }
 
   /**
@@ -913,13 +912,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface OptionalOf extends TypeLambda1 {
+  export interface OptionalOf extends TypeFunction {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `OptionalOf.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -927,7 +926,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer P extends Any ? Optional<P> : never;
+    readonly return: InputOf<this> extends infer P extends Any ? Optional<P> : never;
   }
 
   /**
@@ -943,13 +942,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface ManyOf extends TypeLambda1 {
+  export interface ManyOf extends TypeFunction {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `ManyOf.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -957,7 +956,7 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer P extends Any ? Many<P> : never;
+    readonly return: InputOf<this> extends infer P extends Any ? Many<P> : never;
   }
 
   /**
@@ -973,13 +972,13 @@ export declare namespace Parser {
    * @since 1.0.0
    * @category type-level
    */
-  export interface Many1Of extends TypeLambda1 {
+  export interface Many1Of extends TypeFunction {
     /**
      * Computes this type lambda's parse result for its current input.
      *
      * @remarks
      * ## Why
-     * hkt-core evaluates each parser combinator through this member without a parallel runtime object.
+     * The local type-function protocol evaluates each parser combinator through this member without a parallel runtime object.
      *
      * ## Ownership and lifetime
      * TypeScript evaluates `Many1Of.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
@@ -987,6 +986,6 @@ export declare namespace Parser {
      * @since 1.0.0
      * @category type-level
      */
-    readonly return: Arg0<this> extends infer P extends Any ? Many1<P> : never;
+    readonly return: InputOf<this> extends infer P extends Any ? Many1<P> : never;
   }
 }

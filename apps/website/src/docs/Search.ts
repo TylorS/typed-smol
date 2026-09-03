@@ -1,4 +1,5 @@
 import type { DocumentationModel, ReferenceInventory } from "./Model.js";
+import { referencePath } from "./Reference.js";
 
 export type SearchEntryKind = "package" | "module" | "exposure" | "resource" | "guide" | "glossary";
 
@@ -104,6 +105,7 @@ const fuzzyScore = (
 export const buildSearchIndex = (
   model: DocumentationModel,
   inventory?: ReferenceInventory,
+  additionalEntries: ReadonlyArray<SearchEntry> = [],
 ): ReadonlyArray<SearchEntry> => {
   const editorial: ReadonlyArray<SearchEntry> = [
     ...model.guides.map((guide) => ({
@@ -128,9 +130,10 @@ export const buildSearchIndex = (
         id: symbol.id,
         title: symbol.exportName,
         kind: (symbol.kind === "resource" ? "resource" : "exposure") as SearchEntryKind,
-        href: `/reference/${encodeURIComponent(symbol.id)}`,
+        href: referencePath(symbol.id),
         text: [symbol.id, symbol.exportName, symbol.summary, symbol.category ?? ""].join(" "),
       })),
+      ...additionalEntries,
     ];
   }
   const declarations = new Map(
@@ -172,7 +175,7 @@ export const buildSearchIndex = (
         declarationKey: exposure.recordKind === "declaration" ? exposure.declarationKey : undefined,
         title: exposure.qualifiedName,
         kind: exposure.recordKind === "resource" ? ("resource" as const) : ("exposure" as const),
-        href: `/reference/${encodeURIComponent(exposure.id)}`,
+        href: referencePath(exposure.id),
         specifier: exposure.consumerSpecifier,
         text: [
           exposure.id,
@@ -190,6 +193,7 @@ export const buildSearchIndex = (
         ].join(" "),
       };
     }),
+    ...additionalEntries,
   ];
 };
 
@@ -223,8 +227,9 @@ const postings = (
 export const buildSearchArtifact = (
   model: DocumentationModel,
   inventory?: ReferenceInventory,
+  additionalEntries: ReadonlyArray<SearchEntry> = [],
 ): SearchArtifact => {
-  const entries = buildSearchIndex(model, inventory);
+  const entries = buildSearchIndex(model, inventory, additionalEntries);
   const prefixes = new Map<string, Set<number>>();
   const trigrams = new Map<string, Set<number>>();
   entries.forEach((entry, entryIndex) => {

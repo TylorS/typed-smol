@@ -93,8 +93,8 @@ a stale request that should be interrupted.
 
 ## Know which candidate wins
 
-Typed compiles Route paths into [find-my-way-ts](https://github.com/tim-smart/find-my-way-ts), the
-same routing engine behind Effect's `HttpRouter`. `HttpRouter` uses it to select an HTTP handler;
+Typed compiles Route paths into Effect's native `unstable/http/FindMyWay` matcher, the same routing
+engine behind `HttpRouter`. `HttpRouter` uses it to select an HTTP handler;
 Matcher uses it to select live Fx work from Navigation, then applies Route codecs and Guards.
 Matching is case-insensitive and ignores a trailing slash. Distinct path shapes use the router's
 structural precedence, so a literal such as `/issues/new` wins over `/issues/:issueId`.

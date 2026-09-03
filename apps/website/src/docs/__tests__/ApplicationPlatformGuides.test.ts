@@ -31,8 +31,8 @@ describe("application and platform guides", () => {
     expect(route.source).toContain('from "@typed/router/Route"');
     expect(route.source).toContain("Route.Type");
     expect(route.source).toContain("RouteDecodeError");
-    expect(route.source).toContain("[find-my-way-ts](https://github.com/tim-smart/find-my-way-ts)");
-    expect(route.source).toContain("Effect's `HttpRouter`");
+    expect(route.source).toContain("Effect's native `unstable/http/FindMyWay` matcher");
+    expect(route.source).toContain("`HttpRouter`");
     expect(route.source).not.toContain("## Matching performs the decode");
     const routeCode = extractTypeScriptFences(route.guide.body).join("\n");
     for (const routeApi of [
@@ -56,11 +56,8 @@ describe("application and platform guides", () => {
     expect(router.source).toContain("ServerRouter");
     expect(router.source).toContain("TestRouter");
     expect(router.source).toContain("Navigation.currentEntry");
-    expect(router.source).toContain("find-my-way-ts");
-    expect(router.source).toContain(
-      "[find-my-way-ts](https://github.com/tim-smart/find-my-way-ts)",
-    );
-    expect(router.source).toContain("Effect's `HttpRouter`");
+    expect(router.source).toContain("Effect's native `unstable/http/FindMyWay` matcher");
+    expect(router.source).toContain("`HttpRouter`");
     expect(router.source).toMatch(/Effect.*Stream.*Fx/s);
     expect(router.source).toContain("Guard");
     expect(router.source).toContain("dependencies");

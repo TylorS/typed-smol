@@ -1,4 +1,4 @@
-import type { Arg0, Call1W, Identity, Pipe, TypeLambda, TypeLambda1 } from "hkt-core";
+import type { Apply, Identity, InputOf, Pipe, TypeFunction } from "./TypeFunction.js";
 
 /**
  * Parses a URI string literal into component literal types, optionally against a base URI.
@@ -208,15 +208,15 @@ export declare namespace Uri {
  * @since 1.0.0
  * @category type-level
  */
-export type FormatUri<Uri extends Uri.Any, BaseUri extends string = never> = Call1W<
+export type FormatUri<Uri extends Uri.Any, BaseUri extends string = never> = Apply<
   FormatUrlLambda,
-  [BaseUri] extends [never] ? Uri : Call1W<ApplyBaseUriLambda<ParseUri<BaseUri>>, Uri>
+  [BaseUri] extends [never] ? Uri : Apply<ApplyBaseUriLambda<ParseUri<BaseUri>>, Uri>
 >;
 
 // Internal
 
-interface FormatUrlLambda extends TypeLambda1 {
-  readonly return: Arg0<this> extends infer Uri extends Uri.Any
+interface FormatUrlLambda extends TypeFunction {
+  readonly return: InputOf<this> extends infer Uri extends Uri.Any
     ? StringJoin<
         [
           FormatProtocol<Uri["protocol"]>,
@@ -282,8 +282,8 @@ type GetUriKey<UriLike, Key extends keyof Uri> = Key extends keyof UriLike
     : Uri[Key]
   : Uri[Key];
 
-interface ParseUriLambda extends TypeLambda<[uri: string], Uri> {
-  return: Arg0<this> extends infer R
+interface ParseUriLambda extends TypeFunction<string, Uri> {
+  return: InputOf<this> extends infer R
     ? Pipe<
         [{}, R],
         UriParserReducerLambda<ParseHashLambda>,
@@ -294,59 +294,59 @@ interface ParseUriLambda extends TypeLambda<[uri: string], Uri> {
       > extends readonly [infer Result, infer Remaining extends string]
       ? Remaining extends ""
         ? Result
-        : `Failed to parse URI: ${Arg0<this>}`
+        : `Failed to parse URI: ${InputOf<this>}`
       : never
     : never;
 }
 
-interface UriParserReducerLambda<F extends TypeLambda> extends TypeLambda {
-  return: Arg0<this> extends readonly [infer State, infer Input extends string]
+interface UriParserReducerLambda<F extends TypeFunction> extends TypeFunction {
+  return: InputOf<this> extends readonly [infer State, infer Input extends string]
     ? Pipe<Input, F> extends readonly [infer NextState, infer Remaining extends string]
       ? [NextState & State, Remaining]
       : never
     : never;
 }
 
-interface ParseProtocolLambda extends TypeLambda {
-  readonly return: Arg0<this> extends `${infer Protocol}//${infer Rest}`
+interface ParseProtocolLambda extends TypeFunction {
+  readonly return: InputOf<this> extends `${infer Protocol}//${infer Rest}`
     ? [{ readonly protocol: Protocol }, Rest]
-    : [unknown, Arg0<this>];
+    : [unknown, InputOf<this>];
 }
 
-interface ParseHashLambda extends TypeLambda {
-  readonly return: Arg0<this> extends `${infer Rest}#${infer Hash}`
+interface ParseHashLambda extends TypeFunction {
+  readonly return: InputOf<this> extends `${infer Rest}#${infer Hash}`
     ? [{ readonly hash: Hash }, Rest]
-    : [unknown, Arg0<this>];
+    : [unknown, InputOf<this>];
 }
 
-interface ParseQueryLambda extends TypeLambda {
-  readonly return: Arg0<this> extends `${infer Rest}?${infer Query}`
+interface ParseQueryLambda extends TypeFunction {
+  readonly return: InputOf<this> extends `${infer Rest}?${infer Query}`
     ? [{ readonly query: Query }, Rest]
-    : [unknown, Arg0<this>];
+    : [unknown, InputOf<this>];
 }
 
-interface ParseAuthenticationLambda extends TypeLambda {
-  readonly return: Arg0<this> extends `${infer Username}:${infer Password}@${infer Rest}`
+interface ParseAuthenticationLambda extends TypeFunction {
+  readonly return: InputOf<this> extends `${infer Username}:${infer Password}@${infer Rest}`
     ? [{ readonly username: Username; readonly password: Password }, Rest]
-    : [unknown, Arg0<this>];
+    : [unknown, InputOf<this>];
 }
 
-interface ParsePathnamePortPathnameLambda extends TypeLambda {
-  readonly return: Arg0<this> extends `${infer Hostname}:${infer Port extends number}/${infer Pathname}`
+interface ParsePathnamePortPathnameLambda extends TypeFunction {
+  readonly return: InputOf<this> extends `${infer Hostname}:${infer Port extends number}/${infer Pathname}`
     ? [{ readonly hostname: Hostname; readonly port: Port; readonly pathname: Pathname }, ""]
-    : Arg0<this> extends `${infer Hostname}:${infer Port extends number}`
+    : InputOf<this> extends `${infer Hostname}:${infer Port extends number}`
       ? [{ readonly hostname: Hostname; readonly port: Port }, ""]
-      : Arg0<this> extends `${infer Hostname}/${infer Pathname}`
+      : InputOf<this> extends `${infer Hostname}/${infer Pathname}`
         ? "" extends Hostname
           ? [{ readonly pathname: Pathname }, ""]
           : [{ readonly hostname: Hostname; readonly pathname: Pathname }, ""]
-        : Arg0<this> extends `${infer Hostname}`
+        : InputOf<this> extends `${infer Hostname}`
           ? [{ readonly hostname: Hostname }, ""]
-          : [unknown, Arg0<this>];
+          : [unknown, InputOf<this>];
 }
 
-interface ApplyBaseUriLambda<BaseUri extends Uri.Any> extends TypeLambda1<Uri.Any, Uri.Any> {
-  readonly return: Arg0<this> extends infer R extends Uri.Any
+interface ApplyBaseUriLambda<BaseUri extends Uri.Any> extends TypeFunction<Uri.Any, Uri.Any> {
+  readonly return: InputOf<this> extends infer R extends Uri.Any
     ? Uri<
         GetUriKey<BaseUri, "protocol">,
         GetUriKey<BaseUri, "username">,

@@ -5,6 +5,7 @@ import { documentationSchema } from "../Schema.js";
 import { buildSearchIndex, searchDocumentation } from "../Search.js";
 import type { SearchEntry } from "../Search.js";
 import type { DocumentationModel, SymbolDocumentation } from "../Model.js";
+import { curriculumSearchEntries } from "../../tutorial/Content.js";
 
 const symbol: SymbolDocumentation = {
   id: "@typed/template/RenderEvent#DomRenderEvent",
@@ -78,6 +79,9 @@ describe("documentation model", () => {
   it("ranks exact, prefix, and prose matches deterministically", () => {
     const index = buildSearchIndex(model);
     expect(searchDocumentation(index, "DomRenderEvent")[0]?.id).toBe(symbol.id);
+    expect(searchDocumentation(index, "DomRenderEvent")[0]?.href).toBe(
+      "/reference/symbols/QHR5cGVkL3RlbXBsYXRlL1JlbmRlckV2ZW50I0RvbVJlbmRlckV2ZW50",
+    );
     expect(searchDocumentation(index, "renderer output").map((result) => result.id)).toEqual([
       "glossary:render-event",
       symbol.id,
@@ -93,6 +97,15 @@ describe("documentation model", () => {
       "guide:render-event-substrate",
     );
     expect(searchDocumentation(index, "completely unrelated query")).toEqual([]);
+  });
+
+  it("indexes the Quick Start and every TodoMVC tutorial step", () => {
+    const index = buildSearchIndex(model, undefined, curriculumSearchEntries);
+
+    expect(searchDocumentation(index, "install counter")[0]?.href).toBe("/explore/quick-start");
+    expect(searchDocumentation(index, "persist the list")[0]?.href).toBe(
+      "/explore/tutorial/persist-the-list",
+    );
   });
 
   it("collapses fuzzy aliases to canonical declarations but preserves exact exposure paths", () => {

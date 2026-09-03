@@ -1,9 +1,21 @@
 import { assert, describe, expect, it } from "vitest";
+import { TokenKind, tokenize } from "../internal/HtmlTokenizer.js";
 import { templateHash } from "../internal/templateHash.js";
 import * as Parser from "../Parser.js";
 import * as Template from "../Template.js";
 
 describe("Parser", () => {
+  it("tokenizes quoted attributes and raw-text elements", () => {
+    const tokens = tokenize('<style>a < b {}</style><input value="x">');
+
+    expect(tokens.filter(({ type }) => type === TokenKind.Literal).map(({ value }) => value).join(""))
+      .toBe("a < b {}");
+    expect(tokens).not.toContainEqual(expect.objectContaining({ type: TokenKind.OpenTag, value: "b" }));
+    expect(tokens).toContainEqual(
+      expect.objectContaining({ type: TokenKind.AttrValueDq, value: '"x"' }),
+    );
+  });
+
   it("returns an independent AST for each public parse call", () => {
     const template = h`<div>${"value"}</div>`;
 

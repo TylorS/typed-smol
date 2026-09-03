@@ -185,8 +185,8 @@ export const Home = html`
             Every <code>Route.*</code> constructor produces a Schema-backed route. Path and query
             parameters decode into domain values, malformed input remains typed, and every route
             composes through the same representation. <code>Matcher</code> delegates route
-            selection directly to <code>find-my-way-ts</code>—the same radix-tree foundation behind
-            Effect's <code>HttpRouter</code>—then carries each handler's output, errors, and services
+            selection directly to Effect's native <code>FindMyWay</code> matcher—the same radix-tree
+            foundation behind <code>HttpRouter</code>—then carries each handler's output, errors, and services
             through ${TermLink("fx", "Fx")}.
           </p>
           <a class="chapter-link" href=${siteHref("/explore/router-navigation-live-selection")}>

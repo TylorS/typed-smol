@@ -36,8 +36,8 @@ that construct the public [`RouteAst`](/reference/modules/%40typed%2Frouter%2FAS
 `Parse` turns a literal route pattern into a typed value. Parameter names become object keys without
 an interface or cast beside the route.
 
-Its path syntax follows [find-my-way-ts](https://github.com/tim-smart/find-my-way-ts), the routing
-engine behind Effect's `HttpRouter`. A Route only describes that syntax and its codecs here; the
+Its path syntax follows Effect's native `unstable/http/FindMyWay` matcher, the routing engine behind
+`HttpRouter`. A Route only describes that syntax and its codecs here; the
 [Router guide](/explore/router-navigation-live-selection) covers how Matcher uses the same engine to
 select application work from a URL.
 

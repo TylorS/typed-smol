@@ -315,7 +315,7 @@ export const DomRenderTemplate = Object.assign(
               const output = rendered ?? persistent(document, template.hash, fragment!);
 
               // Setup our event listeners for our rendered content.
-              yield* ctx.eventSource.setup(output, ctx.scope);
+              yield* ctx.eventSource.setup(output, ctx.eventScope);
 
               // If we're hydrating, we need to mark this part of the stack as hydrated
               if (hydration !== undefined) {
@@ -1060,6 +1060,7 @@ function makeSpreadPartInstance<R>(
       const partContext: TemplateContext<R> = {
         ...ctx,
         disposables,
+        disposeEventHandlers: true,
         refCounter,
         scope,
         services: Context.add(ctx.services, Scope.Scope, scope),
@@ -1136,6 +1137,8 @@ export type TemplateContext<R = never> = {
   readonly eventSource: EventSource;
   readonly refCounter: IndexRefCounter;
   readonly scope: Scope.Closeable;
+  readonly eventScope: Scope.Scope;
+  readonly disposeEventHandlers: boolean;
   readonly values: ArrayLike<Renderable<unknown, any, any>>;
   readonly services: Context.Context<R | Scope.Scope>;
   readonly onCause: (cause: Cause.Cause<any>) => Effect.Effect<unknown>;
@@ -1166,7 +1169,8 @@ const makeTemplateContext = Effect.fn(function* <
   const services: Context.Context<Renderable.Services<Values[number]> | RSink | Scope.Scope> =
     yield* Effect.context<Renderable.Services<Values[number]> | RSink | Scope.Scope>();
   const refCounter: IndexRefCounter = yield* makeRefCounter;
-  const scope: Scope.Closeable = yield* Scope.fork(Context.get(services, Scope.Scope));
+  const eventScope = Context.get(services, Scope.Scope);
+  const scope: Scope.Closeable = yield* Scope.fork(eventScope);
   const eventSource: EventSource = makeEventSource();
   const servicesWithScope = Context.add(services, Scope.Scope, scope);
   const hydrateContext = Context.getOption(services, HydrateContext);
@@ -1178,6 +1182,8 @@ const makeTemplateContext = Effect.fn(function* <
     eventSource,
     refCounter,
     scope,
+    eventScope,
+    disposeEventHandlers: false,
     values,
     onCause: (cause) =>
       Cause.hasInterruptsOnly(cause)
@@ -1340,17 +1346,16 @@ function createTemplateAttribute(document: Document, element: Element, name: str
 function setupEventHandler(element: Element, ctx: TemplateContext, index: number, name: string) {
   const value = ctx.values[index];
   if (isNullish(value)) return;
-  ctx.disposables.add(
-    ctx.eventSource.addEventListener(
-      element,
-      name,
-      EventHandler.fromEffectOrEventHandler(
-        value as
-          | Effect.Effect<unknown, never, never>
-          | EventHandler.EventHandler<Event, never, never>,
-      ).pipe(EventHandler.provide(ctx.services), EventHandler.catchCause(ctx.onCause)),
-    ),
+  const disposable = ctx.eventSource.addEventListener(
+    element,
+    name,
+    EventHandler.fromEffectOrEventHandler(
+      value as
+        | Effect.Effect<unknown, never, never>
+        | EventHandler.EventHandler<Event, never, never>,
+    ).pipe(EventHandler.provide(ctx.services), EventHandler.catchCause(ctx.onCause)),
   );
+  if (ctx.disposeEventHandlers) ctx.disposables.add(disposable);
 }
 
 function setupDataset<E, R>(

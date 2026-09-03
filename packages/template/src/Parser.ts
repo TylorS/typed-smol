@@ -1,7 +1,10 @@
 /* eslint-disable no-restricted-syntax */
 
-import type { IToken } from "html5parser";
-import { tokenize } from "html5parser";
+import {
+  TokenKind as HtmlTokenKind,
+  tokenize,
+  type IToken,
+} from "./internal/HtmlTokenizer.js";
 import { keyToPartType } from "./internal/keyToPartType.js";
 import { PART_STRING } from "./internal/meta.js";
 import { PathStack } from "./internal/PathStack.js";
@@ -96,8 +99,7 @@ class Parser {
     return this.tokens[this.index];
   }
 
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  private consumeNextTokenOfKind(kind: import("html5parser").TokenKind) {
+  private consumeNextTokenOfKind(kind: HtmlTokenKind) {
     const token = this.tokens[this.index];
     if (token.type !== kind) {
       throw new Error(`Expected ${TokenKindToName[kind]} but got ${TokenKindToName[token.type]}`);
@@ -112,8 +114,7 @@ class Parser {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  private consumeNextTokenOfKinds(...kinds: Array<import("html5parser").TokenKind>) {
+  private consumeNextTokenOfKinds(...kinds: Array<HtmlTokenKind>) {
     const token = this.tokens[this.index];
     if (!kinds.includes(token.type)) {
       throw new Error(
@@ -534,15 +535,15 @@ const SELF_CLOSING_TAGS = new Set([
 
 const TokenKind = {
   /* eslint-disable @typescript-eslint/consistent-type-imports */
-  Literal: 0 as import("html5parser").TokenKind.Literal,
-  OpenTag: 1 as import("html5parser").TokenKind.OpenTag,
-  OpenTagEnd: 2 as import("html5parser").TokenKind.OpenTagEnd,
-  CloseTag: 3 as import("html5parser").TokenKind.CloseTag,
-  Whitespace: 4 as import("html5parser").TokenKind.Whitespace,
-  AttrValueEq: 5 as import("html5parser").TokenKind.AttrValueEq,
-  AttrValueNq: 6 as import("html5parser").TokenKind.AttrValueNq,
-  AttrValueSq: 7 as import("html5parser").TokenKind.AttrValueSq,
-  AttrValueDq: 8 as import("html5parser").TokenKind.AttrValueDq,
+  Literal: HtmlTokenKind.Literal,
+  OpenTag: HtmlTokenKind.OpenTag,
+  OpenTagEnd: HtmlTokenKind.OpenTagEnd,
+  CloseTag: HtmlTokenKind.CloseTag,
+  Whitespace: HtmlTokenKind.Whitespace,
+  AttrValueEq: HtmlTokenKind.AttrValueEq,
+  AttrValueNq: HtmlTokenKind.AttrValueNq,
+  AttrValueSq: HtmlTokenKind.AttrValueSq,
+  AttrValueDq: HtmlTokenKind.AttrValueDq,
   /* eslint-enable @typescript-eslint/consistent-type-imports */
 } as const;
 

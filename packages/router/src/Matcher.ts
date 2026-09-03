@@ -1,4 +1,4 @@
-import * as findMyWay from "find-my-way-ts";
+import * as FindMyWay from "effect/unstable/http/FindMyWay";
 import type * as Arr from "effect/Array";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
@@ -376,7 +376,7 @@ type ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GE, GR> = ApplyCatch<
  * Building a Matcher is pure. Running it requires Router and Scope: it subscribes to CurrentPath,
  * switches selected handlers when the route changes, reuses the same handler for parameter-only
  * updates, and finalizes route/layout/layer scopes when selection changes or the consumer interrupts.
- * Matching is case-insensitive and ignores trailing slashes. `find-my-way-ts` chooses among distinct
+ * Matching is case-insensitive and ignores trailing slashes. Effect's native `FindMyWay` chooses among distinct
  * registered matcher paths using its path-shape precedence (for example, static versus parameter
  * shapes), not a global first-declared rule. Registration order matters among compiled entries that
  * share the same matcher path: their schemas and guards fall through in that order.
@@ -408,7 +408,7 @@ export interface Matcher<A, E = never, R = never>
    * @remarks
    * ## Why
    * Keeping cases visible preserves registration order for entries that compile to the same matcher
-   * path. Distinct matcher paths are still selected by `find-my-way-ts` path-shape precedence.
+   * path. Distinct matcher paths are still selected by `FindMyWay` path-shape precedence.
    *
    * ## Ownership and lifetime
    * The array is retained by the Matcher value and acquires no runtime resources.
@@ -428,7 +428,7 @@ export interface Matcher<A, E = never, R = never>
    * variants, and options without erasing their errors or service requirements. After path lookup,
    * candidates registered under the same matcher path are decoded and guarded in declaration order:
    * the first decoded guard `Some` wins; decode failure, guard `None`, or guard failure falls through.
-   * Distinct path shapes are prioritized by `find-my-way-ts`, not solely by this call's position.
+   * Distinct path shapes are prioritized by `FindMyWay`, not solely by this call's position.
    *
    * ## Ownership and lifetime
    * Registration is pure and returns a new Matcher. When run, candidate layers are prepared before
@@ -1212,7 +1212,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
           }),
       });
       const executor = yield* makeRouteExecutor<A, E, R>();
-      const router = findMyWay.make<ReadonlyArray<CompiledEntry>>({
+      const router = FindMyWay.make<ReadonlyArray<CompiledEntry>>({
         ignoreTrailingSlash: true,
         caseSensitive: false,
       });
@@ -1968,7 +1968,7 @@ export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledE
   return entries;
 }
 
-function getMatcherPaths(ast: RouteAst): ReadonlyArray<findMyWay.PathInput> {
+function getMatcherPaths(ast: RouteAst): ReadonlyArray<FindMyWay.PathInput> {
   let variants: Array<Array<AST.PathAst>> = [[]];
   for (const part of Path.flattenRouteAst(ast)) {
     if (part.type === "query-params") continue;
@@ -1983,7 +1983,7 @@ function getMatcherPaths(ast: RouteAst): ReadonlyArray<findMyWay.PathInput> {
   return [...new Set(variants.map(formatMatcherPath))];
 }
 
-function formatMatcherPath(parts: ReadonlyArray<AST.PathAst>): findMyWay.PathInput {
+function formatMatcherPath(parts: ReadonlyArray<AST.PathAst>): FindMyWay.PathInput {
   const normalized: Array<AST.PathAst> = [];
   for (const part of parts) {
     if (part.type === "slash" && normalized.at(-1)?.type === "slash") continue;

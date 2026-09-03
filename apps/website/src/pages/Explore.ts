@@ -23,6 +23,33 @@ export const Explore = html`
       ${ExploreNavigation()}
 
       <div class="explore-curriculum">
+        <section class="explore-section" aria-labelledby="explore-start-here">
+          <header>
+            <span class="index">START</span>
+            <h2 id="explore-start-here">Build an application</h2>
+          </header>
+          <div class="guide-list">
+            <article>
+              <span class="guide-kind guide-kind--guide">quick start</span>
+              <div>
+                <h3>
+                  <a href=${siteHref("/explore/quick-start")}>Build your first Counter</a>
+                </h3>
+                <p>Progress from client-only markup to reactive state and hydration.</p>
+              </div>
+              <span aria-hidden="true">→</span>
+            </article>
+            <article>
+              <span class="guide-kind guide-kind--guide">tutorial</span>
+              <div>
+                <h3><a href=${siteHref("/explore/tutorial")}>Build TodoMVC</a></h3>
+                <p>Build the complete application one clean architecture boundary at a time.</p>
+              </div>
+              <span aria-hidden="true">→</span>
+            </article>
+          </div>
+        </section>
+
         ${exploreSections.map(
           (s, i) => html`
             <section class="explore-section" aria-labelledby="explore-section-${i + 1}">

@@ -5,6 +5,9 @@ import { pageTitle } from "../../PageTitle.js";
 describe("pageTitle", () => {
   it.each([
     ["/", "Typed — Cooperative by design"],
+    ["/explore/quick-start", "Quick Start — Typed"],
+    ["/explore/tutorial", "TodoMVC tutorial — Typed"],
+    ["/explore/tutorial/model-the-domain", "Model the domain — TodoMVC tutorial — Typed"],
     ["/explore", "Explore — Typed"],
     ["/explore/building-fx", "Building Fx values — Typed"],
     ["/integrate/react", "Use React and Typed together — Typed"],
@@ -13,7 +16,10 @@ describe("pageTitle", () => {
       "/reference/modules/%40typed%2Ftemplate%2FRenderEvent",
       "@typed/template/RenderEvent module — Typed",
     ],
-    ["/reference/%40typed%2Ftemplate%2Fmany%23many", "many — @typed/template/many — Typed"],
+    [
+      "/reference/symbols/QHR5cGVkL3RlbXBsYXRlL21hbnkjbWFueQ",
+      "many — @typed/template/many — Typed",
+    ],
   ])("describes %s", (pathname, expected) => {
     expect(pageTitle(pathname)).toBe(expected);
   });

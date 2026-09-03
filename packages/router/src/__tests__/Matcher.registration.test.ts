@@ -6,17 +6,17 @@ const registrations = vi.hoisted(
   () => [] as Array<{ readonly method: string; readonly path: string }>,
 );
 
-vi.mock("find-my-way-ts", async (importOriginal) => {
-  const original = await importOriginal<typeof import("find-my-way-ts")>();
+vi.mock("effect/unstable/http/FindMyWay", async (importOriginal) => {
+  const original = await importOriginal<typeof import("effect/unstable/http/FindMyWay")>();
 
   return {
     ...original,
-    make: <A>(options?: Partial<import("find-my-way-ts").RouterConfig>) => {
+    make: <A>(options?: Partial<import("effect/unstable/http/FindMyWay").RouterConfig>) => {
       const router = original.make<A>(options);
       return {
         on: (
           method: string | Iterable<string>,
-          path: import("find-my-way-ts").PathInput,
+          path: import("effect/unstable/http/FindMyWay").PathInput,
           handler: A,
         ) => {
           for (const value of typeof method === "string" ? [method] : method) {
@@ -24,7 +24,7 @@ vi.mock("find-my-way-ts", async (importOriginal) => {
           }
           router.on(method, path, handler);
         },
-        all: (path: import("find-my-way-ts").PathInput, handler: A) => {
+        all: (path: import("effect/unstable/http/FindMyWay").PathInput, handler: A) => {
           registrations.push({ method: "ALL", path });
           router.all(path, handler);
         },

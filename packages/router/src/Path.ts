@@ -1,4 +1,4 @@
-import type { Arg0, TypeLambda1 } from "hkt-core";
+import type { InputOf, TypeFunction } from "./TypeFunction.js";
 
 import * as Schema from "effect/Schema";
 import type { PathAst, RouteAst } from "./AST.js";
@@ -29,17 +29,17 @@ type TakeWhileNot1Internal<Input extends string, Stop extends string> =
     : never;
 
 interface TakeWhileNot1<Stop extends string> extends Parser<string> {
-  readonly return: Arg0<this> extends infer Input extends string
+  readonly return: InputOf<this> extends infer Input extends string
     ? TakeWhileNot1Internal<Input, Stop>
     : never;
 }
 
-interface Second extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly [infer _A, infer B] ? B : never;
+interface Second extends TypeFunction {
+  readonly return: InputOf<this> extends readonly [infer _A, infer B] ? B : never;
 }
 
-interface RegexBetweenParens extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly ["(", readonly [infer Regex extends string, ")"]]
+interface RegexBetweenParens extends TypeFunction {
+  readonly return: InputOf<this> extends readonly ["(", readonly [infer Regex extends string, ")"]]
     ? Regex
     : never;
 }
@@ -63,7 +63,7 @@ type StartsWithQueryParam<
   : false;
 
 interface OptionalQuestionMarkParser extends Parser<"?" | undefined> {
-  readonly return: Arg0<this> extends infer Input extends string
+  readonly return: InputOf<this> extends infer Input extends string
     ? Input extends `?${infer Rest}`
       ? StartsWithQueryParam<Rest> extends true
         ? readonly [undefined, Input]
@@ -92,8 +92,8 @@ type ParameterAst<
   ? ToReadonlyRecord<Ast>
   : never;
 
-interface ToParameterAst extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly [
+interface ToParameterAst extends TypeFunction {
+  readonly return: InputOf<this> extends readonly [
     readonly [":", infer Name extends string],
     readonly [infer Regex, infer OptionalMark],
   ]
@@ -107,14 +107,14 @@ interface ToParameterAst extends TypeLambda1 {
 
 type ParameterParser = Parser.Map<ParameterPartsParser, ToParameterAst>;
 
-interface ToWildcardAst extends TypeLambda1 {
+interface ToWildcardAst extends TypeFunction {
   readonly return: { readonly type: "wildcard" };
 }
 
 type WildcardParser = Parser.Map<Parser.Char<"*">, ToWildcardAst>;
 
-interface ToLiteralAst extends TypeLambda1 {
-  readonly return: Arg0<this> extends infer Value extends string
+interface ToLiteralAst extends TypeFunction {
+  readonly return: InputOf<this> extends infer Value extends string
     ? { readonly type: "literal"; readonly value: Value }
     : never;
 }
@@ -128,8 +128,8 @@ type QueryValueParser = Parser.OrElse<
   Parser.OrElse<WildcardParser, QueryLiteralParser>
 >;
 
-interface ToQueryParamAst extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly [
+interface ToQueryParamAst extends TypeFunction {
+  readonly return: InputOf<this> extends readonly [
     infer Name extends string,
     readonly ["=", infer Value extends PathAst],
   ]
@@ -147,8 +147,8 @@ type QueryParamParser = Parser.Map<
 
 type QueryParamTailParser = Parser.Map<Parser.Zip<Parser.Char<"&">, QueryParamParser>, Second>;
 
-interface PrependToTuple extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly [
+interface PrependToTuple extends TypeFunction {
+  readonly return: InputOf<this> extends readonly [
     infer Head,
     infer Tail extends ReadonlyArray<unknown>,
   ]
@@ -161,8 +161,8 @@ type QueryParamListParser = Parser.Map<
   PrependToTuple
 >;
 
-interface ToQueryParamsAst extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly [
+interface ToQueryParamsAst extends TypeFunction {
+  readonly return: InputOf<this> extends readonly [
     "?",
     infer Params extends ReadonlyArray<PathAst.QueryParam>,
   ]
@@ -204,8 +204,8 @@ type SlashAst = { readonly type: "slash" };
 
 type PathChunk = readonly [PathAst] | readonly [SlashAst, PathAst];
 
-interface ToPathChunk extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly [infer Slashes, infer Ast extends PathAst]
+interface ToPathChunk extends TypeFunction {
+  readonly return: InputOf<this> extends readonly [infer Slashes, infer Ast extends PathAst]
     ? [Slashes] extends [undefined]
       ? readonly [Ast]
       : readonly [SlashAst, Ast]
@@ -228,8 +228,8 @@ type CombineChunks<First, Chunks extends ReadonlyArray<PathChunk>> = [First] ext
   ? readonly [First, ...FlattenChunks<Chunks>]
   : FlattenChunks<Chunks>;
 
-interface ToAsts extends TypeLambda1 {
-  readonly return: Arg0<this> extends readonly [
+interface ToAsts extends TypeFunction {
+  readonly return: InputOf<this> extends readonly [
     infer First,
     infer Chunks extends ReadonlyArray<PathChunk>,
   ]

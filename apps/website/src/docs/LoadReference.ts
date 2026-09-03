@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import type { ExposurePayload, ReferenceModule, ReferencePackage } from "./Model.js";
-import { referenceSlug } from "./Reference.js";
+import { referenceIdFromRouteSlug, referenceSlug } from "./Reference.js";
 
 const browserPath = (pathname: string, basePath: string): string => {
   const base = basePath.startsWith("/") ? basePath : `/${basePath}`;
@@ -47,3 +47,13 @@ export const loadModule = (
 
 export const loadExposure = (id: string, basePath = "/"): Effect.Effect<ExposurePayload, Error> =>
   loadJson(`/docs/reference/exposures/${referenceSlug(id)}.json`, basePath);
+
+export const loadExposureBySlug = (
+  slug: string,
+  basePath = "/",
+): Effect.Effect<ExposurePayload, Error> => {
+  const id = referenceIdFromRouteSlug(slug);
+  return id === undefined
+    ? Effect.fail(new Error(`Invalid reference slug: ${slug}`))
+    : loadExposure(id, basePath);
+};

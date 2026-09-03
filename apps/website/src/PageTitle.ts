@@ -1,15 +1,38 @@
 import { guides } from "./docs/Content.js";
 import { recipes } from "./docs/Recipes.js";
+import { generatedManifest } from "./generated/manifest.js";
+import { tutorialSteps } from "./tutorial/Content.js";
+import { referencePath } from "./docs/Reference.js";
 
 const fixedTitles = new Map<string, string>([
   ["/", "Typed — Cooperative by design"],
+  ["/explore/quick-start", "Quick Start — Typed"],
+  ["/explore/tutorial", "TodoMVC tutorial — Typed"],
   ["/explore", "Explore — Typed"],
   ["/integrate", "Integration recipes — Typed"],
   ["/reference", "API reference — Typed"],
   ["/glossary", "Glossary — Typed"],
   ...guides.map((guide) => [`/explore/${guide.slug}`, `${guide.title} — Typed`] as const),
   ...recipes.map((recipe) => [`/integrate/${recipe.slug}`, `${recipe.title} — Typed`] as const),
+  ...tutorialSteps.map(
+    (step) =>
+      [`/explore/tutorial/${step.slug}`, `${step.title} — TodoMVC tutorial — Typed`] as const,
+  ),
 ]);
+
+const referenceTitles = new Map(
+  generatedManifest.routes.flatMap((route) => {
+    if (route.kind !== "exposure") return [];
+    const separator = route.id.lastIndexOf("#");
+    if (separator < 0) return [];
+    return [
+      [
+        referencePath(route.id),
+        `${route.id.slice(separator + 1)} — ${route.id.slice(0, separator)} — Typed`,
+      ] as const,
+    ];
+  }),
+);
 
 const decode = (value: string): string => {
   try {
@@ -35,6 +58,8 @@ export const pageTitle = (pathname: string, base = "/"): string => {
   const path = normalizePath(pathname, base);
   const fixed = fixedTitles.get(path);
   if (fixed !== undefined) return fixed;
+  const referenceTitle = referenceTitles.get(path);
+  if (referenceTitle !== undefined) return referenceTitle;
 
   const packagePrefix = "/reference/packages/";
   if (path.startsWith(packagePrefix)) {
