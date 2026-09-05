@@ -64,7 +64,8 @@ describe("Authored curriculum examples", () => {
     }
   });
 
-  it("typechecks every cumulative milestone against the public packages", () => {
+  // This builds a complete curriculum/atlas, including compiler or highlighter startup on CI.
+  it("typechecks every cumulative milestone against the public packages", { timeout: 60_000 }, () => {
     const staging = fs.mkdtempSync(
       path.join(websiteRoot, ".curriculum-examples-"),
     );

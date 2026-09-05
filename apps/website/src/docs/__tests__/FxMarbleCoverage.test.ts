@@ -65,7 +65,8 @@ output: 3 |
     expect(report.unexpected).toEqual(["internalMap"]);
   });
 
-  it("covers every public temporal export in the canonical atlas", async () => {
+  // This builds a complete curriculum/atlas, including compiler or highlighter startup on CI.
+  it("covers every public temporal export in the canonical atlas", { timeout: 60_000 }, async () => {
     const inventory = JSON.parse(
       fs.readFileSync(
         path.join(websiteRoot, "src/generated/reference.json"),

@@ -58,7 +58,8 @@ describe("public UI guides", () => {
     }
   });
 
-  it("compiles every UI guide example, preserving explicit multi-file boundaries", () => {
+  // This builds a complete curriculum/atlas, including compiler or highlighter startup on CI.
+  it("compiles every UI guide example, preserving explicit multi-file boundaries", { timeout: 60_000 }, () => {
     const staging = fs.mkdtempSync(path.join(websiteRoot, ".public-ui-guide-check-"));
 
     try {
