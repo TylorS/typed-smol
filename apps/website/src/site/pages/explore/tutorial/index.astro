@@ -1,10 +1,18 @@
 ---
 import { getCollection } from "astro:content";
+import { adjacentLinks, learningGroups } from "../../../Guides.js";
+import { orderTutorialSteps } from "../../../../tutorial/Routes.js";
 import Article from "../../../layouts/Article.astro";
 import Demo from "../../../components/CurriculumDemo.js";
 import { siteHref } from "../../../../SiteHref.js";
-const steps = (await getCollection("tutorial")).sort(
-  (a, b) => a.data.order - b.data.order,
+const steps = orderTutorialSteps(await getCollection("tutorial"));
+const navigation = adjacentLinks(
+  "tutorial",
+  learningGroups(
+    await getCollection("guides"),
+    await getCollection("learn"),
+    steps,
+  ),
 );
 ---
 
@@ -13,10 +21,7 @@ const steps = (await getCollection("tutorial")).sort(
   summary="A complete client application: domain rules, reactive state, keyed views, filters, persistence, and tests."
   section="TUTORIAL"
   current="tutorial"
-  next={{
-    href: `/explore/tutorial/${steps[0]!.data.slug}`,
-    title: steps[0]!.data.title,
-  }}
+  {...navigation}
 >
   <Demo id="todo-10" client:only="@typed/astro"
     ><p slot="fallback">

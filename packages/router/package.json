@@ -1,6 +1,6 @@
 {
   "name": "@typed/router",
-  "version": "1.0.0-beta.6",
+  "version": "1.0.0-beta.7",
   "description": "Typed routing, matchers, and route execution for Typed applications.",
   "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/router#readme",
   "bugs": "https://github.com/TylorS/typed-smol/issues",

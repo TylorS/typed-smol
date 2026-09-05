@@ -184,7 +184,7 @@ export interface Success<A> {
  * import { Cause } from "effect"
  * const state = failure(Cause.fail("offline"))
  * ```
- * See [Effect Cause](https://effect.website/docs/error-management/cause/).
+ * See [Effect Cause](https://effect.website/docs/data-types/cause/).
  * @category State models
  * @since 1.0.0
  */

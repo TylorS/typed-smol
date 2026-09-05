@@ -9,7 +9,8 @@ test("reference names wrap and the selected module is visible without scrolling 
     server: { host: "127.0.0.1", port: 0 }, logLevel: "silent",
   });
   if (server) t.after(() => server.stop());
-  const origin = process.env.SITE_ORIGIN ?? `http://127.0.0.1:${server.port}`;
+  const origin = process.env.SITE_ORIGIN ?? (server ? `http://127.0.0.1:${server.port}` : undefined);
+  assert.ok(origin);
   const base = (process.env.SITE_BASE ?? "/typed-smol/").replace(/\/$/u, "");
   const browser = await chromium.launch();
   t.after(() => browser.close());

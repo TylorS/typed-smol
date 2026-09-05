@@ -11,6 +11,9 @@ A Scope registers finalizers and closes the lifetime that acquired resources. Sc
 subscriptions, and mounts connect their active work to that boundary rather than relying on an
 unrelated DOM removal or a global cleanup list.
 
-A template’s first output can arrive while its listeners remain owned by an ambient Scope. Finishing
-`take(1)` is therefore not proof of unmounting. Close the actual render Scope to test teardown. See
-[lifetime contracts](/explore/fx-services-and-lifetime) and [cleanup tests](/explore/testing-typed-systems).
+A first render emission is a readiness signal, not the lifetime of an interactive view. Keep its
+subscription alive while it is mounted. Each `component()` run forks a child Scope; ending that
+subscription with `take(1)` closes the child and releases its resources. A directly rendered template
+may also have resources attached to an enclosing Scope, so test teardown by interrupting the live
+renderer and closing its owning Scope. See [lifetime contracts](/explore/fx-services-and-lifetime)
+and [cleanup tests](/explore/testing-typed-systems).

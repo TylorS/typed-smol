@@ -22,25 +22,22 @@ plain templates because no component-local state needs setup. The app's running 
 the renderer and the browser router; the exported stop function is for the host that owns this mount.
 
 ```ts
+import * as Router from "@typed/router"
 import { Effect, Fiber } from "effect"
 import { Fx } from "@typed/fx"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
-import { BrowserRouter } from "@typed/router/Router"
 import { DomRenderTemplate, html, render } from "@typed/template"
 import { Link } from "@typed/ui/Link"
 
-const Queue = Route.Parse("/issues")
-const Issue = Route.Join(Queue, Route.Int("issueId"))
-const pages = Matcher.empty
-  .match(Queue, html`<main><h1>Review queue</h1>
+const Queue = Router.Parse("/issues")
+const Issue = Router.Join(Queue, Router.Int("issueId"))
+const pages = Router.match(Queue, html`<main><h1>Review queue</h1>
     ${Link({ href: "/issues/42", content: "Review issue 42" })}
   </main>`)
   .match(Issue, (params) => html`<main>
     <h1>Issue ${Fx.map(params, ({ issueId }) => issueId)}</h1>
     ${Link({ href: "/issues/43", content: "Next issue" })}
   </main>`)
-  .match(Route.Parse("/not-found"), html`<main><h1>Page not found</h1></main>`)
+  .match(Router.Parse("/not-found"), html`<main><h1>Page not found</h1></main>`)
   .layout(({ content }) => html`
     <nav aria-label="Primary">${Link({ href: "/issues", content: "Queue" })}</nav>
     ${content}
@@ -48,12 +45,11 @@ const pages = Matcher.empty
 
 const host = document.getElementById("review-app")
 if (host === null) throw new Error("Missing review-app host")
-const application = pages.pipe(
-  Matcher.redirectTo("/not-found"),
+const application = pages.redirectTo("/not-found").pipe(
   render(host),
   Fx.drain,
   Effect.provide(DomRenderTemplate.using(host.ownerDocument)),
-  Effect.provide(BrowserRouter(window)),
+  Effect.provide(Router.BrowserRouter(window)),
   Effect.scoped,
 )
 const fiber = Effect.runFork(application)
@@ -65,7 +61,7 @@ The example intentionally shows the decoded issue ID rather than pretending to f
 The later [Matcher lesson](/explore/router-navigation-live-selection) adds a concrete service and
 an executable test for loading when that ID changes.
 
-`Route.Int` gives the handler a number. `Link` keeps a real href and routes eligible clicks through
+`Router.Int` gives the handler a number. `Link` keeps a real href and routes eligible clicks through
 Navigation. The layout wraps selected content and can remain compatible across inner selection.
 The template observes the parameter ref, so moving from issue 42 to 43 changes the heading without
 a second imperative URL listener.

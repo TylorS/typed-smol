@@ -22,10 +22,10 @@ belong in the URL because a copied link should reconstruct the same search. A dr
 whether the user has opened a temporary menu can remain local.
 
 ```ts
-import * as Route from "@typed/router/Route"
+import * as Router from "@typed/router"
 
-const Queue = Route.Parse("/workspaces/:workspaceId/issues?q=:q?&status=:status?")
-type QueueParams = Route.Type<typeof Queue>
+const Queue = Router.Parse("/workspaces/:workspaceId/issues?q=:q?&status=:status?")
+type QueueParams = Router.Type<typeof Queue>
 // workspaceId: string; q?: string; status?: string
 
 const queueHref = ({ workspaceId, q, status }: QueueParams) => {
@@ -58,11 +58,11 @@ The detail operation expects a numeric issue ID. Declare that at the Route bound
 calling `Number` independently in a component, loader, and command.
 
 ```ts
+import * as Router from "@typed/router"
 import { Effect, Schema } from "effect"
-import * as Route from "@typed/router/Route"
 
-const Issue = Route.Join(Route.Parse("/issues"), Route.Int("issueId"))
-type IssueParams = Route.Type<typeof Issue>
+const Issue = Router.Join(Router.Parse("/issues"), Router.Int("issueId"))
+type IssueParams = Router.Type<typeof Issue>
 
 const decodeIssue = Schema.decodeEffect(Issue.paramsSchema)
 const issueHref = (params: IssueParams) =>
@@ -94,16 +94,16 @@ and rejects NaN and infinity. Use `ParamWithSchema` when the operation needs a d
 such as a branded workspace identifier:
 
 ```ts
+import * as Router from "@typed/router"
 import { Schema } from "effect"
-import * as Route from "@typed/router/Route"
 
 const WorkspaceId = Schema.String.pipe(Schema.brand("WorkspaceId"))
-const Workspace = Route.Join(
-  Route.Parse("/workspaces"),
-  Route.ParamWithSchema("workspaceId", WorkspaceId),
+const Workspace = Router.Join(
+  Router.Parse("/workspaces"),
+  Router.ParamWithSchema("workspaceId", WorkspaceId),
 )
-const Issue = Route.Join(Workspace, Route.Parse("/issues"), Route.Int("issueId"))
-type WorkspaceIssue = Route.Type<typeof Issue>
+const Issue = Router.Join(Workspace, Router.Parse("/issues"), Router.Int("issueId"))
+type WorkspaceIssue = Router.Type<typeof Issue>
 ```
 
 The brand distinguishes this identifier in TypeScript; its schema decides runtime validity. Joining
@@ -141,10 +141,10 @@ or query records independently, while the selected handler normally receives the
 record. Use these codecs instead of maintaining parallel interfaces.
 
 ```ts
+import * as Router from "@typed/router"
 import { Schema } from "effect"
-import * as Route from "@typed/router/Route"
 
-const Queue = Route.Parse("/workspaces/:workspaceId/issues?q=:q?&status=:status?")
+const Queue = Router.Parse("/workspaces/:workspaceId/issues?q=:q?&status=:status?")
 const path = Schema.decodeEffect(Queue.pathSchema)({ workspaceId: "typed" })
 const query = Schema.decodeEffect(Queue.querySchema)({ q: "hydration", status: "open" })
 const params = Schema.decodeEffect(Queue.paramsSchema)({ workspaceId: "typed", status: "open" })
@@ -154,12 +154,12 @@ Syntax validation and authorization are different boundaries. A well-formed work
 needs a permission check when data is loaded or mutated. A page Guard can enrich or reject decoded
 input for selection; it cannot replace authorization in the server operation itself.
 
-Library helpers can project Route types without creating another route model. `Route.Path` gives
-the normalized literal pattern; `Route.Params` describes raw syntax parameters; `Route.Type` gives
-the decoded handler shape; `PathType` and `QueryType` select their parts. `Route.Schema`,
+Library helpers can project Route types without creating another route model. `Router.Route.Path` gives
+the normalized literal pattern; `Router.Params` describes raw syntax parameters; `Router.Type` gives
+the decoded handler shape; `PathType` and `QueryType` select their parts. `Router.Route.Schema`,
 `DecodingServices`, and `EncodingServices` expose the codec contract for generic utilities.
 
-`Route.make(ast)` is the extension point for code generators and routing libraries. It accepts the
+`Router.make(ast)` is the extension point for code generators and routing libraries. It accepts the
 public [Route AST](/reference/modules/%40typed%2Frouter%2FAST); ordinary applications usually express
 the same model more clearly with Parse and Join. Type-level Path, Parser, and Uri modules underpin
 literal inference and are useful when building such tooling, not prerequisites for a queue page.

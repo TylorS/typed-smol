@@ -14,6 +14,7 @@ import {
   isSerializableSpreadKey,
   templateToHtmlChunks,
 } from "./HtmlChunk.js";
+import { renderToString } from "./internal/encoding.js";
 import { TEXT_START, TYPED_NODE_END, TYPED_NODE_START } from "./internal/meta.js";
 import { renderManyToHtml } from "./internal/renderManyToHtml.js";
 import { takeOneIfNotRenderEvent } from "./internal/takeOneIfNotRenderEvent.js";
@@ -357,10 +358,19 @@ function renderPart<E, R>(
   }
 
   // Otherwise we're going to coerce to a string
-  return Fx.filterMap(liftRenderableToFx<E, R>(renderable, isStatic, undefined, false), (value) => {
-    const s = render(value);
-    return s ? some(HtmlRenderEvent(s, last)) : none();
-  });
+  return Fx.filterMap(
+    liftRenderableToFx<E, R>(
+      renderable,
+      isStatic,
+      undefined,
+      false,
+      node._tag === "className-part",
+    ),
+    (value) => {
+      const s = render(value);
+      return s ? some(HtmlRenderEvent(s, last)) : none();
+    },
+  );
 }
 
 function isEffectLike(value: object): boolean {
@@ -455,7 +465,16 @@ function renderSparsePart<E, R>(
   return Fx.tuple(
     ...node.nodes.map((node) => {
       if (node._tag === "text") return Fx.succeed(node.value);
-      return liftRenderableToFx<E, R>(values[node.index], isStatic, undefined, false);
+      const value = liftRenderableToFx<E, R>(
+        values[node.index],
+        isStatic,
+        undefined,
+        false,
+        chunk.node._tag === "sparse-class-name",
+      );
+      return chunk.node._tag === "sparse-class-name"
+        ? Fx.map(value, (value) => renderToString(value, " "))
+        : value;
     }),
   ).pipe(
     Fx.take(1),
@@ -468,6 +487,7 @@ function liftRenderableToFx<E, R>(
   isStatic: boolean,
   propertyAncestors?: ReadonlySet<object>,
   nodeContext = true,
+  classContext = false,
 ): Fx.Fx<any, E, R> {
   switch (typeof renderable) {
     case "function":
@@ -492,13 +512,23 @@ function liftRenderableToFx<E, R>(
       } else if (Array.isArray(renderable)) {
         const ancestors = addPropertyAncestor(renderable, propertyAncestors);
         if (ancestors === null) return Fx.empty;
-        return Fx.mergeOrdered(
-          ...renderable.map((r) => liftRenderableToFx<E, R>(r, isStatic, ancestors, nodeContext)),
+        const children = renderable.map((r) =>
+          liftRenderableToFx<E, R>(r, isStatic, ancestors, nodeContext, classContext),
         );
+        // A class collection is one attribute value, not a sequence of HTML chunks.
+        return classContext ? Fx.tuple(...children) : Fx.mergeOrdered(...children);
       } else if (isOption(renderable)) {
         return isNone(renderable)
-          ? Fx.empty
-          : liftRenderableToFx(renderable.value, isStatic, propertyAncestors, nodeContext);
+          ? classContext
+            ? Fx.succeed(undefined)
+            : Fx.empty
+          : liftRenderableToFx(
+              renderable.value,
+              isStatic,
+              propertyAncestors,
+              nodeContext,
+              classContext,
+            );
       } else if (isStream(renderable)) {
         return takeOneIfNotRenderEvent(fromStream(renderable)) as Fx.Fx<any, E, R>;
       } else if (Fx.isFx(renderable)) {
@@ -506,7 +536,7 @@ function liftRenderableToFx<E, R>(
       } else if (Effect.isEffect(renderable)) {
         return Fx.unwrap(
           Effect.map(renderable, (r) =>
-            liftRenderableToFx<E, R>(r, isStatic, propertyAncestors, nodeContext),
+            liftRenderableToFx<E, R>(r, isStatic, propertyAncestors, nodeContext, classContext),
           ),
         );
       } else if (isHtmlRenderEvent(renderable)) {
@@ -517,7 +547,7 @@ function liftRenderableToFx<E, R>(
         return Fx.take(
           Fx.struct(
             mapRecord(renderable, (_) =>
-              liftRenderableToFx<E, R>(_, isStatic, ancestors, nodeContext),
+              liftRenderableToFx<E, R>(_, isStatic, ancestors, nodeContext, classContext),
             ),
           ),
           1,

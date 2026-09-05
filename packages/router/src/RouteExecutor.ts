@@ -147,12 +147,12 @@ export interface RouteExecutor<A, E = never, R = never> {
  *
  * @example
  * ```ts
- * import { makeRouteExecutor } from "@typed/router/RouteExecutor"
+ * import * as Router from "@typed/router"
  * import * as Effect from "effect/Effect"
  *
  * const useExecutor = Effect.scoped(
  *   Effect.gen(function* () {
- *     yield* makeRouteExecutor<string>()
+ *     yield* Router.makeRouteExecutor<string>()
  *     yield* Effect.log("route executor is owned by this scope")
  *   })
  * )

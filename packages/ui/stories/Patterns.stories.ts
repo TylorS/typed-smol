@@ -1,3 +1,5 @@
+import type { StoryObj } from "@storybook/html-vite";
+import { expect, within } from "storybook/test";
 import { RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
 import * as CarouselComponent from "../src/Carousel.js";
@@ -332,42 +334,104 @@ const select = component(function* () {
 
 export const Select = story(select);
 
-const tabs = component(function* () {
-  const state = yield* TabsComponent.makeState({ selectedId: "first" });
+interface TabsStoryProps {
+  readonly activationMode: TabsComponent.ActivationMode;
+  readonly orientation: TabsComponent.Orientation;
+}
+
+const tabs = component(function* ({ activationMode, orientation }: TabsStoryProps) {
+  const state = yield* TabsComponent.makeState({
+    selectedId: "workspace-overview",
+    activationMode,
+    orientation,
+  });
   const collection = yield* TabsComponent.makeCollection();
 
-  return [
-    TabsComponent.List({
-      state,
-      collection,
-      content: [
-        TabsComponent.Tab({
-          state,
-          collection,
-          id: "first",
-          panelId: "first-panel",
-          content: "First",
-        }),
-        TabsComponent.Tab({
-          state,
-          collection,
-          id: "second",
-          panelId: "second-panel",
-          content: "Second",
-        }),
-      ],
-    }),
-    TabsComponent.Panel({ state, id: "first-panel", tabId: "first", content: "First panel" }),
-    TabsComponent.Panel({
-      state,
-      id: "second-panel",
-      tabId: "second",
-      content: "Second panel",
-    }),
-  ];
+  return html`<section class="story-tabs" aria-label="Project workspace">
+    <header class="story-tabs-heading">
+      <p class="story-tabs-eyebrow">Project workspace</p>
+      <h2>Atlas design system</h2>
+      <p>A shared home for the team's components, decisions, and release notes.</p>
+    </header>
+    <p id="workspace-tabs-help" class="story-tabs-help">${
+      activationMode === "manual"
+        ? "Use the arrow keys to explore tabs, then Enter or Space to open a panel. Billing is unavailable."
+        : "Use the arrow keys to switch panels. Billing is unavailable and is skipped by keyboard navigation."
+    }</p>
+    <div class="story-tabs-layout">
+      ${TabsComponent.List({
+        state,
+        collection,
+        label: "Project details",
+        props: { "aria-describedby": "workspace-tabs-help" },
+        content: [
+          TabsComponent.Tab({ state, collection, id: "workspace-overview",
+            panelId: "workspace-overview-panel", content: "Overview" }),
+          TabsComponent.Tab({ state, collection, id: "workspace-activity",
+            panelId: "workspace-activity-panel", content: "Activity" }),
+          TabsComponent.Tab({ state, collection, id: "workspace-billing",
+            panelId: "workspace-billing-panel", content: "Billing", disabled: true }),
+          TabsComponent.Tab({ state, collection, id: "workspace-settings",
+            panelId: "workspace-settings-panel", content: "Settings" }),
+        ],
+      })}
+      <div class="story-tabs-panels">
+        ${TabsComponent.Panel({ state, id: "workspace-overview-panel", tabId: "workspace-overview",
+          content: html`<h3>Everything the team needs to build together</h3>
+            <p>Atlas keeps reusable components and the decisions behind them in one place.</p>
+            <dl class="story-tabs-details">
+              <div><dt>Project status</dt><dd>Ready for review</dd></div>
+              <div><dt>Owner</dt><dd>Design systems team</dd></div>
+              <div><dt>Latest release</dt><dd>Version 2.4</dd></div>
+              <div><dt>Next milestone</dt><dd>Component review</dd></div>
+            </dl>`,
+        })}
+        ${TabsComponent.Panel({ state, id: "workspace-activity-panel", tabId: "workspace-activity",
+          content: html`<h3>Recent activity</h3><p>The latest changes to Atlas.</p>
+            <ol class="story-tabs-activity">
+              <li><strong>Navigation patterns reviewed</strong><span>Today · Design systems team</span></li>
+              <li><strong>Version 2.4 published</strong><span>Yesterday · Release team</span></li>
+              <li><strong>Color tokens updated</strong><span>Monday · Design systems team</span></li>
+            </ol>`,
+        })}
+        ${TabsComponent.Panel({ state, id: "workspace-billing-panel", tabId: "workspace-billing",
+          content: html`<h3>Billing</h3><p>Billing is managed by the organization owner.</p>`,
+        })}
+        ${TabsComponent.Panel({ state, id: "workspace-settings-panel", tabId: "workspace-settings",
+          content: html`<h3>Workspace settings</h3><p>Preferences shared by the Atlas team.</p>
+            <dl class="story-tabs-details">
+              <div><dt>Visibility</dt><dd>Organization members</dd></div>
+              <div><dt>Release notifications</dt><dd>Enabled</dd></div>
+              <div><dt>Default branch</dt><dd>Main</dd></div>
+              <div><dt>Review policy</dt><dd>One approval required</dd></div>
+            </dl>`,
+        })}
+      </div>
+    </div>
+  </section>`;
 });
 
-export const Tabs = story(tabs);
+export const Tabs = {
+  ...story(
+    tabs,
+    { activationMode: "automatic", orientation: "horizontal" },
+    {
+      activationMode: { control: "inline-radio", options: ["automatic", "manual"] },
+      orientation: { control: "inline-radio", options: ["horizontal", "vertical"] },
+    },
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const overview = canvas.getByRole("tab", { name: "Overview" });
+    const billing = canvas.getByRole("tab", { name: "Billing" });
+
+    // Catch missing compound-framework styles without changing the visitor's state.
+    await expect(Number.parseFloat(getComputedStyle(overview).paddingInlineStart)).toBeGreaterThanOrEqual(12);
+    await expect(overview.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(Number.parseFloat(getComputedStyle(overview.parentElement!).gap)).toBeGreaterThanOrEqual(8);
+    await expect(billing).toHaveAttribute("aria-disabled", "true");
+  },
+} satisfies StoryObj<TabsStoryProps>;
 
 const toolbar = component(function* () {
   const state = yield* ToolbarComponent.makeState({ activeId: "bold" });
@@ -502,23 +566,32 @@ const treeGrid = component(function* () {
 
 export const TreeGrid = story(treeGrid);
 
-const windowSplitter = component(function* () {
-  const state = yield* WindowSplitterComponent.makeState({ value: 40, step: 10 });
-  const paneSizes = RefSubject.map(
-    state,
-    (current) => `--primary-size: ${current.value}fr; --secondary-size: ${100 - current.value}fr;`,
-  );
+const windowSplitter = component(function* (options: {
+  readonly orientation: WindowSplitterComponent.Orientation;
+  readonly min: number;
+  readonly max: number;
+  readonly disabled: boolean;
+}) {
+  const state = yield* WindowSplitterComponent.makeState({ value: 40, step: 10, ...options });
+  const paneSizes = RefSubject.map(state, (current) => {
+    const tracks = `minmax(0, ${current.value}fr) 12px minmax(0, ${100 - current.value}fr)`;
+    return current.orientation === "vertical"
+      ? `grid-template-columns:${tracks};grid-template-rows:1fr;min-height:180px;`
+      : `grid-template-rows:${tracks};grid-template-columns:1fr;height:320px;`;
+  });
   const valueText = RefSubject.map(
     state,
-    (current) => `${current.value}% table of contents, ${100 - current.value}% document`,
+    (current) => `${Math.round(current.value)}% table of contents, ${Math.round(100 - current.value)}% document`,
   );
 
-  return html`<div class="story-split-view" style=${paneSizes}>
+  return html`<p>Drag the divider, or focus it and use arrow keys. Home/End reach the bounds; Enter collapses or restores.</p>
+    <div class="story-split-view" style=${paneSizes}>
       <aside id="contents">Table of contents</aside>
       ${WindowSplitterComponent.WindowSplitter({
         state,
         primaryPaneId: "contents",
         label: "Table of contents",
+        disabled: options.disabled,
         valueText,
       })}
       <main>Document</main>
@@ -526,4 +599,11 @@ const windowSplitter = component(function* () {
     <output aria-live="polite">${valueText}</output>`;
 });
 
-export const WindowSplitter = story(windowSplitter);
+export const WindowSplitter = story(windowSplitter, {
+  orientation: "vertical", min: 10, max: 90, disabled: false,
+}, {
+  orientation: { control: "select", options: ["vertical", "horizontal"] },
+  min: { control: { type: "range", min: 0, max: 40, step: 5 } },
+  max: { control: { type: "range", min: 60, max: 100, step: 5 } },
+  disabled: { control: "boolean" },
+});

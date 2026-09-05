@@ -23,23 +23,22 @@ page, navigates, and waits for the second result. Ending the Scope closes the ob
 work. No browser or DOM is needed to test route behavior.
 
 ```ts
+import * as Router from "@typed/router"
 import { Context, Effect, Layer } from "effect"
 import { Fx } from "@typed/fx"
 import { Navigation } from "@typed/navigation"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 import { TestRouter } from "@typed/router/RouterTest"
 
 class Issues extends Context.Service<Issues, {
   readonly title: (id: number) => Effect.Effect<string>
 }>()("docs/Issues") {}
 
-const Issue = Route.Join(Route.Parse("/issues"), Route.Int("issueId"))
+const Issue = Router.Join(Router.Parse("/issues"), Router.Int("issueId"))
 const loadIssue = Effect.fn("loadIssue")(function* (issueId: number) {
   const issues = yield* Issues
   return { issueId, title: yield* issues.title(issueId) }
 })
-const pages = Matcher.match(Issue, (params) =>
+const pages = Router.match(Issue, (params) =>
   Fx.switchMapEffect(params, ({ issueId }) => loadIssue(issueId)),
 )
 
@@ -81,13 +80,12 @@ Matcher accepts plain values, Effects, Streams, Fx, or functions returning them.
 `html` is sufficient when no generator setup is needed.
 
 ```ts
+import * as Router from "@typed/router"
 import { Fx } from "@typed/fx"
 import { html } from "@typed/template"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 
-const Issue = Route.Parse("/issues/:issueId?tab=:tab?")
-const pages = Matcher.match(Issue, (params) => {
+const Issue = Router.Parse("/issues/:issueId?tab=:tab?")
+const pages = Router.match(Issue, (params) => {
   const heading = Fx.map(params, ({ issueId }) => `Issue ${issueId}`)
   const tab = Fx.map(params, (value) => value.tab ?? "overview")
   return html`<article><h1>${heading}</h1><p>Current tab: ${tab}</p></article>`
@@ -119,18 +117,16 @@ A guard can enrich the decoded value, return None for ordinary non-match, or fai
 Here a signed-in account page and its explicit sign-in alternative share the same route:
 
 ```ts
+import * as Router from "@typed/router"
 import { Context, Effect, Option } from "effect"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 
 class Session extends Context.Service<Session, { readonly signedIn: boolean }>()("docs/Session") {}
-const Account = Route.Parse("/account")
-const signedIn = Effect.fn("signedIn")(function* (params: Route.Type<typeof Account>) {
+const Account = Router.Parse("/account")
+const signedIn = Effect.fn("signedIn")(function* (params: Router.Type<typeof Account>) {
   const session = yield* Session
   return session.signedIn ? Option.some(params) : Option.none()
 })
-const account = Matcher.empty
-  .match(Account, signedIn, "Account settings")
+const account = Router.match(Account, signedIn, "Account settings")
   .match(Account, "Sign in to continue")
   .provideService(Session, { signedIn: true })
 ```
@@ -148,17 +144,16 @@ A detail page can acquire a feature service locally, then wrap its live output i
 options form keeps those choices beside the candidate.
 
 ```ts
+import * as Router from "@typed/router"
 import { Context, Effect, Layer } from "effect"
 import { Fx } from "@typed/fx"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 
 class IssueLabels extends Context.Service<IssueLabels, {
   readonly title: (id: string) => string
 }>()("docs/IssueLabels") {}
 const LabelsLive = Layer.succeed(IssueLabels, { title: (id: string) => `Issue ${id}` })
 
-const pages = Matcher.match(Route.Parse("/issues/:issueId"), {
+const pages = Router.match(Router.Parse("/issues/:issueId"), {
   dependencies: [LabelsLive],
   handler: (params) => Fx.mapEffect(params, ({ issueId }) =>
     Effect.map(IssueLabels, (labels) => labels.title(issueId)),
@@ -190,26 +185,27 @@ candidate decoding exhausts; `RouteGuardError` preserves guard-selection failure
 load/render failures retain their own error types. Recover them where their meaning is known.
 
 ```ts
+import * as Router from "@typed/router"
 import { Data } from "effect"
 import { Fx } from "@typed/fx"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 
 class IssueUnavailable extends Data.TaggedError("IssueUnavailable")<{ readonly id: string }> {}
-const pages = Matcher.match(Route.Parse("/issues/:issueId"),
+const pages = Router.match(Router.Parse("/issues/:issueId"),
   Fx.fail(new IssueUnavailable({ id: "42" })),
 )
 const recovered = pages.catchTag("IssueUnavailable", ({ id }) =>
   Fx.succeed({ kind: "retry" as const, id }),
 )
-const application = recovered.pipe(Matcher.redirectTo("/not-found"))
+const application = recovered.redirectTo("/not-found")
 ```
 
-`redirectTo` handles only RouteNotFound. It does not hide malformed input, guard failures, or a
-selected page's outage. `.catch` recovers typed errors; `.catchTag` selects tagged ones;
+`matcher.redirectTo(path)` handles only RouteNotFound and returns the finished Fx. It does not hide
+malformed input, guard failures, or a selected page's outage. `.catch` recovers typed errors; `.catchTag` selects tagged ones;
 `.catchCause` sees full Causes, including defects and interruption. A route-local `catch` option
-receives the live Cause ref and can retain its own fallback. Use fluent recovery while you still
-need Matcher configuration; standalone Matcher catch combinators also accept Fx at a final boundary.
+receives the live Cause ref and can retain its own fallback. Use fluent recovery while configuring
+the Matcher, then call `.redirectTo(path)` when a not-found redirect is required. The terminal method returns Fx, so add routes, merge tables, and
+provide dependencies before calling it. Standalone Router recovery functions remain available
+for compatibility and for inputs that are already Fx.
 
 ## Compose a larger application without another history
 
@@ -218,17 +214,14 @@ mounts their paths under a fragment. For an independently owned nested Matcher, 
 a structural mount boundary with ancestry.
 
 ```ts
+import * as Router from "@typed/router"
 import { Fx } from "@typed/fx"
-import { CurrentRoute } from "@typed/router/CurrentRoute"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 
-const admin = Matcher.empty
-  .match(Route.Slash, "Administration")
-  .match(Route.Parse("users"), "Manage users")
-const mounted = admin.pipe(Fx.provide(CurrentRoute.extend(Route.Parse("/admin"))))
-const publicPages = Matcher.empty.match(Route.Slash, "Home").match(Route.Parse("/help"), "Help")
-const flatApplication = Matcher.merge(publicPages, admin.prefix(Route.Parse("/admin")))
+const admin = Router.match(Router.Slash, "Administration")
+  .match(Router.Parse("users"), "Manage users")
+const mounted = admin.pipe(Fx.provide(Router.CurrentRoute.extend(Router.Parse("/admin"))))
+const publicPages = Router.match(Router.Slash, "Home").match(Router.Parse("/help"), "Help")
+const flatApplication = publicPages.merge(admin.prefix(Router.Parse("/admin")))
 ```
 
 The nested example matches `/admin` and `/admin/users`. CurrentRoute describes the mount and parent

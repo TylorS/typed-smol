@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import * as Form from "../Form.js";
 
 describe("typed/ui/Form in Chromium", () => {
@@ -275,9 +275,9 @@ describe("typed/ui/Form in Chromium", () => {
       input.dispatchEvent(new Event("input", { bubbles: true }));
       yield* Effect.sleep(0);
       yield* Form.reset(state);
-      yield* Effect.sleep(20);
-
-      assert.strictEqual(input.value, "initial@example.com");
+      yield* Effect.promise(() =>
+        vi.waitFor(() => assert.strictEqual(input.value, "initial@example.com")),
+      );
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 });

@@ -49,6 +49,10 @@ A ref callback accepts an `HTMLElement` and returns `Effect<void, E, R | Scope>`
 
 ## Debug the native boundary
 
-A missing `popover` attribute or a disconnected element can make native calls invalid. Missing `showPopover` indicates that the environment does not supply the API; this primitive does not polyfill it. Exceptions in native methods are defects, while state failures retain their original typed E. Test against real toggle events, including an outside click for auto mode and repeated open/close cycles.
+An initially open state waits for the host to connect before invoking `showPopover()`. A later
+closed state or Scope teardown cancels that pending wait, so a removed or deliberately closed
+surface cannot open merely because it is attached later. This follows the same scoped connection
+policy as NativeDialog; hidden documents may defer the check until animation frames resume.
+A missing `popover` attribute can still make the native call invalid. Missing `showPopover` indicates that the environment does not supply the API; this primitive does not polyfill it. Exceptions in native methods are defects, while state failures retain their original typed E. Test against real toggle events, including an outside click for auto mode and repeated open/close cycles.
 
 The content still needs an appropriate role or semantic element, a readable name, focus visibility, and layout. A top-layer surface does not establish a menu keyboard model or modal inertness. Continue with [Hovercard](/explore/ui-hovercard) when pointer/focus transfer must keep interactive content available. API: [NativePopover.ref](/reference/modules/%40typed%2Fui%2FNativePopover).

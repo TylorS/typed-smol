@@ -10,6 +10,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const base = (process.env.SITE_BASE ?? "/typed-smol/").replace(/\/$/u, "");
 const site = join(root, "dist/site");
 
+/** @param {string} directory */
 async function pagesUnder(directory) {
   const files = await readdir(directory, { recursive: true, withFileTypes: true });
   return (
@@ -39,13 +40,14 @@ test(
     const browser = await chromium.launch();
     t.after(() => browser.close());
     const origin = `http://127.0.0.1:${server.port}`;
+    /** @type {string[]} */
     const failures = [];
     let visited = 0;
 
-    for (const [scheme, width] of [
+    for (const [scheme, width] of /** @type {const} */ ([
       ["dark", 1440],
       ["light", 390],
-    ]) {
+    ])) {
       let cursor = 0;
       await Promise.all(
         Array.from({ length: 4 }, async () => {

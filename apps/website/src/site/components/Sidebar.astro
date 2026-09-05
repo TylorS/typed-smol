@@ -1,63 +1,41 @@
 ---
 import { getCollection } from "astro:content";
 import { siteHref } from "../../SiteHref.js";
-import { groupGuides } from "../Guides.js";
-import { groupRecipes } from "../Recipes.js";
+import { learningGroups } from "../Guides.js";
+import { recipeNavigationGroups } from "../Recipes.js";
 
 interface Props {
   current?: string;
 }
 const { current } = Astro.props;
-const integrations = groupRecipes(await getCollection("recipes"));
-const starters = [
-  ["cooperative-by-design", "Cooperative by design"],
-  ["quick-start", "Quick Start"],
-  ["tutorial", "Build TodoMVC"],
-  ["ui", "Learn every UI primitive"],
-  ["storybook", "UI Storybook"],
-  ["fx-operator-atlas", "Fx marble atlas"],
-];
-const featured = new Set(starters.map(([slug]) => slug));
-const groups = groupGuides(await getCollection("guides"))
-  .map(
-    ([section, entries]) =>
-      [section, entries.filter(({ id }) => !featured.has(id))] as const,
-  )
-  .filter(([, entries]) => entries.length > 0);
+const integrations = recipeNavigationGroups(await getCollection("recipes"));
+const groups = learningGroups(
+  await getCollection("guides"),
+  await getCollection("learn"),
+  await getCollection("tutorial"),
+);
 ---
 
 <nav aria-label="Documentation" data-docs-navigation>
-  <div class="sidebar-group">
-    <h2>Start building</h2>
-    {
-      starters.map(([slug, title]) => (
-        <a
-          href={siteHref(`/explore/${slug}`)}
-          aria-current={current === slug ? "page" : undefined}
-        >
-          {title}
-        </a>
-      ))
-    }
-  </div>
   {
-    [...groups].map(([section, entries]) => (
+    groups.map(({ title, entries }) => (
       <details
         class="sidebar-group"
         open={
-          section === "Learning paths" ||
+          title === "Start building" ||
+          title === "Learning paths" ||
           entries.some(({ id }) => id === current)
         }
       >
         <summary>
-          {section} <span>{entries.length}</span>
+          {title} <span>{entries.length}</span>
         </summary>
-        {entries.map((entry) => (
+        {entries.map(({ id, href, title }) => (
           <a
-            href={siteHref(`/explore/${entry.id}`)}
-            aria-current={current === entry.id ? "page" : undefined}
+            href={siteHref(href)}
+            aria-current={current === id ? "page" : undefined}
           >
-            {entry.data.title}
+            {title}
           </a>
         ))}
       </details>
@@ -68,19 +46,15 @@ const groups = groupGuides(await getCollection("guides"))
       integrations.map(({ title, entries }) => (
         <details
           class="sidebar-group"
-          open={entries.some(
-            ({ data }) => current === `integrate/${data.slug}`,
-          )}
+          open={entries.some(({ id }) => current === id)}
         >
           <summary>{title}</summary>
-          {entries.map(({ data }) => (
+          {entries.map(({ id, href, title }) => (
             <a
-              href={siteHref(`/integrate/${data.slug}`)}
-              aria-current={
-                current === `integrate/${data.slug}` ? "page" : undefined
-              }
+              href={siteHref(href)}
+              aria-current={current === id ? "page" : undefined}
             >
-              {data.title}
+              {title}
             </a>
           ))}
         </details>

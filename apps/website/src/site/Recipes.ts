@@ -1,4 +1,5 @@
 import type { CollectionEntry } from "astro:content";
+import type { NavigationGroup } from "./Guides.js";
 
 const families = [
   {
@@ -17,11 +18,19 @@ const families = [
     title: "Connect browser and network APIs",
     description:
       "Turn requests, messages, and observations into typed programs with explicit cleanup.",
-    slugs: ["fetch-schema", "progressive-forms", "websocket", "web-workers", "resize-observer"],
+    slugs: [
+      "fetch-schema",
+      "progressive-forms",
+      "websocket",
+      "web-workers",
+      "resize-observer",
+    ],
   },
 ] as const;
 
-export function groupRecipes(recipes: ReadonlyArray<CollectionEntry<"recipes">>) {
+export function groupRecipes(
+  recipes: ReadonlyArray<CollectionEntry<"recipes">>,
+) {
   const bySlug = new Map(recipes.map((entry) => [entry.data.slug, entry]));
   return families.map(({ slugs, ...family }) => ({
     ...family,
@@ -30,5 +39,18 @@ export function groupRecipes(recipes: ReadonlyArray<CollectionEntry<"recipes">>)
       if (!entry) throw new Error(`Missing integration lesson: ${slug}`);
       return entry;
     }),
+  }));
+}
+
+export function recipeNavigationGroups(
+  recipes: ReadonlyArray<CollectionEntry<"recipes">>,
+): ReadonlyArray<NavigationGroup> {
+  return groupRecipes(recipes).map(({ title, entries }) => ({
+    title,
+    entries: entries.map(({ data }) => ({
+      id: `integrate/${data.slug}`,
+      href: `/integrate/${data.slug}`,
+      title: data.title,
+    })),
   }));
 }

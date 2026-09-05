@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect";
+import * as Fiber from "effect/Fiber";
 import type * as Scope from "effect/Scope";
 import { Fx, RefSubject } from "@typed/fx";
 
@@ -68,20 +69,26 @@ export function ref<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
   options: Options = {},
 ): (element: HTMLDialogElement) => Effect.Effect<void, E, R | Scope.Scope> {
-  return Effect.fn((element) =>
-    Effect.asVoid(
-      Effect.forkScoped(
-        Fx.drain(
-          Fx.switchMapEffect(state, (value) =>
-            Effect.andThen(
-              value.open && options.modal !== false ? whenConnected(element) : Effect.void,
-              Effect.sync(() => synchronize(element, value.open, options)),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
+  return Effect.fn(function* (element) {
+    let pending: Fiber.Fiber<void> | undefined;
+    yield* Effect.forkScoped(
+      Fx.observe(state, Effect.fn(function* (value) {
+        if (pending !== undefined) {
+          const previous = pending;
+          pending = undefined;
+          yield* Fiber.interrupt(previous);
+        }
+        const update = Effect.sync(() => synchronize(element, value.open, options));
+        if (value.open && options.modal !== false && !element.isConnected) {
+          pending = yield* Effect.forkScoped(Effect.andThen(whenConnected(element), update));
+        } else {
+          // Complete connected transitions before queued native lifecycle events
+          // can reflect an older open state back into the application.
+          yield* update;
+        }
+      })),
+    );
+  });
 }
 
 // Template refs run before their host is inserted. Native showModal requires a connected element.

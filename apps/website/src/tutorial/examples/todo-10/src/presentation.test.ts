@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { DateTime, Effect, Layer } from "effect";
+import { DateTime, Deferred, Effect, Layer } from "effect";
 import { Fx } from "@typed/fx";
 import { ServerRouter } from "@typed/router";
 import { DomRenderTemplate, render } from "@typed/template";
@@ -38,7 +38,13 @@ it("keeps the keyed row and discards its edit draft on Escape", async () => {
 
   try {
     await Effect.gen(function* () {
-      yield* render(TodoApp, host).pipe(Fx.take(1), Fx.drain);
+      const ready = yield* Deferred.make<void>();
+      yield* render(TodoApp, host).pipe(
+        Fx.observe(() => Deferred.succeed(ready, undefined)),
+        Effect.scoped,
+        Effect.forkScoped,
+      );
+      yield* Deferred.await(ready);
       yield* Effect.promise(async () => {
         const draft = host.querySelector<HTMLInputElement>(".new-todo")!;
         type(draft, "Same title");

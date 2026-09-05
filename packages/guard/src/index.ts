@@ -30,7 +30,7 @@ import { getGuard } from "./getGuard.js";
  * ## Ownership and lifetime
  * A Guard acquires no resources by itself; each invocation has the lifetime and service requirements of the returned Effect.
  *
- * See [Effect Option](https://effect.website/docs/data-types/option/) and [Effect error management](https://effect.website/docs/error-management/).
+ * See [Effect Option](https://effect.website/docs/data-types/option/) and [Effect error management](https://effect.website/docs/v4/error-management/expected-errors/).
  *
  * @example
  * ```ts

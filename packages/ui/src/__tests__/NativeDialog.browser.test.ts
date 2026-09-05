@@ -105,3 +105,23 @@ it("opens after delayed insertion into a connected closed shadow root", async ()
     host.remove();
   }
 });
+
+it("applies connected transitions before publishing the next open state", async () => {
+  const dialog = document.createElement("dialog");
+  document.body.append(dialog);
+  try {
+    await Effect.runPromise(Effect.gen(function* () {
+      const state = yield* RefSubject.make({ open: true });
+      yield* NativeDialog.ref(state)(dialog);
+      // Wait for the scoped observer to subscribe before checking subsequent publications.
+      yield* Effect.promise(() => vi.waitFor(() => expect(dialog.open).toBe(true)));
+      yield* RefSubject.set(state, { open: false });
+      expect(dialog.open).toBe(false);
+      yield* RefSubject.set(state, { open: true });
+      expect(dialog.open).toBe(true);
+    }).pipe(Effect.scoped));
+  } finally {
+    dialog.close();
+    dialog.remove();
+  }
+});

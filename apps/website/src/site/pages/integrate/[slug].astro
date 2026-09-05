@@ -1,30 +1,29 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import Article from "../../layouts/Article.astro";
-import { groupRecipes } from "../../Recipes.js";
+import { adjacentLinks, type GuideLink } from "../../Guides.js";
+import { groupRecipes, recipeNavigationGroups } from "../../Recipes.js";
 export async function getStaticPaths() {
-  return groupRecipes(await getCollection("recipes")).flatMap(
-    ({ title, entries }) =>
-      entries.map((entry, index) => ({
-        params: { slug: entry.data.slug },
-        props: {
-          entry,
-          family: title,
-          previous: entries[index - 1],
-          next: entries[index + 1],
-        },
-      })),
+  const recipes = await getCollection("recipes");
+  const navigation = recipeNavigationGroups(recipes);
+  return groupRecipes(recipes).flatMap(({ title, entries }) =>
+    entries.map((entry) => ({
+      params: { slug: entry.data.slug },
+      props: {
+        entry,
+        family: title,
+        ...adjacentLinks(`integrate/${entry.data.slug}`, navigation),
+      },
+    })),
   );
 }
 interface Props {
   entry: CollectionEntry<"recipes">;
   family: string;
-  previous?: CollectionEntry<"recipes">;
-  next?: CollectionEntry<"recipes">;
+  previous?: GuideLink;
+  next?: GuideLink;
 }
 const { entry, family, previous, next } = Astro.props;
-const link = (entry?: CollectionEntry<"recipes">) =>
-  entry && { href: `/integrate/${entry.data.slug}`, title: entry.data.title };
 const { Content, headings } = await render(entry);
 ---
 
@@ -34,8 +33,8 @@ const { Content, headings } = await render(entry);
   section={family}
   current={`integrate/${entry.data.slug}`}
   index={{ href: "/integrate", title: "All integrations" }}
-  previous={link(previous)}
-  next={link(next)}
+  previous={previous}
+  next={next}
   headings={headings}
   source={`content/recipes/${entry.id}.md`}><Content /></Article
 >

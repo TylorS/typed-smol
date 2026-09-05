@@ -117,7 +117,24 @@
   }
 
   .typed-story :where([role="alert"]):not(:empty) {
-    @apply alert alert-success;
+    @apply alert;
+  }
+
+  .typed-story .story-success[role="alert"]:not(:empty) {
+    @apply alert-success;
+  }
+
+  .typed-story .story-error[role="alert"]:not(:empty) {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-error);
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
 
   .typed-story :where([role="menu"]:not([popover]), [role="menu"][popover]:popover-open) {
@@ -128,16 +145,183 @@
     @apply rounded-md px-3 py-2 hover:bg-base-200;
   }
 
-  .typed-story :where([role="tablist"]) {
-    @apply tabs tabs-box w-fit;
+  /* The headless tab hosts use roles, not DaisyUI's required .tabs > .tab classes. */
+  .typed-story [role="tablist"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--color-base-300);
+    padding: 0.25rem 0.25rem 0;
   }
 
-  .typed-story :where([role="tab"]) {
-    @apply tab;
+  .typed-story [role="tab"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.625rem 1rem;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: var(--radius-field) var(--radius-field) 0 0;
+    background: transparent;
+    color: var(--color-base-content);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
   }
 
-  .typed-story :where([role="tab"][aria-selected="true"]) {
-    @apply tab-active;
+  .typed-story [role="tab"][aria-selected="true"] {
+    border-bottom-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-accent);
+  }
+
+  .typed-story [role="tab"]:not([aria-disabled="true"]):hover {
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  }
+
+  .typed-story [role="tab"][aria-disabled="true"] {
+    color: color-mix(in srgb, var(--color-base-content) 40%, var(--color-base-100));
+    cursor: not-allowed;
+  }
+
+  .typed-story :where([role="tab"], [role="tabpanel"]):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+
+  .typed-story [role="tablist"][aria-orientation="vertical"] {
+    flex-direction: column;
+    align-self: start;
+    border-bottom: 0;
+    border-inline-end: 1px solid var(--color-base-300);
+    padding: 0.25rem;
+  }
+
+  .typed-story [aria-orientation="vertical"] > [role="tab"] {
+    justify-content: flex-start;
+    border-bottom: 0;
+    border-inline-start: 3px solid transparent;
+    border-radius: var(--radius-field);
+  }
+
+  .typed-story [aria-orientation="vertical"] > [role="tab"][aria-selected="true"] {
+    border-inline-start-color: var(--color-primary);
+  }
+
+  .typed-story .story-tabs {
+    max-width: 54rem;
+    padding: clamp(1.25rem, 4vw, 2.5rem);
+    gap: 1.5rem;
+  }
+
+  .typed-story .story-tabs-heading {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .typed-story .story-tabs-eyebrow {
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .typed-story .story-tabs-heading h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.035em;
+  }
+
+  .typed-story .story-tabs-help {
+    font-size: 0.8125rem;
+  }
+
+  .typed-story .story-tabs-layout {
+    display: grid;
+    gap: 1.25rem;
+    min-width: 0;
+  }
+
+  .typed-story .story-tabs-layout:has([aria-orientation="vertical"]) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .typed-story .story-tabs-panels {
+    min-width: 0;
+  }
+
+  .typed-story .story-tabs [role="tabpanel"] {
+    min-height: 16rem;
+    padding: 1.5rem;
+    background: var(--color-base-100);
+  }
+
+  .typed-story .story-tabs [role="tabpanel"] > h3 {
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 650;
+  }
+
+  .typed-story .story-tabs-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .typed-story .story-tabs-details dt {
+    margin-bottom: 0.25rem;
+    color: color-mix(in srgb, var(--color-base-content) 70%, transparent);
+    font-size: 0.8125rem;
+  }
+
+  .typed-story .story-tabs-details dd {
+    font-weight: 550;
+  }
+
+  .typed-story .story-tabs-activity {
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding-inline-start: 1.25rem;
+    list-style-type: decimal;
+  }
+
+  .typed-story .story-tabs-activity strong,
+  .typed-story .story-tabs-activity span {
+    display: block;
+  }
+
+  .typed-story .story-tabs-activity strong {
+    color: var(--color-base-content);
+    font-weight: 550;
+  }
+
+  .typed-story .story-tabs-activity span {
+    font-size: 0.8125rem;
+  }
+
+  @media (max-width: 480px) {
+    .typed-story .story-tabs [role="tab"] {
+      padding-inline: 0.75rem;
+    }
+
+    .typed-story .story-tabs-details {
+      grid-template-columns: 1fr;
+    }
+
+    .typed-story .story-tabs [role="tabpanel"] {
+      padding: 1rem;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .typed-story [role="tab"][aria-selected="true"] {
+      border-color: Highlight;
+    }
   }
 
   .typed-story :where([role="option"], [role="treeitem"], [role="gridcell"], [role="columnheader"], [role="rowheader"]) {
@@ -228,6 +412,23 @@
 
   .typed-story [role="separator"][aria-orientation="horizontal"] {
     @apply h-px w-full bg-base-300;
+  }
+
+  .typed-story .story-split-view [role="separator"][aria-orientation="vertical"] {
+    cursor: col-resize;
+    min-width: 8px;
+  }
+
+  .typed-story .story-split-view [role="separator"][aria-orientation="horizontal"] {
+    cursor: row-resize;
+    width: 100%;
+    height: 100%;
+    min-height: 8px;
+  }
+
+  .typed-story .story-split-view [role="separator"]:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
   }
 
   .typed-story output {

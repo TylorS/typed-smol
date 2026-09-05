@@ -50,11 +50,11 @@ describe("application and platform guides", () => {
 
   it("demonstrates typed inputs, live selection, history, and HTTP at their own boundaries", () => {
     const route = examples("route-typed-url-inputs.md");
-    for (const api of ["Route.Parse", "Route.Int", "Route.ParamWithSchema", "Route.Type", "Schema.decodeEffect", "Schema.encodeEffect", ".paramsSchema"]) {
+    for (const api of ["Router.Parse", "Router.Int", "Router.ParamWithSchema", "Router.Type", "Schema.decodeEffect", "Schema.encodeEffect", ".paramsSchema"]) {
       expect(route, `URL contract example: ${api}`).toContain(api);
     }
     const router = examples("router-navigation-live-selection.md");
-    for (const api of ["Matcher.match", "Fx.switchMapEffect", ".layout(", ".catchTag(", "CurrentRoute.extend"]) {
+    for (const api of ["Router.match", "Fx.switchMapEffect", ".layout(", ".catchTag(", ".redirectTo(", "Router.CurrentRoute.extend"]) {
       expect(router, `Live selection example: ${api}`).toContain(api);
     }
     const navigation = examples("navigation-as-an-effect-service.md");
@@ -68,6 +68,9 @@ describe("application and platform guides", () => {
     const all = routingFiles.map(examples).join("\n");
     expect(importedNames(all, "@typed/router/RouterTest")).toContain("TestRouter");
     expect(importedNames(all, "@typed/router/Router")).not.toContain("TestRouter");
+    expect(all).toContain('import * as Router from "@typed/router"');
+    expect(all).not.toContain("Matcher.empty");
+    expect(all).not.toContain("Router.empty");
     expect(all).not.toContain("FindMyWay");
     expect(all).not.toContain("Ids.Test(");
   });

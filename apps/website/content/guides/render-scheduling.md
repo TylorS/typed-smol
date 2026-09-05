@@ -15,6 +15,54 @@ Read [Direct updates, local reconciliation](/explore/dom-updates-and-reconciliat
 controls when that work runs; it does not change the owned field, choose application concurrency,
 or make a large range diff cheap.
 
+## Scheduling is already available
+
+Scheduling services are always available in the Effect context used by each `RenderTemplate`.
+`CurrentRenderQueue` defaults to `MixedRenderQueue`, and `CurrentRenderPriority` defaults to
+`RenderPriority.Raf(10)`. Ordinary templates need no queue setup. The DOM renderer uses these
+services when scheduling its dynamic parts; server-rendered HTML does not wait for a browser paint.
+
+`MixedRenderQueue` routes work to synchronous, animation-frame, or idle scheduling according to its
+priority. Where frame or idle callbacks are unavailable, those lanes use timer-based fallbacks.
+
+## Set the priority of a specific template
+
+Wrap a template in `Fx.provideService(CurrentRenderPriority, ...)` to control when its DOM updates
+run. Here both outputs observe the same state, but only the first uses synchronous updates:
+
+```ts
+import { Fx, RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+import { CurrentRenderPriority } from "@typed/template/Render";
+import { RenderPriority } from "@typed/template/RenderQueue";
+
+export const Counter = Fx.gen(function* () {
+  const count = yield* RefSubject.make(0);
+
+  // Apply updates to this output immediately.
+  const immediate = html`<output aria-label="Immediate count">${count}</output>`.pipe(
+    Fx.provideService(CurrentRenderPriority, RenderPriority.Sync),
+  );
+
+  // This sibling retains the default animation-frame priority.
+  const framed = html`<output aria-label="Frame count">${count}</output>`;
+
+  return html`
+    <section>
+      <button onclick=${RefSubject.increment(count)}>Increment</button>
+      <p>Immediate: ${immediate}</p>
+      <p>Next frame: ${framed}</p>
+    </section>
+  `;
+});
+```
+
+Render `Counter` with your usual `DomRenderTemplate` setup. The override applies to the wrapped
+template and templates rendered inside its context; siblings keep their surrounding priority.
+A nested template can provide its own priority. Use `RenderPriority.Raf(5)` for earlier frame work
+or `RenderPriority.Idle(1)` for nonessential background presentation in the same way. These overrides
+reuse the current queue; they do not create a queue per template or change how `count` publishes.
+
 ## Keep publication separate from presentation
 
 Imagine a count publishing `10`, `11`, and `12` before the next visual frame. If each pending update
@@ -59,11 +107,12 @@ budget. Idle work must genuinely tolerate waiting.
 A queue callback finishing does not mean layout or paint has completed. Measurements and focus
 policies that require connection or geometry need their own platform coordination.
 
-## Provide a policy at the rendering boundary
+## Override the queue at the rendering boundary
 
-`CurrentRenderQueue` and `CurrentRenderPriority` are Effect services. An application or renderer
-integration can provide them alongside the DOM target without coupling every component to a global
-scheduler:
+For a custom scheduler or a deterministic test environment, override `CurrentRenderQueue` at the
+rendering boundary. This is optional: changing one template's priority only needs the
+`Fx.provideService` wrapper above. The following setup replaces the mixed queue with a
+`SyncRenderQueue` for all rendering inside the provided context:
 
 ```ts
 import { Effect, Layer } from "effect";

@@ -1,5 +1,12 @@
 ---
+import { basename } from "node:path";
 import { getCollection, render, type CollectionEntry } from "astro:content";
+import {
+  adjacentLinks,
+  learningGroups,
+  type GuideLink,
+} from "../../../Guides.js";
+import { orderTutorialSteps } from "../../../../tutorial/Routes.js";
 import Article from "../../../layouts/Article.astro";
 import Demo from "../../../components/CurriculumDemo.js";
 import CurriculumDiff from "../../../components/CurriculumDiff.astro";
@@ -9,8 +16,11 @@ import {
   type CurriculumFile,
 } from "../../../../tutorial/Files.js";
 export async function getStaticPaths() {
-  const steps = (await getCollection("tutorial")).sort(
-    (a, b) => a.data.order - b.data.order,
+  const steps = orderTutorialSteps(await getCollection("tutorial"));
+  const groups = learningGroups(
+    await getCollection("guides"),
+    await getCollection("learn"),
+    steps,
   );
   const snapshots = new Map<string, CurriculumFile>();
   return steps.map((entry, index) => {
@@ -21,8 +31,8 @@ export async function getStaticPaths() {
       params: { slug: entry.data.slug },
       props: {
         entry,
-        previous: steps[index - 1],
-        next: steps[index + 1],
+        ...adjacentLinks(`tutorial/${entry.data.slug}`, groups),
+        previousStep: steps[index - 1],
         files,
         previousFiles,
       },
@@ -31,29 +41,27 @@ export async function getStaticPaths() {
 }
 interface Props {
   entry: CollectionEntry<"tutorial">;
-  previous?: CollectionEntry<"tutorial">;
-  next?: CollectionEntry<"tutorial">;
+  previous?: GuideLink;
+  previousStep?: CollectionEntry<"tutorial">;
+  next?: GuideLink;
   files: ReadonlyArray<CurriculumFile>;
   previousFiles: ReadonlyArray<CurriculumFile>;
 }
-const { entry, previous, next, files, previousFiles } = Astro.props;
+const { entry, previous, previousStep, next, files, previousFiles } =
+  Astro.props;
 const { Content, headings } = await render(entry);
-const link = (step?: CollectionEntry<"tutorial">) =>
-  step && {
-    href: `/explore/tutorial/${step.data.slug}`,
-    title: step.data.title,
-  };
+if (!entry.filePath) throw new Error(`Missing source file for tutorial ${entry.id}`);
 ---
 
 <Article
   title={entry.data.title}
   summary={entry.data.summary}
   section={`TUTORIAL / ${entry.data.order.toString().padStart(2, "0")}`}
-  current="tutorial"
+  current={`tutorial/${entry.data.slug}`}
   headings={headings}
-  source={`content/tutorial/${entry.id}.md`}
-  previous={link(previous)}
-  next={link(next)}
+  source={`content/tutorial/${basename(entry.filePath)}`}
+  previous={previous}
+  next={next}
 >
   {
     entry.data.demo && (
@@ -69,11 +77,11 @@ const link = (step?: CollectionEntry<"tutorial">) =>
   }
   <Content />
   {
-    previous && (
+    previousStep && (
       <CurriculumDiff
         files={files}
         previousFiles={previousFiles}
-        previousTitle={previous.data.title}
+        previousTitle={previousStep.data.title}
       />
     )
   }

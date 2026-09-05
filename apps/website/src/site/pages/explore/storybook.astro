@@ -1,8 +1,18 @@
 ---
+import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import { siteHref } from "../../../SiteHref.js";
+import { adjacentLinks, learningGroups } from "../../Guides.js";
 
 const storybook = siteHref("/storybook/index.html?path=/story/inputs--button");
+const navigation = adjacentLinks(
+  "storybook",
+  learningGroups(
+    await getCollection("guides"),
+    await getCollection("learn"),
+    await getCollection("tutorial"),
+  ),
+);
 ---
 
 <Base
@@ -42,6 +52,20 @@ const storybook = siteHref("/storybook/index.html?path=/story/inputs--button");
         >write and mount your own stories</a
       >.
     </p>
+    <nav class="article-footer" aria-label="Continue learning">
+      {
+        navigation.previous && (
+          <a href={siteHref(navigation.previous.href)}>
+            ← {navigation.previous.title}
+          </a>
+        )
+      }
+      {
+        navigation.next && (
+          <a href={siteHref(navigation.next.href)}>{navigation.next.title} →</a>
+        )
+      }
+    </nav>
   </main>
 </Base>
 

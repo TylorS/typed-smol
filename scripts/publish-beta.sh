@@ -24,6 +24,8 @@ TOPO_ORDER=(
   packages/router
   # Level 3
   packages/ui
+  # Level 4: integrates Template and UI with Astro
+  packages/astro
 )
 
 package_field() {

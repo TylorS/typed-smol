@@ -72,10 +72,10 @@ export interface CurrentRouteTree {
  *
  * @example
  * ```ts
- * import { CurrentRoute } from "@typed/router/CurrentRoute"
+ * import * as Router from "@typed/router"
  * import * as Effect from "effect/Effect"
  *
- * const mountedPath = Effect.map(CurrentRoute, ({ route }) => route.path)
+ * const mountedPath = Effect.map(Router.CurrentRoute, ({ route }) => route.path)
  * ```
  *
  * @since 1.0.0

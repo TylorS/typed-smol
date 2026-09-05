@@ -29,8 +29,8 @@ type ComponentResult<Args extends ReadonlyArray<any>, Result> = Args extends rea
  *
  * ## Ownership and lifetime
  *
- * These types acquire nothing. The `Fx` produced by `component` is lazy; its
- * running Effect `Scope` owns yielded effects, subscriptions, and cleanup.
+ * These types acquire nothing. The `Fx` produced by `component` is lazy;
+ * each run forks its parent `Scope` for yielded effects, subscriptions, and cleanup.
  *
  * @since 1.0.0
  * @category Component construction
@@ -49,7 +49,8 @@ export namespace component {
    * ## Ownership and lifetime
    *
    * Calling a `Gen` value constructs a lazy `Fx` and starts no work. Resources
-   * yielded by the generator belong to the Scope that eventually runs that Fx.
+   * yielded by the generator belong to a child forked from the running Fx's
+   * required parent Scope. The returned renderable shares that same child.
    *
    * @example
    * ```ts
@@ -302,8 +303,10 @@ export namespace component {
  * that child to both yielded effects and the lifted returned renderable. The
  * child stays open throughout subscription and closes on completion, failure,
  * or interruption; closing the parent also closes every child. Sibling runs
- * therefore own separate resources. Even a scalar component requires Scope.
- * The constructor does not own DOM outside its returned renderable.
+ * therefore own separate resources. A DOM template stays subscribed after its
+ * first emission, so its child remains open while the template is mounted.
+ * Even a scalar component requires Scope. The constructor does not own DOM
+ * outside its returned renderable.
  *
  * ## Composition
  *
@@ -343,6 +346,8 @@ export const component: component.Gen = function (
   }
 
   return (Fx.fn as (...args: ReadonlyArray<any>) => any)(
+    // Fx.fn needs a generator; instance owns acquisition inside the child Scope.
+    // oxlint-disable-next-line require-yield
     function* (...args: ReadonlyArray<any>) {
       return instance(() => body(...args));
     },
@@ -353,12 +358,20 @@ export const component: component.Gen = function (
 function instance(
   body: () => Generator<Effect.Effect<any, any, any>, Renderable.Any, any>,
 ): Fx.Fx<any, any, any> {
-  return Fx.make(sink => Effect.flatMap(Scope.Scope, parent => Effect.acquireUseRelease(
-    Scope.fork(parent),
-    child => Scope.provide(Fx.gen(function* () {
-      const renderable = yield* body();
-      return liftRenderableToFx(renderable);
-    }).run(sink), child),
-    (child, exit) => Scope.close(child, exit),
-  )));
+  return Fx.make((sink) =>
+    Effect.flatMap(Scope.Scope, (parent) =>
+      Effect.acquireUseRelease(
+        Scope.fork(parent),
+        (child) =>
+          Scope.provide(
+            Fx.gen(function* () {
+              const renderable = yield* body();
+              return liftRenderableToFx(renderable);
+            }).run(sink),
+            child,
+          ),
+        (child, exit) => Scope.close(child, exit),
+      ),
+    ),
+  );
 }

@@ -63,3 +63,4 @@ docs/superpowers/
 
 # Generated from the explicit, source-audited Fx diagram catalog
 apps/website/content/guides/fx-operator-atlas.md
+**/.vitest/attachments/**

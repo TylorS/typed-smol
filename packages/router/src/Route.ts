@@ -313,10 +313,10 @@ export type QueryType<T extends Any> = Route.QueryType<T>;
  *
  * @example
  * ```ts
- * import { make } from "@typed/router/Route"
+ * import * as Router from "@typed/router"
  * import { literal, path } from "@typed/router/AST"
  *
- * const Account = make<"/account">(path(literal("account")))
+ * const Account = Router.make<"/account">(path(literal("account")))
  * ```
  *
  * @since 1.0.0
@@ -485,10 +485,10 @@ function projectRecord(input: unknown, names: ReadonlySet<string>): Record<Prope
  *
  * @example
  * ```ts
- * import { Parse, type Route } from "@typed/router/Route"
+ * import * as Router from "@typed/router"
  *
- * const User = Parse("/users/:id?tab=:tab?")
- * // Route.Type<typeof User> is { readonly id: string; readonly tab?: string }
+ * const User = Router.Parse("/users/:id?tab=:tab?")
+ * // Router.Type<typeof User> is { readonly id: string; readonly tab?: string }
  * ```
  *
  * @since 1.0.0
@@ -675,11 +675,11 @@ const removeSlash = (ast: AST.RouteAst): ReadonlyArray<AST.RouteAst> => {
  *
  * @example
  * ```ts
- * import * as Route from "@typed/router/Route"
+ * import * as Router from "@typed/router"
  *
- * const Workspace = Route.Join(Route.Parse("/workspaces"), Route.Param("workspaceId"))
- * const Issue = Route.Join(Workspace, Route.Parse("/issues"), Route.Int("issueId"))
- * type IssueInput = Route.Type<typeof Issue>
+ * const Workspace = Router.Join(Router.Parse("/workspaces"), Router.Param("workspaceId"))
+ * const Issue = Router.Join(Workspace, Router.Parse("/issues"), Router.Int("issueId"))
+ * type IssueInput = Router.Type<typeof Issue>
  * // { readonly workspaceId: string; readonly issueId: number }
  * ```
  *

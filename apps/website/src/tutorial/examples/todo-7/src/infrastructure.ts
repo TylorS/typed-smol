@@ -7,8 +7,8 @@ import * as Domain from "./domain.js";
 const FilterState = Router.match(Router.Slash, "all")
   .match(Router.Parse("active"), "active")
   .match(Router.Parse("completed"), "completed")
+  .redirectTo("/")
   .pipe(
-    Router.redirectTo("/"),
     Fx.catchCause(() => Fx.succeed("all" as const)),
   );
 

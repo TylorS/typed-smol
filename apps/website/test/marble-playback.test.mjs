@@ -35,6 +35,7 @@ test(
       viewport: { width: 1440, height: 1000 },
       colorScheme: "dark",
     });
+    /** @type {string[]} */
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto(`${origin}${base}/explore/fx-operator-atlas/`);
@@ -109,11 +110,14 @@ test(
     const issues = await page.locator(".fx-marble").evaluateAll((figures) =>
       figures.flatMap((node) => {
         const events = [...node.querySelectorAll(".fx-marble__event")];
-        const steps = Number(node.querySelector(".fx-marble__diagram").dataset.ticks);
+        const diagram = node.querySelector(".fx-marble__diagram");
+        if (!diagram) throw new Error("Expected marble diagram");
+        const steps = Number(diagram.getAttribute("data-ticks"));
         return events.flatMap((event) => {
           const rect = event.getBoundingClientRect();
+          if (!event.parentElement) throw new Error("Expected event track");
           const track = event.parentElement.getBoundingClientRect();
-          const tick = Number(event.dataset.tick);
+          const tick = Number(event.getAttribute("data-tick"));
           const center = track.left + (track.width * (tick + 0.5)) / steps;
           return Math.abs(rect.x + rect.width / 2 - center) > 1 ||
             rect.width > track.width / steps ||
@@ -172,8 +176,11 @@ test(
     // Following stays inside the horizontal timeline; controls retain keyboard focus.
     const assertCurrentTickVisible = async () => {
       const bounds = await figure.evaluate((node) => {
-        const viewport = node.querySelector(".fx-marble__viewport").getBoundingClientRect();
-        const label = node.querySelector(".fx-marble__label").getBoundingClientRect();
+        const viewportElement = node.querySelector(".fx-marble__viewport");
+        const labelElement = node.querySelector(".fx-marble__label");
+        if (!viewportElement || !labelElement) throw new Error("Expected timeline viewport and label");
+        const viewport = viewportElement.getBoundingClientRect();
+        const label = labelElement.getBoundingClientRect();
         return [...node.querySelectorAll('[data-phase="current"]')].map((event) => {
           const rect = event.getBoundingClientRect();
           return {

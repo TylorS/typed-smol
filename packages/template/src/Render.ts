@@ -697,8 +697,12 @@ function setupRenderPart<E = never, R = never>(
     case "sparse-class-name": {
       const updater = makeClassListUpdater(node as HTMLElement | SVGElement);
       // Sparse segments form one attribute value; a hole may continue a class token.
-      return renderSparseTextContent(node, part.nodes, ++ctx.dynamicIndex, ctx, (classNames) =>
-        updater(getClassList(classNames)),
+      return renderSparsePart(
+        part.nodes,
+        ++ctx.dynamicIndex,
+        ctx,
+        (segments) => updater(getClassList(segments.join(""))),
+        (value) => renderToString(value, " "),
       );
     }
     case "sparse-comment":

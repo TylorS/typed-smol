@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import * as Combobox from "../Combobox.js";
 
 describe("typed/ui/Combobox in browsers", () => {
@@ -27,11 +27,11 @@ describe("typed/ui/Combobox in browsers", () => {
 
       const input = document.querySelector("input") as HTMLInputElement;
       input.focus();
-      yield* Effect.sleep(0);
-
+      yield* Effect.promise(() => vi.waitFor(() => {
+        assert.strictEqual(input.getAttribute("aria-activedescendant"), "two");
+        assert.strictEqual(document.activeElement, input);
+      }));
       assert.strictEqual((yield* state).activeId, "two");
-      assert.strictEqual(input.getAttribute("aria-activedescendant"), "two");
-      assert.strictEqual(document.activeElement, input);
     }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
   });
 

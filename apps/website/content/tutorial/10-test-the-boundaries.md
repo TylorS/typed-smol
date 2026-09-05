@@ -67,7 +67,7 @@ Our factory has no expected-error channel, so this test supplies a defect with `
 
 ## Test the real form in src/presentation.test.ts
 
-The test mounts `TodoApp` with controlled services. Its helpers reproduce the events our handlers consume:
+The test mounts `TodoApp` with controlled services. A scoped renderer fiber stays subscribed during the test; a Deferred readiness signal waits for its first emission without ending it. Its helpers reproduce the events our handlers consume:
 
 ```ts
 // @source examples/todo-10/src/presentation.test.ts#L29-L37
@@ -78,7 +78,7 @@ The test mounts `TodoApp` with controlled services. Its helpers reproduce the ev
 Changing `.value` alone would not notify the application. After the first submission, retain its row. Prepend another todo and check that the retained row merely moved:
 
 ```ts
-// @source examples/todo-10/src/presentation.test.ts#L43-L53
+// @source examples/todo-10/src/presentation.test.ts#L49-L59
 // @expect const original = host.querySelector
 // @expect toBe(original)
 ```
@@ -86,7 +86,7 @@ Changing `.value` alone would not notify the application. After the first submis
 Now edit that row and press Escape:
 
 ```ts
-// @source examples/todo-10/src/presentation.test.ts#L55-L62
+// @source examples/todo-10/src/presentation.test.ts#L61-L68
 // @expect type(edit, "Uncommitted text")
 // @expect key: "Escape"
 // @expect toBe("Same title")

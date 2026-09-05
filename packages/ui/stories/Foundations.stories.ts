@@ -14,7 +14,7 @@ import { story } from "./story.js";
 
 export default { title: "Foundations" };
 
-export const Alert = story(AlertComponent.Alert({ content: "Your profile has been saved." }));
+export const Alert = story(AlertComponent.Alert({ content: "Your profile has been saved.", props: { class: "story-success" } }));
 
 const collection = Fx.gen(function* () {
     const state = yield* CollectionComponent.makeState([

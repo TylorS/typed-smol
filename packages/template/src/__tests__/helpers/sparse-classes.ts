@@ -1,4 +1,4 @@
-import { Deferred, Effect } from "effect";
+import { Deferred, Effect, Option } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -11,6 +11,48 @@ import {
 
 export function sparseClassTests(createDocument: () => Document) {
   describe("sparse class concatenation", () => {
+    const collections = [
+      ["array", ["one", "two"]],
+      ["nested array", ["one", ["two", "three"]]],
+      ["effect array", Effect.succeed(["one", ["two", "three"]])],
+      ["Fx array", Fx.succeed(["one", ["two", "three"]])],
+      ["optional array", ["one", Option.none(), [null, "two", undefined, Option.some("three")]]],
+    ] as const;
+    for (const [name, value] of collections) {
+      for (const sparse of [false, true]) {
+        it(`preserves ${name} entries in ${sparse ? "sparse" : "whole"} classes across SSR and DOM`, () =>
+          Effect.gen(function* () {
+            const document = createDocument();
+            const view = sparse
+              ? html`<div class="base ${value}"></div>`
+              : html`<div class=${value}></div>`;
+            const expected = [
+              ...(sparse ? ["base"] : []),
+              "one",
+              "two",
+              ...(name === "array" ? [] : ["three"]),
+            ];
+            const serialized = yield* view.pipe(
+              renderToHtmlString,
+              Effect.provide(HtmlRenderTemplate),
+            );
+            expect(serialized.match(/class=/g)).toHaveLength(1);
+            for (const hydrate of [false, true]) {
+              const host = document.createElement("main");
+              if (hydrate) {
+                host.innerHTML = serialized;
+                expect(Array.from(host.querySelector("div")!.classList)).toEqual(expected);
+              }
+              yield* render(view, host).pipe(
+                Fx.provide(DomRenderTemplate.using(document)),
+                Fx.take(1),
+                Fx.drain,
+              );
+              expect(Array.from(host.querySelector("div")!.classList)).toEqual(expected);
+            }
+          }).pipe(Effect.scoped, Effect.runPromise));
+      }
+    }
     for (const hydrate of [false, true]) {
       it(`joins authored segments before splitting tokens during ${hydrate ? "hydration" : "DOM rendering"} and updates`, () =>
         Effect.gen(function* () {
@@ -18,7 +60,7 @@ export function sparseClassTests(createDocument: () => Document) {
           const host = document.createElement("main");
           document.body.append(host);
           yield* Effect.addFinalizer(() => Effect.sync(() => host.remove()));
-          const kind = yield* RefSubject.make("input");
+          const kind = yield* RefSubject.make<string | ReadonlyArray<string>>("input");
           const phase = yield* RefSubject.make("ready");
           const view = html`<div class="row row--${kind} status-${phase}-end"></div>`;
           const serialized = yield* view.pipe(
@@ -49,7 +91,7 @@ export function sparseClassTests(createDocument: () => Document) {
             [...expectedInitial, ...external].sort(),
           );
           element.classList.add("external-after-mount");
-          yield* RefSubject.set(kind, "output");
+          yield* RefSubject.set(kind, ["output", "additional"]);
           yield* RefSubject.set(phase, "complete");
           yield* Effect.promise(() =>
             vi.waitFor(() => {
@@ -57,6 +99,7 @@ export function sparseClassTests(createDocument: () => Document) {
                 [
                   "row",
                   "row--output",
+                  "additional",
                   "status-complete-end",
                   ...external,
                   "external-after-mount",

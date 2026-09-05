@@ -20,10 +20,13 @@ test(
           logLevel: "silent",
         });
     if (server) t.after(() => server.stop());
-    const origin = process.env.SEARCH_TEST_ORIGIN ?? `http://127.0.0.1:${server.port}`;
+    const origin = process.env.SEARCH_TEST_ORIGIN ?? (server ? `http://127.0.0.1:${server.port}` : undefined);
+    assert.ok(origin);
     const browser = await chromium.launch();
     t.after(() => browser.close());
+    /** @type {string[]} */
     const errors = [];
+    /** @param {import("playwright").BrowserContextOptions} options */
     const openPage = async (options) => {
       const page = await browser.newPage(options);
       page.on("pageerror", (error) => errors.push(error.message));
@@ -72,7 +75,10 @@ test(
     );
     for (const href of await topic
       .locator("a")
-      .evaluateAll((links) => links.map((link) => link.href))) {
+      .evaluateAll((links) => links.map((link) => {
+        if (!(link instanceof HTMLAnchorElement)) throw new Error("Expected result anchor");
+        return link.href;
+      }))) {
       assert.equal((await fetch(href)).status, 200, href);
     }
     await page.keyboard.press("ArrowDown");
@@ -104,7 +110,10 @@ test(
     );
     await input.click();
     await page.keyboard.press("Escape");
-    await page.waitForFunction(() => document.querySelector("#docs-search-query")?.value === "");
+    await page.waitForFunction(() => {
+      const input = document.querySelector("#docs-search-query");
+      return input instanceof HTMLInputElement && input.value === "";
+    });
     assert.equal(await input.inputValue(), "");
     assert.equal(await dialog.isVisible(), true);
     await page.keyboard.press("Escape");
@@ -131,7 +140,7 @@ test(
     assert.equal(await page.getByRole("dialog").isVisible(), false);
     await page.close();
 
-    for (const colorScheme of ["dark", "light"]) {
+    for (const colorScheme of /** @type {const} */ (["dark", "light"])) {
       const mobile = await openPage({
         viewport: { width: 390, height: 844 },
         colorScheme,
@@ -163,12 +172,16 @@ test(
         true,
         "dialog and its contents fit the mobile viewport",
       );
+      const headerBounds = await mobile.locator(".search-dialog-header").boundingBox();
+      assert.ok(headerBounds);
       assert.ok(
-        (await mobile.locator(".search-dialog-header").boundingBox()).height < 80,
+        headerBounds.height < 80,
         "search chrome leaves room for results",
       );
+      const resultBounds = await mobile.locator(".search-result").nth(1).boundingBox();
+      assert.ok(resultBounds);
       assert.ok(
-        (await mobile.locator(".search-result").nth(1).boundingBox()).height < 115,
+        resultBounds.height < 115,
         "ordinary matches stay compact",
       );
       await mobile.getByRole("searchbox").fill("map");

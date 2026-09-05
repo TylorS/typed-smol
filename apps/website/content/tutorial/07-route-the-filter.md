@@ -26,7 +26,7 @@ In `src/infrastructure.ts`, match the three locations:
 ```ts
 // @source examples/todo-7/src/infrastructure.ts#L7-L13
 // @expect const FilterState = Router.match
-// @expect Router.redirectTo("/")
+// @expect .redirectTo("/")
 ```
 
 The root selects All, `/active` selects Active, and `/completed` selects Completed. Unmatched locations redirect to the root; the catch supplies All if matching fails. Application code receives a filter value, not `window.location`.

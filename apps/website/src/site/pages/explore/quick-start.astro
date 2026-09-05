@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from "astro:content";
+import { adjacentLinks, learningGroups } from "../../Guides.js";
 import Article from "../../layouts/Article.astro";
 import Demo from "../../components/CurriculumDemo.js";
 import { siteHref } from "../../../SiteHref.js";
@@ -7,6 +8,14 @@ import {
   counterLessonPath,
   isQuickStartSection,
 } from "../../../tutorial/Routes.js";
+const navigation = adjacentLinks(
+  "quick-start",
+  learningGroups(
+    await getCollection("guides"),
+    await getCollection("learn"),
+    await getCollection("tutorial"),
+  ),
+);
 const sections = await Promise.all(
   (await getCollection("learn"))
     .filter((entry) => isQuickStartSection(entry.data.id))
@@ -26,10 +35,7 @@ const headings = sections.map(({ entry }) => ({
   section="QUICK START"
   current="quick-start"
   headings={headings}
-  next={{
-    href: counterLessonPath("component-lifetime"),
-    title: "Derive a value from the count",
-  }}
+  {...navigation}
 >
   <Demo id="counter-reactive" client:load />
   {

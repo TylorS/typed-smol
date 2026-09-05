@@ -114,10 +114,10 @@ item updates the content. Rendering the same final text into new elements would 
 regression, so retain an element reference:
 
 ```ts
-import { Effect } from "effect"
+import { Deferred, Effect, Fiber } from "effect"
 import { expect, it } from "@effect/vitest"
 import { Fx, RefSubject } from "@typed/fx"
-import { DomRenderTemplate, html, isHtmlElement, many, render } from "@typed/template"
+import { DomRenderTemplate, html, many, render } from "@typed/template"
 import { vi } from "vitest"
 
 const keepsKeyedIdentity = Effect.fn("keepsKeyedIdentity")(function* () {
@@ -139,19 +139,25 @@ const keepsKeyedIdentity = Effect.fn("keepsKeyedIdentity")(function* () {
     }),
     (host) => Effect.sync(() => host.remove()),
   );
-  const [rendered] = yield* render(view, host).pipe(
+  const ready = yield* Deferred.make<void>()
+  const renderer = yield* render(view, host).pipe(
     Fx.provide(DomRenderTemplate.using(document)),
-    Fx.take(1),
-    Fx.collectUpTo(1),
+    Fx.observe(() => Deferred.succeed(ready, undefined)),
+    Effect.scoped,
+    Effect.forkScoped,
   )
-  if (rendered === undefined || !isHtmlElement(rendered)) throw new Error("render failed")
-  const original = rendered.querySelectorAll("li")[1]
+  yield* Deferred.await(ready)
+  yield* Effect.promise(() => vi.waitFor(() => {
+    expect(Array.from(host.querySelectorAll("li"), row => row.textContent)).toEqual(["A", "B"])
+  }))
+  const original = host.querySelectorAll("li")[1]
 
   yield* RefSubject.set(items, [initial[1], initial[0]])
   yield* Effect.promise(() => vi.waitFor(() => {
-    expect(rendered.querySelectorAll("li")[0]?.textContent).toBe("B")
-    expect(rendered.querySelectorAll("li")[0]).toBe(original)
+    expect(host.querySelectorAll("li")[0]?.textContent).toBe("B")
+    expect(host.querySelectorAll("li")[0]).toBe(original)
   }))
+  yield* Fiber.interrupt(renderer)
 })
 
 it.effect("keeps keyed DOM identity across a reorder", keepsKeyedIdentity)
@@ -161,12 +167,13 @@ The dedicated host prevents the test from replacing unrelated document content. 
 the fixture after the test. The reorder assertion checks both the expected row and the exact node
 object, so simply rebuilding the list cannot satisfy it.
 
-This example takes the first render emission while leaving the owning test Scope open. Template
-listeners and dynamic work remain attached to that ambient Scope; `take(1)` is not an unmount signal.
-For an explicit render teardown test, run
-`Fx.drain(render(view, host).pipe(Fx.provide(layer))).pipe(Effect.scoped, Effect.forkScoped)`.
-Interrupting the fiber closes that inner render Scope. Assert that acquired finalizers run and that
-subsequent input no longer invokes the released handlers. Merely removing the host cannot prove this.
+The ready signal observes the first render without ending the subscription. Dynamic rows can arrive
+after the surrounding template, so the initial row assertion also waits for their actual content.
+The renderer runs in its own Scope, forked into the test lifetime, so rows and listeners stay active during assertions.
+Interrupting its fiber closes that render Scope; the test Scope also interrupts it if an assertion
+fails. To test teardown, assert that acquired finalizers run and subsequent input no longer invokes
+released handlers. `take(1)` ends the subscription and closes a component's child Scope; use it only
+when checking a snapshot that needs no later interaction. Removing the host alone cannot prove cleanup.
 [Cooperative ownership](/explore/cooperative-by-design) explains why placement and disposal are separate.
 
 Run this identity test with a browser Document. DOM emulators can cover text, attributes, and many
@@ -187,18 +194,17 @@ should not depend on the browser’s global history. `TestRouter` provides memor
 same matcher contract:
 
 ```ts
+import * as Router from "@typed/router"
 import { Effect } from "effect"
 import { expect, layer } from "@effect/vitest"
 import { Fx } from "@typed/fx"
 import { Navigation } from "@typed/navigation"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 import { TestRouter } from "@typed/router/RouterTest"
 
 layer(TestRouter({ url: "http://localhost/users/1" }))("memory routing", (it) => {
   it.effect("matches a route and navigates in memory", Effect.fn("matchesMemoryRoute")(function* () {
-      const route = Route.Join(Route.Parse("users"), Route.Param("id"));
-      const matcher = Matcher.empty.match(route, (params) => Fx.map(params, ({ id }) => `user:${id}`));
+      const route = Router.Join(Router.Parse("users"), Router.Param("id"));
+      const matcher = Router.match(route, (params) => Fx.map(params, ({ id }) => `user:${id}`));
 
       expect(yield* Fx.collectAll(Fx.take(matcher, 1))).toEqual(["user:1"]);
       yield* Navigation.navigate("http://localhost/users/2");

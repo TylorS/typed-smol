@@ -56,39 +56,59 @@ const checkbox = Fx.gen(function* () {
 
 export const Checkbox = story(checkbox);
 
-const form = Fx.gen(function* () {
+const form = component(function* () {
   const phone = FormComponent.mask(
     "(",
-    FormComponent.slot("area", Schema.FiniteFromString, { length: 3 }),
+    FormComponent.slot("area", Schema.String, { length: 3, charset: /[0-9]/ }),
     ") ",
-    FormComponent.slot("line", Schema.FiniteFromString, { length: 4 }),
+    FormComponent.slot("prefix", Schema.String, { length: 3, charset: /[0-9]/ }),
+    "-",
+    FormComponent.slot("line", Schema.String, { length: 4, charset: /[0-9]/ }),
   );
   const ContactForm = FormComponent.make(Schema.Struct({ email: Schema.String, phone }));
-  const formState = yield* ContactForm.state({
-    email: "",
-    phone: { area: 555, line: 1234 },
-  });
+  const formState = yield* ContactForm.state(
+    {
+      email: "hello@example.com",
+      phone: { area: "555", prefix: "123", line: "4567" },
+    },
+    { id: "contact-information" },
+  );
+  const saved = yield* RefSubject.make("No changes saved yet.");
 
-  return ContactForm.Root({
-    form: formState,
-    content: [
-      ContactForm.Group({
-        label: "Contact information",
-        content: html`<div>
-            ${ContactForm.Label({ for: "email", content: "Email" })}
-            ${ContactForm.EmailInput({ name: "email", props: { id: "email", required: true } })}
-            ${ContactForm.Error({ name: "email" })}
-          </div>
-          <div>
-            ${ContactForm.Label({ for: "phone", content: "Phone" })}
-            ${ContactForm.MaskedInput({ name: "phone", props: { id: "phone" } })}
-            ${ContactForm.Error({ name: "phone" })}
-          </div>`,
-      }),
-      ContactForm.Submit({ content: "Save" }),
-      ContactForm.Reset({ content: "Reset" }),
-    ],
-  });
+  return html`${ContactForm.Root({
+      form: formState,
+      onValidSubmit: (values) =>
+        RefSubject.set(
+          saved,
+          `Saved ${values.email}: (${values.phone.area}) ${values.phone.prefix}-${values.phone.line}.`,
+        ),
+      content: [
+        ContactForm.Group({
+          label: "Contact information",
+          content: html`<div class="story-field">
+              ${ContactForm.Label({ for: "email", content: "Email" })}
+              ${ContactForm.EmailInput({ name: "email", props: { id: "email", required: true, autocomplete: "email" } })}
+              ${ContactForm.Error({ name: "email", props: { class: "story-error" } })}
+            </div>
+            <div class="story-field">
+              ${ContactForm.Label({ for: "phone", content: "Phone (10 digits)" })}
+              ${ContactForm.MaskedInput({
+                name: "phone",
+                props: {
+                  id: "phone",
+                  inputmode: "tel",
+                  autocomplete: "tel-national",
+                  required: true,
+                },
+              })}
+              <small>Type or paste 10 digits. Parentheses and the dash are added for you.</small>
+              ${ContactForm.Error({ name: "phone", props: { class: "story-error" } })}
+            </div>`,
+        }),
+        ContactForm.Submit({ content: "Save contact" }),
+        ContactForm.Reset({ content: "Reset" }),
+      ],
+    })}<output aria-live="polite">${saved}</output>`;
 });
 
 export const Form = story(form);

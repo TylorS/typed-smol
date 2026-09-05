@@ -27,17 +27,16 @@ and closes the server with the provided Layer's Scope. It uses static HTML becau
 response is not intended to hydrate.
 
 ```ts
+import * as Router from "@typed/router"
 import { NodeHttpServer } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
 import { HttpClient, HttpRouter } from "effect/unstable/http"
 import { Fx } from "@typed/fx"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 import { html, StaticHtmlRenderTemplate } from "@typed/template"
 import { handleHttpServerError, ssrForHttp } from "@typed/ui/HttpRouter"
 
-const Issue = Route.Join(Route.Parse("/issues"), Route.Int("issueId"))
-const pages = Matcher.match(Issue, (params) =>
+const Issue = Router.Join(Router.Parse("/issues"), Router.Int("issueId"))
+const pages = Router.match(Issue, (params) =>
   html`<main><h1>Issue ${Fx.map(params, ({ issueId }) => issueId)}</h1></main>`,
 )
 const Server = HttpRouter.use(ssrForHttp(pages)).pipe(
@@ -71,16 +70,15 @@ A Node entry point must supply the server and launch the resulting Layer. Here i
 static server; replace the page table with the application's renderable Matcher.
 
 ```ts
+import * as Router from "@typed/router"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
 import { Layer } from "effect"
 import * as HttpRouter from "effect/unstable/http/HttpRouter"
 import * as Http from "node:http"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 import { html, StaticHtmlRenderTemplate } from "@typed/template"
 import { handleHttpServerError, ssrForHttp } from "@typed/ui/HttpRouter"
 
-const pages = Matcher.match(Route.Slash, html`<!doctype html><html lang="en">
+const pages = Router.match(Router.Slash, html`<!doctype html><html lang="en">
   <head><meta charset="utf-8" /><title>Review queue</title></head>
   <body><main><h1>Review queue</h1></main></body>
 </html>`)
@@ -130,14 +128,13 @@ send renderer chunks earlier, but failures may then occur after headers or conte
 sent. The choice changes recovery and cancellation behavior, not route syntax.
 
 ```ts
+import * as Router from "@typed/router"
 import { Layer } from "effect"
 import * as HttpRouter from "effect/unstable/http/HttpRouter"
-import * as Matcher from "@typed/router/Matcher"
-import * as Route from "@typed/router/Route"
 import { html, HtmlRenderTemplate } from "@typed/template"
 import { streamingSsrForHttp } from "@typed/ui/HttpRouter"
 
-const pages = Matcher.match(Route.Slash, html`<main><h1>Review queue</h1></main>`)
+const pages = Router.match(Router.Slash, html`<main><h1>Review queue</h1></main>`)
 const StreamingPages = HttpRouter.use(streamingSsrForHttp(pages)).pipe(
   Layer.provide(HtmlRenderTemplate),
 )

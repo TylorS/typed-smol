@@ -1,53 +1,47 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
+import {
+  adjacentLinks,
+  learningGroups,
+  type GuideLink,
+} from "../../../Guides.js";
 import Article from "../../../layouts/Article.astro";
 import Demo from "../../../components/CurriculumDemo.js";
 import "../../../components/CurriculumFiles.css";
-import {
-  counterLessonPath,
-  isQuickStartSection,
-} from "../../../../tutorial/Routes.js";
+import { orderCounterLessons } from "../../../../tutorial/Routes.js";
 
 export async function getStaticPaths() {
-  const lessons = (await getCollection("learn"))
-    .filter((entry) => !isQuickStartSection(entry.data.id))
-    .sort((a, b) => a.data.order - b.data.order);
-  return lessons.map((entry, index) => ({
+  const allLessons = await getCollection("learn");
+  const lessons = orderCounterLessons(allLessons);
+  const groups = learningGroups(
+    await getCollection("guides"),
+    allLessons,
+    await getCollection("tutorial"),
+  );
+  return lessons.map((entry) => ({
     params: { slug: entry.data.id },
-    props: {
-      entry,
-      previous: index > 1 ? lessons[index - 1] : undefined,
-      next: lessons[index + 1],
-    },
+    props: { entry, ...adjacentLinks(`counter/${entry.data.id}`, groups) },
   }));
 }
 
 interface Props {
   entry: CollectionEntry<"learn">;
-  previous?: CollectionEntry<"learn">;
-  next?: CollectionEntry<"learn">;
+  previous?: GuideLink;
+  next?: GuideLink;
 }
 const { entry, previous, next } = Astro.props;
 const { Content, headings } = await render(entry);
-const link = (lesson: CollectionEntry<"learn">) => ({
-  href: counterLessonPath(lesson.data.id),
-  title: lesson.data.title,
-});
 ---
 
 <Article
   title={entry.data.title}
   summary={entry.data.summary}
   section="BEYOND QUICK START"
-  current="quick-start"
+  current={`counter/${entry.data.id}`}
   headings={headings}
   source={`content/learn/${entry.id}.md`}
-  previous={previous
-    ? link(previous)
-    : { href: "/explore/quick-start", title: "Quick Start" }}
-  next={next
-    ? link(next)
-    : { href: "/explore/tutorial", title: "Build a Todo app" }}
+  previous={previous}
+  next={next}
 >
   {entry.data.demo && <Demo id={entry.data.demo} client:visible />}
   <Content />

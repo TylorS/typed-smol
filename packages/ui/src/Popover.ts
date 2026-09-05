@@ -278,9 +278,6 @@ function contentInternalProps<const Options extends ContentOptions>(options: Opt
           yield* setOpen(options.state, false);
         }),
       ),
-      onbeforetoggle: EventHandler.make(
-        Effect.fn((event: Event) => setOpen(options.state, Dom.toggleState(event) === "open")),
-      ),
       ontoggle: EventHandler.make(
         Effect.fn((event: Event) => setOpen(options.state, Dom.toggleState(event) === "open")),
       ),
@@ -296,10 +293,10 @@ type ContentInternalProps<Options extends ContentOptions> = ReturnType<
  * @remarks
  * ## Why
  * The component delegates top-layer lifecycle to the Popover API, synchronizes
- * real `beforetoggle`/`toggle` events, and handles Escape through native events.
+ * completed `toggle` events, and handles Escape through native events.
  * ## Ownership and lifetime
  * Running the Fx owns listeners and the NativePopover observer in its Effect
- * Scope. A custom host must preserve `popover="manual"`, toggle handlers, and
+ * Scope. A custom host must preserve `popover="manual"`, the toggle handler, and
  * the single composed hydration ref.
  * @example
  * ```ts

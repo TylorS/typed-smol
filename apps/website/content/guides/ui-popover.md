@@ -43,7 +43,7 @@ const ChartLegend = component(function* () {
 
 ## Follow both state directions
 
-`makeState` creates hydrated `{ open: false }` state unless initialized otherwise. `NativePopover.ref` observes it and invokes show/hide methods. `Content` reports both `beforetoggle` and `toggle` back into state through `Dom.toggleState`; real toggle events expose `newState`. A plain synthetic `Event("toggle")` has no such field and is not an accurate open event.
+`makeState` creates hydrated `{ open: false }` state unless initialized otherwise. `NativePopover.ref` observes it and invokes show/hide methods. `Content` reports the completed `toggle` event back into state through `Dom.toggleState`; real toggle events expose `newState`. It waits for the completed transition because synchronizing during `beforetoggle` would call show/hide again while the browser is already transitioning. A caller can still use `props.onbeforetoggle` to cancel a native opening. A plain synthetic `Event("toggle")` has no such field and is not an accurate open event.
 
 Escape on the trigger or inside content prevents the key default and sets state false. If focus has moved elsewhere, these local listeners cannot observe it. Outside click does not close this manual popover. Do not tell users a panel dismisses on blur or traps focus unless you implement and test that additional contract. For commands use [Menu](/explore/ui-menu); for a modal task use [Dialog](/explore/ui-dialog).
 

@@ -150,8 +150,13 @@ it("connects a native button click to visible pending and saved states", async (
   try {
     await Effect.gen(function* () {
       const pending = yield* Deferred.make<void, SaveRejected>();
-      // The enclosing Scope keeps handlers alive after this first render emission.
-      yield* render(SaveAccount(Deferred.await(pending)), host).pipe(Fx.take(1), Fx.drain);
+      const mounted = yield* Deferred.make<void>();
+      // Keep the render subscription alive while testing the component's events.
+      yield* render(SaveAccount(Deferred.await(pending)), host).pipe(
+        Fx.observe(() => Deferred.succeed(mounted, undefined)),
+        Effect.forkScoped,
+      );
+      yield* Deferred.await(mounted);
       const button = host.querySelector<HTMLButtonElement>("button")!;
       button.click();
       yield* Effect.promise(() => vi.waitFor(() => {

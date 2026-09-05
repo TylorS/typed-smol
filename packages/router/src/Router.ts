@@ -41,12 +41,12 @@ export type Router = CurrentRoute | Navigation;
  *
  * @example
  * ```ts
- * import { BrowserRouter } from "@typed/router/Router"
+ * import * as Router from "@typed/router"
  * import { Navigation } from "@typed/navigation/Navigation"
  * import * as Effect from "effect/Effect"
  *
  * const currentUrl = Effect.map(Navigation.currentEntry, ({ url }) => url)
- * const program = Effect.provide(currentUrl, BrowserRouter(window))
+ * const program = Effect.provide(currentUrl, Router.BrowserRouter(window))
  * ```
  *
  * @since 1.0.0
@@ -71,9 +71,9 @@ export const BrowserRouter = (window?: Window): Layer.Layer<Router, NavigationEr
  *
  * @example
  * ```ts
- * import { ServerRouter } from "@typed/router/Router"
+ * import * as Router from "@typed/router"
  *
- * const RouterLive = ServerRouter({ url: "https://example.com/products" })
+ * const RouterLive = Router.ServerRouter({ url: "https://example.com/products" })
  * ```
  *
  * @since 1.0.0

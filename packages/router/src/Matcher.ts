@@ -383,12 +383,10 @@ type ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GE, GR> = ApplyCatch<
  *
  * @example
  * ```ts
- * import { empty } from "@typed/router/Matcher"
- * import { Parse } from "@typed/router/Route"
+ * import * as Router from "@typed/router"
  *
- * const app = empty
- *   .match(Parse("/"), "home")
- *   .match(Parse("/users/:id"), (params) => params)
+ * const app = Router.match(Router.Parse("/"), "home")
+ *   .match(Router.Parse("/users/:id"), (params) => params)
  * ```
  *
  * Matcher dependency and lifetime behavior follows Effect v4 Layer and Scope semantics:
@@ -437,25 +435,23 @@ export interface Matcher<A, E = never, R = never>
    *
    * @example
    * ```ts
-   * import { empty } from "@typed/router/Matcher"
-   * import { Parse } from "@typed/router/Route"
+   * import * as Router from "@typed/router"
    * import * as Effect from "effect/Effect"
    *
-   * const users = empty.match(Parse("/users/:id"), (params) =>
+   * const users = Router.match(Router.Parse("/users/:id"), (params) =>
    *   Effect.map(params, ({ id }) => `user:${id}`)
    * )
    * ```
    *
    * @example Guarded candidate
    * ```ts
-   * import { empty } from "@typed/router/Matcher"
-   * import { Parse } from "@typed/router/Route"
+   * import * as Router from "@typed/router"
    * import type { Guard } from "@typed/guard"
    * import * as Effect from "effect/Effect"
    *
    * type Params = { readonly id: string }
    * const accepted: Guard<Params, Params> = (params) => Effect.succeedSome(params)
-   * const users = empty.match(Parse("/users/:id"), accepted, (params) => params)
+   * const users = Router.match(Router.Parse("/users/:id"), accepted, (params) => params)
    * ```
    *
    * @since 1.0.0
@@ -693,6 +689,32 @@ export interface Matcher<A, E = never, R = never>
     A | B,
     E2 | ExcludeTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>,
     R | R2
+  >;
+
+  /**
+   * Finishes route configuration with one redirect-and-retry on `RouteNotFound`.
+   *
+   * Use this terminal method after adding routes, providers, layouts, and recovery. It returns
+   * an Fx rather than another Matcher because the redirect wraps the running route selection.
+   * Matched-handler, decoding, and guard failures retain their error channels and do not redirect.
+   * Construction starts no navigation; the consuming Scope owns execution and the single retry.
+   *
+   * @example
+   * ```ts
+   * import * as Router from "@typed/router"
+   *
+   * const application = Router.match(Router.Slash, "Queue")
+   *   .match(Router.Parse("/issues/:issueId"), "Issue")
+   *   .redirectTo("/")
+   * ```
+   *
+   * @since 1.0.0
+   * @category Route recovery
+   */
+  readonly redirectTo: (path: string) => Fx.Fx<
+    A,
+    Exclude<E, RouteNotFound> | RouteDecodeError | RouteGuardError,
+    R | Router | Scope.Scope
   >;
 
   /**
@@ -975,6 +997,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     this.match = this.match.bind(this);
     this.catch = this.catch.bind(this);
     this.catchTag = this.catchTag.bind(this);
+    this.redirectTo = this.redirectTo.bind(this);
     this.layout = this.layout.bind(this);
     this.provide = this.provide.bind(this);
     this.provideService = this.provideService.bind(this);
@@ -1174,6 +1197,16 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
     ]);
   }
 
+  redirectTo(path: string): Fx.Fx<
+    A,
+    Exclude<E, RouteNotFound> | RouteDecodeError | RouteGuardError,
+    R | Router | Scope.Scope
+  > {
+    // The standalone helper extracts channels through conditional types; this facade already
+    // has their concrete A/E/R correspondence through the Matcher contract.
+    return redirectTo(path)<Matcher<A, E, R>>(this) as ReturnType<Matcher<A, E, R>["redirectTo"]>;
+  }
+
   layout<B, E2, R2>(layout: Layout<any, A, E, R, B, E2, R2>): Matcher<B, E | E2, R | R2> {
     return new MatcherImpl<B, E | E2, R | R2>([
       AST.layout(this.cases, layout as AnyLayout),
@@ -1297,10 +1330,9 @@ export const empty: Matcher<never> = new MatcherImpl([]);
  *
  * @example
  * ```ts
- * import { match } from "@typed/router/Matcher"
- * import { Parse } from "@typed/router/Route"
+ * import * as Router from "@typed/router"
  *
- * const home = match(Parse("/"), "home")
+ * const home = Router.match(Router.Parse("/"), "home")
  * ```
  *
  * @since 1.0.0
@@ -1738,6 +1770,9 @@ export const catchTag: {
 /**
  * Retries a Matcher or Fx once after navigating on `RouteNotFound`.
  *
+ * Prefer the fluent `matcher.redirectTo(path)` method when configuring a Matcher. This standalone
+ * form remains useful for inputs already expressed as Fx and for existing data-last pipelines.
+ *
  * @remarks
  * ## Why
  * A fallback route can redirect without masking matched-handler failures or redirecting forever.
@@ -1747,11 +1782,10 @@ export const catchTag: {
  *
  * @example
  * ```ts
- * import { empty, redirectTo } from "@typed/router/Matcher"
- * import { Parse } from "@typed/router/Route"
+ * import * as Router from "@typed/router"
  *
- * const app = empty.match(Parse("/"), "home")
- * const withFallback = redirectTo("/not-found")(app)
+ * const app = Router.match(Router.Parse("/"), "home")
+ * const withFallback = Router.redirectTo("/not-found")(app)
  * ```
  *
  * @since 1.0.0

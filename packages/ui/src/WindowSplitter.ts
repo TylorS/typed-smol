@@ -1,8 +1,10 @@
 import * as Effect from "effect/Effect";
+import * as Scope from "effect/Scope";
 import * as Schema from "effect/Schema";
-import { RefSubject } from "@typed/fx";
-import { EventHandler, html, type Renderable } from "@typed/template";
+import { Fx, RefSubject } from "@typed/fx";
+import { EventHandler, html, liftRenderableToFx, type Renderable } from "@typed/template";
 import * as Dom from "./Dom.js";
+import type { ComposedRef } from "./Dom/Refs.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /** Visual orientation of the separator between panes.
@@ -298,7 +300,20 @@ export interface WindowSplitterOptions extends Dom.HostOptions<HTMLDivElement> {
    * @category Accessible value text
    */
   readonly valueText?: Renderable.Any<string | null | undefined>;
-  /** Whether keyboard adjustments are disabled.
+  /** State-value units represented by one CSS pixel of pointer movement.
+   * @remarks
+   * By default, the usable parent width (vertical separator) or height
+   * (horizontal separator), minus the separator thickness, represents 100
+   * units. This matches percentage pane sizes. Set `1` for CSS-pixel values.
+   * Positive axis-aligned CSS scaling is accounted for; pointer coordinates
+   * are converted from viewport pixels to the parent's CSS-pixel scale.
+   * Supply a positive finite number when using another unit system.
+   * Keyboard step and min/max remain independent of pointer resolution.
+   * @since 1.0.0
+   * @category Pointer resizing
+   */
+  readonly valuePerPixel?: number;
+  /** Whether keyboard and pointer adjustments are disabled.
    * @remarks
    * ARIA disabled state and handler behavior must agree.
    * Dynamic values follow the component Scope.
@@ -308,7 +323,94 @@ export interface WindowSplitterOptions extends Dom.HostOptions<HTMLDivElement> {
   readonly disabled?: Renderable.Any<boolean | null | undefined>;
 }
 
-function internalProps<const Options extends WindowSplitterOptions>(options: Options) {
+function internalProps<const Options extends WindowSplitterOptions>(
+  options: Options,
+): (helpers: Dom.InternalPropsHelpers<Options>) => WindowSplitterInternalProps<Options> {
+  const drags = new WeakMap<HTMLElement, {
+    readonly pointerId: number;
+    readonly coordinate: number;
+    readonly value: number;
+    readonly orientation: Orientation;
+    readonly scale: number;
+  }>();
+  const release = (element: HTMLElement) => {
+    const drag = drags.get(element);
+    drags.delete(element);
+    if (drag !== undefined && element.hasPointerCapture(drag.pointerId)) {
+      element.releasePointerCapture(drag.pointerId);
+    }
+  };
+  const pointerRef = Effect.fn(function* (element: HTMLDivElement) {
+    yield* Scope.addFinalizer(yield* Effect.scope, Effect.sync(() => {
+      release(element);
+    }));
+  });
+  const pointerStyle: Fx.Fx<
+    string | Partial<CSSStyleDeclaration>,
+    Renderable.Error<Options>,
+    Renderable.Services<Options>
+  > = liftRenderableToFx<Renderable.Error<Options>, Renderable.Services<Options>>(
+    options.props?.style,
+  ).pipe(Fx.map((style: string | Partial<CSSStyleDeclaration> | null | undefined): string | Partial<CSSStyleDeclaration> => {
+    if (typeof style === "string") return `${style};touch-action:none;`;
+    if (typeof style?.cssText === "string") return `${style.cssText};touch-action:none;`;
+    return { ...style, touchAction: "none" };
+  }));
+  const onpointerdown = EventHandler.make((event: PointerEvent) => Effect.sync(() => {
+    const element = Dom.currentTarget<HTMLElement>(event);
+    if (event.button !== 0 || !event.isPrimary || element.getAttribute("aria-disabled") === "true") return;
+    if (drags.has(element)) return;
+    // The visible ARIA snapshot starts the native gesture without yielding to
+    // state acquisition before preventDefault and pointer capture.
+    const valueAttribute = element.getAttribute("aria-valuenow");
+    const value = Number(valueAttribute);
+    const orientation = element.getAttribute("aria-orientation");
+    if (valueAttribute === null || !Number.isFinite(value)) return;
+    const parent = element.parentElement;
+    if (parent === null) return;
+    const vertical = orientation === "vertical";
+    const parentRect = parent.getBoundingClientRect();
+    const separatorRect = element.getBoundingClientRect();
+    // Pointer coordinates and DOMRects use viewport pixels. Convert the
+    // parent's client extent to that same unit, excluding its border/scrollbar.
+    const axisScale = vertical
+      ? parentRect.width / parent.offsetWidth
+      : parentRect.height / parent.offsetHeight;
+    if (!Number.isFinite(axisScale) || axisScale <= 0) return;
+    const extent = vertical
+      ? parent.clientWidth * axisScale - separatorRect.width
+      : parent.clientHeight * axisScale - separatorRect.height;
+    const scale = options.valuePerPixel === undefined
+      ? 100 / extent
+      : options.valuePerPixel / axisScale;
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    event.preventDefault();
+    element.focus();
+    element.setPointerCapture(event.pointerId);
+    drags.set(element, {
+      pointerId: event.pointerId,
+      coordinate: vertical ? event.clientX : event.clientY,
+      value,
+      orientation: vertical ? "vertical" : "horizontal",
+      scale,
+    });
+  }));
+  const onpointermove = EventHandler.make(Effect.fn(function* (event: PointerEvent) {
+    const element = Dom.currentTarget<HTMLElement>(event);
+    const drag = drags.get(element);
+    if (drag === undefined || drag.pointerId !== event.pointerId) return;
+    if (element.getAttribute("aria-disabled") === "true" || (event.buttons & 1) === 0) {
+      release(element);
+      return;
+    }
+    event.preventDefault();
+    const coordinate = drag.orientation === "vertical" ? event.clientX : event.clientY;
+    yield* setValue(options.state, drag.value + (coordinate - drag.coordinate) * drag.scale);
+  }));
+  const endDrag = EventHandler.make((event: PointerEvent) => Effect.sync(() => {
+    const element = Dom.currentTarget<HTMLElement>(event);
+    if (drags.get(element)?.pointerId === event.pointerId) release(element);
+  }));
   const onkeydown = EventHandler.make(
     Effect.fn(function* (event: KeyboardEvent) {
       const current = yield* options.state;
@@ -338,6 +440,7 @@ function internalProps<const Options extends WindowSplitterOptions>(options: Opt
   return ({ property }: Dom.InternalPropsHelpers<Options>) =>
     ({
       role: "separator",
+      style: pointerStyle,
       tabindex: 0,
       "aria-orientation": RefSubject.map(options.state, (state) => state.orientation),
       "aria-valuenow": RefSubject.map(options.state, (state) => state.value),
@@ -348,18 +451,49 @@ function internalProps<const Options extends WindowSplitterOptions>(options: Opt
       "aria-valuetext": property("valueText", undefined),
       "aria-disabled": property("disabled", false),
       onkeydown,
-      ref: options.state,
+      onpointerdown,
+      onpointermove,
+      onpointerup: endDrag,
+      onpointercancel: endDrag,
+      onlostpointercapture: endDrag,
+      ref: Dom.composeRefs(options.state, pointerRef),
     }) as const;
 }
-type WindowSplitterInternalProps<Options extends WindowSplitterOptions> = ReturnType<
-  ReturnType<typeof internalProps<Options>>
->;
+type WindowSplitterInternalProps<Options extends WindowSplitterOptions> = {
+  readonly role: "separator";
+  readonly style: Fx.Fx<string | Partial<CSSStyleDeclaration>, Renderable.Error<Options>, Renderable.Services<Options>>;
+  readonly tabindex: 0;
+  readonly "aria-orientation": RefSubject.Computed<Orientation, Schema.SchemaError>;
+  readonly "aria-valuenow": RefSubject.Computed<number, Schema.SchemaError>;
+  readonly "aria-valuemin": RefSubject.Computed<number, Schema.SchemaError>;
+  readonly "aria-valuemax": RefSubject.Computed<number, Schema.SchemaError>;
+  readonly "aria-controls": Dom.NonNullish<Dom.Property<Options, "primaryPaneId">> | undefined;
+  readonly "aria-label": Dom.NonNullish<Dom.Property<Options, "label">> | undefined;
+  readonly "aria-valuetext": Dom.NonNullish<Dom.Property<Options, "valueText">> | undefined;
+  readonly "aria-disabled": Dom.NonNullish<Dom.Property<Options, "disabled">> | false;
+  readonly onkeydown: EventHandler.EventHandler<KeyboardEvent, Schema.SchemaError>;
+  readonly onpointerdown: EventHandler.EventHandler<PointerEvent>;
+  readonly onpointermove: EventHandler.EventHandler<PointerEvent, Schema.SchemaError>;
+  readonly onpointerup: EventHandler.EventHandler<PointerEvent>;
+  readonly onpointercancel: EventHandler.EventHandler<PointerEvent>;
+  readonly onlostpointercapture: EventHandler.EventHandler<PointerEvent>;
+  readonly ref: ComposedRef<
+    RefSubject.HydratedRefSubject<State, Schema.SchemaError>,
+    (element: HTMLDivElement) => Effect.Effect<void, never, Scope.Scope>
+  > | undefined;
+};
 
 /** Renders a focusable ARIA separator for resizing a pane.
  * @remarks
  * The component exposes native DOM focus/events and the ARIA window-splitter
  * range contract: arrows adjust by step, Home/End reach bounds, and Enter
- * collapses/restores. Disabled state leaves key events inert.
+ * collapses/restores. Pointer dragging adjusts the same clamped state, using
+ * percentage-of-parent movement by default or the supplied `valuePerPixel`.
+ * Native pointer capture keeps movement attached outside the separator;
+ * release, cancellation, lost capture, and Scope teardown end the drag.
+ * The host composes caller styles with `touch-action: none` so touch gestures
+ * remain resize interactions. The caller binds state to actual pane layout. Disabled state
+ * leaves keyboard and pointer activation inert.
  * Running the returned Fx owns real key listeners, reactive ARIA attributes,
  * and the hydration ref in its Effect Scope. A custom host must preserve role,
  * tab index, range/relationship attributes, handler, and one hydration owner.

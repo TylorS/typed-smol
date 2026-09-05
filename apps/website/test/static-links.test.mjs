@@ -5,10 +5,15 @@ import { test } from "node:test";
 
 const websiteRoot = path.resolve(import.meta.dirname, "..");
 const siteRoot = path.join(websiteRoot, "dist/site");
+const repositoryRoot = path.resolve(websiteRoot, "../..");
 const base = (process.env.SITE_BASE ?? "/typed-smol/").replace(/\/$/u, "");
+/** @param {string} text */
 const decode = (text) =>
   text.replaceAll("&amp;", "&").replaceAll("&quot;", '"').replaceAll("&#39;", "'");
 
+/** @param {string} root
+ * @returns {Promise<string[]>}
+ */
 async function filesIn(root) {
   return (await fs.readdir(root, { withFileTypes: true }))
     .flatMap((entry) => (entry.isDirectory() ? [] : [path.join(root, entry.name)]))
@@ -28,7 +33,7 @@ test("every built page link, local anchor, and asset resolves under the deployme
     await Promise.all(
       files
         .filter((file) => file.endsWith(".html"))
-        .map(async (file) => [file, await fs.readFile(file, "utf8")]),
+        .map(async (file) => /** @type {const} */ ([file, await fs.readFile(file, "utf8")])),
     ),
   );
   const ids = new Map(
@@ -38,6 +43,7 @@ test("every built page link, local anchor, and asset resolves under the deployme
     ]),
   );
   const broken = new Set();
+  const sourceTargets = new Map();
   for (const [file, html] of pages) {
     const relative = path.relative(siteRoot, file).replace(/index\.html$/u, "");
     const seen = new Set();
@@ -51,6 +57,17 @@ test("every built page link, local anchor, and asset resolves under the deployme
     )) {
       const href = decode(encoded);
       const url = new URL(href, pageUrl);
+      const source = url.origin === "https://github.com"
+        ? url.pathname.match(/^\/TylorS\/typed-smol\/(?:blob|tree)\/main\/(.+)$/u)
+        : null;
+      if (source) {
+        const sourcePath = decodeURIComponent(source[1]);
+        if (!sourceTargets.has(sourcePath)) {
+          sourceTargets.set(sourcePath, await fs.access(path.join(repositoryRoot, sourcePath))
+            .then(() => true, () => false));
+        }
+        if (!sourceTargets.get(sourcePath)) broken.add(`${relative}: missing source ${href}`);
+      }
       if (url.origin !== "https://docs.test") continue;
       if (base && !url.pathname.startsWith(`${base}/`)) {
         broken.add(`${relative}: missing base ${href}`);
@@ -73,7 +90,7 @@ test("every built page link, local anchor, and asset resolves under the deployme
       if (
         url.hash &&
         ids.has(existing) &&
-        !ids.get(existing).has(decodeURIComponent(url.hash.slice(1)))
+        !ids.get(existing)?.has(decodeURIComponent(url.hash.slice(1)))
       )
         broken.add(`${relative}: missing anchor ${href}`);
     }
@@ -88,13 +105,33 @@ test("every built page link, local anchor, and asset resolves under the deployme
 });
 
 test("every source-derived reference and search target has a static HTML page", async () => {
+  /** @type {unknown} */
   const inventory = JSON.parse(
     await fs.readFile(path.join(websiteRoot, "src/generated/reference.json"), "utf8"),
   );
+  /** @type {unknown} */
   const search = JSON.parse(await fs.readFile(path.join(siteRoot, "search-index.json"), "utf8"));
+  assert.ok(inventory && typeof inventory === "object" && "routes" in inventory);
+  assert.ok(search && typeof search === "object" && "entries" in search);
+  /** @param {unknown} entries
+   * @param {string} field
+   * @returns {string[]}
+   */
+  const destinations = (entries, field) => {
+    assert.ok(Array.isArray(entries));
+    /** @type {unknown[]} */
+    const values = entries;
+    return values.map((entry) => {
+      assert.ok(entry && typeof entry === "object" && field in entry);
+      /** @type {unknown} */
+      const href = Reflect.get(entry, field);
+      assert.ok(typeof href === "string");
+      return href;
+    });
+  };
   const routes = [
-    ...inventory.routes.map((route) => route.canonicalPath),
-    ...search.entries.map((entry) => entry.href),
+    ...destinations(inventory.routes, "canonicalPath"),
+    ...destinations(search.entries, "href"),
   ];
   const missing = [];
   for (const route of routes) {

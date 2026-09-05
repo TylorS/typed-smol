@@ -16,8 +16,8 @@ import * as Schema from "effect/Schema";
 import * as SchemaIssue from "effect/SchemaIssue";
 import * as SchemaTransformation from "effect/SchemaTransformation";
 import type * as SchemaAST from "effect/SchemaAST";
-import { Fx as FxApi, RefSubject } from "@typed/fx";
-import type * as Scope from "effect/Scope";
+import { Fx as FxApi, RefSubject, Subject } from "@typed/fx";
+import * as Scope from "effect/Scope";
 import type { Fx } from "@typed/fx/Fx";
 import {
   EventHandler,
@@ -452,6 +452,8 @@ function inputProps<Values extends object, Value>(
   type: string,
   codec: Schema.Codec<Value, string>,
 ) {
+  const parts = maskParts.get(codec);
+  if (parts !== undefined) return maskedInputProps(options, type, codec, parts);
   return () =>
     ({
       type,
@@ -680,18 +682,14 @@ function renderInput<
   Renderable.Services<RenderableComponentOptions<Options> | Host> | Scope.Scope | RenderTemplate
 > {
   const codec = options.codec ?? defaultCodec;
-  return Dom.renderHost<HTMLInputElement>()<
-    Options,
-    InputProps<Values, Value>,
-    "",
-    HostResult,
-    Host
-  >(
-    options,
-    host,
-    inputProps(options, type, codec),
-    "",
-    (props) => html`<input ...${props} />`,
+  return FxApi.suspend(() =>
+    Dom.renderHost<HTMLInputElement>()<Options, InputProps<Values, Value>, "", HostResult, Host>(
+      options,
+      host,
+      inputProps(options, type, codec),
+      "",
+      (props) => html`<input ...${props} />`,
+    ),
   ) as Fx<
     RenderEvent,
     Schema.SchemaError | Renderable.Error<RenderableComponentOptions<Options> | Host>,
@@ -1032,8 +1030,9 @@ function formErrors<Values extends object>(
 /**
  * Named decoded segment in a bidirectional text mask.
  * @remarks
- * Slots make structured display strings type-safe and Schema-driven rather than cursor heuristics.
- * A slot retains its codec and optional validation constraints; it acquires no Scope.
+ * The codec preserves the slot's domain type. Supply a fixed length and charset
+ * when the input should insert unambiguous surrounding literals while editing.
+ * Use string codecs for identifiers such as phone segments that may start with zero.
  * @since 1.0.0
  * @category Input codecs
  */
@@ -1100,12 +1099,20 @@ export function slot<Name extends string, Value>(
   return { _tag: "MaskSlot", name, codec, ...options };
 }
 
+const maskParts = new WeakMap<object, ReadonlyArray<MaskPart>>();
+const maskedInputResets = new WeakMap<
+  object,
+  { readonly signal: Subject.Subject<void>; users: number }
+>();
+
 /**
  * Builds a bidirectional Schema codec from literal text and named slots.
  * @remarks
- * Display formatting and decoding share one ordered specification and produce
- * ordinary Schema issues on invalid length, characters, literals, or slot values.
- * Pure codec construction. Decode/encode Effects are lazy and Scope-free.
+ * Strict encoding and decoding share the same parts and reject invalid length,
+ * characters, literals, or slot values. MaskedInput also uses these parts to
+ * retain drafts and format fixed-width slots with explicit charsets. Literal
+ * characters must be distinguishable from editable characters for auto-formatting;
+ * ambiguous or variable-width masks retain ordinary strict text entry.
  * @example
  * ```ts
  * import { mask, slot } from "@typed/ui/Form"
@@ -1126,7 +1133,7 @@ export function mask<const Parts extends ReadonlyArray<MaskPart>>(
       value !== null &&
       parts.every((part) => typeof part === "string" || Reflect.has(value, part.name)),
   );
-  return Schema.String.pipe(
+  const codec = Schema.String.pipe(
     Schema.decodeTo(
       valueSchema,
       SchemaTransformation.transformOrFail({
@@ -1135,6 +1142,252 @@ export function mask<const Parts extends ReadonlyArray<MaskPart>>(
       }),
     ),
   );
+  maskParts.set(codec, parts);
+  return codec;
+}
+
+function maskedInputProps<Values extends object, Value>(
+  options: InputOptions<Values, Value>,
+  type: string,
+  codec: Schema.Codec<Value, string>,
+  parts: ReadonlyArray<MaskPart>,
+) {
+  return () => {
+    let draft: string | undefined;
+    let lastValue: unknown;
+    let composing = false;
+    let invalidDraft = false;
+    let editRevision = 0;
+    let pending: State<Values> | undefined;
+    let input: HTMLInputElement | undefined;
+    const format = maskDraftFormatter(parts);
+    const message = `Enter a complete value in the format ${parts
+      .map((part) => (typeof part === "string" ? part : "_".repeat(part.length ?? 3)))
+      .join("")}.`;
+
+    const commit = Effect.fn(function* (element: HTMLInputElement) {
+      const revision = ++editRevision;
+      const snapshot = yield* options.state;
+      pending = snapshot;
+      input = element;
+      const formatted = format?.(element.value, element.selectionStart ?? element.value.length);
+      if (formatted !== undefined) {
+        element.value = formatted.value;
+        element.setSelectionRange(formatted.cursor, formatted.cursor);
+      }
+      draft = element.value;
+      return yield* Schema.decodeEffect(codec)(draft).pipe(
+        Effect.matchEffect({
+          onSuccess: Effect.fn(function* (decoded) {
+            if (
+              revision !== editRevision ||
+              (yield* options.state).values[options.name] !== snapshot.values[options.name]
+            )
+              return;
+            pending = undefined;
+            lastValue = decoded;
+            invalidDraft = false;
+            element.setCustomValidity("");
+            yield* updateDecodedValue(options.state, options.name, decoded);
+            yield* setFieldError(options.state, options.name, undefined);
+          }),
+          onFailure: Effect.fn(function* () {
+            if (
+              revision !== editRevision ||
+              (yield* options.state).values[options.name] !== snapshot.values[options.name]
+            )
+              return;
+            pending = undefined;
+            invalidDraft = true;
+            element.setCustomValidity(message);
+            yield* setFieldError(options.state, options.name, message);
+          }),
+        }),
+      );
+    });
+
+    return {
+      type,
+      name: options.name,
+      "aria-describedby": RefSubject.map(options.state, (state) =>
+        state.errors[options.name] === undefined
+          ? undefined
+          : fieldErrorId(options.state, options.name),
+      ),
+      "aria-invalid": RefSubject.map(options.state, (state) =>
+        state.errors[options.name] === undefined ? undefined : true,
+      ),
+      ".value": Effect.flatMap(options.state, (state) =>
+        Schema.encodeUnknownEffect(codec)(state.values[options.name]),
+      ),
+      ref: Effect.fn(function* (element: HTMLInputElement) {
+        input = element;
+        const initial = yield* options.state;
+        lastValue = initial.values[options.name];
+        const resetInput = Effect.gen(function* () {
+          const revision = ++editRevision;
+          pending = undefined;
+          draft = undefined;
+          invalidDraft = false;
+          composing = false;
+          const value = (yield* options.state).values[options.name];
+          lastValue = value;
+          element.setCustomValidity("");
+          const encoded = yield* Schema.encodeUnknownEffect(codec)(value);
+          if (revision === editRevision && (yield* options.state).values[options.name] === value) {
+            element.value = encoded;
+          }
+        });
+        let resets = maskedInputResets.get(options.state);
+        if (resets === undefined) {
+          resets = { signal: Subject.unsafeMake<void>(), users: 0 };
+          maskedInputResets.set(options.state, resets);
+        }
+        const resetSignal = resets;
+        resetSignal.users++;
+        yield* Scope.addFinalizer(
+          yield* Effect.scope,
+          Effect.suspend(() => {
+            if (--resetSignal.users > 0) return Effect.void;
+            maskedInputResets.delete(options.state);
+            return resetSignal.signal.interrupt;
+          }),
+        );
+        yield* Effect.forkScoped(FxApi.observe(resetSignal.signal, () => resetInput));
+        yield* Effect.forkScoped(
+          FxApi.observe(
+            options.state,
+            Effect.fn(function* (state) {
+              if (
+                pending !== undefined &&
+                state.values[options.name] !== pending.values[options.name]
+              ) {
+                pending = undefined;
+                editRevision++;
+                draft = undefined;
+                invalidDraft = false;
+              }
+              const value = state.values[options.name];
+              if (
+                value === lastValue &&
+                (composing ||
+                  (draft !== undefined &&
+                    (!invalidDraft || state.errors[options.name] !== undefined)))
+              )
+                return;
+              lastValue = value;
+              draft = undefined;
+              invalidDraft = false;
+              element.setCustomValidity("");
+              const revision = editRevision;
+              const encoded = yield* Schema.encodeUnknownEffect(codec)(value);
+              if (
+                revision === editRevision &&
+                (yield* options.state).values[options.name] === value &&
+                element.value !== encoded
+              ) {
+                element.value = encoded;
+              }
+            }),
+          ),
+        );
+      }),
+      onbeforeinput: EventHandler.make(
+        Effect.fn(function* (event: InputEvent) {
+          if (event.isComposing || composing || !event.cancelable || format === undefined) return;
+          if (
+            event.inputType !== "deleteContentBackward" &&
+            event.inputType !== "deleteContentForward"
+          )
+            return;
+          const element = Dom.currentTarget<HTMLInputElement>(event);
+          const start = element.selectionStart;
+          if (start === null || start !== element.selectionEnd) return;
+          const backwards = event.inputType === "deleteContentBackward";
+          const separators = parts
+            .filter((part): part is string => typeof part === "string")
+            .join("");
+          let index = backwards ? start - 1 : start;
+          if (!separators.includes(element.value[index] ?? "\u0000")) return;
+          while (
+            index >= 0 &&
+            index < element.value.length &&
+            separators.includes(element.value[index])
+          ) {
+            index += backwards ? -1 : 1;
+          }
+          if (index < 0 || index >= element.value.length) return;
+          event.preventDefault();
+          element.setRangeText("", index, index + 1, "start");
+          return yield* commit(element);
+        }),
+      ),
+      oninput: EventHandler.make(
+        Effect.fn(function* (event: InputEvent) {
+          input = Dom.currentTarget<HTMLInputElement>(event);
+          if (composing || event.isComposing) return;
+          return yield* commit(input);
+        }),
+      ),
+      oncompositionstart: EventHandler.make(() =>
+        Effect.sync(() => {
+          composing = true;
+        }),
+      ),
+      oncompositionend: EventHandler.make(
+        Effect.fn(function* (event: CompositionEvent) {
+          composing = false;
+          return yield* commit(Dom.currentTarget<HTMLInputElement>(event));
+        }),
+      ),
+    } as const;
+  };
+}
+
+// Only auto-format when fixed-width slots explicitly distinguish editable
+// characters from literals. Ambiguous/variable-width codecs still retain drafts
+// and validate, without guessing which characters the user meant to enter.
+function maskDraftFormatter(parts: ReadonlyArray<MaskPart>) {
+  const slots = parts.filter((part): part is MaskSlot => typeof part !== "string");
+  const literals = parts.filter((part): part is string => typeof part === "string").join("");
+  if (
+    slots.length === 0 ||
+    slots.some(
+      (slot) => slot.length === undefined || slot.charset === undefined || slot.length < 1,
+    ) ||
+    [...literals].some((character) => slots.some((slot) => matchesCharset(slot, character)))
+  )
+    return undefined;
+  return (text: string, cursor: number): { value: string; cursor: number } | undefined => {
+    const characters: string[] = [];
+    let beforeCursor = 0;
+    for (let index = 0; index < text.length; index++) {
+      const character = text[index];
+      if (literals.includes(character)) continue;
+      characters.push(character);
+      if (index < cursor) beforeCursor++;
+    }
+    let offset = 0;
+    let value = "";
+    let nextCursor = 0;
+    for (const [index, part] of parts.entries()) {
+      if (typeof part === "string") {
+        const complete = characters.length === slots.reduce((sum, slot) => sum + slot.length!, 0);
+        const suffix = parts.slice(index + 1).every((remaining) => typeof remaining === "string");
+        if (offset < characters.length || (complete && suffix)) value += part;
+        continue;
+      }
+      const segment = characters.slice(offset, offset + part.length!);
+      if (segment.some((character) => !matchesCharset(part, character))) return undefined;
+      for (const character of segment) {
+        value += character;
+        offset++;
+        if (offset <= beforeCursor) nextCursor = value.length;
+      }
+    }
+    if (offset !== characters.length) return undefined;
+    return { value, cursor: beforeCursor === characters.length ? value.length : nextCursor };
+  };
 }
 
 function decodeMask<Parts extends ReadonlyArray<MaskPart>>(
@@ -1260,10 +1513,13 @@ export interface MaskedInputOptions<
 /**
  * Binds a native text input to a structured mask value.
  * @remarks
- * The supplied Schema codec controls both display encoding and input decoding;
- * failed edits update field errors rather than corrupting decoded state.
- * DOM listeners and reactive value binding live in the control Scope. The
- * supplied state can be tested and retained without mounting this control.
+ * A codec created by mask supplies the editable format. Fixed-width slots with
+ * explicit charsets receive literal insertion and caret-aware deletion; other
+ * codecs retain strict text entry. Incomplete drafts remain visible while decoded
+ * state keeps its previous value. Native custom validity and field error text
+ * prevent native submission of an incomplete mask. Composition is committed only
+ * after compositionend. New edits and resets supersede pending slot decoders.
+ * Each mounted input owns its draft observer and reset registration in Scope.
  * @since 1.0.0
  * @category Input codecs
  */
@@ -1998,7 +2254,13 @@ export function reset<Values extends object, E, R>(
     errors: {},
     meta: {},
     submitting: false,
-  }));
+  })).pipe(
+    Effect.tap(() =>
+      Effect.suspend(
+        () => maskedInputResets.get(state)?.signal.onSuccess(undefined) ?? Effect.void,
+      ),
+    ),
+  );
 }
 
 /**

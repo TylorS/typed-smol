@@ -15,16 +15,15 @@ Prerequisites: [typed URL inputs](/explore/route-typed-url-inputs) and [server H
 This complete route-registration layer renders a report identifier from the matched URL. The deployment's Effect HTTP server supplies the transport; this module does not choose a port or start listening as a side effect of import.
 
 ```ts
+import * as Router from "@typed/router"
 import { Fx } from "@typed/fx";
-import * as Matcher from "@typed/router/Matcher";
-import * as Route from "@typed/router/Route";
 import { html, StaticHtmlRenderTemplate } from "@typed/template";
 import { handleHttpServerError, ssrForHttp } from "@typed/ui/HttpRouter";
 import { Effect, Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
-const reportRoute = Route.Join(Route.Parse("reports"), Route.Param("reportId"));
-const reports = Matcher.empty.match(reportRoute, (params) => html`
+const reportRoute = Router.Join(Router.Parse("reports"), Router.Param("reportId"));
+const reports = Router.match(reportRoute, (params) => html`
   <main>
     <h1>Report ${params.pipe(Fx.map(({ reportId }) => reportId))}</h1>
     <p>Review the report before sharing it.</p>
